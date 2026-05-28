@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP MCP Abilities
  * Description: Registers core WordPress management abilities for the MCP Adapter plugin.
- * Version:     1.0.0
+ * Version:     1.0.1
  * Requires at least: 6.9
  * Requires PHP: 7.4
  * Author:      Daniel Boring
@@ -17,11 +17,7 @@ add_action( 'admin_notices', function () {
 	}
 } );
 
-add_action( 'init', function () {
-	if ( ! function_exists( 'wp_register_ability' ) ) {
-		return;
-	}
-
+add_action( 'wp_abilities_api_init', function () {
 	require_once __DIR__ . '/includes/class-posts.php';
 	require_once __DIR__ . '/includes/class-taxonomy.php';
 	require_once __DIR__ . '/includes/class-comments.php';
@@ -35,4 +31,4 @@ add_action( 'init', function () {
 	WP_MCP_Health::register();
 	WP_MCP_Security::register();
 	WP_MCP_SEO::register();
-}, 20 );
+} );
