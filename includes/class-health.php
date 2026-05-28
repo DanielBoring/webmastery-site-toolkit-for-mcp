@@ -8,7 +8,7 @@ class WP_MCP_Health {
 		wp_register_ability( 'wp-mcp/site-health-check', [
 			'label'               => 'Site Health Check',
 			'description'         => 'Run WordPress site health tests and return results grouped by severity.',
-			'category'            => 'core',
+			'category'            => 'wp-mcp',
 			'execute_callback'    => [ self::class, 'execute' ],
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'read' ) ) {

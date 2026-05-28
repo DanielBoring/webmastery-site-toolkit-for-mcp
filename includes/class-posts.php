@@ -71,7 +71,7 @@ class WP_MCP_Posts {
 		wp_register_ability( "wp-mcp/list-{$slug}", [
 			'label'               => "List {$label}s",
 			'description'         => "List WordPress {$slug} with optional filters.",
-			'category'            => 'core',
+			'category'            => 'wp-mcp',
 			'input_schema'        => $list_input,
 			'execute_callback'    => function ( $input ) use ( $type ) {
 				$args = [
@@ -115,7 +115,7 @@ class WP_MCP_Posts {
 		wp_register_ability( "wp-mcp/get-{$type}", [
 			'label'               => "Get {$label}",
 			'description'         => "Get a single WordPress {$type} by ID.",
-			'category'            => 'core',
+			'category'            => 'wp-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -157,7 +157,7 @@ class WP_MCP_Posts {
 		wp_register_ability( "wp-mcp/create-{$type}", [
 			'label'               => "Create {$label}",
 			'description'         => "Create a new WordPress {$type}.",
-			'category'            => 'core',
+			'category'            => 'wp-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => $create_props,
@@ -222,7 +222,7 @@ class WP_MCP_Posts {
 		wp_register_ability( "wp-mcp/update-{$type}", [
 			'label'               => "Update {$label}",
 			'description'         => "Update an existing WordPress {$type}.",
-			'category'            => 'core',
+			'category'            => 'wp-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => $update_props,
@@ -282,7 +282,7 @@ class WP_MCP_Posts {
 		wp_register_ability( "wp-mcp/delete-{$type}", [
 			'label'               => "Delete {$label}",
 			'description'         => "Move a WordPress {$type} to trash.",
-			'category'            => 'core',
+			'category'            => 'wp-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [

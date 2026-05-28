@@ -13,7 +13,7 @@ class WP_MCP_SEO {
 		wp_register_ability( 'wp-mcp/seo-analyze-post', [
 			'label'               => 'SEO: Analyze Post',
 			'description'         => 'Analyze a post or page for SEO best practices and return findings.',
-			'category'            => 'core',
+			'category'            => 'wp-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -172,7 +172,7 @@ class WP_MCP_SEO {
 		wp_register_ability( 'wp-mcp/seo-site-overview', [
 			'label'               => 'SEO: Site Overview',
 			'description'         => 'Get a site-level SEO overview: sitemap, robots.txt, and posts missing Yoast optimization.',
-			'category'            => 'core',
+			'category'            => 'wp-mcp',
 			'execute_callback'    => [ self::class, 'execute_site_overview' ],
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'read' ) ) {

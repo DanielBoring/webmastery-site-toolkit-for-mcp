@@ -8,7 +8,7 @@ class WP_MCP_Security {
 		wp_register_ability( 'wp-mcp/security-audit', [
 			'label'               => 'Security Audit',
 			'description'         => 'Run a security audit of the WordPress installation and return findings grouped by severity.',
-			'category'            => 'core',
+			'category'            => 'wp-mcp',
 			'execute_callback'    => [ self::class, 'execute' ],
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'read' ) ) {

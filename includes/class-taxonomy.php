@@ -28,7 +28,7 @@ class WP_MCP_Taxonomy {
 		wp_register_ability( "wp-mcp/list-{$ability}", [
 			'label'               => "List {$label}",
 			'description'         => "List all WordPress {$label}.",
-			'category'            => 'core',
+			'category'            => 'wp-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -90,7 +90,7 @@ class WP_MCP_Taxonomy {
 		wp_register_ability( "wp-mcp/create-{$ability}", [
 			'label'               => "Create {$label}",
 			'description'         => "Create a new WordPress {$label}.",
-			'category'            => 'core',
+			'category'            => 'wp-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => $props,

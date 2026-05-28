@@ -29,7 +29,7 @@ class WP_MCP_Comments {
 		wp_register_ability( 'wp-mcp/list-comments', [
 			'label'               => 'List Comments',
 			'description'         => 'List WordPress comments with optional filters.',
-			'category'            => 'core',
+			'category'            => 'wp-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -83,7 +83,7 @@ class WP_MCP_Comments {
 		wp_register_ability( "wp-mcp/{$action}-comment", [
 			'label'               => $label,
 			'description'         => "{$label} by ID.",
-			'category'            => 'core',
+			'category'            => 'wp-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
