@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP MCP Abilities
  * Description: Registers core WordPress management abilities for the MCP Adapter plugin.
- * Version:     1.0.8-diag
+ * Version:     1.0.9-diag
  * Requires at least: 6.9
  * Requires PHP: 7.4
  * Author:      Daniel Boring
@@ -17,8 +17,18 @@ add_action( 'admin_notices', function () {
 	}
 } );
 
-// Register abilities — wp_register_ability() only works inside wp_abilities_api_init.
 add_action( 'wp_abilities_api_init', function () {
+	// Inline test: if this ability appears in /diag, the callback runs and
+	// wp_register_ability() works. If it's missing, the callback never fires.
+	wp_register_ability( 'wp-mcp/test-ping', array(
+		'label'               => 'Test Ping',
+		'description'         => 'Diagnostic ability.',
+		'category'            => 'core',
+		'execute_callback'    => function () { return array( 'ok' => true ); },
+		'permission_callback' => function () { return true; },
+		'meta'                => array( 'mcp' => array( 'public' => true ) ),
+	) );
+
 	require_once __DIR__ . '/includes/class-posts.php';
 	require_once __DIR__ . '/includes/class-taxonomy.php';
 	require_once __DIR__ . '/includes/class-comments.php';
