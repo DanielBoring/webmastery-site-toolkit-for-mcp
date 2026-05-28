@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP MCP Abilities
  * Description: Registers core WordPress management abilities for the MCP Adapter plugin.
- * Version:     1.0.2-debug
+ * Version:     1.0.3
  * Requires at least: 6.9
  * Requires PHP: 7.4
  * Author:      Daniel Boring
@@ -17,21 +17,11 @@ add_action( 'admin_notices', function () {
 	}
 } );
 
-// Diagnostic: one inline ability with no dependencies to verify the hook fires.
-add_action( 'wp_abilities_api_init', function () {
-	wp_register_ability( 'core/ping', [
-		'label'               => 'Ping',
-		'description'         => 'Diagnostic ability — confirms WP MCP Abilities plugin is active.',
-		'category'            => 'core',
-		'execute_callback'    => function () {
-			return [ 'success' => true, 'data' => [ 'status' => 'ok', 'version' => '1.0.2-debug' ] ];
-		},
-		'permission_callback' => function () { return true; },
-		'meta'                => [ 'mcp' => [ 'public' => true ] ],
-	] );
-} );
+function wp_mcp_abilities_register() {
+	if ( ! function_exists( 'wp_register_ability' ) ) {
+		return;
+	}
 
-add_action( 'wp_abilities_api_init', function () {
 	require_once __DIR__ . '/includes/class-posts.php';
 	require_once __DIR__ . '/includes/class-taxonomy.php';
 	require_once __DIR__ . '/includes/class-comments.php';
@@ -45,4 +35,12 @@ add_action( 'wp_abilities_api_init', function () {
 	WP_MCP_Health::register();
 	WP_MCP_Security::register();
 	WP_MCP_SEO::register();
-} );
+}
+
+// Primary: correct hook per WP 6.9 Abilities API docs.
+add_action( 'wp_abilities_api_init', 'wp_mcp_abilities_register' );
+
+// Fallback: register after the MCP Adapter initialises (priority 15) but
+// before it processes any requests. Covers environments where the registry
+// singleton initialises before plugins run their wp_abilities_api_init callbacks.
+add_action( 'rest_api_init', 'wp_mcp_abilities_register', 20 );
