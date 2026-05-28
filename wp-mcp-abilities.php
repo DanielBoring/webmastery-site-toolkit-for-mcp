@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP MCP Abilities
  * Description: Registers core WordPress management abilities for the MCP Adapter plugin.
- * Version:     1.0.7
+ * Version:     1.0.8-diag
  * Requires at least: 6.9
  * Requires PHP: 7.4
  * Author:      Daniel Boring
@@ -17,11 +17,7 @@ add_action( 'admin_notices', function () {
 	}
 } );
 
-/**
- * wp_register_ability() only works when called from inside the wp_abilities_api_init
- * action (WordPress enforces this with doing_action() check and returns null otherwise).
- * This callback must ONLY be hooked to wp_abilities_api_init.
- */
+// Register abilities — wp_register_ability() only works inside wp_abilities_api_init.
 add_action( 'wp_abilities_api_init', function () {
 	require_once __DIR__ . '/includes/class-posts.php';
 	require_once __DIR__ . '/includes/class-taxonomy.php';
@@ -36,4 +32,34 @@ add_action( 'wp_abilities_api_init', function () {
 	WP_MCP_Health::register();
 	WP_MCP_Security::register();
 	WP_MCP_SEO::register();
+} );
+
+// Diagnostic REST endpoint — DELETE BEFORE PRODUCTION.
+// GET /wp-json/wp-mcp/v1/diag  (requires authentication)
+add_action( 'rest_api_init', function () {
+	register_rest_route( 'wp-mcp/v1', '/diag', array(
+		'methods'             => 'GET',
+		'callback'            => function () {
+			$abilities    = function_exists( 'wp_get_abilities' ) ? wp_get_abilities() : array();
+			$ability_list = array();
+			foreach ( $abilities as $a ) {
+				$meta           = $a->get_meta();
+				$ability_list[] = array(
+					'name'       => $a->get_name(),
+					'mcp_public' => $meta['mcp']['public'] ?? false,
+					'mcp_type'   => $meta['mcp']['type'] ?? 'tool',
+				);
+			}
+			return array(
+				'wp_abilities_api_init_fired' => (bool) did_action( 'wp_abilities_api_init' ),
+				'wp_register_ability_exists'  => function_exists( 'wp_register_ability' ),
+				'wp_get_abilities_exists'     => function_exists( 'wp_get_abilities' ),
+				'ability_count'               => count( $ability_list ),
+				'abilities'                   => $ability_list,
+			);
+		},
+		'permission_callback' => function () {
+			return is_user_logged_in();
+		},
+	) );
 } );
