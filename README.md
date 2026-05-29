@@ -238,7 +238,7 @@ The password will be in the format `xxxx xxxx xxxx xxxx xxxx xxxx`. Keep the spa
 
 ### 5. Connect your MCP client
 
-Configure `@automattic/mcp-wordpress-remote` to point at your WordPress site. Select your client below:
+Configure `@automattic/mcp-wordpress-remote` to point at the MCP Adapter endpoint on your WordPress site. The published package reads `WP_API_URL`, `WP_API_USERNAME`, and `WP_API_PASSWORD`; set `WP_API_URL` to the full `/wp-json/mcp/mcp-adapter-default-server` URL. Select your client below:
 
 <details>
 <summary>Claude Code</summary>
@@ -252,9 +252,9 @@ Add to `~/.claude/settings.json`:
       "command": "npx",
       "args": ["-y", "@automattic/mcp-wordpress-remote@latest"],
       "env": {
-        "WP_SITE_URL": "https://your-site.com",
-        "WP_USERNAME": "ai-editor",
-        "WP_APP_PASSWORD": "xxxx xxxx xxxx xxxx xxxx xxxx"
+        "WP_API_URL": "https://your-site.com/wp-json/mcp/mcp-adapter-default-server",
+        "WP_API_USERNAME": "ai-editor",
+        "WP_API_PASSWORD": "xxxx xxxx xxxx xxxx xxxx xxxx"
       }
     }
   }
@@ -275,9 +275,9 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) o
       "command": "npx",
       "args": ["-y", "@automattic/mcp-wordpress-remote@latest"],
       "env": {
-        "WP_SITE_URL": "https://your-site.com",
-        "WP_USERNAME": "ai-editor",
-        "WP_APP_PASSWORD": "xxxx xxxx xxxx xxxx xxxx xxxx"
+        "WP_API_URL": "https://your-site.com/wp-json/mcp/mcp-adapter-default-server",
+        "WP_API_USERNAME": "ai-editor",
+        "WP_API_PASSWORD": "xxxx xxxx xxxx xxxx xxxx xxxx"
       }
     }
   }
@@ -300,9 +300,9 @@ Requires VS Code 1.99+. Add to `.vscode/mcp.json` in your project (workspace-sco
       "command": "npx",
       "args": ["-y", "@automattic/mcp-wordpress-remote@latest"],
       "env": {
-        "WP_SITE_URL": "https://your-site.com",
-        "WP_USERNAME": "ai-editor",
-        "WP_APP_PASSWORD": "xxxx xxxx xxxx xxxx xxxx xxxx"
+        "WP_API_URL": "https://your-site.com/wp-json/mcp/mcp-adapter-default-server",
+        "WP_API_USERNAME": "ai-editor",
+        "WP_API_PASSWORD": "xxxx xxxx xxxx xxxx xxxx xxxx"
       }
     }
   }
@@ -323,9 +323,9 @@ Add to `~/.copilot/mcp-config.json`:
       "command": "npx",
       "args": ["-y", "@automattic/mcp-wordpress-remote@latest"],
       "env": {
-        "WP_SITE_URL": "https://your-site.com",
-        "WP_USERNAME": "ai-editor",
-        "WP_APP_PASSWORD": "xxxx xxxx xxxx xxxx xxxx xxxx"
+        "WP_API_URL": "https://your-site.com/wp-json/mcp/mcp-adapter-default-server",
+        "WP_API_USERNAME": "ai-editor",
+        "WP_API_PASSWORD": "xxxx xxxx xxxx xxxx xxxx xxxx"
       }
     }
   }
@@ -345,9 +345,9 @@ command = "npx"
 args = ["-y", "@automattic/mcp-wordpress-remote@latest"]
 
 [mcp_servers.wordpress.env]
-WP_SITE_URL = "https://your-site.com"
-WP_USERNAME = "ai-editor"
-WP_APP_PASSWORD = "xxxx xxxx xxxx xxxx xxxx xxxx"
+WP_API_URL = "https://your-site.com/wp-json/mcp/mcp-adapter-default-server"
+WP_API_USERNAME = "ai-editor"
+WP_API_PASSWORD = "xxxx xxxx xxxx xxxx xxxx xxxx"
 ```
 
 </details>
@@ -364,9 +364,9 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
       "command": "npx",
       "args": ["-y", "@automattic/mcp-wordpress-remote@latest"],
       "env": {
-        "WP_SITE_URL": "https://your-site.com",
-        "WP_USERNAME": "ai-editor",
-        "WP_APP_PASSWORD": "xxxx xxxx xxxx xxxx xxxx xxxx"
+        "WP_API_URL": "https://your-site.com/wp-json/mcp/mcp-adapter-default-server",
+        "WP_API_USERNAME": "ai-editor",
+        "WP_API_PASSWORD": "xxxx xxxx xxxx xxxx xxxx xxxx"
       }
     }
   }
@@ -387,9 +387,9 @@ Add to `~/.gemini/settings.json`:
       "command": "npx",
       "args": ["-y", "@automattic/mcp-wordpress-remote@latest"],
       "env": {
-        "WP_SITE_URL": "https://your-site.com",
-        "WP_USERNAME": "ai-editor",
-        "WP_APP_PASSWORD": "xxxx xxxx xxxx xxxx xxxx xxxx"
+        "WP_API_URL": "https://your-site.com/wp-json/mcp/mcp-adapter-default-server",
+        "WP_API_USERNAME": "ai-editor",
+        "WP_API_PASSWORD": "xxxx xxxx xxxx xxxx xxxx xxxx"
       }
     }
   }
