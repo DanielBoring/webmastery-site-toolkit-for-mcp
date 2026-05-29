@@ -1,18 +1,10 @@
 # WordPress MCP Abilities
 
-A WordPress plugin that registers core content management abilities for the [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, making them accessible to AI agents via the Model Context Protocol (MCP).
-
-## What it is
-
-The MCP Adapter plugin (by WordPress.org) provides the *framework* for exposing WordPress functionality over MCP — but it ships with zero content management abilities out of the box. Only plugins that explicitly register abilities show up as MCP tools.
-
-This plugin fills that gap. It registers 24 abilities covering the operations an editor needs day-to-day: reading and writing posts and pages, managing taxonomy, moderating comments, running health checks, auditing security, and analyzing SEO.
+**WordPress MCP Abilities** is a companion plugin for the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) by Automattic. The MCP Adapter is a transport framework — it handles the MCP session, REST endpoint, and protocol routing — but ships with no content management abilities. Any tools an AI agent can actually call must come from plugins that register them. This plugin registers 24 abilities covering what an editor needs day-to-day: posts, pages, taxonomy, comments, site health, security auditing, and SEO analysis.
 
 ## Why you'd use it
 
-If you're connecting an AI assistant (like Claude) to a WordPress site via the `@automattic/mcp-wordpress-remote` MCP server, without this plugin the AI can only see whatever other plugins have registered — typically nothing beyond Yoast SEO scores. This plugin gives the AI a full working vocabulary for your site.
-
-## When it makes sense
+If you're connecting an AI assistant (like Claude) to a WordPress site via the `@automattic/mcp-wordpress-remote` MCP server, without this plugin the AI can only see the 3 meta/discovery abilities the MCP Adapter ships with — there are no editorial tools to call. This plugin gives the AI a full working vocabulary for your site.
 
 - You want an AI agent to draft, update, or publish posts and pages
 - You want to ask an AI to audit your site's security or health posture
@@ -122,7 +114,7 @@ Returns findings in `fail` / `warn` / `pass` buckets with actionable description
 
 ### 1. Install the MCP Adapter plugin
 
-This plugin depends on MCP Adapter being installed and active. Install it first via WP Admin or by cloning the repo into `wp-content/plugins/`.
+This plugin depends on MCP Adapter being installed and active. Install it first via **WP Admin → Plugins → Add New**, search for "MCP Adapter", and activate it.
 
 ### 2. Install WordPress MCP Abilities
 
@@ -191,7 +183,7 @@ Configure `@automattic/mcp-wordpress-remote` to point at your WordPress site. In
 
 ## Verification
 
-After activation and MCP client configuration, call the discover ability:
+After activation and MCP client configuration, run the following from your MCP client:
 
 ```
 mcp-adapter-discover-abilities
@@ -214,7 +206,7 @@ wp-mcp/site-health-check  {}
 
 ---
 
-## Security notes
+## Security
 
 - All abilities enforce WordPress capability checks via `permission_callback`. The ability list reflects what the authenticated user is actually allowed to do — an editor cannot call abilities that require admin caps.
 - `delete-post` and `delete-page` move content to trash, not permanent deletion.
