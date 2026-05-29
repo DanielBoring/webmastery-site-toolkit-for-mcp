@@ -43,7 +43,7 @@ All 27 abilities available: full editorial access to posts, pages, taxonomy, com
 ## Quickstart
 
 **1. Install Official WordPress MCP Adapter Plugin**
-WP Admin → Plugins → Add New → search "MCP Adapter" → Install & Activate
+Download the [latest release zip](https://github.com/WordPress/mcp-adapter/releases/latest) → WP Admin → Plugins → Add New → Upload Plugin → Install & Activate
 
 **2. Install WordPress MCP Abilities Plugin**
 Download the [latest release zip](https://github.com/DanielBoring/wordpress-mcp-abilities/releases/latest) → WP Admin → Plugins → Add New → Upload Plugin → Install & Activate
@@ -72,7 +72,7 @@ WP Admin → Users → edit the user → Application Passwords → enter a name 
 ```
 
 **6. Verify**
-Run `mcp-adapter-discover-abilities` — you should see 27 abilities (3 from MCP Adapter + 24 from this plugin).
+Run `mcp-adapter-discover-abilities` — you should see additional abilities enabled by this companion plugin.
 
 ---
 
