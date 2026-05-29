@@ -1,10 +1,10 @@
+<h2 align="center">
+  <img width="80%" alt="WordPress MCP Abilities" src="assets/gh_banner.png"><br/>
+  WordPress MCP Abilities<br/>
+  <sub>Give your AI agent editorial control over WordPress.</sub>
+</h2>
+
 <div align="center">
-  <img src="assets/gh_banner.png" alt="WordPress MCP Abilities" />
-
-  <h1>WordPress MCP Abilities</h1>
-  <h2>Give your AI agent editorial control over WordPress.</h2>
-
-
   <h2>
     <a href="https://wordpress.org">
       <img src="https://img.shields.io/badge/WordPress-6.9%2B-21759b?logo=wordpress&logoColor=white" alt="WordPress 6.9+" />
@@ -17,38 +17,63 @@
     </a>
   </h2>
 
-</div>
-
-<div align="center">
-
-[Why you'd use it](#why-youd-use-it) · [Architecture](#architecture) · [Abilities](#abilities) · [Requirements](#requirements) · [Installation](#installation) · [Verification](#verification) · [Security](#security)
+[Quickstart](#quickstart) • [Architecture](#architecture) • [Abilities](#abilities) • [Requirements](#requirements) • [Installation](#installation) • [Verification](#verification) • [Security](#security)
 
 </div>
 
----
-
-**WordPress MCP Abilities** is a companion plugin for the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) by WordPress. The MCP Adapter is a transport framework — it handles the MCP session, REST endpoint, and protocol routing — but ships with no content management abilities. Any tools an AI agent can actually call must come from plugins that register them. 
-
-This plugin (WordPress MCP Abilities) registers 24 abilities covering what an editor needs day-to-day: posts, pages, taxonomy, comments, site health, security auditing, and SEO analysis.
-
-## Why you'd use it
-
-This plugin presents WordPress content management abilities to the MCP Adapter — giving your AI agent the tools to take action: publish a draft, run a security audit, check site health, or analyze a post's SEO. Without it, the MCP Adapter has no editorial tools to offer.
+**WordPress MCP Abilities** is a companion plugin for the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) by WordPress. The MCP Adapter is a transport framework — it handles the MCP session, REST endpoint, and protocol routing — but ships with no content management abilities out of the box. Any tools an AI agent can actually call must come from plugins that register them. This plugin fills that gap with 24 abilities, giving your AI agent the tools to take action: publish a draft, run a security audit, check site health, or analyze a post's SEO.
 
 - You want an AI agent to draft, update, or publish posts and pages
 - You want to ask an AI to audit your site's security or health posture
 - You want SEO analysis integrated into your content workflow
 - You open `mcp-adapter-discover-abilities` and see only the adapter's own meta abilities, with no content tools
 
-## Before:
-MCP Adapter only found MCP abilities from Yoast
+### Without this plugin
+Only the MCP Adapter's 3 meta/discovery abilities are visible — no content tools.
 
-![Only the MCP Adapter](assets/before.png)
+![Before](assets/before.png)
 
-## After:
-Unlock additional WordPress abilities with this plugin!
+### With this plugin
+All 27 abilities available: full editorial access to posts, pages, taxonomy, comments, security, and SEO.
 
-![With WordPress MCP Abiltiies!](assets/after.png)
+![After](assets/after.png)
+
+---
+
+## Quickstart
+
+**1. Install Official WordPress MCP Adapter Plugin**
+WP Admin → Plugins → Add New → search "MCP Adapter" → Install & Activate
+
+**2. Install WordPress MCP Abilities Plugin**
+Download the [latest release zip](https://github.com/DanielBoring/wordpress-mcp-abilities/releases/latest) → WP Admin → Plugins → Add New → Upload Plugin → Install & Activate
+
+**3. Create a dedicated Editor user**
+WP Admin → Users → Add New → set Role to **Editor** → Add New User
+
+**4. Create an application password**
+WP Admin → Users → edit the user → Application Passwords → enter a name → Add → copy the password
+
+**5. Configure your MCP client**
+```json
+{
+  "mcpServers": {
+    "wordpress": {
+      "command": "npx",
+      "args": ["-y", "@automattic/mcp-wordpress-remote@latest"],
+      "env": {
+        "WP_SITE_URL": "https://your-site.com",
+        "WP_USERNAME": "ai-editor",
+        "WP_APP_PASSWORD": "xxxx xxxx xxxx xxxx xxxx xxxx"
+      }
+    }
+  }
+}
+```
+
+**6. Verify**
+Run `mcp-adapter-discover-abilities` — you should see 27 abilities (3 from MCP Adapter + 24 from this plugin).
+
 ---
 
 ## Architecture
