@@ -85,15 +85,20 @@ AI Agent (e.g. Claude Code, Codex, etc)
         ▼
 @automattic/mcp-wordpress-remote          ← MCP server (npm process, runs locally)
         │
-        │  WordPress REST API
+        │  HTTPS · WordPress REST API
         │  POST /wp-json/mcp/mcp-adapter-default-server
         ▼
-WordPress Site
-  ├── MCP Adapter plugin                  ← framework: registers the REST endpoint,
-  │     (WordPress/mcp-adapter)               handles sessions, routes MCP calls
-  │
-  └── WordPress MCP Abilities plugin             ← this plugin: registers the actual
-        (this repo)                           abilities the AI can call
+MCP Adapter plugin                        ← framework: registers the REST endpoint,
+  (WordPress/mcp-adapter)                     handles the MCP session, routes calls
+        │
+        │  calls wp_register_ability() handlers at runtime
+        ▼
+WordPress MCP Abilities plugin            ← this plugin: registers the actual
+  (this repo)                                 abilities the AI can call
+        │
+        │  WordPress core APIs (no direct DB queries)
+        ▼
+WordPress database
 ```
 
 The MCP Adapter handles the transport layer. This plugin handles the *content* — it registers abilities using `wp_register_ability()` that the adapter then exposes as MCP tools.
