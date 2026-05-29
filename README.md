@@ -58,7 +58,7 @@ WP Admin → Users → edit the user → Application Passwords → enter a name 
 See [Step 5 — Connect your MCP client](#5-connect-your-mcp-client) for config snippets covering Claude Code, Claude Desktop, GitHub Copilot (VS Code), GitHub Copilot CLI, Codex, Windsurf, Gemini CLI, and ChatGPT.
 
 **6. Verify**
-Run `mcp-adapter-discover-abilities` — you should see additional abilities enabled by this companion plugin.
+Ask your MCP client or agent to call `mcp-adapter-discover-abilities` — you should see additional abilities enabled by this companion plugin.
 
 ---
 
@@ -97,14 +97,14 @@ New abilities and feature requests are tracked in [GitHub Issues](https://github
 
 ### Role overview
 
-Each ability enforces a WordPress capability check. The table below maps standard WordPress roles to the capabilities this plugin uses so you can choose the right role for your MCP service account.
+Each ability enforces a WordPress capability check. The table below maps standard WordPress roles to the plugin-relevant capabilities they provide so you can choose the right role for your MCP service account.
 
-| Role          | Capabilities used by this plugin                                         | Suitable for                                                                 |
-| ------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| Subscriber    | `read`                                                                   | Read-only workflows: taxonomy browsing, health checks, SEO overview          |
-| Author        | `edit_posts`, `delete_posts`, `upload_files`                             | Creating and managing the agent's own posts only                             |
-| **Editor** ✓  | All Author caps + `edit_pages`, `manage_categories`, `moderate_comments` | **Full editorial control — recommended default**                             |
-| Administrator | All Editor caps + `manage_options`, `activate_plugins`, `edit_users`     | Required for audit, performance, database, backup, and user access abilities |
+| Role          | Plugin-relevant capabilities provided                                    | Suitable for                                                        |
+| ------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| Subscriber    | `read`                                                                   | Read-only workflows: taxonomy browsing, health checks, SEO overview |
+| Author        | `edit_posts`, `delete_posts`                                             | Creating and managing the agent's own posts only                    |
+| **Editor** ✓  | All Author caps + `edit_pages`, `delete_pages`, `manage_categories`, `moderate_comments` | **Full editorial control — recommended default** |
+| Administrator | All Editor caps, plus extra administrative capabilities not required by the current ability set | Future admin-only audit workflows, if added |
 
 > **Scope note for `edit_posts`:** This capability is available to Authors and above, but WordPress scopes query results to the authenticated user's own content unless `edit_others_posts` is also present. An Editor account (which has `edit_others_posts`) sees all content site-wide. Use Author only if the agent should be limited to content it created.
 
@@ -158,7 +158,7 @@ Each ability enforces a WordPress capability check. The table below maps standar
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---------- |
 | `wp-mcp/security-audit` | Check for common security issues: debug mode, file editor, SSL, admin username, WP/plugin version currency, XMLRPC, and auth key strength | `read`              | Subscriber |
 
-Returns findings in `fail` / `warn` / `pass` buckets with actionable descriptions.
+Returns findings in `fail` / `warn` / `pass` buckets with actionable descriptions. The ability itself requires `read`; plugin update checks are included only when the authenticated user also has `update_plugins`.
 
 ### SEO Analysis
 | Ability                    | Description                                                                                                                                     | Required Capability | Min. Role  |
@@ -189,7 +189,7 @@ Returns findings in `fail` / `warn` / `pass` buckets with actionable description
 
 ### 1. Install the MCP Adapter plugin
 
-This plugin depends on MCP Adapter being installed and active. Install it first via **WP Admin → Plugins → Add New**, search for "MCP Adapter", and activate it.
+This plugin depends on MCP Adapter being installed and active. Install it first from the official [WordPress MCP Adapter project](https://github.com/WordPress/mcp-adapter) or its [latest release](https://github.com/WordPress/mcp-adapter/releases/latest), then upload and activate it in **WP Admin → Plugins → Add New → Upload Plugin**.
 
 ### 2. Install WordPress MCP Abilities
 
@@ -199,7 +199,7 @@ This plugin depends on MCP Adapter being installed and active. Install it first 
 
 1. Download or build the zip:
    ```bash
-   git clone https://github.com/DanielBoring/wordpress-mcp-abilities.git
+   git clone https://github.com/DanielBoring/wordpress-mcp-abilities.git wp-mcp-abilities
    cd wp-mcp-abilities
    zip -r wp-mcp-abilities.zip . --exclude='.git/*'
    ```
@@ -411,26 +411,22 @@ ChatGPT's MCP integration works differently from the tools above. Rather than a 
 
 ## Verification
 
-After activation and MCP client configuration, run the following from your MCP client:
+`mcp-adapter-discover-abilities` is an MCP tool registered by the WordPress MCP Adapter plugin — it is not a CLI command. Invoke it through your AI assistant's chat interface by asking your agent to call it. The tool name and behaviour are the same across all supported clients; only the invocation method differs.
 
-```
-mcp-adapter-discover-abilities
-```
+| Client | How to invoke |
+| --- | --- |
+| Claude Code / Claude Desktop | Ask Claude: *"Call mcp-adapter-discover-abilities"* |
+| GitHub Copilot (VS Code / CLI) | Ask Copilot in chat: *"Use the mcp-adapter-discover-abilities tool"* |
+| Codex | Ask Codex: *"Run mcp-adapter-discover-abilities"* |
+| Windsurf / Gemini CLI | Ask the assistant to call `mcp-adapter-discover-abilities` |
 
 You should see the MCP Adapter's built-in meta/discovery abilities plus all abilities registered by this plugin.
 
-Test a few to confirm they're working:
+To confirm everything is working, ask your agent to call a few abilities:
 
-```
-# List the 5 most recent published posts
-wp-mcp/list-posts  { "status": "publish", "per_page": 5 }
-
-# Run a security audit
-wp-mcp/security-audit  {}
-
-# Check site health
-wp-mcp/site-health-check  {}
-```
+- `wp-mcp/list-posts` — *"List the 5 most recent published posts"*
+- `wp-mcp/security-audit` — *"Run a security audit of my WordPress site"*
+- `wp-mcp/site-health-check` — *"Check WordPress site health"*
 
 ---
 
