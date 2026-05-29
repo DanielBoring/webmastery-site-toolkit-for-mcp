@@ -4,7 +4,7 @@ Tags: mcp, ai, automation, content-management, artificial-intelligence
 Requires at least: 6.9
 Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,6 +81,9 @@ Delete operations for posts and pages move content to trash, not permanent delet
 
 == Changelog ==
 
+= 1.3.1 =
+* Add `yoast_meta_description` and `yoast_focus_keyword` fields to `update-post` and `update-page`
+
 = 1.3.0 =
 * Initial public release
 * 24 abilities: posts (5), pages (5), taxonomy (6), comments (4), site health (1), security audit (1), SEO analysis (2)
@@ -89,6 +92,9 @@ Delete operations for posts and pages move content to trash, not permanent delet
 * Security audit with fail/warn/pass buckets and remediation guidance
 
 == Upgrade Notice ==
+
+= 1.3.1 =
+Adds Yoast meta description and focus keyword fields to update-post and update-page.
 
 = 1.3.0 =
 Initial release.
