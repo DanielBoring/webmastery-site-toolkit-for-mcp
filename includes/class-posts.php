@@ -154,6 +154,9 @@ class WP_MCP_Posts {
 			$create_props['category_ids'] = [ 'type' => 'array', 'items' => [ 'type' => 'integer' ] ];
 			$create_props['tag_ids']      = [ 'type' => 'array', 'items' => [ 'type' => 'integer' ] ];
 		}
+		if ( 'page' === $type ) {
+			$create_props['parent'] = [ 'type' => 'integer', 'description' => 'Parent page ID (0 for top-level)' ];
+		}
 
 		wp_register_ability( "wp-mcp/create-{$type}", [
 			'label'               => "Create {$label}",
@@ -175,7 +178,7 @@ class WP_MCP_Posts {
 				];
 
 				if ( ! empty( $input['scheduled_date'] ) ) {
-					$args['post_date']     = date( 'Y-m-d H:i:s', strtotime( sanitize_text_field( $input['scheduled_date'] ) ) );
+					$args['post_date']     = wp_date( 'Y-m-d H:i:s', strtotime( sanitize_text_field( $input['scheduled_date'] ) ) );
 					$args['post_date_gmt'] = get_gmt_from_date( $args['post_date'] );
 				}
 				if ( ! empty( $input['excerpt'] ) ) {
@@ -183,6 +186,9 @@ class WP_MCP_Posts {
 				}
 				if ( ! empty( $input['slug'] ) ) {
 					$args['post_name'] = sanitize_title( $input['slug'] );
+				}
+				if ( 'page' === $type && isset( $input['parent'] ) ) {
+					$args['post_parent'] = absint( $input['parent'] );
 				}
 
 				$id = wp_insert_post( $args, true );
@@ -224,6 +230,9 @@ class WP_MCP_Posts {
 			$update_props['category_ids'] = [ 'type' => 'array', 'items' => [ 'type' => 'integer' ] ];
 			$update_props['tag_ids']      = [ 'type' => 'array', 'items' => [ 'type' => 'integer' ] ];
 		}
+		if ( 'page' === $type ) {
+			$update_props['parent'] = [ 'type' => 'integer', 'description' => 'Parent page ID (0 for top-level)' ];
+		}
 
 		$update_props['yoast_meta_description'] = [ 'type' => 'string', 'description' => 'Yoast SEO meta description (stored as _yoast_wpseo_metadesc)' ];
 		$update_props['yoast_focus_keyword']    = [ 'type' => 'string', 'description' => 'Yoast SEO focus keyword (stored as _yoast_wpseo_focuskw)' ];
@@ -263,8 +272,11 @@ class WP_MCP_Posts {
 					$args['post_status'] = $input['status'];
 				}
 				if ( ! empty( $input['scheduled_date'] ) ) {
-					$args['post_date']     = date( 'Y-m-d H:i:s', strtotime( sanitize_text_field( $input['scheduled_date'] ) ) );
+					$args['post_date']     = wp_date( 'Y-m-d H:i:s', strtotime( sanitize_text_field( $input['scheduled_date'] ) ) );
 					$args['post_date_gmt'] = get_gmt_from_date( $args['post_date'] );
+				}
+				if ( 'page' === $type && isset( $input['parent'] ) ) {
+					$args['post_parent'] = absint( $input['parent'] );
 				}
 
 				$result = wp_update_post( $args, true );

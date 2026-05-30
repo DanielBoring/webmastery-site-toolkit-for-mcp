@@ -3,8 +3,8 @@ Contributors: deboring
 Tags: mcp, ai, automation, content-management, artificial-intelligence
 Requires at least: 6.9
 Tested up to: 6.9
-Requires PHP: 7.4
-Stable tag: 1.3.1
+Requires PHP: 8.0
+Stable tag: 1.3.2
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
@@ -91,12 +91,12 @@ After activation, call `mcp-adapter-discover-abilities` from your MCP client. Yo
 
 Delete operations for posts and pages move content to trash, not permanent deletion. All inputs are sanitized using WordPress core functions. All operations go through the WordPress API — no direct database queries.
 
-== Screenshots ==
-
-1. Before: only the MCP Adapter's 3 meta/discovery abilities are visible — no content tools.
-2. After: all abilities available — full editorial access to posts, pages, taxonomy, comments, site health, security, and SEO.
-
 == Changelog ==
+
+= 1.3.2 =
+* Bump minimum PHP requirement to 8.0 (str_starts_with is unavailable on PHP 7.4)
+* Add parent field support to create-page and update-page abilities
+* Replace PHP date() with wp_date() per WordPress coding standards
 
 = 1.3.1 =
 * Add `yoast_meta_description` and `yoast_focus_keyword` fields to `update-post` and `update-page`
@@ -109,6 +109,9 @@ Delete operations for posts and pages move content to trash, not permanent delet
 * Security audit with fail/warn/pass buckets and remediation guidance
 
 == Upgrade Notice ==
+
+= 1.3.2 =
+Requires PHP 8.0+. Adds parent page hierarchy support to create-page and update-page.
 
 = 1.3.1 =
 Adds Yoast meta description and focus keyword fields to update-post and update-page.
