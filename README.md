@@ -34,7 +34,7 @@ Only the MCP Adapter's 3 meta/discovery abilities are visible — no content too
 ![Before](assets/before.png)
 
 ### With this plugin
-All abilities available: full editorial access to posts, pages, taxonomy, comments, security, and SEO.
+All abilities available: full editorial access to posts, pages, taxonomy, comments, media, user lookup, security, and SEO.
 
 ![After](assets/after.png)
 
@@ -104,7 +104,7 @@ Each ability enforces a WordPress capability check. The table below maps standar
 | Subscriber    | `read`                                                                   | Read-only workflows: taxonomy browsing, health checks, SEO overview |
 | Author        | `edit_posts`, `delete_posts`, `upload_files`                             | Creating and managing the agent's own posts and media               |
 | **Editor** ✓  | All Author caps + `edit_pages`, `delete_pages`, `manage_categories`, `moderate_comments` | **Full editorial control — recommended default** |
-| Administrator | All Editor caps, plus extra administrative capabilities not required by the current ability set | Future admin-only audit workflows, if added |
+| Administrator | All Editor caps, plus `list_users` for user lookup and other administrative capabilities | User lookup (`list-users` / `get-user`) and future admin-only workflows |
 
 > **Scope note for `edit_posts`:** This capability is available to Authors and above, but WordPress scopes query results to the authenticated user's own content unless `edit_others_posts` is also present. An Editor account (which has `edit_others_posts`) sees all content site-wide. Use Author only if the agent should be limited to content it created.
 
@@ -157,6 +157,12 @@ Each ability enforces a WordPress capability check. The table below maps standar
 | `wp-mcp/delete-media`  | Permanently delete a media item                         | `delete_posts`      | Author    |
 
 † Author-role access is scoped to media owned by the authenticated user. Use **Editor** to manage media site-wide.
+
+### Users
+| Ability              | Description                                             | Required Capability | Min. Role     |
+| -------------------- | ------------------------------------------------------- | ------------------- | ------------- |
+| `wp-mcp/list-users`  | List users with filters (role, search, pagination)      | `list_users`        | Administrator |
+| `wp-mcp/get-user`    | Get a single user by ID                                 | `list_users`        | Administrator |
 
 ### Site Health
 | Ability                    | Description                                                                                                | Required Capability | Min. Role  |
@@ -245,7 +251,7 @@ It is recommended to create a dedicated user for your AI agent rather than using
 3. Set the **Role** to **Editor**
 4. Click **Add New User**
 
-> **Why Editor and not Administrator?** The Editor role covers all capabilities used by the current ability set (`edit_posts`, `edit_pages`, `delete_posts`, `delete_pages`, `upload_files`, `manage_categories`, `moderate_comments`, `read`). For planned audit abilities — database health, performance status, backup status, plugin audit, and user access audit — an Administrator account will be required, as those abilities need `manage_options`, `activate_plugins`, or `edit_users`. If you plan to use those abilities, create a separate Administrator service account and keep the Editor account for content workflows. See the [Role overview](#role-overview) for the full breakdown.
+> **Why Editor and not Administrator?** Editor is still the recommended default for content workflows and covers the editorial capabilities used by posts, pages, taxonomy, comments, media, health, security, and SEO (`edit_posts`, `edit_pages`, `delete_posts`, `delete_pages`, `upload_files`, `manage_categories`, `moderate_comments`, `read`). The new user lookup abilities (`list-users`, `get-user`) require `list_users`, which is typically Administrator-only. If you need those abilities, use a separate dedicated Administrator service account and keep the Editor account for day-to-day content operations. See the [Role overview](#role-overview) for the full breakdown.
 
 ### 4. Create an application password
 

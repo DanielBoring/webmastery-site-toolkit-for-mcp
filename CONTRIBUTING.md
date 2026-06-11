@@ -32,7 +32,7 @@ Thanks for your interest in contributing. This document covers how to report bug
    wp plugin activate wp-mcp-abilities
    ```
 3. Create a test user with the Editor role and generate an application password (see README.md for details)
-4. Point your MCP client at the local site and run `mcp-adapter-discover-abilities` to confirm the 24 abilities load
+4. Point your MCP client at the local site and run `mcp-adapter-discover-abilities` to confirm the abilities load
 
 ---
 
