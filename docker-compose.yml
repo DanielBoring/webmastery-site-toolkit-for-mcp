@@ -15,7 +15,7 @@ services:
       retries: 10
 
   wordpress:
-    image: wordpress:6.8.2-php8.2-apache
+    image: wordpress:6.9-php8.2-apache
     container_name: wordpress_server
     depends_on:
       mysql:
