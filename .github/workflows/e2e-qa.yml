@@ -17,7 +17,7 @@ jobs:
       changed-files: ${{ steps.filter.outputs.changed-files }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
           fetch-depth: 0
 
@@ -73,7 +73,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
           fetch-depth: 1
 
