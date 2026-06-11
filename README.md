@@ -156,6 +156,8 @@ Each ability enforces a WordPress capability check. The table below maps standar
 | `wp-mcp/update-media`  | Update media alt text, title, and caption               | `upload_files`      | Author    |
 | `wp-mcp/delete-media`  | Permanently delete a media item                         | `delete_posts`      | Author    |
 
+† Author-role access is scoped to media owned by the authenticated user. Use **Editor** to manage media site-wide.
+
 ### Site Health
 | Ability                    | Description                                                                                                | Required Capability | Min. Role  |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------- | ---------- |

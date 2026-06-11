@@ -54,6 +54,32 @@ class WP_MCP_Media {
 		};
 	}
 
+	private static function user_can_view_attachment( $attachment ) {
+		$attachment = get_post( $attachment );
+		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
+			return false;
+		}
+
+		if ( current_user_can( 'edit_others_posts' ) ) {
+			return true;
+		}
+
+		return (int) $attachment->post_author === get_current_user_id();
+	}
+
+	private static function user_can_delete_attachment( $attachment ) {
+		$attachment = get_post( $attachment );
+		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
+			return false;
+		}
+
+		if ( current_user_can( 'delete_others_posts' ) ) {
+			return true;
+		}
+
+		return (int) $attachment->post_author === get_current_user_id();
+	}
+
 	private static function register_list() {
 		wp_register_ability( 'wp-mcp/list-media', [
 			'label'               => 'List Media',
@@ -83,6 +109,9 @@ class WP_MCP_Media {
 				}
 				if ( ! empty( $input['search'] ) ) {
 					$args['s'] = sanitize_text_field( $input['search'] );
+				}
+				if ( ! current_user_can( 'edit_others_posts' ) ) {
+					$args['author'] = get_current_user_id();
 				}
 
 				$query = new WP_Query( $args );
@@ -123,6 +152,9 @@ class WP_MCP_Media {
 				if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
 					return [ 'success' => false, 'error' => 'Media item not found.' ];
 				}
+				if ( ! self::user_can_view_attachment( $attachment ) ) {
+					return [ 'success' => false, 'error' => 'You do not have permission to view this media item.' ];
+				}
 
 				return [ 'success' => true, 'data' => self::normalize( $attachment ) ];
 			},
@@ -155,6 +187,9 @@ class WP_MCP_Media {
 
 				if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
 					return [ 'success' => false, 'error' => 'Media item not found.' ];
+				}
+				if ( ! self::user_can_view_attachment( $attachment ) ) {
+					return [ 'success' => false, 'error' => 'You do not have permission to update this media item.' ];
 				}
 
 				$args = [ 'ID' => $id ];
@@ -206,6 +241,9 @@ class WP_MCP_Media {
 
 				if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
 					return [ 'success' => false, 'error' => 'Media item not found.' ];
+				}
+				if ( ! self::user_can_delete_attachment( $attachment ) ) {
+					return [ 'success' => false, 'error' => 'You do not have permission to delete this media item.' ];
 				}
 
 				$result = wp_delete_attachment( $id, true );
