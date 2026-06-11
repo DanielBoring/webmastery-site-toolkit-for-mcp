@@ -1,188 +1,58 @@
 # GitHub Actions Automation Guide
 
-This repository uses GitHub Actions to automate the complete development workflow: from issue to PR to release.
+This repository uses GitHub Actions for two purposes:
+1. Docker-based E2E QA validation.
+2. Tag-based release publishing.
 
-## Workflows Overview
+## Trigger map (event -> workflow -> behavior)
 
-### 1. **E2E QA Testing** (`e2e-qa.yml`)
-Runs automatically on every pull request push and on pushes to main/develop branches.
+| Event | Workflow file | Behavior |
+|------|------|------|
+| `pull_request` (`opened`, `synchronize`, `reopened`) | `.github/workflows/e2e-qa.yml` | Detects relevant changed files, runs E2E QA when in scope, and posts an accurate PR comment (pass/fail). |
+| `push` to `main` or `develop` | `.github/workflows/e2e-qa.yml` | Detects relevant changed files and runs E2E QA when in scope. |
+| `workflow_dispatch` | `.github/workflows/e2e-qa.yml` | Runs E2E QA on demand. |
+| `push` tag `v*` | `.github/workflows/release.yml` | Validates version/changelog alignment, builds and validates release ZIP, then publishes a GitHub release. |
 
-**What it does:**
-- Spins up WordPress + MySQL using Docker Compose
-- Installs MCP Adapter v0.5.0
-- Creates test users (Author, Editor, Subscriber)
-- Tests all media abilities for proper authorization
-- Verifies existing features still work
-- Comments test results directly on the PR
+## Workflow details
 
-**Triggers:**
-- `pull_request` (opened, synchronize, reopened)
-- `push` to main/develop branches
+### E2E QA (`e2e-qa.yml`)
 
-**Required:** PR must pass E2E QA before merge (recommended branch protection rule)
+**Execution flow**
+1. Detect whether changed files are in E2E scope.
+2. If in scope, start Docker stack and run `scripts/e2e-test.sh`.
+3. Validate WordPress debug log for fatal/error-level entries.
+4. Post truthful PR status comment from an isolated comment job.
+5. Always clean up Docker resources.
 
-### 2. **Auto-create PR from Issue** (`auto-pr-from-issue.yml`)
-Creates a feature branch and PR when an issue is labeled `ready-for-dev`.
+**Security model**
+- E2E execution jobs run with read-only permissions.
+- PR commenting is isolated to a dedicated job with comment-only write scope.
+- Actions are pinned to immutable SHAs.
 
-**What it does:**
-- Listens for `ready-for-dev` label on issues
-- Creates feature branch `issue-{number}`
-- Creates PR with title and issue context
-- Automatically links PR to issue with `Closes #X`
-- Adds comment on issue confirming PR creation
+### Release (`release.yml`)
 
-**Triggers:**
-- `issues: labeled` with label `ready-for-dev`
+**Execution flow**
+1. Trigger on tag push matching `v*`.
+2. Validate `tag version == plugin header version == readme stable tag`.
+3. Verify changelog notes exist for the tagged version.
+4. Build plugin ZIP and validate required/forbidden contents.
+5. Fail if a release for the same tag already exists.
+6. Publish release with notes from `readme.txt`.
 
-**How to use:**
-1. Create/find an issue
-2. Add label `ready-for-dev`
-3. Workflow automatically creates `issue-{number}` PR
-4. E2E QA runs automatically
-5. Merge when ready
+## Issue and PR process
 
-### 3. **Auto-release on Merge** (`auto-release.yml`)
-Detects version changes and creates GitHub Release automatically.
+- Use normal issue triage and branch-based PR flow.
+- Include `Closes #N` / `Fixes #N` / `Resolves #N` in PR body when merge should close an issue.
+- GitHub native issue closing handles closure on merge; no custom close workflow is used.
 
-**What it does:**
-- Triggers when code is merged to main
-- Compares current version to latest git tag
-- Extracts changelog from `readme.txt`
-- Creates GitHub Release with:
-  - Tag name: `v{version}`
-  - Release notes from changelog
-  - Release asset (ZIP file)
-- Comments on merged PR with release link
-
-**Triggers:**
-- `push` to main with changes to:
-  - `wp-mcp-abilities.php` (version header)
-  - `readme.txt` (changelog)
-  - `includes/**` (ability changes)
-
-**How versioning works:**
-- Plugin version in `wp-mcp-abilities.php` header is source of truth
-- Follow semantic versioning: `MAJOR.MINOR.PATCH`
-  - **MAJOR** (X.0.0): breaking changes to ability names/inputs
-  - **MINOR** (1.X.0): new features (backward compatible)
-  - **PATCH** (1.4.X): bug/security fixes only
-- Update version + add changelog entry + merge PR
-- Release workflow automatically tags and publishes
-
-### 4. **Auto-close Issue on PR Merge** (`auto-close-issue.yml`)
-Automatically closes linked issues when their PR is merged.
-
-**What it does:**
-- Detects "Closes #X" in PR body
-- Adds final comment to issue with merge confirmation
-- Closes the issue automatically
-
-**Triggers:**
-- `pull_request: closed` (only if merged)
-
-**Important:** PR must include `Closes #X` in body (added automatically by auto-pr-from-issue workflow)
-
-## Complete Workflow Example
-
-### Scenario: Add new media ability
-
-1. **Create Issue** (e.g., "Add delete-media ability")
-   - Describe requirements
-   - Define acceptance criteria
-
-2. **Label Issue** with `ready-for-dev`
-   - ✅ Workflow: Auto-creates PR `issue-{number}`
-   - ✅ Comment added to issue linking PR
-
-3. **Push code to PR branch**
-   - ✅ Workflow: E2E QA runs automatically
-   - ✅ Workflow: Comments test results on PR
-   - ✅ Tests must pass before merge
-
-4. **Merge PR to main**
-   - ✅ Workflow: Detects version bump in `wp-mcp-abilities.php`
-   - ✅ Workflow: Creates GitHub Release with changelog
-   - ✅ Workflow: Comments on PR with release link
-   - ✅ Workflow: Closes linked issue
-
-5. **Done!** 🎉
-   - No manual tagging
-   - No manual release creation
-   - No manual issue closing
-
-## Local Testing
-
-You can also run E2E tests locally using Docker Compose:
+## Local E2E testing
 
 ```bash
-# Start WordPress stack
-docker-compose up -d
-
-# Wait for services to be ready
-sleep 10
-
-# Run tests
-./scripts/e2e-test.sh
-
-# Clean up
-docker-compose down -v
+docker compose up -d
+bash scripts/e2e-test.sh
+docker compose down -v
 ```
 
-## Branch Protection Rules
+## Branch protection recommendation
 
-Recommended branch protection settings for `main`:
-
-```
-Require status checks to pass before merging:
-  ✓ E2E QA Testing (e2e-test)
-
-Additional rules:
-  ✓ Require pull request reviews before merging: 1 approval
-  ✓ Require branches to be up to date before merging
-  ✓ Include administrators: No (allows automation to bypass if needed)
-  ✓ Restrict who can push to matching branches: Only allow specific accounts
-```
-
-## Troubleshooting
-
-### E2E tests fail in CI but pass locally
-- Check Docker image versions in `docker-compose.yml`
-- Ensure `wp-mcp-adapter` v0.5.0 is compatible with your changes
-- Review WordPress debug log in workflow output
-
-### PR not being created from issue
-- Verify issue has `ready-for-dev` label
-- Check workflow permissions: needs `issues: write`, `pull-requests: write`, `contents: write`
-- Review workflow logs in Actions tab
-
-### Release not being created
-- Ensure version in `wp-mcp-abilities.php` is different from last tag
-- Check that `readme.txt` has changelog entry for new version
-- Verify workflow has `contents: write` permission
-
-### Auto-close not working
-- Ensure PR body contains `Closes #X` (with exact capitalization)
-- Check PR is merged, not just closed
-
-## Files
-
-| File | Purpose |
-|------|---------|
-| `.github/workflows/e2e-qa.yml` | E2E testing on every PR |
-| `.github/workflows/auto-pr-from-issue.yml` | Create PR from labeled issue |
-| `.github/workflows/auto-release.yml` | Auto-tag and release on merge |
-| `.github/workflows/auto-close-issue.yml` | Auto-close issue on PR merge |
-| `.github/PULL_REQUEST_TEMPLATE.md` | Pre-fill PR with checklist |
-| `docker-compose.yml` | Local WordPress environment for testing |
-| `scripts/e2e-test.sh` | E2E test script (runs in CI and locally) |
-
-## Next Steps
-
-1. Commit these files to your repository
-2. Create a test issue and label it `ready-for-dev`
-3. Watch the automation in action!
-4. Update branch protection rules to require E2E QA passing
-
----
-
-**Questions?** Check `.github/workflows/*.yml` for implementation details.
+Require the E2E QA check before merging to `main`.

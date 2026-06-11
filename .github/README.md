@@ -1,31 +1,36 @@
 # GitHub Automation
 
-This folder contains the repository automation for issue handling, PR validation, and releases.
+This folder contains the repository automation for pull request QA and release publishing.
 
 ## What it does
 
-- **Auto-create PRs from issues** when an issue is labeled `ready-for-dev`
-- **Run E2E QA in Docker** on every pull request
-- **Auto-close linked issues** when PRs are merged
-- **Auto-create releases** when versioned changes land on `main`
+- Runs Docker-based E2E QA for relevant pull request and push changes.
+- Publishes releases from version tags using the tag-based release workflow.
+- Uses native GitHub issue-closing keywords in PR bodies (`Closes #N`, `Fixes #N`, `Resolves #N`) instead of custom close automation.
+
+## Trigger map (what triggers what)
+
+| Event | Workflow file | What happens |
+|------|---------|---------|
+| Pull request opened/synchronized/reopened | `.github/workflows/e2e-qa.yml` | Detects relevant file changes and runs Docker E2E QA when in scope; posts truthful PR comment with pass/fail result. |
+| Push to `main` or `develop` | `.github/workflows/e2e-qa.yml` | Detects relevant file changes and runs Docker E2E QA when in scope. |
+| Manual run (`workflow_dispatch`) | `.github/workflows/e2e-qa.yml` | Forces an on-demand E2E QA run. |
+| Push tag matching `v*` | `.github/workflows/release.yml` | Validates version/changelog consistency, builds release ZIP, validates artifact contents, and publishes GitHub release. |
 
 ## Main files
 
 | File | Purpose |
 |------|---------|
-| `.github/workflows/auto-pr-from-issue.yml` | Creates a PR from a labeled issue |
-| `.github/workflows/e2e-qa.yml` | Runs Docker-based E2E QA on PRs |
-| `.github/workflows/auto-close-issue.yml` | Closes linked issues after merge |
-| `.github/workflows/auto-release.yml` | Publishes releases from versioned merges |
-| `.github/PULL_REQUEST_TEMPLATE.md` | PR checklist and linking reminder |
-| `.github/AUTOMATION.md` | Full automation guide |
-| `.github/SETUP-COMPLETE.md` | High-level summary of the setup |
+| `.github/workflows/e2e-qa.yml` | Runs Docker-based E2E QA with scoped execution and accurate PR reporting |
+| `.github/workflows/release.yml` | Creates tag-based GitHub releases after validation gates pass |
+| `.github/PULL_REQUEST_TEMPLATE.md` | PR checklist and issue-linking reminder |
+| `.github/AUTOMATION.md` | Detailed workflow behavior and contributor process |
+| `.github/SETUP-COMPLETE.md` | High-level setup summary |
 
-## How it flows
+## Contributor flow
 
-1. Create or label an issue with `ready-for-dev`.
-2. The PR automation creates a branch and links the issue.
-3. E2E QA runs automatically on PR updates.
-4. Merge the PR when checks pass.
-5. The issue closes and the release workflow publishes the new version if needed.
-
+1. Create and scope an issue.
+2. Create a branch and open a PR with `Closes #N` only when merge should close that issue.
+3. Ensure E2E QA passes.
+4. Merge PR.
+5. Create/push version tag (`vX.Y.Z`) when ready to publish release.

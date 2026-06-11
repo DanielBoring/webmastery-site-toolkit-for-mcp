@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   mysql:
-    image: mysql:8.0
+    image: mysql:8.0.36
     container_name: wordpress_mysql
     environment:
       MYSQL_DATABASE: wordpress
@@ -17,7 +15,7 @@ services:
       retries: 10
 
   wordpress:
-    image: wordpress:latest
+    image: wordpress:6.5.5-php8.2-apache
     container_name: wordpress_server
     depends_on:
       mysql:

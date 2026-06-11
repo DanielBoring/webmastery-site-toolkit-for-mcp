@@ -13,14 +13,59 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 1
 
-      - name: Get version from tag
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+      - name: Validate release inputs
+        id: validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="$VERSION"
+          PLUGIN_VERSION="$(grep -E '^[[:space:]]*\*?[[:space:]]*Version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+' wp-mcp-abilities.php | head -1 | sed -E 's/.*Version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
+          STABLE_TAG="$(grep -Ei '^Stable tag:' readme.txt | head -1 | sed -E 's/^Stable tag:[[:space:]]*//I' | tr -d '\r')"
+
+          if [ -z "$PLUGIN_VERSION" ]; then
+            echo "Could not parse plugin version from wp-mcp-abilities.php" >&2
+            exit 1
+          fi
+          if [ -z "$STABLE_TAG" ]; then
+            echo "Could not parse Stable tag from readme.txt" >&2
+            exit 1
+          fi
+          if [ "$TAG_VERSION" != "$PLUGIN_VERSION" ]; then
+            echo "Tag version ($TAG_VERSION) does not match plugin header version ($PLUGIN_VERSION)" >&2
+            exit 1
+          fi
+          if [ "$TAG_VERSION" != "$STABLE_TAG" ]; then
+            echo "Tag version ($TAG_VERSION) does not match readme stable tag ($STABLE_TAG)" >&2
+            exit 1
+          fi
+
+          RELEASE_TAG="v$TAG_VERSION"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists; refusing duplicate publish" >&2
+            exit 1
+          fi
+
+          NOTES_FILE="build/release-notes-${TAG_VERSION}.md"
+          mkdir -p build
+          NOTES="$(awk "/^= ${TAG_VERSION} =/{found=1; next} found && /^= /{exit} found{print}" readme.txt | sed '/^[[:space:]]*$/d')"
+          if [ -z "$NOTES" ]; then
+            echo "No changelog notes found in readme.txt for version ${TAG_VERSION}" >&2
+            exit 1
+          fi
+          printf '%s\n' "$NOTES" > "$NOTES_FILE"
+
+          echo "version=$TAG_VERSION" >> "$GITHUB_OUTPUT"
+          echo "notes-file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
 
       - name: Build plugin zip
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p build/wp-mcp-abilities
           rsync -r \
             --exclude='.git' \
@@ -33,24 +78,37 @@ jobs:
             --exclude='build' \
             . build/wp-mcp-abilities/
           cd build
-          zip -r ../wp-mcp-abilities-${{ steps.version.outputs.version }}.zip wp-mcp-abilities/
+          zip -r ../wp-mcp-abilities-${{ steps.validate.outputs.version }}.zip wp-mcp-abilities/
 
-      - name: Extract changelog for this version
-        id: changelog
+      - name: Validate built artifact contents
+        shell: bash
         run: |
-          version="${{ steps.version.outputs.version }}"
-          notes=$(awk "/^= ${version} =/{found=1; next} found && /^= /{exit} found{print}" readme.txt | sed '/^$/d')
-          {
-            echo "notes<<EOF"
-            echo "$notes"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
+          set -euo pipefail
+          ZIP_FILE="wp-mcp-abilities-${{ steps.validate.outputs.version }}.zip"
+          if [ ! -s "$ZIP_FILE" ]; then
+            echo "Missing or empty release artifact: $ZIP_FILE" >&2
+            exit 1
+          fi
+          unzip -l "$ZIP_FILE" > build/zip-listing.txt
+          grep -q 'wp-mcp-abilities/wp-mcp-abilities.php' build/zip-listing.txt
+          grep -q 'wp-mcp-abilities/includes/' build/zip-listing.txt
+          if grep -q 'wp-mcp-abilities/.github/' build/zip-listing.txt; then
+            echo "Release artifact unexpectedly contains .github directory" >&2
+            exit 1
+          fi
+          if grep -q 'wp-mcp-abilities/.git/' build/zip-listing.txt; then
+            echo "Release artifact unexpectedly contains .git directory" >&2
+            exit 1
+          fi
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: v${{ steps.version.outputs.version }}
-          body: ${{ steps.changelog.outputs.notes }}
-          files: wp-mcp-abilities-${{ steps.version.outputs.version }}.zip
-          draft: false
-          prerelease: false
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.validate.outputs.version }}"
+          gh release create "v${VERSION}" \
+            "wp-mcp-abilities-${VERSION}.zip" \
+            --title "v${VERSION}" \
+            --notes-file "${{ steps.validate.outputs.notes-file }}"
