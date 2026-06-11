@@ -1,0 +1,124 @@
+name: Auto-release on Merge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'wp-mcp-abilities.php'
+      - 'readme.txt'
+      - 'includes/**'
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  detect-version:
+    runs-on: ubuntu-latest
+    outputs:
+      should-release: ${{ steps.check.outputs.should-release }}
+      version: ${{ steps.check.outputs.version }}
+      pr-number: ${{ steps.check.outputs.pr-number }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Get latest tag
+        id: latest-tag
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "latest-tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Latest tag: $LATEST_TAG"
+      
+      - name: Get current version from plugin file
+        id: check
+        run: |
+          VERSION=$(grep "Version:" wp-mcp-abilities.php | head -1 | sed 's/.*Version:\s*\([0-9.]*\).*/\1/')
+          TAG="v$VERSION"
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          echo "Current version: $VERSION"
+          echo "Latest tag: $LATEST_TAG"
+          
+          if [ "$TAG" != "$LATEST_TAG" ]; then
+            echo "should-release=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            
+            # Try to get PR number from commit message
+            PR_NUMBER=$(git log -1 --format=%B | grep -oP 'Merge pull request #\K[0-9]+' | head -1 || echo "")
+            if [ -n "$PR_NUMBER" ]; then
+              echo "pr-number=$PR_NUMBER" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "should-release=false" >> $GITHUB_OUTPUT
+            echo "Skipping release - version unchanged"
+          fi
+
+  create-release:
+    needs: detect-version
+    if: needs.detect-version.outputs.should-release == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Extract changelog
+        id: changelog
+        run: |
+          VERSION=${{ needs.detect-version.outputs.version }}
+          
+          # Extract changelog entry for this version
+          CHANGELOG=$(awk "/= $VERSION =/,/= [0-9]+\.[0-9]+\.[0-9]+ =/" readme.txt | sed '1d;$d')
+          
+          # Use heredoc to preserve multiline content
+          {
+            echo 'changelog<<EOF'
+            echo "$CHANGELOG"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+      
+      - name: Create GitHub Release
+        id: create-release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.detect-version.outputs.version }}
+          release_name: Release v${{ needs.detect-version.outputs.version }}
+          body: |
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ## About This Release
+            
+            Version **${{ needs.detect-version.outputs.version }}** includes new features and bug fixes. 
+            
+            ${{ needs.detect-version.outputs.pr-number && format('Related PR: #{0}', needs.detect-version.outputs.pr-number) || '' }}
+          draft: false
+          prerelease: false
+      
+      - name: Upload release asset (ZIP)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: ./wordpress-mcp-abilities.zip
+          asset_name: wordpress-mcp-abilities-${{ needs.detect-version.outputs.version }}.zip
+          asset_content_type: application/zip
+        continue-on-error: true
+      
+      - name: Comment on merged PR
+        if: needs.detect-version.outputs.pr-number != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ needs.detect-version.outputs.pr-number }},
+              body: `✅ Released as **v${{ needs.detect-version.outputs.version }}**\n\nThe code from this PR is now live. See [release notes](https://github.com/${{ github.repository }}/releases/tag/v${{ needs.detect-version.outputs.version }})`
+            });

@@ -100,6 +100,23 @@ Set `annotations` accurately — `readonly: true` for read-only abilities, `dest
 
 ---
 
+## Versioning policy
+
+This project follows **Semantic Versioning** (`MAJOR.MINOR.PATCH`):
+
+- **MAJOR** (`X.0.0`) — breaking changes to ability names, required inputs, output shape, or behavior that can break existing MCP clients.
+- **MINOR** (`1.X.0`) — new backward-compatible abilities or features.
+- **PATCH** (`1.4.X`) — backward-compatible bug fixes, security fixes, and documentation-only corrections.
+
+Release checklist:
+
+1. Choose the version bump based on the rules above.
+2. Update the `Version` header in `wp-mcp-abilities.php`.
+3. Update `Stable tag` and changelog entries in `readme.txt`.
+4. Tag and push `vX.Y.Z` to trigger the release workflow.
+
+---
+
 ## Release process (maintainers)
 
 1. Update the `Version` header in `wp-mcp-abilities.php`

@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: wordpress_mysql
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wp
+      MYSQL_PASSWORD: wp
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  wordpress:
+    image: wordpress:latest
+    container_name: wordpress_server
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DEBUG: "true"
+      WORDPRESS_DEBUG_LOG: /var/www/html/wp-content/debug.log
+    ports:
+      - "80:80"
+    volumes:
+      - ./:/var/www/html/wp-content/plugins/wordpress-mcp-abilities
+      - wp_data:/var/www/html
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/wp-json/"]
+      timeout: 20s
+      retries: 10
+
+volumes:
+  wp_data:

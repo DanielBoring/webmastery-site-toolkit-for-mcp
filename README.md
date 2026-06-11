@@ -17,7 +17,7 @@
     </a>
   </h2>
 
-[Quickstart](#quickstart) • [Architecture](#architecture) • [MCP Abilities](#mcp-abilities) • [Requirements](#requirements) • [Installation](#installation) • [Verification](#verification) • [Security](#security)
+[Quickstart](#quickstart) • [Architecture](#architecture) • [MCP Abilities](#mcp-abilities) • [Requirements](#requirements) • [Versioning](#versioning) • [Installation](#installation) • [Verification](#verification) • [Security](#security)
 
 </div>
 
@@ -192,6 +192,18 @@ Returns findings in `fail` / `warn` / `pass` buckets with actionable description
 | [Yoast SEO](https://wordpress.org/plugins/wordpress-seo/)      | Optional — structural SEO checks work without it; meta description, focus keyword, and sitemap checks require it |
 
 > **Self-hosted WordPress only.** Both this plugin and the MCP Adapter require a WordPress installation where custom plugins can be installed — self-hosted WordPress or a managed host (WP Engine, Kinsta, Flywheel, etc.). They are not compatible with WordPress.com Free, Personal, or Premium plans, which do not allow custom plugin installation.
+
+---
+
+## Versioning
+
+This project follows **Semantic Versioning** (`MAJOR.MINOR.PATCH`):
+
+- **MAJOR** (`X.0.0`) for breaking changes that can impact existing MCP clients.
+- **MINOR** (`1.X.0`) for new backward-compatible abilities/features.
+- **PATCH** (`1.4.X`) for backward-compatible fixes (including security and bug fixes).
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md#versioning-policy) for the full release/versioning policy.
 
 ---
 
