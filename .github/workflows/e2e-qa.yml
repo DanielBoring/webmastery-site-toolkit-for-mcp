@@ -75,6 +75,9 @@ jobs:
       wordpress-image: ${{ steps.versions.outputs.wordpress-image }}
       wordpress-version: ${{ steps.versions.outputs.wordpress-version }}
       php-version: ${{ steps.versions.outputs.php-version }}
+      mysql-image: ${{ steps.versions.outputs.mysql-image }}
+      mysql-version: ${{ steps.versions.outputs.mysql-version }}
+      mcp-adapter-release: ${{ steps.versions.outputs.mcp-adapter-release }}
       mcp-adapter-version: ${{ steps.versions.outputs.mcp-adapter-version }}
       plugin-version: ${{ steps.versions.outputs.plugin-version }}
     steps:
@@ -100,14 +103,20 @@ jobs:
         run: |
           set -euo pipefail
           wordpress_image="$(docker compose config | awk '$1 == "image:" && $2 ~ /^wordpress:/ { print $2; exit }')"
+          mysql_image="$(docker compose config | awk '$1 == "image:" && $2 ~ /^mysql:/ { print $2; exit }')"
           wordpress_version="$(docker compose exec -T wordpress wp --allow-root core version 2>/dev/null || echo unknown)"
           php_version="$(docker compose exec -T wordpress php -r 'echo PHP_VERSION;' 2>/dev/null || echo unknown)"
+          mysql_version="$(docker compose exec -T mysql mysql --version 2>/dev/null || echo unknown)"
+          mcp_adapter_release="$(grep '^MCP_ADAPTER_ZIP=' scripts/e2e-test.sh | sed -E 's#.*releases/download/([^/]+)/.*#\1#')"
           mcp_adapter_version="$(docker compose exec -T wordpress wp --allow-root plugin get mcp-adapter --field=version 2>/dev/null || echo unknown)"
           plugin_version="$(docker compose exec -T wordpress wp --allow-root plugin get wordpress-mcp-abilities --field=version 2>/dev/null || echo unknown)"
           {
             echo "wordpress-image=${wordpress_image:-unknown}"
             echo "wordpress-version=${wordpress_version:-unknown}"
             echo "php-version=${php_version:-unknown}"
+            echo "mysql-image=${mysql_image:-unknown}"
+            echo "mysql-version=${mysql_version:-unknown}"
+            echo "mcp-adapter-release=${mcp_adapter_release:-unknown}"
             echo "mcp-adapter-version=${mcp_adapter_version:-unknown}"
             echo "plugin-version=${plugin_version:-unknown}"
           } >> "$GITHUB_OUTPUT"
@@ -140,8 +149,13 @@ jobs:
           WORDPRESS_IMAGE: ${{ needs.e2e-test.outputs.wordpress-image }}
           WORDPRESS_VERSION: ${{ needs.e2e-test.outputs.wordpress-version }}
           PHP_VERSION: ${{ needs.e2e-test.outputs.php-version }}
+          MYSQL_IMAGE: ${{ needs.e2e-test.outputs.mysql-image }}
+          MYSQL_VERSION: ${{ needs.e2e-test.outputs.mysql-version }}
+          MCP_ADAPTER_RELEASE: ${{ needs.e2e-test.outputs.mcp-adapter-release }}
           MCP_ADAPTER_VERSION: ${{ needs.e2e-test.outputs.mcp-adapter-version }}
           PLUGIN_VERSION: ${{ needs.e2e-test.outputs.plugin-version }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          HEAD_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -149,8 +163,13 @@ jobs:
           VERSIONS+="- WordPress Docker image: ${WORDPRESS_IMAGE:-unknown}"$'\n'
           VERSIONS+="- WordPress core: ${WORDPRESS_VERSION:-unknown}"$'\n'
           VERSIONS+="- PHP: ${PHP_VERSION:-unknown}"$'\n'
-          VERSIONS+="- MCP Adapter: ${MCP_ADAPTER_VERSION:-unknown}"$'\n'
-          VERSIONS+="- WP MCP Abilities: ${PLUGIN_VERSION:-unknown}"
+          VERSIONS+="- MySQL Docker image: ${MYSQL_IMAGE:-unknown}"$'\n'
+          VERSIONS+="- MySQL server: ${MYSQL_VERSION:-unknown}"$'\n'
+          VERSIONS+="- MCP Adapter release: ${MCP_ADAPTER_RELEASE:-unknown}"$'\n'
+          VERSIONS+="- MCP Adapter plugin: ${MCP_ADAPTER_VERSION:-unknown}"$'\n'
+          VERSIONS+="- WP MCP Abilities: ${PLUGIN_VERSION:-unknown}"$'\n'
+          VERSIONS+="- Commit: ${HEAD_SHA:-unknown}"$'\n'
+          VERSIONS+="- Workflow run: ${RUN_URL:-unknown}"
           if [ "$E2E_RESULT" = "success" ]; then
             BODY=$'## E2E QA Tests Passed\n\n- Docker WordPress stack started\n- WordPress core installed before plugin activation\n- MCP Adapter installed from official WordPress release asset\n- Ability execution tests passed\n- PHP syntax checks passed\n- WordPress debug log scan found no fatal/error-level entries'
           else
