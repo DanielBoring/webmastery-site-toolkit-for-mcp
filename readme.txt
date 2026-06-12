@@ -9,13 +9,13 @@ License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
 
-Adds MCP-powered WordPress content management abilities for posts, pages, media, comments, SEO checks, site health, security audits, and user lookup.
+Adds MCP-powered WordPress content management abilities for posts, pages, media, comments, plugins, SEO checks, site health, security audits, and user lookup.
 
 == Description ==
 
-Unlock MCP Potential is a WordPress plugin that adds MCP-powered content management abilities for posts, pages, media, comments, SEO checks, site health, security audits, and user lookup. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
+Unlock MCP Potential is a WordPress plugin that adds MCP-powered content management abilities for posts, pages, media, comments, plugins, SEO checks, site health, security audits, and user lookup. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
 
-Unlock MCP Potential registers abilities across nine groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
+Unlock MCP Potential registers abilities across ten groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
 
 **Posts**
 Create, read, update, and delete posts. Supports all statuses including scheduled (future) posts, category and tag assignment, and pagination.
@@ -35,6 +35,9 @@ List, inspect, update, and permanently delete media attachments. Supports MIME t
 **Users**
 List users with role/search/pagination filters and fetch a single user by ID. Useful for resolving numeric author IDs from post and media responses.
 
+**Plugins**
+List installed plugins and manage activation state by canonical plugin basename. Includes protected-plugin safeguards, multisite-aware network activation handling, and structured errors for capability, context, and identifier failures.
+
 **Site Health**
 Run WordPress's built-in health tests and get results grouped by severity: critical, recommended, and good.
 
@@ -53,7 +56,7 @@ All abilities enforce WordPress capability checks — an editor cannot call abil
 1. Install and activate the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin first — Unlock MCP Potential depends on it.
 2. Upload the `unlock-mcp-potential` folder to `/wp-content/plugins/`, or install via **Plugins > Add New > Upload Plugin**.
 3. Activate the plugin through the **Plugins** menu in WordPress.
-4. Create a dedicated WordPress user for your AI agent: go to **Users > Add New User**, set the Role to **Editor**, and save. Using a dedicated account limits access and makes it easy to revoke later. If you need user lookup abilities (`list-users`, `get-user`), create a separate dedicated **Administrator** service account because those require `list_users`.
+4. Create a dedicated WordPress user for your AI agent: go to **Users > Add New User**, set the Role to **Editor**, and save. Using a dedicated account limits access and makes it easy to revoke later. If you need user lookup, plugin management, or sensitive site-audit abilities, create a separate dedicated **Administrator** service account because those require administrative capabilities such as `list_users`, `activate_plugins`, or `manage_options`.
 5. Generate an application password for that user: open the user profile, scroll to **Application Passwords**, enter a name (e.g. `MCP Client`), and click **Add New Application Password**. Copy it immediately — it is only shown once.
 6. Configure your MCP client with the site URL, the dedicated username, and the application password. All abilities are then automatically available.
 
@@ -83,7 +86,7 @@ No, but behavior differs depending on whether it is active:
 
 For core content workflows, use the **Editor** role. It covers the editorial capabilities used by posts, pages, taxonomy, comments, and media: `edit_posts`, `edit_pages`, `delete_posts`, `delete_pages`, `upload_files`, `manage_categories`, and `moderate_comments`.
 
-For user lookup and sensitive site-audit workflows (`list-users`, `get-user`, `site-health-check`, `security-audit`, and `seo-site-overview`), use a separate dedicated **Administrator** account because those abilities require `list_users` or `manage_options`.
+For user lookup, plugin management, and sensitive site-audit workflows (`list-users`, `get-user`, `list-plugins`, `activate-plugin`, `deactivate-plugin`, `site-health-check`, `security-audit`, and `seo-site-overview`), use a separate dedicated **Administrator** account because those abilities require `list_users`, `activate_plugins`, or `manage_options`.
 
 Note on role scope: the `edit_posts` and `upload_files` capabilities are available to Authors as well, but WordPress scopes results and write access to the authenticated user's own content unless `edit_others_posts` / `delete_others_posts` are also present (which Editors have). Use an Author-role account only if you intentionally want the agent limited to content it created. For full site-wide editorial control, use Editor.
 
@@ -97,7 +100,7 @@ After activation, call `mcp-adapter-discover-abilities` from your MCP client. Yo
 
 = Are write operations safe? =
 
-Delete operations for posts and pages move content to trash. Media delete permanently removes the attachment and its files. All inputs are sanitized using WordPress core functions. All operations go through the WordPress API — no direct database queries.
+Delete operations for posts and pages move content to trash. Media delete permanently removes the attachment and its files. Plugin activation and deactivation require Administrator plugin capabilities, and protected-plugin deactivation is blocked unless explicitly forced. All inputs are sanitized using WordPress core functions. All operations go through the WordPress API — no direct database queries.
 
 == Changelog ==
 

@@ -4,16 +4,23 @@ All notable changes to Unlock MCP Potential are tracked here.
 
 ## Unreleased
 
+### Changed
+
+- Updated README and WordPress.org readme documentation to include plugin management abilities and administrator role requirements.
+- Clarified E2E manifest coverage documentation for the current 33 registered abilities and 45 manifest test cases.
+- Updated pull request and contribution guidance so external contributors can apply WordPress.org guideline checks when relevant and keep docs, changelog, and E2E coverage in sync.
+- Added repository agent instructions for repeatable ability, documentation, changelog, contribution, and validation workflows.
+- Clarified that local agent validation is a preflight check and GitHub Actions remains the authoritative PR validation gate.
+
 ## 1.6.0
 
 ### Added
 
 - Added WordPress Coding Standards tooling via Composer and `phpcs.xml.dist`.
 - Added contribution and PR checklist guidance for WordPress.org Detailed Plugin Guidelines review.
-- Added a hardened GitHub Actions E2E QA workflow with merge-base-safe changed-file detection and manual `workflow_dispatch` support.
 - Added manifest-driven E2E ability coverage via `tests/e2e/abilities-manifest.json` and `tests/e2e/ability-runner.php`.
 - Added an E2E coverage gate that fails when any registered `wp-mcp/*` ability is missing from the manifest.
-- Added E2E execution coverage for the current 30 registered abilities with 37 manifest test cases, including positive and negative permission cases.
+- Added E2E execution coverage for the current 33 registered abilities with 45 manifest test cases, including positive and negative permission cases.
 - Added E2E PR comments that report ability coverage counts, tested dependency versions, commit SHA, and workflow run URL.
 - Added failure artifact collection for E2E failures, including Docker Compose logs, WordPress debug logs, and E2E summary JSON.
 - Added E2E documentation in `tests/e2e/README.md` describing the rule that new or changed abilities must include manifest test coverage.
@@ -39,6 +46,16 @@ All notable changes to Unlock MCP Potential are tracked here.
 - Removed `auto-pr-from-issue.yml` placeholder PR automation.
 - Removed merge-based `auto-release.yml` automation to avoid overlapping release paths.
 - Removed `.github/README.md` so GitHub shows the project root `README.md` on the repository homepage.
+
+## 1.5.0
+
+### Added
+
+- Added user lookup abilities: `list-users` and `get-user`.
+- Expanded to 30 abilities: posts (5), pages (5), taxonomy (6), comments (4), media (4), users (2), site health (1), security audit (1), SEO analysis (2).
+- Added GitHub Actions workflow automation for E2E QA, issue closure, PR creation from issues, and release publishing.
+- Added Docker-based E2E test support via `docker-compose.yml` and `scripts/e2e-test.sh`.
+- Added automation setup and operation documentation under `.github/`.
 
 ## 1.4.0
 

@@ -44,7 +44,7 @@ This plugin follows [WordPress Coding Standards](https://developer.wordpress.org
 - **Sanitize inputs** — use `sanitize_text_field()` for strings, `absint()` for IDs, `wp_kses_post()` for HTML content, and enum validation for fixed-value fields
 - **Capability checks** — every ability must have a `permission_callback` that returns a `WP_Error` on failure, not just `false`; prefer object-specific checks such as `edit_post` / `delete_post` when an object ID is available
 - **No direct database queries** — use WordPress API functions (`get_posts()`, `wp_insert_post()`, etc.) exclusively
-- **No output buffering** — abilities return arrays; the MCP Adapter handles serialization
+- **No output buffering** — abilities return arrays or `WP_Error` objects; the MCP Adapter handles serialization
 - **WordPress.org readiness** — avoid trademark-confusing names, spammy readme text, undisclosed external calls, bundled duplicate libraries, and non-GPL-compatible assets
 
 Run standards checks before opening a PR:
@@ -64,8 +64,10 @@ Each group of abilities lives in its own file under `includes/`. Follow the exis
 2. **Register** the ability inside the class's `register()` method using `wp_register_ability()`
 3. **Use the `wp-mcp/` prefix** for the ability name (e.g., `wp-mcp/list-media`)
 4. **Require the narrowest relevant capability** in `permission_callback` — use object-specific checks when an input ID is available and never skip the check
-5. **Return a consistent shape** — `['success' => true, 'data' => [...]]` on success, `['success' => false, 'error' => '...']` on failure
+5. **Return a consistent shape** — match the affected ability group's existing success arrays and `WP_Error`/structured error responses
 6. **Require the class file** in `unlock-mcp-potential.php` inside the `wp_abilities_api_init` action and call `ClassName::register()`
+7. **Add E2E manifest coverage** in `tests/e2e/abilities-manifest.json`; include both allowed and denied roles when permissions differ by role or capability
+8. **Update docs and changelog** when behavior is user-facing: `README.md`, `readme.txt`, relevant markdown files, and `CHANGELOG.md` under `## Unreleased`
 
 A minimal ability skeleton:
 
@@ -105,15 +107,16 @@ Set `annotations` accurately — `readonly: true` for read-only abilities, `dest
 2. Make your changes following the conventions above
 3. Run `composer phpcs`
 4. Test manually against a real WordPress install — verify the ability appears in `mcp-adapter-discover-abilities` and returns correct output
-5. Review the WordPress.org Detailed Plugin Guidelines for any name, readme, privacy, licensing, or release-readiness impact
-6. Update `readme.txt` — add a changelog entry under `== Changelog ==` for the new version
-7. Open a PR with a clear description of what changed and why
+5. If the PR adds or changes abilities, update `tests/e2e/abilities-manifest.json` with matching coverage
+6. Update user-facing docs and add a `CHANGELOG.md` entry under `## Unreleased`
+7. Review the WordPress.org Detailed Plugin Guidelines when the change affects naming, readme text, privacy/external calls, licensing/assets, or release packaging
+8. Open a PR with a clear description of what changed and why
 
 ---
 
 ## WordPress.org plugin guideline review
 
-Before packaging a release for WordPress.org, compare the final plugin against the Detailed Plugin Guidelines:
+Before packaging a release for WordPress.org, maintainers compare the final plugin against the Detailed Plugin Guidelines. Contributors should also consider these items for public-facing or release-impacting PRs:
 
 - Confirm the display name and slug do not begin with or imply ownership of another project or trademark.
 - Keep readme tags to five or fewer, avoid keyword stuffing, and only link to directly relevant resources.
@@ -136,20 +139,22 @@ Release checklist:
 
 1. Choose the version bump based on the rules above.
 2. Update the `Version` header in `unlock-mcp-potential.php`.
-3. Update `Stable tag` and changelog entries in `readme.txt`.
-4. Confirm the generated zip uses the `unlock-mcp-potential` directory slug.
-5. Tag and push `vX.Y.Z` to trigger the release workflow.
+3. Move relevant `CHANGELOG.md` entries from `## Unreleased` into the new version section.
+4. Update `Stable tag`, changelog entries, and upgrade notice in `readme.txt`.
+5. Confirm the generated zip uses the `unlock-mcp-potential` directory slug.
+6. Tag and push `vX.Y.Z` to trigger the release workflow.
 
 ---
 
 ## Release process (maintainers)
 
 1. Update the `Version` header in `unlock-mcp-potential.php`
-2. Add a changelog entry to `readme.txt` under `== Changelog ==`
-3. Commit: `git commit -m "chore: release v1.x.x"`
-4. Tag and push: `git tag v1.x.x && git push origin v1.x.x`
-5. GitHub Actions builds the zip and creates the release automatically
-6. Download the zip from the release and upload it to the WordPress.org SVN
+2. Move `CHANGELOG.md` notes from `## Unreleased` into the release version
+3. Add release notes to `readme.txt` under `== Changelog ==` and `== Upgrade Notice ==`
+4. Commit: `git commit -m "chore: release v1.x.x"`
+5. Tag and push: `git tag v1.x.x && git push origin v1.x.x`
+6. GitHub Actions builds the zip and creates the release automatically
+7. Download the zip from the release and upload it to the WordPress.org SVN
 
 ---
 
