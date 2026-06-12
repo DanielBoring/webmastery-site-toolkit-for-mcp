@@ -239,8 +239,7 @@ This plugin depends on MCP Adapter being installed and active. Install it first 
 1. Download or build the zip:
    ```bash
    git clone https://github.com/DanielBoring/unlock-mcp-potential.git unlock-mcp-potential
-   cd unlock-mcp-potential
-   zip -r unlock-mcp-potential.zip . --exclude='.git/*'
+   zip -r unlock-mcp-potential.zip unlock-mcp-potential --exclude='unlock-mcp-potential/.git/*'
    ```
 2. In WP Admin, go to **Plugins → Add New → Upload Plugin**
 3. Upload `unlock-mcp-potential.zip` and click **Install Now**

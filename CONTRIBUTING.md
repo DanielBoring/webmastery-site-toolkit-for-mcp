@@ -142,7 +142,8 @@ Release checklist:
 3. Move relevant plugin-facing `CHANGELOG.md` entries from `## Unreleased` into the new version section. Do not include `.github/REPOSITORY_CHANGELOG.md` entries in plugin release notes.
 4. Update `Stable tag`, plugin changelog entries, and upgrade notice in `readme.txt`.
 5. Confirm the generated zip uses the `unlock-mcp-potential` directory slug.
-6. Tag and push `vX.Y.Z` to trigger the release workflow.
+6. Run the official WordPress Plugin Check utility against the generated `unlock-mcp-potential` package and confirm there are no unexpected errors.
+7. Tag and push `vX.Y.Z` to trigger the release workflow.
 
 ---
 
@@ -154,7 +155,17 @@ Release checklist:
 4. Commit: `git commit -m "chore: release v1.x.x"`
 5. Tag and push: `git tag v1.x.x && git push origin v1.x.x`
 6. GitHub Actions builds the zip and creates the release automatically
-7. Download the zip from the release and upload it to the WordPress.org SVN
+7. Download the zip from the release and verify Plugin Check evaluates it as the `unlock-mcp-potential` slug
+8. Upload the verified package to the WordPress.org SVN
+
+### Plugin Check notes
+
+The official Plugin Check utility must evaluate the built package from an `unlock-mcp-potential` top-level directory. Running it from a differently named folder can report a text-domain mismatch even when the plugin header and i18n calls correctly use `unlock-mcp-potential`.
+
+Known warnings that are acceptable for this plugin:
+
+- `update_modification_detected` for `auto_update_plugins`: plugin listing reads this option only to report whether auto-updates are enabled; it does not alter WordPress update routines.
+- `WordPress.DB.SlowDBQuery.slow_db_query_meta_query` in SEO overview: the Yoast focus-keyword and meta-description checks are explicit administrator-requested diagnostics, limited to 50 published posts/pages, and return IDs only.
 
 ---
 

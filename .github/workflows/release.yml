@@ -25,14 +25,24 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           TAG_VERSION="$VERSION"
           PLUGIN_VERSION="$(grep -E '^[[:space:]]*\*?[[:space:]]*Version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+' unlock-mcp-potential.php | head -1 | sed -E 's/.*Version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
+          TEXT_DOMAIN="$(grep -E '^[[:space:]]*\*?[[:space:]]*Text Domain:' unlock-mcp-potential.php | head -1 | sed -E 's/.*Text Domain:[[:space:]]*//' | tr -d '\r')"
           STABLE_TAG="$(grep -Ei '^Stable tag:' readme.txt | head -1 | sed -E 's/^Stable tag:[[:space:]]*//I' | tr -d '\r')"
+          SHORT_DESCRIPTION="$(awk 'BEGIN{after_header=0} /^Donate link:/ {after_header=1; next} after_header && NF {print; exit}' readme.txt | tr -d '\r')"
 
           if [ -z "$PLUGIN_VERSION" ]; then
             echo "Could not parse plugin version from unlock-mcp-potential.php" >&2
             exit 1
           fi
+          if [ "$TEXT_DOMAIN" != "unlock-mcp-potential" ]; then
+            echo "Text Domain ($TEXT_DOMAIN) does not match canonical slug unlock-mcp-potential" >&2
+            exit 1
+          fi
           if [ -z "$STABLE_TAG" ]; then
             echo "Could not parse Stable tag from readme.txt" >&2
+            exit 1
+          fi
+          if [ ${#SHORT_DESCRIPTION} -gt 150 ]; then
+            echo "readme.txt short description is ${#SHORT_DESCRIPTION} characters; WordPress.org supports a maximum of 150" >&2
             exit 1
           fi
           if [ "$TAG_VERSION" != "$PLUGIN_VERSION" ]; then

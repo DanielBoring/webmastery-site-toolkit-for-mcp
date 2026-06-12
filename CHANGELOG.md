@@ -6,7 +6,9 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
-No unreleased plugin-facing changes.
+### Fixed
+
+- Fixed v1.6.1 release-readiness items from Plugin Check by keeping package validation aligned to the canonical `unlock-mcp-potential` slug, shortening the WordPress.org short description, and documenting accepted read-only update-status and bounded Yoast meta-query warnings.
 
 ## 1.6.0
 

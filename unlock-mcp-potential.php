@@ -3,7 +3,7 @@
  * Plugin Name: Unlock MCP Potential
  * Plugin URI:  https://github.com/DanielBoring/unlock-mcp-potential
  * Description: Adds content management abilities for MCP-powered WordPress workflows: posts, pages, taxonomy, comments, media, plugins, user lookup, health checks, security auditing, and SEO analysis.
- * Version:     1.6.0
+ * Version:     1.6.1
  * Requires at least: 6.9
  * Requires PHP: 8.0
  * Author:      Daniel Boring
