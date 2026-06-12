@@ -113,85 +113,85 @@ Each ability enforces a WordPress capability check. The table below maps standar
 ### Posts
 | Ability               | Description                                                            | Required Capability | Min. Role |
 | --------------------- | ---------------------------------------------------------------------- | ------------------- | --------- |
-| `wp-mcp/list-posts`   | List posts with filters (status, search, author, category, pagination) | `edit_posts`        | Author †  |
-| `wp-mcp/get-post`     | Get a single post by ID                                                | `edit_post`         | Author †  |
-| `wp-mcp/create-post`  | Create a new post with title, content, status, categories, tags        | `edit_posts`        | Author    |
-| `wp-mcp/update-post`  | Update an existing post                                                | `edit_post`         | Author †  |
-| `wp-mcp/delete-post`  | Move a post to trash                                                   | `delete_post`       | Author †  |
-| `wp-mcp/restore-post` | Restore a post from trash                                              | `delete_post`       | Author †  |
+| `unlock-mcp-potential/list-posts`   | List posts with filters (status, search, author, category, pagination) | `edit_posts`        | Author †  |
+| `unlock-mcp-potential/get-post`     | Get a single post by ID                                                | `edit_post`         | Author †  |
+| `unlock-mcp-potential/create-post`  | Create a new post with title, content, status, categories, tags        | `edit_posts`        | Author    |
+| `unlock-mcp-potential/update-post`  | Update an existing post                                                | `edit_post`         | Author †  |
+| `unlock-mcp-potential/delete-post`  | Move a post to trash                                                   | `delete_post`       | Author †  |
+| `unlock-mcp-potential/restore-post` | Restore a post from trash                                              | `delete_post`       | Author †  |
 
 † Returns or acts on the service account's own posts only. Use **Editor** to manage all posts site-wide.
 
 ### Pages
 | Ability               | Description               | Required Capability | Min. Role |
 | --------------------- | ------------------------- | ------------------- | --------- |
-| `wp-mcp/list-pages`   | List pages with filters   | `edit_pages`        | Editor    |
-| `wp-mcp/get-page`     | Get a single page by ID   | `edit_post`         | Editor    |
-| `wp-mcp/create-page`  | Create a new page         | `edit_pages`        | Editor    |
-| `wp-mcp/update-page`  | Update an existing page   | `edit_post`         | Editor    |
-| `wp-mcp/delete-page`  | Move a page to trash      | `delete_post`       | Editor    |
-| `wp-mcp/restore-page` | Restore a page from trash | `delete_post`       | Editor    |
+| `unlock-mcp-potential/list-pages`   | List pages with filters   | `edit_pages`        | Editor    |
+| `unlock-mcp-potential/get-page`     | Get a single page by ID   | `edit_post`         | Editor    |
+| `unlock-mcp-potential/create-page`  | Create a new page         | `edit_pages`        | Editor    |
+| `unlock-mcp-potential/update-page`  | Update an existing page   | `edit_post`         | Editor    |
+| `unlock-mcp-potential/delete-page`  | Move a page to trash      | `delete_post`       | Editor    |
+| `unlock-mcp-potential/restore-page` | Restore a page from trash | `delete_post`       | Editor    |
 
 ### Taxonomy
 | Ability                  | Description                         | Required Capability | Min. Role  |
 | ------------------------ | ----------------------------------- | ------------------- | ---------- |
-| `wp-mcp/list-categories` | List all categories                 | `read`              | Subscriber |
-| `wp-mcp/list-tags`       | List all tags                       | `read`              | Subscriber |
-| `wp-mcp/create-category` | Create a new category               | `manage_categories` | Editor     |
-| `wp-mcp/create-tag`      | Create a new tag                    | `manage_categories` | Editor     |
-| `wp-mcp/delete-category` | Permanently delete a category by ID | `manage_categories` | Editor     |
-| `wp-mcp/delete-tag`      | Permanently delete a tag by ID      | `manage_categories` | Editor     |
+| `unlock-mcp-potential/list-categories` | List all categories                 | `read`              | Subscriber |
+| `unlock-mcp-potential/list-tags`       | List all tags                       | `read`              | Subscriber |
+| `unlock-mcp-potential/create-category` | Create a new category               | `manage_categories` | Editor     |
+| `unlock-mcp-potential/create-tag`      | Create a new tag                    | `manage_categories` | Editor     |
+| `unlock-mcp-potential/delete-category` | Permanently delete a category by ID | `manage_categories` | Editor     |
+| `unlock-mcp-potential/delete-tag`      | Permanently delete a tag by ID      | `manage_categories` | Editor     |
 
 ### Comments
 | Ability                  | Description                                       | Required Capability | Min. Role |
 | ------------------------ | ------------------------------------------------- | ------------------- | --------- |
-| `wp-mcp/list-comments`   | List comments with filters (post, status, search) | `moderate_comments` | Editor    |
-| `wp-mcp/approve-comment` | Approve a comment                                 | `moderate_comments` | Editor    |
-| `wp-mcp/trash-comment`   | Move a comment to trash                           | `moderate_comments` | Editor    |
-| `wp-mcp/spam-comment`    | Mark a comment as spam                            | `moderate_comments` | Editor    |
+| `unlock-mcp-potential/list-comments`   | List comments with filters (post, status, search) | `moderate_comments` | Editor    |
+| `unlock-mcp-potential/approve-comment` | Approve a comment                                 | `moderate_comments` | Editor    |
+| `unlock-mcp-potential/trash-comment`   | Move a comment to trash                           | `moderate_comments` | Editor    |
+| `unlock-mcp-potential/spam-comment`    | Mark a comment as spam                            | `moderate_comments` | Editor    |
 
 ### Media
 | Ability                | Description                                             | Required Capability | Min. Role |
 | ---------------------- | ------------------------------------------------------- | ------------------- | --------- |
-| `wp-mcp/list-media`    | List media items with filters (MIME type, search, pagination) | `upload_files`      | Author    |
-| `wp-mcp/get-media`     | Get a single media item by ID                           | `edit_post`         | Author †  |
-| `wp-mcp/update-media`  | Update media alt text, title, and caption               | `edit_post`         | Author †  |
-| `wp-mcp/delete-media`  | Permanently delete a media item                         | `delete_post`       | Author †  |
+| `unlock-mcp-potential/list-media`    | List media items with filters (MIME type, search, pagination) | `upload_files`      | Author    |
+| `unlock-mcp-potential/get-media`     | Get a single media item by ID                           | `edit_post`         | Author †  |
+| `unlock-mcp-potential/update-media`  | Update media alt text, title, and caption               | `edit_post`         | Author †  |
+| `unlock-mcp-potential/delete-media`  | Permanently delete a media item                         | `delete_post`       | Author †  |
 
 † Author-role access is scoped to media owned by the authenticated user. Use **Editor** to manage media site-wide.
 
 ### Users
 | Ability              | Description                                             | Required Capability | Min. Role     |
 | -------------------- | ------------------------------------------------------- | ------------------- | ------------- |
-| `wp-mcp/list-users`  | List users with filters (role, search, pagination)      | `list_users`        | Administrator |
-| `wp-mcp/get-user`    | Get a single user by ID                                 | `list_users`        | Administrator |
+| `unlock-mcp-potential/list-users`  | List users with filters (role, search, pagination)      | `list_users`        | Administrator |
+| `unlock-mcp-potential/get-user`    | Get a single user by ID                                 | `list_users`        | Administrator |
 
 ### Plugins
 | Ability                    | Description                                                                                     | Required Capability | Min. Role     |
 | -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------- | ------------- |
-| `wp-mcp/list-plugins`      | List installed plugins with version, activation state, network activation, auto-update, and update availability | `activate_plugins`  | Administrator |
-| `wp-mcp/activate-plugin`   | Activate a plugin by canonical plugin basename, or by slug when it resolves to exactly one plugin | `activate_plugins`  | Administrator |
-| `wp-mcp/deactivate-plugin` | Deactivate a plugin by canonical plugin basename, with protected-plugin and multisite safeguards | `activate_plugins`  | Administrator |
+| `unlock-mcp-potential/list-plugins`      | List installed plugins with version, activation state, network activation, auto-update, and update availability | `activate_plugins`  | Administrator |
+| `unlock-mcp-potential/activate-plugin`   | Activate a plugin by canonical plugin basename, or by slug when it resolves to exactly one plugin | `activate_plugins`  | Administrator |
+| `unlock-mcp-potential/deactivate-plugin` | Deactivate a plugin by canonical plugin basename, with protected-plugin and multisite safeguards | `activate_plugins`  | Administrator |
 
 Plugin management abilities require Administrator-level plugin capabilities. Network-wide activation or deactivation is only available on multisite installations and requires `manage_network_plugins`.
 
 ### Site Health
 | Ability                    | Description                                                                                                | Required Capability | Min. Role  |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------- | ---------- |
-| `wp-mcp/site-health-check` | Run WordPress's built-in health tests; returns results grouped by severity (critical / recommended / good) | `manage_options`    | Administrator |
+| `unlock-mcp-potential/site-health-check` | Run WordPress's built-in health tests; returns results grouped by severity (critical / recommended / good) | `manage_options`    | Administrator |
 
 ### Security Audit
 | Ability                 | Description                                                                                                                               | Required Capability | Min. Role  |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---------- |
-| `wp-mcp/security-audit` | Check for common security issues: debug mode, file editor, SSL, admin username, WP/plugin version currency, XMLRPC, and auth key strength | `manage_options`    | Administrator |
+| `unlock-mcp-potential/security-audit` | Check for common security issues: debug mode, file editor, SSL, admin username, WP/plugin version currency, XMLRPC, and auth key strength | `manage_options`    | Administrator |
 
 Returns findings in `fail` / `warn` / `pass` buckets with actionable descriptions.
 
 ### SEO Analysis
 | Ability                    | Description                                                                                                                                     | Required Capability | Min. Role  |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---------- |
-| `wp-mcp/seo-analyze-post`  | Analyze a single post or page: title length, word count, meta description, focus keyword placement, image alt text, internal links, slug length | `edit_post`         | Author †   |
-| `wp-mcp/seo-site-overview` | Site-wide SEO snapshot: sitemap and robots.txt accessibility, count of published posts missing Yoast focus keyword or meta description          | `manage_options`    | Administrator |
+| `unlock-mcp-potential/seo-analyze-post`  | Analyze a single post or page: title length, word count, meta description, focus keyword placement, image alt text, internal links, slug length | `edit_post`         | Author †   |
+| `unlock-mcp-potential/seo-site-overview` | Site-wide SEO snapshot: sitemap and robots.txt accessibility, count of published posts missing Yoast focus keyword or meta description          | `manage_options`    | Administrator |
 
 **With Yoast SEO installed:** all checks run fully, including meta description and focus keyword analysis per post, site-wide counts of unoptimized content, and Yoast sitemap verification.
 
@@ -463,10 +463,10 @@ You should see the MCP Adapter's built-in meta/discovery abilities plus all abil
 
 To confirm everything is working, ask your agent to call a few abilities:
 
-- `wp-mcp/list-posts` — *"List the 5 most recent published posts"*
-- `wp-mcp/security-audit` with an Administrator service account — *"Run a security audit of my WordPress site"*
-- `wp-mcp/site-health-check` with an Administrator service account — *"Check WordPress site health"*
-- `wp-mcp/list-plugins` with an Administrator service account — *"List installed plugins and their activation state"*
+- `unlock-mcp-potential/list-posts` — *"List the 5 most recent published posts"*
+- `unlock-mcp-potential/security-audit` with an Administrator service account — *"Run a security audit of my WordPress site"*
+- `unlock-mcp-potential/site-health-check` with an Administrator service account — *"Check WordPress site health"*
+- `unlock-mcp-potential/list-plugins` with an Administrator service account — *"List installed plugins and their activation state"*
 
 ---
 

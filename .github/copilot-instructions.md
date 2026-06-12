@@ -7,7 +7,7 @@ Use this workflow for code, documentation, ability, and release-readiness change
 When asked to add, change, or release abilities, complete all applicable steps before the final response.
 
 1. Audit abilities
-   - Compare all registered `wp-mcp/*` abilities against `tests/e2e/abilities-manifest.json`.
+   - Compare all registered `unlock-mcp-potential/*` abilities against `tests/e2e/abilities-manifest.json`.
    - Ensure each registered ability has at least one manifest case.
    - For permissioned abilities, include allowed and denied role or capability cases.
 
@@ -18,6 +18,7 @@ When asked to add, change, or release abilities, complete all applicable steps b
 
 3. Update changelog
    - Add all unreleased work under `CHANGELOG.md` `## Unreleased`.
+   - Keep `CHANGELOG.md` focused on plugin-facing release notes. Use user-facing ability descriptions or short ability labels; avoid raw internal ability namespace strings unless the exact MCP tool name is necessary for compatibility notes.
    - Do not put new work directly under a released version unless preparing that release section.
 
 4. Validate contribution guidance
@@ -35,4 +36,3 @@ When asked to add, change, or release abilities, complete all applicable steps b
 6. Final response
    - Summarize changed files and the meaningful outcome.
    - Mention any validation that could not run due to missing local tools.
-

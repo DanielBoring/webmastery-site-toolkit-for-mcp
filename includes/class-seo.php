@@ -23,10 +23,10 @@ class Unlock_MCP_SEO {
 	}
 
 	private static function register_analyze_post() {
-		wp_register_ability( 'wp-mcp/seo-analyze-post', [
+		wp_register_ability( 'unlock-mcp-potential/seo-analyze-post', [
 			'label'               => 'SEO: Analyze Post',
 			'description'         => 'Analyze a post or page for SEO best practices and return findings.',
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -177,10 +177,10 @@ class Unlock_MCP_SEO {
 	}
 
 	private static function register_site_overview() {
-		wp_register_ability( 'wp-mcp/seo-site-overview', [
+		wp_register_ability( 'unlock-mcp-potential/seo-site-overview', [
 			'label'               => 'SEO: Site Overview',
 			'description'         => 'Get a site-level SEO overview: sitemap, robots.txt, and posts missing Yoast optimization.',
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'execute_callback'    => [ self::class, 'execute_site_overview' ],
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'manage_options' ) ) {

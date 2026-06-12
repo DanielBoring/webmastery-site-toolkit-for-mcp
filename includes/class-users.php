@@ -36,10 +36,10 @@ class Unlock_MCP_Users {
 	}
 
 	private static function register_list() {
-		wp_register_ability( 'wp-mcp/list-users', [
+		wp_register_ability( 'unlock-mcp-potential/list-users', [
 			'label'               => 'List Users',
 			'description'         => 'List WordPress users with optional role, search, and pagination filters.',
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -96,10 +96,10 @@ class Unlock_MCP_Users {
 	}
 
 	private static function register_get() {
-		wp_register_ability( 'wp-mcp/get-user', [
+		wp_register_ability( 'unlock-mcp-potential/get-user', [
 			'label'               => 'Get User',
 			'description'         => 'Get a single WordPress user by ID.',
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [

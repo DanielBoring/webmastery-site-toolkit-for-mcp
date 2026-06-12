@@ -7,7 +7,7 @@ assignees: ''
 ---
 
 **Proposed ability name**
-e.g. `wp-mcp/list-media`
+e.g. `unlock-mcp-potential/list-media`
 
 **What should it do?**
 A clear description of what the ability does and what it returns.

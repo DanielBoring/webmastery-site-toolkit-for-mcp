@@ -273,7 +273,7 @@ $roles = array(
 $registered = array_filter(
 	array_keys( wp_get_abilities() ),
 	static function ( $ability_name ) {
-		return str_starts_with( $ability_name, 'wp-mcp/' );
+		return str_starts_with( $ability_name, 'unlock-mcp-potential/' );
 	}
 );
 sort( $registered );
@@ -303,7 +303,7 @@ $summary = array(
 	'cases'                 => array(),
 );
 
-echo 'INFO registered wp-mcp abilities: ' . count( $registered ) . "\n";
+echo 'INFO registered unlock-mcp-potential abilities: ' . count( $registered ) . "\n";
 echo 'INFO manifest-covered abilities: ' . count( $covered ) . "\n";
 echo 'INFO manifest test cases: ' . count( $manifest ) . "\n";
 echo 'INFO negative permission cases: ' . $summary['negative_cases'] . "\n";

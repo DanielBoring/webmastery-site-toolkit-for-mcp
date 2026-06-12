@@ -26,10 +26,10 @@ class Unlock_MCP_Comments {
 	}
 
 	private static function register_list() {
-		wp_register_ability( 'wp-mcp/list-comments', [
+		wp_register_ability( 'unlock-mcp-potential/list-comments', [
 			'label'               => 'List Comments',
 			'description'         => 'List WordPress comments with optional filters.',
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -80,10 +80,10 @@ class Unlock_MCP_Comments {
 	}
 
 	private static function register_set_status( $action, $label, $wp_status ) {
-		wp_register_ability( "wp-mcp/{$action}-comment", [
+		wp_register_ability( "unlock-mcp-potential/{$action}-comment", [
 			'label'               => $label,
 			'description'         => "{$label} by ID.",
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [

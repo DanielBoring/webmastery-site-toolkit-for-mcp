@@ -27,10 +27,10 @@ class Unlock_MCP_Taxonomy {
 	private static function register_list( $taxonomy, $label ) {
 		$ability = 'category' === $taxonomy ? 'categories' : 'tags';
 
-		wp_register_ability( "wp-mcp/list-{$ability}", [
+		wp_register_ability( "unlock-mcp-potential/list-{$ability}", [
 			'label'               => "List {$label}",
 			'description'         => "List all WordPress {$label}.",
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -89,10 +89,10 @@ class Unlock_MCP_Taxonomy {
 			$props['parent'] = [ 'type' => 'integer', 'description' => 'Parent category ID (0 for top-level)' ];
 		}
 
-		wp_register_ability( "wp-mcp/create-{$ability}", [
+		wp_register_ability( "unlock-mcp-potential/create-{$ability}", [
 			'label'               => "Create {$label}",
 			'description'         => "Create a new WordPress {$label}.",
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => $props,
@@ -139,10 +139,10 @@ class Unlock_MCP_Taxonomy {
 		$label       = $is_category ? 'Category' : 'Tag';
 		$ability     = $is_category ? 'category' : 'tag';
 
-		wp_register_ability( "wp-mcp/delete-{$ability}", [
+		wp_register_ability( "unlock-mcp-potential/delete-{$ability}", [
 			'label'               => "Delete {$label}",
 			'description'         => "Permanently delete a WordPress {$label} by ID.",
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [

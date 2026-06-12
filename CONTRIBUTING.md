@@ -62,20 +62,20 @@ Each group of abilities lives in its own file under `includes/`. Follow the exis
 
 1. **Create or open** the relevant class file (e.g., `includes/class-media.php`)
 2. **Register** the ability inside the class's `register()` method using `wp_register_ability()`
-3. **Use the `wp-mcp/` prefix** for the ability name (e.g., `wp-mcp/list-media`)
+3. **Use the `unlock-mcp-potential/` prefix** for the ability name (e.g., `unlock-mcp-potential/list-media`)
 4. **Require the narrowest relevant capability** in `permission_callback` — use object-specific checks when an input ID is available and never skip the check
 5. **Return a consistent shape** — match the affected ability group's existing success arrays and `WP_Error`/structured error responses
 6. **Require the class file** in `unlock-mcp-potential.php` inside the `wp_abilities_api_init` action and call `ClassName::register()`
 7. **Add E2E manifest coverage** in `tests/e2e/abilities-manifest.json`; include both allowed and denied roles when permissions differ by role or capability
-8. **Update docs and changelog** when behavior is user-facing: `README.md`, `readme.txt`, relevant markdown files, and `CHANGELOG.md` under `## Unreleased`
+8. **Update docs and changelog** when behavior is user-facing: `README.md`, `readme.txt`, relevant markdown files, and `CHANGELOG.md` under `## Unreleased`. Changelog entries should use plugin-facing release-note wording rather than raw internal ability namespace strings unless the exact MCP tool name is necessary.
 
 A minimal ability skeleton:
 
 ```php
-wp_register_ability( 'wp-mcp/your-ability', [
+wp_register_ability( 'unlock-mcp-potential/your-ability', [
     'label'               => 'Label shown in MCP clients',
     'description'         => 'One-sentence description.',
-    'category'            => 'wp-mcp',
+    'category'            => 'unlock-mcp-potential',
     'input_schema'        => [
         'type'       => 'object',
         'properties' => [

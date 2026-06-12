@@ -28,10 +28,10 @@ add_action( 'admin_notices', function () {
 	}
 } );
 
-// Register the wp-mcp category before abilities are registered.
+// Register the unlock-mcp-potential category before abilities are registered.
 add_action( 'wp_abilities_api_categories_init', function () {
-	wp_register_ability_category( 'wp-mcp', array(
-		'label'       => 'WP MCP',
+	wp_register_ability_category( 'unlock-mcp-potential', array(
+		'label'       => 'Unlock MCP Potential',
 		'description' => 'WordPress content management abilities registered by Unlock MCP Potential.',
 	) );
 } );

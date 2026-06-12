@@ -209,12 +209,12 @@ jobs:
           VERSIONS+="- Commit: ${HEAD_SHA:-unknown}"$'\n'
           VERSIONS+="- Workflow run: ${RUN_URL:-unknown}"
           COVERAGE=$'\n\n### Ability coverage\n\n'
-          COVERAGE+="- Registered wp-mcp abilities: ${REGISTERED_ABILITIES:-unknown}"$'\n'
+          COVERAGE+="- Registered unlock-mcp-potential abilities: ${REGISTERED_ABILITIES:-unknown}"$'\n'
           COVERAGE+="- Manifest-covered abilities: ${COVERED_ABILITIES:-unknown}"$'\n'
           COVERAGE+="- Manifest test cases: ${TEST_CASES:-unknown}"$'\n'
           COVERAGE+="- Negative permission cases: ${NEGATIVE_CASES:-unknown}"
           if [ "$E2E_RESULT" = "success" ]; then
-            BODY=$'## E2E QA Tests Passed\n\n- Docker WordPress stack started\n- WordPress core installed before plugin activation\n- MCP Adapter installed from official WordPress release asset\n- Manifest covers every registered wp-mcp ability\n- Ability execution tests passed\n- PHP syntax checks passed\n- WordPress debug log scan found no fatal/error-level entries'
+            BODY=$'## E2E QA Tests Passed\n\n- Docker WordPress stack started\n- WordPress core installed before plugin activation\n- MCP Adapter installed from official WordPress release asset\n- Manifest covers every registered unlock-mcp-potential ability\n- Ability execution tests passed\n- PHP syntax checks passed\n- WordPress debug log scan found no fatal/error-level entries'
           else
             BODY=$"## E2E QA Tests Failed\n\n- Result: ${E2E_RESULT}\n- Review this workflow run and uploaded E2E failure artifacts for the failed setup/test phase details."
           fi

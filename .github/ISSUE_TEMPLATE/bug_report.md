@@ -10,7 +10,7 @@ assignees: ''
 A clear description of what went wrong.
 
 **Ability name**
-e.g. `wp-mcp/list-posts`
+e.g. `unlock-mcp-potential/list-posts`
 
 **Steps to reproduce**
 1. Called ability with input `{ ... }`

@@ -4,10 +4,16 @@ All notable changes to Unlock MCP Potential are tracked here.
 
 ## Unreleased
 
+### Added
+
+- Added featured image abilities for setting and removing featured images on posts and pages, with E2E manifest coverage.
+- Added restore abilities for restoring trashed posts and pages, with object-specific `delete_post` permission checks and E2E manifest coverage.
+
 ### Changed
 
+- Renamed registered MCP ability names and categories to the `unlock-mcp-potential` plugin slug namespace.
 - Updated README and WordPress.org readme documentation to include plugin management abilities and administrator role requirements.
-- Clarified E2E manifest coverage documentation for the current 33 registered abilities and 45 manifest test cases.
+- Clarified E2E manifest coverage documentation for the current 37 registered abilities and 57 manifest test cases.
 - Updated pull request and contribution guidance so external contributors can apply WordPress.org guideline checks when relevant and keep docs, changelog, and E2E coverage in sync.
 - Added repository agent instructions for repeatable ability, documentation, changelog, contribution, and validation workflows.
 - Clarified that local agent validation is a preflight check and GitHub Actions remains the authoritative PR validation gate.
@@ -15,6 +21,7 @@ All notable changes to Unlock MCP Potential are tracked here.
 ### Fixed
 
 - Preserved backslashes in `create-post` and `update-post` content by slashing post data before WordPress insert/update calls.
+- Avoided Docker Compose project-name collisions between local and GitHub Actions E2E runs.
 
 ## 1.6.0
 
@@ -23,7 +30,7 @@ All notable changes to Unlock MCP Potential are tracked here.
 - Added WordPress Coding Standards tooling via Composer and `phpcs.xml.dist`.
 - Added contribution and PR checklist guidance for WordPress.org Detailed Plugin Guidelines review.
 - Added manifest-driven E2E ability coverage via `tests/e2e/abilities-manifest.json` and `tests/e2e/ability-runner.php`.
-- Added an E2E coverage gate that fails when any registered `wp-mcp/*` ability is missing from the manifest.
+- Added an E2E coverage gate that fails when any registered `unlock-mcp-potential/*` ability is missing from the manifest.
 - Added E2E execution coverage for the current 33 registered abilities with 45 manifest test cases, including positive and negative permission cases.
 - Added E2E PR comments that report ability coverage counts, tested dependency versions, commit SHA, and workflow run URL.
 - Added failure artifact collection for E2E failures, including Docker Compose logs, WordPress debug logs, and E2E summary JSON.

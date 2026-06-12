@@ -8,7 +8,7 @@ Open feature requests and bugs are tracked in [GitHub Issues](https://github.com
 
 ### Features
 
-- [ ] **SEO/Webmaster:** Add a read-only `wp-mcp/webmaster-verification-status` ability that checks public Google/Bing webmaster setup: Google Site Kit installed/active status, homepage `google-site-verification` meta tag, Bing `msvalidate.01` meta tag, `BingSiteAuth.xml`, visible DNS TXT verification records where available, `robots.txt` sitemap declarations, and sitemap reachability. Start with WordPress-visible/public proof only; consider a later admin-only API-backed version for confirmed Google Search Console and Bing Webmaster Tools account status, which would require OAuth/API credentials.
+- [ ] **SEO/Webmaster:** Add a read-only `unlock-mcp-potential/webmaster-verification-status` ability that checks public Google/Bing webmaster setup: Google Site Kit installed/active status, homepage `google-site-verification` meta tag, Bing `msvalidate.01` meta tag, `BingSiteAuth.xml`, visible DNS TXT verification records where available, `robots.txt` sitemap declarations, and sitemap reachability. Start with WordPress-visible/public proof only; consider a later admin-only API-backed version for confirmed Google Search Console and Bing Webmaster Tools account status, which would require OAuth/API credentials.
 
 ## Completed
 

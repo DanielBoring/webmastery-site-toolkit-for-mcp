@@ -5,10 +5,10 @@ defined( 'ABSPATH' ) || exit;
 class Unlock_MCP_Security {
 
 	public static function register() {
-		wp_register_ability( 'wp-mcp/security-audit', [
+		wp_register_ability( 'unlock-mcp-potential/security-audit', [
 			'label'               => 'Security Audit',
 			'description'         => 'Run a security audit of the WordPress installation and return findings grouped by severity.',
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'execute_callback'    => [ self::class, 'execute' ],
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'manage_options' ) ) {

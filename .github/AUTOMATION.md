@@ -21,7 +21,7 @@ This repository uses GitHub Actions for two purposes:
 1. Detect whether changed files are in E2E scope.
 2. If in scope, start Docker stack and run `scripts/e2e-test.sh`.
 3. Run manifest-driven ability coverage from `tests/e2e/abilities-manifest.json`.
-4. Fail if a registered `wp-mcp/*` ability is missing from the manifest or if the manifest references an unregistered ability.
+4. Fail if a registered `unlock-mcp-potential/*` ability is missing from the manifest or if the manifest references an unregistered ability.
 5. Write `e2e-artifacts/e2e-summary.json` with registered ability, covered ability, test case, and negative case counts.
 6. Validate WordPress debug log for fatal/error-level entries.
 7. Upload E2E failure artifacts when the test fails.
@@ -29,7 +29,7 @@ This repository uses GitHub Actions for two purposes:
 9. Always clean up Docker resources.
 
 **Ability coverage contract**
-- Every new `wp-mcp/*` ability must add coverage in `tests/e2e/abilities-manifest.json`.
+- Every new `unlock-mcp-potential/*` ability must add coverage in `tests/e2e/abilities-manifest.json`.
 - CI fails when registered abilities are not covered by the manifest.
 - CI fails when manifest entries reference abilities that are no longer registered.
 - For permission-sensitive abilities, include both allowed and denied role cases where practical.

@@ -135,10 +135,10 @@ class Unlock_MCP_Posts {
 	}
 
 	private static function register_set_featured_image() {
-		wp_register_ability( 'wp-mcp/set-featured-image', [
+		wp_register_ability( 'unlock-mcp-potential/set-featured-image', [
 			'label'               => 'Set Featured Image',
 			'description'         => 'Set the featured image for a WordPress post or page by attachment ID.',
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -181,10 +181,10 @@ class Unlock_MCP_Posts {
 	}
 
 	private static function register_remove_featured_image() {
-		wp_register_ability( 'wp-mcp/remove-featured-image', [
+		wp_register_ability( 'unlock-mcp-potential/remove-featured-image', [
 			'label'               => 'Remove Featured Image',
 			'description'         => 'Remove the featured image from a WordPress post or page.',
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -233,10 +233,10 @@ class Unlock_MCP_Posts {
 			$list_input['properties']['category_id'] = [ 'type' => 'integer' ];
 		}
 
-		wp_register_ability( "wp-mcp/list-{$slug}", [
+		wp_register_ability( "unlock-mcp-potential/list-{$slug}", [
 			'label'               => "List {$label}s",
 			'description'         => "List WordPress {$slug} with optional filters.",
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => $list_input,
 			'execute_callback'    => function ( $input ) use ( $type, $slug ) {
 				$args = [
@@ -280,10 +280,10 @@ class Unlock_MCP_Posts {
 		] );
 
 		// --- get ---
-		wp_register_ability( "wp-mcp/get-{$type}", [
+		wp_register_ability( "unlock-mcp-potential/get-{$type}", [
 			'label'               => "Get {$label}",
 			'description'         => "Get a single WordPress {$type} by ID.",
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -329,10 +329,10 @@ class Unlock_MCP_Posts {
 			$create_props['parent'] = [ 'type' => 'integer', 'description' => 'Parent page ID (0 for top-level)' ];
 		}
 
-		wp_register_ability( "wp-mcp/create-{$type}", [
+		wp_register_ability( "unlock-mcp-potential/create-{$type}", [
 			'label'               => "Create {$label}",
 			'description'         => "Create a new WordPress {$type}.",
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => $create_props,
@@ -414,10 +414,10 @@ class Unlock_MCP_Posts {
 		$update_props['yoast_meta_description'] = [ 'type' => 'string', 'description' => 'Yoast SEO meta description (stored as _yoast_wpseo_metadesc)' ];
 		$update_props['yoast_focus_keyword']    = [ 'type' => 'string', 'description' => 'Yoast SEO focus keyword (stored as _yoast_wpseo_focuskw)' ];
 
-		wp_register_ability( "wp-mcp/update-{$type}", [
+		wp_register_ability( "unlock-mcp-potential/update-{$type}", [
 			'label'               => "Update {$label}",
 			'description'         => "Update an existing WordPress {$type}.",
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => $update_props,
@@ -494,10 +494,10 @@ class Unlock_MCP_Posts {
 		] );
 
 		// --- delete (trash) ---
-		wp_register_ability( "wp-mcp/delete-{$type}", [
+		wp_register_ability( "unlock-mcp-potential/delete-{$type}", [
 			'label'               => "Delete {$label}",
 			'description'         => "Move a WordPress {$type} to trash.",
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -532,10 +532,10 @@ class Unlock_MCP_Posts {
 		] );
 
 		// --- restore (untrash) ---
-		wp_register_ability( "wp-mcp/restore-{$type}", [
+		wp_register_ability( "unlock-mcp-potential/restore-{$type}", [
 			'label'               => "Restore {$label}",
 			'description'         => "Restore a WordPress {$type} from trash.",
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [

@@ -172,10 +172,10 @@ class Unlock_MCP_Plugins {
 	}
 
 	private static function register_list() {
-		wp_register_ability( 'wp-mcp/list-plugins', [
+		wp_register_ability( 'unlock-mcp-potential/list-plugins', [
 			'label'               => 'List Plugins',
 			'description'         => 'List installed WordPress plugins and their activation state.',
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'execute_callback'    => [ self::class, 'list_plugins' ],
 			'permission_callback' => '__return_true',
 			'meta'                => [
@@ -186,10 +186,10 @@ class Unlock_MCP_Plugins {
 	}
 
 	private static function register_activate() {
-		wp_register_ability( 'wp-mcp/activate-plugin', [
+		wp_register_ability( 'unlock-mcp-potential/activate-plugin', [
 			'label'               => 'Activate Plugin',
 			'description'         => 'Activate a WordPress plugin by canonical plugin basename.',
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -208,10 +208,10 @@ class Unlock_MCP_Plugins {
 	}
 
 	private static function register_deactivate() {
-		wp_register_ability( 'wp-mcp/deactivate-plugin', [
+		wp_register_ability( 'unlock-mcp-potential/deactivate-plugin', [
 			'label'               => 'Deactivate Plugin',
 			'description'         => 'Deactivate a WordPress plugin by canonical plugin basename.',
-			'category'            => 'wp-mcp',
+			'category'            => 'unlock-mcp-potential',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
