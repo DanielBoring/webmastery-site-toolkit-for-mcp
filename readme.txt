@@ -4,7 +4,7 @@ Tags: mcp, ai, automation, content-management, artificial-intelligence
 Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.5.1
+Stable tag: 1.6.0
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
@@ -101,6 +101,12 @@ Delete operations for posts and pages move content to trash. Media delete perman
 
 == Changelog ==
 
+= 1.6.0 =
+* Add plugin management abilities: `list-plugins`, `activate-plugin`, and `deactivate-plugin`
+* Add guarded plugin activation/deactivation controls with canonical `plugin_basename` identifiers, protected-plugin safeguards, multisite-aware `network_wide` handling, and structured errors
+* Add E2E manifest coverage and release QA/reporting hardening for ability lifecycle changes
+* Rebrand package/repository references to align with Unlock MCP Potential and remove `.github/README.md` so GitHub uses the root README
+
 = 1.5.1 =
 * Rename plugin to "Unlock MCP Potential" and update slug references to `unlock-mcp-potential`
 * Replace generic `WP_MCP_` PHP class prefixes with `Unlock_MCP_`
@@ -139,6 +145,9 @@ Delete operations for posts and pages move content to trash. Media delete perman
 * Security audit with fail/warn/pass buckets and remediation guidance
 
 == Upgrade Notice ==
+
+= 1.6.0 =
+Adds plugin management abilities and guarded activation controls, plus release and coverage hardening updates.
 
 = 1.5.1 =
 Renames the plugin, tightens permission checks, and adds WordPress.org review-readiness tooling.

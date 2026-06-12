@@ -4,6 +4,8 @@ All notable changes to Unlock MCP Potential are tracked here.
 
 ## Unreleased
 
+## 1.6.0
+
 ### Added
 
 - Added WordPress Coding Standards tooling via Composer and `phpcs.xml.dist`.
@@ -16,10 +18,13 @@ All notable changes to Unlock MCP Potential are tracked here.
 - Added failure artifact collection for E2E failures, including Docker Compose logs, WordPress debug logs, and E2E summary JSON.
 - Added E2E documentation in `tests/e2e/README.md` describing the rule that new or changed abilities must include manifest test coverage.
 - Added a pull request checklist reminder to update `tests/e2e/abilities-manifest.json` when abilities are added or changed.
+- Added plugin management abilities: `list-plugins`, `activate-plugin`, and `deactivate-plugin`.
+- Added guarded plugin state controls with canonical `plugin_basename` identifiers, protected-plugin deactivation safeguards (`force` override), multisite-aware `network_wide` handling, and structured `WP_Error` responses for capability/context/identifier failures.
 
 ### Changed
 
 - Renamed the plugin to "Unlock MCP Potential" and updated release/test tooling for the `unlock-mcp-potential` plugin slug.
+- Updated repository/documentation references to align with the Unlock MCP Potential package rebrand.
 - Replaced generic `WP_MCP_` PHP class prefixes with `Unlock_MCP_`.
 - Hardened permission callbacks for object-specific post/media operations and sensitive site-audit abilities.
 - Consolidated release automation to the tag-based `release.yml` workflow.
@@ -33,6 +38,7 @@ All notable changes to Unlock MCP Potential are tracked here.
 - Removed redundant `auto-close-issue.yml` automation in favor of GitHub's native `Closes #N` / `Fixes #N` / `Resolves #N` behavior.
 - Removed `auto-pr-from-issue.yml` placeholder PR automation.
 - Removed merge-based `auto-release.yml` automation to avoid overlapping release paths.
+- Removed `.github/README.md` so GitHub shows the project root `README.md` on the repository homepage.
 
 ## 1.4.0
 
