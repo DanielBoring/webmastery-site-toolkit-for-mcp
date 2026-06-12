@@ -46,6 +46,7 @@ add_action( 'wp_abilities_api_init', function () {
 	require_once __DIR__ . '/includes/class-health.php';
 	require_once __DIR__ . '/includes/class-security.php';
 	require_once __DIR__ . '/includes/class-seo.php';
+	require_once __DIR__ . '/includes/class-plugins.php';
 
 	Unlock_MCP_Posts::register();
 	Unlock_MCP_Taxonomy::register();
@@ -55,4 +56,5 @@ add_action( 'wp_abilities_api_init', function () {
 	Unlock_MCP_Health::register();
 	Unlock_MCP_Security::register();
 	Unlock_MCP_SEO::register();
+	Unlock_MCP_Plugins::register();
 } );

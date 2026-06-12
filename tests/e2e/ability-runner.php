@@ -85,6 +85,27 @@ function e2e_insert_media( $post_id, $author_id, $suffix ) {
 	return (int) $id;
 }
 
+function e2e_ensure_plugin( $relative_path, $name ) {
+	$plugin_path = WP_PLUGIN_DIR . '/' . ltrim( $relative_path, '/' );
+	$plugin_dir  = dirname( $plugin_path );
+
+	if ( ! is_dir( $plugin_dir ) ) {
+		wp_mkdir_p( $plugin_dir );
+	}
+
+	$contents = <<<PHP
+<?php
+/**
+ * Plugin Name: {$name}
+ * Version: 1.0.0
+ */
+
+defined( 'ABSPATH' ) || exit;
+PHP;
+
+	file_put_contents( $plugin_path, $contents . "\n" );
+}
+
 function e2e_resolve_placeholders( $value, $fixtures ) {
 	if ( is_string( $value ) && preg_match( '/^__([a-z0-9_]+)__$/', $value, $matches ) ) {
 		$key = $matches[1];
@@ -103,8 +124,61 @@ function e2e_resolve_placeholders( $value, $fixtures ) {
 	return $value;
 }
 
+function e2e_result_error_code( $result ) {
+	if ( is_wp_error( $result ) ) {
+		return $result->get_error_code();
+	}
+
+	if ( is_array( $result ) && false === ( $result['success'] ?? true ) && is_array( $result['error'] ?? null ) ) {
+		return $result['error']['code'] ?? null;
+	}
+
+	return null;
+}
+
+function e2e_result_error_message( $result ) {
+	if ( is_wp_error( $result ) ) {
+		return $result->get_error_message();
+	}
+
+	if ( is_array( $result ) && false === ( $result['success'] ?? true ) ) {
+		if ( is_array( $result['error'] ?? null ) ) {
+			return $result['error']['message'] ?? '';
+		}
+
+		return (string) ( $result['error'] ?? '' );
+	}
+
+	return '';
+}
+
 function e2e_result_is_success( $result ) {
 	return is_array( $result ) && true === ( $result['success'] ?? false );
+}
+
+function e2e_get_path_value( $value, $path, &$exists = false ) {
+	$exists  = true;
+	$segments = explode( '.', $path );
+
+	foreach ( $segments as $segment ) {
+		if ( is_array( $value ) && array_key_exists( $segment, $value ) ) {
+			$value = $value[ $segment ];
+			continue;
+		}
+
+		if ( is_array( $value ) && ctype_digit( (string) $segment ) ) {
+			$index = (int) $segment;
+			if ( array_key_exists( $index, $value ) ) {
+				$value = $value[ $index ];
+				continue;
+			}
+		}
+
+		$exists = false;
+		return null;
+	}
+
+	return $value;
 }
 
 function e2e_write_summary( $summary ) {
@@ -156,6 +230,22 @@ $fixtures['trash_comment_id'] = e2e_insert_comment( $fixtures['post_id'], 'trash
 $fixtures['spam_comment_id']  = e2e_insert_comment( $fixtures['post_id'], 'spam' );
 $fixtures['media_id']         = e2e_insert_media( $fixtures['post_id'], $author_id, 'read-update' );
 $fixtures['delete_media_id']  = e2e_insert_media( $fixtures['post_id'], $author_id, 'delete' );
+
+e2e_ensure_plugin( 'mcp-e2e-plugin/mcp-e2e-plugin.php', 'MCP E2E Plugin' );
+e2e_ensure_plugin( 'mcp-e2e-duplicate/mcp-e2e-duplicate.php', 'MCP E2E Duplicate Folder Plugin' );
+e2e_ensure_plugin( 'mcp-e2e-duplicate.php', 'MCP E2E Duplicate Single Plugin' );
+deactivate_plugins(
+	array(
+		'mcp-e2e-plugin/mcp-e2e-plugin.php',
+		'mcp-e2e-duplicate/mcp-e2e-duplicate.php',
+		'mcp-e2e-duplicate.php',
+	),
+	true
+);
+
+$fixtures['fixture_plugin']        = 'mcp-e2e-plugin/mcp-e2e-plugin.php';
+$fixtures['ambiguous_plugin_slug'] = 'mcp-e2e-duplicate';
+$fixtures['protected_plugin']      = 'unlock-mcp-potential/unlock-mcp-potential.php';
 
 $roles = array(
 	'admin'      => $admin_id,
@@ -235,6 +325,34 @@ foreach ( $manifest as $case ) {
 	$result  = $ability->execute( $input );
 	$ok      = ! is_wp_error( $result ) && e2e_result_is_success( $result );
 	$passed  = ( 'success' === $expect && $ok ) || ( 'failure' === $expect && ! $ok );
+
+	if ( $passed && ! empty( $case['expect_error_code'] ) ) {
+		$passed = $case['expect_error_code'] === e2e_result_error_code( $result );
+	}
+
+	if ( $passed && ! empty( $case['expect_error_message_contains'] ) ) {
+		$passed = false !== strpos( e2e_result_error_message( $result ), $case['expect_error_message_contains'] );
+	}
+
+	if ( $passed && ! empty( $case['assert_paths'] ) ) {
+		foreach ( (array) $case['assert_paths'] as $path ) {
+			e2e_get_path_value( $result, $path, $exists );
+			if ( ! $exists ) {
+				$passed = false;
+				break;
+			}
+		}
+	}
+
+	if ( $passed && ! empty( $case['assert_values'] ) ) {
+		foreach ( (array) $case['assert_values'] as $path => $expected_value ) {
+			$actual_value = e2e_get_path_value( $result, $path, $exists );
+			if ( ! $exists || $expected_value !== $actual_value ) {
+				$passed = false;
+				break;
+			}
+		}
+	}
 
 	if ( $passed ) {
 		$summary['passed']++;
