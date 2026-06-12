@@ -6,7 +6,9 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
-No unreleased repository changes.
+### Added
+
+- Added a dedicated Coding Standards workflow that installs Composer dev dependencies and runs PHPCS on pushes, pull requests, and manual dispatches.
 
 ## 1.6.0
 
