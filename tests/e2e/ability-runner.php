@@ -45,11 +45,6 @@ function e2e_insert_post( $type, $title, $content, $author_id ) {
 		throw new RuntimeException( $id->get_error_message() );
 	}
 
-	if ( $is_image ) {
-		require_once ABSPATH . 'wp-admin/includes/image.php';
-		wp_update_attachment_metadata( $id, wp_generate_attachment_metadata( $id, $upload['file'] ) );
-	}
-
 	return (int) $id;
 }
 
