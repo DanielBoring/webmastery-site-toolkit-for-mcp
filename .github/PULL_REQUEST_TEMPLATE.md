@@ -12,13 +12,13 @@
 <!-- E2E QA tests will run automatically on push. -->
 
 ## Checklist
-- [ ] Capability check in `permission_callback` returns `WP_Error` on failure
-- [ ] All inputs sanitized (`sanitize_text_field`, `absint`, `wp_kses_post`, or enum validation)
-- [ ] Returns `['success' => true, 'data' => [...]]` on success and `['success' => false, 'error' => '...']` on failure
-- [ ] Ability name uses `wp-mcp/` prefix
-- [ ] `annotations` flags set correctly (`readonly`, `destructive`, `idempotent`)
-- [ ] If this PR adds or changes `wp-mcp/*` abilities, `tests/e2e/abilities-manifest.json` includes matching positive/negative E2E cases
-- [ ] WordPress Coding Standards checked with `composer phpcs`
-- [ ] WordPress.org Detailed Plugin Guidelines reviewed for naming, readme, privacy/external calls, licensing/assets, and release readiness
-- [ ] `readme.txt` changelog updated under `== Changelog ==`
-- [ ] E2E QA tests passing (see CI/workflow status)
+- [ ] Capability checks use the narrowest relevant WordPress capability and return/surface `WP_Error` on failure
+- [ ] Inputs are sanitized or validated (`sanitize_text_field`, `sanitize_key`, `absint`, `wp_kses_post`, enum validation, or an equivalent WordPress API)
+- [ ] Ability responses follow the existing success/error shape for the affected ability group
+- [ ] New ability names use the `wp-mcp/` prefix and set accurate `annotations` (`readonly`, `destructive`, `idempotent`)
+- [ ] If this PR adds or changes `wp-mcp/*` abilities, `tests/e2e/abilities-manifest.json` includes matching positive and negative cases where permissions apply
+- [ ] User-facing changes update relevant docs (`README.md`, `readme.txt`, `tests/e2e/README.md`, or other affected markdown)
+- [ ] `CHANGELOG.md` is updated under `## Unreleased`
+- [ ] WordPress Coding Standards checked with `composer phpcs`, or the reason it was not run is documented above
+- [ ] WordPress.org Detailed Plugin Guidelines were considered for public-facing or release-impacting changes such as naming, readme text, privacy/external calls, licensing, bundled assets, and release packaging
+- [ ] E2E QA is passing, or failures are unrelated and explained above

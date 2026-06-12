@@ -21,7 +21,7 @@
 
 </div>
 
-**Unlock MCP Potential** is a WordPress plugin that adds MCP-powered content management abilities for posts, pages, media, comments, SEO checks, site health, security audits, and user lookup. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
+**Unlock MCP Potential** is a WordPress plugin that adds MCP-powered content management abilities for posts, pages, media, comments, plugins, SEO checks, site health, security audits, and user lookup. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
 
 - You want an AI agent to draft, update, or publish posts and pages
 - You want to ask an AI to audit your site's security or health posture
@@ -34,7 +34,7 @@ Only the MCP Adapter's 3 meta/discovery abilities are visible — no content too
 ![Before](assets/before.png)
 
 ### With this plugin
-All abilities available: full editorial access to posts, pages, taxonomy, comments, media, user lookup, security, and SEO.
+All abilities available: full editorial access to posts, pages, taxonomy, comments, media, plugin management, user lookup, security, and SEO.
 
 ![After](assets/after.png)
 
@@ -104,7 +104,7 @@ Each ability enforces a WordPress capability check. The table below maps standar
 | Subscriber    | `read`                                                                   | Read-only taxonomy browsing |
 | Author        | `edit_posts`, `delete_posts`, `upload_files`                             | Creating and managing the agent's own posts and media               |
 | **Editor** ✓  | All Author caps + `edit_pages`, `delete_pages`, `manage_categories`, `moderate_comments` | **Full editorial control — recommended default** |
-| Administrator | All Editor caps, plus `list_users`, `manage_options`, and other administrative capabilities | User lookup and sensitive site-audit workflows |
+| Administrator | All Editor caps, plus `list_users`, `manage_options`, `activate_plugins`, and other administrative capabilities | User lookup, plugin management, and sensitive site-audit workflows |
 
 > **Scope note for `edit_posts`:** This capability is available to Authors and above, but WordPress scopes query results to the authenticated user's own content unless `edit_others_posts` is also present. An Editor account (which has `edit_others_posts`) sees all content site-wide. Use Author only if the agent should be limited to content it created.
 
@@ -118,7 +118,7 @@ Each ability enforces a WordPress capability check. The table below maps standar
 | `wp-mcp/create-post`  | Create a new post with title, content, status, categories, tags        | `edit_posts`        | Author    |
 | `wp-mcp/update-post`  | Update an existing post                                                | `edit_post`         | Author †  |
 | `wp-mcp/delete-post`  | Move a post to trash                                                   | `delete_post`       | Author †  |
-| `wp-mcp/restore-post` | Restore a post from trash                                              | `delete_posts`      | Author    |
+| `wp-mcp/restore-post` | Restore a post from trash                                              | `delete_post`       | Author †  |
 
 † Returns or acts on the service account's own posts only. Use **Editor** to manage all posts site-wide.
 
@@ -130,7 +130,7 @@ Each ability enforces a WordPress capability check. The table below maps standar
 | `wp-mcp/create-page`  | Create a new page         | `edit_pages`        | Editor    |
 | `wp-mcp/update-page`  | Update an existing page   | `edit_post`         | Editor    |
 | `wp-mcp/delete-page`  | Move a page to trash      | `delete_post`       | Editor    |
-| `wp-mcp/restore-page` | Restore a page from trash | `delete_pages`      | Editor    |
+| `wp-mcp/restore-page` | Restore a page from trash | `delete_post`       | Editor    |
 
 ### Taxonomy
 | Ability                  | Description                         | Required Capability | Min. Role  |
@@ -165,6 +165,15 @@ Each ability enforces a WordPress capability check. The table below maps standar
 | -------------------- | ------------------------------------------------------- | ------------------- | ------------- |
 | `wp-mcp/list-users`  | List users with filters (role, search, pagination)      | `list_users`        | Administrator |
 | `wp-mcp/get-user`    | Get a single user by ID                                 | `list_users`        | Administrator |
+
+### Plugins
+| Ability                    | Description                                                                                     | Required Capability | Min. Role     |
+| -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------- | ------------- |
+| `wp-mcp/list-plugins`      | List installed plugins with version, activation state, network activation, auto-update, and update availability | `activate_plugins`  | Administrator |
+| `wp-mcp/activate-plugin`   | Activate a plugin by canonical plugin basename, or by slug when it resolves to exactly one plugin | `activate_plugins`  | Administrator |
+| `wp-mcp/deactivate-plugin` | Deactivate a plugin by canonical plugin basename, with protected-plugin and multisite safeguards | `activate_plugins`  | Administrator |
+
+Plugin management abilities require Administrator-level plugin capabilities. Network-wide activation or deactivation is only available on multisite installations and requires `manage_network_plugins`.
 
 ### Site Health
 | Ability                    | Description                                                                                                | Required Capability | Min. Role  |
@@ -253,7 +262,7 @@ It is recommended to create a dedicated user for your AI agent rather than using
 3. Set the **Role** to **Editor**
 4. Click **Add New User**
 
-> **Why Editor and not Administrator?** Editor is still the recommended default for content workflows and covers the editorial capabilities used by posts, pages, taxonomy, comments, and media (`edit_posts`, `edit_pages`, `delete_posts`, `delete_pages`, `upload_files`, `manage_categories`, and `moderate_comments`). User lookup and sensitive site-audit abilities require Administrator capabilities such as `list_users` or `manage_options`. Use a separate dedicated Administrator service account for those workflows and keep the Editor account for day-to-day content operations. See the [Role overview](#role-overview) for the full breakdown.
+> **Why Editor and not Administrator?** Editor is still the recommended default for content workflows and covers the editorial capabilities used by posts, pages, taxonomy, comments, and media (`edit_posts`, `edit_pages`, `delete_posts`, `delete_pages`, `upload_files`, `manage_categories`, and `moderate_comments`). User lookup, plugin management, and sensitive site-audit abilities require Administrator capabilities such as `list_users`, `activate_plugins`, or `manage_options`. Use a separate dedicated Administrator service account for those workflows and keep the Editor account for day-to-day content operations. See the [Role overview](#role-overview) for the full breakdown.
 
 ### 4. Create an application password
 
@@ -457,6 +466,7 @@ To confirm everything is working, ask your agent to call a few abilities:
 - `wp-mcp/list-posts` — *"List the 5 most recent published posts"*
 - `wp-mcp/security-audit` with an Administrator service account — *"Run a security audit of my WordPress site"*
 - `wp-mcp/site-health-check` with an Administrator service account — *"Check WordPress site health"*
+- `wp-mcp/list-plugins` with an Administrator service account — *"List installed plugins and their activation state"*
 
 ---
 
@@ -464,5 +474,6 @@ To confirm everything is working, ask your agent to call a few abilities:
 
 - All abilities enforce WordPress capability checks via `permission_callback`. The ability list reflects what the authenticated user is actually allowed to do — an editor cannot call abilities that require admin caps.
 - `delete-post` and `delete-page` move content to trash, not permanent deletion. Use `restore-post` and `restore-page` to untrash content.
+- Plugin activation and deactivation require `activate_plugins`; network-wide changes require multisite and `manage_network_plugins`. Deactivation is blocked for protected plugins unless explicitly forced.
 - Content is sanitized on write: `sanitize_text_field()` for strings, `wp_kses_post()` for HTML content, `absint()` for IDs, and enum validation for status fields.
 - No direct database queries — all reads and writes go through the WordPress API.

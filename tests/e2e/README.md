@@ -2,6 +2,8 @@
 
 The E2E suite is manifest-driven. Every registered `wp-mcp/*` ability must be represented in `tests/e2e/abilities-manifest.json`.
 
+Current coverage is 33 registered abilities across 45 manifest test cases, including the plugin management abilities `wp-mcp/list-plugins`, `wp-mcp/activate-plugin`, and `wp-mcp/deactivate-plugin`.
+
 ## Rule for new abilities
 
 When a PR adds a new ability, it must also add at least one manifest test case for that ability. If the ability is registered but missing from the manifest, E2E QA fails.

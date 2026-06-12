@@ -69,6 +69,10 @@ jobs:
     if: needs.changes.outputs.should-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      COMPOSE_PROJECT_NAME: unlock-mcp-potential-${{ github.event.pull_request.number || github.run_id }}
+      MYSQL_PORT: 0
+      WORDPRESS_PORT: 0
     permissions:
       contents: read
     outputs:
