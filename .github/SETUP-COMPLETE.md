@@ -17,7 +17,7 @@ Removed workflows:
 | Pull request opened/synchronized/reopened | `e2e-qa.yml` | Runs changed-file detection and executes Docker E2E QA when in scope. |
 | Push to `main` or `develop` | `e2e-qa.yml` | Runs changed-file detection and executes Docker E2E QA when in scope. |
 | Manual dispatch | `e2e-qa.yml` | Executes on-demand E2E QA run. |
-| Push tag `v*` | `release.yml` | Validates versions/changelog, builds artifact, validates contents, publishes release. |
+| Push tag `v*` | `release.yml` | Validates plugin version/release notes, builds artifact, validates contents, publishes release. |
 
 ## Contributor flow
 

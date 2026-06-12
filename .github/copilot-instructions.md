@@ -16,14 +16,16 @@ When asked to add, change, or release abilities, complete all applicable steps b
    - Update `readme.txt` for WordPress.org-facing description, FAQ, changelog, and upgrade notice when applicable.
    - Update related markdown files such as `tests/e2e/README.md`, `CONTRIBUTING.md`, and `.github/PULL_REQUEST_TEMPLATE.md`.
 
-3. Update changelog
-   - Add all unreleased work under `CHANGELOG.md` `## Unreleased`.
-   - Keep `CHANGELOG.md` focused on plugin-facing release notes. Use user-facing ability descriptions or short ability labels; avoid raw internal ability namespace strings unless the exact MCP tool name is necessary for compatibility notes.
+3. Update changelogs
+   - Add plugin-facing unreleased work under `CHANGELOG.md` `## Unreleased`.
+   - Keep `CHANGELOG.md` focused on plugin release notes: changes that affect plugin users, MCP tool compatibility, WordPress behavior, packaged plugin functionality, security, or bug fixes.
+   - Add repository, CI, contributor, GitHub platform, template, or agent workflow changes under `.github/REPOSITORY_CHANGELOG.md` `## Unreleased`.
+   - Use user-facing ability descriptions or short ability labels in plugin release notes; avoid raw internal ability namespace strings unless the exact MCP tool name is necessary for compatibility notes.
    - Do not put new work directly under a released version unless preparing that release section.
 
 4. Validate contribution guidance
    - Keep `.github/PULL_REQUEST_TEMPLATE.md` and `CONTRIBUTING.md` in sync.
-   - The PR checklist must cover capability checks, sanitization, response shape, E2E manifest coverage, docs, changelog, PHPCS, E2E QA, and WordPress.org guideline impact where relevant.
+   - The PR checklist must cover capability checks, sanitization, response shape, E2E manifest coverage, docs, plugin/repository changelog selection, PHPCS, E2E QA, and WordPress.org guideline impact where relevant.
 
 5. Validate
    - When running locally, run available checks in the local checkout before finishing:

@@ -11,7 +11,7 @@ This repository uses GitHub Actions for two purposes:
 | `pull_request` (`opened`, `synchronize`, `reopened`) | `.github/workflows/e2e-qa.yml` | Detects relevant changed files, runs E2E QA when in scope, and posts an accurate PR comment (pass/fail). |
 | `push` to `main` or `develop` | `.github/workflows/e2e-qa.yml` | Detects relevant changed files and runs E2E QA when in scope. |
 | `workflow_dispatch` | `.github/workflows/e2e-qa.yml` | Runs E2E QA on demand. |
-| `push` tag `v*` | `.github/workflows/release.yml` | Validates version/changelog alignment, builds and validates release ZIP, then publishes a GitHub release. |
+| `push` tag `v*` | `.github/workflows/release.yml` | Validates plugin version/release-note alignment, builds and validates release ZIP, then publishes a GitHub release. |
 
 ## Workflow details
 
@@ -45,7 +45,7 @@ This repository uses GitHub Actions for two purposes:
 **Execution flow**
 1. Trigger on tag push matching `v*`.
 2. Validate `tag version == plugin header version == readme stable tag`.
-3. Verify changelog notes exist for the tagged version.
+3. Verify plugin release notes exist in `readme.txt` for the tagged version.
 4. Build plugin ZIP and validate required/forbidden contents.
 5. Fail if a release for the same tag already exists.
 6. Publish release with notes from `readme.txt`.

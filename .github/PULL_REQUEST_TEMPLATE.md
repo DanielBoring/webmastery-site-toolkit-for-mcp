@@ -18,7 +18,8 @@
 - [ ] New ability names use the `unlock-mcp-potential/` prefix and set accurate `annotations` (`readonly`, `destructive`, `idempotent`)
 - [ ] If this PR adds or changes `unlock-mcp-potential/*` abilities, `tests/e2e/abilities-manifest.json` includes matching positive and negative cases where permissions apply
 - [ ] User-facing changes update relevant docs (`README.md`, `readme.txt`, `tests/e2e/README.md`, or other affected markdown)
-- [ ] `CHANGELOG.md` is updated under `## Unreleased`
+- [ ] Plugin-facing changes update `CHANGELOG.md` under `## Unreleased`
+- [ ] Repository, CI, contributor, GitHub platform, template, or agent workflow changes update `.github/REPOSITORY_CHANGELOG.md` under `## Unreleased`
 - [ ] WordPress Coding Standards checked with `composer phpcs`, or the reason it was not run is documented above
 - [ ] WordPress.org Detailed Plugin Guidelines were considered for public-facing or release-impacting changes such as naming, readme text, privacy/external calls, licensing, bundled assets, and release packaging
 - [ ] E2E QA is passing, or failures are unrelated and explained above

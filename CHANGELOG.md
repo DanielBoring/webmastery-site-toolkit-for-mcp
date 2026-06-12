@@ -1,62 +1,31 @@
-# Changelog
+# Plugin Changelog
 
-All notable changes to Unlock MCP Potential are tracked here.
+Plugin-facing changes to Unlock MCP Potential are tracked here. Release notes and version sections should include only changes that affect plugin users, MCP tool compatibility, WordPress behavior, or packaged plugin functionality.
+
+Repository, CI, contributor, and GitHub platform changes are tracked separately in `.github/REPOSITORY_CHANGELOG.md`.
 
 ## Unreleased
 
-### Added
-
-- Added featured image abilities for setting and removing featured images on posts and pages, with E2E manifest coverage.
-- Added restore abilities for restoring trashed posts and pages, with object-specific `delete_post` permission checks and E2E manifest coverage.
-
-### Changed
-
-- Renamed registered MCP ability names and categories to the `unlock-mcp-potential` plugin slug namespace.
-- Updated README and WordPress.org readme documentation to include plugin management abilities and administrator role requirements.
-- Clarified E2E manifest coverage documentation for the current 37 registered abilities and 57 manifest test cases.
-- Updated pull request and contribution guidance so external contributors can apply WordPress.org guideline checks when relevant and keep docs, changelog, and E2E coverage in sync.
-- Added repository agent instructions for repeatable ability, documentation, changelog, contribution, and validation workflows.
-- Clarified that local agent validation is a preflight check and GitHub Actions remains the authoritative PR validation gate.
-
-### Fixed
-
-- Preserved backslashes in `create-post` and `update-post` content by slashing post data before WordPress insert/update calls.
-- Avoided Docker Compose project-name collisions between local and GitHub Actions E2E runs.
+No unreleased plugin-facing changes.
 
 ## 1.6.0
 
 ### Added
 
-- Added WordPress Coding Standards tooling via Composer and `phpcs.xml.dist`.
-- Added contribution and PR checklist guidance for WordPress.org Detailed Plugin Guidelines review.
-- Added manifest-driven E2E ability coverage via `tests/e2e/abilities-manifest.json` and `tests/e2e/ability-runner.php`.
-- Added an E2E coverage gate that fails when any registered `unlock-mcp-potential/*` ability is missing from the manifest.
-- Added E2E execution coverage for the current 33 registered abilities with 45 manifest test cases, including positive and negative permission cases.
-- Added E2E PR comments that report ability coverage counts, tested dependency versions, commit SHA, and workflow run URL.
-- Added failure artifact collection for E2E failures, including Docker Compose logs, WordPress debug logs, and E2E summary JSON.
-- Added E2E documentation in `tests/e2e/README.md` describing the rule that new or changed abilities must include manifest test coverage.
-- Added a pull request checklist reminder to update `tests/e2e/abilities-manifest.json` when abilities are added or changed.
+- Added featured image abilities for setting and removing featured images on posts and pages.
+- Added restore abilities for restoring trashed posts and pages, with object-specific `delete_post` permission checks.
 - Added plugin management abilities: `list-plugins`, `activate-plugin`, and `deactivate-plugin`.
 - Added guarded plugin state controls with canonical `plugin_basename` identifiers, protected-plugin deactivation safeguards (`force` override), multisite-aware `network_wide` handling, and structured `WP_Error` responses for capability/context/identifier failures.
 
 ### Changed
 
-- Renamed the plugin to "Unlock MCP Potential" and updated release/test tooling for the `unlock-mcp-potential` plugin slug.
-- Updated repository/documentation references to align with the Unlock MCP Potential package rebrand.
-- Replaced generic `WP_MCP_` PHP class prefixes with `Unlock_MCP_`.
+- Renamed registered MCP ability names and categories to the `unlock-mcp-potential` plugin slug namespace.
+- Renamed the plugin to "Unlock MCP Potential" and updated plugin references for the `unlock-mcp-potential` slug.
 - Hardened permission callbacks for object-specific post/media operations and sensitive site-audit abilities.
-- Consolidated release automation to the tag-based `release.yml` workflow.
-- Hardened release validation to check tag, plugin header, `readme.txt` stable tag, changelog notes, artifact contents, and duplicate release state before publishing.
-- Updated E2E Docker testing to run against WordPress 7.0 with PHP 8.2 and MySQL 8.0.36.
-- Pinned GitHub Actions to immutable commit SHAs and updated `actions/checkout` to a Node.js 24-compatible release.
-- Split E2E PR commenting into a separate no-checkout job with write permissions isolated from PR-controlled code execution.
 
-### Removed
+### Fixed
 
-- Removed redundant `auto-close-issue.yml` automation in favor of GitHub's native `Closes #N` / `Fixes #N` / `Resolves #N` behavior.
-- Removed `auto-pr-from-issue.yml` placeholder PR automation.
-- Removed merge-based `auto-release.yml` automation to avoid overlapping release paths.
-- Removed `.github/README.md` so GitHub shows the project root `README.md` on the repository homepage.
+- Preserved backslashes in `create-post` and `update-post` content by slashing post data before WordPress insert/update calls.
 
 ## 1.5.0
 

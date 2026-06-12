@@ -54,7 +54,7 @@ jobs:
           mkdir -p build
           NOTES="$(awk "/^= ${TAG_VERSION} =/{found=1; next} found && /^= /{exit} found{print}" readme.txt | sed '/^[[:space:]]*$/d')"
           if [ -z "$NOTES" ]; then
-            echo "No changelog notes found in readme.txt for version ${TAG_VERSION}" >&2
+            echo "No plugin release notes found in readme.txt for version ${TAG_VERSION}" >&2
             exit 1
           fi
           printf '%s\n' "$NOTES" > "$NOTES_FILE"

@@ -67,7 +67,7 @@ Each group of abilities lives in its own file under `includes/`. Follow the exis
 5. **Return a consistent shape** — match the affected ability group's existing success arrays and `WP_Error`/structured error responses
 6. **Require the class file** in `unlock-mcp-potential.php` inside the `wp_abilities_api_init` action and call `ClassName::register()`
 7. **Add E2E manifest coverage** in `tests/e2e/abilities-manifest.json`; include both allowed and denied roles when permissions differ by role or capability
-8. **Update docs and changelog** when behavior is user-facing: `README.md`, `readme.txt`, relevant markdown files, and `CHANGELOG.md` under `## Unreleased`. Changelog entries should use plugin-facing release-note wording rather than raw internal ability namespace strings unless the exact MCP tool name is necessary.
+8. **Update docs and changelogs** when behavior is user-facing: `README.md`, `readme.txt`, relevant markdown files, and `CHANGELOG.md` under `## Unreleased`. Changelog entries should use plugin-facing release-note wording rather than raw internal ability namespace strings unless the exact MCP tool name is necessary. Repository, CI, contributor, GitHub platform, template, or agent workflow changes belong in `.github/REPOSITORY_CHANGELOG.md`.
 
 A minimal ability skeleton:
 
@@ -108,7 +108,7 @@ Set `annotations` accurately — `readonly: true` for read-only abilities, `dest
 3. Run `composer phpcs`
 4. Test manually against a real WordPress install — verify the ability appears in `mcp-adapter-discover-abilities` and returns correct output
 5. If the PR adds or changes abilities, update `tests/e2e/abilities-manifest.json` with matching coverage
-6. Update user-facing docs and add a `CHANGELOG.md` entry under `## Unreleased`
+6. Update user-facing docs and add a `CHANGELOG.md` entry under `## Unreleased`; use `.github/REPOSITORY_CHANGELOG.md` for repo/platform-only changes
 7. Review the WordPress.org Detailed Plugin Guidelines when the change affects naming, readme text, privacy/external calls, licensing/assets, or release packaging
 8. Open a PR with a clear description of what changed and why
 
@@ -139,8 +139,8 @@ Release checklist:
 
 1. Choose the version bump based on the rules above.
 2. Update the `Version` header in `unlock-mcp-potential.php`.
-3. Move relevant `CHANGELOG.md` entries from `## Unreleased` into the new version section.
-4. Update `Stable tag`, changelog entries, and upgrade notice in `readme.txt`.
+3. Move relevant plugin-facing `CHANGELOG.md` entries from `## Unreleased` into the new version section. Do not include `.github/REPOSITORY_CHANGELOG.md` entries in plugin release notes.
+4. Update `Stable tag`, plugin changelog entries, and upgrade notice in `readme.txt`.
 5. Confirm the generated zip uses the `unlock-mcp-potential` directory slug.
 6. Tag and push `vX.Y.Z` to trigger the release workflow.
 
@@ -149,7 +149,7 @@ Release checklist:
 ## Release process (maintainers)
 
 1. Update the `Version` header in `unlock-mcp-potential.php`
-2. Move `CHANGELOG.md` notes from `## Unreleased` into the release version
+2. Move plugin-facing `CHANGELOG.md` notes from `## Unreleased` into the release version
 3. Add release notes to `readme.txt` under `== Changelog ==` and `== Upgrade Notice ==`
 4. Commit: `git commit -m "chore: release v1.x.x"`
 5. Tag and push: `git tag v1.x.x && git push origin v1.x.x`

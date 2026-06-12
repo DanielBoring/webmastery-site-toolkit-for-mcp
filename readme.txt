@@ -105,10 +105,13 @@ Delete operations for posts and pages move content to trash. Media delete perman
 == Changelog ==
 
 = 1.6.0 =
+* Rename registered MCP ability names and categories to the `unlock-mcp-potential` plugin slug namespace
+* Add featured image abilities for setting and removing featured images on posts and pages
+* Add restore abilities for restoring trashed posts and pages with object-specific `delete_post` permission checks
+* Preserve backslashes in `create-post` and `update-post` content
 * Add plugin management abilities: `list-plugins`, `activate-plugin`, and `deactivate-plugin`
 * Add guarded plugin activation/deactivation controls with canonical `plugin_basename` identifiers, protected-plugin safeguards, multisite-aware `network_wide` handling, and structured errors
-* Add E2E manifest coverage and release QA/reporting hardening for ability lifecycle changes
-* Rebrand package/repository references to align with Unlock MCP Potential and remove `.github/README.md` so GitHub uses the root README
+* Rename plugin/package references to align with Unlock MCP Potential and harden object-specific permission callbacks
 
 = 1.5.1 =
 * Rename plugin to "Unlock MCP Potential" and update slug references to `unlock-mcp-potential`
@@ -150,7 +153,7 @@ Delete operations for posts and pages move content to trash. Media delete perman
 == Upgrade Notice ==
 
 = 1.6.0 =
-Adds plugin management abilities and guarded activation controls, plus release and coverage hardening updates.
+Renames MCP ability IDs to the `unlock-mcp-potential` namespace, adds featured image, restore, and plugin management abilities, and fixes post content backslash preservation.
 
 = 1.5.1 =
 Renames the plugin, tightens permission checks, and adds WordPress.org review-readiness tooling.
