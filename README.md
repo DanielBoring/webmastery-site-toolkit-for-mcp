@@ -1,6 +1,6 @@
 <h2 align="center">
-  <img width="80%" alt="WP MCP Abilities" src="assets/gh_banner.png"><br/>
-  WP MCP Abilities<br/>
+  <img width="80%" alt="Unlock MCP Potential" src="assets/gh_banner.png"><br/>
+  Unlock MCP Potential<br/>
   <sub>Give your AI agent editorial control over WordPress.</sub>
 </h2>
 
@@ -10,7 +10,7 @@
       <img src="https://img.shields.io/badge/WordPress-6.9%2B-21759b?logo=wordpress&logoColor=white" alt="WordPress 6.9+" />
     </a>
     <a href="https://www.php.net">
-      <img src="https://img.shields.io/badge/PHP-7.4%2B-777bb4?logo=php&logoColor=white" alt="PHP 7.4+" />
+      <img src="https://img.shields.io/badge/PHP-8.0%2B-777bb4?logo=php&logoColor=white" alt="PHP 8.0+" />
     </a>
     <a href="https://www.gnu.org/licenses/gpl-2.0.html">
       <img src="https://img.shields.io/badge/license-GPL--2.0%2B-blue" alt="License GPL-2.0+" />
@@ -21,7 +21,7 @@
 
 </div>
 
-**WP MCP Abilities** is a companion plugin for the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) by WordPress. The MCP Adapter is a transport framework — it handles the MCP session, REST endpoint, and protocol routing — but ships with no content management abilities out of the box. Any tools an AI agent can actually call must come from plugins that register them. This plugin fills that gap, giving your AI agent the tools to take action: publish a draft, run a security audit, check site health, or analyze a post's SEO.
+**Unlock MCP Potential** is a WordPress plugin that adds MCP-powered content management abilities for posts, pages, media, comments, SEO checks, site health, security audits, and user lookup. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
 
 - You want an AI agent to draft, update, or publish posts and pages
 - You want to ask an AI to audit your site's security or health posture
@@ -45,8 +45,8 @@ All abilities available: full editorial access to posts, pages, taxonomy, commen
 **1. Install Official WordPress MCP Adapter Plugin**
 Download the [latest release zip](https://github.com/WordPress/mcp-adapter/releases/latest) → WP Admin → Plugins → Add New → Upload Plugin → Install & Activate
 
-**2. Install WP MCP Abilities Plugin**
-Download the [latest release zip](https://github.com/DanielBoring/wordpress-mcp-abilities/releases/latest) → WP Admin → Plugins → Add New → Upload Plugin → Install & Activate
+**2. Install Unlock MCP Potential Plugin**
+Download the [latest release zip](https://github.com/DanielBoring/unlock-mcp-potential/releases/latest) → WP Admin → Plugins → Add New → Upload Plugin → Install & Activate
 
 **3. Create a dedicated Editor user**
 WP Admin → Users → Add New → set Role to **Editor** → Add New User
@@ -79,7 +79,7 @@ MCP Adapter plugin                        ← framework: registers the REST endp
         │
         │  calls wp_register_ability() handlers at runtime
         ▼
-WP MCP Abilities plugin               ← this plugin: registers the actual
+Unlock MCP Potential plugin               ← this plugin: registers the actual
   (this repo)                                 abilities the AI can call
         │
         │  WordPress core APIs (no direct DB queries)
@@ -93,7 +93,7 @@ The MCP Adapter handles the transport layer. This plugin handles the *content* �
 
 ## MCP Abilities
 
-New abilities and feature requests are tracked in [GitHub Issues](https://github.com/DanielBoring/wordpress-mcp-abilities/issues).
+New abilities and feature requests are tracked in [GitHub Issues](https://github.com/DanielBoring/unlock-mcp-potential/issues).
 
 ### Role overview
 
@@ -101,10 +101,10 @@ Each ability enforces a WordPress capability check. The table below maps standar
 
 | Role          | Plugin-relevant capabilities provided                                    | Suitable for                                                        |
 | ------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| Subscriber    | `read`                                                                   | Read-only workflows: taxonomy browsing, health checks, SEO overview |
+| Subscriber    | `read`                                                                   | Read-only taxonomy browsing |
 | Author        | `edit_posts`, `delete_posts`, `upload_files`                             | Creating and managing the agent's own posts and media               |
 | **Editor** ✓  | All Author caps + `edit_pages`, `delete_pages`, `manage_categories`, `moderate_comments` | **Full editorial control — recommended default** |
-| Administrator | All Editor caps, plus `list_users` for user lookup and other administrative capabilities | User lookup (`list-users` / `get-user`) and future admin-only workflows |
+| Administrator | All Editor caps, plus `list_users`, `manage_options`, and other administrative capabilities | User lookup and sensitive site-audit workflows |
 
 > **Scope note for `edit_posts`:** This capability is available to Authors and above, but WordPress scopes query results to the authenticated user's own content unless `edit_others_posts` is also present. An Editor account (which has `edit_others_posts`) sees all content site-wide. Use Author only if the agent should be limited to content it created.
 
@@ -114,10 +114,10 @@ Each ability enforces a WordPress capability check. The table below maps standar
 | Ability              | Description                                                            | Required Capability | Min. Role |
 | -------------------- | ---------------------------------------------------------------------- | ------------------- | --------- |
 | `wp-mcp/list-posts`  | List posts with filters (status, search, author, category, pagination) | `edit_posts`        | Author †  |
-| `wp-mcp/get-post`    | Get a single post by ID                                                | `edit_posts`        | Author †  |
+| `wp-mcp/get-post`    | Get a single post by ID                                                | `edit_post`         | Author †  |
 | `wp-mcp/create-post` | Create a new post with title, content, status, categories, tags        | `edit_posts`        | Author    |
-| `wp-mcp/update-post` | Update an existing post                                                | `edit_posts`        | Author †  |
-| `wp-mcp/delete-post` | Move a post to trash                                                   | `delete_posts`      | Author †  |
+| `wp-mcp/update-post` | Update an existing post                                                | `edit_post`         | Author †  |
+| `wp-mcp/delete-post` | Move a post to trash                                                   | `delete_post`       | Author †  |
 
 † Returns or acts on the service account's own posts only. Use **Editor** to manage all posts site-wide.
 
@@ -125,10 +125,10 @@ Each ability enforces a WordPress capability check. The table below maps standar
 | Ability              | Description             | Required Capability | Min. Role |
 | -------------------- | ----------------------- | ------------------- | --------- |
 | `wp-mcp/list-pages`  | List pages with filters | `edit_pages`        | Editor    |
-| `wp-mcp/get-page`    | Get a single page by ID | `edit_pages`        | Editor    |
+| `wp-mcp/get-page`    | Get a single page by ID | `edit_post`         | Editor    |
 | `wp-mcp/create-page` | Create a new page       | `edit_pages`        | Editor    |
-| `wp-mcp/update-page` | Update an existing page | `edit_pages`        | Editor    |
-| `wp-mcp/delete-page` | Move a page to trash    | `delete_pages`      | Editor    |
+| `wp-mcp/update-page` | Update an existing page | `edit_post`         | Editor    |
+| `wp-mcp/delete-page` | Move a page to trash    | `delete_post`       | Editor    |
 
 ### Taxonomy
 | Ability                  | Description                         | Required Capability | Min. Role  |
@@ -143,7 +143,7 @@ Each ability enforces a WordPress capability check. The table below maps standar
 ### Comments
 | Ability                  | Description                                       | Required Capability | Min. Role |
 | ------------------------ | ------------------------------------------------- | ------------------- | --------- |
-| `wp-mcp/list-comments`   | List comments with filters (post, status, search) | `edit_posts`        | Author    |
+| `wp-mcp/list-comments`   | List comments with filters (post, status, search) | `moderate_comments` | Editor    |
 | `wp-mcp/approve-comment` | Approve a comment                                 | `moderate_comments` | Editor    |
 | `wp-mcp/trash-comment`   | Move a comment to trash                           | `moderate_comments` | Editor    |
 | `wp-mcp/spam-comment`    | Mark a comment as spam                            | `moderate_comments` | Editor    |
@@ -152,9 +152,9 @@ Each ability enforces a WordPress capability check. The table below maps standar
 | Ability                | Description                                             | Required Capability | Min. Role |
 | ---------------------- | ------------------------------------------------------- | ------------------- | --------- |
 | `wp-mcp/list-media`    | List media items with filters (MIME type, search, pagination) | `upload_files`      | Author    |
-| `wp-mcp/get-media`     | Get a single media item by ID                           | `upload_files`      | Author    |
-| `wp-mcp/update-media`  | Update media alt text, title, and caption               | `upload_files`      | Author    |
-| `wp-mcp/delete-media`  | Permanently delete a media item                         | `delete_posts`      | Author    |
+| `wp-mcp/get-media`     | Get a single media item by ID                           | `edit_post`         | Author †  |
+| `wp-mcp/update-media`  | Update media alt text, title, and caption               | `edit_post`         | Author †  |
+| `wp-mcp/delete-media`  | Permanently delete a media item                         | `delete_post`       | Author †  |
 
 † Author-role access is scoped to media owned by the authenticated user. Use **Editor** to manage media site-wide.
 
@@ -167,20 +167,20 @@ Each ability enforces a WordPress capability check. The table below maps standar
 ### Site Health
 | Ability                    | Description                                                                                                | Required Capability | Min. Role  |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------- | ---------- |
-| `wp-mcp/site-health-check` | Run WordPress's built-in health tests; returns results grouped by severity (critical / recommended / good) | `read`              | Subscriber |
+| `wp-mcp/site-health-check` | Run WordPress's built-in health tests; returns results grouped by severity (critical / recommended / good) | `manage_options`    | Administrator |
 
 ### Security Audit
 | Ability                 | Description                                                                                                                               | Required Capability | Min. Role  |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---------- |
-| `wp-mcp/security-audit` | Check for common security issues: debug mode, file editor, SSL, admin username, WP/plugin version currency, XMLRPC, and auth key strength | `read`              | Subscriber |
+| `wp-mcp/security-audit` | Check for common security issues: debug mode, file editor, SSL, admin username, WP/plugin version currency, XMLRPC, and auth key strength | `manage_options`    | Administrator |
 
-Returns findings in `fail` / `warn` / `pass` buckets with actionable descriptions. The ability itself requires `read`; plugin update checks are included only when the authenticated user also has `update_plugins`.
+Returns findings in `fail` / `warn` / `pass` buckets with actionable descriptions.
 
 ### SEO Analysis
 | Ability                    | Description                                                                                                                                     | Required Capability | Min. Role  |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---------- |
-| `wp-mcp/seo-analyze-post`  | Analyze a single post or page: title length, word count, meta description, focus keyword placement, image alt text, internal links, slug length | `edit_posts`        | Author     |
-| `wp-mcp/seo-site-overview` | Site-wide SEO snapshot: sitemap and robots.txt accessibility, count of published posts missing Yoast focus keyword or meta description          | `read`              | Subscriber |
+| `wp-mcp/seo-analyze-post`  | Analyze a single post or page: title length, word count, meta description, focus keyword placement, image alt text, internal links, slug length | `edit_post`         | Author †   |
+| `wp-mcp/seo-site-overview` | Site-wide SEO snapshot: sitemap and robots.txt accessibility, count of published posts missing Yoast focus keyword or meta description          | `manage_options`    | Administrator |
 
 **With Yoast SEO installed:** all checks run fully, including meta description and focus keyword analysis per post, site-wide counts of unoptimized content, and Yoast sitemap verification.
 
@@ -193,7 +193,7 @@ Returns findings in `fail` / `warn` / `pass` buckets with actionable description
 | Requirement                                                    | Version                                                                                                          |
 | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | WordPress                                                      | 6.9+                                                                                                             |
-| PHP                                                            | 7.4+                                                                                                             |
+| PHP                                                            | 8.0+                                                                                                             |
 | [MCP Adapter plugin](https://github.com/WordPress/mcp-adapter) | Latest                                                                                                           |
 | [Yoast SEO](https://wordpress.org/plugins/wordpress-seo/)      | Optional — structural SEO checks work without it; meta description, focus keyword, and sitemap checks require it |
 
@@ -219,27 +219,27 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md#versioning-policy) for the full release/
 
 This plugin depends on MCP Adapter being installed and active. Install it first from the official [WordPress MCP Adapter project](https://github.com/WordPress/mcp-adapter) or its [latest release](https://github.com/WordPress/mcp-adapter/releases/latest), then upload and activate it in **WP Admin → Plugins → Add New → Upload Plugin**.
 
-### 2. Install WP MCP Abilities
+### 2. Install Unlock MCP Potential
 
-> **Coming soon to the WordPress Plugin Directory** — this plugin has been submitted for review. Once approved, you'll be able to install it directly from **WP Admin → Plugins → Add New** by searching "WP MCP Abilities". Until then, use one of the options below.
+> **Coming soon to the WordPress Plugin Directory** — this plugin has been submitted for review. Once approved, you'll be able to install it directly from **WP Admin → Plugins → Add New** by searching "Unlock MCP Potential". Until then, use one of the options below.
 
 **Option A — Upload zip (recommended for most sites)**
 
 1. Download or build the zip:
    ```bash
-   git clone https://github.com/DanielBoring/wordpress-mcp-abilities.git wp-mcp-abilities
-   cd wp-mcp-abilities
-   zip -r wp-mcp-abilities.zip . --exclude='.git/*'
+   git clone https://github.com/DanielBoring/unlock-mcp-potential.git unlock-mcp-potential
+   cd unlock-mcp-potential
+   zip -r unlock-mcp-potential.zip . --exclude='.git/*'
    ```
 2. In WP Admin, go to **Plugins → Add New → Upload Plugin**
-3. Upload `wp-mcp-abilities.zip` and click **Install Now**
+3. Upload `unlock-mcp-potential.zip` and click **Install Now**
 4. Click **Activate Plugin**
 
 **Option B — Direct file copy (server access)**
 
 ```bash
-cp -r wp-mcp-abilities /var/www/html/wp-content/plugins/
-wp plugin activate wp-mcp-abilities
+cp -r unlock-mcp-potential /var/www/html/wp-content/plugins/
+wp plugin activate unlock-mcp-potential
 ```
 
 ### 3. Create a dedicated WordPress user
@@ -251,7 +251,7 @@ It is recommended to create a dedicated user for your AI agent rather than using
 3. Set the **Role** to **Editor**
 4. Click **Add New User**
 
-> **Why Editor and not Administrator?** Editor is still the recommended default for content workflows and covers the editorial capabilities used by posts, pages, taxonomy, comments, media, health, security, and SEO (`edit_posts`, `edit_pages`, `delete_posts`, `delete_pages`, `upload_files`, `manage_categories`, `moderate_comments`, `read`). The new user lookup abilities (`list-users`, `get-user`) require `list_users`, which is typically Administrator-only. If you need those abilities, use a separate dedicated Administrator service account and keep the Editor account for day-to-day content operations. See the [Role overview](#role-overview) for the full breakdown.
+> **Why Editor and not Administrator?** Editor is still the recommended default for content workflows and covers the editorial capabilities used by posts, pages, taxonomy, comments, and media (`edit_posts`, `edit_pages`, `delete_posts`, `delete_pages`, `upload_files`, `manage_categories`, and `moderate_comments`). User lookup and sensitive site-audit abilities require Administrator capabilities such as `list_users` or `manage_options`. Use a separate dedicated Administrator service account for those workflows and keep the Editor account for day-to-day content operations. See the [Role overview](#role-overview) for the full breakdown.
 
 ### 4. Create an application password
 
@@ -453,8 +453,8 @@ You should see the MCP Adapter's built-in meta/discovery abilities plus all abil
 To confirm everything is working, ask your agent to call a few abilities:
 
 - `wp-mcp/list-posts` — *"List the 5 most recent published posts"*
-- `wp-mcp/security-audit` — *"Run a security audit of my WordPress site"*
-- `wp-mcp/site-health-check` — *"Check WordPress site health"*
+- `wp-mcp/security-audit` with an Administrator service account — *"Run a security audit of my WordPress site"*
+- `wp-mcp/site-health-check` with an Administrator service account — *"Check WordPress site health"*
 
 ---
 

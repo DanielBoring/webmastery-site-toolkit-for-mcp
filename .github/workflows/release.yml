@@ -24,11 +24,11 @@ jobs:
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
           TAG_VERSION="$VERSION"
-          PLUGIN_VERSION="$(grep -E '^[[:space:]]*\*?[[:space:]]*Version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+' wp-mcp-abilities.php | head -1 | sed -E 's/.*Version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
+          PLUGIN_VERSION="$(grep -E '^[[:space:]]*\*?[[:space:]]*Version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+' unlock-mcp-potential.php | head -1 | sed -E 's/.*Version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
           STABLE_TAG="$(grep -Ei '^Stable tag:' readme.txt | head -1 | sed -E 's/^Stable tag:[[:space:]]*//I' | tr -d '\r')"
 
           if [ -z "$PLUGIN_VERSION" ]; then
-            echo "Could not parse plugin version from wp-mcp-abilities.php" >&2
+            echo "Could not parse plugin version from unlock-mcp-potential.php" >&2
             exit 1
           fi
           if [ -z "$STABLE_TAG" ]; then
@@ -66,38 +66,27 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p build/wp-mcp-abilities
-          rsync -r \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='.gitignore' \
-            --exclude='.gitattributes' \
-            --exclude='README.md' \
-            --exclude='BACKLOG.md' \
-            --exclude='assets' \
-            --exclude='build' \
-            . build/wp-mcp-abilities/
+          PACKAGE_DIR="build/unlock-mcp-potential"
+          rm -rf "$PACKAGE_DIR"
+          mkdir -p "$PACKAGE_DIR"
+          rsync -r unlock-mcp-potential.php readme.txt LICENSE includes "$PACKAGE_DIR/"
           cd build
-          zip -r ../wp-mcp-abilities-${{ steps.validate.outputs.version }}.zip wp-mcp-abilities/
+          zip -r ../unlock-mcp-potential-${{ steps.validate.outputs.version }}.zip unlock-mcp-potential/
 
       - name: Validate built artifact contents
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_FILE="wp-mcp-abilities-${{ steps.validate.outputs.version }}.zip"
+          ZIP_FILE="unlock-mcp-potential-${{ steps.validate.outputs.version }}.zip"
           if [ ! -s "$ZIP_FILE" ]; then
             echo "Missing or empty release artifact: $ZIP_FILE" >&2
             exit 1
           fi
           unzip -l "$ZIP_FILE" > build/zip-listing.txt
-          grep -q 'wp-mcp-abilities/wp-mcp-abilities.php' build/zip-listing.txt
-          grep -q 'wp-mcp-abilities/includes/' build/zip-listing.txt
-          if grep -q 'wp-mcp-abilities/.github/' build/zip-listing.txt; then
-            echo "Release artifact unexpectedly contains .github directory" >&2
-            exit 1
-          fi
-          if grep -q 'wp-mcp-abilities/.git/' build/zip-listing.txt; then
-            echo "Release artifact unexpectedly contains .git directory" >&2
+          grep -q 'unlock-mcp-potential/unlock-mcp-potential.php' build/zip-listing.txt
+          grep -q 'unlock-mcp-potential/includes/' build/zip-listing.txt
+          if grep -E 'unlock-mcp-potential/(\.git|\.github|assets|build|e2e-artifacts|scripts|tests|vendor)/|unlock-mcp-potential/(BACKLOG|CHANGELOG|CONTRIBUTING|README)\.md|unlock-mcp-potential/(composer\.(json|lock)|docker-compose\.yml|phpcs\.xml\.dist|\.gitattributes|\.gitignore)' build/zip-listing.txt; then
+            echo "Release artifact contains development, CI, test, or repository-only files" >&2
             exit 1
           fi
 
@@ -109,6 +98,6 @@ jobs:
           set -euo pipefail
           VERSION="${{ steps.validate.outputs.version }}"
           gh release create "v${VERSION}" \
-            "wp-mcp-abilities-${VERSION}.zip" \
+            "unlock-mcp-potential-${VERSION}.zip" \
             --title "v${VERSION}" \
             --notes-file "${{ steps.validate.outputs.notes-file }}"

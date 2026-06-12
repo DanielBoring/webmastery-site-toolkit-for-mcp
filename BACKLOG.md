@@ -1,6 +1,6 @@
-# WP MCP Abilities — Backlog
+# Unlock MCP Potential — Backlog
 
-Open feature requests and bugs are tracked in [GitHub Issues](https://github.com/DanielBoring/wordpress-mcp-abilities/issues).
+Open feature requests and bugs are tracked in [GitHub Issues](https://github.com/DanielBoring/unlock-mcp-potential/issues).
 
 ---
 

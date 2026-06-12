@@ -1,21 +1,21 @@
-=== MCP Adapter Abilities ===
+=== Unlock MCP Potential ===
 Contributors: deboring
 Tags: mcp, ai, automation, content-management, artificial-intelligence
 Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.5.0
+Stable tag: 1.5.1
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
 
-Adds content management abilities to the WordPress MCP Adapter, giving AI agents full editorial access via the Model Context Protocol.
+Adds MCP-powered WordPress content management abilities for posts, pages, media, comments, SEO checks, site health, security audits, and user lookup.
 
 == Description ==
 
-WP MCP Abilities is a companion plugin for the official [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin. The MCP Adapter is a transport framework — it handles the MCP session, REST endpoint, and protocol routing — but ships with no content management abilities out of the box. Any tools an AI agent can actually call must come from plugins that register them. This plugin fills that gap, giving your AI agent the tools to take action: publish a draft, run a security audit, check site health, or analyze a post's SEO.
+Unlock MCP Potential is a WordPress plugin that adds MCP-powered content management abilities for posts, pages, media, comments, SEO checks, site health, security audits, and user lookup. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
 
-MCP Adapter Abilities registers abilities across nine groups, giving AI agents (such as Claude) a full working vocabulary for your WordPress site:
+Unlock MCP Potential registers abilities across nine groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
 
 **Posts**
 Create, read, update, and delete posts. Supports all statuses including scheduled (future) posts, category and tag assignment, and pagination.
@@ -50,11 +50,11 @@ All abilities enforce WordPress capability checks — an editor cannot call abil
 
 == Installation ==
 
-1. Install and activate the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin first — WP MCP Abilities depends on it.
-2. Upload the `wp-mcp-abilities` folder to `/wp-content/plugins/`, or install via **Plugins > Add New > Upload Plugin**.
+1. Install and activate the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin first — Unlock MCP Potential depends on it.
+2. Upload the `unlock-mcp-potential` folder to `/wp-content/plugins/`, or install via **Plugins > Add New > Upload Plugin**.
 3. Activate the plugin through the **Plugins** menu in WordPress.
 4. Create a dedicated WordPress user for your AI agent: go to **Users > Add New User**, set the Role to **Editor**, and save. Using a dedicated account limits access and makes it easy to revoke later. If you need user lookup abilities (`list-users`, `get-user`), create a separate dedicated **Administrator** service account because those require `list_users`.
-5. Generate an application password for that user: open the user profile, scroll to **Application Passwords**, enter a name (e.g. `Claude Code`), and click **Add New Application Password**. Copy it immediately — it is only shown once.
+5. Generate an application password for that user: open the user profile, scroll to **Application Passwords**, enter a name (e.g. `MCP Client`), and click **Add New Application Password**. Copy it immediately — it is only shown once.
 6. Configure your MCP client with the site URL, the dedicated username, and the application password. All abilities are then automatically available.
 
 == Frequently Asked Questions ==
@@ -65,11 +65,11 @@ This plugin requires a WordPress installation where custom plugins can be instal
 
 = Does this work without the MCP Adapter plugin? =
 
-No. WP MCP Abilities extends the official WordPress MCP Adapter plugin. Install and activate it first from the plugin directory.
+No. Unlock MCP Potential extends the MCP Adapter plugin. Install and activate it first from the plugin directory.
 
 = What MCP clients are supported? =
 
-Any client that speaks the Model Context Protocol. Claude Code, Claude Desktop, and any client using `@automattic/mcp-wordpress-remote` are tested and known to work.
+Any client that speaks the Model Context Protocol and can connect to `@automattic/mcp-wordpress-remote` or an equivalent MCP bridge should work.
 
 = Do I need Yoast SEO installed? =
 
@@ -81,13 +81,13 @@ No, but behavior differs depending on whether it is active:
 
 = What WordPress user role should I use? =
 
-For core content workflows, use the **Editor** role. It covers the editorial capabilities used by posts, pages, taxonomy, comments, media, health, security, and SEO: `edit_posts`, `edit_pages`, `delete_posts`, `delete_pages`, `upload_files`, `manage_categories`, `moderate_comments`, and `read`.
+For core content workflows, use the **Editor** role. It covers the editorial capabilities used by posts, pages, taxonomy, comments, and media: `edit_posts`, `edit_pages`, `delete_posts`, `delete_pages`, `upload_files`, `manage_categories`, and `moderate_comments`.
 
-For user lookup workflows (`list-users`, `get-user`), use a separate dedicated **Administrator** account because those abilities require `list_users`.
+For user lookup and sensitive site-audit workflows (`list-users`, `get-user`, `site-health-check`, `security-audit`, and `seo-site-overview`), use a separate dedicated **Administrator** account because those abilities require `list_users` or `manage_options`.
 
 Note on role scope: the `edit_posts` and `upload_files` capabilities are available to Authors as well, but WordPress scopes results and write access to the authenticated user's own content unless `edit_others_posts` / `delete_others_posts` are also present (which Editors have). Use an Author-role account only if you intentionally want the agent limited to content it created. For full site-wide editorial control, use Editor.
 
-Planned audit abilities — database health, performance status, backup detection, plugin audit, and user access audit — will require an **Administrator** account because they need `manage_options`, `activate_plugins`, or `edit_users`. For those workflows, create a second dedicated Administrator service account and keep the Editor account for content. Using two accounts limits blast radius: the Editor account cannot touch site configuration, and the Administrator account is used only for auditing.
+For those workflows, create a second dedicated Administrator service account and keep the Editor account for content. Using two accounts limits blast radius: the Editor account cannot touch site configuration, and the Administrator account is used only for auditing.
 
 Always create a dedicated user for each role rather than using your personal account — this makes access easy to revoke independently.
 
@@ -101,6 +101,12 @@ Delete operations for posts and pages move content to trash. Media delete perman
 
 == Changelog ==
 
+= 1.5.1 =
+* Rename plugin to "Unlock MCP Potential" and update slug references to `unlock-mcp-potential`
+* Replace generic `WP_MCP_` PHP class prefixes with `Unlock_MCP_`
+* Harden ability permissions with object-specific post/media checks and administrator-only sensitive audit abilities
+* Add WordPress Coding Standards tooling and update WordPress.org plugin-guideline documentation
+
 = 1.5.0 =
 * Add user lookup abilities: `list-users` and `get-user`
 * 30 abilities: posts (5), pages (5), taxonomy (6), comments (4), media (4), users (2), site health (1), security audit (1), SEO analysis (2)
@@ -110,7 +116,7 @@ Delete operations for posts and pages move content to trash. Media delete perman
 * 28 abilities: posts (5), pages (5), taxonomy (6), comments (4), media (4), site health (1), security audit (1), SEO analysis (2)
 
 = 1.3.4 =
-* Rename plugin to "MCP Adapter Abilities" to comply with WordPress.org naming guidelines
+* Rename plugin to "Unlock MCP Potential" to comply with WordPress.org naming guidelines
 
 = 1.3.3 =
 * Update "Tested up to" to WordPress 7.0
@@ -134,6 +140,9 @@ Delete operations for posts and pages move content to trash. Media delete perman
 
 == Upgrade Notice ==
 
+= 1.5.1 =
+Renames the plugin, tightens permission checks, and adds WordPress.org review-readiness tooling.
+
 = 1.5.0 =
 Adds user lookup abilities for resolving WordPress author IDs.
 
@@ -141,7 +150,7 @@ Adds user lookup abilities for resolving WordPress author IDs.
 Adds media list, get, update, and permanent delete abilities.
 
 = 1.3.4 =
-Plugin renamed to "MCP Adapter Abilities".
+Plugin renamed to "Unlock MCP Potential".
 
 = 1.3.3 =
 Updates tested up to WordPress 7.0.

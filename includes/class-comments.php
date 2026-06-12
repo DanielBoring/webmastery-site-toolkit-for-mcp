@@ -2,13 +2,13 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_MCP_Comments {
+class Unlock_MCP_Comments {
 
 	public static function register() {
 		self::register_list();
-		self::register_set_status( 'approve',  'Approve Comment', '1'    );
-		self::register_set_status( 'trash',    'Trash Comment',   'trash' );
-		self::register_set_status( 'spam',     'Spam Comment',    'spam'  );
+		self::register_set_status( 'approve', 'Approve Comment', '1' );
+		self::register_set_status( 'trash', 'Trash Comment', 'trash' );
+		self::register_set_status( 'spam', 'Spam Comment', 'spam' );
 	}
 
 	private static function normalize( $comment ) {
@@ -67,8 +67,8 @@ class WP_MCP_Comments {
 				];
 			},
 			'permission_callback' => function () {
-				if ( ! current_user_can( 'edit_posts' ) ) {
-					return new WP_Error( 'forbidden', 'Requires edit_posts capability.' );
+				if ( ! current_user_can( 'moderate_comments' ) ) {
+					return new WP_Error( 'forbidden', 'Requires moderate_comments capability.' );
 				}
 				return true;
 			},

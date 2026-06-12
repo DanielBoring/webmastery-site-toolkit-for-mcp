@@ -2,7 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_MCP_Health {
+class Unlock_MCP_Health {
 
 	public static function register() {
 		wp_register_ability( 'wp-mcp/site-health-check', [
@@ -11,8 +11,8 @@ class WP_MCP_Health {
 			'category'            => 'wp-mcp',
 			'execute_callback'    => [ self::class, 'execute' ],
 			'permission_callback' => function () {
-				if ( ! current_user_can( 'read' ) ) {
-					return new WP_Error( 'forbidden', 'Requires read capability.' );
+				if ( ! current_user_can( 'manage_options' ) ) {
+					return new WP_Error( 'forbidden', 'Requires manage_options capability.' );
 				}
 				return true;
 			},

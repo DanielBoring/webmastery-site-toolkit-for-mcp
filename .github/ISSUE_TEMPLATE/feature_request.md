@@ -13,7 +13,7 @@ e.g. `wp-mcp/list-media`
 A clear description of what the ability does and what it returns.
 
 **Required WordPress capability**
-Which capability gate should protect it? e.g. `edit_posts`, `manage_options`, `read`
+Which capability gate should protect it? Prefer object-specific capabilities when an input ID is available, e.g. `edit_post`, `delete_post`, `manage_options`, `read`.
 
 **Why does an AI agent need this?**
 Describe the workflow or use case this enables.

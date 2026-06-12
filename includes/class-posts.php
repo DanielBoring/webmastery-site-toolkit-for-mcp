@@ -2,7 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_MCP_Posts {
+class Unlock_MCP_Posts {
 
 	public static function register() {
 		self::register_post_type( 'post' );
@@ -46,9 +46,43 @@ class WP_MCP_Posts {
 		};
 	}
 
+	private static function object_permission( $type, $input_key, $cap ) {
+		return function ( $input = [] ) use ( $type, $input_key, $cap ) {
+			$id   = absint( $input[ $input_key ] ?? 0 );
+			$post = get_post( $id );
+
+			if ( ! $post || $post->post_type !== $type ) {
+				return new WP_Error( 'not_found', ucfirst( $type ) . ' not found.' );
+			}
+			if ( ! current_user_can( $cap, $id ) ) {
+				return new WP_Error( 'forbidden', "Requires {$cap} capability for this {$type}." );
+			}
+			return true;
+		};
+	}
+
+	private static function create_permission( $type ) {
+		return function ( $input = [] ) use ( $type ) {
+			$edit_cap    = 'post' === $type ? 'edit_posts' : 'edit_pages';
+			$publish_cap = 'post' === $type ? 'publish_posts' : 'publish_pages';
+			$status      = $input['status'] ?? 'draft';
+
+			if ( ! current_user_can( $edit_cap ) ) {
+				return new WP_Error( 'forbidden', "Requires {$edit_cap} capability." );
+			}
+			if ( in_array( $status, [ 'publish', 'future' ], true ) && ! current_user_can( $publish_cap ) ) {
+				return new WP_Error( 'forbidden', "Requires {$publish_cap} capability." );
+			}
+			if ( 'page' === $type && ! empty( $input['parent'] ) && ! current_user_can( 'edit_post', absint( $input['parent'] ) ) ) {
+				return new WP_Error( 'forbidden', 'Requires edit_post capability for the parent page.' );
+			}
+			return true;
+		};
+	}
+
 	private static function register_post_type( $type ) {
 		$slug  = 'post' === $type ? 'posts' : 'pages';
-		$label = 'post' === $type ? 'Post'  : 'Page';
+		$label = 'post' === $type ? 'Post' : 'Page';
 
 		// --- list ---
 		$list_input = [
@@ -73,7 +107,7 @@ class WP_MCP_Posts {
 			'description'         => "List WordPress {$slug} with optional filters.",
 			'category'            => 'wp-mcp',
 			'input_schema'        => $list_input,
-			'execute_callback'    => function ( $input ) use ( $type ) {
+			'execute_callback'    => function ( $input ) use ( $type, $slug ) {
 				$args = [
 					'post_type'      => $type,
 					'post_status'    => $input['status'] ?? 'any',
@@ -88,6 +122,9 @@ class WP_MCP_Posts {
 				}
 				if ( ! empty( $input['author'] ) ) {
 					$args['author'] = absint( $input['author'] );
+				}
+				if ( ! current_user_can( 'edit_others_' . $slug ) ) {
+					$args['author'] = get_current_user_id();
 				}
 				if ( 'post' === $type && ! empty( $input['category_id'] ) ) {
 					$args['cat'] = absint( $input['category_id'] );
@@ -124,16 +161,19 @@ class WP_MCP_Posts {
 				'required'   => [ "{$type}_id" ],
 			],
 			'execute_callback'    => function ( $input ) use ( $type ) {
-				$id   = absint( $input["{$type}_id"] );
+				$id   = absint( $input[ "{$type}_id" ] );
 				$post = get_post( $id );
 
 				if ( ! $post || $post->post_type !== $type ) {
 					return [ 'success' => false, 'error' => ucfirst( $type ) . ' not found.' ];
 				}
+				if ( ! current_user_can( 'edit_post', $id ) ) {
+					return [ 'success' => false, 'error' => 'You do not have permission to view this ' . $type . '.' ];
+				}
 
 				return [ 'success' => true, 'data' => self::normalize( $post ) ];
 			},
-			'permission_callback' => self::permission( 'post' === $type ? 'edit_posts' : 'edit_pages' ),
+			'permission_callback' => self::object_permission( $type, "{$type}_id", 'edit_post' ),
 			'meta'                => [
 				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
@@ -168,13 +208,19 @@ class WP_MCP_Posts {
 				'required'   => [ 'title', 'content' ],
 			],
 			'execute_callback'    => function ( $input ) use ( $type ) {
+				$permission = self::create_permission( $type );
+				$allowed    = $permission( $input );
+				if ( is_wp_error( $allowed ) ) {
+					return [ 'success' => false, 'error' => $allowed->get_error_message() ];
+				}
+
 				$args = [
 					'post_type'    => $type,
 					'post_title'   => sanitize_text_field( $input['title'] ),
 					'post_content' => wp_kses_post( $input['content'] ),
 					'post_status'  => in_array( $input['status'] ?? 'draft', [ 'draft', 'publish', 'pending', 'future' ], true )
-									  ? $input['status']
-									  : 'draft',
+										? $input['status']
+										: 'draft',
 				];
 
 				if ( ! empty( $input['scheduled_date'] ) ) {
@@ -208,7 +254,7 @@ class WP_MCP_Posts {
 
 				return [ 'success' => true, 'data' => self::normalize( $id ) ];
 			},
-			'permission_callback' => self::permission( 'post' === $type ? 'edit_posts' : 'edit_pages' ),
+			'permission_callback' => self::create_permission( $type ),
 			'meta'                => [
 				'annotations' => [ 'readonly' => false, 'destructive' => false, 'idempotent' => false ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
@@ -246,12 +292,18 @@ class WP_MCP_Posts {
 				'properties' => $update_props,
 				'required'   => [ "{$type}_id" ],
 			],
-			'execute_callback'    => function ( $input ) use ( $type ) {
-				$id   = absint( $input["{$type}_id"] );
+			'execute_callback'    => function ( $input ) use ( $type, $slug ) {
+				$id   = absint( $input[ "{$type}_id" ] );
 				$post = get_post( $id );
 
 				if ( ! $post || $post->post_type !== $type ) {
 					return [ 'success' => false, 'error' => ucfirst( $type ) . ' not found.' ];
+				}
+				if ( ! current_user_can( 'edit_post', $id ) ) {
+					return [ 'success' => false, 'error' => 'You do not have permission to update this ' . $type . '.' ];
+				}
+				if ( isset( $input['status'] ) && in_array( $input['status'], [ 'publish', 'future' ], true ) && ! current_user_can( 'publish_' . $slug ) ) {
+					return [ 'success' => false, 'error' => 'You do not have permission to publish this ' . $type . '.' ];
 				}
 
 				$args = [ 'ID' => $id ];
@@ -303,7 +355,7 @@ class WP_MCP_Posts {
 
 				return [ 'success' => true, 'data' => self::normalize( $id ) ];
 			},
-			'permission_callback' => self::permission( 'post' === $type ? 'edit_posts' : 'edit_pages' ),
+			'permission_callback' => self::object_permission( $type, "{$type}_id", 'edit_post' ),
 			'meta'                => [
 				'annotations' => [ 'readonly' => false, 'destructive' => false, 'idempotent' => false ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
@@ -323,11 +375,14 @@ class WP_MCP_Posts {
 				'required'   => [ "{$type}_id" ],
 			],
 			'execute_callback'    => function ( $input ) use ( $type ) {
-				$id   = absint( $input["{$type}_id"] );
+				$id   = absint( $input[ "{$type}_id" ] );
 				$post = get_post( $id );
 
 				if ( ! $post || $post->post_type !== $type ) {
 					return [ 'success' => false, 'error' => ucfirst( $type ) . ' not found.' ];
+				}
+				if ( ! current_user_can( 'delete_post', $id ) ) {
+					return [ 'success' => false, 'error' => 'You do not have permission to delete this ' . $type . '.' ];
 				}
 
 				$result = wp_trash_post( $id );
@@ -338,7 +393,7 @@ class WP_MCP_Posts {
 
 				return [ 'success' => true, 'data' => [ 'id' => $id, 'status' => 'trash' ] ];
 			},
-			'permission_callback' => self::permission( 'post' === $type ? 'delete_posts' : 'delete_pages' ),
+			'permission_callback' => self::object_permission( $type, "{$type}_id", 'delete_post' ),
 			'meta'                => [
 				'annotations' => [ 'readonly' => false, 'destructive' => true, 'idempotent' => false ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],

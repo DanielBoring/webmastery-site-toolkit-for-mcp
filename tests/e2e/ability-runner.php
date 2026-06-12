@@ -108,7 +108,7 @@ function e2e_result_is_success( $result ) {
 }
 
 function e2e_write_summary( $summary ) {
-	$artifact_dir = WP_PLUGIN_DIR . '/wordpress-mcp-abilities/e2e-artifacts';
+	$artifact_dir = WP_PLUGIN_DIR . '/unlock-mcp-potential/e2e-artifacts';
 	if ( ! is_dir( $artifact_dir ) ) {
 		wp_mkdir_p( $artifact_dir );
 	}
@@ -119,7 +119,7 @@ function e2e_write_summary( $summary ) {
 	);
 }
 
-$manifest_path = WP_PLUGIN_DIR . '/wordpress-mcp-abilities/tests/e2e/abilities-manifest.json';
+$manifest_path = WP_PLUGIN_DIR . '/unlock-mcp-potential/tests/e2e/abilities-manifest.json';
 $manifest      = json_decode( file_get_contents( $manifest_path ), true );
 
 if ( ! is_array( $manifest ) ) {

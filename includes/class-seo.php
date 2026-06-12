@@ -2,11 +2,24 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_MCP_SEO {
+class Unlock_MCP_SEO {
 
 	public static function register() {
 		self::register_analyze_post();
 		self::register_site_overview();
+	}
+
+	public static function permission_analyze_post( $input = [] ) {
+		$id   = absint( $input['post_id'] ?? 0 );
+		$post = get_post( $id );
+
+		if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
+			return new WP_Error( 'not_found', 'Post not found.' );
+		}
+		if ( ! current_user_can( 'edit_post', $id ) ) {
+			return new WP_Error( 'forbidden', 'Requires edit_post capability for this post.' );
+		}
+		return true;
 	}
 
 	private static function register_analyze_post() {
@@ -22,12 +35,7 @@ class WP_MCP_SEO {
 				'required'   => [ 'post_id' ],
 			],
 			'execute_callback'    => [ self::class, 'execute_analyze_post' ],
-			'permission_callback' => function () {
-				if ( ! current_user_can( 'edit_posts' ) ) {
-					return new WP_Error( 'forbidden', 'Requires edit_posts capability.' );
-				}
-				return true;
-			},
+			'permission_callback' => [ self::class, 'permission_analyze_post' ],
 			'meta' => [
 				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
@@ -42,6 +50,9 @@ class WP_MCP_SEO {
 		if ( ! $post ) {
 			return [ 'success' => false, 'error' => 'Post not found.' ];
 		}
+		if ( ! current_user_can( 'edit_post', $id ) ) {
+			return [ 'success' => false, 'error' => 'You do not have permission to analyze this post.' ];
+		}
 
 		$issues = [];
 		$good   = [];
@@ -53,9 +64,9 @@ class WP_MCP_SEO {
 		$word_count    = str_word_count( $plain_content );
 		$title_len     = mb_strlen( $title );
 
-		$data['title']      = $title;
-		$data['url']        = get_permalink( $id );
-		$data['word_count'] = $word_count;
+		$data['title']        = $title;
+		$data['url']          = get_permalink( $id );
+		$data['word_count']   = $word_count;
 		$data['title_length'] = $title_len;
 
 		// Title length
@@ -75,7 +86,7 @@ class WP_MCP_SEO {
 		}
 
 		// Yoast meta description
-		$meta_desc = get_post_meta( $id, '_yoast_wpseo_metadesc', true );
+		$meta_desc                      = get_post_meta( $id, '_yoast_wpseo_metadesc', true );
 		$data['yoast_meta_description'] = $meta_desc;
 		if ( empty( $meta_desc ) ) {
 			$issues[] = [ 'check' => 'meta_description', 'severity' => 'warn', 'message' => 'No Yoast meta description set.' ];
@@ -89,21 +100,18 @@ class WP_MCP_SEO {
 		}
 
 		// Yoast focus keyword
-		$focus_kw = get_post_meta( $id, '_yoast_wpseo_focuskw', true );
+		$focus_kw                    = get_post_meta( $id, '_yoast_wpseo_focuskw', true );
 		$data['yoast_focus_keyword'] = $focus_kw;
 		if ( empty( $focus_kw ) ) {
 			$issues[] = [ 'check' => 'focus_keyword', 'severity' => 'warn', 'message' => 'No Yoast focus keyword set.' ];
+		} elseif ( false !== stripos( $title, $focus_kw ) ) {
+			$good[] = [ 'check' => 'keyword_in_title', 'message' => "Focus keyword \"{$focus_kw}\" found in title." ];
 		} else {
-			// Keyword in title
-			if ( stripos( $title, $focus_kw ) !== false ) {
-				$good[] = [ 'check' => 'keyword_in_title', 'message' => "Focus keyword \"{$focus_kw}\" found in title." ];
-			} else {
-				$issues[] = [ 'check' => 'keyword_in_title', 'severity' => 'warn', 'message' => "Focus keyword \"{$focus_kw}\" not found in title." ];
-			}
+			$issues[] = [ 'check' => 'keyword_in_title', 'severity' => 'warn', 'message' => "Focus keyword \"{$focus_kw}\" not found in title." ];
 		}
 
 		// Images without alt text
-		$images_without_alt = self::count_images_without_alt( $content );
+		$images_without_alt         = self::count_images_without_alt( $content );
 		$data['images_without_alt'] = $images_without_alt;
 		if ( $images_without_alt > 0 ) {
 			$issues[] = [ 'check' => 'image_alt', 'severity' => 'warn', 'message' => "{$images_without_alt} image(s) missing alt text." ];
@@ -112,20 +120,20 @@ class WP_MCP_SEO {
 		}
 
 		// Link counts
-		$internal_links = self::count_links( $content, home_url() );
-		$external_links = self::count_links( $content, home_url(), true );
+		$internal_links         = self::count_links( $content, home_url() );
+		$external_links         = self::count_links( $content, home_url(), true );
 		$data['internal_links'] = $internal_links;
 		$data['external_links'] = $external_links;
 
-		if ( $internal_links === 0 ) {
+		if ( 0 === $internal_links ) {
 			$issues[] = [ 'check' => 'internal_links', 'severity' => 'info', 'message' => 'No internal links found. Internal links help with crawlability.' ];
 		} else {
 			$good[] = [ 'check' => 'internal_links', 'message' => "{$internal_links} internal link(s) found." ];
 		}
 
 		// Slug length
-		$slug     = $post->post_name;
-		$slug_len = mb_strlen( $slug );
+		$slug         = $post->post_name;
+		$slug_len     = mb_strlen( $slug );
 		$data['slug'] = $slug;
 		if ( $slug_len > 75 ) {
 			$issues[] = [ 'check' => 'slug_length', 'severity' => 'info', 'message' => "Slug is long ({$slug_len} chars). Shorter slugs are generally better." ];
@@ -150,7 +158,7 @@ class WP_MCP_SEO {
 		$count = 0;
 		foreach ( $matches[0] as $img ) {
 			if ( ! preg_match( '/\balt\s*=\s*"[^"]+"/i', $img ) && ! preg_match( "/\\balt\\s*=\\s*'[^']+'/i", $img ) ) {
-				$count++;
+				++$count;
 			}
 		}
 		return $count;
@@ -162,7 +170,7 @@ class WP_MCP_SEO {
 		foreach ( $matches[1] as $href ) {
 			$is_internal = str_starts_with( $href, $home ) || str_starts_with( $href, '/' );
 			if ( $external ? ! $is_internal : $is_internal ) {
-				$count++;
+				++$count;
 			}
 		}
 		return $count;
@@ -175,8 +183,8 @@ class WP_MCP_SEO {
 			'category'            => 'wp-mcp',
 			'execute_callback'    => [ self::class, 'execute_site_overview' ],
 			'permission_callback' => function () {
-				if ( ! current_user_can( 'read' ) ) {
-					return new WP_Error( 'forbidden', 'Requires read capability.' );
+				if ( ! current_user_can( 'manage_options' ) ) {
+					return new WP_Error( 'forbidden', 'Requires manage_options capability.' );
 				}
 				return true;
 			},
@@ -197,13 +205,13 @@ class WP_MCP_SEO {
 		$data['sitemap']  = [ 'url' => $sitemap_url, 'accessible' => $sitemap_ok ];
 
 		// Robots.txt
-		$robots_url      = home_url( '/robots.txt' );
-		$robots_response = wp_remote_head( $robots_url, [ 'timeout' => 5 ] );
-		$robots_ok       = ! is_wp_error( $robots_response ) && wp_remote_retrieve_response_code( $robots_response ) === 200;
+		$robots_url         = home_url( '/robots.txt' );
+		$robots_response    = wp_remote_head( $robots_url, [ 'timeout' => 5 ] );
+		$robots_ok          = ! is_wp_error( $robots_response ) && wp_remote_retrieve_response_code( $robots_response ) === 200;
 		$data['robots_txt'] = [ 'url' => $robots_url, 'accessible' => $robots_ok ];
 
 		// Published posts missing Yoast focus keyword
-		$no_keyword = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying Yoast fields; only runs on explicit admin request.
+		$no_keyword                          = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying Yoast fields; only runs on explicit admin request.
 			'post_type'      => [ 'post', 'page' ],
 			'post_status'    => 'publish',
 			'posts_per_page' => 50,
@@ -227,7 +235,7 @@ class WP_MCP_SEO {
 		];
 
 		// Posts with no Yoast meta description
-		$no_desc = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying Yoast fields; only runs on explicit admin request.
+		$no_desc                                = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying Yoast fields; only runs on explicit admin request.
 			'post_type'      => [ 'post', 'page' ],
 			'post_status'    => 'publish',
 			'posts_per_page' => 50,

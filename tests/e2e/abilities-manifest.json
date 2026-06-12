@@ -20,6 +20,7 @@
   { "ability": "wp-mcp/get-user", "label": "get-user as admin", "role": "admin", "input": { "user_id": "__editor_id__" }, "expect": "success" },
   { "ability": "wp-mcp/get-user", "label": "get-user as subscriber", "role": "subscriber", "input": { "user_id": "__editor_id__" }, "expect": "failure" },
   { "ability": "wp-mcp/list-comments", "label": "list-comments", "role": "editor", "input": { "post_id": "__post_id__", "status": "all" }, "expect": "success" },
+  { "ability": "wp-mcp/list-comments", "label": "list-comments as subscriber", "role": "subscriber", "input": { "post_id": "__post_id__", "status": "all" }, "expect": "failure" },
   { "ability": "wp-mcp/approve-comment", "label": "approve-comment", "role": "editor", "input": { "comment_id": "__comment_id__" }, "expect": "success" },
   { "ability": "wp-mcp/trash-comment", "label": "trash-comment", "role": "editor", "input": { "comment_id": "__trash_comment_id__" }, "expect": "success" },
   { "ability": "wp-mcp/spam-comment", "label": "spam-comment", "role": "editor", "input": { "comment_id": "__spam_comment_id__" }, "expect": "success" },
@@ -29,7 +30,10 @@
   { "ability": "wp-mcp/update-media", "label": "update-media", "role": "author", "input": { "media_id": "__media_id__", "title": "MCP E2E Media Updated", "alt_text": "Test alt text" }, "expect": "success" },
   { "ability": "wp-mcp/delete-media", "label": "delete-media", "role": "author", "input": { "media_id": "__delete_media_id__" }, "expect": "success" },
   { "ability": "wp-mcp/seo-analyze-post", "label": "seo-analyze-post", "role": "editor", "input": { "post_id": "__post_id__" }, "expect": "success" },
-  { "ability": "wp-mcp/seo-site-overview", "label": "seo-site-overview", "role": "subscriber", "input": null, "expect": "success" },
-  { "ability": "wp-mcp/site-health-check", "label": "site-health-check", "role": "subscriber", "input": null, "expect": "success" },
-  { "ability": "wp-mcp/security-audit", "label": "security-audit", "role": "subscriber", "input": null, "expect": "success" }
+  { "ability": "wp-mcp/seo-site-overview", "label": "seo-site-overview", "role": "admin", "input": null, "expect": "success" },
+  { "ability": "wp-mcp/seo-site-overview", "label": "seo-site-overview as subscriber", "role": "subscriber", "input": null, "expect": "failure" },
+  { "ability": "wp-mcp/site-health-check", "label": "site-health-check", "role": "admin", "input": null, "expect": "success" },
+  { "ability": "wp-mcp/site-health-check", "label": "site-health-check as subscriber", "role": "subscriber", "input": null, "expect": "failure" },
+  { "ability": "wp-mcp/security-audit", "label": "security-audit", "role": "admin", "input": null, "expect": "success" },
+  { "ability": "wp-mcp/security-audit", "label": "security-audit as subscriber", "role": "subscriber", "input": null, "expect": "failure" }
 ]

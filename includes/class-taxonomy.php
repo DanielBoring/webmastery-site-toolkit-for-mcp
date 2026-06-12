@@ -2,7 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_MCP_Taxonomy {
+class Unlock_MCP_Taxonomy {
 
 	public static function register() {
 		self::register_list( 'category', 'Categories' );
@@ -151,7 +151,7 @@ class WP_MCP_Taxonomy {
 				'required'   => [ "{$ability}_id" ],
 			],
 			'execute_callback'    => function ( $input ) use ( $taxonomy, $label, $ability ) {
-				$id   = absint( $input["{$ability}_id"] );
+				$id   = absint( $input[ "{$ability}_id" ] );
 				$term = get_term( $id, $taxonomy );
 
 				if ( ! $term || is_wp_error( $term ) ) {

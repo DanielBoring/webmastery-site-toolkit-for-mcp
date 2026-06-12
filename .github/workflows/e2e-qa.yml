@@ -52,7 +52,7 @@ jobs:
 
           printf '%s\n' "$CHANGED_FILES"
 
-          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(\.github/workflows/e2e-qa\.yml|docker-compose\.yml|scripts/e2e-test\.sh|tests/e2e/|includes/|wp-mcp-abilities\.php|readme\.txt|assets/)'; then
+          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(\.github/workflows/e2e-qa\.yml|docker-compose\.yml|scripts/e2e-test\.sh|tests/e2e/|includes/|unlock-mcp-potential\.php|readme\.txt|composer\.(json|lock)|phpcs\.xml\.dist|assets/)'; then
             echo "should-run=true" >> "$GITHUB_OUTPUT"
           else
             echo "should-run=false" >> "$GITHUB_OUTPUT"
@@ -114,7 +114,7 @@ jobs:
           mysql_version="$(docker compose exec -T mysql mysql --version 2>/dev/null || echo unknown)"
           mcp_adapter_release="$(grep '^MCP_ADAPTER_ZIP=' scripts/e2e-test.sh | sed -E 's#.*releases/download/([^/]+)/.*#\1#')"
           mcp_adapter_version="$(docker compose exec -T wordpress wp --allow-root plugin get mcp-adapter --field=version 2>/dev/null || echo unknown)"
-          plugin_version="$(docker compose exec -T wordpress wp --allow-root plugin get wordpress-mcp-abilities --field=version 2>/dev/null || echo unknown)"
+          plugin_version="$(docker compose exec -T wordpress wp --allow-root plugin get unlock-mcp-potential --field=version 2>/dev/null || echo unknown)"
           summary_file="e2e-artifacts/e2e-summary.json"
           registered_abilities="$(jq -r '.registered_abilities // "unknown"' "$summary_file" 2>/dev/null || echo unknown)"
           covered_abilities="$(jq -r '.covered_abilities // "unknown"' "$summary_file" 2>/dev/null || echo unknown)"
@@ -201,7 +201,7 @@ jobs:
           VERSIONS+="- MySQL server: ${MYSQL_VERSION:-unknown}"$'\n'
           VERSIONS+="- MCP Adapter release: ${MCP_ADAPTER_RELEASE:-unknown}"$'\n'
           VERSIONS+="- MCP Adapter plugin: ${MCP_ADAPTER_VERSION:-unknown}"$'\n'
-          VERSIONS+="- WP MCP Abilities: ${PLUGIN_VERSION:-unknown}"$'\n'
+          VERSIONS+="- Unlock MCP Potential: ${PLUGIN_VERSION:-unknown}"$'\n'
           VERSIONS+="- Commit: ${HEAD_SHA:-unknown}"$'\n'
           VERSIONS+="- Workflow run: ${RUN_URL:-unknown}"
           COVERAGE=$'\n\n### Ability coverage\n\n'

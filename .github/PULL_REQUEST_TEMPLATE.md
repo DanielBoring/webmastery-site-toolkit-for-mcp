@@ -18,5 +18,7 @@
 - [ ] Ability name uses `wp-mcp/` prefix
 - [ ] `annotations` flags set correctly (`readonly`, `destructive`, `idempotent`)
 - [ ] If this PR adds or changes `wp-mcp/*` abilities, `tests/e2e/abilities-manifest.json` includes matching positive/negative E2E cases
+- [ ] WordPress Coding Standards checked with `composer phpcs`
+- [ ] WordPress.org Detailed Plugin Guidelines reviewed for naming, readme, privacy/external calls, licensing/assets, and release readiness
 - [ ] `readme.txt` changelog updated under `== Changelog ==`
 - [ ] E2E QA tests passing (see CI/workflow status)

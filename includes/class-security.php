@@ -2,7 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_MCP_Security {
+class Unlock_MCP_Security {
 
 	public static function register() {
 		wp_register_ability( 'wp-mcp/security-audit', [
@@ -11,8 +11,8 @@ class WP_MCP_Security {
 			'category'            => 'wp-mcp',
 			'execute_callback'    => [ self::class, 'execute' ],
 			'permission_callback' => function () {
-				if ( ! current_user_can( 'read' ) ) {
-					return new WP_Error( 'forbidden', 'Requires read capability.' );
+				if ( ! current_user_can( 'manage_options' ) ) {
+					return new WP_Error( 'forbidden', 'Requires manage_options capability.' );
 				}
 				return true;
 			},
@@ -42,7 +42,7 @@ class WP_MCP_Security {
 
 		// Debug log
 		if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
-			$log_path = is_string( WP_DEBUG_LOG ) ? WP_DEBUG_LOG : WP_CONTENT_DIR . '/debug.log';
+			$log_path            = is_string( WP_DEBUG_LOG ) ? WP_DEBUG_LOG : WP_CONTENT_DIR . '/debug.log';
 			$publicly_accessible = str_starts_with( $log_path, WP_CONTENT_DIR )
 				&& ! file_exists( dirname( $log_path ) . '/.htaccess' );
 			if ( $publicly_accessible ) {

@@ -1,15 +1,17 @@
 # Changelog
 
-All notable changes to MCP Adapter Abilities are tracked here.
+All notable changes to Unlock MCP Potential are tracked here.
 
 ## Unreleased
 
 ### Added
 
+- Added WordPress Coding Standards tooling via Composer and `phpcs.xml.dist`.
+- Added contribution and PR checklist guidance for WordPress.org Detailed Plugin Guidelines review.
 - Added a hardened GitHub Actions E2E QA workflow with merge-base-safe changed-file detection and manual `workflow_dispatch` support.
 - Added manifest-driven E2E ability coverage via `tests/e2e/abilities-manifest.json` and `tests/e2e/ability-runner.php`.
 - Added an E2E coverage gate that fails when any registered `wp-mcp/*` ability is missing from the manifest.
-- Added E2E execution coverage for the current 30 registered abilities with 33 manifest test cases, including positive and negative permission cases.
+- Added E2E execution coverage for the current 30 registered abilities with 37 manifest test cases, including positive and negative permission cases.
 - Added E2E PR comments that report ability coverage counts, tested dependency versions, commit SHA, and workflow run URL.
 - Added failure artifact collection for E2E failures, including Docker Compose logs, WordPress debug logs, and E2E summary JSON.
 - Added E2E documentation in `tests/e2e/README.md` describing the rule that new or changed abilities must include manifest test coverage.
@@ -17,6 +19,9 @@ All notable changes to MCP Adapter Abilities are tracked here.
 
 ### Changed
 
+- Renamed the plugin to "Unlock MCP Potential" and updated release/test tooling for the `unlock-mcp-potential` plugin slug.
+- Replaced generic `WP_MCP_` PHP class prefixes with `Unlock_MCP_`.
+- Hardened permission callbacks for object-specific post/media operations and sensitive site-audit abilities.
 - Consolidated release automation to the tag-based `release.yml` workflow.
 - Hardened release validation to check tag, plugin header, `readme.txt` stable tag, changelog notes, artifact contents, and duplicate release state before publishing.
 - Updated E2E Docker testing to run against WordPress 7.0 with PHP 8.2 and MySQL 8.0.36.
@@ -36,7 +41,7 @@ All notable changes to MCP Adapter Abilities are tracked here.
 
 ## 1.3.4
 
-- Renamed plugin to "MCP Adapter Abilities" to comply with WordPress.org naming guidelines.
+- Renamed plugin to "Unlock MCP Potential" to comply with WordPress.org naming guidelines.
 
 ## 1.3.3
 

@@ -2,7 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_MCP_Users {
+class Unlock_MCP_Users {
 
 	public static function register() {
 		self::register_list();

@@ -2,7 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_MCP_Media {
+class Unlock_MCP_Media {
 
 	public static function register() {
 		self::register_list();
@@ -54,30 +54,19 @@ class WP_MCP_Media {
 		};
 	}
 
-	private static function user_can_view_attachment( $attachment ) {
-		$attachment = get_post( $attachment );
-		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
-			return false;
-		}
+	private static function attachment_permission( $input_key, $cap ) {
+		return function ( $input = [] ) use ( $input_key, $cap ) {
+			$id         = absint( $input[ $input_key ] ?? 0 );
+			$attachment = get_post( $id );
 
-		if ( current_user_can( 'edit_others_posts' ) ) {
+			if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
+				return new WP_Error( 'not_found', 'Media item not found.' );
+			}
+			if ( ! current_user_can( $cap, $id ) ) {
+				return new WP_Error( 'forbidden', "Requires {$cap} capability for this media item." );
+			}
 			return true;
-		}
-
-		return (int) $attachment->post_author === get_current_user_id();
-	}
-
-	private static function user_can_delete_attachment( $attachment ) {
-		$attachment = get_post( $attachment );
-		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
-			return false;
-		}
-
-		if ( current_user_can( 'delete_others_posts' ) ) {
-			return true;
-		}
-
-		return (int) $attachment->post_author === get_current_user_id();
+		};
 	}
 
 	private static function register_list() {
@@ -152,13 +141,13 @@ class WP_MCP_Media {
 				if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
 					return [ 'success' => false, 'error' => 'Media item not found.' ];
 				}
-				if ( ! self::user_can_view_attachment( $attachment ) ) {
+				if ( ! current_user_can( 'edit_post', $id ) ) {
 					return [ 'success' => false, 'error' => 'You do not have permission to view this media item.' ];
 				}
 
 				return [ 'success' => true, 'data' => self::normalize( $attachment ) ];
 			},
-			'permission_callback' => self::permission( 'upload_files' ),
+			'permission_callback' => self::attachment_permission( 'media_id', 'edit_post' ),
 			'meta'                => [
 				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
@@ -188,7 +177,7 @@ class WP_MCP_Media {
 				if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
 					return [ 'success' => false, 'error' => 'Media item not found.' ];
 				}
-				if ( ! self::user_can_view_attachment( $attachment ) ) {
+				if ( ! current_user_can( 'edit_post', $id ) ) {
 					return [ 'success' => false, 'error' => 'You do not have permission to update this media item.' ];
 				}
 
@@ -215,7 +204,7 @@ class WP_MCP_Media {
 
 				return [ 'success' => true, 'data' => self::normalize( $id ) ];
 			},
-			'permission_callback' => self::permission( 'upload_files' ),
+			'permission_callback' => self::attachment_permission( 'media_id', 'edit_post' ),
 			'meta'                => [
 				'annotations' => [ 'readonly' => false, 'destructive' => false, 'idempotent' => false ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
@@ -242,7 +231,7 @@ class WP_MCP_Media {
 				if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
 					return [ 'success' => false, 'error' => 'Media item not found.' ];
 				}
-				if ( ! self::user_can_delete_attachment( $attachment ) ) {
+				if ( ! current_user_can( 'delete_post', $id ) ) {
 					return [ 'success' => false, 'error' => 'You do not have permission to delete this media item.' ];
 				}
 
@@ -254,7 +243,7 @@ class WP_MCP_Media {
 
 				return [ 'success' => true, 'data' => [ 'id' => $id, 'deleted' => true ] ];
 			},
-			'permission_callback' => self::permission( 'delete_posts' ),
+			'permission_callback' => self::attachment_permission( 'media_id', 'delete_post' ),
 			'meta'                => [
 				'annotations' => [ 'readonly' => false, 'destructive' => true, 'idempotent' => false ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],

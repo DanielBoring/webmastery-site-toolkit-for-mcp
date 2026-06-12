@@ -1,16 +1,16 @@
 <?php
 /**
- * Plugin Name: MCP Adapter Abilities
- * Plugin URI:  https://github.com/DanielBoring/wordpress-mcp-abilities
- * Description: Adds core content management abilities to the official WordPress MCP Adapter plugin, giving AI agents full editorial access: posts, pages, taxonomy, comments, media, user lookup, health checks, security auditing, and SEO analysis.
- * Version:     1.5.0
+ * Plugin Name: Unlock MCP Potential
+ * Plugin URI:  https://github.com/DanielBoring/unlock-mcp-potential
+ * Description: Adds content management abilities for MCP-powered WordPress workflows: posts, pages, taxonomy, comments, media, user lookup, health checks, security auditing, and SEO analysis.
+ * Version:     1.5.1
  * Requires at least: 6.9
  * Requires PHP: 8.0
  * Author:      Daniel Boring
  * Author URI:  https://www.virtuallyboring.com
  * License:     GPL-2.0+
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: mcp-adapter-abilities
+ * Text Domain: unlock-mcp-potential
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -20,7 +20,7 @@ add_action( 'admin_notices', function () {
 		echo '<div class="notice notice-error"><p>' . wp_kses(
 				sprintf(
 					/* translators: %s: URL to MCP Adapter plugin page */
-					__( '<strong>MCP Adapter Abilities</strong> requires the <a href="%s">MCP Adapter</a> plugin to be installed and active.', 'mcp-adapter-abilities' ),
+					__( '<strong>Unlock MCP Potential</strong> requires the <a href="%s">MCP Adapter</a> plugin to be installed and active.', 'unlock-mcp-potential' ),
 					'https://wordpress.org/plugins/mcp-adapter/'
 				),
 				[ 'strong' => [], 'a' => [ 'href' => [] ] ]
@@ -32,7 +32,7 @@ add_action( 'admin_notices', function () {
 add_action( 'wp_abilities_api_categories_init', function () {
 	wp_register_ability_category( 'wp-mcp', array(
 		'label'       => 'WP MCP',
-		'description' => 'WordPress content management abilities registered by WP MCP Abilities.',
+		'description' => 'WordPress content management abilities registered by Unlock MCP Potential.',
 	) );
 } );
 
@@ -47,12 +47,12 @@ add_action( 'wp_abilities_api_init', function () {
 	require_once __DIR__ . '/includes/class-security.php';
 	require_once __DIR__ . '/includes/class-seo.php';
 
-	WP_MCP_Posts::register();
-	WP_MCP_Taxonomy::register();
-	WP_MCP_Comments::register();
-	WP_MCP_Media::register();
-	WP_MCP_Users::register();
-	WP_MCP_Health::register();
-	WP_MCP_Security::register();
-	WP_MCP_SEO::register();
+	Unlock_MCP_Posts::register();
+	Unlock_MCP_Taxonomy::register();
+	Unlock_MCP_Comments::register();
+	Unlock_MCP_Media::register();
+	Unlock_MCP_Users::register();
+	Unlock_MCP_Health::register();
+	Unlock_MCP_Security::register();
+	Unlock_MCP_SEO::register();
 } );
