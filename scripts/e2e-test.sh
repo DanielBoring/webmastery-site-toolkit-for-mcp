@@ -7,10 +7,15 @@ MCP_ADAPTER_ZIP="https://github.com/WordPress/mcp-adapter/releases/download/v0.5
 E2E_ARTIFACTS_DIR="${E2E_ARTIFACTS_DIR:-e2e-artifacts}"
 
 compose() {
+	local project_args=()
+	if [ -n "${COMPOSE_PROJECT_NAME:-}" ]; then
+		project_args=( --project-name "$COMPOSE_PROJECT_NAME" )
+	fi
+
 	if docker compose version >/dev/null 2>&1; then
-		docker compose "$@"
+		docker compose "${project_args[@]}" "$@"
 	else
-		docker-compose "$@"
+		docker-compose "${project_args[@]}" "$@"
 	fi
 }
 

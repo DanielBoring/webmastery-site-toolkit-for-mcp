@@ -7,6 +7,8 @@ class Unlock_MCP_Posts {
 	public static function register() {
 		self::register_post_type( 'post' );
 		self::register_post_type( 'page' );
+		self::register_set_featured_image();
+		self::register_remove_featured_image();
 	}
 
 	private static function normalize( $post ) {
@@ -16,17 +18,18 @@ class Unlock_MCP_Posts {
 		}
 
 		$data = [
-			'id'            => $post->ID,
-			'title'         => $post->post_title,
-			'content'       => $post->post_content,
-			'excerpt'       => $post->post_excerpt,
-			'status'        => $post->post_status,
-			'slug'          => $post->post_name,
-			'url'           => get_permalink( $post->ID ),
-			'author'        => (int) $post->post_author,
-			'date_created'  => $post->post_date,
-			'date_modified' => $post->post_modified,
-			'type'          => $post->post_type,
+			'id'                => $post->ID,
+			'title'             => $post->post_title,
+			'content'           => $post->post_content,
+			'excerpt'           => $post->post_excerpt,
+			'status'            => $post->post_status,
+			'slug'              => $post->post_name,
+			'url'               => get_permalink( $post->ID ),
+			'author'            => (int) $post->post_author,
+			'date_created'      => $post->post_date,
+			'date_modified'     => $post->post_modified,
+			'type'              => $post->post_type,
+			'featured_image_id' => (int) get_post_thumbnail_id( $post->ID ),
 		];
 
 		if ( 'post' === $post->post_type ) {
@@ -78,6 +81,118 @@ class Unlock_MCP_Posts {
 			}
 			return true;
 		};
+	}
+
+	private static function featured_image_permission() {
+		return function ( $input = [] ) {
+			$id   = absint( $input['post_id'] ?? 0 );
+			$post = get_post( $id );
+
+			if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
+				return new WP_Error( 'not_found', 'Post or page not found.' );
+			}
+
+			$cap = 'post' === $post->post_type ? 'edit_posts' : 'edit_pages';
+			if ( ! current_user_can( $cap ) ) {
+				return new WP_Error( 'forbidden', "Requires {$cap} capability." );
+			}
+			if ( ! current_user_can( 'edit_post', $id ) ) {
+				return new WP_Error( 'forbidden', 'Requires edit_post capability for this post or page.' );
+			}
+
+			return true;
+		};
+	}
+
+	private static function get_featured_image_target( $input ) {
+		$id   = absint( $input['post_id'] ?? 0 );
+		$post = get_post( $id );
+
+		if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
+			return new WP_Error( 'not_found', 'Post or page not found.' );
+		}
+		if ( ! current_user_can( 'edit_post', $id ) ) {
+			return new WP_Error( 'forbidden', 'You do not have permission to update this post or page.' );
+		}
+
+		return $post;
+	}
+
+	private static function register_set_featured_image() {
+		wp_register_ability( 'wp-mcp/set-featured-image', [
+			'label'               => 'Set Featured Image',
+			'description'         => 'Set the featured image for a WordPress post or page by attachment ID.',
+			'category'            => 'wp-mcp',
+			'input_schema'        => [
+				'type'       => 'object',
+				'properties' => [
+					'post_id'       => [ 'type' => 'integer', 'description' => 'Post or page ID' ],
+					'attachment_id' => [ 'type' => 'integer', 'description' => 'Image attachment ID to use as the featured image' ],
+				],
+				'required'   => [ 'post_id', 'attachment_id' ],
+			],
+			'execute_callback'    => function ( $input ) {
+				$post = self::get_featured_image_target( $input );
+
+				if ( is_wp_error( $post ) ) {
+					return [ 'success' => false, 'error' => $post->get_error_message() ];
+				}
+
+				$attachment_id = absint( $input['attachment_id'] );
+				$attachment    = get_post( $attachment_id );
+
+				if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
+					return [ 'success' => false, 'error' => 'Attachment not found.' ];
+				}
+				if ( ! wp_attachment_is_image( $attachment_id ) ) {
+					return [ 'success' => false, 'error' => 'Attachment must be an image.' ];
+				}
+
+				$result = set_post_thumbnail( $post->ID, $attachment_id );
+
+				if ( ! $result ) {
+					return [ 'success' => false, 'error' => 'Failed to set featured image.' ];
+				}
+
+				return [ 'success' => true, 'data' => self::normalize( $post->ID ) ];
+			},
+			'permission_callback' => self::featured_image_permission(),
+			'meta'                => [
+				'annotations' => [ 'readonly' => false, 'destructive' => false, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+	}
+
+	private static function register_remove_featured_image() {
+		wp_register_ability( 'wp-mcp/remove-featured-image', [
+			'label'               => 'Remove Featured Image',
+			'description'         => 'Remove the featured image from a WordPress post or page.',
+			'category'            => 'wp-mcp',
+			'input_schema'        => [
+				'type'       => 'object',
+				'properties' => [
+					'post_id' => [ 'type' => 'integer', 'description' => 'Post or page ID' ],
+				],
+				'required'   => [ 'post_id' ],
+			],
+			'execute_callback'    => function ( $input ) {
+				$post = self::get_featured_image_target( $input );
+
+				if ( is_wp_error( $post ) ) {
+					return [ 'success' => false, 'error' => $post->get_error_message() ];
+				}
+
+				delete_post_thumbnail( $post->ID );
+
+				return [ 'success' => true, 'data' => self::normalize( $post->ID ) ];
+			},
+			'permission_callback' => self::featured_image_permission(),
+			'meta'                => [
+				'annotations' => [ 'readonly' => false, 'destructive' => true, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
 	}
 
 	private static function register_post_type( $type ) {
