@@ -42,6 +42,7 @@ add_action( 'wp_abilities_api_init', function () {
 	require_once __DIR__ . '/includes/class-taxonomy.php';
 	require_once __DIR__ . '/includes/class-comments.php';
 	require_once __DIR__ . '/includes/class-media.php';
+	require_once __DIR__ . '/includes/class-users.php';
 	require_once __DIR__ . '/includes/class-health.php';
 	require_once __DIR__ . '/includes/class-security.php';
 	require_once __DIR__ . '/includes/class-seo.php';
@@ -50,6 +51,7 @@ add_action( 'wp_abilities_api_init', function () {
 	WP_MCP_Taxonomy::register();
 	WP_MCP_Comments::register();
 	WP_MCP_Media::register();
+	WP_MCP_Users::register();
 	WP_MCP_Health::register();
 	WP_MCP_Security::register();
 	WP_MCP_SEO::register();
