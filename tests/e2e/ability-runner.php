@@ -309,6 +309,8 @@ if ( $missing || $extra ) {
 }
 
 foreach ( $manifest as $case ) {
+	$case = e2e_resolve_placeholders( $case, $fixtures );
+
 	$label        = $case['label'] ?? $case['ability'];
 	$ability_name = $case['ability'];
 	$role         = $case['role'] ?? 'subscriber';

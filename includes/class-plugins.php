@@ -45,7 +45,10 @@ class Unlock_MCP_Plugins {
 	}
 
 	public static function list_plugins( $input = [] ) {
-		unset( $input );
+		$permission = self::permission( $input );
+		if ( is_wp_error( $permission ) ) {
+			return $permission;
+		}
 
 		$plugins = self::get_plugins();
 		$items   = [];
@@ -173,12 +176,8 @@ class Unlock_MCP_Plugins {
 			'label'               => 'List Plugins',
 			'description'         => 'List installed WordPress plugins and their activation state.',
 			'category'            => 'wp-mcp',
-			'input_schema'        => [
-				'type'       => 'object',
-				'properties' => [],
-			],
 			'execute_callback'    => [ self::class, 'list_plugins' ],
-			'permission_callback' => [ self::class, 'permission' ],
+			'permission_callback' => '__return_true',
 			'meta'                => [
 				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
@@ -200,9 +199,9 @@ class Unlock_MCP_Plugins {
 				],
 			],
 			'execute_callback'    => [ self::class, 'activate_plugin' ],
-			'permission_callback' => [ self::class, 'permission' ],
+			'permission_callback' => '__return_true',
 			'meta'                => [
-				'annotations' => [ 'readonly' => false, 'destructive' => false, 'idempotent' => false ],
+				'annotations' => [ 'readonly' => false, 'destructive' => false, 'idempotent' => true ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
 			],
 		] );
@@ -223,9 +222,9 @@ class Unlock_MCP_Plugins {
 				],
 			],
 			'execute_callback'    => [ self::class, 'deactivate_plugin' ],
-			'permission_callback' => [ self::class, 'permission' ],
+			'permission_callback' => '__return_true',
 			'meta'                => [
-				'annotations' => [ 'readonly' => false, 'destructive' => true, 'idempotent' => false ],
+				'annotations' => [ 'readonly' => false, 'destructive' => true, 'idempotent' => true ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
 			],
 		] );
