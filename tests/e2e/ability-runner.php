@@ -29,6 +29,13 @@ function e2e_ensure_term_id( $name, $taxonomy ) {
 	return (int) $created['term_id'];
 }
 
+function e2e_delete_term_by_slug( $slug, $taxonomy ) {
+	$term = get_term_by( 'slug', $slug, $taxonomy );
+	if ( $term ) {
+		wp_delete_term( (int) $term->term_id, $taxonomy );
+	}
+}
+
 function e2e_insert_post( $type, $title, $content, $author_id ) {
 	$id = wp_insert_post(
 		array(
@@ -46,6 +53,56 @@ function e2e_insert_post( $type, $title, $content, $author_id ) {
 	}
 
 	return (int) $id;
+}
+
+function e2e_block_by_path( $blocks, $path ) {
+	$segments       = array_map( 'absint', explode( '.', $path ) );
+	$current_blocks = $blocks;
+	$current_block  = null;
+
+	foreach ( $segments as $segment ) {
+		if ( ! is_array( $current_blocks ) || ! array_key_exists( $segment, $current_blocks ) ) {
+			throw new RuntimeException( "Unknown E2E block path: {$path}" );
+		}
+
+		$current_block  = $current_blocks[ $segment ];
+		$current_blocks = $current_block['innerBlocks'] ?? array();
+	}
+
+	return $current_block;
+}
+
+function e2e_filter_empty_freeform_blocks( $blocks ) {
+	$filtered = array();
+
+	foreach ( $blocks as $block ) {
+		$is_empty_freeform = null === ( $block['blockName'] ?? null )
+			&& '' === trim( $block['innerHTML'] ?? '' )
+			&& empty( $block['innerBlocks'] );
+
+		if ( $is_empty_freeform ) {
+			continue;
+		}
+
+		if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+			$block['innerBlocks'] = e2e_filter_empty_freeform_blocks( $block['innerBlocks'] );
+		}
+
+		$filtered[] = $block;
+	}
+
+	return $filtered;
+}
+
+function e2e_block_hash_for_post_path( $post_id, $path ) {
+	$post = get_post( $post_id );
+	if ( ! $post ) {
+		throw new RuntimeException( "Unknown E2E post ID: {$post_id}" );
+	}
+
+	$block = e2e_block_by_path( e2e_filter_empty_freeform_blocks( parse_blocks( $post->post_content ) ), $path );
+
+	return hash( 'sha256', serialize_block( $block ) );
 }
 
 function e2e_insert_comment( $post_id, $suffix ) {
@@ -216,6 +273,9 @@ $author_id     = e2e_ensure_user( 'author_test', 'author@test.local', 'author' )
 $editor_id     = e2e_ensure_user( 'editor_test', 'editor@test.local', 'editor' );
 $subscriber_id = e2e_ensure_user( 'subscriber_test', 'subscriber@test.local', 'subscriber' );
 
+e2e_delete_term_by_slug( 'mcp-e2e-created-category', 'category' );
+e2e_delete_term_by_slug( 'mcp-e2e-created-tag', 'post_tag' );
+
 $fixtures = array(
 	'admin_id'           => $admin_id,
 	'author_id'          => $author_id,
@@ -228,11 +288,62 @@ $fixtures = array(
 );
 
 $fixtures['post_id']         = e2e_insert_post( 'post', 'MCP E2E Post', 'Content for MCP E2E post.', $author_id );
+$fixtures['partial_post_id'] = e2e_insert_post(
+	'post',
+	'MCP E2E Partial Post',
+	'<!-- wp:heading {"level":2} --><h2>Overview</h2><!-- /wp:heading -->
+<!-- wp:paragraph --><p>Original overview.</p><!-- /wp:paragraph -->
+<!-- wp:heading {"level":2} --><h2>Details</h2><!-- /wp:heading -->
+<!-- wp:paragraph --><p>Original details.</p><!-- /wp:paragraph -->
+<!-- wp:heading {"level":2} --><h2>Wrap Up</h2><!-- /wp:heading -->
+<!-- wp:paragraph --><p>Final note.</p><!-- /wp:paragraph -->',
+	$author_id
+);
+$fixtures['ambiguous_partial_post_id'] = e2e_insert_post(
+	'post',
+	'MCP E2E Ambiguous Partial Post',
+	'<!-- wp:heading {"level":2} --><h2>Details</h2><!-- /wp:heading -->
+<!-- wp:paragraph --><p>First details.</p><!-- /wp:paragraph -->
+<!-- wp:heading {"level":2} --><h2>Details</h2><!-- /wp:heading -->
+<!-- wp:paragraph --><p>Second details.</p><!-- /wp:paragraph -->',
+	$author_id
+);
+$fixtures['classic_partial_post_id'] = e2e_insert_post(
+	'post',
+	'MCP E2E Classic Partial Post',
+	'<p>Classic intro.</p><p>Replace this exact sentence.</p><p>Classic ending.</p>',
+	$author_id
+);
+$fixtures['block_path_post_id'] = e2e_insert_post(
+	'post',
+	'MCP E2E Block Path Post',
+	'<!-- wp:paragraph --><p>First top-level block.</p><!-- /wp:paragraph -->
+<!-- wp:paragraph --><p>Middle top-level block.</p><!-- /wp:paragraph -->
+<!-- wp:group -->
+<div class="wp-block-group"><!-- wp:paragraph --><p>Nested paragraph block.</p><!-- /wp:paragraph --></div>
+<!-- /wp:group -->',
+	$author_id
+);
+$fixtures['block_hash_post_id'] = e2e_insert_post(
+	'post',
+	'MCP E2E Block Hash Post',
+	'<!-- wp:paragraph --><p>Hash intro block.</p><!-- /wp:paragraph -->
+<!-- wp:paragraph --><p>Hash target block.</p><!-- /wp:paragraph -->',
+	$author_id
+);
 $fixtures['delete_post_id']  = e2e_insert_post( 'post', 'MCP E2E Delete Post', 'Delete fixture.', $author_id );
 $fixtures['restore_post_id'] = e2e_insert_post( 'post', 'MCP E2E Restore Post', 'Restore fixture.', $author_id );
 $fixtures['page_id']         = e2e_insert_post( 'page', 'MCP E2E Page', 'Content for MCP E2E page.', $editor_id );
+$fixtures['block_path_page_id'] = e2e_insert_post(
+	'page',
+	'MCP E2E Block Path Page',
+	'<!-- wp:paragraph --><p>Page first block.</p><!-- /wp:paragraph -->
+<!-- wp:paragraph --><p>Page target block.</p><!-- /wp:paragraph -->',
+	$editor_id
+);
 $fixtures['delete_page_id']  = e2e_insert_post( 'page', 'MCP E2E Delete Page', 'Delete fixture.', $editor_id );
 $fixtures['restore_page_id'] = e2e_insert_post( 'page', 'MCP E2E Restore Page', 'Restore fixture.', $editor_id );
+$fixtures['block_hash_post_path_1'] = e2e_block_hash_for_post_path( $fixtures['block_hash_post_id'], '1' );
 
 wp_trash_post( $fixtures['restore_post_id'] );
 wp_trash_post( $fixtures['restore_page_id'] );
@@ -366,6 +477,36 @@ foreach ( $manifest as $case ) {
 		foreach ( (array) $case['assert_values'] as $path => $expected_value ) {
 			$actual_value = e2e_get_path_value( $result, $path, $exists );
 			if ( ! $exists || $expected_value !== $actual_value ) {
+				$passed = false;
+				break;
+			}
+		}
+	}
+
+	if ( $passed && ! empty( $case['assert_contains'] ) ) {
+		foreach ( (array) $case['assert_contains'] as $path => $expected_text ) {
+			if ( is_array( $expected_text ) ) {
+				$path          = $expected_text['path'] ?? '';
+				$expected_text = $expected_text['value'] ?? '';
+			}
+
+			$actual_value = e2e_get_path_value( $result, $path, $exists );
+			if ( ! $exists || ! is_string( $actual_value ) || false === strpos( $actual_value, $expected_text ) ) {
+				$passed = false;
+				break;
+			}
+		}
+	}
+
+	if ( $passed && ! empty( $case['assert_not_contains'] ) ) {
+		foreach ( (array) $case['assert_not_contains'] as $path => $unexpected_text ) {
+			if ( is_array( $unexpected_text ) ) {
+				$path            = $unexpected_text['path'] ?? '';
+				$unexpected_text = $unexpected_text['value'] ?? '';
+			}
+
+			$actual_value = e2e_get_path_value( $result, $path, $exists );
+			if ( ! $exists || ! is_string( $actual_value ) || false !== strpos( $actual_value, $unexpected_text ) ) {
 				$passed = false;
 				break;
 			}

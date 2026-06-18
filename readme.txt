@@ -15,13 +15,16 @@ Adds MCP-powered WordPress site abilities for posts, pages, media, comments, plu
 
 Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, pages, media, comments, plugins, SEO checks, site health, security audits, and user lookup. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
 
-Webmastery Site Toolkit for MCP registers abilities across ten groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
+Webmastery Site Toolkit for MCP registers abilities across eleven groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
 
 **Posts**
-Create, read, update, and delete posts. Supports all statuses including scheduled (future) posts, category and tag assignment, and pagination.
+Create, read, update, partially patch, and delete posts. Supports all statuses including scheduled (future) posts, category and tag assignment, pagination, and safer targeted content updates.
 
 **Pages**
 Create, read, update, and delete pages. Supports parent hierarchy and all standard page fields.
+
+**Content Blocks**
+Inspect Gutenberg block paths and hashes, then replace a single block in a post or page by exact path or unique hash.
 
 **Taxonomy**
 List, create, and delete categories and tags. Category creation supports parent hierarchy.
@@ -96,13 +99,19 @@ Always create a dedicated user for each role rather than using your personal acc
 
 = How do I verify the plugin is working? =
 
-After activation, call `mcp-adapter-discover-abilities` from your MCP client. You should see the MCP Adapter's built-in meta/discovery abilities plus all abilities registered by this plugin.
+After activation, call the MCP Adapter discovery tool, `mcp-adapter-discover-abilities`, from your MCP client. You should see the MCP Adapter's built-in meta/discovery abilities plus all abilities registered by this plugin.
 
 = Are write operations safe? =
 
 Delete operations for posts and pages move content to trash. Media delete permanently removes the attachment and its files. Plugin activation and deactivation require Administrator plugin capabilities, and protected-plugin deactivation is blocked unless explicitly forced. All inputs are sanitized using WordPress core functions. All operations go through the WordPress API — no direct database queries.
 
+For post and page body edits, `list-content-blocks` returns precise block paths and hashes, then `patch-content-block` can replace one exact Gutenberg block by path or unique hash. `patch-post-content` can still update the content under one exact Gutenberg heading or perform a strict exact-match replacement for classic/raw HTML content. These abilities fail when the target is missing, ambiguous, or stale and support optional hash preconditions to avoid overwriting newer edits.
+
 == Changelog ==
+
+= 2.1.0 =
+* Add `list-content-blocks` and `patch-content-block` for precise Gutenberg block inspection and single-block replacement in posts and pages.
+* Add `patch-post-content` for safer partial post body edits with block-aware heading targeting, exact-match fallback, ambiguous-target failures, and optional content-hash preconditions.
 
 = 2.0.0 =
 * Rename the plugin to Webmastery Site Toolkit for MCP for WordPress.org naming guideline compliance
