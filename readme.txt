@@ -4,7 +4,7 @@ Tags: mcp, ai, automation, content-management, artificial-intelligence
 Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 2.0.0
+Stable tag: 2.1.0
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
@@ -170,6 +170,9 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 * Security audit with fail/warn/pass buckets and remediation guidance
 
 == Upgrade Notice ==
+
+= 2.1.0 =
+Adds safer block-level post and page editing abilities for MCP clients.
 
 = 2.0.0 =
 Renames MCP ability IDs to the `webmastery-site-toolkit-for-mcp` namespace as part of the WordPress.org review rename.
