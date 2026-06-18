@@ -2,7 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class Unlock_MCP_Comments {
+class Webmastery_MCP_Comments {
 
 	public static function register() {
 		self::register_list();
@@ -26,10 +26,10 @@ class Unlock_MCP_Comments {
 	}
 
 	private static function register_list() {
-		wp_register_ability( 'unlock-mcp-potential/list-comments', [
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-comments', [
 			'label'               => 'List Comments',
 			'description'         => 'List WordPress comments with optional filters.',
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -80,10 +80,10 @@ class Unlock_MCP_Comments {
 	}
 
 	private static function register_set_status( $action, $label, $wp_status ) {
-		wp_register_ability( "unlock-mcp-potential/{$action}-comment", [
+		wp_register_ability( "webmastery-site-toolkit-for-mcp/{$action}-comment", [
 			'label'               => $label,
 			'description'         => "{$label} by ID.",
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [

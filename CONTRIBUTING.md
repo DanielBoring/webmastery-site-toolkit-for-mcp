@@ -1,4 +1,4 @@
-# Contributing to Unlock MCP Potential
+# Contributing to Webmastery Site Toolkit for MCP
 
 Thanks for your interest in contributing. This document covers how to report bugs, request features, and submit code changes.
 
@@ -26,11 +26,11 @@ Thanks for your interest in contributing. This document covers how to report bug
 
 1. Clone this repo into your local WordPress plugins directory:
    ```bash
-   git clone https://github.com/DanielBoring/unlock-mcp-potential.git unlock-mcp-potential
+   git clone https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp.git webmastery-site-toolkit-for-mcp
    ```
 2. Activate the plugin via WP Admin or WP-CLI:
    ```bash
-   wp plugin activate unlock-mcp-potential
+   wp plugin activate webmastery-site-toolkit-for-mcp
    ```
 3. Create a test user with the Editor role and generate an application password (see README.md for details)
 4. Point your MCP client at the local site and run `mcp-adapter-discover-abilities` to confirm the abilities load
@@ -62,20 +62,20 @@ Each group of abilities lives in its own file under `includes/`. Follow the exis
 
 1. **Create or open** the relevant class file (e.g., `includes/class-media.php`)
 2. **Register** the ability inside the class's `register()` method using `wp_register_ability()`
-3. **Use the `unlock-mcp-potential/` prefix** for the ability name (e.g., `unlock-mcp-potential/list-media`)
+3. **Use the `webmastery-site-toolkit-for-mcp/` prefix** for the ability name (e.g., `webmastery-site-toolkit-for-mcp/list-media`)
 4. **Require the narrowest relevant capability** in `permission_callback` — use object-specific checks when an input ID is available and never skip the check
 5. **Return a consistent shape** — match the affected ability group's existing success arrays and `WP_Error`/structured error responses
-6. **Require the class file** in `unlock-mcp-potential.php` inside the `wp_abilities_api_init` action and call `ClassName::register()`
+6. **Require the class file** in `webmastery-site-toolkit-for-mcp.php` inside the `wp_abilities_api_init` action and call `ClassName::register()`
 7. **Add E2E manifest coverage** in `tests/e2e/abilities-manifest.json`; include both allowed and denied roles when permissions differ by role or capability
 8. **Update docs and changelogs** when behavior is user-facing: `README.md`, `readme.txt`, relevant markdown files, and `CHANGELOG.md` under `## Unreleased`. Changelog entries should use plugin-facing release-note wording rather than raw internal ability namespace strings unless the exact MCP tool name is necessary. Repository, CI, contributor, GitHub platform, template, or agent workflow changes belong in `.github/REPOSITORY_CHANGELOG.md`.
 
 A minimal ability skeleton:
 
 ```php
-wp_register_ability( 'unlock-mcp-potential/your-ability', [
+wp_register_ability( 'webmastery-site-toolkit-for-mcp/your-ability', [
     'label'               => 'Label shown in MCP clients',
     'description'         => 'One-sentence description.',
-    'category'            => 'unlock-mcp-potential',
+    'category'            => 'webmastery-site-toolkit-for-mcp',
     'input_schema'        => [
         'type'       => 'object',
         'properties' => [
@@ -138,29 +138,29 @@ This project follows **Semantic Versioning** (`MAJOR.MINOR.PATCH`):
 Release checklist:
 
 1. Choose the version bump based on the rules above.
-2. Update the `Version` header in `unlock-mcp-potential.php`.
+2. Update the `Version` header in `webmastery-site-toolkit-for-mcp.php`.
 3. Move relevant plugin-facing `CHANGELOG.md` entries from `## Unreleased` into the new version section. Do not include `.github/REPOSITORY_CHANGELOG.md` entries in plugin release notes.
 4. Update `Stable tag`, plugin changelog entries, and upgrade notice in `readme.txt`.
-5. Confirm the generated zip uses the `unlock-mcp-potential` directory slug.
-6. Run the official WordPress Plugin Check utility against the generated `unlock-mcp-potential` package and confirm there are no unexpected errors.
+5. Confirm the generated zip uses the `webmastery-site-toolkit-for-mcp` directory slug.
+6. Run the official WordPress Plugin Check utility against the generated `webmastery-site-toolkit-for-mcp` package and confirm there are no unexpected errors.
 7. Tag and push `vX.Y.Z` to trigger the release workflow.
 
 ---
 
 ## Release process (maintainers)
 
-1. Update the `Version` header in `unlock-mcp-potential.php`
+1. Update the `Version` header in `webmastery-site-toolkit-for-mcp.php`
 2. Move plugin-facing `CHANGELOG.md` notes from `## Unreleased` into the release version
 3. Add release notes to `readme.txt` under `== Changelog ==` and `== Upgrade Notice ==`
 4. Commit: `git commit -m "chore: release v1.x.x"`
 5. Tag and push: `git tag v1.x.x && git push origin v1.x.x`
 6. GitHub Actions builds the zip and creates the release automatically
-7. Download the zip from the release and verify Plugin Check evaluates it as the `unlock-mcp-potential` slug
+7. Download the zip from the release and verify Plugin Check evaluates it as the `webmastery-site-toolkit-for-mcp` slug
 8. Upload the verified package to the WordPress.org SVN
 
 ### Plugin Check notes
 
-The official Plugin Check utility must evaluate the built package from an `unlock-mcp-potential` top-level directory. Running it from a differently named folder can report a text-domain mismatch even when the plugin header and i18n calls correctly use `unlock-mcp-potential`.
+The official Plugin Check utility must evaluate the built package from an `webmastery-site-toolkit-for-mcp` top-level directory. Running it from a differently named folder can report a text-domain mismatch even when the plugin header and i18n calls correctly use `webmastery-site-toolkit-for-mcp`.
 
 Known warnings that are acceptable for this plugin:
 

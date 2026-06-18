@@ -24,17 +24,17 @@ jobs:
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
           TAG_VERSION="$VERSION"
-          PLUGIN_VERSION="$(grep -E '^[[:space:]]*\*?[[:space:]]*Version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+' unlock-mcp-potential.php | head -1 | sed -E 's/.*Version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
-          TEXT_DOMAIN="$(grep -E '^[[:space:]]*\*?[[:space:]]*Text Domain:' unlock-mcp-potential.php | head -1 | sed -E 's/.*Text Domain:[[:space:]]*//' | tr -d '\r')"
+          PLUGIN_VERSION="$(grep -E '^[[:space:]]*\*?[[:space:]]*Version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+' webmastery-site-toolkit-for-mcp.php | head -1 | sed -E 's/.*Version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
+          TEXT_DOMAIN="$(grep -E '^[[:space:]]*\*?[[:space:]]*Text Domain:' webmastery-site-toolkit-for-mcp.php | head -1 | sed -E 's/.*Text Domain:[[:space:]]*//' | tr -d '\r')"
           STABLE_TAG="$(grep -Ei '^Stable tag:' readme.txt | head -1 | sed -E 's/^Stable tag:[[:space:]]*//I' | tr -d '\r')"
           SHORT_DESCRIPTION="$(awk 'BEGIN{after_header=0} /^Donate link:/ {after_header=1; next} after_header && NF {print; exit}' readme.txt | tr -d '\r')"
 
           if [ -z "$PLUGIN_VERSION" ]; then
-            echo "Could not parse plugin version from unlock-mcp-potential.php" >&2
+            echo "Could not parse plugin version from webmastery-site-toolkit-for-mcp.php" >&2
             exit 1
           fi
-          if [ "$TEXT_DOMAIN" != "unlock-mcp-potential" ]; then
-            echo "Text Domain ($TEXT_DOMAIN) does not match canonical slug unlock-mcp-potential" >&2
+          if [ "$TEXT_DOMAIN" != "webmastery-site-toolkit-for-mcp" ]; then
+            echo "Text Domain ($TEXT_DOMAIN) does not match canonical slug webmastery-site-toolkit-for-mcp" >&2
             exit 1
           fi
           if [ -z "$STABLE_TAG" ]; then
@@ -76,26 +76,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PACKAGE_DIR="build/unlock-mcp-potential"
+          PACKAGE_DIR="build/webmastery-site-toolkit-for-mcp"
           rm -rf "$PACKAGE_DIR"
           mkdir -p "$PACKAGE_DIR"
-          rsync -r unlock-mcp-potential.php readme.txt LICENSE includes "$PACKAGE_DIR/"
+          rsync -r webmastery-site-toolkit-for-mcp.php readme.txt LICENSE includes "$PACKAGE_DIR/"
           cd build
-          zip -r ../unlock-mcp-potential-${{ steps.validate.outputs.version }}.zip unlock-mcp-potential/
+          zip -r ../webmastery-site-toolkit-for-mcp-${{ steps.validate.outputs.version }}.zip webmastery-site-toolkit-for-mcp/
 
       - name: Validate built artifact contents
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_FILE="unlock-mcp-potential-${{ steps.validate.outputs.version }}.zip"
+          ZIP_FILE="webmastery-site-toolkit-for-mcp-${{ steps.validate.outputs.version }}.zip"
           if [ ! -s "$ZIP_FILE" ]; then
             echo "Missing or empty release artifact: $ZIP_FILE" >&2
             exit 1
           fi
           unzip -l "$ZIP_FILE" > build/zip-listing.txt
-          grep -q 'unlock-mcp-potential/unlock-mcp-potential.php' build/zip-listing.txt
-          grep -q 'unlock-mcp-potential/includes/' build/zip-listing.txt
-          if grep -E 'unlock-mcp-potential/(\.git|\.github|assets|build|e2e-artifacts|scripts|tests|vendor)/|unlock-mcp-potential/(BACKLOG|CHANGELOG|CONTRIBUTING|README)\.md|unlock-mcp-potential/(composer\.(json|lock)|docker-compose\.yml|phpcs\.xml\.dist|\.gitattributes|\.gitignore)' build/zip-listing.txt; then
+          grep -q 'webmastery-site-toolkit-for-mcp/webmastery-site-toolkit-for-mcp.php' build/zip-listing.txt
+          grep -q 'webmastery-site-toolkit-for-mcp/includes/' build/zip-listing.txt
+          if grep -E 'webmastery-site-toolkit-for-mcp/(\.git|\.github|assets|build|e2e-artifacts|scripts|tests|vendor)/|webmastery-site-toolkit-for-mcp/(BACKLOG|CHANGELOG|CONTRIBUTING|README)\.md|webmastery-site-toolkit-for-mcp/(composer\.(json|lock)|docker-compose\.yml|phpcs\.xml\.dist|\.gitattributes|\.gitignore)' build/zip-listing.txt; then
             echo "Release artifact contains development, CI, test, or repository-only files" >&2
             exit 1
           fi
@@ -108,6 +108,6 @@ jobs:
           set -euo pipefail
           VERSION="${{ steps.validate.outputs.version }}"
           gh release create "v${VERSION}" \
-            "unlock-mcp-potential-${VERSION}.zip" \
+            "webmastery-site-toolkit-for-mcp-${VERSION}.zip" \
             --title "v${VERSION}" \
             --notes-file "${{ steps.validate.outputs.notes-file }}"

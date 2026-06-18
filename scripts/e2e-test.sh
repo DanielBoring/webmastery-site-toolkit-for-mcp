@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 WORDPRESS_URL="${WORDPRESS_URL:-http://localhost}"
-PLUGIN_SLUG="unlock-mcp-potential"
+PLUGIN_SLUG="webmastery-site-toolkit-for-mcp"
 MCP_ADAPTER_ZIP="https://github.com/WordPress/mcp-adapter/releases/download/v0.5.0/mcp-adapter.zip"
 E2E_ARTIFACTS_DIR="${E2E_ARTIFACTS_DIR:-e2e-artifacts}"
 
@@ -81,7 +81,7 @@ run_ability_manifest() {
 
 run_php_lint() {
 	echo "Running PHP syntax checks..."
-	compose exec -T wordpress bash -lc "php -l /var/www/html/wp-content/plugins/${PLUGIN_SLUG}/unlock-mcp-potential.php && find /var/www/html/wp-content/plugins/${PLUGIN_SLUG}/includes -name '*.php' -print0 | xargs -0 -n1 php -l"
+	compose exec -T wordpress bash -lc "php -l /var/www/html/wp-content/plugins/${PLUGIN_SLUG}/webmastery-site-toolkit-for-mcp.php && find /var/www/html/wp-content/plugins/${PLUGIN_SLUG}/includes -name '*.php' -print0 | xargs -0 -n1 php -l"
 }
 
 run_debug_log_check() {

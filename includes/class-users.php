@@ -2,7 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class Unlock_MCP_Users {
+class Webmastery_MCP_Users {
 
 	public static function register() {
 		self::register_list();
@@ -36,10 +36,10 @@ class Unlock_MCP_Users {
 	}
 
 	private static function register_list() {
-		wp_register_ability( 'unlock-mcp-potential/list-users', [
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-users', [
 			'label'               => 'List Users',
 			'description'         => 'List WordPress users with optional role, search, and pagination filters.',
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -96,10 +96,10 @@ class Unlock_MCP_Users {
 	}
 
 	private static function register_get() {
-		wp_register_ability( 'unlock-mcp-potential/get-user', [
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-user', [
 			'label'               => 'Get User',
 			'description'         => 'Get a single WordPress user by ID.',
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [

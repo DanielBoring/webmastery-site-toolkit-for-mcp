@@ -2,7 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class Unlock_MCP_SEO {
+class Webmastery_MCP_SEO {
 
 	public static function register() {
 		self::register_analyze_post();
@@ -23,10 +23,10 @@ class Unlock_MCP_SEO {
 	}
 
 	private static function register_analyze_post() {
-		wp_register_ability( 'unlock-mcp-potential/seo-analyze-post', [
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/seo-analyze-post', [
 			'label'               => 'SEO: Analyze Post',
 			'description'         => 'Analyze a post or page for SEO best practices and return findings.',
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -177,10 +177,10 @@ class Unlock_MCP_SEO {
 	}
 
 	private static function register_site_overview() {
-		wp_register_ability( 'unlock-mcp-potential/seo-site-overview', [
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/seo-site-overview', [
 			'label'               => 'SEO: Site Overview',
 			'description'         => 'Get a site-level SEO overview: sitemap, robots.txt, and posts missing Yoast optimization.',
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'execute_callback'    => [ self::class, 'execute_site_overview' ],
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'manage_options' ) ) {

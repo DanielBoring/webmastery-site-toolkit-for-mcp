@@ -2,13 +2,13 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class Unlock_MCP_Health {
+class Webmastery_MCP_Health {
 
 	public static function register() {
-		wp_register_ability( 'unlock-mcp-potential/site-health-check', [
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/site-health-check', [
 			'label'               => 'Site Health Check',
 			'description'         => 'Run WordPress site health tests and return results grouped by severity.',
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'execute_callback'    => [ self::class, 'execute' ],
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'manage_options' ) ) {

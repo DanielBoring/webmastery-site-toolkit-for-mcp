@@ -7,7 +7,7 @@ Use this workflow for code, documentation, ability, and release-readiness change
 When asked to add, change, or release abilities, complete all applicable steps before the final response.
 
 1. Audit abilities
-   - Compare all registered `unlock-mcp-potential/*` abilities against `tests/e2e/abilities-manifest.json`.
+   - Compare all registered `webmastery-site-toolkit-for-mcp/*` abilities against `tests/e2e/abilities-manifest.json`.
    - Ensure each registered ability has at least one manifest case.
    - For permissioned abilities, include allowed and denied role or capability cases.
 

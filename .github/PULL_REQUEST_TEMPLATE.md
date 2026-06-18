@@ -5,7 +5,7 @@
 <!-- What does this PR change and why? -->
 
 ## Ability name (if new)
-<!-- e.g. unlock-mcp-potential/list-media — leave blank for bug fixes -->
+<!-- e.g. webmastery-site-toolkit-for-mcp/list-media — leave blank for bug fixes -->
 
 ## Testing
 <!-- How did you verify this works? List the ability calls you ran and what they returned. -->
@@ -15,8 +15,8 @@
 - [ ] Capability checks use the narrowest relevant WordPress capability and return/surface `WP_Error` on failure
 - [ ] Inputs are sanitized or validated (`sanitize_text_field`, `sanitize_key`, `absint`, `wp_kses_post`, enum validation, or an equivalent WordPress API)
 - [ ] Ability responses follow the existing success/error shape for the affected ability group
-- [ ] New ability names use the `unlock-mcp-potential/` prefix and set accurate `annotations` (`readonly`, `destructive`, `idempotent`)
-- [ ] If this PR adds or changes `unlock-mcp-potential/*` abilities, `tests/e2e/abilities-manifest.json` includes matching positive and negative cases where permissions apply
+- [ ] New ability names use the `webmastery-site-toolkit-for-mcp/` prefix and set accurate `annotations` (`readonly`, `destructive`, `idempotent`)
+- [ ] If this PR adds or changes `webmastery-site-toolkit-for-mcp/*` abilities, `tests/e2e/abilities-manifest.json` includes matching positive and negative cases where permissions apply
 - [ ] User-facing changes update relevant docs (`README.md`, `readme.txt`, `tests/e2e/README.md`, or other affected markdown)
 - [ ] Plugin-facing changes update `CHANGELOG.md` under `## Unreleased`
 - [ ] Repository, CI, contributor, GitHub platform, template, or agent workflow changes update `.github/REPOSITORY_CHANGELOG.md` under `## Unreleased`

@@ -10,6 +10,10 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 - Added a dedicated Coding Standards workflow that installs Composer dev dependencies and runs PHPCS on pushes, pull requests, and manual dispatches.
 
+### Changed
+
+- Updated release, E2E, PHPCS, Composer, and documentation automation references for the Webmastery Site Toolkit for MCP package rename.
+
 ## 1.6.0
 
 ### Added
@@ -17,7 +21,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 - Added WordPress Coding Standards tooling via Composer and `phpcs.xml.dist`.
 - Added contribution and PR checklist guidance for WordPress.org Detailed Plugin Guidelines review.
 - Added manifest-driven E2E ability coverage via `tests/e2e/abilities-manifest.json` and `tests/e2e/ability-runner.php`.
-- Added an E2E coverage gate that fails when any registered `unlock-mcp-potential/*` ability is missing from the manifest.
+- Added an E2E coverage gate that fails when any registered `webmastery-site-toolkit-for-mcp/*` ability is missing from the manifest.
 - Added E2E execution coverage for the current 33 registered abilities with 45 manifest test cases, including positive and negative permission cases.
 - Added E2E PR comments that report ability coverage counts, tested dependency versions, commit SHA, and workflow run URL.
 - Added failure artifact collection for E2E failures, including Docker Compose logs, WordPress debug logs, and E2E summary JSON.
@@ -27,8 +31,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 ### Changed
 
 - Updated README and WordPress.org readme documentation to include plugin management abilities and administrator role requirements.
-- Updated repository/documentation references to align with the Unlock MCP Potential package rebrand.
-- Replaced generic `WP_MCP_` PHP class prefixes with `Unlock_MCP_`.
+- Updated repository/documentation references to align with the Webmastery Site Toolkit for MCP package rebrand.
+- Replaced generic `WP_MCP_` PHP class prefixes with `Webmastery_MCP_`.
 - Clarified E2E manifest coverage documentation for the current 37 registered abilities and 57 manifest test cases.
 - Updated pull request and contribution guidance so external contributors can apply WordPress.org guideline checks when relevant and keep docs, changelogs, and E2E coverage in sync.
 - Added repository agent instructions for repeatable ability, documentation, changelog, contribution, and validation workflows.

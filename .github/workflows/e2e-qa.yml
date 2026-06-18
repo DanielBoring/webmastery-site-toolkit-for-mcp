@@ -52,7 +52,7 @@ jobs:
 
           printf '%s\n' "$CHANGED_FILES"
 
-          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(\.github/workflows/e2e-qa\.yml|docker-compose\.yml|scripts/e2e-test\.sh|tests/e2e/|includes/|unlock-mcp-potential\.php|readme\.txt|composer\.(json|lock)|phpcs\.xml\.dist|assets/)'; then
+          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(\.github/workflows/e2e-qa\.yml|docker-compose\.yml|scripts/e2e-test\.sh|tests/e2e/|includes/|webmastery-site-toolkit-for-mcp\.php|readme\.txt|composer\.(json|lock)|phpcs\.xml\.dist|assets/)'; then
             echo "should-run=true" >> "$GITHUB_OUTPUT"
           else
             echo "should-run=false" >> "$GITHUB_OUTPUT"
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      COMPOSE_PROJECT_NAME: unlock-mcp-potential-${{ github.event.pull_request.number || github.run_id }}
+      COMPOSE_PROJECT_NAME: webmastery-site-toolkit-for-mcp-${{ github.event.pull_request.number || github.run_id }}
       MYSQL_PORT: 0
       WORDPRESS_PORT: 0
     permissions:
@@ -118,7 +118,7 @@ jobs:
           mysql_version="$(docker compose exec -T mysql mysql --version 2>/dev/null || echo unknown)"
           mcp_adapter_release="$(grep '^MCP_ADAPTER_ZIP=' scripts/e2e-test.sh | sed -E 's#.*releases/download/([^/]+)/.*#\1#')"
           mcp_adapter_version="$(docker compose exec -T wordpress wp --allow-root plugin get mcp-adapter --field=version 2>/dev/null || echo unknown)"
-          plugin_version="$(docker compose exec -T wordpress wp --allow-root plugin get unlock-mcp-potential --field=version 2>/dev/null || echo unknown)"
+          plugin_version="$(docker compose exec -T wordpress wp --allow-root plugin get webmastery-site-toolkit-for-mcp --field=version 2>/dev/null || echo unknown)"
           summary_file="e2e-artifacts/e2e-summary.json"
           registered_abilities="$(jq -r '.registered_abilities // "unknown"' "$summary_file" 2>/dev/null || echo unknown)"
           covered_abilities="$(jq -r '.covered_abilities // "unknown"' "$summary_file" 2>/dev/null || echo unknown)"
@@ -205,16 +205,16 @@ jobs:
           VERSIONS+="- MySQL server: ${MYSQL_VERSION:-unknown}"$'\n'
           VERSIONS+="- MCP Adapter release: ${MCP_ADAPTER_RELEASE:-unknown}"$'\n'
           VERSIONS+="- MCP Adapter plugin: ${MCP_ADAPTER_VERSION:-unknown}"$'\n'
-          VERSIONS+="- Unlock MCP Potential: ${PLUGIN_VERSION:-unknown}"$'\n'
+          VERSIONS+="- Webmastery Site Toolkit for MCP: ${PLUGIN_VERSION:-unknown}"$'\n'
           VERSIONS+="- Commit: ${HEAD_SHA:-unknown}"$'\n'
           VERSIONS+="- Workflow run: ${RUN_URL:-unknown}"
           COVERAGE=$'\n\n### Ability coverage\n\n'
-          COVERAGE+="- Registered unlock-mcp-potential abilities: ${REGISTERED_ABILITIES:-unknown}"$'\n'
+          COVERAGE+="- Registered webmastery-site-toolkit-for-mcp abilities: ${REGISTERED_ABILITIES:-unknown}"$'\n'
           COVERAGE+="- Manifest-covered abilities: ${COVERED_ABILITIES:-unknown}"$'\n'
           COVERAGE+="- Manifest test cases: ${TEST_CASES:-unknown}"$'\n'
           COVERAGE+="- Negative permission cases: ${NEGATIVE_CASES:-unknown}"
           if [ "$E2E_RESULT" = "success" ]; then
-            BODY=$'## E2E QA Tests Passed\n\n- Docker WordPress stack started\n- WordPress core installed before plugin activation\n- MCP Adapter installed from official WordPress release asset\n- Manifest covers every registered unlock-mcp-potential ability\n- Ability execution tests passed\n- PHP syntax checks passed\n- WordPress debug log scan found no fatal/error-level entries'
+            BODY=$'## E2E QA Tests Passed\n\n- Docker WordPress stack started\n- WordPress core installed before plugin activation\n- MCP Adapter installed from official WordPress release asset\n- Manifest covers every registered webmastery-site-toolkit-for-mcp ability\n- Ability execution tests passed\n- PHP syntax checks passed\n- WordPress debug log scan found no fatal/error-level entries'
           else
             BODY=$"## E2E QA Tests Failed\n\n- Result: ${E2E_RESULT}\n- Review this workflow run and uploaded E2E failure artifacts for the failed setup/test phase details."
           fi

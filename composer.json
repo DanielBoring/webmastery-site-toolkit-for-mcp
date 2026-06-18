@@ -1,6 +1,6 @@
 {
-	"name": "danielboring/unlock-mcp-potential",
-	"description": "WordPress plugin that adds MCP-powered content management abilities.",
+	"name": "danielboring/webmastery-site-toolkit-for-mcp",
+	"description": "WordPress plugin that adds MCP-powered site management abilities.",
 	"type": "wordpress-plugin",
 	"license": "GPL-2.0-or-later",
 	"require": {},

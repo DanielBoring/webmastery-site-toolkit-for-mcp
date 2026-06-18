@@ -2,7 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class Unlock_MCP_Plugins {
+class Webmastery_MCP_Plugins {
 
 	public static function register() {
 		self::load_plugin_api();
@@ -172,10 +172,10 @@ class Unlock_MCP_Plugins {
 	}
 
 	private static function register_list() {
-		wp_register_ability( 'unlock-mcp-potential/list-plugins', [
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-plugins', [
 			'label'               => 'List Plugins',
 			'description'         => 'List installed WordPress plugins and their activation state.',
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'execute_callback'    => [ self::class, 'list_plugins' ],
 			'permission_callback' => '__return_true',
 			'meta'                => [
@@ -186,10 +186,10 @@ class Unlock_MCP_Plugins {
 	}
 
 	private static function register_activate() {
-		wp_register_ability( 'unlock-mcp-potential/activate-plugin', [
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/activate-plugin', [
 			'label'               => 'Activate Plugin',
 			'description'         => 'Activate a WordPress plugin by canonical plugin basename.',
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -208,10 +208,10 @@ class Unlock_MCP_Plugins {
 	}
 
 	private static function register_deactivate() {
-		wp_register_ability( 'unlock-mcp-potential/deactivate-plugin', [
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/deactivate-plugin', [
 			'label'               => 'Deactivate Plugin',
 			'description'         => 'Deactivate a WordPress plugin by canonical plugin basename.',
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -336,7 +336,7 @@ class Unlock_MCP_Plugins {
 
 	private static function protected_plugins() {
 		return [
-			plugin_basename( dirname( __DIR__ ) . '/unlock-mcp-potential.php' ),
+			plugin_basename( dirname( __DIR__ ) . '/webmastery-site-toolkit-for-mcp.php' ),
 			'mcp-adapter/mcp-adapter.php',
 		];
 	}

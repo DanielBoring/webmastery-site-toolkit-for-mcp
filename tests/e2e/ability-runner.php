@@ -192,7 +192,7 @@ function e2e_get_path_value( $value, $path, &$exists = false ) {
 }
 
 function e2e_write_summary( $summary ) {
-	$artifact_dir = WP_PLUGIN_DIR . '/unlock-mcp-potential/e2e-artifacts';
+	$artifact_dir = WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/e2e-artifacts';
 	if ( ! is_dir( $artifact_dir ) ) {
 		wp_mkdir_p( $artifact_dir );
 	}
@@ -203,7 +203,7 @@ function e2e_write_summary( $summary ) {
 	);
 }
 
-$manifest_path = WP_PLUGIN_DIR . '/unlock-mcp-potential/tests/e2e/abilities-manifest.json';
+$manifest_path = WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/tests/e2e/abilities-manifest.json';
 $manifest      = json_decode( file_get_contents( $manifest_path ), true );
 
 if ( ! is_array( $manifest ) ) {
@@ -261,7 +261,7 @@ deactivate_plugins(
 
 $fixtures['fixture_plugin']        = 'mcp-e2e-plugin/mcp-e2e-plugin.php';
 $fixtures['ambiguous_plugin_slug'] = 'mcp-e2e-duplicate';
-$fixtures['protected_plugin']      = 'unlock-mcp-potential/unlock-mcp-potential.php';
+$fixtures['protected_plugin']      = 'webmastery-site-toolkit-for-mcp/webmastery-site-toolkit-for-mcp.php';
 
 $roles = array(
 	'admin'      => $admin_id,
@@ -273,7 +273,7 @@ $roles = array(
 $registered = array_filter(
 	array_keys( wp_get_abilities() ),
 	static function ( $ability_name ) {
-		return str_starts_with( $ability_name, 'unlock-mcp-potential/' );
+		return str_starts_with( $ability_name, 'webmastery-site-toolkit-for-mcp/' );
 	}
 );
 sort( $registered );
@@ -303,7 +303,7 @@ $summary = array(
 	'cases'                 => array(),
 );
 
-echo 'INFO registered unlock-mcp-potential abilities: ' . count( $registered ) . "\n";
+echo 'INFO registered webmastery-site-toolkit-for-mcp abilities: ' . count( $registered ) . "\n";
 echo 'INFO manifest-covered abilities: ' . count( $covered ) . "\n";
 echo 'INFO manifest test cases: ' . count( $manifest ) . "\n";
 echo 'INFO negative permission cases: ' . $summary['negative_cases'] . "\n";

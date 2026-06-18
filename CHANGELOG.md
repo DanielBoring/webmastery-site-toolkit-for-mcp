@@ -1,14 +1,22 @@
 # Plugin Changelog
 
-Plugin-facing changes to Unlock MCP Potential are tracked here. Release notes and version sections should include only changes that affect plugin users, MCP tool compatibility, WordPress behavior, or packaged plugin functionality.
+Plugin-facing changes to Webmastery Site Toolkit for MCP are tracked here. Release notes and version sections should include only changes that affect plugin users, MCP tool compatibility, WordPress behavior, or packaged plugin functionality.
 
 Repository, CI, contributor, and GitHub platform changes are tracked separately in `.github/REPOSITORY_CHANGELOG.md`.
 
 ## Unreleased
 
+## 2.0.0
+
+### Changed
+
+- Renamed the plugin to "Webmastery Site Toolkit for MCP" for WordPress.org naming guideline compliance.
+- Renamed the plugin slug, text domain, package folder, and MCP ability namespace to `webmastery-site-toolkit-for-mcp`.
+- Renamed PHP class prefixes to `Webmastery_MCP_` for clearer plugin-specific namespacing.
+
 ### Fixed
 
-- Fixed v1.6.1 release-readiness items from Plugin Check by keeping package validation aligned to the canonical `unlock-mcp-potential` slug, shortening the WordPress.org short description, and documenting accepted read-only update-status and bounded Yoast meta-query warnings.
+- Kept package validation aligned to the canonical `webmastery-site-toolkit-for-mcp` slug, shortened the WordPress.org short description, and documented accepted read-only update-status and bounded Yoast meta-query warnings.
 
 ## 1.6.0
 
@@ -21,8 +29,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Changed
 
-- Renamed registered MCP ability names and categories to the `unlock-mcp-potential` plugin slug namespace.
-- Renamed the plugin to "Unlock MCP Potential" and updated plugin references for the `unlock-mcp-potential` slug.
+- Renamed registered MCP ability names and categories to the `webmastery-site-toolkit-for-mcp` plugin slug namespace.
+- Renamed the plugin to "Webmastery Site Toolkit for MCP" and updated plugin references for the `webmastery-site-toolkit-for-mcp` slug.
 - Hardened permission callbacks for object-specific post/media operations and sensitive site-audit abilities.
 
 ### Fixed
@@ -46,7 +54,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## 1.3.4
 
-- Renamed plugin to "Unlock MCP Potential" to comply with WordPress.org naming guidelines.
+- Renamed plugin to "Webmastery Site Toolkit for MCP" to comply with WordPress.org naming guidelines.
 
 ## 1.3.3
 

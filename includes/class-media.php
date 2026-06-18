@@ -2,7 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class Unlock_MCP_Media {
+class Webmastery_MCP_Media {
 
 	public static function register() {
 		self::register_list();
@@ -70,10 +70,10 @@ class Unlock_MCP_Media {
 	}
 
 	private static function register_list() {
-		wp_register_ability( 'unlock-mcp-potential/list-media', [
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-media', [
 			'label'               => 'List Media',
 			'description'         => 'List WordPress media items with optional filters.',
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -123,10 +123,10 @@ class Unlock_MCP_Media {
 	}
 
 	private static function register_get() {
-		wp_register_ability( 'unlock-mcp-potential/get-media', [
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-media', [
 			'label'               => 'Get Media',
 			'description'         => 'Get a single WordPress media item by ID.',
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -156,10 +156,10 @@ class Unlock_MCP_Media {
 	}
 
 	private static function register_update() {
-		wp_register_ability( 'unlock-mcp-potential/update-media', [
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/update-media', [
 			'label'               => 'Update Media',
 			'description'         => 'Update media alt text, title, and caption.',
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
@@ -213,10 +213,10 @@ class Unlock_MCP_Media {
 	}
 
 	private static function register_delete() {
-		wp_register_ability( 'unlock-mcp-potential/delete-media', [
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/delete-media', [
 			'label'               => 'Delete Media',
 			'description'         => 'Permanently delete a WordPress media item by ID.',
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [

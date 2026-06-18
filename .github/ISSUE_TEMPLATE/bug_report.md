@@ -10,7 +10,7 @@ assignees: ''
 A clear description of what went wrong.
 
 **Ability name**
-e.g. `unlock-mcp-potential/list-posts`
+e.g. `webmastery-site-toolkit-for-mcp/list-posts`
 
 **Steps to reproduce**
 1. Called ability with input `{ ... }`

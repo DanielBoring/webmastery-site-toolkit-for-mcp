@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
-<ruleset name="Unlock MCP Potential">
-	<description>WordPress Coding Standards checks for Unlock MCP Potential.</description>
+<ruleset name="Webmastery Site Toolkit for MCP">
+	<description>WordPress Coding Standards checks for Webmastery Site Toolkit for MCP.</description>
 
-	<file>unlock-mcp-potential.php</file>
+	<file>webmastery-site-toolkit-for-mcp.php</file>
 	<file>includes</file>
 
 	<exclude-pattern>*/vendor/*</exclude-pattern>
@@ -34,8 +34,8 @@
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<properties>
 			<property name="prefixes" type="array">
-				<element value="unlock_mcp"/>
-				<element value="Unlock_MCP"/>
+				<element value="webmastery_mcp"/>
+				<element value="Webmastery_MCP"/>
 			</property>
 		</properties>
 	</rule>

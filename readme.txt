@@ -1,21 +1,21 @@
-=== Unlock MCP Potential ===
+=== Webmastery Site Toolkit for MCP ===
 Contributors: deboring
 Tags: mcp, ai, automation, content-management, artificial-intelligence
 Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.6.1
+Stable tag: 2.0.0
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
 
-Adds MCP-powered WordPress abilities for posts, pages, media, comments, plugins, SEO, site health, security, and users.
+Adds MCP-powered WordPress site abilities for posts, pages, media, comments, plugins, SEO, health, security, and users.
 
 == Description ==
 
-Unlock MCP Potential is a WordPress plugin that adds MCP-powered content management abilities for posts, pages, media, comments, plugins, SEO checks, site health, security audits, and user lookup. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
+Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, pages, media, comments, plugins, SEO checks, site health, security audits, and user lookup. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
 
-Unlock MCP Potential registers abilities across ten groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
+Webmastery Site Toolkit for MCP registers abilities across ten groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
 
 **Posts**
 Create, read, update, and delete posts. Supports all statuses including scheduled (future) posts, category and tag assignment, and pagination.
@@ -53,8 +53,8 @@ All abilities enforce WordPress capability checks — an editor cannot call abil
 
 == Installation ==
 
-1. Install and activate the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin first — Unlock MCP Potential depends on it.
-2. Upload the `unlock-mcp-potential` folder to `/wp-content/plugins/`, or install via **Plugins > Add New > Upload Plugin**.
+1. Install and activate the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin first — Webmastery Site Toolkit for MCP depends on it.
+2. Upload the `webmastery-site-toolkit-for-mcp` folder to `/wp-content/plugins/`, or install via **Plugins > Add New > Upload Plugin**.
 3. Activate the plugin through the **Plugins** menu in WordPress.
 4. Create a dedicated WordPress user for your AI agent: go to **Users > Add New User**, set the Role to **Editor**, and save. Using a dedicated account limits access and makes it easy to revoke later. If you need user lookup, plugin management, or sensitive site-audit abilities, create a separate dedicated **Administrator** service account because those require administrative capabilities such as `list_users`, `activate_plugins`, or `manage_options`.
 5. Generate an application password for that user: open the user profile, scroll to **Application Passwords**, enter a name (e.g. `MCP Client`), and click **Add New Application Password**. Copy it immediately — it is only shown once.
@@ -68,7 +68,7 @@ This plugin requires a WordPress installation where custom plugins can be instal
 
 = Does this work without the MCP Adapter plugin? =
 
-No. Unlock MCP Potential extends the MCP Adapter plugin. Install and activate it first from the plugin directory.
+No. Webmastery Site Toolkit for MCP extends the MCP Adapter plugin. Install and activate it first from the plugin directory.
 
 = What MCP clients are supported? =
 
@@ -104,23 +104,28 @@ Delete operations for posts and pages move content to trash. Media delete perman
 
 == Changelog ==
 
+= 2.0.0 =
+* Rename the plugin to Webmastery Site Toolkit for MCP for WordPress.org naming guideline compliance
+* Rename the plugin slug, text domain, package folder, and MCP ability namespace to `webmastery-site-toolkit-for-mcp`
+* Rename PHP class prefixes to `Webmastery_MCP_` for clearer plugin-specific namespacing
+
 = 1.6.1 =
-* Fix release packaging guidance so Plugin Check evaluates the canonical `unlock-mcp-potential` slug
+* Fix release packaging guidance so Plugin Check evaluates the canonical `webmastery-site-toolkit-for-mcp` slug
 * Shorten the WordPress.org short description to stay within parser limits
 * Document accepted Plugin Check warnings for read-only plugin auto-update status reporting and bounded Yoast SEO meta checks
 
 = 1.6.0 =
-* Rename registered MCP ability names and categories to the `unlock-mcp-potential` plugin slug namespace
+* Rename registered MCP ability names and categories to the `webmastery-site-toolkit-for-mcp` plugin slug namespace
 * Add featured image abilities for setting and removing featured images on posts and pages
 * Add restore abilities for restoring trashed posts and pages with object-specific `delete_post` permission checks
 * Preserve backslashes in `create-post` and `update-post` content
 * Add plugin management abilities: `list-plugins`, `activate-plugin`, and `deactivate-plugin`
 * Add guarded plugin activation/deactivation controls with canonical `plugin_basename` identifiers, protected-plugin safeguards, multisite-aware `network_wide` handling, and structured errors
-* Rename plugin/package references to align with Unlock MCP Potential and harden object-specific permission callbacks
+* Rename plugin/package references to align with Webmastery Site Toolkit for MCP and harden object-specific permission callbacks
 
 = 1.5.1 =
-* Rename plugin to "Unlock MCP Potential" and update slug references to `unlock-mcp-potential`
-* Replace generic `WP_MCP_` PHP class prefixes with `Unlock_MCP_`
+* Rename plugin to "Webmastery Site Toolkit for MCP" and update slug references to `webmastery-site-toolkit-for-mcp`
+* Replace generic `WP_MCP_` PHP class prefixes with `Webmastery_MCP_`
 * Harden ability permissions with object-specific post/media checks and administrator-only sensitive audit abilities
 * Add WordPress Coding Standards tooling and update WordPress.org plugin-guideline documentation
 
@@ -133,7 +138,7 @@ Delete operations for posts and pages move content to trash. Media delete perman
 * 28 abilities: posts (5), pages (5), taxonomy (6), comments (4), media (4), site health (1), security audit (1), SEO analysis (2)
 
 = 1.3.4 =
-* Rename plugin to "Unlock MCP Potential" to comply with WordPress.org naming guidelines
+* Rename plugin to "Webmastery Site Toolkit for MCP" to comply with WordPress.org naming guidelines
 
 = 1.3.3 =
 * Update "Tested up to" to WordPress 7.0
@@ -157,11 +162,14 @@ Delete operations for posts and pages move content to trash. Media delete perman
 
 == Upgrade Notice ==
 
+= 2.0.0 =
+Renames MCP ability IDs to the `webmastery-site-toolkit-for-mcp` namespace as part of the WordPress.org review rename.
+
 = 1.6.1 =
 Fixes Plugin Check release-readiness items for the WordPress.org package.
 
 = 1.6.0 =
-Renames MCP ability IDs to the `unlock-mcp-potential` namespace, adds featured image, restore, and plugin management abilities, and fixes post content backslash preservation.
+Renames MCP ability IDs to the `webmastery-site-toolkit-for-mcp` namespace, adds featured image, restore, and plugin management abilities, and fixes post content backslash preservation.
 
 = 1.5.1 =
 Renames the plugin, tightens permission checks, and adds WordPress.org review-readiness tooling.
@@ -173,7 +181,7 @@ Adds user lookup abilities for resolving WordPress author IDs.
 Adds media list, get, update, and permanent delete abilities.
 
 = 1.3.4 =
-Plugin renamed to "Unlock MCP Potential".
+Plugin renamed to "Webmastery Site Toolkit for MCP".
 
 = 1.3.3 =
 Updates tested up to WordPress 7.0.

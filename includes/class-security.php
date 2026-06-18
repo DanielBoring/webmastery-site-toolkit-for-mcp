@@ -2,13 +2,13 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class Unlock_MCP_Security {
+class Webmastery_MCP_Security {
 
 	public static function register() {
-		wp_register_ability( 'unlock-mcp-potential/security-audit', [
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/security-audit', [
 			'label'               => 'Security Audit',
 			'description'         => 'Run a security audit of the WordPress installation and return findings grouped by severity.',
-			'category'            => 'unlock-mcp-potential',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'execute_callback'    => [ self::class, 'execute' ],
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'manage_options' ) ) {

@@ -7,7 +7,7 @@ assignees: ''
 ---
 
 **Proposed ability name**
-e.g. `unlock-mcp-potential/list-media`
+e.g. `webmastery-site-toolkit-for-mcp/list-media`
 
 **What should it do?**
 A clear description of what the ability does and what it returns.
