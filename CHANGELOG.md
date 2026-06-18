@@ -6,6 +6,11 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+### Added
+
+- Added `list-content-blocks` and `patch-content-block` for precise Gutenberg block inspection and single-block replacement in posts and pages.
+- Added `patch-post-content` for safer partial post body edits with block-aware heading targeting, exact-match fallback, ambiguous-target failures, and optional content-hash preconditions.
+
 ## 2.0.0
 
 ### Changed
