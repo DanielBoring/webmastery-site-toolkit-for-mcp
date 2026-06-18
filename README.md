@@ -17,7 +17,7 @@
     </a>
   </h2>
 
-[Quickstart](#quickstart) • [Abilities](#abilities) • [Requirements](#requirements) • [Installation](#installation) • [Verification](#verification) • [Security](#security) • [Full docs ↗](https://www.virtuallyboring.com/unlock-mcp-potential/)
+[Quickstart](#quickstart) • [Abilities](#abilities) • [Requirements](#requirements) • [Installation](#installation) • [Verification](#verification) • [Security](#security) • [Full docs ↗](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/)
 
 </div>
 
@@ -36,7 +36,7 @@ Without this plugin, the MCP Adapter exposes only its 3 meta/discovery abilities
 <td align="center"><strong>With this plugin</strong><br/><img src="assets/after.png" alt="After"></td></tr>
 </table>
 
-> 📖 **Full reference** — the complete ability tables, architecture diagram, and extended security notes live on the project page: **[virtuallyboring.com/unlock-mcp-potential](https://www.virtuallyboring.com/unlock-mcp-potential/)**.
+> 📖 **Full reference** — the complete ability tables, architecture diagram, and extended security notes live on the project page: **[virtuallyboring.com/webmastery-site-toolkit-for-mcp](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/)**.
 
 ---
 
@@ -72,7 +72,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 
 Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
 
-👉 **[See the full ability reference](https://www.virtuallyboring.com/unlock-mcp-potential/#available-abilities)** for every ability, its description, required capability, and minimum role.
+👉 **[See the full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities)** for every ability, its description, required capability, and minimum role.
 
 ---
 
@@ -196,7 +196,7 @@ To confirm everything works, ask your agent to call a few:
 - `patch-content-block` and `patch-post-content` support optional hash preconditions and fail safely when a target is missing, ambiguous, or stale.
 - Content is sanitized on write, and there are **no direct database queries** — all reads and writes go through the WordPress API.
 
-📖 **[Full security model](https://www.virtuallyboring.com/unlock-mcp-potential/#security)**, including plugin-management safeguards and the complete sanitization rules.
+📖 **[Full security model](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#security)**, including plugin-management safeguards and the complete sanitization rules.
 
 ---
 
