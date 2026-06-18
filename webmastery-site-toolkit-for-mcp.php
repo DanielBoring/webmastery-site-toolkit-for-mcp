@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Webmastery Site Toolkit for MCP
- * Plugin URI:  https://github.com/DanielBoring/unlock-mcp-potential
+ * Plugin URI:  https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp
  * Description: Adds site management abilities for MCP-powered WordPress workflows: posts, pages, taxonomy, comments, media, plugins, user lookup, health checks, security auditing, and SEO analysis.
  * Version:     2.0.0
  * Requires at least: 6.9
