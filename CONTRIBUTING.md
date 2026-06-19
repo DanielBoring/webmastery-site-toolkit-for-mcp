@@ -33,7 +33,7 @@ Thanks for your interest in contributing. This document covers how to report bug
    wp plugin activate webmastery-site-toolkit-for-mcp
    ```
 3. Create a test user with the Editor role and generate an application password (see README.md for details)
-4. Point your MCP client at the local site and run `mcp-adapter-discover-abilities` to confirm the abilities load
+4. Point your MCP client at the local site and run the MCP Adapter discovery tool, `mcp-adapter-discover-abilities`, to confirm the abilities load
 
 ---
 
@@ -106,7 +106,7 @@ Set `annotations` accurately — `readonly: true` for read-only abilities, `dest
 1. Fork the repo and create a branch from `main` (`feature/your-feature` or `fix/your-bug`)
 2. Make your changes following the conventions above
 3. Run `composer phpcs`
-4. Test manually against a real WordPress install — verify the ability appears in `mcp-adapter-discover-abilities` and returns correct output
+4. Test manually against a real WordPress install — verify the ability appears in the MCP Adapter discovery tool, `mcp-adapter-discover-abilities`, and returns correct output
 5. If the PR adds or changes abilities, update `tests/e2e/abilities-manifest.json` with matching coverage
 6. Update user-facing docs and add a `CHANGELOG.md` entry under `## Unreleased`; use `.github/REPOSITORY_CHANGELOG.md` for repo/platform-only changes
 7. Review the WordPress.org Detailed Plugin Guidelines when the change affects naming, readme text, privacy/external calls, licensing/assets, or release packaging
