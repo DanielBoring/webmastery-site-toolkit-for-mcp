@@ -7,6 +7,8 @@ class Webmastery_MCP_SEO {
 	public static function register() {
 		self::register_analyze_post();
 		self::register_site_overview();
+		self::register_score_ability( 'get-seo-scores', 'SEO Scores', '_yoast_wpseo_linkdex', 'Yoast SEO analysis scores.' );
+		self::register_score_ability( 'get-readability-scores', 'Readability Scores', '_yoast_wpseo_content_score', 'Yoast readability analysis scores.' );
 	}
 
 	public static function permission_analyze_post( $input = [] ) {
@@ -193,6 +195,141 @@ class Webmastery_MCP_SEO {
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
 			],
 		] );
+	}
+
+	private static function is_yoast_active() {
+		return defined( 'WPSEO_VERSION' )
+			|| defined( 'WPSEO_FILE' )
+			|| class_exists( 'WPSEO_Options' )
+			|| function_exists( 'wpseo_init' );
+	}
+
+	private static function score_input_schema() {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'per_page'       => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 10 ],
+				'page'           => [ 'type' => 'integer', 'minimum' => 1, 'default' => 1 ],
+				'post_type'      => [ 'type' => 'string', 'enum' => [ 'post', 'page' ], 'description' => 'Optional post type filter.' ],
+				'status'         => [ 'type' => 'string', 'enum' => [ 'publish', 'draft', 'pending', 'private', 'future', 'any' ], 'description' => 'Optional post status filter.' ],
+				'modified_after' => [ 'type' => 'string', 'description' => 'Optional GMT modified-after filter, parseable by strtotime().' ],
+			],
+		];
+	}
+
+	private static function register_score_ability( $slug, $label, $meta_key, $description ) {
+		wp_register_ability( "webmastery-site-toolkit-for-mcp/{$slug}", [
+			'label'               => "SEO: {$label}",
+			'description'         => $description,
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => self::score_input_schema(),
+			'execute_callback'    => function ( $input ) use ( $meta_key ) {
+				return self::execute_score_list( $input, $meta_key );
+			},
+			'permission_callback' => function ( $input = [] ) {
+				if ( 'page' === ( $input['post_type'] ?? null ) && ! current_user_can( 'edit_pages' ) ) {
+					return new WP_Error( 'forbidden', 'Requires edit_pages capability.' );
+				}
+				if ( ! current_user_can( 'edit_posts' ) ) {
+					return new WP_Error( 'forbidden', 'Requires edit_posts capability.' );
+				}
+				return true;
+			},
+			'meta'                => [
+				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+	}
+
+	public static function execute_score_list( $input, $meta_key ) {
+		if ( ! self::is_yoast_active() ) {
+			return [
+				'success' => true,
+				'data'    => [
+					'items'        => [],
+					'total'        => 0,
+					'total_pages'  => 0,
+					'yoast_active' => false,
+					'note'         => 'Yoast SEO is not active, so no Yoast scores are available.',
+				],
+			];
+		}
+
+		$post_type = $input['post_type'] ?? [ 'post', 'page' ];
+		if ( is_string( $post_type ) && ! in_array( $post_type, [ 'post', 'page' ], true ) ) {
+			return [ 'success' => false, 'error' => 'post_type must be post or page.' ];
+		}
+
+		$status = $input['status'] ?? 'any';
+		if ( ! in_array( $status, [ 'publish', 'draft', 'pending', 'private', 'future', 'any' ], true ) ) {
+			return [ 'success' => false, 'error' => 'status is invalid.' ];
+		}
+
+		$args = [
+			'post_type'      => $post_type,
+			'post_status'    => $status,
+			'posts_per_page' => min( max( 1, (int) ( $input['per_page'] ?? 10 ) ), 100 ),
+			'paged'          => max( 1, (int) ( $input['page'] ?? 1 ) ),
+			'orderby'        => 'modified',
+			'order'          => 'DESC',
+		];
+
+		if ( is_array( $post_type ) && ! current_user_can( 'edit_pages' ) ) {
+			$args['post_type'] = 'post';
+		}
+
+		if ( 'page' === $args['post_type'] && ! current_user_can( 'edit_others_pages' ) ) {
+			$args['author'] = get_current_user_id();
+		} elseif ( 'post' === $args['post_type'] && ! current_user_can( 'edit_others_posts' ) ) {
+			$args['author'] = get_current_user_id();
+		} elseif ( is_array( $args['post_type'] ) && ! current_user_can( 'edit_others_posts' ) ) {
+			$args['author'] = get_current_user_id();
+		}
+
+		if ( ! empty( $input['modified_after'] ) ) {
+			$modified_after = strtotime( sanitize_text_field( $input['modified_after'] ) );
+			if ( false === $modified_after ) {
+				return [ 'success' => false, 'error' => 'modified_after must be a parseable date/time.' ];
+			}
+
+			$args['date_query'] = [
+				[
+					'column'    => 'post_modified_gmt',
+					'after'     => gmdate( 'Y-m-d H:i:s', $modified_after ),
+					'inclusive' => false,
+				],
+			];
+		}
+
+		$query = new WP_Query( $args );
+		$items = [];
+
+		foreach ( $query->posts as $post ) {
+			if ( ! current_user_can( 'edit_post', $post->ID ) ) {
+				continue;
+			}
+
+			$raw_score = get_post_meta( $post->ID, $meta_key, true );
+			$items[]   = [
+				'post_id'      => (int) $post->ID,
+				'title'        => $post->post_title,
+				'url'          => get_permalink( $post->ID ),
+				'post_type'    => $post->post_type,
+				'modified_gmt' => $post->post_modified_gmt,
+				'score'        => '' === $raw_score ? null : (int) $raw_score,
+			];
+		}
+
+		return [
+			'success' => true,
+			'data'    => [
+				'items'        => $items,
+				'total'        => (int) $query->found_posts,
+				'total_pages'  => (int) $query->max_num_pages,
+				'yoast_active' => true,
+			],
+		];
 	}
 
 	public static function execute_site_overview( $input = [] ) {

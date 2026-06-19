@@ -48,11 +48,11 @@ Run WordPress's built-in health tests and get results grouped by severity: criti
 Check for common misconfigurations: debug mode, file editor exposure, SSL, admin username presence, core and plugin version currency, XML-RPC status, and auth key strength. Returns findings in fail/warn/pass buckets with actionable remediation steps.
 
 **SEO Analysis**
-Analyze individual posts for title length, word count, meta description, focus keyword placement, image alt text, internal links, and slug length. Get a site-wide overview including sitemap and robots.txt accessibility and counts of published posts missing optimization.
+Analyze individual posts for title length, word count, meta description, focus keyword placement, image alt text, internal links, and slug length. Get a site-wide overview including sitemap and robots.txt accessibility and counts of published posts missing optimization. Read Yoast SEO and readability score lists with pagination and optional post type, status, and modified-after filters.
 
 Post and page create/update abilities can write supported Yoast SEO protected meta keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys fail with structured details instead of being silently ignored.
 
-When Yoast SEO is installed, all checks run fully including the Yoast sitemap verification. Without Yoast, meta description and focus keyword checks will warn on every post (since those fields are never populated) and the sitemap check will fail — the structural checks still work correctly.
+When Yoast SEO is installed, all checks run fully including the Yoast sitemap verification and score-list abilities. Without Yoast, meta description and focus keyword checks will warn on every post (since those fields are never populated), the sitemap check will fail, and score-list abilities will return empty results with a note — the structural checks still work correctly.
 
 All abilities enforce WordPress capability checks — an editor cannot call abilities requiring admin caps. Content is sanitized on write using WordPress core functions.
 
@@ -83,9 +83,9 @@ Any client that speaks the Model Context Protocol and can connect to `@automatti
 
 No, but behavior differs depending on whether it is active:
 
-**With Yoast SEO:** All SEO checks run fully — structural analysis (title length, word count, image alt text, internal links, slug) plus meta description and focus keyword checks per post, site-wide counts of unoptimized posts, and Yoast sitemap verification.
+**With Yoast SEO:** All SEO checks run fully — structural analysis (title length, word count, image alt text, internal links, slug), meta description and focus keyword checks per post, site-wide counts of unoptimized posts, Yoast sitemap verification, and Yoast SEO/readability score lists.
 
-**Without Yoast SEO:** Structural checks work correctly. However, `seo-analyze-post` will always flag "No Yoast meta description set" and "No Yoast focus keyword set" on every post, and `seo-site-overview` will report every published post as missing those fields. The sitemap check will also fail since it checks the Yoast-specific `/sitemap_index.xml` URL. If you are not using Yoast, treat those specific warnings as not applicable.
+**Without Yoast SEO:** Structural checks work correctly. However, `seo-analyze-post` will always flag "No Yoast meta description set" and "No Yoast focus keyword set" on every post, and `seo-site-overview` will report every published post as missing those fields. The sitemap check will also fail since it checks the Yoast-specific `/sitemap_index.xml` URL. `get-seo-scores` and `get-readability-scores` return empty results with a note. If you are not using Yoast, treat those specific warnings as not applicable.
 
 = What WordPress user role should I use? =
 

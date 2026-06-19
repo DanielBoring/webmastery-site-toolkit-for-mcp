@@ -357,6 +357,20 @@ $fixtures['spam_comment_id']  = e2e_insert_comment( $fixtures['post_id'], 'spam'
 $fixtures['media_id']          = e2e_insert_media( $fixtures['post_id'], $author_id, 'read-update' );
 $fixtures['delete_media_id']   = e2e_insert_media( $fixtures['post_id'], $author_id, 'delete' );
 $fixtures['featured_image_id'] = e2e_insert_media( $fixtures['post_id'], $author_id, 'featured-image', 'image/png' );
+$fixtures['yoast_score_post_id'] = e2e_insert_post( 'post', 'MCP E2E Yoast Score Post', 'Yoast score fixture.', $author_id );
+wp_update_post(
+	array(
+		'ID'          => $fixtures['yoast_score_post_id'],
+		'post_status' => 'pending',
+	)
+);
+
+if ( ! defined( 'WPSEO_VERSION' ) ) {
+	define( 'WPSEO_VERSION', 'e2e' );
+}
+
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_linkdex', '82' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_content_score', '74' );
 
 e2e_ensure_plugin( 'mcp-e2e-plugin/mcp-e2e-plugin.php', 'MCP E2E Plugin' );
 e2e_ensure_plugin( 'mcp-e2e-duplicate/mcp-e2e-duplicate.php', 'MCP E2E Duplicate Folder Plugin' );
