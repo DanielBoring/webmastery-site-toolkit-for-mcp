@@ -6,6 +6,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+## 2.2.0
+
 ### Added
 
 - Added Yoast SEO score and readability score abilities with pagination, filters, deterministic newest-modified-first ordering, and explicit empty results when Yoast SEO is not active.

@@ -4,7 +4,7 @@ Tags: mcp, ai, automation, content-management, artificial-intelligence
 Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 2.1.0
+Stable tag: 2.2.0
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
@@ -113,6 +113,10 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 
 == Changelog ==
 
+= 2.2.0 =
+* Add Yoast SEO score and readability score abilities with pagination, filters, deterministic newest-modified-first ordering, and explicit empty results when Yoast SEO is not active.
+* Persist supported Yoast SEO protected meta keys from post and page create/update abilities, including focus keyphrase, meta description, and SEO title, and return structured `meta_write_failed` details for meta keys that are not writable.
+
 = 2.1.0 =
 * Add `list-content-blocks` and `patch-content-block` for precise Gutenberg block inspection and single-block replacement in posts and pages.
 * Add `patch-post-content` for safer partial post body edits with block-aware heading targeting, exact-match fallback, ambiguous-target failures, and optional content-hash preconditions.
@@ -174,6 +178,9 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 * Security audit with fail/warn/pass buckets and remediation guidance
 
 == Upgrade Notice ==
+
+= 2.2.0 =
+Adds Yoast score list abilities and fixes supported Yoast protected meta writes for post and page create/update workflows.
 
 = 2.1.0 =
 Adds safer block-level post and page editing abilities for MCP clients.
