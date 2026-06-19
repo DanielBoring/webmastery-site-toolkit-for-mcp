@@ -50,6 +50,8 @@ Check for common misconfigurations: debug mode, file editor exposure, SSL, admin
 **SEO Analysis**
 Analyze individual posts for title length, word count, meta description, focus keyword placement, image alt text, internal links, and slug length. Get a site-wide overview including sitemap and robots.txt accessibility and counts of published posts missing optimization.
 
+Post and page create/update abilities can write supported Yoast SEO protected meta keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys fail with structured details instead of being silently ignored.
+
 When Yoast SEO is installed, all checks run fully including the Yoast sitemap verification. Without Yoast, meta description and focus keyword checks will warn on every post (since those fields are never populated) and the sitemap check will fail — the structural checks still work correctly.
 
 All abilities enforce WordPress capability checks — an editor cannot call abilities requiring admin caps. Content is sanitized on write using WordPress core functions.
@@ -104,6 +106,8 @@ After activation, call the MCP Adapter discovery tool, `mcp-adapter-discover-abi
 = Are write operations safe? =
 
 Delete operations for posts and pages move content to trash. Media delete permanently removes the attachment and its files. Plugin activation and deactivation require Administrator plugin capabilities, and protected-plugin deactivation is blocked unless explicitly forced. All inputs are sanitized using WordPress core functions. All operations go through the WordPress API — no direct database queries.
+
+Post and page meta writes are limited to REST-registered keys and supported Yoast SEO protected keys. Unsupported keys return `meta_write_failed` with the rejected keys listed in `data.meta.not_written`.
 
 For post and page body edits, `list-content-blocks` returns precise block paths and hashes, then `patch-content-block` can replace one exact Gutenberg block by path or unique hash. `patch-post-content` can still update the content under one exact Gutenberg heading or perform a strict exact-match replacement for classic/raw HTML content. These abilities fail when the target is missing, ambiguous, or stale and support optional hash preconditions to avoid overwriting newer edits.
 
