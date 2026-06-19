@@ -6,6 +6,10 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+### Added
+
+- Added Yoast SEO score and readability score abilities with pagination, filters, deterministic newest-modified-first ordering, and explicit empty results when Yoast SEO is not active.
+
 ### Fixed
 
 - Persist supported Yoast SEO protected meta keys from post and page create/update abilities, including focus keyphrase, meta description, and SEO title, and return structured `meta_write_failed` details for meta keys that are not writable.

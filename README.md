@@ -66,13 +66,15 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 | Users                     | 2         | Administrator            |
 | Plugins                   | 3         | Administrator            |
 | Site health & security    | 2         | Administrator            |
-| SEO analysis              | 2         | Author → Administrator   |
+| SEO analysis              | 4         | Author → Administrator   |
 
 **Editor** is the recommended default for content workflows. User lookup, plugin management, and site-audit abilities need Administrator capabilities — use a separate Administrator service account for those.
 
 Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
 
 `create-post`, `create-page`, `update-post`, and `update-page` can write REST-registered post meta plus supported Yoast SEO protected keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys return a `meta_write_failed` response with `data.meta.not_written` instead of being silently ignored.
+
+`get-seo-scores` and `get-readability-scores` return Yoast SEO and readability score meta for posts and pages with stable pagination, optional `post_type`, `status`, and `modified_after` filters, and newest-modified-first ordering. Missing score meta is returned as `null`; when Yoast SEO is not active, the abilities return an empty result with an explanatory note.
 
 👉 **[See the full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities)** for every ability, its description, required capability, and minimum role.
 
@@ -85,7 +87,7 @@ Post and page body edits can use `list-content-blocks` to inspect block paths an
 | WordPress                                                      | 6.9+                                                                                                             |
 | PHP                                                            | 8.0+                                                                                                             |
 | [MCP Adapter plugin](https://github.com/WordPress/mcp-adapter) | Latest                                                                                                           |
-| [Yoast SEO](https://wordpress.org/plugins/wordpress-seo/)      | Optional — structural SEO checks work without it; meta description, focus keyword, and sitemap checks require it |
+| [Yoast SEO](https://wordpress.org/plugins/wordpress-seo/)      | Optional — structural SEO checks work without it; meta description, focus keyword, sitemap, and score checks require it |
 
 > **Self-hosted WordPress only.** Both this plugin and the MCP Adapter require an install where custom plugins can be added — self-hosted WordPress or a managed host (WP Engine, Kinsta, Flywheel, etc.). They are not compatible with WordPress.com Free, Personal, or Premium plans.
 
