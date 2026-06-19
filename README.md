@@ -72,6 +72,8 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 
 Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
 
+`create-post`, `create-page`, `update-post`, and `update-page` can write REST-registered post meta plus supported Yoast SEO protected keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys return a `meta_write_failed` response with `data.meta.not_written` instead of being silently ignored.
+
 👉 **[See the full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities)** for every ability, its description, required capability, and minimum role.
 
 ---
@@ -194,6 +196,7 @@ To confirm everything works, ask your agent to call a few:
 - All abilities enforce WordPress capability checks via `permission_callback` — an editor cannot call abilities that require admin caps.
 - `delete-post` and `delete-page` move content to trash, not permanent deletion; use `restore-post` / `restore-page` to undo.
 - `patch-content-block` and `patch-post-content` support optional hash preconditions and fail safely when a target is missing, ambiguous, or stale.
+- Post and page meta writes are limited to REST-registered keys and supported Yoast SEO protected keys; unsupported keys fail with a structured `meta_write_failed` response.
 - Content is sanitized on write, and there are **no direct database queries** — all reads and writes go through the WordPress API.
 
 📖 **[Full security model](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#security)**, including plugin-management safeguards and the complete sanitization rules.

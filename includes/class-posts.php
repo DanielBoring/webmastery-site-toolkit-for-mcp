@@ -43,6 +43,152 @@ class Webmastery_MCP_Posts {
 		return $data;
 	}
 
+	private static function writable_protected_meta_keys() {
+		return [
+			'_yoast_wpseo_focuskw'                => 'string',
+			'_yoast_wpseo_metadesc'               => 'string',
+			'_yoast_wpseo_title'                  => 'string',
+			'_yoast_wpseo_is_cornerstone'         => 'boolean_string',
+			'_yoast_wpseo_meta-robots-noindex'    => 'boolean_string',
+			'_yoast_wpseo_meta-robots-nofollow'   => 'boolean_string',
+			'_yoast_wpseo_meta-robots-adv'        => 'string',
+		];
+	}
+
+	private static function meta_schema() {
+		return [
+			'type'                 => 'object',
+			'description'          => 'Post meta to write. REST-registered keys and supported Yoast protected keys are persisted; unsupported protected keys fail with details instead of being silently ignored.',
+			'additionalProperties' => [
+				'type' => [ 'string', 'number', 'integer', 'boolean', 'null' ],
+			],
+		];
+	}
+
+	private static function normalize_meta_value( $value, $type = 'string' ) {
+		if ( null === $value ) {
+			return '';
+		}
+
+		if ( is_bool( $value ) ) {
+			$value = $value ? '1' : '0';
+		}
+
+		if ( is_array( $value ) || is_object( $value ) ) {
+			return null;
+		}
+
+		if ( 'boolean_string' === $type ) {
+			return rest_sanitize_boolean( $value ) ? '1' : '0';
+		}
+
+		return sanitize_text_field( (string) $value );
+	}
+
+	private static function registered_rest_meta_keys( $type ) {
+		$registered = get_registered_meta_keys( 'post', $type );
+		$keys       = [];
+
+		foreach ( $registered as $key => $args ) {
+			if ( ! empty( $args['show_in_rest'] ) ) {
+				$keys[ $key ] = $args;
+			}
+		}
+
+		return $keys;
+	}
+
+	private static function prepare_meta_writes( $input, $type ) {
+		$requested = [];
+
+		if ( isset( $input['meta'] ) && is_array( $input['meta'] ) ) {
+			$requested = $input['meta'];
+		}
+
+		if ( isset( $input['yoast_meta_description'] ) ) {
+			$requested['_yoast_wpseo_metadesc'] = $input['yoast_meta_description'];
+		}
+		if ( isset( $input['yoast_focus_keyword'] ) ) {
+			$requested['_yoast_wpseo_focuskw'] = $input['yoast_focus_keyword'];
+		}
+		if ( isset( $input['yoast_seo_title'] ) ) {
+			$requested['_yoast_wpseo_title'] = $input['yoast_seo_title'];
+		}
+
+		$protected_keys = self::writable_protected_meta_keys();
+		$rest_keys      = self::registered_rest_meta_keys( $type );
+		$prepared       = [
+			'writes'      => [],
+			'not_written' => [],
+		];
+
+		foreach ( $requested as $key => $value ) {
+			$key = (string) $key;
+
+			if ( isset( $protected_keys[ $key ] ) ) {
+				$normalized = self::normalize_meta_value( $value, $protected_keys[ $key ] );
+				if ( null === $normalized ) {
+					$prepared['not_written'][] = [
+						'key'    => $key,
+						'reason' => 'invalid_value',
+					];
+					continue;
+				}
+
+				$prepared['writes'][ $key ] = $normalized;
+				continue;
+			}
+
+			if ( isset( $rest_keys[ $key ] ) ) {
+				$normalized = self::normalize_meta_value( $value );
+				if ( null === $normalized ) {
+					$prepared['not_written'][] = [
+						'key'    => $key,
+						'reason' => 'invalid_value',
+					];
+					continue;
+				}
+
+				$prepared['writes'][ $key ] = $normalized;
+				continue;
+			}
+
+			$prepared['not_written'][] = [
+				'key'    => $key,
+				'reason' => is_protected_meta( $key, 'post' ) ? 'unsupported_protected_meta' : 'not_registered_for_rest',
+			];
+		}
+
+		return $prepared;
+	}
+
+	private static function apply_meta_writes( $post_id, $writes ) {
+		$written = [];
+
+		foreach ( $writes as $key => $value ) {
+			update_post_meta( $post_id, $key, $value );
+			$written[ $key ] = get_post_meta( $post_id, $key, true );
+		}
+
+		return $written;
+	}
+
+	private static function meta_write_error_response( $prepared ) {
+		return [
+			'success' => false,
+			'error'   => [
+				'code'    => 'meta_write_failed',
+				'message' => 'One or more meta keys are not writable by this ability.',
+			],
+			'data'    => [
+				'meta' => [
+					'written'     => [],
+					'not_written' => $prepared['not_written'],
+				],
+			],
+		];
+	}
+
 	private static function permission( $cap ) {
 		return function () use ( $cap ) {
 			if ( ! current_user_can( $cap ) ) {
@@ -902,6 +1048,7 @@ class Webmastery_MCP_Posts {
 			'scheduled_date' => [ 'type' => 'string', 'description' => 'ISO 8601 datetime to publish (required when status is future, e.g. 2025-12-01T09:00:00)' ],
 			'excerpt'        => [ 'type' => 'string' ],
 			'slug'           => [ 'type' => 'string' ],
+			'meta'           => self::meta_schema(),
 		];
 
 		if ( 'post' === $type ) {
@@ -911,6 +1058,10 @@ class Webmastery_MCP_Posts {
 		if ( 'page' === $type ) {
 			$create_props['parent'] = [ 'type' => 'integer', 'description' => 'Parent page ID (0 for top-level)' ];
 		}
+
+		$create_props['yoast_meta_description'] = [ 'type' => 'string', 'description' => 'Yoast SEO meta description (stored as _yoast_wpseo_metadesc)' ];
+		$create_props['yoast_focus_keyword']    = [ 'type' => 'string', 'description' => 'Yoast SEO focus keyphrase (stored as _yoast_wpseo_focuskw)' ];
+		$create_props['yoast_seo_title']        = [ 'type' => 'string', 'description' => 'Yoast SEO title (stored as _yoast_wpseo_title)' ];
 
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/create-{$type}", [
 			'label'               => "Create {$label}",
@@ -926,6 +1077,11 @@ class Webmastery_MCP_Posts {
 				$allowed    = $permission( $input );
 				if ( is_wp_error( $allowed ) ) {
 					return [ 'success' => false, 'error' => $allowed->get_error_message() ];
+				}
+
+				$meta_writes = self::prepare_meta_writes( $input, $type );
+				if ( ! empty( $meta_writes['not_written'] ) ) {
+					return self::meta_write_error_response( $meta_writes );
 				}
 
 				$args = [
@@ -966,7 +1122,15 @@ class Webmastery_MCP_Posts {
 					}
 				}
 
-				return [ 'success' => true, 'data' => self::normalize( $id ) ];
+				$data = self::normalize( $id );
+				if ( ! empty( $meta_writes['writes'] ) ) {
+					$data['meta'] = [
+						'written'     => self::apply_meta_writes( $id, $meta_writes['writes'] ),
+						'not_written' => [],
+					];
+				}
+
+				return [ 'success' => true, 'data' => $data ];
 			},
 			'permission_callback' => self::create_permission( $type ),
 			'meta'                => [
@@ -984,6 +1148,7 @@ class Webmastery_MCP_Posts {
 			'scheduled_date' => [ 'type' => 'string', 'description' => 'ISO 8601 datetime to publish (required when status is future)' ],
 			'excerpt'        => [ 'type' => 'string' ],
 			'slug'           => [ 'type' => 'string' ],
+			'meta'           => self::meta_schema(),
 		];
 
 		if ( 'post' === $type ) {
@@ -995,7 +1160,8 @@ class Webmastery_MCP_Posts {
 		}
 
 		$update_props['yoast_meta_description'] = [ 'type' => 'string', 'description' => 'Yoast SEO meta description (stored as _yoast_wpseo_metadesc)' ];
-		$update_props['yoast_focus_keyword']    = [ 'type' => 'string', 'description' => 'Yoast SEO focus keyword (stored as _yoast_wpseo_focuskw)' ];
+		$update_props['yoast_focus_keyword']    = [ 'type' => 'string', 'description' => 'Yoast SEO focus keyphrase (stored as _yoast_wpseo_focuskw)' ];
+		$update_props['yoast_seo_title']        = [ 'type' => 'string', 'description' => 'Yoast SEO title (stored as _yoast_wpseo_title)' ];
 
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/update-{$type}", [
 			'label'               => "Update {$label}",
@@ -1018,6 +1184,11 @@ class Webmastery_MCP_Posts {
 				}
 				if ( isset( $input['status'] ) && in_array( $input['status'], [ 'publish', 'future' ], true ) && ! current_user_can( 'publish_' . $slug ) ) {
 					return [ 'success' => false, 'error' => 'You do not have permission to publish this ' . $type . '.' ];
+				}
+
+				$meta_writes = self::prepare_meta_writes( $input, $type );
+				if ( ! empty( $meta_writes['not_written'] ) ) {
+					return self::meta_write_error_response( $meta_writes );
 				}
 
 				$args = [ 'ID' => $id ];
@@ -1060,14 +1231,15 @@ class Webmastery_MCP_Posts {
 					}
 				}
 
-				if ( isset( $input['yoast_meta_description'] ) ) {
-					update_post_meta( $id, '_yoast_wpseo_metadesc', sanitize_text_field( $input['yoast_meta_description'] ) );
-				}
-				if ( isset( $input['yoast_focus_keyword'] ) ) {
-					update_post_meta( $id, '_yoast_wpseo_focuskw', sanitize_text_field( $input['yoast_focus_keyword'] ) );
+				$data = self::normalize( $id );
+				if ( ! empty( $meta_writes['writes'] ) ) {
+					$data['meta'] = [
+						'written'     => self::apply_meta_writes( $id, $meta_writes['writes'] ),
+						'not_written' => [],
+					];
 				}
 
-				return [ 'success' => true, 'data' => self::normalize( $id ) ];
+				return [ 'success' => true, 'data' => $data ];
 			},
 			'permission_callback' => self::object_permission( $type, "{$type}_id", 'edit_post' ),
 			'meta'                => [
