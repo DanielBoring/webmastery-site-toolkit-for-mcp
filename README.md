@@ -60,6 +60,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 | Posts                     | 7         | Author                   |
 | Pages                     | 6         | Editor                   |
 | Content blocks            | 2         | Author → Editor          |
+| Featured images           | 2         | Author → Editor          |
 | Taxonomy                  | 6         | Subscriber → Editor      |
 | Comments                  | 4         | Editor                   |
 | Media                     | 4         | Author                   |
