@@ -61,7 +61,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 | Pages                     | 6         | Editor                   |
 | Content blocks            | 2         | Author → Editor          |
 | Featured images           | 2         | Author → Editor          |
-| Taxonomy                  | 6         | Subscriber → Editor      |
+| Taxonomy                  | 10        | Subscriber → Editor      |
 | Comments                  | 4         | Editor                   |
 | Media                     | 4         | Author                   |
 | Users                     | 2         | Administrator            |
@@ -71,7 +71,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 
 **Editor** is the recommended default for content workflows. User lookup, plugin management, and site-audit abilities need Administrator capabilities — use a separate Administrator service account for those.
 
-Post and page listings include the numeric author ID plus `author_name` and `author_login`, so agents can show human-readable bylines without an extra user lookup. Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
+Post and page listings include the numeric author ID plus `author_name` and `author_login`, so agents can show human-readable bylines without an extra user lookup. Taxonomy abilities can list, get, create, update, and delete categories and tags; reads require `read`, while writes require `manage_categories`. Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
 
 `create-post`, `create-page`, `update-post`, and `update-page` can write REST-registered post meta plus supported Yoast SEO protected keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys return a `meta_write_failed` response with `data.meta.not_written` instead of being silently ignored.
 
@@ -189,6 +189,7 @@ See [Verification](#verification) below.
 To confirm everything works, ask your agent to call a few:
 
 - `webmastery-site-toolkit-for-mcp/list-posts` — *"List the 5 most recent published posts"*
+- `webmastery-site-toolkit-for-mcp/get-category` — *"Get category 12"*
 - `webmastery-site-toolkit-for-mcp/security-audit` (Administrator account) — *"Run a security audit of my WordPress site"*
 - `webmastery-site-toolkit-for-mcp/site-health-check` (Administrator account) — *"Check WordPress site health"*
 

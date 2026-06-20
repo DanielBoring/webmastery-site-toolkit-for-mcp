@@ -7,8 +7,12 @@ class Webmastery_MCP_Taxonomy {
 	public static function register() {
 		self::register_list( 'category', 'Categories' );
 		self::register_list( 'post_tag', 'Tags' );
+		self::register_get( 'category' );
+		self::register_get( 'post_tag' );
 		self::register_create( 'category' );
 		self::register_create( 'post_tag' );
+		self::register_update( 'category' );
+		self::register_update( 'post_tag' );
 		self::register_delete( 'category' );
 		self::register_delete( 'post_tag' );
 	}
@@ -74,6 +78,45 @@ class Webmastery_MCP_Taxonomy {
 		] );
 	}
 
+	private static function register_get( $taxonomy ) {
+		$is_category = 'category' === $taxonomy;
+		$label       = $is_category ? 'Category' : 'Tag';
+		$ability     = $is_category ? 'category' : 'tag';
+
+		wp_register_ability( "webmastery-site-toolkit-for-mcp/get-{$ability}", [
+			'label'               => "Get {$label}",
+			'description'         => "Get a single WordPress {$label} by ID.",
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => [
+				'type'       => 'object',
+				'properties' => [
+					"{$ability}_id" => [ 'type' => 'integer', 'description' => "{$label} term ID" ],
+				],
+				'required'   => [ "{$ability}_id" ],
+			],
+			'execute_callback'    => function ( $input ) use ( $taxonomy, $label, $ability ) {
+				$id   = absint( $input[ "{$ability}_id" ] );
+				$term = get_term( $id, $taxonomy );
+
+				if ( ! $term || is_wp_error( $term ) ) {
+					return [ 'success' => false, 'error' => "{$label} not found." ];
+				}
+
+				return [ 'success' => true, 'data' => self::normalize_term( $term ) ];
+			},
+			'permission_callback' => function () {
+				if ( ! current_user_can( 'read' ) ) {
+					return new WP_Error( 'forbidden', 'Requires read capability.' );
+				}
+				return true;
+			},
+			'meta'                => [
+				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+	}
+
 	private static function register_create( $taxonomy ) {
 		$is_category = 'category' === $taxonomy;
 		$label       = $is_category ? 'Category' : 'Tag';
@@ -128,6 +171,81 @@ class Webmastery_MCP_Taxonomy {
 				return true;
 			},
 			'meta' => [
+				'annotations' => [ 'readonly' => false, 'destructive' => false, 'idempotent' => false ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+	}
+
+	private static function register_update( $taxonomy ) {
+		$is_category = 'category' === $taxonomy;
+		$label       = $is_category ? 'Category' : 'Tag';
+		$ability     = $is_category ? 'category' : 'tag';
+
+		$props = [
+			"{$ability}_id" => [ 'type' => 'integer', 'description' => "{$label} term ID to update" ],
+			'name'          => [ 'type' => 'string', 'description' => "{$label} name" ],
+			'slug'          => [ 'type' => 'string' ],
+			'description'   => [ 'type' => 'string' ],
+		];
+
+		if ( $is_category ) {
+			$props['parent'] = [ 'type' => 'integer', 'description' => 'Parent category ID (0 for top-level)' ];
+		}
+
+		wp_register_ability( "webmastery-site-toolkit-for-mcp/update-{$ability}", [
+			'label'               => "Update {$label}",
+			'description'         => "Update an existing WordPress {$label}.",
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => [
+				'type'       => 'object',
+				'properties' => $props,
+				'required'   => [ "{$ability}_id" ],
+			],
+			'execute_callback'    => function ( $input ) use ( $taxonomy, $label, $ability ) {
+				$id   = absint( $input[ "{$ability}_id" ] );
+				$term = get_term( $id, $taxonomy );
+
+				if ( ! $term || is_wp_error( $term ) ) {
+					return [ 'success' => false, 'error' => "{$label} not found." ];
+				}
+
+				$args = [];
+
+				if ( isset( $input['name'] ) ) {
+					$args['name'] = sanitize_text_field( $input['name'] );
+				}
+				if ( isset( $input['slug'] ) ) {
+					$args['slug'] = sanitize_title( $input['slug'] );
+				}
+				if ( isset( $input['description'] ) ) {
+					$args['description'] = sanitize_text_field( $input['description'] );
+				}
+				if ( 'category' === $taxonomy && isset( $input['parent'] ) ) {
+					$args['parent'] = absint( $input['parent'] );
+				}
+
+				$result = wp_update_term( $id, $taxonomy, $args );
+
+				if ( is_wp_error( $result ) ) {
+					return [ 'success' => false, 'error' => $result->get_error_message() ];
+				}
+
+				$updated = get_term( $result['term_id'], $taxonomy );
+
+				if ( ! $updated || is_wp_error( $updated ) ) {
+					return [ 'success' => false, 'error' => "{$label} not found." ];
+				}
+
+				return [ 'success' => true, 'data' => self::normalize_term( $updated ) ];
+			},
+			'permission_callback' => function () {
+				if ( ! current_user_can( 'manage_categories' ) ) {
+					return new WP_Error( 'forbidden', 'Requires manage_categories capability.' );
+				}
+				return true;
+			},
+			'meta'                => [
 				'annotations' => [ 'readonly' => false, 'destructive' => false, 'idempotent' => false ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
 			],
