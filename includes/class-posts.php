@@ -29,6 +29,8 @@ class Webmastery_MCP_Posts {
 			'slug'              => $post->post_name,
 			'url'               => get_permalink( $post->ID ),
 			'author'            => (int) $post->post_author,
+			'author_name'       => get_the_author_meta( 'display_name', (int) $post->post_author ),
+			'author_login'      => get_the_author_meta( 'user_login', (int) $post->post_author ),
 			'date_created'      => $post->post_date,
 			'date_modified'     => $post->post_modified,
 			'type'              => $post->post_type,

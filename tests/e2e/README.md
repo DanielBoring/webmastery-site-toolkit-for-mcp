@@ -2,7 +2,7 @@
 
 The E2E suite is manifest-driven. Every registered `webmastery-site-toolkit-for-mcp/*` ability must be represented in `tests/e2e/abilities-manifest.json`.
 
-Current coverage is 42 registered abilities across 78 manifest test cases, including the block editing abilities `webmastery-site-toolkit-for-mcp/list-content-blocks`, `webmastery-site-toolkit-for-mcp/patch-content-block`, and `webmastery-site-toolkit-for-mcp/patch-post-content`, the Yoast score abilities `webmastery-site-toolkit-for-mcp/get-seo-scores` and `webmastery-site-toolkit-for-mcp/get-readability-scores`, plus the plugin management abilities `webmastery-site-toolkit-for-mcp/list-plugins`, `webmastery-site-toolkit-for-mcp/activate-plugin`, and `webmastery-site-toolkit-for-mcp/deactivate-plugin`.
+Current coverage is 42 registered abilities across 78 manifest test cases, including post and page listing response-shape assertions, the block editing abilities `webmastery-site-toolkit-for-mcp/list-content-blocks`, `webmastery-site-toolkit-for-mcp/patch-content-block`, and `webmastery-site-toolkit-for-mcp/patch-post-content`, the Yoast score abilities `webmastery-site-toolkit-for-mcp/get-seo-scores` and `webmastery-site-toolkit-for-mcp/get-readability-scores`, plus the plugin management abilities `webmastery-site-toolkit-for-mcp/list-plugins`, `webmastery-site-toolkit-for-mcp/activate-plugin`, and `webmastery-site-toolkit-for-mcp/deactivate-plugin`.
 
 ## Rule for new abilities
 

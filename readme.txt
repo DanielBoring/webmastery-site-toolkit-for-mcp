@@ -18,10 +18,10 @@ Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site
 Webmastery Site Toolkit for MCP registers abilities across eleven groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
 
 **Posts**
-Create, read, update, partially patch, and delete posts. Supports all statuses including scheduled (future) posts, category and tag assignment, pagination, and safer targeted content updates.
+Create, read, update, partially patch, and delete posts. Supports all statuses including scheduled (future) posts, category and tag assignment, pagination, human-readable author fields, and safer targeted content updates.
 
 **Pages**
-Create, read, update, and delete pages. Supports parent hierarchy and all standard page fields.
+Create, read, update, and delete pages. Supports parent hierarchy, human-readable author fields, and all standard page fields.
 
 **Content Blocks**
 Inspect Gutenberg block paths and hashes, then replace a single block in a post or page by exact path or unique hash.
@@ -36,7 +36,7 @@ List comments with filters, approve, trash, or mark as spam — all through the 
 List, inspect, update, and permanently delete media attachments. Supports MIME type and search filters, pagination, alt text updates, title updates, and caption updates.
 
 **Users**
-List users with role/search/pagination filters and fetch a single user by ID. Useful for resolving numeric author IDs from post and media responses.
+List users with role/search/pagination filters and fetch a single user by ID. Useful for account audits and resolving numeric user IDs from responses that do not already include display names.
 
 **Plugins**
 List installed plugins and manage activation state by canonical plugin basename. Includes protected-plugin safeguards, multisite-aware network activation handling, and structured errors for capability, context, and identifier failures.
@@ -112,6 +112,9 @@ Post and page meta writes are limited to REST-registered keys and supported Yoas
 For post and page body edits, `list-content-blocks` returns precise block paths and hashes, then `patch-content-block` can replace one exact Gutenberg block by path or unique hash. `patch-post-content` can still update the content under one exact Gutenberg heading or perform a strict exact-match replacement for classic/raw HTML content. These abilities fail when the target is missing, ambiguous, or stale and support optional hash preconditions to avoid overwriting newer edits.
 
 == Changelog ==
+
+= Unreleased =
+* Add `author_name` and `author_login` to post and page responses so listings expose human-readable author details alongside the numeric author ID.
 
 = 2.2.0 =
 * Add Yoast SEO score and readability score abilities with pagination, filters, deterministic newest-modified-first ordering, and explicit empty results when Yoast SEO is not active.

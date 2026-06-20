@@ -6,6 +6,10 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+### Added
+
+- Added `author_name` and `author_login` to post and page responses so listings expose human-readable author details alongside the numeric author ID.
+
 ## 2.2.0
 
 ### Added
