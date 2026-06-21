@@ -21,7 +21,7 @@
 
 </div>
 
-**Webmastery Site Toolkit for MCP** is a WordPress plugin that lets an AI agent manage your site over MCP — posts, post meta, pages, media, comments, taxonomy, plugins, SEO checks, site health, security audits, user lookup, and non-sensitive site introspection. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an agent can call.
+**Webmastery Site Toolkit for MCP** is a WordPress plugin that lets an AI agent manage your site over MCP — posts, post meta, pages, public custom post types, media, comments, taxonomy, plugins, SEO checks, site health, security audits, user lookup, and non-sensitive site introspection. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an agent can call.
 
 **Use it if you want to:**
 
@@ -60,6 +60,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 | Posts                     | 7         | Author                   |
 | Post meta                 | 3         | Author → Editor          |
 | Pages                     | 6         | Editor                   |
+| Custom post types         | 1 + 5 per eligible CPT | CPT capability map |
 | Content blocks            | 2         | Author → Editor          |
 | Featured images           | 2         | Author → Editor          |
 | Taxonomy                  | 10        | Subscriber → Editor      |
@@ -76,6 +77,8 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 Post and page listings include the numeric author ID plus `author_name` and `author_login`, so agents can show human-readable bylines without an extra user lookup. Taxonomy abilities can list, get, create, update, and delete categories and tags; reads require `read`, while writes require `manage_categories`. Site introspection abilities require `read` and return stable, non-sensitive schemas: `get-site-info` returns public site metadata, active theme name/version, deterministic timezone fallback (`UTC±HH:MM` when no timezone string is configured), multisite status, and permalink structure; `get-user-info` returns the current user's profile, roles, and a fixed capability summary; `get-environment-info` returns only PHP version, database server version, WordPress environment type, and locale. Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
 
 `create-post`, `create-page`, `update-post`, and `update-page` can write REST-registered post meta plus supported Yoast SEO protected keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys return a `meta_write_failed` response with `data.meta.not_written` instead of being silently ignored. Dedicated post meta abilities can read, update, or delete one post's unprotected meta keys, plus explicitly allowlisted protected keys, after an object-level `edit_post` check.
+
+`list-post-types` discovers eligible custom post types where `public = true`, `_builtin = false`, and `show_ui = true`. Each eligible CPT gets deterministic ability names in the form `list-cpt-{post-type}`, `get-cpt-{post-type}`, `create-cpt-{post-type}`, `update-cpt-{post-type}`, and `delete-cpt-{post-type}`; naming collisions append a stable short hash. CPT CRUD abilities use the post type's own capability map, including object-level `read_post`, `edit_post`, and `delete_post` checks. CPT taxonomy metadata is returned by discovery, and create/update calls can assign terms through `taxonomy_terms` when the account has the taxonomy's `assign_terms` capability.
 
 `get-seo-scores` and `get-readability-scores` return Yoast SEO and readability score meta for posts and pages with stable pagination, optional `post_type`, `status`, and `modified_after` filters, and newest-modified-first ordering. Missing score meta is returned as `null`; when Yoast SEO is not active, the abilities return an empty result with an explanatory note.
 
@@ -192,6 +195,7 @@ To confirm everything works, ask your agent to call a few:
 
 - `webmastery-site-toolkit-for-mcp/list-posts` — *"List the 5 most recent published posts"*
 - `webmastery-site-toolkit-for-mcp/update-post-meta` — *"Set the campaign_brief custom field on post 42"*
+- `webmastery-site-toolkit-for-mcp/list-post-types` — *"Show eligible custom post types and their generated abilities"*
 - `webmastery-site-toolkit-for-mcp/get-site-info` — *"Get stable public metadata for this WordPress site"*
 - `webmastery-site-toolkit-for-mcp/get-category` — *"Get category 12"*
 - `webmastery-site-toolkit-for-mcp/security-audit` (Administrator account) — *"Run a security audit of my WordPress site"*
@@ -202,6 +206,7 @@ To confirm everything works, ask your agent to call a few:
 ## Security
 
 - All abilities enforce WordPress capability checks via `permission_callback` — an editor cannot call abilities that require admin caps.
+- Custom post type abilities use each CPT's registered capability map instead of generic post or page capabilities.
 - Site introspection abilities intentionally exclude filesystem paths, raw server internals, secrets, auth keys, salts, and configuration values beyond the documented fields.
 - `delete-post` and `delete-page` move content to trash, not permanent deletion; use `restore-post` / `restore-page` to undo.
 - `patch-content-block` and `patch-post-content` support optional hash preconditions and fail safely when a target is missing, ambiguous, or stale.

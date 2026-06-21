@@ -9,6 +9,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 ### Added
 
 - Added a dedicated Coding Standards workflow that installs Composer dev dependencies and runs PHPCS on pushes, pull requests, and manual dispatches.
+- Added an E2E mu-plugin fixture for custom post type ability coverage.
 
 ### Changed
 

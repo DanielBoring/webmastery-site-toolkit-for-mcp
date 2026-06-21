@@ -55,6 +55,19 @@ function e2e_insert_post( $type, $title, $content, $author_id ) {
 	return (int) $id;
 }
 
+function e2e_ensure_role( $role, $display_name, $caps ) {
+	$wp_role = get_role( $role );
+
+	if ( ! $wp_role ) {
+		add_role( $role, $display_name, array_fill_keys( $caps, true ) );
+		$wp_role = get_role( $role );
+	}
+
+	foreach ( $caps as $cap ) {
+		$wp_role->add_cap( $cap );
+	}
+}
+
 function e2e_block_by_path( $blocks, $path ) {
 	$segments       = array_map( 'absint', explode( '.', $path ) );
 	$current_blocks = $blocks;
@@ -275,6 +288,44 @@ $subscriber_id = e2e_ensure_user( 'subscriber_test', 'subscriber@test.local', 's
 $no_role_id    = e2e_ensure_user( 'no_role_test', 'no-role@test.local', 'subscriber' );
 ( new WP_User( $no_role_id ) )->set_role( '' );
 
+e2e_ensure_role(
+	'book_manager',
+	'Book Manager',
+	[
+		'read',
+		'edit_mcp_books',
+		'edit_others_mcp_books',
+		'edit_published_mcp_books',
+		'publish_mcp_books',
+		'delete_mcp_books',
+		'delete_others_mcp_books',
+		'delete_published_mcp_books',
+		'read_private_mcp_books',
+		'assign_mcp_genres',
+	]
+);
+e2e_ensure_role(
+	'case_manager',
+	'Case Manager',
+	[
+		'read',
+		'edit_mcp_cases',
+		'edit_others_mcp_cases',
+		'edit_published_mcp_cases',
+		'publish_mcp_cases',
+		'create_mcp_cases',
+		'delete_mcp_cases',
+		'delete_others_mcp_cases',
+		'delete_published_mcp_cases',
+		'read_private_mcp_cases',
+	]
+);
+
+$book_manager_id = e2e_ensure_user( 'book_manager_test', 'book-manager@test.local', 'book_manager' );
+$case_manager_id = e2e_ensure_user( 'case_manager_test', 'case-manager@test.local', 'case_manager' );
+( new WP_User( $book_manager_id ) )->set_role( 'book_manager' );
+( new WP_User( $case_manager_id ) )->set_role( 'case_manager' );
+
 e2e_delete_term_by_slug( 'mcp-e2e-created-category', 'category' );
 e2e_delete_term_by_slug( 'mcp-e2e-created-tag', 'post_tag' );
 e2e_delete_term_by_slug( 'mcp-e2e-updated-category', 'category' );
@@ -286,8 +337,11 @@ $fixtures = array(
 	'editor_id'          => $editor_id,
 	'subscriber_id'      => $subscriber_id,
 	'no_role_id'         => $no_role_id,
+	'book_manager_id'    => $book_manager_id,
+	'case_manager_id'    => $case_manager_id,
 	'category_id'        => e2e_ensure_term_id( 'MCP E2E Category', 'category' ),
 	'tag_id'             => e2e_ensure_term_id( 'mcp-e2e-tag', 'post_tag' ),
+	'genre_id'           => e2e_ensure_term_id( 'MCP E2E Genre', 'mcp_genre' ),
 	'parent_category_id' => e2e_ensure_term_id( 'MCP E2E Parent Category', 'category' ),
 	'update_category_id' => e2e_ensure_term_id( 'MCP E2E Update Category', 'category' ),
 	'update_tag_id'      => e2e_ensure_term_id( 'mcp-e2e-update-tag', 'post_tag' ),
@@ -344,6 +398,10 @@ $fixtures['restore_post_id'] = e2e_insert_post( 'post', 'MCP E2E Restore Post', 
 $fixtures['meta_post_id']    = e2e_insert_post( 'post', 'MCP E2E Meta Post', 'Meta fixture.', $author_id );
 $fixtures['delete_meta_post_id'] = e2e_insert_post( 'post', 'MCP E2E Delete Meta Post', 'Delete meta fixture.', $author_id );
 $fixtures['page_id']         = e2e_insert_post( 'page', 'MCP E2E Page', 'Content for MCP E2E page.', $editor_id );
+$fixtures['book_id']         = e2e_insert_post( 'mcp_book', 'MCP E2E Book', 'Content for MCP E2E book.', $book_manager_id );
+$fixtures['delete_book_id']  = e2e_insert_post( 'mcp_book', 'MCP E2E Delete Book', 'Delete CPT fixture.', $book_manager_id );
+$fixtures['case_id']         = e2e_insert_post( 'mcp_case_study', 'MCP E2E Case Study', 'Content for MCP E2E case study.', $case_manager_id );
+$fixtures['delete_case_id']  = e2e_insert_post( 'mcp_case_study', 'MCP E2E Delete Case Study', 'Delete CPT fixture.', $case_manager_id );
 $fixtures['block_path_page_id'] = e2e_insert_post(
 	'page',
 	'MCP E2E Block Path Page',
@@ -360,6 +418,7 @@ wp_trash_post( $fixtures['restore_page_id'] );
 
 wp_set_post_categories( $fixtures['post_id'], array( $fixtures['category_id'] ) );
 wp_set_post_tags( $fixtures['post_id'], array( $fixtures['tag_id'] ) );
+wp_set_object_terms( $fixtures['book_id'], array( $fixtures['genre_id'] ), 'mcp_genre' );
 update_post_meta( $fixtures['meta_post_id'], 'mcp_e2e_public_key', 'public meta value' );
 update_post_meta( $fixtures['meta_post_id'], '_mcp_e2e_protected_key', 'hidden protected value' );
 update_post_meta( $fixtures['delete_meta_post_id'], 'mcp_e2e_delete_key', 'delete me' );
@@ -402,11 +461,13 @@ $fixtures['ambiguous_plugin_slug'] = 'mcp-e2e-duplicate';
 $fixtures['protected_plugin']      = 'webmastery-site-toolkit-for-mcp/webmastery-site-toolkit-for-mcp.php';
 
 $roles = array(
-	'admin'      => $admin_id,
-	'author'     => $author_id,
-	'editor'     => $editor_id,
-	'subscriber' => $subscriber_id,
-	'no_role'    => $no_role_id,
+	'admin'        => $admin_id,
+	'author'       => $author_id,
+	'editor'       => $editor_id,
+	'subscriber'   => $subscriber_id,
+	'no_role'      => $no_role_id,
+	'book_manager' => $book_manager_id,
+	'case_manager' => $case_manager_id,
 );
 
 $registered = array_filter(
