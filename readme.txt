@@ -9,16 +9,19 @@ License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
 
-Adds MCP-powered WordPress site abilities for posts, pages, media, comments, plugins, SEO, health, security, and users.
+Adds MCP-powered WordPress site abilities for posts, post meta, pages, media, comments, plugins, SEO, health, security, and users.
 
 == Description ==
 
-Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, pages, media, comments, plugins, SEO checks, site health, security audits, and user lookup. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
+Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, post meta, pages, media, comments, plugins, SEO checks, site health, security audits, and user lookup. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
 
 Webmastery Site Toolkit for MCP registers abilities across eleven groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
 
 **Posts**
 Create, read, update, partially patch, and delete posts. Supports all statuses including scheduled (future) posts, category and tag assignment, pagination, human-readable author fields, and safer targeted content updates.
+
+**Post Meta**
+Read, update, and delete post custom fields after an object-level `edit_post` check. Unprotected keys are allowed when they pass key and value safety limits; `_`-prefixed protected keys are denied unless explicitly allowlisted by the plugin. Updates support scalar values and JSON object/array values.
 
 **Pages**
 Create, read, update, and delete pages. Supports parent hierarchy, human-readable author fields, and all standard page fields.
@@ -50,7 +53,7 @@ Check for common misconfigurations: debug mode, file editor exposure, SSL, admin
 **SEO Analysis**
 Analyze individual posts for title length, word count, meta description, focus keyword placement, image alt text, internal links, and slug length. Get a site-wide overview including sitemap and robots.txt accessibility and counts of published posts missing optimization. Read Yoast SEO and readability score lists with pagination and optional post type, status, and modified-after filters.
 
-Post and page create/update abilities can write supported Yoast SEO protected meta keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys fail with structured details instead of being silently ignored.
+Post and page create/update abilities can write supported Yoast SEO protected meta keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys fail with structured details instead of being silently ignored. Dedicated post meta abilities can read, update, and delete unprotected custom fields, plus explicitly allowlisted protected keys, only after the current user can edit the target post.
 
 When Yoast SEO is installed, all checks run fully including the Yoast sitemap verification and score-list abilities. Without Yoast, meta description and focus keyword checks will warn on every post (since those fields are never populated), the sitemap check will fail, and score-list abilities will return empty results with a note — the structural checks still work correctly.
 
@@ -107,13 +110,14 @@ After activation, call the MCP Adapter discovery tool, `mcp-adapter-discover-abi
 
 Delete operations for posts and pages move content to trash. Media delete permanently removes the attachment and its files. Plugin activation and deactivation require Administrator plugin capabilities, and protected-plugin deactivation is blocked unless explicitly forced. All inputs are sanitized using WordPress core functions. All operations go through the WordPress API — no direct database queries.
 
-Post and page meta writes are limited to REST-registered keys and supported Yoast SEO protected keys. Unsupported keys return `meta_write_failed` with the rejected keys listed in `data.meta.not_written`.
+Post and page create/update meta writes are limited to REST-registered keys and supported Yoast SEO protected keys. Unsupported keys return `meta_write_failed` with the rejected keys listed in `data.meta.not_written`. Dedicated post meta abilities enforce object-level `edit_post` checks, reject unsafe key names and oversized values, support scalar and JSON object/array values, and deny protected `_`-prefixed keys unless they are explicitly allowlisted by the plugin.
 
 For post and page body edits, `list-content-blocks` returns precise block paths and hashes, then `patch-content-block` can replace one exact Gutenberg block by path or unique hash. `patch-post-content` can still update the content under one exact Gutenberg heading or perform a strict exact-match replacement for classic/raw HTML content. These abilities fail when the target is missing, ambiguous, or stale and support optional hash preconditions to avoid overwriting newer edits.
 
 == Changelog ==
 
 = Unreleased =
+* Add post meta read, update, and delete abilities with object-level permissions, protected-key safeguards, typed responses, scalar/JSON value support, and key/value limits.
 * Add category and tag get-by-ID abilities requiring `read`, plus category and tag update abilities requiring `manage_categories`.
 * Add `author_name` and `author_login` to post and page responses so listings expose human-readable author details alongside the numeric author ID.
 
