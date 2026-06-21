@@ -58,8 +58,8 @@ class Webmastery_MCP_Custom_Post_Types {
 				continue;
 			}
 
-			$bases[ $post_type ]       = $base;
-			$base_counts[ $base ]      = ( $base_counts[ $base ] ?? 0 ) + 1;
+			$bases[ $post_type ]  = $base;
+			$base_counts[ $base ] = ( $base_counts[ $base ] ?? 0 ) + 1;
 		}
 
 		foreach ( $bases as $post_type => $base ) {
