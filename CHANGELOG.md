@@ -8,6 +8,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Added
 
+- Added site introspection abilities for stable, non-sensitive site, current-user, and runtime environment context with `read` capability checks.
 - Added post meta read, update, and delete abilities with object-level `edit_post` checks, protected-key safeguards, typed responses, scalar/JSON value support, and key/value limits.
 - Added `author_name` and `author_login` to post and page responses so listings expose human-readable author details alongside the numeric author ID.
 - Added category and tag get-by-ID abilities requiring `read`, plus category and tag update abilities requiring `manage_categories`.
