@@ -341,6 +341,8 @@ $fixtures['block_hash_post_id'] = e2e_insert_post(
 );
 $fixtures['delete_post_id']  = e2e_insert_post( 'post', 'MCP E2E Delete Post', 'Delete fixture.', $author_id );
 $fixtures['restore_post_id'] = e2e_insert_post( 'post', 'MCP E2E Restore Post', 'Restore fixture.', $author_id );
+$fixtures['meta_post_id']    = e2e_insert_post( 'post', 'MCP E2E Meta Post', 'Meta fixture.', $author_id );
+$fixtures['delete_meta_post_id'] = e2e_insert_post( 'post', 'MCP E2E Delete Meta Post', 'Delete meta fixture.', $author_id );
 $fixtures['page_id']         = e2e_insert_post( 'page', 'MCP E2E Page', 'Content for MCP E2E page.', $editor_id );
 $fixtures['block_path_page_id'] = e2e_insert_post(
 	'page',
@@ -358,6 +360,9 @@ wp_trash_post( $fixtures['restore_page_id'] );
 
 wp_set_post_categories( $fixtures['post_id'], array( $fixtures['category_id'] ) );
 wp_set_post_tags( $fixtures['post_id'], array( $fixtures['tag_id'] ) );
+update_post_meta( $fixtures['meta_post_id'], 'mcp_e2e_public_key', 'public meta value' );
+update_post_meta( $fixtures['meta_post_id'], '_mcp_e2e_protected_key', 'hidden protected value' );
+update_post_meta( $fixtures['delete_meta_post_id'], 'mcp_e2e_delete_key', 'delete me' );
 
 $fixtures['comment_id']       = e2e_insert_comment( $fixtures['post_id'], 'approve' );
 $fixtures['trash_comment_id'] = e2e_insert_comment( $fixtures['post_id'], 'trash' );

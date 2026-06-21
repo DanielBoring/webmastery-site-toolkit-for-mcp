@@ -4,6 +4,10 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Posts {
 
+	private const POST_META_KEY_MAX_LENGTH  = 255;
+	private const POST_META_VALUE_MAX_BYTES = 100000;
+	private const POST_META_VALUE_MAX_DEPTH = 10;
+
 	public static function register() {
 		self::register_post_type( 'post' );
 		self::register_post_type( 'page' );
@@ -12,6 +16,9 @@ class Webmastery_MCP_Posts {
 		self::register_patch_post_content();
 		self::register_set_featured_image();
 		self::register_remove_featured_image();
+		self::register_get_post_meta();
+		self::register_update_post_meta();
+		self::register_delete_post_meta();
 	}
 
 	private static function normalize( $post ) {
@@ -55,6 +62,111 @@ class Webmastery_MCP_Posts {
 			'_yoast_wpseo_meta-robots-nofollow'   => 'boolean_string',
 			'_yoast_wpseo_meta-robots-adv'        => 'string',
 		];
+	}
+
+	private static function allowed_protected_post_meta_keys() {
+		return array_fill_keys( array_keys( self::writable_protected_meta_keys() ), true );
+	}
+
+	private static function validate_post_meta_key( $key ) {
+		$key = (string) $key;
+
+		if ( '' === $key ) {
+			return new WP_Error( 'invalid_meta_key', 'meta_key is required.' );
+		}
+		if ( strlen( $key ) > self::POST_META_KEY_MAX_LENGTH ) {
+			return new WP_Error( 'invalid_meta_key', 'meta_key must be 255 bytes or fewer.' );
+		}
+		if ( ! preg_match( '/^[A-Za-z0-9_\-:.]+$/', $key ) ) {
+			return new WP_Error( 'invalid_meta_key', 'meta_key may only contain letters, numbers, underscores, hyphens, colons, and periods.' );
+		}
+
+		return $key;
+	}
+
+	private static function can_access_post_meta_key( $key ) {
+		return ! is_protected_meta( $key, 'post' ) || isset( self::allowed_protected_post_meta_keys()[ $key ] );
+	}
+
+	private static function normalize_post_meta_value( $value, $depth = 0 ) {
+		if ( $depth > self::POST_META_VALUE_MAX_DEPTH ) {
+			return new WP_Error( 'invalid_meta_value', 'meta_value nesting is too deep.' );
+		}
+
+		if ( null === $value ) {
+			return new WP_Error( 'invalid_meta_value', 'meta_value must be a scalar, object, or array.' );
+		}
+
+		if ( is_string( $value ) ) {
+			return sanitize_textarea_field( $value );
+		}
+
+		if ( is_int( $value ) || is_float( $value ) || is_bool( $value ) ) {
+			return $value;
+		}
+
+		if ( is_object( $value ) ) {
+			$value = get_object_vars( $value );
+		}
+
+		if ( is_array( $value ) ) {
+			$normalized = [];
+
+			foreach ( $value as $item_key => $item_value ) {
+				$normalized_item = null === $item_value ? null : self::normalize_post_meta_value( $item_value, $depth + 1 );
+				if ( is_wp_error( $normalized_item ) ) {
+					return $normalized_item;
+				}
+
+				$normalized[ is_int( $item_key ) ? $item_key : sanitize_key( (string) $item_key ) ] = $normalized_item;
+			}
+
+			return $normalized;
+		}
+
+		return new WP_Error( 'invalid_meta_value', 'meta_value must be a scalar, object, or array.' );
+	}
+
+	private static function validate_post_meta_value( $value ) {
+		$normalized = self::normalize_post_meta_value( $value );
+		if ( is_wp_error( $normalized ) ) {
+			return $normalized;
+		}
+
+		$encoded = wp_json_encode( $normalized );
+		if ( false === $encoded ) {
+			return new WP_Error( 'invalid_meta_value', 'meta_value could not be encoded safely.' );
+		}
+		if ( strlen( $encoded ) > self::POST_META_VALUE_MAX_BYTES ) {
+			return new WP_Error( 'invalid_meta_value', 'meta_value must encode to 100000 bytes or fewer.' );
+		}
+
+		return $normalized;
+	}
+
+	private static function prepare_post_meta_update_value( $key, $value ) {
+		$protected_keys = self::writable_protected_meta_keys();
+
+		if ( isset( $protected_keys[ $key ] ) ) {
+			$normalized = self::normalize_meta_value( $value, $protected_keys[ $key ] );
+			if ( null === $normalized ) {
+				return new WP_Error( 'invalid_meta_value', 'meta_value is not valid for this protected meta key.' );
+			}
+
+			return $normalized;
+		}
+
+		return self::validate_post_meta_value( $value );
+	}
+
+	private static function normalize_post_meta_response_value( $value ) {
+		if ( is_array( $value ) ) {
+			foreach ( $value as $key => $item ) {
+				$value[ $key ] = self::normalize_post_meta_response_value( $item );
+			}
+		}
+
+		return $value;
 	}
 
 	private static function meta_schema() {
@@ -271,6 +383,22 @@ class Webmastery_MCP_Posts {
 		};
 	}
 
+	private static function post_meta_permission() {
+		return function ( $input = [] ) {
+			$id   = absint( $input['post_id'] ?? 0 );
+			$post = get_post( $id );
+
+			if ( ! $post ) {
+				return new WP_Error( 'not_found', 'Post not found.' );
+			}
+			if ( ! current_user_can( 'edit_post', $id ) ) {
+				return new WP_Error( 'forbidden', 'Requires edit_post capability for this post.' );
+			}
+
+			return true;
+		};
+	}
+
 	private static function get_featured_image_target( $input ) {
 		$id   = absint( $input['post_id'] ?? 0 );
 		$post = get_post( $id );
@@ -285,14 +413,20 @@ class Webmastery_MCP_Posts {
 		return $post;
 	}
 
-	private static function error_response( $code, $message ) {
-		return [
+	private static function error_response( $code, $message, $data = [] ) {
+		$response = [
 			'success' => false,
 			'error'   => [
 				'code'    => $code,
 				'message' => $message,
 			],
 		];
+
+		if ( ! empty( $data ) ) {
+			$response['data'] = $data;
+		}
+
+		return $response;
 	}
 
 	private static function content_hash( $content ) {
@@ -940,6 +1074,192 @@ class Webmastery_MCP_Posts {
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
 			],
 		] );
+	}
+
+	private static function register_get_post_meta() {
+		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key,WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Ability schema and response field names, not query arguments.
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-post-meta', [
+			'label'               => 'Get Post Meta',
+			'description'         => 'Get allowed custom field values for a post. Protected keys are hidden unless explicitly allowlisted by the plugin.',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => [
+				'type'       => 'object',
+				'properties' => [
+					'post_id'  => [ 'type' => 'integer', 'description' => 'Post ID whose meta should be read.' ],
+					'meta_key' => [ 'type' => 'string', 'description' => 'Optional specific meta key to read.' ],
+				],
+				'required'   => [ 'post_id' ],
+			],
+			'execute_callback'    => function ( $input ) {
+				$post_id = absint( $input['post_id'] ?? 0 );
+				$post    = get_post( $post_id );
+
+				if ( ! $post ) {
+					return self::error_response( 'not_found', 'Post not found.' );
+				}
+				if ( ! current_user_can( 'edit_post', $post_id ) ) {
+					return self::error_response( 'forbidden', 'You do not have permission to read meta for this post.' );
+				}
+
+				$meta = [];
+
+				if ( isset( $input['meta_key'] ) && '' !== (string) $input['meta_key'] ) {
+					$key = self::validate_post_meta_key( $input['meta_key'] );
+					if ( is_wp_error( $key ) ) {
+						return self::error_response( $key->get_error_code(), $key->get_error_message() );
+					}
+					if ( ! self::can_access_post_meta_key( $key ) ) {
+						return self::error_response( 'protected_meta_key', 'Protected meta keys are denied unless explicitly allowlisted.' );
+					}
+
+					$meta[ $key ] = array_map( [ self::class, 'normalize_post_meta_response_value' ], get_post_meta( $post_id, $key, false ) );
+				} else {
+					foreach ( get_post_meta( $post_id ) as $key => $values ) {
+						$key = (string) $key;
+						if ( ! self::can_access_post_meta_key( $key ) ) {
+							continue;
+						}
+
+						$meta[ $key ] = array_map( [ self::class, 'normalize_post_meta_response_value' ], (array) $values );
+					}
+				}
+
+				return [
+					'success' => true,
+					'data'    => [
+						'post_id' => $post_id,
+						'meta'    => $meta,
+					],
+				];
+			},
+			'permission_callback' => self::post_meta_permission(),
+			'meta'                => [
+				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_key,WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+	}
+
+	private static function register_update_post_meta() {
+		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key,WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Ability schema and response field names, not query arguments.
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/update-post-meta', [
+			'label'               => 'Update Post Meta',
+			'description'         => 'Update one allowed post meta key with a scalar or structured JSON-compatible value.',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => [
+				'type'       => 'object',
+				'properties' => [
+					'post_id'    => [ 'type' => 'integer', 'description' => 'Post ID whose meta should be updated.' ],
+					'meta_key'   => [ 'type' => 'string', 'description' => 'Meta key to update.' ],
+					'meta_value' => [
+						'type'        => [ 'string', 'number', 'integer', 'boolean', 'object', 'array' ],
+						'description' => 'Scalar value or JSON object/array to store.',
+					],
+				],
+				'required'   => [ 'post_id', 'meta_key', 'meta_value' ],
+			],
+			'execute_callback'    => function ( $input ) {
+				$post_id = absint( $input['post_id'] ?? 0 );
+				$post    = get_post( $post_id );
+
+				if ( ! $post ) {
+					return self::error_response( 'not_found', 'Post not found.' );
+				}
+				if ( ! current_user_can( 'edit_post', $post_id ) ) {
+					return self::error_response( 'forbidden', 'You do not have permission to update meta for this post.' );
+				}
+
+				$key = self::validate_post_meta_key( $input['meta_key'] ?? '' );
+				if ( is_wp_error( $key ) ) {
+					return self::error_response( $key->get_error_code(), $key->get_error_message() );
+				}
+				if ( ! self::can_access_post_meta_key( $key ) ) {
+					return self::error_response( 'protected_meta_key', 'Protected meta keys are denied unless explicitly allowlisted.' );
+				}
+
+				$value = self::prepare_post_meta_update_value( $key, $input['meta_value'] ?? null );
+				if ( is_wp_error( $value ) ) {
+					return self::error_response( $value->get_error_code(), $value->get_error_message() );
+				}
+
+				$previous_value = self::normalize_post_meta_response_value( get_post_meta( $post_id, $key, true ) );
+				$updated        = update_post_meta( $post_id, $key, wp_slash( $value ) );
+				$current_value  = self::normalize_post_meta_response_value( get_post_meta( $post_id, $key, true ) );
+
+				return [
+					'success' => true,
+					'data'    => [
+						'post_id'        => $post_id,
+						'meta_key'       => $key,
+						'updated'        => (bool) $updated,
+						'previous_value' => $previous_value,
+						'current_value'  => $current_value,
+					],
+				];
+			},
+			'permission_callback' => self::post_meta_permission(),
+			'meta'                => [
+				'annotations' => [ 'readonly' => false, 'destructive' => false, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_key,WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+	}
+
+	private static function register_delete_post_meta() {
+		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Ability schema and response field names, not query arguments.
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/delete-post-meta', [
+			'label'               => 'Delete Post Meta',
+			'description'         => 'Delete one allowed post meta key from a post.',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => [
+				'type'       => 'object',
+				'properties' => [
+					'post_id'  => [ 'type' => 'integer', 'description' => 'Post ID whose meta should be deleted.' ],
+					'meta_key' => [ 'type' => 'string', 'description' => 'Meta key to delete.' ],
+				],
+				'required'   => [ 'post_id', 'meta_key' ],
+			],
+			'execute_callback'    => function ( $input ) {
+				$post_id = absint( $input['post_id'] ?? 0 );
+				$post    = get_post( $post_id );
+
+				if ( ! $post ) {
+					return self::error_response( 'not_found', 'Post not found.' );
+				}
+				if ( ! current_user_can( 'edit_post', $post_id ) ) {
+					return self::error_response( 'forbidden', 'You do not have permission to delete meta for this post.' );
+				}
+
+				$key = self::validate_post_meta_key( $input['meta_key'] ?? '' );
+				if ( is_wp_error( $key ) ) {
+					return self::error_response( $key->get_error_code(), $key->get_error_message() );
+				}
+				if ( ! self::can_access_post_meta_key( $key ) ) {
+					return self::error_response( 'protected_meta_key', 'Protected meta keys are denied unless explicitly allowlisted.' );
+				}
+
+				$before_count  = count( get_post_meta( $post_id, $key, false ) );
+				$deleted       = delete_post_meta( $post_id, $key );
+				$deleted_count = $deleted ? $before_count : 0;
+
+				return [
+					'success' => true,
+					'data'    => [
+						'post_id'       => $post_id,
+						'meta_key'      => $key,
+						'deleted_count' => $deleted_count,
+					],
+				];
+			},
+			'permission_callback' => self::post_meta_permission(),
+			'meta'                => [
+				'annotations' => [ 'readonly' => false, 'destructive' => true, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 	}
 
 	private static function register_post_type( $type ) {

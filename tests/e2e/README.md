@@ -2,7 +2,7 @@
 
 The E2E suite is manifest-driven. Every registered `webmastery-site-toolkit-for-mcp/*` ability must be represented in `tests/e2e/abilities-manifest.json`.
 
-Current coverage is 46 registered abilities across 86 manifest test cases, including taxonomy get/update permission coverage, post and page listing response-shape assertions, the block editing abilities `webmastery-site-toolkit-for-mcp/list-content-blocks`, `webmastery-site-toolkit-for-mcp/patch-content-block`, and `webmastery-site-toolkit-for-mcp/patch-post-content`, the Yoast score abilities `webmastery-site-toolkit-for-mcp/get-seo-scores` and `webmastery-site-toolkit-for-mcp/get-readability-scores`, plus the plugin management abilities `webmastery-site-toolkit-for-mcp/list-plugins`, `webmastery-site-toolkit-for-mcp/activate-plugin`, and `webmastery-site-toolkit-for-mcp/deactivate-plugin`.
+Current coverage is 49 registered abilities across 95 manifest test cases, including taxonomy get/update permission coverage, post and page listing response-shape assertions, the post meta abilities `webmastery-site-toolkit-for-mcp/get-post-meta`, `webmastery-site-toolkit-for-mcp/update-post-meta`, and `webmastery-site-toolkit-for-mcp/delete-post-meta`, the block editing abilities `webmastery-site-toolkit-for-mcp/list-content-blocks`, `webmastery-site-toolkit-for-mcp/patch-content-block`, and `webmastery-site-toolkit-for-mcp/patch-post-content`, the Yoast score abilities `webmastery-site-toolkit-for-mcp/get-seo-scores` and `webmastery-site-toolkit-for-mcp/get-readability-scores`, plus the plugin management abilities `webmastery-site-toolkit-for-mcp/list-plugins`, `webmastery-site-toolkit-for-mcp/activate-plugin`, and `webmastery-site-toolkit-for-mcp/deactivate-plugin`.
 
 ## Rule for new abilities
 

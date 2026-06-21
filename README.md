@@ -21,7 +21,7 @@
 
 </div>
 
-**Webmastery Site Toolkit for MCP** is a WordPress plugin that lets an AI agent manage your site over MCP — posts, pages, media, comments, taxonomy, plugins, SEO checks, site health, security audits, and user lookup. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an agent can call.
+**Webmastery Site Toolkit for MCP** is a WordPress plugin that lets an AI agent manage your site over MCP — posts, post meta, pages, media, comments, taxonomy, plugins, SEO checks, site health, security audits, and user lookup. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an agent can call.
 
 **Use it if you want to:**
 
@@ -58,6 +58,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 | Category                  | Abilities | Typical min. role        |
 | ------------------------- | --------- | ------------------------ |
 | Posts                     | 7         | Author                   |
+| Post meta                 | 3         | Author → Editor          |
 | Pages                     | 6         | Editor                   |
 | Content blocks            | 2         | Author → Editor          |
 | Featured images           | 2         | Author → Editor          |
@@ -73,7 +74,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 
 Post and page listings include the numeric author ID plus `author_name` and `author_login`, so agents can show human-readable bylines without an extra user lookup. Taxonomy abilities can list, get, create, update, and delete categories and tags; reads require `read`, while writes require `manage_categories`. Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
 
-`create-post`, `create-page`, `update-post`, and `update-page` can write REST-registered post meta plus supported Yoast SEO protected keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys return a `meta_write_failed` response with `data.meta.not_written` instead of being silently ignored.
+`create-post`, `create-page`, `update-post`, and `update-page` can write REST-registered post meta plus supported Yoast SEO protected keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys return a `meta_write_failed` response with `data.meta.not_written` instead of being silently ignored. Dedicated post meta abilities can read, update, or delete one post's unprotected meta keys, plus explicitly allowlisted protected keys, after an object-level `edit_post` check.
 
 `get-seo-scores` and `get-readability-scores` return Yoast SEO and readability score meta for posts and pages with stable pagination, optional `post_type`, `status`, and `modified_after` filters, and newest-modified-first ordering. Missing score meta is returned as `null`; when Yoast SEO is not active, the abilities return an empty result with an explanatory note.
 
@@ -189,6 +190,7 @@ See [Verification](#verification) below.
 To confirm everything works, ask your agent to call a few:
 
 - `webmastery-site-toolkit-for-mcp/list-posts` — *"List the 5 most recent published posts"*
+- `webmastery-site-toolkit-for-mcp/update-post-meta` — *"Set the campaign_brief custom field on post 42"*
 - `webmastery-site-toolkit-for-mcp/get-category` — *"Get category 12"*
 - `webmastery-site-toolkit-for-mcp/security-audit` (Administrator account) — *"Run a security audit of my WordPress site"*
 - `webmastery-site-toolkit-for-mcp/site-health-check` (Administrator account) — *"Check WordPress site health"*
@@ -200,7 +202,7 @@ To confirm everything works, ask your agent to call a few:
 - All abilities enforce WordPress capability checks via `permission_callback` — an editor cannot call abilities that require admin caps.
 - `delete-post` and `delete-page` move content to trash, not permanent deletion; use `restore-post` / `restore-page` to undo.
 - `patch-content-block` and `patch-post-content` support optional hash preconditions and fail safely when a target is missing, ambiguous, or stale.
-- Post and page meta writes are limited to REST-registered keys and supported Yoast SEO protected keys; unsupported keys fail with a structured `meta_write_failed` response.
+- Post and page create/update meta writes are limited to REST-registered keys and supported Yoast SEO protected keys; unsupported keys fail with a structured `meta_write_failed` response. Dedicated post meta abilities require `edit_post` for the target post, reject unsafe keys and oversized values, support scalar and JSON object/array values, and deny `_`-prefixed protected keys unless the plugin explicitly allowlists them.
 - Content is sanitized on write, and there are **no direct database queries** — all reads and writes go through the WordPress API.
 
 📖 **[Full security model](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#security)**, including plugin-management safeguards and the complete sanitization rules.
