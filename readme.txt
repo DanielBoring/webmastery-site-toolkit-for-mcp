@@ -27,7 +27,7 @@ Create, read, update, and delete pages. Supports parent hierarchy, human-readabl
 Inspect Gutenberg block paths and hashes, then replace a single block in a post or page by exact path or unique hash.
 
 **Taxonomy**
-List, create, and delete categories and tags. Category creation supports parent hierarchy.
+List, get, create, update, and delete categories and tags. Category creation and updates support parent hierarchy.
 
 **Comments**
 List comments with filters, approve, trash, or mark as spam — all through the standard WordPress comment moderation flow.
@@ -114,6 +114,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 == Changelog ==
 
 = Unreleased =
+* Add category and tag get-by-ID abilities requiring `read`, plus category and tag update abilities requiring `manage_categories`.
 * Add `author_name` and `author_login` to post and page responses so listings expose human-readable author details alongside the numeric author ID.
 
 = 2.2.0 =

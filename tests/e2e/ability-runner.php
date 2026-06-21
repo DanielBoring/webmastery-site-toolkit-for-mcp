@@ -272,17 +272,25 @@ $admin_id      = (int) $admin->ID;
 $author_id     = e2e_ensure_user( 'author_test', 'author@test.local', 'author' );
 $editor_id     = e2e_ensure_user( 'editor_test', 'editor@test.local', 'editor' );
 $subscriber_id = e2e_ensure_user( 'subscriber_test', 'subscriber@test.local', 'subscriber' );
+$no_role_id    = e2e_ensure_user( 'no_role_test', 'no-role@test.local', 'subscriber' );
+( new WP_User( $no_role_id ) )->set_role( '' );
 
 e2e_delete_term_by_slug( 'mcp-e2e-created-category', 'category' );
 e2e_delete_term_by_slug( 'mcp-e2e-created-tag', 'post_tag' );
+e2e_delete_term_by_slug( 'mcp-e2e-updated-category', 'category' );
+e2e_delete_term_by_slug( 'mcp-e2e-updated-tag', 'post_tag' );
 
 $fixtures = array(
 	'admin_id'           => $admin_id,
 	'author_id'          => $author_id,
 	'editor_id'          => $editor_id,
 	'subscriber_id'      => $subscriber_id,
+	'no_role_id'         => $no_role_id,
 	'category_id'        => e2e_ensure_term_id( 'MCP E2E Category', 'category' ),
 	'tag_id'             => e2e_ensure_term_id( 'mcp-e2e-tag', 'post_tag' ),
+	'parent_category_id' => e2e_ensure_term_id( 'MCP E2E Parent Category', 'category' ),
+	'update_category_id' => e2e_ensure_term_id( 'MCP E2E Update Category', 'category' ),
+	'update_tag_id'      => e2e_ensure_term_id( 'mcp-e2e-update-tag', 'post_tag' ),
 	'delete_category_id' => e2e_ensure_term_id( 'MCP E2E Delete Category', 'category' ),
 	'delete_tag_id'      => e2e_ensure_term_id( 'mcp-e2e-delete-tag', 'post_tag' ),
 );
@@ -393,6 +401,7 @@ $roles = array(
 	'author'     => $author_id,
 	'editor'     => $editor_id,
 	'subscriber' => $subscriber_id,
+	'no_role'    => $no_role_id,
 );
 
 $registered = array_filter(

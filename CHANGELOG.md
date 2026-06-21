@@ -9,6 +9,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 ### Added
 
 - Added `author_name` and `author_login` to post and page responses so listings expose human-readable author details alongside the numeric author ID.
+- Added category and tag get-by-ID abilities requiring `read`, plus category and tag update abilities requiring `manage_categories`.
 
 ## 2.2.0
 
