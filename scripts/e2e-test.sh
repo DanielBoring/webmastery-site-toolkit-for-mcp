@@ -66,6 +66,10 @@ install_wordpress() {
 }
 
 install_plugins() {
+	echo "Installing E2E custom post type fixture..."
+	compose exec -T wordpress mkdir -p /var/www/html/wp-content/mu-plugins
+	compose exec -T wordpress cp "/var/www/html/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/custom-post-types-fixture.php" /var/www/html/wp-content/mu-plugins/webmastery-mcp-e2e-cpts.php
+
 	echo "Installing MCP Adapter..."
 	wp plugin install "$MCP_ADAPTER_ZIP" --activate --force
 
