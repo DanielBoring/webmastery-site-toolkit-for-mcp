@@ -9,13 +9,13 @@ License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
 
-Adds MCP-powered WordPress site abilities for posts, post meta, pages, media, comments, plugins, SEO, health, security, and users.
+Adds MCP-powered WordPress site abilities for posts, post meta, pages, media, comments, plugins, SEO, health, security, users, and site info.
 
 == Description ==
 
-Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, post meta, pages, media, comments, plugins, SEO checks, site health, security audits, and user lookup. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
+Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, post meta, pages, media, comments, plugins, SEO checks, site health, security audits, user lookup, and non-sensitive site introspection. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
 
-Webmastery Site Toolkit for MCP registers abilities across eleven groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
+Webmastery Site Toolkit for MCP registers abilities across twelve groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
 
 **Posts**
 Create, read, update, partially patch, and delete posts. Supports all statuses including scheduled (future) posts, category and tag assignment, pagination, human-readable author fields, and safer targeted content updates.
@@ -41,6 +41,9 @@ List, inspect, update, and permanently delete media attachments. Supports MIME t
 **Users**
 List users with role/search/pagination filters and fetch a single user by ID. Useful for account audits and resolving numeric user IDs from responses that do not already include display names.
 
+**Site Info**
+Inspect stable, non-sensitive context for the site, current authenticated user, and runtime environment. Site details include public URLs, language, WordPress version, active theme name/version, deterministic timezone fallback, multisite status, and permalink structure. User details include profile fields, roles, and a fixed key-capability summary. Environment details include PHP version, database server version, WordPress environment type, and locale only.
+
 **Plugins**
 List installed plugins and manage activation state by canonical plugin basename. Includes protected-plugin safeguards, multisite-aware network activation handling, and structured errors for capability, context, and identifier failures.
 
@@ -57,7 +60,7 @@ Post and page create/update abilities can write supported Yoast SEO protected me
 
 When Yoast SEO is installed, all checks run fully including the Yoast sitemap verification and score-list abilities. Without Yoast, meta description and focus keyword checks will warn on every post (since those fields are never populated), the sitemap check will fail, and score-list abilities will return empty results with a note — the structural checks still work correctly.
 
-All abilities enforce WordPress capability checks — an editor cannot call abilities requiring admin caps. Content is sanitized on write using WordPress core functions.
+All abilities enforce WordPress capability checks — an editor cannot call abilities requiring admin caps. Site info abilities require `read` and deliberately exclude filesystem paths, secrets, auth keys, salts, and raw server internals. Content is sanitized on write using WordPress core functions.
 
 == Installation ==
 
@@ -94,6 +97,8 @@ No, but behavior differs depending on whether it is active:
 
 For core content workflows, use the **Editor** role. It covers the editorial capabilities used by posts, pages, taxonomy, comments, and media: `edit_posts`, `edit_pages`, `delete_posts`, `delete_pages`, `upload_files`, `manage_categories`, and `moderate_comments`.
 
+Site introspection workflows (`get-site-info`, `get-user-info`, and `get-environment-info`) require only `read`, so they work with Subscriber and higher roles.
+
 For user lookup, plugin management, and sensitive site-audit workflows (`list-users`, `get-user`, `list-plugins`, `activate-plugin`, `deactivate-plugin`, `site-health-check`, `security-audit`, and `seo-site-overview`), use a separate dedicated **Administrator** account because those abilities require `list_users`, `activate_plugins`, or `manage_options`.
 
 Note on role scope: the `edit_posts` and `upload_files` capabilities are available to Authors as well, but WordPress scopes results and write access to the authenticated user's own content unless `edit_others_posts` / `delete_others_posts` are also present (which Editors have). Use an Author-role account only if you intentionally want the agent limited to content it created. For full site-wide editorial control, use Editor.
@@ -117,6 +122,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 == Changelog ==
 
 = Unreleased =
+* Add site introspection abilities for stable, non-sensitive site, current-user, and runtime environment context with `read` capability checks.
 * Add post meta read, update, and delete abilities with object-level permissions, protected-key safeguards, typed responses, scalar/JSON value support, and key/value limits.
 * Add category and tag get-by-ID abilities requiring `read`, plus category and tag update abilities requiring `manage_categories`.
 * Add `author_name` and `author_login` to post and page responses so listings expose human-readable author details alongside the numeric author ID.
