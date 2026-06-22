@@ -21,7 +21,7 @@
 
 </div>
 
-**Webmastery Site Toolkit for MCP** is a WordPress plugin that lets an AI agent manage your site over MCP — posts, post meta, pages, public custom post types, media, comments, taxonomy, plugins, SEO checks, site health, security audits, user lookup, and non-sensitive site introspection. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an agent can call.
+**Webmastery Site Toolkit for MCP** is a WordPress plugin that lets an AI agent manage your site over MCP — posts, revisions, post meta, pages, public custom post types, media, comments, taxonomy, plugins, SEO checks, site health, security audits, user lookup, and non-sensitive site introspection. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an agent can call.
 
 **Use it if you want to:**
 
@@ -58,6 +58,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 | Category                  | Abilities | Typical min. role        |
 | ------------------------- | --------- | ------------------------ |
 | Posts                     | 7         | Author                   |
+| Revisions                 | 2         | Editor                   |
 | Post meta                 | 3         | Author → Editor          |
 | Pages                     | 6         | Editor                   |
 | Custom post types         | 1 + 5 per eligible CPT | CPT capability map |
@@ -74,7 +75,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 
 **Editor** is the recommended default for content workflows. User lookup, plugin management, and site-audit abilities need Administrator capabilities — use a separate Administrator service account for those.
 
-Post and page listings include the numeric author ID plus `author_name` and `author_login`, so agents can show human-readable bylines without an extra user lookup. Taxonomy abilities can list, get, create, update, and delete categories and tags; reads require `read`, while writes require `manage_categories`. Site introspection abilities require `read` and return stable, non-sensitive schemas: `get-site-info` returns public site metadata, active theme name/version, deterministic timezone fallback (`UTC±HH:MM` when no timezone string is configured), multisite status, and permalink structure; `get-user-info` returns the current user's profile, roles, and a fixed capability summary; `get-environment-info` returns only PHP version, database server version, WordPress environment type, and locale. Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
+Post and page listings include the numeric author ID plus `author_name` and `author_login`, so agents can show human-readable bylines without an extra user lookup. Revision abilities can list saved revisions for posts and pages and restore a post or page to a specific revision; both require `edit_posts` plus object-level edit access to the target content. Taxonomy abilities can list, get, create, update, and delete categories and tags; reads require `read`, while writes require `manage_categories`. Site introspection abilities require `read` and return stable, non-sensitive schemas: `get-site-info` returns public site metadata, active theme name/version, deterministic timezone fallback (`UTC±HH:MM` when no timezone string is configured), multisite status, and permalink structure; `get-user-info` returns the current user's profile, roles, and a fixed capability summary; `get-environment-info` returns only PHP version, database server version, WordPress environment type, and locale. Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
 
 `create-post`, `create-page`, `update-post`, and `update-page` can write REST-registered post meta plus supported Yoast SEO protected keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys return a `meta_write_failed` response with `data.meta.not_written` instead of being silently ignored. Dedicated post meta abilities can read, update, or delete one post's unprotected meta keys, plus explicitly allowlisted protected keys, after an object-level `edit_post` check.
 
@@ -194,6 +195,7 @@ See [Verification](#verification) below.
 To confirm everything works, ask your agent to call a few:
 
 - `webmastery-site-toolkit-for-mcp/list-posts` — *"List the 5 most recent published posts"*
+- `webmastery-site-toolkit-for-mcp/list-revisions` — *"Show saved revisions for post 42"*
 - `webmastery-site-toolkit-for-mcp/update-post-meta` — *"Set the campaign_brief custom field on post 42"*
 - `webmastery-site-toolkit-for-mcp/list-post-types` — *"Show eligible custom post types and their generated abilities"*
 - `webmastery-site-toolkit-for-mcp/get-site-info` — *"Get stable public metadata for this WordPress site"*
@@ -209,6 +211,7 @@ To confirm everything works, ask your agent to call a few:
 - Custom post type abilities use each CPT's registered capability map instead of generic post or page capabilities.
 - Site introspection abilities intentionally exclude filesystem paths, raw server internals, secrets, auth keys, salts, and configuration values beyond the documented fields.
 - `delete-post` and `delete-page` move content to trash, not permanent deletion; use `restore-post` / `restore-page` to undo.
+- `restore-revision` uses WordPress core revision restore APIs and requires `edit_posts` plus object-level edit access for the parent post or page.
 - `patch-content-block` and `patch-post-content` support optional hash preconditions and fail safely when a target is missing, ambiguous, or stale.
 - Post and page create/update meta writes are limited to REST-registered keys and supported Yoast SEO protected keys; unsupported keys fail with a structured `meta_write_failed` response. Dedicated post meta abilities require `edit_post` for the target post, reject unsafe keys and oversized values, support scalar and JSON object/array values, and deny `_`-prefixed protected keys unless the plugin explicitly allowlists them.
 - Content is sanitized on write, and there are **no direct database queries** — all reads and writes go through the WordPress API.
