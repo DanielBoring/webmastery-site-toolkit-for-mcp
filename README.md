@@ -57,7 +57,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 
 | Category                  | Abilities | Typical min. role        |
 | ------------------------- | --------- | ------------------------ |
-| Posts                     | 7         | Author                   |
+| Posts                     | 9         | Author                   |
 | Revisions                 | 2         | Editor                   |
 | Post meta                 | 3         | Author → Editor          |
 | Pages                     | 6         | Editor                   |
@@ -75,7 +75,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 
 **Editor** is the recommended default for content workflows. User lookup, plugin management, and site-audit abilities need Administrator capabilities — use a separate Administrator service account for those.
 
-Post and page listings include the numeric author ID plus `author_name` and `author_login`, so agents can show human-readable bylines without an extra user lookup. Revision abilities can list saved revisions for posts and pages and restore a post or page to a specific revision; both require `edit_posts` plus object-level edit access to the target content. Taxonomy abilities can list, get, create, update, and delete categories and tags; reads require `read`, while writes require `manage_categories`. Site introspection abilities require `read` and return stable, non-sensitive schemas: `get-site-info` returns public site metadata, active theme name/version, deterministic timezone fallback (`UTC±HH:MM` when no timezone string is configured), multisite status, and permalink structure; `get-user-info` returns the current user's profile, roles, and a fixed capability summary; `get-environment-info` returns only PHP version, database server version, WordPress environment type, and locale. Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
+Post and page listings include the numeric author ID plus `author_name` and `author_login`, so agents can show human-readable bylines without an extra user lookup. Bulk post operations can move multiple posts to trash with `bulk-trash-posts` (`delete_posts`) or publish multiple draft posts with `bulk-publish-posts` (`edit_posts`), returning per-ID success and failure summaries instead of stopping at the first problem. Revision abilities can list saved revisions for posts and pages and restore a post or page to a specific revision; both require `edit_posts` plus object-level edit access to the target content. Taxonomy abilities can list, get, create, update, and delete categories and tags; reads require `read`, while writes require `manage_categories`. Site introspection abilities require `read` and return stable, non-sensitive schemas: `get-site-info` returns public site metadata, active theme name/version, deterministic timezone fallback (`UTC±HH:MM` when no timezone string is configured), multisite status, and permalink structure; `get-user-info` returns the current user's profile, roles, and a fixed capability summary; `get-environment-info` returns only PHP version, database server version, WordPress environment type, and locale. Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
 
 `create-post`, `create-page`, `update-post`, and `update-page` can write REST-registered post meta plus supported Yoast SEO protected keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys return a `meta_write_failed` response with `data.meta.not_written` instead of being silently ignored. Dedicated post meta abilities can read, update, or delete one post's unprotected meta keys, plus explicitly allowlisted protected keys, after an object-level `edit_post` check.
 
@@ -195,6 +195,7 @@ See [Verification](#verification) below.
 To confirm everything works, ask your agent to call a few:
 
 - `webmastery-site-toolkit-for-mcp/list-posts` — *"List the 5 most recent published posts"*
+- `webmastery-site-toolkit-for-mcp/bulk-publish-posts` — *"Publish these draft post IDs: 42, 43, and 44"*
 - `webmastery-site-toolkit-for-mcp/list-revisions` — *"Show saved revisions for post 42"*
 - `webmastery-site-toolkit-for-mcp/update-post-meta` — *"Set the campaign_brief custom field on post 42"*
 - `webmastery-site-toolkit-for-mcp/list-post-types` — *"Show eligible custom post types and their generated abilities"*
@@ -210,7 +211,7 @@ To confirm everything works, ask your agent to call a few:
 - All abilities enforce WordPress capability checks via `permission_callback` — an editor cannot call abilities that require admin caps.
 - Custom post type abilities use each CPT's registered capability map instead of generic post or page capabilities.
 - Site introspection abilities intentionally exclude filesystem paths, raw server internals, secrets, auth keys, salts, and configuration values beyond the documented fields.
-- `delete-post` and `delete-page` move content to trash, not permanent deletion; use `restore-post` / `restore-page` to undo.
+- `delete-post`, `delete-page`, and `bulk-trash-posts` move content to trash, not permanent deletion; use `restore-post` / `restore-page` to undo individual items.
 - `restore-revision` uses WordPress core revision restore APIs and requires `edit_posts` plus object-level edit access for the parent post or page.
 - `patch-content-block` and `patch-post-content` support optional hash preconditions and fail safely when a target is missing, ambiguous, or stale.
 - Post and page create/update meta writes are limited to REST-registered keys and supported Yoast SEO protected keys; unsupported keys fail with a structured `meta_write_failed` response. Dedicated post meta abilities require `edit_post` for the target post, reject unsafe keys and oversized values, support scalar and JSON object/array values, and deny `_`-prefixed protected keys unless the plugin explicitly allowlists them.

@@ -21,6 +21,8 @@ class Webmastery_MCP_Posts {
 		self::register_get_post_meta();
 		self::register_update_post_meta();
 		self::register_delete_post_meta();
+		self::register_bulk_trash_posts();
+		self::register_bulk_publish_posts();
 	}
 
 	private static function normalize( $post ) {
@@ -425,6 +427,168 @@ class Webmastery_MCP_Posts {
 
 			return true;
 		};
+	}
+
+	private static function bulk_post_ids_schema( $description ) {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'ids' => [
+					'type'        => 'array',
+					'description' => $description,
+					'items'       => [ 'type' => 'integer' ],
+					'minItems'    => 1,
+				],
+			],
+			'required'   => [ 'ids' ],
+		];
+	}
+
+	private static function bulk_post_summary( $ids, $successes, $failures ) {
+		return [
+			'success' => true,
+			'data'    => [
+				'requested'     => count( $ids ),
+				'success_count' => count( $successes ),
+				'failure_count' => count( $failures ),
+				'successes'     => $successes,
+				'failures'      => $failures,
+			],
+		];
+	}
+
+	private static function register_bulk_trash_posts() {
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/bulk-trash-posts', [
+			'label'               => 'Bulk Trash Posts',
+			'description'         => 'Move multiple WordPress posts to trash and return per-post successes and failures.',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => self::bulk_post_ids_schema( 'Post IDs to move to trash.' ),
+			'execute_callback'    => function ( $input ) {
+				$ids       = array_map( 'absint', (array) ( $input['ids'] ?? [] ) );
+				$successes = [];
+				$failures  = [];
+
+				foreach ( $ids as $id ) {
+					$post = get_post( $id );
+
+					if ( ! $id || ! $post || 'post' !== $post->post_type ) {
+						$failures[] = [
+							'id'      => $id,
+							'code'    => 'not_found',
+							'message' => 'Post not found.',
+						];
+						continue;
+					}
+
+					if ( ! current_user_can( 'delete_post', $id ) ) {
+						$failures[] = [
+							'id'      => $id,
+							'code'    => 'forbidden',
+							'message' => 'You do not have permission to delete this post.',
+						];
+						continue;
+					}
+
+					$result = wp_trash_post( $id );
+					if ( ! $result ) {
+						$failures[] = [
+							'id'      => $id,
+							'code'    => 'trash_failed',
+							'message' => 'Failed to trash post.',
+						];
+						continue;
+					}
+
+					$successes[] = [
+						'id'     => $id,
+						'status' => 'trash',
+					];
+				}
+
+				return self::bulk_post_summary( $ids, $successes, $failures );
+			},
+			'permission_callback' => self::permission( 'delete_posts' ),
+			'meta'                => [
+				'annotations' => [ 'readonly' => false, 'destructive' => true, 'idempotent' => false ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+	}
+
+	private static function register_bulk_publish_posts() {
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/bulk-publish-posts', [
+			'label'               => 'Bulk Publish Posts',
+			'description'         => 'Publish multiple draft WordPress posts and return per-post successes and failures.',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => self::bulk_post_ids_schema( 'Draft post IDs to publish.' ),
+			'execute_callback'    => function ( $input ) {
+				$ids       = array_map( 'absint', (array) ( $input['ids'] ?? [] ) );
+				$successes = [];
+				$failures  = [];
+
+				foreach ( $ids as $id ) {
+					$post = get_post( $id );
+
+					if ( ! $id || ! $post || 'post' !== $post->post_type ) {
+						$failures[] = [
+							'id'      => $id,
+							'code'    => 'not_found',
+							'message' => 'Post not found.',
+						];
+						continue;
+					}
+
+					if ( ! current_user_can( 'edit_post', $id ) ) {
+						$failures[] = [
+							'id'      => $id,
+							'code'    => 'forbidden',
+							'message' => 'You do not have permission to edit this post.',
+						];
+						continue;
+					}
+
+					if ( 'draft' !== $post->post_status ) {
+						$failures[] = [
+							'id'      => $id,
+							'code'    => 'invalid_status',
+							'message' => 'Only draft posts can be bulk published.',
+						];
+						continue;
+					}
+
+					$result = wp_update_post(
+						wp_slash(
+							[
+								'ID'          => $id,
+								'post_status' => 'publish',
+							]
+						),
+						true
+					);
+
+					if ( is_wp_error( $result ) ) {
+						$failures[] = [
+							'id'      => $id,
+							'code'    => $result->get_error_code(),
+							'message' => $result->get_error_message(),
+						];
+						continue;
+					}
+
+					$successes[] = [
+						'id'     => $id,
+						'status' => 'publish',
+					];
+				}
+
+				return self::bulk_post_summary( $ids, $successes, $failures );
+			},
+			'permission_callback' => self::permission( 'edit_posts' ),
+			'meta'                => [
+				'annotations' => [ 'readonly' => false, 'destructive' => false, 'idempotent' => false ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
 	}
 
 	private static function get_featured_image_target( $input ) {

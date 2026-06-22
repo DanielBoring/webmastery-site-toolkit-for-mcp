@@ -18,7 +18,10 @@ Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site
 Webmastery Site Toolkit for MCP registers abilities across fourteen groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
 
 **Posts**
-Create, read, update, partially patch, and delete posts. Supports all statuses including scheduled (future) posts, category and tag assignment, pagination, human-readable author fields, and safer targeted content updates.
+Create, read, update, partially patch, bulk publish drafts, bulk trash, and delete posts. Supports all statuses including scheduled (future) posts, category and tag assignment, pagination, human-readable author fields, and safer targeted content updates.
+
+**Revisions**
+List saved revisions for posts and pages and restore a post or page to a specific revision. Requires `edit_posts` plus object-level edit access to the parent content.
 
 **Revisions**
 List saved revisions for posts and pages and restore a post or page to a specific revision. Requires `edit_posts` plus object-level edit access to the parent content.
@@ -66,7 +69,7 @@ Post and page create/update abilities can write supported Yoast SEO protected me
 
 When Yoast SEO is installed, all checks run fully including the Yoast sitemap verification and score-list abilities. Without Yoast, meta description and focus keyword checks will warn on every post (since those fields are never populated), the sitemap check will fail, and score-list abilities will return empty results with a note — the structural checks still work correctly.
 
-All abilities enforce WordPress capability checks — an editor cannot call abilities requiring admin caps. Custom post type abilities use each CPT's capability map rather than generic post or page capabilities. Site info abilities require `read` and deliberately exclude filesystem paths, secrets, auth keys, salts, and raw server internals. Content is sanitized on write using WordPress core functions.
+All abilities enforce WordPress capability checks — an editor cannot call abilities requiring admin caps. Bulk post operations require `delete_posts` for trashing or `edit_posts` for publishing drafts and return per-ID success and failure summaries. Custom post type abilities use each CPT's capability map rather than generic post or page capabilities. Site info abilities require `read` and deliberately exclude filesystem paths, secrets, auth keys, salts, and raw server internals. Content is sanitized on write using WordPress core functions.
 
 == Installation ==
 
@@ -121,7 +124,7 @@ After activation, call the MCP Adapter discovery tool, `mcp-adapter-discover-abi
 
 = Are write operations safe? =
 
-Delete operations for posts and pages move content to trash. Media delete permanently removes the attachment and its files. Plugin activation and deactivation require Administrator plugin capabilities, and protected-plugin deactivation is blocked unless explicitly forced. All inputs are sanitized using WordPress core functions. All operations go through the WordPress API — no direct database queries.
+Delete operations for posts and pages, including bulk post trashing, move content to trash. Media delete permanently removes the attachment and its files. Plugin activation and deactivation require Administrator plugin capabilities, and protected-plugin deactivation is blocked unless explicitly forced. All inputs are sanitized using WordPress core functions. All operations go through the WordPress API — no direct database queries.
 
 Post and page create/update meta writes are limited to REST-registered keys and supported Yoast SEO protected keys. Unsupported keys return `meta_write_failed` with the rejected keys listed in `data.meta.not_written`. Dedicated post meta abilities enforce object-level `edit_post` checks, reject unsafe key names and oversized values, support scalar and JSON object/array values, and deny protected `_`-prefixed keys unless they are explicitly allowlisted by the plugin.
 
@@ -130,6 +133,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 == Changelog ==
 
 = Unreleased =
+* Add bulk post trash and bulk draft-publish abilities with per-ID success/failure summaries and `delete_posts` / `edit_posts` capability checks.
 * Add discoverability and CRUD abilities for eligible public custom post types, with deterministic naming, CPT-specific capability checks, and taxonomy term assignment support.
 * Add site introspection abilities for stable, non-sensitive site, current-user, and runtime environment context with `read` capability checks.
 * Add post meta read, update, and delete abilities with object-level permissions, protected-key safeguards, typed responses, scalar/JSON value support, and key/value limits.
@@ -202,6 +206,9 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 * Security audit with fail/warn/pass buckets and remediation guidance
 
 == Upgrade Notice ==
+
+= Unreleased =
+Adds bulk post trash and bulk draft-publish abilities for MCP clients that need to process multiple post IDs in one call.
 
 = 2.2.0 =
 Adds Yoast score list abilities and fixes supported Yoast protected meta writes for post and page create/update workflows.
