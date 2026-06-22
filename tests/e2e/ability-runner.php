@@ -55,6 +55,37 @@ function e2e_insert_post( $type, $title, $content, $author_id ) {
 	return (int) $id;
 }
 
+function e2e_insert_revisioned_post( $type, $title, $original_content, $updated_content, $author_id ) {
+	$post_id     = e2e_insert_post( $type, $title, $original_content, $author_id );
+	$revision_id = wp_save_post_revision( $post_id );
+
+	if ( is_wp_error( $revision_id ) ) {
+		throw new RuntimeException( $revision_id->get_error_message() );
+	}
+	if ( ! $revision_id ) {
+		throw new RuntimeException( "Failed to create E2E revision for {$title}." );
+	}
+
+	$updated = wp_update_post(
+		wp_slash(
+			array(
+				'ID'           => $post_id,
+				'post_content' => $updated_content,
+			)
+		),
+		true
+	);
+
+	if ( is_wp_error( $updated ) ) {
+		throw new RuntimeException( $updated->get_error_message() );
+	}
+
+	return array(
+		'post_id'     => (int) $post_id,
+		'revision_id' => (int) $revision_id,
+	);
+}
+
 function e2e_ensure_role( $role, $display_name, $caps ) {
 	$wp_role = get_role( $role );
 
@@ -411,6 +442,15 @@ $fixtures['block_path_page_id'] = e2e_insert_post(
 );
 $fixtures['delete_page_id']  = e2e_insert_post( 'page', 'MCP E2E Delete Page', 'Delete fixture.', $editor_id );
 $fixtures['restore_page_id'] = e2e_insert_post( 'page', 'MCP E2E Restore Page', 'Restore fixture.', $editor_id );
+$revision_post               = e2e_insert_revisioned_post( 'post', 'MCP E2E Revision Post', 'Original revision content.', 'Updated revision content.', $author_id );
+$restore_revision_post       = e2e_insert_revisioned_post( 'post', 'MCP E2E Restore Revision Post', 'Restore original revision content.', 'Restore updated revision content.', $author_id );
+$revision_page               = e2e_insert_revisioned_post( 'page', 'MCP E2E Revision Page', 'Original page revision content.', 'Updated page revision content.', $editor_id );
+$fixtures['revision_post_id']          = $revision_post['post_id'];
+$fixtures['revision_id']               = $revision_post['revision_id'];
+$fixtures['restore_revision_post_id']  = $restore_revision_post['post_id'];
+$fixtures['restore_revision_id']       = $restore_revision_post['revision_id'];
+$fixtures['revision_page_id']          = $revision_page['post_id'];
+$fixtures['revision_page_revision_id'] = $revision_page['revision_id'];
 $fixtures['block_hash_post_path_1'] = e2e_block_hash_for_post_path( $fixtures['block_hash_post_id'], '1' );
 
 wp_trash_post( $fixtures['restore_post_id'] );

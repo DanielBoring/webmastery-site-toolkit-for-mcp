@@ -9,16 +9,19 @@ License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
 
-Adds MCP-powered WordPress site abilities for posts, post meta, pages, custom post types, media, comments, plugins, SEO, health, security, users, and site info.
+Adds MCP-powered WordPress site abilities for posts, revisions, post meta, pages, custom post types, media, comments, plugins, SEO, health, security, users, and site info.
 
 == Description ==
 
-Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, post meta, pages, public custom post types, media, comments, plugins, SEO checks, site health, security audits, user lookup, and non-sensitive site introspection. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
+Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, revisions, post meta, pages, public custom post types, media, comments, plugins, SEO checks, site health, security audits, user lookup, and non-sensitive site introspection. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
 
-Webmastery Site Toolkit for MCP registers abilities across thirteen groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
+Webmastery Site Toolkit for MCP registers abilities across fourteen groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
 
 **Posts**
 Create, read, update, partially patch, and delete posts. Supports all statuses including scheduled (future) posts, category and tag assignment, pagination, human-readable author fields, and safer targeted content updates.
+
+**Revisions**
+List saved revisions for posts and pages and restore a post or page to a specific revision. Requires `edit_posts` plus object-level edit access to the parent content.
 
 **Post Meta**
 Read, update, and delete post custom fields after an object-level `edit_post` check. Unprotected keys are allowed when they pass key and value safety limits; `_`-prefixed protected keys are denied unless explicitly allowlisted by the plugin. Updates support scalar values and JSON object/array values.
@@ -130,6 +133,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 * Add discoverability and CRUD abilities for eligible public custom post types, with deterministic naming, CPT-specific capability checks, and taxonomy term assignment support.
 * Add site introspection abilities for stable, non-sensitive site, current-user, and runtime environment context with `read` capability checks.
 * Add post meta read, update, and delete abilities with object-level permissions, protected-key safeguards, typed responses, scalar/JSON value support, and key/value limits.
+* Add revision abilities to list saved post/page revisions and restore a post or page to a specific revision with `edit_posts` and object-level edit checks.
 * Add category and tag get-by-ID abilities requiring `read`, plus category and tag update abilities requiring `manage_categories`.
 * Add `author_name` and `author_login` to post and page responses so listings expose human-readable author details alongside the numeric author ID.
 

@@ -16,6 +16,8 @@ class Webmastery_MCP_Posts {
 		self::register_patch_post_content();
 		self::register_set_featured_image();
 		self::register_remove_featured_image();
+		self::register_list_revisions();
+		self::register_restore_revision();
 		self::register_get_post_meta();
 		self::register_update_post_meta();
 		self::register_delete_post_meta();
@@ -393,6 +395,32 @@ class Webmastery_MCP_Posts {
 			}
 			if ( ! current_user_can( 'edit_post', $id ) ) {
 				return new WP_Error( 'forbidden', 'Requires edit_post capability for this post.' );
+			}
+
+			return true;
+		};
+	}
+
+	private static function revision_target_permission( $input_key ) {
+		return function ( $input = [] ) use ( $input_key ) {
+			$id   = absint( $input[ $input_key ] ?? 0 );
+			$post = get_post( $id );
+
+			if ( ! $post ) {
+				return new WP_Error( 'not_found', 'Post or revision not found.' );
+			}
+
+			$parent_id = 'revision' === $post->post_type ? (int) $post->post_parent : (int) $post->ID;
+			$parent    = get_post( $parent_id );
+
+			if ( ! $parent || ! in_array( $parent->post_type, [ 'post', 'page' ], true ) ) {
+				return new WP_Error( 'not_found', 'Post or page not found.' );
+			}
+			if ( ! current_user_can( 'edit_posts' ) ) {
+				return new WP_Error( 'forbidden', 'Requires edit_posts capability.' );
+			}
+			if ( ! current_user_can( 'edit_post', $parent_id ) ) {
+				return new WP_Error( 'forbidden', 'Requires edit_post capability for this post or page.' );
 			}
 
 			return true;
@@ -1071,6 +1099,136 @@ class Webmastery_MCP_Posts {
 			'permission_callback' => self::featured_image_permission(),
 			'meta'                => [
 				'annotations' => [ 'readonly' => false, 'destructive' => true, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+	}
+
+	private static function normalize_revision( $revision ) {
+		$revision = get_post( $revision );
+		if ( ! $revision || 'revision' !== $revision->post_type ) {
+			return null;
+		}
+
+		return [
+			'id'            => (int) $revision->ID,
+			'post_id'       => (int) $revision->post_parent,
+			'author'        => (int) $revision->post_author,
+			'author_name'   => get_the_author_meta( 'display_name', (int) $revision->post_author ),
+			'author_login'  => get_the_author_meta( 'user_login', (int) $revision->post_author ),
+			'title'         => $revision->post_title,
+			'content'       => $revision->post_content,
+			'excerpt'       => $revision->post_excerpt,
+			'date_created'  => $revision->post_date,
+			'date_modified' => $revision->post_modified,
+		];
+	}
+
+	private static function register_list_revisions() {
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-revisions', [
+			'label'               => 'List Revisions',
+			'description'         => 'List saved revisions for a WordPress post or page.',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => [
+				'type'       => 'object',
+				'properties' => [
+					'post_id'  => [ 'type' => 'integer', 'description' => 'Post or page ID whose revisions should be listed.' ],
+					'per_page' => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 20 ],
+				],
+				'required'   => [ 'post_id' ],
+			],
+			'execute_callback'    => function ( $input ) {
+				$post_id = absint( $input['post_id'] ?? 0 );
+				$post    = get_post( $post_id );
+
+				if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
+					return self::error_response( 'not_found', 'Post or page not found.' );
+				}
+				if ( ! current_user_can( 'edit_posts' ) ) {
+					return self::error_response( 'forbidden', 'Requires edit_posts capability.' );
+				}
+				if ( ! current_user_can( 'edit_post', $post_id ) ) {
+					return self::error_response( 'forbidden', 'You do not have permission to list revisions for this post or page.' );
+				}
+
+				$per_page  = min( max( 1, absint( $input['per_page'] ?? 20 ) ), 100 );
+				$revisions = wp_get_post_revisions(
+					$post_id,
+					[
+						'posts_per_page' => $per_page,
+						'orderby'        => 'date',
+						'order'          => 'DESC',
+					]
+				);
+
+				return [
+					'success' => true,
+					'data'    => [
+						'post_id'   => $post_id,
+						'type'      => $post->post_type,
+						'revisions' => array_values( array_filter( array_map( [ self::class, 'normalize_revision' ], $revisions ) ) ),
+					],
+				];
+			},
+			'permission_callback' => self::revision_target_permission( 'post_id' ),
+			'meta'                => [
+				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+	}
+
+	private static function register_restore_revision() {
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/restore-revision', [
+			'label'               => 'Restore Revision',
+			'description'         => 'Restore a WordPress post or page to a specific saved revision.',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => [
+				'type'       => 'object',
+				'properties' => [
+					'revision_id' => [ 'type' => 'integer', 'description' => 'Revision ID to restore.' ],
+				],
+				'required'   => [ 'revision_id' ],
+			],
+			'execute_callback'    => function ( $input ) {
+				$revision_id = absint( $input['revision_id'] ?? 0 );
+				$revision    = get_post( $revision_id );
+
+				if ( ! $revision || 'revision' !== $revision->post_type ) {
+					return self::error_response( 'not_found', 'Revision not found.' );
+				}
+
+				$post_id = (int) $revision->post_parent;
+				$post    = get_post( $post_id );
+
+				if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
+					return self::error_response( 'not_found', 'Post or page not found.' );
+				}
+				if ( ! current_user_can( 'edit_posts' ) ) {
+					return self::error_response( 'forbidden', 'Requires edit_posts capability.' );
+				}
+				if ( ! current_user_can( 'edit_post', $post_id ) ) {
+					return self::error_response( 'forbidden', 'You do not have permission to restore revisions for this post or page.' );
+				}
+
+				$result = wp_restore_post_revision( $revision_id );
+
+				if ( ! $result || is_wp_error( $result ) ) {
+					$message = is_wp_error( $result ) ? $result->get_error_message() : 'Failed to restore revision.';
+					return self::error_response( 'restore_revision_failed', $message );
+				}
+
+				return [
+					'success' => true,
+					'data'    => [
+						'revision' => self::normalize_revision( $revision_id ),
+						'post'     => self::normalize( $post_id ),
+					],
+				];
+			},
+			'permission_callback' => self::revision_target_permission( 'revision_id' ),
+			'meta'                => [
+				'annotations' => [ 'readonly' => false, 'destructive' => false, 'idempotent' => false ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
 			],
 		] );
