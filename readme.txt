@@ -23,6 +23,9 @@ Create, read, update, partially patch, bulk publish drafts, bulk trash, and dele
 **Revisions**
 List saved revisions for posts and pages and restore a post or page to a specific revision. Requires `edit_posts` plus object-level edit access to the parent content.
 
+**Revisions**
+List saved revisions for posts and pages and restore a post or page to a specific revision. Requires `edit_posts` plus object-level edit access to the parent content.
+
 **Post Meta**
 Read, update, and delete post custom fields after an object-level `edit_post` check. Unprotected keys are allowed when they pass key and value safety limits; `_`-prefixed protected keys are denied unless explicitly allowlisted by the plugin. Updates support scalar values and JSON object/array values.
 
