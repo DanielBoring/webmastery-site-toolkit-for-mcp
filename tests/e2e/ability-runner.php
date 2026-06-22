@@ -36,13 +36,13 @@ function e2e_delete_term_by_slug( $slug, $taxonomy ) {
 	}
 }
 
-function e2e_insert_post( $type, $title, $content, $author_id ) {
+function e2e_insert_post( $type, $title, $content, $author_id, $status = 'publish' ) {
 	$id = wp_insert_post(
 		array(
 			'post_type'    => $type,
 			'post_title'   => $title,
 			'post_content' => $content,
-			'post_status'  => 'publish',
+			'post_status'  => $status,
 			'post_author'  => $author_id,
 		),
 		true
@@ -428,6 +428,9 @@ $fixtures['delete_post_id']  = e2e_insert_post( 'post', 'MCP E2E Delete Post', '
 $fixtures['restore_post_id'] = e2e_insert_post( 'post', 'MCP E2E Restore Post', 'Restore fixture.', $author_id );
 $fixtures['meta_post_id']    = e2e_insert_post( 'post', 'MCP E2E Meta Post', 'Meta fixture.', $author_id );
 $fixtures['delete_meta_post_id'] = e2e_insert_post( 'post', 'MCP E2E Delete Meta Post', 'Delete meta fixture.', $author_id );
+$fixtures['bulk_trash_post_id']   = e2e_insert_post( 'post', 'MCP E2E Bulk Trash Post', 'Bulk trash fixture.', $author_id );
+$fixtures['bulk_publish_post_id'] = e2e_insert_post( 'post', 'MCP E2E Bulk Publish Post', 'Bulk publish fixture.', $author_id, 'draft' );
+$fixtures['bulk_missing_post_id'] = 987654321;
 $fixtures['page_id']         = e2e_insert_post( 'page', 'MCP E2E Page', 'Content for MCP E2E page.', $editor_id );
 $fixtures['book_id']         = e2e_insert_post( 'mcp_book', 'MCP E2E Book', 'Content for MCP E2E book.', $book_manager_id );
 $fixtures['delete_book_id']  = e2e_insert_post( 'mcp_book', 'MCP E2E Delete Book', 'Delete CPT fixture.', $book_manager_id );
