@@ -70,11 +70,11 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 | Content hygiene           | 3         | Author → Editor          |
 | Users                     | 2         | Administrator            |
 | Site introspection        | 3         | Subscriber               |
-| Plugins                   | 3         | Administrator            |
+| Plugins                   | 4         | Administrator            |
 | Site health & security    | 3         | Administrator            |
 | SEO analysis              | 4         | Author → Administrator   |
 
-**Editor** is the recommended default for content workflows. User lookup, plugin management, and site-audit abilities need Administrator capabilities — use a separate Administrator service account for those.
+**Editor** is the recommended default for content workflows. User lookup, plugin management/auditing, and site-audit abilities need Administrator capabilities — use a separate Administrator service account for those.
 
 Post and page listings include the numeric author ID plus `author_name` and `author_login`, so agents can show human-readable bylines without an extra user lookup. Bulk post operations can move multiple posts to trash with `bulk-trash-posts` (`delete_posts`) or publish multiple draft posts with `bulk-publish-posts` (`edit_posts`), returning per-ID success and failure summaries instead of stopping at the first problem. Revision abilities can list saved revisions for posts and pages and restore a post or page to a specific revision; both require `edit_posts` plus object-level edit access to the target content. Taxonomy abilities can list, get, create, update, and delete categories and tags; reads require `read`, while writes require `manage_categories`. Site introspection abilities require `read` and return stable, non-sensitive schemas: `get-site-info` returns public site metadata, active theme name/version, deterministic timezone fallback (`UTC±HH:MM` when no timezone string is configured), multisite status, and permalink structure; `get-user-info` returns the current user's profile, roles, and a fixed capability summary; `get-environment-info` returns only PHP version, database server version, WordPress environment type, and locale. Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
 
@@ -87,6 +87,8 @@ Post and page listings include the numeric author ID plus `author_name` and `aut
 Content hygiene diagnostics are read-only audit tools for common editorial cleanup work: `list-orphaned-media` finds unattached media that is not used as a featured image or referenced in post content (`upload_files`), `list-posts-no-featured-image` finds published posts or pages without `_thumbnail_id` (`edit_posts`, plus `edit_pages` for pages), and `list-stuck-scheduled` finds scheduled posts whose publish time is already in the past (`edit_posts`). These abilities return empty `items` arrays when no matching problems are found.
 
 `database-health` requires `manage_options` and returns read-only database bloat indicators for administrators: post revision count and revision-limit status, orphaned post meta count, expired transient count, autoloaded option size with a 900 KB threshold flag, and per-table row/data/index size details from `information_schema`.
+
+`plugin-audit` requires `activate_plugins` and returns a read-only security and maintenance audit of installed plugins using local plugin metadata and WordPress core's cached update transient. It reports inactive plugins, cached updates and new versions, tested-up-to and minimum WordPress version metadata, potential abandonment when tested compatibility is at least two WordPress release lines behind the current site version, file-modification-age proxy days, and critical updates when the cached update response explicitly flags a security update.
 
 👉 **[See the full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities)** for every ability, its description, required capability, and minimum role.
 
@@ -208,6 +210,7 @@ To confirm everything works, ask your agent to call a few:
 - `webmastery-site-toolkit-for-mcp/list-stuck-scheduled` — *"Find scheduled posts that missed their publish time"*
 - `webmastery-site-toolkit-for-mcp/get-site-info` — *"Get stable public metadata for this WordPress site"*
 - `webmastery-site-toolkit-for-mcp/get-category` — *"Get category 12"*
+- `webmastery-site-toolkit-for-mcp/plugin-audit` (Administrator account) — *"Audit installed plugins for inactive, outdated, or potentially abandoned plugins"*
 - `webmastery-site-toolkit-for-mcp/security-audit` (Administrator account) — *"Run a security audit of my WordPress site"*
 - `webmastery-site-toolkit-for-mcp/site-health-check` (Administrator account) — *"Check WordPress site health"*
 - `webmastery-site-toolkit-for-mcp/database-health` (Administrator account) — *"Audit database bloat and table sizes"*
@@ -219,6 +222,7 @@ To confirm everything works, ask your agent to call a few:
 - All abilities enforce WordPress capability checks via `permission_callback` — an editor cannot call abilities that require admin caps.
 - Custom post type abilities use each CPT's registered capability map instead of generic post or page capabilities.
 - Site introspection abilities intentionally exclude filesystem paths, raw server internals, secrets, auth keys, salts, and configuration values beyond the documented fields.
+- `plugin-audit` is read-only and does not call WordPress.org directly; it uses the cached update transient already maintained by WordPress core. It requires `activate_plugins` because installed plugin names, basenames, versions, and compatibility metadata expose the site's plugin attack surface.
 - `delete-post`, `delete-page`, and `bulk-trash-posts` move content to trash, not permanent deletion; use `restore-post` / `restore-page` to undo individual items.
 - Content hygiene abilities are read-only diagnostics and still honor WordPress ownership scoping; Author-role accounts see only content and media they can edit, while Editors can audit site-wide editorial content.
 - `restore-revision` uses WordPress core revision restore APIs and requires `edit_posts` plus object-level edit access for the parent post or page.

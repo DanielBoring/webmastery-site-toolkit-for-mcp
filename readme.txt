@@ -57,7 +57,7 @@ List users with role/search/pagination filters and fetch a single user by ID. Us
 Inspect stable, non-sensitive context for the site, current authenticated user, and runtime environment. Site details include public URLs, language, WordPress version, active theme name/version, deterministic timezone fallback, multisite status, and permalink structure. User details include profile fields, roles, and a fixed key-capability summary. Environment details include PHP version, database server version, WordPress environment type, and locale only.
 
 **Plugins**
-List installed plugins and manage activation state by canonical plugin basename. Includes protected-plugin safeguards, multisite-aware network activation handling, and structured errors for capability, context, and identifier failures.
+List installed plugins, audit plugin update/maintenance posture, and manage activation state by canonical plugin basename. Plugin audits are read-only and report inactive plugins, cached update availability, tested-up-to compatibility metadata, potential abandonment, local file age, and cached security-update flags without making network calls. Includes protected-plugin safeguards, multisite-aware network activation handling, and structured errors for capability, context, and identifier failures.
 
 **Site Health**
 Run WordPress's built-in health tests and get results grouped by severity: critical, recommended, and good.
@@ -116,7 +116,7 @@ Site introspection workflows (`get-site-info`, `get-user-info`, and `get-environ
 
 Custom post type workflows depend on each CPT's registered capability map. Use `list-post-types` to discover the generated ability names and required capabilities before assigning an MCP service account.
 
-For user lookup, plugin management, and sensitive site-audit workflows (`list-users`, `get-user`, `list-plugins`, `activate-plugin`, `deactivate-plugin`, `site-health-check`, `database-health`, `security-audit`, and `seo-site-overview`), use a separate dedicated **Administrator** account because those abilities require `list_users`, `activate_plugins`, or `manage_options`.
+For user lookup, plugin management/auditing, and sensitive site-audit workflows (`list-users`, `get-user`, `list-plugins`, `plugin-audit`, `activate-plugin`, `deactivate-plugin`, `site-health-check`, `database-health`, `security-audit`, and `seo-site-overview`), use a separate dedicated **Administrator** account because those abilities require `list_users`, `activate_plugins`, or `manage_options`.
 
 Note on role scope: the `edit_posts` and `upload_files` capabilities are available to Authors as well, but WordPress scopes results and write access to the authenticated user's own content unless `edit_others_posts` / `delete_others_posts` are also present (which Editors have). Use an Author-role account only if you intentionally want the agent limited to content it created. For full site-wide editorial control, use Editor.
 
@@ -139,6 +139,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 == Changelog ==
 
 = Unreleased =
+* Add an Administrator-only plugin audit ability for inactive plugins, cached updates, tested-up-to compatibility, potential abandonment, local file age, and cached security-update flags without network calls.
 * Add read-only content hygiene abilities to list orphaned media, published posts or pages missing featured images, and stuck scheduled posts with capability checks and empty results when no problems are found.
 * Add an Administrator-only database health ability for revision bloat, orphaned post meta, expired transients, autoloaded option size, and per-table size diagnostics.
 * Add bulk post trash and bulk draft-publish abilities with per-ID success/failure summaries and `delete_posts` / `edit_posts` capability checks.
@@ -216,7 +217,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 == Upgrade Notice ==
 
 = Unreleased =
-Adds Administrator-only database health diagnostics plus bulk post trash and bulk draft-publish abilities for MCP clients.
+Adds Administrator-only plugin audit and database health diagnostics plus bulk post trash and bulk draft-publish abilities for MCP clients.
 
 = 2.2.0 =
 Adds Yoast score list abilities and fixes supported Yoast protected meta writes for post and page create/update workflows.
