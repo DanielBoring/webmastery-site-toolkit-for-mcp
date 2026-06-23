@@ -21,7 +21,7 @@
 
 </div>
 
-**Webmastery Site Toolkit for MCP** is a WordPress plugin that lets an AI agent manage your site over MCP — posts, revisions, post meta, pages, public custom post types, media, content hygiene diagnostics, comments, taxonomy, plugins, SEO checks, site health, database health, performance status, security audits, user lookup, and non-sensitive site introspection. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an agent can call.
+**Webmastery Site Toolkit for MCP** is a WordPress plugin that lets an AI agent manage your site over MCP — posts, revisions, post meta, pages, public custom post types, media, content hygiene diagnostics, comments, taxonomy, plugins, SEO checks, site health, database health, performance status, backup status, security audits, user lookup, and non-sensitive site introspection. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an agent can call.
 
 **Use it if you want to:**
 
@@ -71,7 +71,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 | Users                     | 2         | Administrator            |
 | Site introspection        | 3         | Subscriber               |
 | Plugins                   | 3         | Administrator            |
-| Site health & security    | 4         | Administrator            |
+| Site health & security    | 5         | Administrator            |
 | SEO analysis              | 4         | Author → Administrator   |
 
 **Editor** is the recommended default for content workflows. User lookup, plugin management, and site-audit abilities need Administrator capabilities — use a separate Administrator service account for those.
@@ -86,7 +86,7 @@ Post and page listings include the numeric author ID plus `author_name` and `aut
 
 Content hygiene diagnostics are read-only audit tools for common editorial cleanup work: `list-orphaned-media` finds unattached media that is not used as a featured image or referenced in post content (`upload_files`), `list-posts-no-featured-image` finds published posts or pages without `_thumbnail_id` (`edit_posts`, plus `edit_pages` for pages), and `list-stuck-scheduled` finds scheduled posts whose publish time is already in the past (`edit_posts`). These abilities return empty `items` arrays when no matching problems are found.
 
-`database-health` requires `manage_options` and returns read-only database bloat indicators for administrators: post revision count and revision-limit status, orphaned post meta count, expired transient count, autoloaded option size with a 900 KB threshold flag, and per-table row/data/index size details from `information_schema`. `performance-status` also requires `manage_options` and reports caching/performance configuration: external object cache status, `object-cache.php` and `advanced-cache.php` drop-in presence, active known page-cache plugins, `WP_MEMORY_LIMIT` versus PHP `memory_limit`, `WP_POST_REVISIONS`, autosave interval, and `CONCATENATE_SCRIPTS`.
+`database-health` requires `manage_options` and returns read-only database bloat indicators for administrators: post revision count and revision-limit status, orphaned post meta count, expired transient count, autoloaded option size with a 900 KB threshold flag, and per-table row/data/index size details from `information_schema`. `performance-status` also requires `manage_options` and reports caching/performance configuration: external object cache status, `object-cache.php` and `advanced-cache.php` drop-in presence, active known page-cache plugins, `WP_MEMORY_LIMIT` versus PHP `memory_limit`, `WP_POST_REVISIONS`, autosave interval, and `CONCATENATE_SCRIPTS`. `backup-status` requires `manage_options` and detects active known backup plugins including UpdraftPlus, BackWPup, Duplicator, All-in-One WP Migration, BlogVault, WPvivid, Jetpack/VaultPress, and ManageWP Worker. It returns accessible last-backup and schedule details for UpdraftPlus, last-backup details for BackWPup, and a warning when no known backup plugin is active.
 
 👉 **[See the full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities)** for every ability, its description, required capability, and minimum role.
 
@@ -212,6 +212,7 @@ To confirm everything works, ask your agent to call a few:
 - `webmastery-site-toolkit-for-mcp/site-health-check` (Administrator account) — *"Check WordPress site health"*
 - `webmastery-site-toolkit-for-mcp/database-health` (Administrator account) — *"Audit database bloat and table sizes"*
 - `webmastery-site-toolkit-for-mcp/performance-status` (Administrator account) — *"Check caching and performance configuration"*
+- `webmastery-site-toolkit-for-mcp/backup-status` (Administrator account) — *"Check whether a known backup plugin is active and when it last ran"*
 
 ---
 

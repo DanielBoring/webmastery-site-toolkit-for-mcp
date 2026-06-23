@@ -327,6 +327,28 @@ function e2e_write_summary( $summary ) {
 	);
 }
 
+function e2e_apply_case_setup( $case ) {
+	$setup = $case['setup'] ?? array();
+	if ( ! is_array( $setup ) ) {
+		return array();
+	}
+
+	$restore = array();
+
+	if ( array_key_exists( 'active_plugins', $setup ) && is_array( $setup['active_plugins'] ) ) {
+		$restore['active_plugins'] = get_option( 'active_plugins', array() );
+		update_option( 'active_plugins', array_values( array_map( 'strval', $setup['active_plugins'] ) ) );
+	}
+
+	return $restore;
+}
+
+function e2e_restore_case_setup( $restore ) {
+	if ( array_key_exists( 'active_plugins', $restore ) ) {
+		update_option( 'active_plugins', $restore['active_plugins'] );
+	}
+}
+
 $manifest_path = WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/tests/e2e/abilities-manifest.json';
 $manifest      = json_decode( file_get_contents( $manifest_path ), true );
 
@@ -546,16 +568,29 @@ e2e_ensure_plugin( 'mcp-e2e-plugin/mcp-e2e-plugin.php', 'MCP E2E Plugin' );
 e2e_ensure_plugin( 'mcp-e2e-duplicate/mcp-e2e-duplicate.php', 'MCP E2E Duplicate Folder Plugin' );
 e2e_ensure_plugin( 'mcp-e2e-duplicate.php', 'MCP E2E Duplicate Single Plugin' );
 e2e_ensure_plugin( 'wp-super-cache/wp-cache.php', 'WP Super Cache' );
+e2e_ensure_plugin( 'updraftplus/updraftplus.php', 'UpdraftPlus' );
+e2e_ensure_plugin( 'backwpup/backwpup.php', 'BackWPup' );
+e2e_ensure_plugin( 'duplicator/duplicator.php', 'Duplicator' );
+e2e_ensure_plugin( 'all-in-one-wp-migration/all-in-one-wp-migration.php', 'All-in-One WP Migration' );
 deactivate_plugins(
 	array(
 		'mcp-e2e-plugin/mcp-e2e-plugin.php',
 		'mcp-e2e-duplicate/mcp-e2e-duplicate.php',
 		'mcp-e2e-duplicate.php',
 		'wp-super-cache/wp-cache.php',
+		'updraftplus/updraftplus.php',
+		'backwpup/backwpup.php',
+		'duplicator/duplicator.php',
+		'all-in-one-wp-migration/all-in-one-wp-migration.php',
 	),
 	true
 );
 activate_plugin( 'wp-super-cache/wp-cache.php' );
+activate_plugin( 'updraftplus/updraftplus.php' );
+update_option( 'updraft_last_backup', 1747278000 );
+update_option( 'updraft_interval', 'weekly' );
+update_option( 'updraft_interval_database', 'weekly' );
+update_option( 'backwpup_jobs', array( array( 'lastrun' => 1747191600 ) ) );
 
 $fixtures['fixture_plugin']        = 'mcp-e2e-plugin/mcp-e2e-plugin.php';
 $fixtures['ambiguous_plugin_slug'] = 'mcp-e2e-duplicate';
@@ -641,7 +676,9 @@ foreach ( $manifest as $case ) {
 
 	$ability = wp_get_ability( $ability_name );
 	$input   = e2e_resolve_placeholders( $case['input'] ?? null, $fixtures );
+	$restore = e2e_apply_case_setup( $case );
 	$result  = $ability->execute( $input );
+	e2e_restore_case_setup( $restore );
 	$ok      = ! is_wp_error( $result ) && e2e_result_is_success( $result );
 	$passed  = ( 'success' === $expect && $ok ) || ( 'failure' === $expect && ! $ok );
 

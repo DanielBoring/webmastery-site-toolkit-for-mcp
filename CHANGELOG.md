@@ -9,6 +9,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 ### Added
 
 - Added Administrator-only performance status diagnostics for object-cache status, known page-cache plugin detection, memory limits, revision limits, autosave interval, and script concatenation.
+- Added Administrator-only backup status diagnostics for known backup plugin detection, UpdraftPlus last-backup and schedule reporting, BackWPup last-backup reporting, and no-backup warnings.
 - Added read-only content hygiene abilities to list orphaned media, published posts or pages missing featured images, and stuck scheduled posts with capability checks and empty results when no problems are found.
 - Added bulk post trash and bulk draft-publish abilities with per-ID success/failure summaries and `delete_posts` / `edit_posts` capability checks.
 - Added Administrator-only database health diagnostics for revision bloat, orphaned post meta, expired transients, autoloaded option size, and per-table sizes.
