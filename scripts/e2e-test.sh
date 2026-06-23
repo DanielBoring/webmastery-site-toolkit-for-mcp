@@ -5,6 +5,8 @@ WORDPRESS_URL="${WORDPRESS_URL:-http://localhost}"
 PLUGIN_SLUG="webmastery-site-toolkit-for-mcp"
 MCP_ADAPTER_ZIP="https://github.com/WordPress/mcp-adapter/releases/download/v0.5.0/mcp-adapter.zip"
 E2E_ARTIFACTS_DIR="${E2E_ARTIFACTS_DIR:-e2e-artifacts}"
+E2E_MANAGE_COMPOSE="${E2E_MANAGE_COMPOSE:-0}"
+E2E_KEEP_COMPOSE="${E2E_KEEP_COMPOSE:-0}"
 
 compose() {
 	local project_args=()
@@ -21,6 +23,27 @@ compose() {
 
 wp() {
 	compose exec -T wordpress wp --allow-root "$@"
+}
+
+start_compose() {
+	if [ "$E2E_MANAGE_COMPOSE" != "1" ]; then
+		return 0
+	fi
+
+	echo "Starting Docker Compose stack..."
+	export MYSQL_PORT="${MYSQL_PORT:-0}"
+	export WORDPRESS_PORT="${WORDPRESS_PORT:-0}"
+	compose down -v --remove-orphans
+	compose up -d
+}
+
+cleanup_compose() {
+	if [ "$E2E_MANAGE_COMPOSE" != "1" ] || [ "$E2E_KEEP_COMPOSE" = "1" ]; then
+		return 0
+	fi
+
+	echo "Stopping Docker Compose stack..."
+	compose down -v --remove-orphans
 }
 
 wait_for_wordpress_files() {
@@ -106,8 +129,11 @@ echo "================================"
 echo "E2E Test Suite: WordPress MCP Abilities"
 echo "================================"
 
+trap cleanup_compose EXIT
+
 rm -rf "$E2E_ARTIFACTS_DIR"
 mkdir -p "$E2E_ARTIFACTS_DIR"
+start_compose
 wait_for_wordpress_files
 install_wp_cli
 install_wordpress

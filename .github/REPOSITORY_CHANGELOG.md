@@ -8,11 +8,13 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added cross-platform local QA helper scripts, a Composer QA command, and a lightweight E2E manifest validator for contributor preflight checks.
 - Added a dedicated Coding Standards workflow that installs Composer dev dependencies and runs PHPCS on pushes, pull requests, and manual dispatches.
 - Added an E2E mu-plugin fixture for custom post type ability coverage.
 
 ### Changed
 
+- Updated E2E runner behavior so local runs can optionally manage Docker Compose startup and cleanup while preserving CI behavior.
 - Updated E2E ability manifest coverage counts and cases for bulk post operation abilities.
 - Updated release, E2E, PHPCS, Composer, and documentation automation references for the Webmastery Site Toolkit for MCP package rename.
 
