@@ -9,11 +9,11 @@ License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
 
-Adds MCP-powered WordPress site abilities for posts, revisions, post meta, pages, custom post types, media, comments, plugins, SEO, health, database health, security, users, and site info.
+Adds MCP-powered WordPress site abilities for posts, revisions, post meta, pages, custom post types, media, content hygiene, comments, plugins, SEO, health, database health, security, users, and site info.
 
 == Description ==
 
-Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, revisions, post meta, pages, public custom post types, media, comments, plugins, SEO checks, site health, database health, security audits, user lookup, and non-sensitive site introspection. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
+Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, revisions, post meta, pages, public custom post types, media, content hygiene diagnostics, comments, plugins, SEO checks, site health, database health, security audits, user lookup, and non-sensitive site introspection. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
 
 Webmastery Site Toolkit for MCP registers abilities across site management groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
 
@@ -46,6 +46,9 @@ List comments with filters, approve, trash, or mark as spam — all through the 
 
 **Media**
 List, inspect, update, and permanently delete media attachments. Supports MIME type and search filters, pagination, alt text updates, title updates, and caption updates.
+
+**Content Hygiene**
+Find common cleanup items: orphaned media not attached or referenced, published posts or pages missing featured images, and scheduled posts whose publish time is already in the past. These read-only diagnostics return empty item lists when no problems are found.
 
 **Users**
 List users with role/search/pagination filters and fetch a single user by ID. Useful for account audits and resolving numeric user IDs from responses that do not already include display names.
@@ -107,7 +110,7 @@ No, but behavior differs depending on whether it is active:
 
 = What WordPress user role should I use? =
 
-For core content workflows, use the **Editor** role. It covers the editorial capabilities used by posts, pages, taxonomy, comments, and media: `edit_posts`, `edit_pages`, `delete_posts`, `delete_pages`, `upload_files`, `manage_categories`, and `moderate_comments`.
+For core content workflows, use the **Editor** role. It covers the editorial capabilities used by posts, pages, taxonomy, comments, media, and content hygiene diagnostics: `edit_posts`, `edit_pages`, `delete_posts`, `delete_pages`, `upload_files`, `manage_categories`, and `moderate_comments`.
 
 Site introspection workflows (`get-site-info`, `get-user-info`, and `get-environment-info`) require only `read`, so they work with Subscriber and higher roles.
 
@@ -136,6 +139,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 == Changelog ==
 
 = Unreleased =
+* Add read-only content hygiene abilities to list orphaned media, published posts or pages missing featured images, and stuck scheduled posts with capability checks and empty results when no problems are found.
 * Add an Administrator-only database health ability for revision bloat, orphaned post meta, expired transients, autoloaded option size, and per-table size diagnostics.
 * Add bulk post trash and bulk draft-publish abilities with per-ID success/failure summaries and `delete_posts` / `edit_posts` capability checks.
 * Add discoverability and CRUD abilities for eligible public custom post types, with deterministic naming, CPT-specific capability checks, and taxonomy term assignment support.

@@ -55,6 +55,29 @@ function e2e_insert_post( $type, $title, $content, $author_id, $status = 'publis
 	return (int) $id;
 }
 
+function e2e_force_post_datetime( $post_id, $status, $local_datetime, $gmt_datetime ) {
+	global $wpdb;
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Deterministic E2E fixture setup for unusual scheduled-date states.
+	$updated = $wpdb->update(
+		$wpdb->posts,
+		array(
+			'post_status'   => $status,
+			'post_date'     => $local_datetime,
+			'post_date_gmt' => $gmt_datetime,
+		),
+		array( 'ID' => $post_id ),
+		array( '%s', '%s', '%s' ),
+		array( '%d' )
+	);
+
+	if ( false === $updated ) {
+		throw new RuntimeException( $wpdb->last_error );
+	}
+
+	clean_post_cache( $post_id );
+}
+
 function e2e_insert_revisioned_post( $type, $title, $original_content, $updated_content, $author_id ) {
 	$post_id     = e2e_insert_post( $type, $title, $original_content, $author_id );
 	$revision_id = wp_save_post_revision( $post_id );
@@ -478,6 +501,7 @@ $fixtures['spam_comment_id']  = e2e_insert_comment( $fixtures['post_id'], 'spam'
 $fixtures['media_id']          = e2e_insert_media( $fixtures['post_id'], $author_id, 'read-update' );
 $fixtures['delete_media_id']   = e2e_insert_media( $fixtures['post_id'], $author_id, 'delete' );
 $fixtures['featured_image_id'] = e2e_insert_media( $fixtures['post_id'], $author_id, 'featured-image', 'image/png' );
+$fixtures['orphaned_media_id'] = e2e_insert_media( 0, $author_id, 'orphaned' );
 $fixtures['yoast_score_post_id'] = e2e_insert_post( 'post', 'MCP E2E Yoast Score Post', 'Yoast score fixture.', $author_id );
 wp_update_post(
 	array(
@@ -492,6 +516,31 @@ if ( ! defined( 'WPSEO_VERSION' ) ) {
 
 update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_linkdex', '82' );
 update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_content_score', '74' );
+
+$fixtures['no_featured_post_id'] = e2e_insert_post( 'post', 'MCP E2E No Featured Image Post', 'Missing featured image fixture.', $author_id );
+$fixtures['no_featured_page_id'] = e2e_insert_post( 'page', 'MCP E2E No Featured Image Page', 'Missing featured image page fixture.', $editor_id );
+$fixtures['stuck_scheduled_post_id'] = e2e_insert_post( 'post', 'MCP E2E Stuck Scheduled Post', 'Missed schedule fixture.', $author_id, 'draft' );
+
+$future_timestamp = time() + DAY_IN_SECONDS;
+$past_timestamp   = time() - DAY_IN_SECONDS;
+e2e_force_post_datetime(
+	$fixtures['no_featured_post_id'],
+	'publish',
+	wp_date( 'Y-m-d H:i:s', $future_timestamp ),
+	gmdate( 'Y-m-d H:i:s', $future_timestamp )
+);
+e2e_force_post_datetime(
+	$fixtures['no_featured_page_id'],
+	'publish',
+	wp_date( 'Y-m-d H:i:s', $future_timestamp ),
+	gmdate( 'Y-m-d H:i:s', $future_timestamp )
+);
+e2e_force_post_datetime(
+	$fixtures['stuck_scheduled_post_id'],
+	'future',
+	wp_date( 'Y-m-d H:i:s', $past_timestamp ),
+	gmdate( 'Y-m-d H:i:s', $past_timestamp )
+);
 
 e2e_ensure_plugin( 'mcp-e2e-plugin/mcp-e2e-plugin.php', 'MCP E2E Plugin' );
 e2e_ensure_plugin( 'mcp-e2e-duplicate/mcp-e2e-duplicate.php', 'MCP E2E Duplicate Folder Plugin' );
