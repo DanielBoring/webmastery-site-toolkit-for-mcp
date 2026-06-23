@@ -78,7 +78,7 @@ class Webmastery_MCP_Plugins {
 		$critical_items = [];
 
 		foreach ( $plugins as $plugin => $plugin_data ) {
-			$item = self::normalize_plugin_audit( $plugin, $plugin_data, $updates );
+			$item    = self::normalize_plugin_audit( $plugin, $plugin_data, $updates );
 			$items[] = $item;
 
 			if ( $item['critical_update'] ) {
