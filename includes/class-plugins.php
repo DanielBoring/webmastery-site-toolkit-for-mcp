@@ -7,6 +7,7 @@ class Webmastery_MCP_Plugins {
 	public static function register() {
 		self::load_plugin_api();
 		self::register_list();
+		self::register_audit();
 		self::register_activate();
 		self::register_deactivate();
 	}
@@ -61,6 +62,65 @@ class Webmastery_MCP_Plugins {
 			'success' => true,
 			'data'    => [
 				'items' => $items,
+			],
+		];
+	}
+
+	public static function plugin_audit( $input = [] ) {
+		$permission = self::permission( $input );
+		if ( is_wp_error( $permission ) ) {
+			return $permission;
+		}
+
+		$plugins        = self::get_plugins();
+		$updates        = self::get_update_plugins_transient();
+		$items          = [];
+		$critical_items = [];
+
+		foreach ( $plugins as $plugin => $plugin_data ) {
+			$item    = self::normalize_plugin_audit( $plugin, $plugin_data, $updates );
+			$items[] = $item;
+
+			if ( $item['critical_update'] ) {
+				$critical_items[] = [
+					'plugin'      => $item['plugin'],
+					'name'        => $item['name'],
+					'slug'        => $item['slug'],
+					'version'     => $item['version'],
+					'new_version' => $item['new_version'],
+				];
+			}
+		}
+
+		return [
+			'success' => true,
+			'data'    => [
+				'inactive_count'                => count(
+					array_filter(
+						$items,
+						static function ( $item ) {
+							return ! $item['active'];
+						}
+					)
+				),
+				'updates_available_count'       => count(
+					array_filter(
+						$items,
+						static function ( $item ) {
+							return $item['update_available'];
+						}
+					)
+				),
+				'potentially_abandoned_count'   => count(
+					array_filter(
+						$items,
+						static function ( $item ) {
+							return $item['abandoned'];
+						}
+					)
+				),
+				'critical_updates'              => $critical_items,
+				'items'                         => $items,
 			],
 		];
 	}
@@ -177,7 +237,21 @@ class Webmastery_MCP_Plugins {
 			'description'         => 'List installed WordPress plugins and their activation state.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'execute_callback'    => [ self::class, 'list_plugins' ],
-			'permission_callback' => '__return_true',
+			'permission_callback' => [ self::class, 'permission' ],
+			'meta'                => [
+				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+	}
+
+	private static function register_audit() {
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/plugin-audit', [
+			'label'               => 'Plugin Audit',
+			'description'         => 'Audit installed WordPress plugins for inactive plugins, cached update availability, compatibility metadata, and potentially abandoned plugins.',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'execute_callback'    => [ self::class, 'plugin_audit' ],
+			'permission_callback' => [ self::class, 'permission' ],
 			'meta'                => [
 				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
@@ -315,7 +389,7 @@ class Webmastery_MCP_Plugins {
 
 	private static function normalize_plugin( $plugin, $plugin_data ) {
 		// Read-only status reporting; this does not modify WordPress update routines.
-		$updates        = get_site_transient( 'update_plugins' );
+		$updates        = self::get_update_plugins_transient();
 		$auto_updates   = (array) get_site_option( 'auto_update_plugins', [] );
 		$network_active = is_multisite() && is_plugin_active_for_network( $plugin );
 
@@ -328,6 +402,153 @@ class Webmastery_MCP_Plugins {
 			'auto_update'      => in_array( $plugin, $auto_updates, true ),
 			'update_available' => isset( $updates->response[ $plugin ] ),
 		];
+	}
+
+	private static function normalize_plugin_audit( $plugin, $plugin_data, $updates ) {
+		$update          = $updates->response[ $plugin ] ?? null;
+		$tested_up_to    = self::get_plugin_tested_up_to( $plugin, $update );
+		$requires_wp     = self::get_plugin_requires_wp( $plugin_data, $update );
+		$critical_update = self::is_security_update( $update );
+
+		return [
+			'plugin'            => $plugin,
+			'name'              => $plugin_data['Name'] ?? $plugin,
+			'slug'              => self::get_plugin_slug( $plugin, $update ),
+			'version'           => $plugin_data['Version'] ?? '',
+			'active'            => is_plugin_active( $plugin ),
+			'update_available'  => null !== $update,
+			'new_version'       => null !== $update && isset( $update->new_version ) ? (string) $update->new_version : null,
+			'tested_up_to'      => $tested_up_to,
+			'requires_wp'       => $requires_wp,
+			'abandoned'         => self::is_potentially_abandoned( $tested_up_to ),
+			'days_since_update' => self::get_days_since_update( $plugin ),
+			'critical_update'   => $critical_update,
+		];
+	}
+
+	private static function get_update_plugins_transient() {
+		$updates = get_site_transient( 'update_plugins' );
+		if ( ! is_object( $updates ) ) {
+			$updates = (object) [];
+		}
+
+		if ( ! isset( $updates->response ) || ! is_array( $updates->response ) ) {
+			$updates->response = [];
+		}
+
+		return $updates;
+	}
+
+	private static function get_plugin_slug( $plugin, $update = null ) {
+		if ( is_object( $update ) && ! empty( $update->slug ) ) {
+			return sanitize_key( $update->slug );
+		}
+
+		$parts = explode( '/', $plugin );
+		if ( count( $parts ) > 1 ) {
+			return sanitize_key( $parts[0] );
+		}
+
+		return sanitize_key( basename( $plugin, '.php' ) );
+	}
+
+	private static function get_plugin_tested_up_to( $plugin, $update = null ) {
+		foreach ( [ 'tested', 'tested_up_to' ] as $property ) {
+			if ( is_object( $update ) && ! empty( $update->{$property} ) ) {
+				return sanitize_text_field( (string) $update->{$property} );
+			}
+		}
+
+		$headers = self::get_extra_plugin_headers( $plugin );
+		return '' !== $headers['TestedUpTo'] ? $headers['TestedUpTo'] : null;
+	}
+
+	private static function get_plugin_requires_wp( $plugin_data, $update = null ) {
+		if ( is_object( $update ) && ! empty( $update->requires ) ) {
+			return sanitize_text_field( (string) $update->requires );
+		}
+
+		if ( ! empty( $plugin_data['RequiresWP'] ) ) {
+			return sanitize_text_field( (string) $plugin_data['RequiresWP'] );
+		}
+
+		return null;
+	}
+
+	private static function get_extra_plugin_headers( $plugin ) {
+		$path = WP_PLUGIN_DIR . '/' . $plugin;
+		if ( ! file_exists( $path ) ) {
+			return [
+				'TestedUpTo' => null,
+			];
+		}
+
+		$headers = get_file_data(
+			$path,
+			[
+				'TestedUpTo' => 'Tested up to',
+			],
+			'plugin'
+		);
+
+		return [
+			'TestedUpTo' => isset( $headers['TestedUpTo'] ) ? sanitize_text_field( $headers['TestedUpTo'] ) : null,
+		];
+	}
+
+	private static function is_potentially_abandoned( $tested_up_to ) {
+		if ( empty( $tested_up_to ) ) {
+			return false;
+		}
+
+		$current = self::major_minor_version_index( get_bloginfo( 'version' ) );
+		$tested  = self::major_minor_version_index( $tested_up_to );
+
+		if ( null === $current || null === $tested ) {
+			return false;
+		}
+
+		return ( $current - $tested ) >= 2;
+	}
+
+	private static function major_minor_version_index( $version ) {
+		if ( ! preg_match( '/^(\d+)(?:\.(\d+))?/', (string) $version, $matches ) ) {
+			return null;
+		}
+
+		$major = absint( $matches[1] );
+		$minor = isset( $matches[2] ) ? absint( $matches[2] ) : 0;
+
+		return ( $major * 10 ) + $minor;
+	}
+
+	private static function get_days_since_update( $plugin ) {
+		$path = WP_PLUGIN_DIR . '/' . $plugin;
+		if ( ! file_exists( $path ) ) {
+			return null;
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_filemtime -- Read-only audit of an installed plugin's local file timestamp.
+		$modified = filemtime( $path );
+		if ( false === $modified ) {
+			return null;
+		}
+
+		return max( 0, (int) floor( ( time() - $modified ) / DAY_IN_SECONDS ) );
+	}
+
+	private static function is_security_update( $update ) {
+		if ( ! is_object( $update ) ) {
+			return false;
+		}
+
+		foreach ( [ 'security', 'security_update', 'is_security_update' ] as $property ) {
+			if ( ! empty( $update->{$property} ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private static function is_protected_plugin( $plugin ) {

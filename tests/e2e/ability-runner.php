@@ -219,7 +219,7 @@ function e2e_insert_media( $post_id, $author_id, $suffix, $mime_type = 'text/pla
 	return (int) $id;
 }
 
-function e2e_ensure_plugin( $relative_path, $name ) {
+function e2e_ensure_plugin( $relative_path, $name, $headers = array() ) {
 	$plugin_path = WP_PLUGIN_DIR . '/' . ltrim( $relative_path, '/' );
 	$plugin_dir  = dirname( $plugin_path );
 
@@ -227,12 +227,17 @@ function e2e_ensure_plugin( $relative_path, $name ) {
 		wp_mkdir_p( $plugin_dir );
 	}
 
+	$header_lines = '';
+	foreach ( $headers as $header => $value ) {
+		$header_lines .= " * {$header}: {$value}\n";
+	}
+
 	$contents = <<<PHP
 <?php
 /**
  * Plugin Name: {$name}
  * Version: 1.0.0
- */
+{$header_lines} */
 
 defined( 'ABSPATH' ) || exit;
 PHP;
@@ -564,7 +569,14 @@ e2e_force_post_datetime(
 	gmdate( 'Y-m-d H:i:s', $past_timestamp )
 );
 
-e2e_ensure_plugin( 'mcp-e2e-plugin/mcp-e2e-plugin.php', 'MCP E2E Plugin' );
+e2e_ensure_plugin(
+	'mcp-e2e-plugin/mcp-e2e-plugin.php',
+	'MCP E2E Plugin',
+	array(
+		'Requires at least' => '5.0',
+		'Tested up to'      => '5.0',
+	)
+);
 e2e_ensure_plugin( 'mcp-e2e-duplicate/mcp-e2e-duplicate.php', 'MCP E2E Duplicate Folder Plugin' );
 e2e_ensure_plugin( 'mcp-e2e-duplicate.php', 'MCP E2E Duplicate Single Plugin' );
 e2e_ensure_plugin( 'wp-super-cache/wp-cache.php', 'WP Super Cache' );
@@ -595,6 +607,26 @@ update_option( 'backwpup_jobs', array( array( 'lastrun' => 1747191600 ) ) );
 $fixtures['fixture_plugin']        = 'mcp-e2e-plugin/mcp-e2e-plugin.php';
 $fixtures['ambiguous_plugin_slug'] = 'mcp-e2e-duplicate';
 $fixtures['protected_plugin']      = 'webmastery-site-toolkit-for-mcp/webmastery-site-toolkit-for-mcp.php';
+
+set_site_transient(
+	'update_plugins',
+	(object) array(
+		'last_checked' => time(),
+		'checked'      => array(
+			$fixtures['fixture_plugin'] => '1.0.0',
+		),
+		'response'     => array(
+			$fixtures['fixture_plugin'] => (object) array(
+				'plugin'          => $fixtures['fixture_plugin'],
+				'slug'            => 'mcp-e2e-plugin',
+				'new_version'     => '1.2.0',
+				'requires'        => '5.0',
+				'tested'          => '5.0',
+				'security_update' => true,
+			),
+		),
+	)
+);
 
 $roles = array(
 	'admin'        => $admin_id,
