@@ -15,6 +15,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Updated E2E PR comments to replace static success bullets with runtime-derived run facts, case pass/fail counts, debug-log status, changed files, and separate PR-head/tested-merge commit SHAs.
 - Updated E2E runner behavior so local runs can optionally manage Docker Compose startup and cleanup while preserving CI behavior.
 - Updated E2E ability manifest coverage counts and cases for bulk post operation abilities.
 - Updated release, E2E, PHPCS, Composer, and documentation automation references for the Webmastery Site Toolkit for MCP package rename.
