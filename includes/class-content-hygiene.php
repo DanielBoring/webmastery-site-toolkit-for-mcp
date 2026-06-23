@@ -10,15 +10,15 @@ class Webmastery_MCP_Content_Hygiene {
 		self::register_list_stuck_scheduled();
 	}
 
-	private static function pagination_schema( $default = 20 ) {
+	private static function pagination_schema( $default_per_page = 20 ) {
 		return [
-			'per_page' => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => $default ],
+			'per_page' => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => $default_per_page ],
 			'page'     => [ 'type' => 'integer', 'minimum' => 1, 'default' => 1 ],
 		];
 	}
 
-	private static function per_page( $input, $default = 20 ) {
-		return min( max( 1, (int) ( $input['per_page'] ?? $default ) ), 100 );
+	private static function per_page( $input, $default_per_page = 20 ) {
+		return min( max( 1, (int) ( $input['per_page'] ?? $default_per_page ) ), 100 );
 	}
 
 	private static function page( $input ) {
