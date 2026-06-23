@@ -25,6 +25,44 @@ For abilities with role or capability restrictions, include both:
 6. Executes every manifest case through `wp_get_ability()->execute()`.
 7. Writes `e2e-artifacts/e2e-summary.json` with coverage and result counts.
 
+## Local QA entry points
+
+For quick local checks that do not require WordPress, run:
+
+```bash
+composer validate:e2e-manifest
+```
+
+This validates manifest JSON structure, required fields, allowed roles, expected result values, labels, and assertion shapes. It cannot replace full E2E coverage because it does not bootstrap WordPress or compare the manifest to `wp_get_abilities()`.
+
+For full Docker E2E, either start Compose yourself and run:
+
+```bash
+docker compose up -d
+composer e2e
+docker compose down -v
+```
+
+Or let the E2E script manage Compose:
+
+```bash
+E2E_MANAGE_COMPOSE=1 composer e2e
+```
+
+Set `E2E_KEEP_COMPOSE=1` when you want to leave the containers running for debugging.
+
+PowerShell users can run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -E2E
+```
+
+Unix, macOS, and Git Bash users can run:
+
+```bash
+scripts/qa-local.sh --e2e
+```
+
 ## PR comment coverage summary
 
 The E2E PR comment includes:

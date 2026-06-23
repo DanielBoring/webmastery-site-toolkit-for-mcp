@@ -43,16 +43,18 @@ This plugin follows [WordPress Coding Standards](https://developer.wordpress.org
 
 - **Sanitize inputs** — use `sanitize_text_field()` for strings, `absint()` for IDs, `wp_kses_post()` for HTML content, and enum validation for fixed-value fields
 - **Capability checks** — every ability must have a `permission_callback` that returns a `WP_Error` on failure, not just `false`; prefer object-specific checks such as `edit_post` / `delete_post` when an object ID is available
-- **No direct database queries** — use WordPress API functions (`get_posts()`, `wp_insert_post()`, etc.) exclusively
+- **Prefer WordPress APIs** — use WordPress API functions (`get_posts()`, `wp_insert_post()`, etc.) for normal reads and writes. Direct `$wpdb` reads are limited to administrator-only diagnostics such as database health checks, must be prepared where variables are present, and must surface query errors.
 - **No output buffering** — abilities return arrays or `WP_Error` objects; the MCP Adapter handles serialization
 - **WordPress.org readiness** — avoid trademark-confusing names, spammy readme text, undisclosed external calls, bundled duplicate libraries, and non-GPL-compatible assets
 
-Run standards checks before opening a PR:
+Run local QA before opening a PR:
 
 ```bash
 composer install
-composer phpcs
+composer qa
 ```
+
+`composer qa` runs WordPress Coding Standards, the lightweight E2E manifest validator, and `git diff --check`.
 
 ---
 
@@ -105,12 +107,34 @@ Set `annotations` accurately — `readonly: true` for read-only abilities, `dest
 
 1. Fork the repo and create a branch from `main` (`feature/your-feature` or `fix/your-bug`)
 2. Make your changes following the conventions above
-3. Run `composer phpcs`
+3. Run local QA with `composer qa` or one of the helper scripts below
 4. Test manually against a real WordPress install — verify the ability appears in the MCP Adapter discovery tool, `mcp-adapter-discover-abilities`, and returns correct output
 5. If the PR adds or changes abilities, update `tests/e2e/abilities-manifest.json` with matching coverage
 6. Update user-facing docs and add a `CHANGELOG.md` entry under `## Unreleased`; use `.github/REPOSITORY_CHANGELOG.md` for repo/platform-only changes
 7. Review the WordPress.org Detailed Plugin Guidelines when the change affects naming, readme text, privacy/external calls, licensing/assets, or release packaging
 8. Open a PR with a clear description of what changed and why
+
+---
+
+## Local QA commands
+
+Use the fastest command that covers your change:
+
+| Command | What it runs |
+| --- | --- |
+| `composer qa` | PHPCS, lightweight E2E manifest validation, and `git diff --check` |
+| `composer e2e` | Docker WordPress E2E against an already-running Compose stack |
+| `E2E_MANAGE_COMPOSE=1 composer e2e` | Docker WordPress E2E with automatic Compose startup and cleanup |
+| `scripts/qa-local.sh --e2e` | Unix/Git Bash wrapper for Composer QA plus managed Docker E2E |
+| `powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -E2E` | PowerShell wrapper for Composer QA plus managed Docker E2E |
+
+For Windows, install PHP and Composer first, then restart your terminal so both commands are available on `PATH`. If a Windows Composer installation cannot invoke `vendor/bin/phpcs` by name, run the equivalent direct fallback:
+
+```powershell
+php vendor\squizlabs\php_codesniffer\bin\phpcs --standard=phpcs.xml.dist
+```
+
+The lightweight manifest validator checks JSON structure, expected fields, roles, labels, and assertion shapes. Full ability registration coverage still requires Docker E2E because registered abilities are only available inside WordPress after the plugin and MCP Adapter load.
 
 ---
 

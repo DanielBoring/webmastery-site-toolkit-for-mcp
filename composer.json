@@ -10,8 +10,16 @@
 		"wp-coding-standards/wpcs": "^3.1"
 	},
 	"scripts": {
+		"diff-check": "git diff --check",
+		"e2e": "bash scripts/e2e-test.sh",
 		"phpcs": "phpcs --standard=phpcs.xml.dist",
-		"phpcbf": "phpcbf --standard=phpcs.xml.dist"
+		"phpcbf": "phpcbf --standard=phpcs.xml.dist",
+		"qa": [
+			"@phpcs",
+			"@validate:e2e-manifest",
+			"@diff-check"
+		],
+		"validate:e2e-manifest": "php scripts/validate-e2e-manifest.php"
 	},
 	"config": {
 		"allow-plugins": {
