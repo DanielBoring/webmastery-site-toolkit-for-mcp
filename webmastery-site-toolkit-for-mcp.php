@@ -46,6 +46,7 @@ add_action( 'wp_abilities_api_init', function () {
 	require_once __DIR__ . '/includes/class-users.php';
 	require_once __DIR__ . '/includes/class-site-info.php';
 	require_once __DIR__ . '/includes/class-health.php';
+	require_once __DIR__ . '/includes/class-database-health.php';
 	require_once __DIR__ . '/includes/class-security.php';
 	require_once __DIR__ . '/includes/class-seo.php';
 	require_once __DIR__ . '/includes/class-plugins.php';
@@ -58,6 +59,7 @@ add_action( 'wp_abilities_api_init', function () {
 	Webmastery_MCP_Users::register();
 	Webmastery_MCP_Site_Info::register();
 	Webmastery_MCP_Health::register();
+	Webmastery_MCP_Database_Health::register();
 	Webmastery_MCP_Security::register();
 	Webmastery_MCP_SEO::register();
 	Webmastery_MCP_Plugins::register();

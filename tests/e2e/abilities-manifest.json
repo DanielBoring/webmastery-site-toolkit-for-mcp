@@ -129,6 +129,8 @@
   { "ability": "webmastery-site-toolkit-for-mcp/seo-site-overview", "label": "seo-site-overview as subscriber", "role": "subscriber", "input": null, "expect": "failure" },
   { "ability": "webmastery-site-toolkit-for-mcp/site-health-check", "label": "site-health-check", "role": "admin", "input": null, "expect": "success" },
   { "ability": "webmastery-site-toolkit-for-mcp/site-health-check", "label": "site-health-check as subscriber", "role": "subscriber", "input": null, "expect": "failure" },
+  { "ability": "webmastery-site-toolkit-for-mcp/database-health", "label": "database-health as admin", "role": "admin", "input": null, "expect": "success", "assert_paths": [ "data.post_revisions.count", "data.post_revisions.estimated_bytes", "data.post_revisions.wp_post_revisions_defined", "data.post_revisions.revision_limit_configured", "data.orphaned_post_meta.count", "data.expired_transients.count", "data.autoloaded_options.total_bytes", "data.autoloaded_options.threshold_bytes", "data.autoloaded_options.over_threshold", "data.table_sizes.0.table", "data.table_sizes.0.rows", "data.table_sizes.0.data_bytes", "data.table_sizes.0.index_bytes", "data.table_sizes.0.total_bytes" ], "assert_values": { "data.autoloaded_options.threshold_bytes": 921600 } },
+  { "ability": "webmastery-site-toolkit-for-mcp/database-health", "label": "database-health as editor", "role": "editor", "input": null, "expect": "failure" },
   { "ability": "webmastery-site-toolkit-for-mcp/security-audit", "label": "security-audit", "role": "admin", "input": null, "expect": "success" },
   { "ability": "webmastery-site-toolkit-for-mcp/security-audit", "label": "security-audit as subscriber", "role": "subscriber", "input": null, "expect": "failure" }
 ]

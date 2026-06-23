@@ -9,6 +9,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 ### Added
 
 - Added bulk post trash and bulk draft-publish abilities with per-ID success/failure summaries and `delete_posts` / `edit_posts` capability checks.
+- Added Administrator-only database health diagnostics for revision bloat, orphaned post meta, expired transients, autoloaded option size, and per-table sizes.
 - Added discoverability and CRUD abilities for eligible public custom post types, with deterministic naming, CPT-specific capability checks, and taxonomy term assignment support.
 - Added site introspection abilities for stable, non-sensitive site, current-user, and runtime environment context with `read` capability checks.
 - Added post meta read, update, and delete abilities with object-level `edit_post` checks, protected-key safeguards, typed responses, scalar/JSON value support, and key/value limits.

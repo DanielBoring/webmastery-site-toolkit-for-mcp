@@ -465,6 +465,12 @@ wp_set_object_terms( $fixtures['book_id'], array( $fixtures['genre_id'] ), 'mcp_
 update_post_meta( $fixtures['meta_post_id'], 'mcp_e2e_public_key', 'public meta value' );
 update_post_meta( $fixtures['meta_post_id'], '_mcp_e2e_protected_key', 'hidden protected value' );
 update_post_meta( $fixtures['delete_meta_post_id'], 'mcp_e2e_delete_key', 'delete me' );
+delete_metadata( 'post', $fixtures['bulk_missing_post_id'], 'mcp_e2e_orphaned_meta' );
+add_metadata( 'post', $fixtures['bulk_missing_post_id'], 'mcp_e2e_orphaned_meta', 'orphaned meta fixture', true );
+delete_option( '_transient_timeout_mcp_e2e_expired' );
+add_option( '_transient_timeout_mcp_e2e_expired', time() - HOUR_IN_SECONDS, '', 'no' );
+delete_option( 'mcp_e2e_autoloaded_option' );
+add_option( 'mcp_e2e_autoloaded_option', 'autoloaded option fixture', '', true );
 
 $fixtures['comment_id']       = e2e_insert_comment( $fixtures['post_id'], 'approve' );
 $fixtures['trash_comment_id'] = e2e_insert_comment( $fixtures['post_id'], 'trash' );
