@@ -374,12 +374,47 @@ function e2e_apply_case_setup( $case ) {
 		update_option( 'active_plugins', array_values( array_map( 'strval', $setup['active_plugins'] ) ) );
 	}
 
+	if ( array_key_exists( 'http_mocks', $setup ) && is_array( $setup['http_mocks'] ) ) {
+		$http_mocks = $setup['http_mocks'];
+		$callback   = static function ( $preempt, $parsed_args, $url ) use ( $http_mocks ) {
+			$path = wp_parse_url( $url, PHP_URL_PATH );
+			if ( ! is_string( $path ) || '' === $path ) {
+				$path = '/';
+			}
+
+			$mock = $http_mocks[ $url ] ?? $http_mocks[ $path ] ?? null;
+			if ( ! is_array( $mock ) ) {
+				return $preempt;
+			}
+
+			$code = (int) ( $mock['code'] ?? 200 );
+
+			return array(
+				'headers'  => array(),
+				'body'     => (string) ( $mock['body'] ?? '' ),
+				'response' => array(
+					'code'    => $code,
+					'message' => (string) ( $mock['message'] ?? 'OK' ),
+				),
+				'cookies'  => array(),
+				'filename' => null,
+			);
+		};
+
+		add_filter( 'pre_http_request', $callback, 10, 3 );
+		$restore['http_mock_callback'] = $callback;
+	}
+
 	return $restore;
 }
 
 function e2e_restore_case_setup( $restore ) {
 	if ( array_key_exists( 'active_plugins', $restore ) ) {
 		update_option( 'active_plugins', $restore['active_plugins'] );
+	}
+
+	if ( array_key_exists( 'http_mock_callback', $restore ) ) {
+		remove_filter( 'pre_http_request', $restore['http_mock_callback'], 10 );
 	}
 }
 
@@ -614,6 +649,7 @@ e2e_ensure_plugin( 'updraftplus/updraftplus.php', 'UpdraftPlus' );
 e2e_ensure_plugin( 'backwpup/backwpup.php', 'BackWPup' );
 e2e_ensure_plugin( 'duplicator/duplicator.php', 'Duplicator' );
 e2e_ensure_plugin( 'all-in-one-wp-migration/all-in-one-wp-migration.php', 'All-in-One WP Migration' );
+e2e_ensure_plugin( 'google-site-kit/google-site-kit.php', 'Site Kit by Google' );
 deactivate_plugins(
 	array(
 		'mcp-e2e-plugin/mcp-e2e-plugin.php',
@@ -624,6 +660,7 @@ deactivate_plugins(
 		'backwpup/backwpup.php',
 		'duplicator/duplicator.php',
 		'all-in-one-wp-migration/all-in-one-wp-migration.php',
+		'google-site-kit/google-site-kit.php',
 	),
 	true
 );

@@ -9,11 +9,11 @@ License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
 
-Adds MCP-powered WordPress site abilities for posts, revisions, post meta, pages, custom post types, media, content hygiene, comments, plugins, SEO, health, database health, performance status, backup status, security, users, and site info.
+Adds MCP-powered WordPress site abilities for posts, revisions, post meta, pages, custom post types, media, content hygiene, comments, plugins, SEO, webmaster verification signals, health, database health, performance status, backup status, security, users, and site info.
 
 == Description ==
 
-Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, revisions, post meta, pages, public custom post types, media, content hygiene diagnostics, comments, plugins, SEO checks, site health, database health, performance status, backup status, security audits, user lookup, and non-sensitive site introspection. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
+Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, revisions, post meta, pages, public custom post types, media, content hygiene diagnostics, comments, plugins, SEO checks, webmaster verification signals, site health, database health, performance status, backup status, security audits, user lookup, and non-sensitive site introspection. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
 
 Webmastery Site Toolkit for MCP registers abilities across site management groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
 
@@ -77,7 +77,12 @@ Check for common misconfigurations: debug mode, file editor exposure, SSL, admin
 **SEO Analysis**
 Analyze individual posts for title length, word count, meta description, focus keyword placement, image alt text, internal links, and slug length. Get a site-wide overview including sitemap and robots.txt accessibility and counts of published posts missing optimization. Read Yoast SEO and readability score lists with pagination and optional post type, status, and modified-after filters.
 
+**Webmaster Verification**
+Check public Google and Bing webmaster verification proof without API credentials. The read-only `webmaster-verification-status` ability reports Google Site Kit installed/active status, rendered homepage verification meta tags, `/BingSiteAuth.xml`, visible DNS TXT verification records when PHP can read them, `robots.txt` sitemap declarations, and same-host sitemap reachability using `pass`, `warn`, and `unknown` statuses.
+
 Post and page create/update abilities can write supported Yoast SEO protected meta keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys fail with structured details instead of being silently ignored. Dedicated post meta abilities can read, update, and delete unprotected custom fields, plus explicitly allowlisted protected keys, only after the current user can edit the target post.
+
+Public webmaster proof is different from confirmed Google Search Console or Bing Webmaster Tools account verification. Account-level confirmation is reported as `unknown` because it would require OAuth/API credentials and a separate security model.
 
 When Yoast SEO is installed, all checks run fully including the Yoast sitemap verification and score-list abilities. Without Yoast, meta description and focus keyword checks will warn on every post (since those fields are never populated), the sitemap check will fail, and score-list abilities will return empty results with a note — the structural checks still work correctly.
 
@@ -118,7 +123,7 @@ No, but behavior differs depending on whether it is active:
 
 For core content workflows, use the **Editor** role. It covers the editorial capabilities used by posts, pages, taxonomy, comments, media, and content hygiene diagnostics: `edit_posts`, `edit_pages`, `delete_posts`, `delete_pages`, `upload_files`, `manage_categories`, and `moderate_comments`.
 
-Site introspection workflows (`get-site-info`, `get-user-info`, and `get-environment-info`) require only `read`, so they work with Subscriber and higher roles.
+Site introspection and public webmaster verification workflows (`get-site-info`, `get-user-info`, `get-environment-info`, and `webmaster-verification-status`) require only `read`, so they work with Subscriber and higher roles.
 
 Custom post type workflows depend on each CPT's registered capability map. Use `list-post-types` to discover the generated ability names and required capabilities before assigning an MCP service account.
 
@@ -145,6 +150,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 == Changelog ==
 
 = Unreleased =
+* Add a read-only webmaster verification status ability for public Google/Bing proof, homepage verification meta tags, Bing XML verification, visible DNS TXT records, robots.txt sitemap declarations, and sitemap reachability without Google or Bing API credentials.
 * Add an Administrator-only user access audit ability for administrator account inventory, default `admin` username detection, administrator application password reporting, warnings, and application-password collection metadata.
 * Add an Administrator-only plugin audit ability for inactive plugins, cached updates, tested-up-to compatibility, potential abandonment, local file age, and cached security-update flags without network calls.
 * Add an Administrator-only backup status ability for known backup plugin detection, UpdraftPlus last-backup and schedule reporting, BackWPup last-backup reporting, and no-backup warnings.
