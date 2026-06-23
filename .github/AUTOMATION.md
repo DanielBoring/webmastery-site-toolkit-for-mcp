@@ -25,8 +25,16 @@ This repository uses GitHub Actions for two purposes:
 5. Write `e2e-artifacts/e2e-summary.json` with registered ability, covered ability, test case, and negative case counts.
 6. Validate WordPress debug log for fatal/error-level entries.
 7. Upload E2E failure artifacts when the test fails.
-8. Post truthful PR status comment from an isolated comment job, including coverage and tested dependency versions.
+8. Post truthful PR status comment from an isolated comment job, including runtime-derived run facts, ability coverage, tested dependency versions, and changed files.
 9. Always clean up Docker resources.
+
+**PR comment data sources**
+- Result and workflow URL come from the current workflow run.
+- PR head commit uses `github.event.pull_request.head.sha`; tested merge commit uses `github.sha`, which is GitHub's synthetic merge commit for pull request runs.
+- Ability coverage, manifest case totals, passed cases, failed cases, and negative permission cases come from `e2e-artifacts/e2e-summary.json`, written by `tests/e2e/ability-runner.php`.
+- WordPress, PHP, MySQL, MCP Adapter, and plugin versions are collected from the live Docker/WordPress runtime after E2E runs.
+- Changed files come from the workflow's changed-file detection job.
+- Debug log status comes from the WordPress debug log scan step.
 
 **Ability coverage contract**
 - Every new `webmastery-site-toolkit-for-mcp/*` ability must add coverage in `tests/e2e/abilities-manifest.json`.
@@ -37,7 +45,7 @@ This repository uses GitHub Actions for two purposes:
 
 **Security model**
 - E2E execution jobs run with read-only permissions.
-- PR commenting is isolated to a dedicated job with comment-only write scope.
+- PR commenting is isolated to a dedicated job with comment-only write scope and no repository checkout.
 - Actions are pinned to immutable SHAs.
 
 ### Release (`release.yml`)

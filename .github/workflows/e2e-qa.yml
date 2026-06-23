@@ -88,6 +88,9 @@ jobs:
       covered-abilities: ${{ steps.versions.outputs.covered-abilities }}
       test-cases: ${{ steps.versions.outputs.test-cases }}
       negative-cases: ${{ steps.versions.outputs.negative-cases }}
+      passed-cases: ${{ steps.versions.outputs.passed-cases }}
+      failed-cases: ${{ steps.versions.outputs.failed-cases }}
+      debug-log-status: ${{ steps.debug-log.outputs.status }}
     steps:
       - name: Checkout code
         uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
@@ -124,6 +127,8 @@ jobs:
           covered_abilities="$(jq -r '.covered_abilities // "unknown"' "$summary_file" 2>/dev/null || echo unknown)"
           test_cases="$(jq -r '.test_cases // "unknown"' "$summary_file" 2>/dev/null || echo unknown)"
           negative_cases="$(jq -r '.negative_cases // "unknown"' "$summary_file" 2>/dev/null || echo unknown)"
+          passed_cases="$(jq -r '.passed // "unknown"' "$summary_file" 2>/dev/null || echo unknown)"
+          failed_cases="$(jq -r '.failed // "unknown"' "$summary_file" 2>/dev/null || echo unknown)"
           {
             echo "wordpress-image=${wordpress_image:-unknown}"
             echo "wordpress-version=${wordpress_version:-unknown}"
@@ -137,13 +142,31 @@ jobs:
             echo "covered-abilities=${covered_abilities:-unknown}"
             echo "test-cases=${test_cases:-unknown}"
             echo "negative-cases=${negative_cases:-unknown}"
+            echo "passed-cases=${passed_cases:-unknown}"
+            echo "failed-cases=${failed_cases:-unknown}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Check WordPress debug log for errors
+        id: debug-log
         if: always()
+        shell: bash
         run: |
+          set -euo pipefail
           echo "=== WordPress Debug Log ==="
-          docker compose exec -T wordpress cat /var/www/html/wp-content/debug.log || true
+          if ! docker compose exec -T wordpress test -f /var/www/html/wp-content/debug.log; then
+            echo "No debug log found"
+            echo "status=no_debug_log" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          docker compose exec -T wordpress cat /var/www/html/wp-content/debug.log
+          if docker compose exec -T wordpress grep -Eiq 'fatal error|parse error|uncaught|error' /var/www/html/wp-content/debug.log; then
+            echo "status=error_entries_found" >> "$GITHUB_OUTPUT"
+            echo "Debug log contains fatal/error-level entries"
+            exit 1
+          fi
+
+          echo "status=no_error_entries" >> "$GITHUB_OUTPUT"
 
       - name: Collect E2E failure artifacts
         if: failure()
@@ -192,12 +215,45 @@ jobs:
           COVERED_ABILITIES: ${{ needs.e2e-test.outputs.covered-abilities }}
           TEST_CASES: ${{ needs.e2e-test.outputs.test-cases }}
           NEGATIVE_CASES: ${{ needs.e2e-test.outputs.negative-cases }}
+          PASSED_CASES: ${{ needs.e2e-test.outputs.passed-cases }}
+          FAILED_CASES: ${{ needs.e2e-test.outputs.failed-cases }}
+          DEBUG_LOG_STATUS: ${{ needs.e2e-test.outputs.debug-log-status }}
+          CHANGED_FILES: ${{ needs.changes.outputs.changed-files }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          HEAD_SHA: ${{ github.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          TESTED_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
-          VERSIONS=$'\n\n### Tested versions\n\n'
+          status_label="$E2E_RESULT"
+          if [ "$E2E_RESULT" = "success" ]; then
+            status_label="passed"
+          fi
+
+          changed_files_count="unknown"
+          if [ -n "${CHANGED_FILES:-}" ] && [ "$CHANGED_FILES" != "manual-dispatch" ]; then
+            changed_files_count="$(printf '%s\n' "$CHANGED_FILES" | sed '/^$/d' | wc -l | tr -d ' ')"
+          elif [ "$CHANGED_FILES" = "manual-dispatch" ]; then
+            changed_files_count="manual-dispatch"
+          fi
+
+          RUN_FACTS=$'\n\n### Run facts\n\n'
+          RUN_FACTS+="- Result: ${status_label}"$'\n'
+          RUN_FACTS+="- PR head commit: ${PR_HEAD_SHA:-unknown}"$'\n'
+          RUN_FACTS+="- Tested merge commit: ${TESTED_SHA:-unknown}"$'\n'
+          RUN_FACTS+="- Changed files that triggered E2E: ${changed_files_count}"$'\n'
+          RUN_FACTS+="- WordPress debug log scan: ${DEBUG_LOG_STATUS:-unknown}"$'\n'
+          RUN_FACTS+="- Workflow run: ${RUN_URL:-unknown}"
+
+          COVERAGE=$'\n\n### Ability coverage from e2e-summary.json\n\n'
+          COVERAGE+="- Registered webmastery-site-toolkit-for-mcp abilities: ${REGISTERED_ABILITIES:-unknown}"$'\n'
+          COVERAGE+="- Manifest-covered abilities: ${COVERED_ABILITIES:-unknown}"$'\n'
+          COVERAGE+="- Manifest test cases: ${TEST_CASES:-unknown}"$'\n'
+          COVERAGE+="- Manifest cases passed: ${PASSED_CASES:-unknown}"$'\n'
+          COVERAGE+="- Manifest cases failed: ${FAILED_CASES:-unknown}"$'\n'
+          COVERAGE+="- Negative permission cases: ${NEGATIVE_CASES:-unknown}"
+
+          VERSIONS=$'\n\n### Tested runtime versions\n\n'
           VERSIONS+="- WordPress Docker image: ${WORDPRESS_IMAGE:-unknown}"$'\n'
           VERSIONS+="- WordPress core: ${WORDPRESS_VERSION:-unknown}"$'\n'
           VERSIONS+="- PHP: ${PHP_VERSION:-unknown}"$'\n'
@@ -205,20 +261,21 @@ jobs:
           VERSIONS+="- MySQL server: ${MYSQL_VERSION:-unknown}"$'\n'
           VERSIONS+="- MCP Adapter release: ${MCP_ADAPTER_RELEASE:-unknown}"$'\n'
           VERSIONS+="- MCP Adapter plugin: ${MCP_ADAPTER_VERSION:-unknown}"$'\n'
-          VERSIONS+="- Webmastery Site Toolkit for MCP: ${PLUGIN_VERSION:-unknown}"$'\n'
-          VERSIONS+="- Commit: ${HEAD_SHA:-unknown}"$'\n'
-          VERSIONS+="- Workflow run: ${RUN_URL:-unknown}"
-          COVERAGE=$'\n\n### Ability coverage\n\n'
-          COVERAGE+="- Registered webmastery-site-toolkit-for-mcp abilities: ${REGISTERED_ABILITIES:-unknown}"$'\n'
-          COVERAGE+="- Manifest-covered abilities: ${COVERED_ABILITIES:-unknown}"$'\n'
-          COVERAGE+="- Manifest test cases: ${TEST_CASES:-unknown}"$'\n'
-          COVERAGE+="- Negative permission cases: ${NEGATIVE_CASES:-unknown}"
-          if [ "$E2E_RESULT" = "success" ]; then
-            BODY=$'## E2E QA Tests Passed\n\n- Docker WordPress stack started\n- WordPress core installed before plugin activation\n- MCP Adapter installed from official WordPress release asset\n- Manifest covers every registered webmastery-site-toolkit-for-mcp ability\n- Ability execution tests passed\n- PHP syntax checks passed\n- WordPress debug log scan found no fatal/error-level entries'
+          VERSIONS+="- Webmastery Site Toolkit for MCP: ${PLUGIN_VERSION:-unknown}"
+
+          CHANGES=$'\n\n### Changed files\n\n'
+          if [ -n "${CHANGED_FILES:-}" ]; then
+            CHANGES+="$(printf '%s\n' "$CHANGED_FILES" | sed '/^$/d' | sed 's/^/- /')"
           else
-            BODY=$"## E2E QA Tests Failed\n\n- Result: ${E2E_RESULT}\n- Review this workflow run and uploaded E2E failure artifacts for the failed setup/test phase details."
+            CHANGES+="- unknown"
           fi
-          BODY+="$COVERAGE$VERSIONS"
+
+          if [ "$E2E_RESULT" = "success" ]; then
+            BODY=$'## E2E QA Tests Passed'
+          else
+            BODY=$'## E2E QA Tests Failed\n\nReview this workflow run and uploaded E2E failure artifacts for the failed setup/test phase details.'
+          fi
+          BODY+="$RUN_FACTS$COVERAGE$VERSIONS$CHANGES"
           gh api "repos/$OWNER/$REPO/issues/$ISSUE_NUMBER/comments" --method POST -f body="$BODY"
 
   skip-summary:
