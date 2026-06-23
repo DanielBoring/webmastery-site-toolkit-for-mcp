@@ -8,6 +8,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Added
 
+- Added an Administrator-only user access audit for administrator account inventory, default `admin` username detection, administrator application password reporting, warnings, and application-password collection metadata.
 - Added an Administrator-only plugin audit for inactive plugins, cached updates, tested-up-to compatibility, potential abandonment, local file age, and cached security-update flags without network calls.
 - Added Administrator-only performance status diagnostics for object-cache status, known page-cache plugin detection, memory limits, revision limits, autosave interval, and script concatenation.
 - Added Administrator-only backup status diagnostics for known backup plugin detection, UpdraftPlus last-backup and schedule reporting, BackWPup last-backup reporting, and no-backup warnings.

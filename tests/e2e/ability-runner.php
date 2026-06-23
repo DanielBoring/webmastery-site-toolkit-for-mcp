@@ -15,6 +15,35 @@ function e2e_ensure_user( $login, $email, $role ) {
 	return (int) $id;
 }
 
+function e2e_ensure_application_password( $user_id, $name ) {
+	if ( ! class_exists( 'WP_Application_Passwords' ) ) {
+		return null;
+	}
+
+	foreach ( WP_Application_Passwords::get_user_application_passwords( $user_id ) as $password ) {
+		if ( $name === ( $password['name'] ?? '' ) ) {
+			WP_Application_Passwords::record_application_password_usage( $user_id, $password['uuid'] );
+			return $password['uuid'];
+		}
+	}
+
+	$created = WP_Application_Passwords::create_new_application_password(
+		$user_id,
+		array(
+			'name' => $name,
+		)
+	);
+
+	if ( is_wp_error( $created ) ) {
+		throw new RuntimeException( $created->get_error_message() );
+	}
+
+	$password = $created[1];
+	WP_Application_Passwords::record_application_password_usage( $user_id, $password['uuid'] );
+
+	return $password['uuid'];
+}
+
 function e2e_ensure_term_id( $name, $taxonomy ) {
 	$existing = term_exists( $name, $taxonomy );
 	if ( $existing ) {
@@ -368,6 +397,7 @@ $editor_id     = e2e_ensure_user( 'editor_test', 'editor@test.local', 'editor' )
 $subscriber_id = e2e_ensure_user( 'subscriber_test', 'subscriber@test.local', 'subscriber' );
 $no_role_id    = e2e_ensure_user( 'no_role_test', 'no-role@test.local', 'subscriber' );
 ( new WP_User( $no_role_id ) )->set_role( '' );
+e2e_ensure_application_password( $admin_id, 'MCP E2E App Password' );
 
 e2e_ensure_role(
 	'book_manager',
