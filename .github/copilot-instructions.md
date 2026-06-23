@@ -2,6 +2,15 @@
 
 Use this workflow for code, documentation, ability, and release-readiness changes in this repository.
 
+## Branch freshness preflight
+
+Before starting issue or PR work, reduce avoidable merge conflicts:
+
+1. Fetch the default branch with `git fetch origin main`.
+2. Check whether the current branch is based on the latest `origin/main` and whether its upstream still exists.
+3. If the branch is stale or its upstream is gone, update it from `origin/main` or start a fresh issue-specific branch before editing.
+4. Before opening a PR, fetch `origin main` again and confirm the branch is mergeable against the current base.
+
 ## Release-readiness workflow
 
 When asked to add, change, or release abilities, complete all applicable steps before the final response.
