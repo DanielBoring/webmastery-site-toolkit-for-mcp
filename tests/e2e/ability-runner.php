@@ -587,7 +587,7 @@ deactivate_plugins(
 );
 activate_plugin( 'wp-super-cache/wp-cache.php' );
 activate_plugin( 'updraftplus/updraftplus.php' );
-update_option( 'updraft_last_backup', 1747278000 );
+update_option( 'updraft_last_backup', array( 'backup_time' => 1747278000, 'backup_nonce' => '999999999999' ) );
 update_option( 'updraft_interval', 'weekly' );
 update_option( 'updraft_interval_database', 'weekly' );
 update_option( 'backwpup_jobs', array( array( 'lastrun' => 1747191600 ) ) );

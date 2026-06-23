@@ -8,7 +8,7 @@ class Webmastery_MCP_Backup_Status {
 		'updraftplus/updraftplus.php'                                => 'UpdraftPlus',
 		'backwpup/backwpup.php'                                      => 'BackWPup',
 		'duplicator/duplicator.php'                                  => 'Duplicator',
-		'all-in-one-wp-migration/all-in-one-wp-migration.php'        => 'All-in-One WP Migration',
+		'all-in-one-wp-migration/all-in-one-wp-migration.php' => 'All-in-One WP Migration',
 		'blogvault-real-time-backup/blogvault.php'                   => 'BlogVault',
 		'wpvivid-backuprestore/wpvivid-backuprestore.php'            => 'WPvivid Backup & Migration',
 		'jetpack/jetpack.php'                                        => 'Jetpack',
@@ -92,7 +92,7 @@ class Webmastery_MCP_Backup_Status {
 
 	private static function get_last_backup_for_plugin( $basename ) {
 		if ( 'updraftplus/updraftplus.php' === $basename ) {
-			return self::format_latest_timestamp( get_option( 'updraft_last_backup', null ) );
+			return self::get_updraftplus_last_backup();
 		}
 
 		if ( 'backwpup/backwpup.php' === $basename ) {
@@ -100,6 +100,18 @@ class Webmastery_MCP_Backup_Status {
 		}
 
 		return null;
+	}
+
+	private static function get_updraftplus_last_backup() {
+		$last_backup = get_option( 'updraft_last_backup', null );
+
+		if ( is_array( $last_backup ) ) {
+			return array_key_exists( 'backup_time', $last_backup )
+				? self::format_latest_timestamp( $last_backup['backup_time'] )
+				: null;
+		}
+
+		return self::format_latest_timestamp( $last_backup );
 	}
 
 	private static function get_schedule_for_plugin( $basename ) {
