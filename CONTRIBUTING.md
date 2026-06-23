@@ -127,14 +127,37 @@ Use the fastest command that covers your change:
 | `E2E_MANAGE_COMPOSE=1 composer e2e` | Docker WordPress E2E with automatic Compose startup and cleanup |
 | `scripts/qa-local.sh --e2e` | Unix/Git Bash wrapper for Composer QA plus managed Docker E2E |
 | `powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -E2E` | PowerShell wrapper for Composer QA plus managed Docker E2E |
+| `powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -PreflightOnly` | Windows prerequisite check without installing dependencies or running QA |
+| `scripts/qa-local.sh --preflight-only` | Unix/Git Bash prerequisite check without installing dependencies or running QA |
 
-For Windows, install PHP and Composer first, then restart your terminal so both commands are available on `PATH`. If a Windows Composer installation cannot invoke `vendor/bin/phpcs` by name, run the equivalent direct fallback:
+For Windows, install PHP and Composer first, then restart your terminal so both commands are available on `PATH`. A winget-based PHP install is acceptable when it provides PHP 8.0+:
+
+```powershell
+winget search PHP --source winget
+winget install --id PHP.PHP.8.2 --source winget
+php -v
+composer --version
+powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -PreflightOnly
+```
+
+If winget installs PHP but `php` is still unavailable, add the package directory that contains `php.exe` to your user `PATH`, then restart the terminal. Composer can be installed globally, or as a user-local wrapper that invokes `composer.phar` with the PHP binary.
+
+If you run the Bash wrapper from WSL, install PHP and Composer inside WSL. Windows `php.exe` and `composer.bat` may appear on WSL's `PATH`, but the Bash wrapper expects Unix `php` and `composer` commands. Use the PowerShell wrapper when validating with Windows-installed PHP and Composer.
+
+If a Windows Composer installation cannot invoke `vendor/bin/phpcs` by name, run the equivalent direct fallback:
 
 ```powershell
 php vendor\squizlabs\php_codesniffer\bin\phpcs --standard=phpcs.xml.dist
 ```
 
 The lightweight manifest validator checks JSON structure, expected fields, roles, labels, and assertion shapes. Full ability registration coverage still requires Docker E2E because registered abilities are only available inside WordPress after the plugin and MCP Adapter load.
+
+When checking GitHub Actions status from the CLI, include the PR number or branch before `--repo`:
+
+```bash
+gh pr checks 67 --repo DanielBoring/webmastery-site-toolkit-for-mcp --watch=false
+gh pr checks issue-18-content-hygiene --repo DanielBoring/webmastery-site-toolkit-for-mcp --watch
+```
 
 ---
 

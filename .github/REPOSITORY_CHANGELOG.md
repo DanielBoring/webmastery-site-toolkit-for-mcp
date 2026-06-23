@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added local QA preflight-only modes and clearer missing-tool guidance for PHP, Composer, Docker, and Bash prerequisites.
 - Added cross-platform local QA helper scripts, a Composer QA command, and a lightweight E2E manifest validator for contributor preflight checks.
 - Added a dedicated Coding Standards workflow that installs Composer dev dependencies and runs PHPCS on pushes, pull requests, and manual dispatches.
 - Added an E2E mu-plugin fixture for custom post type ability coverage.
