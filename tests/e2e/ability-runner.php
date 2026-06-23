@@ -545,14 +545,17 @@ e2e_force_post_datetime(
 e2e_ensure_plugin( 'mcp-e2e-plugin/mcp-e2e-plugin.php', 'MCP E2E Plugin' );
 e2e_ensure_plugin( 'mcp-e2e-duplicate/mcp-e2e-duplicate.php', 'MCP E2E Duplicate Folder Plugin' );
 e2e_ensure_plugin( 'mcp-e2e-duplicate.php', 'MCP E2E Duplicate Single Plugin' );
+e2e_ensure_plugin( 'wp-super-cache/wp-cache.php', 'WP Super Cache' );
 deactivate_plugins(
 	array(
 		'mcp-e2e-plugin/mcp-e2e-plugin.php',
 		'mcp-e2e-duplicate/mcp-e2e-duplicate.php',
 		'mcp-e2e-duplicate.php',
+		'wp-super-cache/wp-cache.php',
 	),
 	true
 );
+activate_plugin( 'wp-super-cache/wp-cache.php' );
 
 $fixtures['fixture_plugin']        = 'mcp-e2e-plugin/mcp-e2e-plugin.php';
 $fixtures['ambiguous_plugin_slug'] = 'mcp-e2e-duplicate';
