@@ -9,11 +9,11 @@ License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
 
-Adds MCP-powered WordPress site abilities for posts, revisions, post meta, pages, custom post types, media, content hygiene, comments, plugins, SEO, health, database health, security, users, and site info.
+Adds MCP-powered WordPress site abilities for posts, revisions, post meta, pages, custom post types, media, content hygiene, comments, plugins, SEO, health, database health, performance status, backup status, security, users, and site info.
 
 == Description ==
 
-Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, revisions, post meta, pages, public custom post types, media, content hygiene diagnostics, comments, plugins, SEO checks, site health, database health, security audits, user lookup, and non-sensitive site introspection. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
+Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, revisions, post meta, pages, public custom post types, media, content hygiene diagnostics, comments, plugins, SEO checks, site health, database health, performance status, backup status, security audits, user lookup, and non-sensitive site introspection. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
 
 Webmastery Site Toolkit for MCP registers abilities across site management groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
 
@@ -64,6 +64,12 @@ Run WordPress's built-in health tests and get results grouped by severity: criti
 
 **Database Health**
 Audit read-only database bloat indicators including revision count and revision-limit status, orphaned post meta, expired transients, autoloaded option size, and per-table size details. Requires Administrator access through `manage_options`.
+
+**Performance Status**
+Inspect caching and performance-related configuration: external object cache status, object-cache and advanced-cache drop-ins, active known page-cache plugins, WordPress and PHP memory limits, post revision limit, autosave interval, and script concatenation. Requires Administrator access through `manage_options`.
+
+**Backup Status**
+Detect active known backup plugins, including UpdraftPlus, BackWPup, Duplicator, All-in-One WP Migration, BlogVault, WPvivid, Jetpack/VaultPress, and ManageWP Worker. Reports accessible last-backup and schedule details for UpdraftPlus, last-backup details for BackWPup, and a warning when no known backup plugin is active. Requires Administrator access through `manage_options`.
 
 **Security Audit**
 Check for common misconfigurations: debug mode, file editor exposure, SSL, admin username presence, core and plugin version currency, XML-RPC status, and auth key strength. Returns findings in fail/warn/pass buckets with actionable remediation steps.
@@ -116,7 +122,7 @@ Site introspection workflows (`get-site-info`, `get-user-info`, and `get-environ
 
 Custom post type workflows depend on each CPT's registered capability map. Use `list-post-types` to discover the generated ability names and required capabilities before assigning an MCP service account.
 
-For user lookup, plugin management/auditing, and sensitive site-audit workflows (`list-users`, `get-user`, `list-plugins`, `plugin-audit`, `activate-plugin`, `deactivate-plugin`, `site-health-check`, `database-health`, `security-audit`, and `seo-site-overview`), use a separate dedicated **Administrator** account because those abilities require `list_users`, `activate_plugins`, or `manage_options`.
+For user lookup, plugin management/auditing, and sensitive site-audit workflows (`list-users`, `get-user`, `list-plugins`, `plugin-audit`, `activate-plugin`, `deactivate-plugin`, `site-health-check`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `seo-site-overview`), use a separate dedicated **Administrator** account because those abilities require `list_users`, `activate_plugins`, or `manage_options`.
 
 Note on role scope: the `edit_posts` and `upload_files` capabilities are available to Authors as well, but WordPress scopes results and write access to the authenticated user's own content unless `edit_others_posts` / `delete_others_posts` are also present (which Editors have). Use an Author-role account only if you intentionally want the agent limited to content it created. For full site-wide editorial control, use Editor.
 
@@ -140,6 +146,8 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 
 = Unreleased =
 * Add an Administrator-only plugin audit ability for inactive plugins, cached updates, tested-up-to compatibility, potential abandonment, local file age, and cached security-update flags without network calls.
+* Add an Administrator-only backup status ability for known backup plugin detection, UpdraftPlus last-backup and schedule reporting, BackWPup last-backup reporting, and no-backup warnings.
+* Add an Administrator-only performance status ability for object-cache status, page-cache plugin detection, memory limits, revision limits, autosave interval, and script concatenation diagnostics.
 * Add read-only content hygiene abilities to list orphaned media, published posts or pages missing featured images, and stuck scheduled posts with capability checks and empty results when no problems are found.
 * Add an Administrator-only database health ability for revision bloat, orphaned post meta, expired transients, autoloaded option size, and per-table size diagnostics.
 * Add bulk post trash and bulk draft-publish abilities with per-ID success/failure summaries and `delete_posts` / `edit_posts` capability checks.

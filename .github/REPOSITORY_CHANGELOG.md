@@ -8,12 +8,16 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added agent branch freshness preflight guidance to reduce avoidable PR merge conflicts.
+- Added local QA preflight-only modes and clearer missing-tool guidance for PHP, Composer, Docker, and Bash prerequisites.
+- Added manifest E2E setup support for temporarily overriding active plugins in scoped ability cases.
 - Added cross-platform local QA helper scripts, a Composer QA command, and a lightweight E2E manifest validator for contributor preflight checks.
 - Added a dedicated Coding Standards workflow that installs Composer dev dependencies and runs PHPCS on pushes, pull requests, and manual dispatches.
 - Added an E2E mu-plugin fixture for custom post type ability coverage.
 
 ### Changed
 
+- Updated E2E PR comments to replace static success bullets with runtime-derived run facts, case pass/fail counts, debug-log status, changed files, and separate PR-head/tested-merge commit SHAs.
 - Updated E2E runner behavior so local runs can optionally manage Docker Compose startup and cleanup while preserving CI behavior.
 - Updated E2E ability manifest coverage counts and cases for bulk post operation abilities.
 - Updated release, E2E, PHPCS, Composer, and documentation automation references for the Webmastery Site Toolkit for MCP package rename.
