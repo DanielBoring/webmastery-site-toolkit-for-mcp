@@ -9,13 +9,13 @@ License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
 
-Adds MCP-powered WordPress site abilities for posts, revisions, post meta, pages, custom post types, media, comments, plugins, SEO, health, security, users, and site info.
+Adds MCP-powered WordPress site abilities for posts, revisions, post meta, pages, custom post types, media, comments, plugins, SEO, health, database health, security, users, and site info.
 
 == Description ==
 
-Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, revisions, post meta, pages, public custom post types, media, comments, plugins, SEO checks, site health, security audits, user lookup, and non-sensitive site introspection. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
+Webmastery Site Toolkit for MCP is a WordPress plugin that adds MCP-powered site management abilities for posts, revisions, post meta, pages, public custom post types, media, comments, plugins, SEO checks, site health, database health, security audits, user lookup, and non-sensitive site introspection. It works with the [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin, which provides the transport layer while this plugin registers the abilities an AI agent can call.
 
-Webmastery Site Toolkit for MCP registers abilities across fourteen groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
+Webmastery Site Toolkit for MCP registers abilities across site management groups, giving AI agents and MCP clients a full working vocabulary for your WordPress site:
 
 **Posts**
 Create, read, update, partially patch, bulk publish drafts, bulk trash, and delete posts. Supports all statuses including scheduled (future) posts, category and tag assignment, pagination, human-readable author fields, and safer targeted content updates.
@@ -58,6 +58,9 @@ List installed plugins and manage activation state by canonical plugin basename.
 
 **Site Health**
 Run WordPress's built-in health tests and get results grouped by severity: critical, recommended, and good.
+
+**Database Health**
+Audit read-only database bloat indicators including revision count and revision-limit status, orphaned post meta, expired transients, autoloaded option size, and per-table size details. Requires Administrator access through `manage_options`.
 
 **Security Audit**
 Check for common misconfigurations: debug mode, file editor exposure, SSL, admin username presence, core and plugin version currency, XML-RPC status, and auth key strength. Returns findings in fail/warn/pass buckets with actionable remediation steps.
@@ -110,7 +113,7 @@ Site introspection workflows (`get-site-info`, `get-user-info`, and `get-environ
 
 Custom post type workflows depend on each CPT's registered capability map. Use `list-post-types` to discover the generated ability names and required capabilities before assigning an MCP service account.
 
-For user lookup, plugin management, and sensitive site-audit workflows (`list-users`, `get-user`, `list-plugins`, `activate-plugin`, `deactivate-plugin`, `site-health-check`, `security-audit`, and `seo-site-overview`), use a separate dedicated **Administrator** account because those abilities require `list_users`, `activate_plugins`, or `manage_options`.
+For user lookup, plugin management, and sensitive site-audit workflows (`list-users`, `get-user`, `list-plugins`, `activate-plugin`, `deactivate-plugin`, `site-health-check`, `database-health`, `security-audit`, and `seo-site-overview`), use a separate dedicated **Administrator** account because those abilities require `list_users`, `activate_plugins`, or `manage_options`.
 
 Note on role scope: the `edit_posts` and `upload_files` capabilities are available to Authors as well, but WordPress scopes results and write access to the authenticated user's own content unless `edit_others_posts` / `delete_others_posts` are also present (which Editors have). Use an Author-role account only if you intentionally want the agent limited to content it created. For full site-wide editorial control, use Editor.
 
@@ -124,7 +127,7 @@ After activation, call the MCP Adapter discovery tool, `mcp-adapter-discover-abi
 
 = Are write operations safe? =
 
-Delete operations for posts and pages, including bulk post trashing, move content to trash. Media delete permanently removes the attachment and its files. Plugin activation and deactivation require Administrator plugin capabilities, and protected-plugin deactivation is blocked unless explicitly forced. All inputs are sanitized using WordPress core functions. All operations go through the WordPress API — no direct database queries.
+Delete operations for posts and pages, including bulk post trashing, move content to trash. Media delete permanently removes the attachment and its files. Plugin activation and deactivation require Administrator plugin capabilities, and protected-plugin deactivation is blocked unless explicitly forced. All inputs are sanitized using WordPress core functions. Operations go through the WordPress API except `database-health`, which uses read-only `$wpdb` queries for Administrator-only diagnostics.
 
 Post and page create/update meta writes are limited to REST-registered keys and supported Yoast SEO protected keys. Unsupported keys return `meta_write_failed` with the rejected keys listed in `data.meta.not_written`. Dedicated post meta abilities enforce object-level `edit_post` checks, reject unsafe key names and oversized values, support scalar and JSON object/array values, and deny protected `_`-prefixed keys unless they are explicitly allowlisted by the plugin.
 
@@ -133,6 +136,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 == Changelog ==
 
 = Unreleased =
+* Add an Administrator-only database health ability for revision bloat, orphaned post meta, expired transients, autoloaded option size, and per-table size diagnostics.
 * Add bulk post trash and bulk draft-publish abilities with per-ID success/failure summaries and `delete_posts` / `edit_posts` capability checks.
 * Add discoverability and CRUD abilities for eligible public custom post types, with deterministic naming, CPT-specific capability checks, and taxonomy term assignment support.
 * Add site introspection abilities for stable, non-sensitive site, current-user, and runtime environment context with `read` capability checks.
@@ -208,7 +212,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 == Upgrade Notice ==
 
 = Unreleased =
-Adds bulk post trash and bulk draft-publish abilities for MCP clients that need to process multiple post IDs in one call.
+Adds Administrator-only database health diagnostics plus bulk post trash and bulk draft-publish abilities for MCP clients.
 
 = 2.2.0 =
 Adds Yoast score list abilities and fixes supported Yoast protected meta writes for post and page create/update workflows.

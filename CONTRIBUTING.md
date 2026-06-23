@@ -43,7 +43,7 @@ This plugin follows [WordPress Coding Standards](https://developer.wordpress.org
 
 - **Sanitize inputs** — use `sanitize_text_field()` for strings, `absint()` for IDs, `wp_kses_post()` for HTML content, and enum validation for fixed-value fields
 - **Capability checks** — every ability must have a `permission_callback` that returns a `WP_Error` on failure, not just `false`; prefer object-specific checks such as `edit_post` / `delete_post` when an object ID is available
-- **No direct database queries** — use WordPress API functions (`get_posts()`, `wp_insert_post()`, etc.) exclusively
+- **Prefer WordPress APIs** — use WordPress API functions (`get_posts()`, `wp_insert_post()`, etc.) for normal reads and writes. Direct `$wpdb` reads are limited to administrator-only diagnostics such as database health checks, must be prepared where variables are present, and must surface query errors.
 - **No output buffering** — abilities return arrays or `WP_Error` objects; the MCP Adapter handles serialization
 - **WordPress.org readiness** — avoid trademark-confusing names, spammy readme text, undisclosed external calls, bundled duplicate libraries, and non-GPL-compatible assets
 

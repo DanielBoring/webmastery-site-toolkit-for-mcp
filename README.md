@@ -21,7 +21,7 @@
 
 </div>
 
-**Webmastery Site Toolkit for MCP** is a WordPress plugin that lets an AI agent manage your site over MCP — posts, revisions, post meta, pages, public custom post types, media, comments, taxonomy, plugins, SEO checks, site health, security audits, user lookup, and non-sensitive site introspection. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an agent can call.
+**Webmastery Site Toolkit for MCP** is a WordPress plugin that lets an AI agent manage your site over MCP — posts, revisions, post meta, pages, public custom post types, media, comments, taxonomy, plugins, SEO checks, site health, database health, security audits, user lookup, and non-sensitive site introspection. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an agent can call.
 
 **Use it if you want to:**
 
@@ -70,7 +70,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 | Users                     | 2         | Administrator            |
 | Site introspection        | 3         | Subscriber               |
 | Plugins                   | 3         | Administrator            |
-| Site health & security    | 2         | Administrator            |
+| Site health & security    | 3         | Administrator            |
 | SEO analysis              | 4         | Author → Administrator   |
 
 **Editor** is the recommended default for content workflows. User lookup, plugin management, and site-audit abilities need Administrator capabilities — use a separate Administrator service account for those.
@@ -82,6 +82,8 @@ Post and page listings include the numeric author ID plus `author_name` and `aut
 `list-post-types` discovers eligible custom post types where `public = true`, `_builtin = false`, and `show_ui = true`. Each eligible CPT gets deterministic ability names in the form `list-cpt-{post-type}`, `get-cpt-{post-type}`, `create-cpt-{post-type}`, `update-cpt-{post-type}`, and `delete-cpt-{post-type}`; naming collisions append a stable short hash. CPT CRUD abilities use the post type's own capability map, including object-level `read_post`, `edit_post`, and `delete_post` checks. CPT taxonomy metadata is returned by discovery, and create/update calls can assign terms through `taxonomy_terms` when the account has the taxonomy's `assign_terms` capability.
 
 `get-seo-scores` and `get-readability-scores` return Yoast SEO and readability score meta for posts and pages with stable pagination, optional `post_type`, `status`, and `modified_after` filters, and newest-modified-first ordering. Missing score meta is returned as `null`; when Yoast SEO is not active, the abilities return an empty result with an explanatory note.
+
+`database-health` requires `manage_options` and returns read-only database bloat indicators for administrators: post revision count and revision-limit status, orphaned post meta count, expired transient count, autoloaded option size with a 900 KB threshold flag, and per-table row/data/index size details from `information_schema`.
 
 👉 **[See the full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities)** for every ability, its description, required capability, and minimum role.
 
@@ -203,6 +205,7 @@ To confirm everything works, ask your agent to call a few:
 - `webmastery-site-toolkit-for-mcp/get-category` — *"Get category 12"*
 - `webmastery-site-toolkit-for-mcp/security-audit` (Administrator account) — *"Run a security audit of my WordPress site"*
 - `webmastery-site-toolkit-for-mcp/site-health-check` (Administrator account) — *"Check WordPress site health"*
+- `webmastery-site-toolkit-for-mcp/database-health` (Administrator account) — *"Audit database bloat and table sizes"*
 
 ---
 
@@ -215,7 +218,7 @@ To confirm everything works, ask your agent to call a few:
 - `restore-revision` uses WordPress core revision restore APIs and requires `edit_posts` plus object-level edit access for the parent post or page.
 - `patch-content-block` and `patch-post-content` support optional hash preconditions and fail safely when a target is missing, ambiguous, or stale.
 - Post and page create/update meta writes are limited to REST-registered keys and supported Yoast SEO protected keys; unsupported keys fail with a structured `meta_write_failed` response. Dedicated post meta abilities require `edit_post` for the target post, reject unsafe keys and oversized values, support scalar and JSON object/array values, and deny `_`-prefixed protected keys unless the plugin explicitly allowlists them.
-- Content is sanitized on write, and there are **no direct database queries** — all reads and writes go through the WordPress API.
+- Content is sanitized on write. Reads and writes go through the WordPress API except `database-health`, which uses read-only `$wpdb` queries for administrator-only database diagnostics.
 
 📖 **[Full security model](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#security)**, including plugin-management safeguards and the complete sanitization rules.
 
