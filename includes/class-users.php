@@ -7,10 +7,11 @@ class Webmastery_MCP_Users {
 	public static function register() {
 		self::register_list();
 		self::register_get();
+		self::register_user_access_audit();
 	}
 
 	private static function normalize( $user ) {
-		$user = get_userdata( $user );
+		$user = $user instanceof WP_User ? $user : get_userdata( $user );
 		if ( ! $user ) {
 			return null;
 		}
@@ -33,6 +34,62 @@ class Webmastery_MCP_Users {
 		}
 
 		return true;
+	}
+
+	public static function audit_permission() {
+		if ( ! current_user_can( 'edit_users' ) ) {
+			return new WP_Error( 'forbidden', 'Requires edit_users capability.' );
+		}
+
+		return true;
+	}
+
+	private static function normalize_admin_account( $user ) {
+		$user = $user instanceof WP_User ? $user : get_userdata( $user );
+		if ( ! $user ) {
+			return null;
+		}
+
+		return [
+			'id'         => (int) $user->ID,
+			'login'      => $user->user_login,
+			'email'      => $user->user_email,
+			'registered' => $user->user_registered,
+			'last_login' => self::get_last_login( (int) $user->ID ),
+		];
+	}
+
+	private static function get_last_login( $user_id ) {
+		$meta_keys = [
+			'last_login',
+			'last_login_at',
+			'last_login_time',
+			'wp-last-login',
+			'wfls-last-login',
+		];
+
+		foreach ( $meta_keys as $meta_key ) {
+			$value = get_user_meta( $user_id, $meta_key, true );
+			if ( '' !== $value ) {
+				return is_numeric( $value ) ? gmdate( 'c', (int) $value ) : (string) $value;
+			}
+		}
+
+		return null;
+	}
+
+	private static function normalize_application_password( $user, $password ) {
+		$last_used = $password['last_used'] ?? null;
+		if ( is_numeric( $last_used ) ) {
+			$last_used = gmdate( 'c', (int) $last_used );
+		}
+
+		return [
+			'user_id'    => (int) $user->ID,
+			'user_login' => $user->user_login,
+			'app_name'   => (string) ( $password['name'] ?? '' ),
+			'last_used'  => $last_used ? (string) $last_used : null,
+		];
 	}
 
 	private static function register_list() {
@@ -122,5 +179,81 @@ class Webmastery_MCP_Users {
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
 			],
 		] );
+	}
+
+	private static function register_user_access_audit() {
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/user-access-audit', [
+			'label'               => 'User Access Audit',
+			'description'         => 'Audit administrator accounts, default admin username usage, and issued application passwords.',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'execute_callback'    => [ self::class, 'execute_user_access_audit' ],
+			'permission_callback' => [ self::class, 'audit_permission' ],
+			'meta'                => [
+				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+	}
+
+	public static function execute_user_access_audit( $input = [] ) {
+		$query        = new WP_User_Query(
+			[
+				'role'    => 'administrator',
+				'orderby' => 'ID',
+				'order'   => 'ASC',
+			]
+		);
+		$admin_users  = $query->get_results();
+		$admin_count  = count( $admin_users );
+		$admin_exists = (bool) get_user_by( 'login', 'admin' );
+
+		$application_passwords = [];
+		$passwords_skipped     = false;
+		$passwords_skip_reason = null;
+
+		if ( ! class_exists( 'WP_Application_Passwords' ) ) {
+			$passwords_skipped     = true;
+			$passwords_skip_reason = 'WP_Application_Passwords is unavailable on this WordPress installation.';
+		} elseif ( ! current_user_can( 'edit_users' ) ) {
+			$passwords_skipped     = true;
+			$passwords_skip_reason = 'Application passwords require edit_users capability.';
+		} else {
+			foreach ( $admin_users as $admin_user ) {
+				$passwords = WP_Application_Passwords::get_user_application_passwords( (int) $admin_user->ID );
+				foreach ( $passwords as $password ) {
+					$application_passwords[] = self::normalize_application_password( $admin_user, $password );
+				}
+			}
+		}
+
+		$warnings = [];
+		if ( $admin_exists ) {
+			$warnings[] = "Username 'admin' exists — common brute-force target";
+		}
+		if ( $admin_count > 0 ) {
+			$warnings[] = sprintf( '%d administrator account(s) detected — review whether all require full admin access', $admin_count );
+		}
+		if ( $application_passwords ) {
+			$warnings[] = sprintf( '%d application password(s) issued to administrator account(s) — review and revoke unused credentials', count( $application_passwords ) );
+		}
+		if ( $passwords_skipped ) {
+			$warnings[] = $passwords_skip_reason;
+		}
+
+		return [
+			'success' => true,
+			'data'    => [
+				'admin_accounts'                => array_values( array_filter( array_map( [ self::class, 'normalize_admin_account' ], $admin_users ) ) ),
+				'admin_count'                   => $admin_count,
+				'default_admin_username_exists' => $admin_exists,
+				'application_passwords'         => $application_passwords,
+				'warnings'                      => $warnings,
+				'metadata'                      => [
+					'application_passwords_skipped'     => $passwords_skipped,
+					'application_passwords_skip_reason' => $passwords_skip_reason,
+					'required_capability'                => 'edit_users',
+				],
+			],
+		];
 	}
 }

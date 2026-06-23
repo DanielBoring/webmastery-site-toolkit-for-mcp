@@ -68,15 +68,15 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 | Comments                  | 4         | Editor                   |
 | Media                     | 4         | Author                   |
 | Content hygiene           | 3         | Author → Editor          |
-| Users                     | 2         | Administrator            |
+| Users                     | 3         | Administrator            |
 | Site introspection        | 3         | Subscriber               |
 | Plugins                   | 4         | Administrator            |
 | Site health & security    | 5         | Administrator            |
 | SEO analysis              | 4         | Author → Administrator   |
 
-**Editor** is the recommended default for content workflows. User lookup, plugin management/auditing, and site-audit abilities need Administrator capabilities — use a separate Administrator service account for those.
+**Editor** is the recommended default for content workflows. User lookup, user access audits, plugin management/auditing, and site-audit abilities need Administrator capabilities — use a separate Administrator service account for those.
 
-Post and page listings include the numeric author ID plus `author_name` and `author_login`, so agents can show human-readable bylines without an extra user lookup. Bulk post operations can move multiple posts to trash with `bulk-trash-posts` (`delete_posts`) or publish multiple draft posts with `bulk-publish-posts` (`edit_posts`), returning per-ID success and failure summaries instead of stopping at the first problem. Revision abilities can list saved revisions for posts and pages and restore a post or page to a specific revision; both require `edit_posts` plus object-level edit access to the target content. Taxonomy abilities can list, get, create, update, and delete categories and tags; reads require `read`, while writes require `manage_categories`. Site introspection abilities require `read` and return stable, non-sensitive schemas: `get-site-info` returns public site metadata, active theme name/version, deterministic timezone fallback (`UTC±HH:MM` when no timezone string is configured), multisite status, and permalink structure; `get-user-info` returns the current user's profile, roles, and a fixed capability summary; `get-environment-info` returns only PHP version, database server version, WordPress environment type, and locale. Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
+Post and page listings include the numeric author ID plus `author_name` and `author_login`, so agents can show human-readable bylines without an extra user lookup. Bulk post operations can move multiple posts to trash with `bulk-trash-posts` (`delete_posts`) or publish multiple draft posts with `bulk-publish-posts` (`edit_posts`), returning per-ID success and failure summaries instead of stopping at the first problem. Revision abilities can list saved revisions for posts and pages and restore a post or page to a specific revision; both require `edit_posts` plus object-level edit access to the target content. Taxonomy abilities can list, get, create, update, and delete categories and tags; reads require `read`, while writes require `manage_categories`. User access auditing requires `edit_users` and returns administrator accounts, default `admin` username detection, administrator application passwords, warnings, and metadata that states whether application password collection was skipped. Site introspection abilities require `read` and return stable, non-sensitive schemas: `get-site-info` returns public site metadata, active theme name/version, deterministic timezone fallback (`UTC±HH:MM` when no timezone string is configured), multisite status, and permalink structure; `get-user-info` returns the current user's profile, roles, and a fixed capability summary; `get-environment-info` returns only PHP version, database server version, WordPress environment type, and locale. Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
 
 `create-post`, `create-page`, `update-post`, and `update-page` can write REST-registered post meta plus supported Yoast SEO protected keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys return a `meta_write_failed` response with `data.meta.not_written` instead of being silently ignored. Dedicated post meta abilities can read, update, or delete one post's unprotected meta keys, plus explicitly allowlisted protected keys, after an object-level `edit_post` check.
 
@@ -137,7 +137,7 @@ wp plugin activate webmastery-site-toolkit-for-mcp
 
 Create a dedicated user for your agent rather than using your personal admin account — it limits what the agent can do and makes access easy to revoke. In **WP Admin → Users → Add New User**, set a username (e.g. `ai-editor`), an email, and the **Role** to **Editor**.
 
-> **Why Editor and not Administrator?** Editor covers posts, pages, taxonomy, comments, and media. User lookup, plugin management, and site-audit abilities require Administrator capabilities (`list_users`, `activate_plugins`, `manage_options`) — keep a *separate* Administrator service account for those and use the Editor account for day-to-day content.
+> **Why Editor and not Administrator?** Editor covers posts, pages, taxonomy, comments, and media. User lookup, user access auditing, plugin management, and site-audit abilities require Administrator capabilities (`list_users`, `edit_users`, `activate_plugins`, `manage_options`) — keep a *separate* Administrator service account for those and use the Editor account for day-to-day content.
 
 ### 4. Create an application password
 
@@ -211,6 +211,7 @@ To confirm everything works, ask your agent to call a few:
 - `webmastery-site-toolkit-for-mcp/get-site-info` — *"Get stable public metadata for this WordPress site"*
 - `webmastery-site-toolkit-for-mcp/get-category` — *"Get category 12"*
 - `webmastery-site-toolkit-for-mcp/plugin-audit` (Administrator account) — *"Audit installed plugins for inactive, outdated, or potentially abandoned plugins"*
+- `webmastery-site-toolkit-for-mcp/user-access-audit` (Administrator account) — *"Audit administrator accounts and application passwords"*
 - `webmastery-site-toolkit-for-mcp/security-audit` (Administrator account) — *"Run a security audit of my WordPress site"*
 - `webmastery-site-toolkit-for-mcp/site-health-check` (Administrator account) — *"Check WordPress site health"*
 - `webmastery-site-toolkit-for-mcp/database-health` (Administrator account) — *"Audit database bloat and table sizes"*
@@ -224,6 +225,7 @@ To confirm everything works, ask your agent to call a few:
 - All abilities enforce WordPress capability checks via `permission_callback` — an editor cannot call abilities that require admin caps.
 - Custom post type abilities use each CPT's registered capability map instead of generic post or page capabilities.
 - Site introspection abilities intentionally exclude filesystem paths, raw server internals, secrets, auth keys, salts, and configuration values beyond the documented fields.
+- `user-access-audit` is read-only and requires `edit_users` because it enumerates administrator accounts and application passwords issued to those accounts. It returns application password names and last-used timestamps, never password secrets.
 - `plugin-audit` is read-only and does not call WordPress.org directly; it uses the cached update transient already maintained by WordPress core. It requires `activate_plugins` because installed plugin names, basenames, versions, and compatibility metadata expose the site's plugin attack surface.
 - Performance status is Administrator-only because it reads configuration constants, plugin activation options, and cache drop-in presence from `wp-content`.
 - `delete-post`, `delete-page`, and `bulk-trash-posts` move content to trash, not permanent deletion; use `restore-post` / `restore-page` to undo individual items.

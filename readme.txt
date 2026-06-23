@@ -122,7 +122,7 @@ Site introspection workflows (`get-site-info`, `get-user-info`, and `get-environ
 
 Custom post type workflows depend on each CPT's registered capability map. Use `list-post-types` to discover the generated ability names and required capabilities before assigning an MCP service account.
 
-For user lookup, plugin management/auditing, and sensitive site-audit workflows (`list-users`, `get-user`, `list-plugins`, `plugin-audit`, `activate-plugin`, `deactivate-plugin`, `site-health-check`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `seo-site-overview`), use a separate dedicated **Administrator** account because those abilities require `list_users`, `activate_plugins`, or `manage_options`.
+For user lookup, user access auditing, plugin management/auditing, and sensitive site-audit workflows (`list-users`, `get-user`, `user-access-audit`, `list-plugins`, `plugin-audit`, `activate-plugin`, `deactivate-plugin`, `site-health-check`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `seo-site-overview`), use a separate dedicated **Administrator** account because those abilities require `list_users`, `edit_users`, `activate_plugins`, or `manage_options`.
 
 Note on role scope: the `edit_posts` and `upload_files` capabilities are available to Authors as well, but WordPress scopes results and write access to the authenticated user's own content unless `edit_others_posts` / `delete_others_posts` are also present (which Editors have). Use an Author-role account only if you intentionally want the agent limited to content it created. For full site-wide editorial control, use Editor.
 
@@ -145,6 +145,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 == Changelog ==
 
 = Unreleased =
+* Add an Administrator-only user access audit ability for administrator account inventory, default `admin` username detection, administrator application password reporting, warnings, and application-password collection metadata.
 * Add an Administrator-only plugin audit ability for inactive plugins, cached updates, tested-up-to compatibility, potential abandonment, local file age, and cached security-update flags without network calls.
 * Add an Administrator-only backup status ability for known backup plugin detection, UpdraftPlus last-backup and schedule reporting, BackWPup last-backup reporting, and no-backup warnings.
 * Add an Administrator-only performance status ability for object-cache status, page-cache plugin detection, memory limits, revision limits, autosave interval, and script concatenation diagnostics.
