@@ -8,6 +8,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Added
 
+- Added a media sideload ability to upload public image URLs into the media library with URL safety checks, image MIME and upload-size enforcement, optional title/alt/caption metadata, and optional featured-image assignment.
 - Added a read-only webmaster verification status ability for public Google/Bing proof, homepage verification meta tags, Bing XML verification, visible DNS TXT records, robots.txt sitemap declarations, and sitemap reachability without Google or Bing API credentials.
 - Added an Administrator-only user access audit for administrator account inventory, default `admin` username detection, administrator application password reporting, warnings, and application-password collection metadata.
 - Added an Administrator-only plugin audit for inactive plugins, cached updates, tested-up-to compatibility, potential abandonment, local file age, and cached security-update flags without network calls.

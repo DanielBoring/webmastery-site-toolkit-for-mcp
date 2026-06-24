@@ -131,6 +131,8 @@ For user lookup, user access auditing, plugin management/auditing, and sensitive
 
 Note on role scope: the `edit_posts` and `upload_files` capabilities are available to Authors as well, but WordPress scopes results and write access to the authenticated user's own content unless `edit_others_posts` / `delete_others_posts` are also present (which Editors have). Use an Author-role account only if you intentionally want the agent limited to content it created. For full site-wide editorial control, use Editor.
 
+The `upload-image` media ability sideloads public HTTP/HTTPS image URLs into the media library, rejects local/private URL targets, enforces allowed image MIME types and upload-size limits, writes title/alt/caption metadata, and can set the uploaded image as featured when the account can edit the target post or page.
+
 For those workflows, create a second dedicated Administrator service account and keep the Editor account for content. Using two accounts limits blast radius: the Editor account cannot touch site configuration, and the Administrator account is used only for auditing.
 
 Always create a dedicated user for each role rather than using your personal account — this makes access easy to revoke independently.
@@ -150,6 +152,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 == Changelog ==
 
 = Unreleased =
+* Add a media sideload ability to upload public image URLs into the media library with URL safety checks, image MIME and upload-size enforcement, optional title/alt/caption metadata, and optional featured-image assignment.
 * Add a read-only webmaster verification status ability for public Google/Bing proof, homepage verification meta tags, Bing XML verification, visible DNS TXT records, robots.txt sitemap declarations, and sitemap reachability without Google or Bing API credentials.
 * Add an Administrator-only user access audit ability for administrator account inventory, default `admin` username detection, administrator application password reporting, warnings, and application-password collection metadata.
 * Add an Administrator-only plugin audit ability for inactive plugins, cached updates, tested-up-to compatibility, potential abandonment, local file age, and cached security-update flags without network calls.
@@ -232,7 +235,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 == Upgrade Notice ==
 
 = Unreleased =
-Adds Administrator-only plugin audit and database health diagnostics plus bulk post trash and bulk draft-publish abilities for MCP clients.
+Adds media URL sideloading plus Administrator-only plugin audit and database health diagnostics plus bulk post trash and bulk draft-publish abilities for MCP clients.
 
 = 2.2.0 =
 Adds Yoast score list abilities and fixes supported Yoast protected meta writes for post and page create/update workflows.

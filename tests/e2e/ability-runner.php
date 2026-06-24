@@ -388,10 +388,20 @@ function e2e_apply_case_setup( $case ) {
 			}
 
 			$code = (int) ( $mock['code'] ?? 200 );
+			$body = array_key_exists( 'body_base64', $mock )
+				? base64_decode( (string) $mock['body_base64'], true )
+				: (string) ( $mock['body'] ?? '' );
+			if ( false === $body ) {
+				$body = '';
+			}
+
+			if ( ! empty( $parsed_args['stream'] ) && ! empty( $parsed_args['filename'] ) ) {
+				file_put_contents( $parsed_args['filename'], $body );
+			}
 
 			return array(
-				'headers'  => array(),
-				'body'     => (string) ( $mock['body'] ?? '' ),
+				'headers'  => (array) ( $mock['headers'] ?? array() ),
+				'body'     => $body,
 				'response' => array(
 					'code'    => $code,
 					'message' => (string) ( $mock['message'] ?? 'OK' ),
@@ -836,6 +846,16 @@ foreach ( $manifest as $case ) {
 				$passed = false;
 				break;
 			}
+		}
+	}
+
+	if ( $passed && ! empty( $case['assert_post_thumbnail'] ) && is_array( $case['assert_post_thumbnail'] ) ) {
+		$post_id_path     = $case['assert_post_thumbnail']['post_id'] ?? '';
+		$attachment_path  = $case['assert_post_thumbnail']['attachment_id_path'] ?? '';
+		$post_id          = e2e_resolve_placeholders( $post_id_path, $fixtures );
+		$attachment_value = e2e_get_path_value( $result, $attachment_path, $exists );
+		if ( ! $exists || (int) get_post_thumbnail_id( (int) $post_id ) !== (int) $attachment_value ) {
+			$passed = false;
 		}
 	}
 

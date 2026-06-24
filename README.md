@@ -66,7 +66,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 | Featured images           | 2         | Author → Editor          |
 | Taxonomy                  | 10        | Subscriber → Editor      |
 | Comments                  | 4         | Editor                   |
-| Media                     | 4         | Author                   |
+| Media                     | 5         | Author                   |
 | Content hygiene           | 3         | Author → Editor          |
 | Users                     | 3         | Administrator            |
 | Site introspection        | 3         | Subscriber               |
@@ -87,6 +87,8 @@ Post and page listings include the numeric author ID plus `author_name` and `aut
 `webmaster-verification-status` requires only `read` and checks public Google/Bing webmaster proof: Google Site Kit installed/active status, rendered homepage verification meta tags, `/BingSiteAuth.xml`, visible DNS TXT verification records when PHP can read them, `robots.txt` sitemap declarations, and same-host sitemap reachability. Results use `pass`, `warn`, and `unknown`; actual Google Search Console or Bing Webmaster Tools account verification is always reported as `unknown` because confirming it would require OAuth/API credentials and a separate security model.
 
 Content hygiene diagnostics are read-only audit tools for common editorial cleanup work: `list-orphaned-media` finds unattached media that is not used as a featured image or referenced in post content (`upload_files`), `list-posts-no-featured-image` finds published posts or pages without `_thumbnail_id` (`edit_posts`, plus `edit_pages` for pages), and `list-stuck-scheduled` finds scheduled posts whose publish time is already in the past (`edit_posts`). These abilities return empty `items` arrays when no matching problems are found.
+
+`upload-image` sideloads a public HTTP/HTTPS image URL into the media library with the same normalized media response shape as other media abilities. It requires `upload_files`, rejects local/private URL targets, enforces the site's upload size and allowed image MIME types, can write title/alt/caption metadata, and can attach the image to a post or page and set it as featured when the account can edit that target.
 
 `database-health` requires `manage_options` and returns read-only database bloat indicators for administrators: post revision count and revision-limit status, orphaned post meta count, expired transient count, autoloaded option size with a 900 KB threshold flag, and per-table row/data/index size details from `information_schema`. `performance-status` also requires `manage_options` and reports caching/performance configuration: external object cache status, `object-cache.php` and `advanced-cache.php` drop-in presence, active known page-cache plugins, `WP_MEMORY_LIMIT` versus PHP `memory_limit`, `WP_POST_REVISIONS`, autosave interval, and `CONCATENATE_SCRIPTS`. `backup-status` requires `manage_options` and detects active known backup plugins including UpdraftPlus, BackWPup, Duplicator, All-in-One WP Migration, BlogVault, WPvivid, Jetpack/VaultPress, and ManageWP Worker. It returns accessible last-backup and schedule details for UpdraftPlus, last-backup details for BackWPup, and a warning when no known backup plugin is active.
 
