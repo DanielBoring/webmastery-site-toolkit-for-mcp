@@ -21,7 +21,7 @@
 
 </div>
 
-**Webmastery Site Toolkit for MCP** is a WordPress plugin that lets an AI agent manage your site over MCP — posts, revisions, post meta, pages, public custom post types, media, content hygiene diagnostics, comments, taxonomy, plugins, SEO checks, site health, database health, performance status, backup status, security audits, user lookup, and non-sensitive site introspection. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an agent can call.
+**Webmastery Site Toolkit for MCP** is a WordPress plugin that lets an AI agent manage your site over MCP — posts, revisions, post meta, pages, public custom post types, media, content hygiene diagnostics, comments, taxonomy, plugins, SEO checks, webmaster verification signals, site health, database health, performance status, backup status, security audits, user lookup, and non-sensitive site introspection. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an agent can call.
 
 **Use it if you want to:**
 
@@ -72,7 +72,7 @@ Every ability enforces a WordPress capability check, so the tools an agent can c
 | Site introspection        | 3         | Subscriber               |
 | Plugins                   | 4         | Administrator            |
 | Site health & security    | 5         | Administrator            |
-| SEO analysis              | 4         | Author → Administrator   |
+| SEO & webmaster signals   | 5         | Subscriber → Administrator |
 
 **Editor** is the recommended default for content workflows. User lookup, user access audits, plugin management/auditing, and site-audit abilities need Administrator capabilities — use a separate Administrator service account for those.
 
@@ -83,6 +83,8 @@ Post and page listings include the numeric author ID plus `author_name` and `aut
 `list-post-types` discovers eligible custom post types where `public = true`, `_builtin = false`, and `show_ui = true`. Each eligible CPT gets deterministic ability names in the form `list-cpt-{post-type}`, `get-cpt-{post-type}`, `create-cpt-{post-type}`, `update-cpt-{post-type}`, and `delete-cpt-{post-type}`; naming collisions append a stable short hash. CPT CRUD abilities use the post type's own capability map, including object-level `read_post`, `edit_post`, and `delete_post` checks. CPT taxonomy metadata is returned by discovery, and create/update calls can assign terms through `taxonomy_terms` when the account has the taxonomy's `assign_terms` capability.
 
 `get-seo-scores` and `get-readability-scores` return Yoast SEO and readability score meta for posts and pages with stable pagination, optional `post_type`, `status`, and `modified_after` filters, and newest-modified-first ordering. Missing score meta is returned as `null`; when Yoast SEO is not active, the abilities return an empty result with an explanatory note.
+
+`webmaster-verification-status` requires only `read` and checks public Google/Bing webmaster proof: Google Site Kit installed/active status, rendered homepage verification meta tags, `/BingSiteAuth.xml`, visible DNS TXT verification records when PHP can read them, `robots.txt` sitemap declarations, and same-host sitemap reachability. Results use `pass`, `warn`, and `unknown`; actual Google Search Console or Bing Webmaster Tools account verification is always reported as `unknown` because confirming it would require OAuth/API credentials and a separate security model.
 
 Content hygiene diagnostics are read-only audit tools for common editorial cleanup work: `list-orphaned-media` finds unattached media that is not used as a featured image or referenced in post content (`upload_files`), `list-posts-no-featured-image` finds published posts or pages without `_thumbnail_id` (`edit_posts`, plus `edit_pages` for pages), and `list-stuck-scheduled` finds scheduled posts whose publish time is already in the past (`edit_posts`). These abilities return empty `items` arrays when no matching problems are found.
 
@@ -209,6 +211,7 @@ To confirm everything works, ask your agent to call a few:
 - `webmastery-site-toolkit-for-mcp/list-posts-no-featured-image` — *"Find published posts missing a featured image"*
 - `webmastery-site-toolkit-for-mcp/list-stuck-scheduled` — *"Find scheduled posts that missed their publish time"*
 - `webmastery-site-toolkit-for-mcp/get-site-info` — *"Get stable public metadata for this WordPress site"*
+- `webmastery-site-toolkit-for-mcp/webmaster-verification-status` — *"Check public Google and Bing webmaster verification signals"*
 - `webmastery-site-toolkit-for-mcp/get-category` — *"Get category 12"*
 - `webmastery-site-toolkit-for-mcp/plugin-audit` (Administrator account) — *"Audit installed plugins for inactive, outdated, or potentially abandoned plugins"*
 - `webmastery-site-toolkit-for-mcp/user-access-audit` (Administrator account) — *"Audit administrator accounts and application passwords"*
