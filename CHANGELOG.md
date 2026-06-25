@@ -23,6 +23,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 - Added revision abilities to list saved revisions for posts and pages and restore content to a specific revision with `edit_posts` and object-level edit checks.
 - Added `author_name` and `author_login` to post and page responses so listings expose human-readable author details alongside the numeric author ID.
 - Added category and tag get-by-ID abilities requiring `read`, plus category and tag update abilities requiring `manage_categories`.
+- Added comment reply and update abilities with threaded reply creation, comment content updates, optional moderation status changes, capability checks, and normalized comment responses.
 
 ## 2.2.0
 
