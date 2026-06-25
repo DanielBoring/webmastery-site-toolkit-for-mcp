@@ -1,9 +1,11 @@
-# E2E Ability Coverage Contract
+# Ability Contract and Full MCP E2E QA
 
-The E2E suite has two layers:
+For the full repository QA posture, including static checks, unit tests, release checks, and GitHub Actions trigger policy, see [`docs/qa-strategy.md`](../../docs/qa-strategy.md).
 
-1. The light manifest suite is ability-driven. Every registered `webmastery-site-toolkit-for-mcp/*` ability must be represented in `tests/e2e/abilities-manifest.json`.
-2. The secondary in-depth CRUD QA suite uses real MCP Adapter HTTP JSON-RPC requests against `/wp-json/mcp/mcp-adapter-default-server` to prove a remote MCP client can create, read, update, and delete content through the adapter transport.
+The Docker QA suite has two layers:
+
+1. Ability Contract QA is ability-driven. Every registered `webmastery-site-toolkit-for-mcp/*` ability must be represented in `tests/e2e/abilities-manifest.json`.
+2. Full MCP E2E QA uses real MCP Adapter HTTP JSON-RPC requests against `/wp-json/mcp/mcp-adapter-default-server` to prove a remote MCP client can create, read, update, and delete content through the adapter transport.
 
 Current coverage is 71 base registered abilities plus 5 generated abilities per eligible custom post type. The E2E runner registers two fixture custom post types, so the manifest covers 81 abilities across 174 test cases, including custom post type discovery and CRUD permission coverage for two capability maps, taxonomy get/update permission coverage, post and page listing response-shape assertions, expanded Yoast and SEOPress metadata write coverage, the bulk post abilities `webmastery-site-toolkit-for-mcp/bulk-trash-posts` and `webmastery-site-toolkit-for-mcp/bulk-publish-posts`, the revision abilities `webmastery-site-toolkit-for-mcp/list-revisions` and `webmastery-site-toolkit-for-mcp/restore-revision`, the post meta abilities `webmastery-site-toolkit-for-mcp/get-post-meta`, `webmastery-site-toolkit-for-mcp/update-post-meta`, and `webmastery-site-toolkit-for-mcp/delete-post-meta`, the block editing abilities `webmastery-site-toolkit-for-mcp/list-content-blocks`, `webmastery-site-toolkit-for-mcp/patch-content-block`, and `webmastery-site-toolkit-for-mcp/patch-post-content`, the comment interaction abilities `webmastery-site-toolkit-for-mcp/reply-comment` and `webmastery-site-toolkit-for-mcp/update-comment`, the media sideload ability `webmastery-site-toolkit-for-mcp/upload-image`, the content hygiene abilities `webmastery-site-toolkit-for-mcp/list-orphaned-media`, `webmastery-site-toolkit-for-mcp/list-posts-no-featured-image`, and `webmastery-site-toolkit-for-mcp/list-stuck-scheduled`, the site introspection abilities `webmastery-site-toolkit-for-mcp/get-site-info`, `webmastery-site-toolkit-for-mcp/get-user-info`, and `webmastery-site-toolkit-for-mcp/get-environment-info`, the user access audit ability `webmastery-site-toolkit-for-mcp/user-access-audit`, the Yoast score and metadata abilities `webmastery-site-toolkit-for-mcp/get-seo-scores`, `webmastery-site-toolkit-for-mcp/get-readability-scores`, and `webmastery-site-toolkit-for-mcp/get-yoast-metadata`, the SEOPress metadata ability `webmastery-site-toolkit-for-mcp/get-seopress-metadata`, the webmaster verification ability `webmastery-site-toolkit-for-mcp/webmaster-verification-status`, the database health ability `webmastery-site-toolkit-for-mcp/database-health`, the performance status ability `webmastery-site-toolkit-for-mcp/performance-status`, the backup status ability `webmastery-site-toolkit-for-mcp/backup-status`, plus the plugin abilities `webmastery-site-toolkit-for-mcp/list-plugins`, `webmastery-site-toolkit-for-mcp/plugin-audit`, `webmastery-site-toolkit-for-mcp/activate-plugin`, and `webmastery-site-toolkit-for-mcp/deactivate-plugin`.
 
@@ -18,7 +20,7 @@ For abilities with role or capability restrictions, include both:
 
 ## What CI checks
 
-`scripts/e2e-test.sh` first runs `tests/e2e/ability-runner.php`, which:
+`scripts/e2e-test.sh contract` runs `tests/e2e/ability-runner.php`, which:
 
 1. Creates deterministic WordPress fixtures.
 2. Installs and activates the MCP Adapter, Yoast SEO, and SEOPress plugin dependencies.
@@ -29,7 +31,7 @@ For abilities with role or capability restrictions, include both:
 7. Executes every manifest case through `wp_get_ability()->execute()`.
 8. Writes `e2e-artifacts/e2e-summary.json` with coverage and result counts.
 
-The script then runs `tests/e2e/mcp-crud-runner.php`, which:
+`scripts/e2e-test.sh e2e` runs `tests/e2e/mcp-crud-runner.php`, which:
 
 1. Creates temporary Application Password credentials for the existing E2E editor and subscriber users.
 2. Initializes real MCP HTTP sessions against the MCP Adapter default server.
@@ -49,18 +51,27 @@ composer validate:e2e-manifest
 
 This validates manifest JSON structure, required fields, allowed roles, expected result values, labels, and assertion shapes. It cannot replace full E2E coverage because it does not bootstrap WordPress or compare the manifest to `wp_get_abilities()`.
 
-For full Docker E2E, either start Compose yourself and run:
+For Docker Ability Contract QA, either start Compose yourself and run:
 
 ```bash
 docker compose up -d
-composer e2e
+composer qa:contract
 docker compose down -v
 ```
 
-Or let the E2E script manage Compose:
+For Docker Full MCP E2E QA, either start Compose yourself and run:
 
 ```bash
-E2E_MANAGE_COMPOSE=1 composer e2e
+docker compose up -d
+composer qa:e2e
+docker compose down -v
+```
+
+Or let the Docker QA script manage Compose:
+
+```bash
+E2E_MANAGE_COMPOSE=1 composer qa:contract
+E2E_MANAGE_COMPOSE=1 composer qa:e2e
 ```
 
 Set `E2E_KEEP_COMPOSE=1` when you want to leave the containers running for debugging.
@@ -74,12 +85,14 @@ Set `MCP_CRUD_ENDPOINT` only when you need the secondary CRUD runner to target a
 PowerShell users can run:
 
 ```powershell
+powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Contract
 powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -E2E
 ```
 
 Unix, macOS, and Git Bash users can run:
 
 ```bash
+scripts/qa-local.sh --contract
 scripts/qa-local.sh --e2e
 ```
 

@@ -17,144 +17,78 @@
     </a>
   </h2>
 
-[Quickstart](#quickstart) • [Abilities](#abilities) • [Requirements](#requirements) • [Installation](#installation) • [Verification](#verification) • [Security](#security) • [Full docs ↗](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/)
+[Quickstart](#quickstart) | [Abilities](#abilities) | [Requirements](#requirements) | [Connect](#connect-your-mcp-client) | [Verify](#verify) | [Security](#security) | [Full docs](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/)
 
 </div>
 
-**Webmastery Site Toolkit for MCP** is a WordPress plugin that lets an AI agent manage your site over MCP — posts, revisions, post meta, pages, public custom post types, media, content hygiene diagnostics, comments, taxonomy, plugins, Yoast SEO and SEOPress checks/metadata, webmaster verification signals, site health, database health, performance status, backup status, security audits, user lookup, and non-sensitive site introspection. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which provides the transport layer while this plugin registers the abilities an agent can call.
+**Webmastery Site Toolkit for MCP** is a WordPress plugin that adds MCP-powered abilities for AI agents and MCP clients. It works with the official [MCP Adapter](https://github.com/WordPress/mcp-adapter): the adapter provides the transport layer, and this plugin registers the WordPress abilities an agent can call.
 
-**Use it if you want to:**
+Use it to let an agent draft or update content, manage media and comments, inspect site health, review SEO metadata, audit plugins and users, and gather safe site context without handing your personal admin account to the agent.
 
-- Have an AI agent draft, update, or publish posts and pages
-- Ask an AI to audit your site's security or health posture
-- Bring SEO analysis into your content workflow
-
-Without this plugin, the MCP Adapter exposes only its 3 meta/discovery abilities — no content tools. With it, your agent gets full editorial access.
+> This README describes the current GitHub repo, including unreleased `main` branch work. The latest stable plugin header and WordPress.org `readme.txt` stable tag remain `2.3.0`; see [CHANGELOG.md](CHANGELOG.md) for what is released versus unreleased.
 
 <table>
 <tr><td align="center"><strong>Without this plugin</strong><br/><img src="assets/before.png" alt="Before"></td>
 <td align="center"><strong>With this plugin</strong><br/><img src="assets/after.png" alt="After"></td></tr>
 </table>
 
-> 📖 **Full reference** — the complete ability tables, architecture diagram, and extended security notes live on the project page: **[virtuallyboring.com/webmastery-site-toolkit-for-mcp](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/)**.
-
----
-
 ## Quickstart
 
-1. **Install the MCP Adapter** — download the [latest release zip](https://github.com/WordPress/mcp-adapter/releases/latest) → WP Admin → Plugins → Add New → Upload Plugin → Install & Activate.
-2. **Install this plugin** — download the [latest release zip](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/releases/latest) → upload and activate the same way.
-3. **Create a dedicated Editor user** — WP Admin → Users → Add New → set Role to **Editor**.
-4. **Create an application password** — edit that user → Application Passwords → add a name → copy the generated password.
-5. **Connect your MCP client** — point `@automattic/mcp-wordpress-remote` at your site. See [Installation → Connect your MCP client](#5-connect-your-mcp-client) for the config for each client.
-6. **Verify** — ask your agent to call `mcp-adapter-discover-abilities`; you should see this plugin's abilities appear.
+1. Install and activate the [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin.
+2. Install and activate **Webmastery Site Toolkit for MCP** from the [latest GitHub release](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/releases/latest).
+3. Create a dedicated WordPress user for the agent. Use **Editor** for normal content work.
+4. Create an application password for that user.
+5. Configure your MCP client with `@automattic/mcp-wordpress-remote`.
+6. Ask the client to call `mcp-adapter-discover-abilities`.
 
----
+The complete setup guide, client-specific examples, and full ability tables live on the [project documentation page](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/).
 
 ## Abilities
 
-Every ability enforces a WordPress capability check, so the tools an agent can call always reflect what its account is actually allowed to do. Pick the service-account role that matches the work.
+Every ability uses WordPress capability checks. An Editor account can handle day-to-day editorial workflows; Administrator-only abilities are intentionally separate because they expose site configuration, installed plugin metadata, or account audit details.
 
-| Category                  | Abilities | Typical min. role        |
-| ------------------------- | --------- | ------------------------ |
-| Posts                     | 9         | Author                   |
-| Revisions                 | 2         | Editor                   |
-| Post meta                 | 3         | Author → Editor          |
-| Pages                     | 6         | Editor                   |
-| Custom post types         | 1 + 5 per eligible CPT | CPT capability map |
-| Content blocks            | 2         | Author → Editor          |
-| Featured images           | 2         | Author → Editor          |
-| Taxonomy                  | 10        | Subscriber → Editor      |
-| Comments                  | 6         | Editor                   |
-| Media                     | 5         | Author                   |
-| Content hygiene           | 3         | Author → Editor          |
-| Users                     | 3         | Administrator            |
-| Site introspection        | 3         | Subscriber               |
-| Plugins                   | 4         | Administrator            |
-| Site health & security    | 5         | Administrator            |
-| SEO & webmaster signals   | 7         | Subscriber → Administrator |
+| Area | What the agent can do | Typical role |
+| --- | --- | --- |
+| Posts and pages | Create, list, read, update, restore, trash, bulk publish, bulk trash, and patch targeted content | Author or Editor |
+| Blocks and revisions | Inspect Gutenberg block paths/hashes, replace one block, list revisions, restore a revision | Author or Editor |
+| Post meta | Read, update, and delete safe custom fields; write supported Yoast SEO and SEOPress metadata | Author or Editor |
+| Custom post types | Discover eligible public CPTs and generate list/get/create/update/delete abilities | CPT capability map |
+| Taxonomy | List, get, create, update, and delete categories and tags | Subscriber to Editor |
+| Comments | List, reply, update, approve, hold, trash, or mark spam | Editor |
+| Media | List, inspect, update, upload public image URLs, set featured images, and delete media | Author or Editor |
+| Content hygiene | Find orphaned media, posts/pages missing featured images, and stuck scheduled posts | Author or Editor |
+| Site info | Return safe public site, current-user, and environment context | Subscriber |
+| SEO and webmaster signals | Analyze content, inspect Yoast/SEOPress metadata, read Yoast scores, and check public Google/Bing proof | Author to Administrator |
+| Plugins, users, health, security, performance, backups, database | Audit or manage sensitive site areas with explicit admin capabilities | Administrator |
 
-**Editor** is the recommended default for content workflows. User lookup, user access audits, plugin management/auditing, and site-audit abilities need Administrator capabilities — use a separate Administrator service account for those.
-
-Post and page listings include the numeric author ID plus `author_name` and `author_login`, so agents can show human-readable bylines without an extra user lookup. Bulk post operations can move multiple posts to trash with `bulk-trash-posts` (`delete_posts`) or publish multiple draft posts with `bulk-publish-posts` (`edit_posts`), returning per-ID success and failure summaries instead of stopping at the first problem. Revision abilities can list saved revisions for posts and pages and restore a post or page to a specific revision; both require `edit_posts` plus object-level edit access to the target content. Taxonomy abilities can list, get, create, update, and delete categories and tags; reads require `read`, while writes require `manage_categories`. Comment abilities can list and moderate comments, create threaded replies as the authenticated user when the account can edit the related post, and update comment content with optional `approve`, `hold`, `spam`, or `trash` moderation. User access auditing requires `edit_users` and returns administrator accounts, default `admin` username detection, administrator application passwords, warnings, and metadata that states whether application password collection was skipped. Site introspection abilities require `read` and return stable, non-sensitive schemas: `get-site-info` returns public site metadata, active theme name/version, deterministic timezone fallback (`UTC±HH:MM` when no timezone string is configured), multisite status, and permalink structure; `get-user-info` returns the current user's profile, roles, and a fixed capability summary; `get-environment-info` returns only PHP version, database server version, WordPress environment type, and locale. Post and page body edits can use `list-content-blocks` to inspect block paths and hashes, then `patch-content-block` to replace one exact Gutenberg block by path or unique hash. `patch-post-content` remains available for heading-section edits and strict exact-match replacement. Ambiguous, missing, or stale targets fail instead of guessing.
-
-`create-post`, `create-page`, `update-post`, and `update-page` can write REST-registered post meta plus supported Yoast SEO and SEOPress protected keys. First-class Yoast inputs cover title, meta description, focus keyphrase, canonical URL, breadcrumb title, Schema.org page/article types, Open Graph title/description/image, Twitter title/description/image, primary category, and robots noindex/nofollow/advanced directives. First-class SEOPress inputs cover title, meta description, target keywords, canonical URL, Open Graph title/description/image, Twitter/X title/description/image, primary category, robots noindex/nofollow/noimageindex/noarchive/nosnippet directives, and breadcrumb title. Unsupported protected or unregistered meta keys return a `meta_write_failed` response with `data.meta.not_written` instead of being silently ignored. Dedicated post meta abilities can read, update, or delete one post's unprotected meta keys, plus explicitly allowlisted protected keys, after an object-level `edit_post` check.
-
-Yoast-specific inputs only write `_yoast_wpseo_*` keys, and SEOPress-specific inputs only write `_seopress_*` keys. The plugin supports both SEO providers side by side without translating or overwriting the other provider's metadata, and E2E coverage verifies both write paths.
-
-`list-post-types` discovers eligible custom post types where `public = true`, `_builtin = false`, and `show_ui = true`. Each eligible CPT gets deterministic ability names in the form `list-cpt-{post-type}`, `get-cpt-{post-type}`, `create-cpt-{post-type}`, `update-cpt-{post-type}`, and `delete-cpt-{post-type}`; naming collisions append a stable short hash. CPT CRUD abilities use the post type's own capability map, including object-level `read_post`, `edit_post`, and `delete_post` checks. CPT taxonomy metadata is returned by discovery, and create/update calls can assign terms through `taxonomy_terms` when the account has the taxonomy's `assign_terms` capability.
-
-`get-seo-scores` and `get-readability-scores` return Yoast SEO and readability score meta for posts and pages with stable pagination, optional `post_type`, `status`, and `modified_after` filters, and newest-modified-first ordering. Missing score meta is returned as `null`; when Yoast SEO is not active, the abilities return an empty result with an explanatory note. `get-yoast-metadata` inspects stored Yoast metadata for a post or page, including canonical, breadcrumb, Schema.org, Open Graph, Twitter, inclusive-language score, primary category, robots directives, and generated Yoast head output when Yoast exposes it through REST. `get-seopress-metadata` inspects stored SEOPress title, description, target keywords, canonical, Open Graph, Twitter/X, primary category, robots, breadcrumb, News sitemap exclusion, and Video sitemap exclusion metadata for a post or page.
-
-`webmaster-verification-status` requires only `read` and checks public Google/Bing webmaster proof: Google Site Kit installed/active status, rendered homepage verification meta tags, `/BingSiteAuth.xml`, visible DNS TXT verification records when PHP can read them, `robots.txt` sitemap declarations, and same-host sitemap reachability. Results use `pass`, `warn`, and `unknown`; actual Google Search Console or Bing Webmaster Tools account verification is always reported as `unknown` because confirming it would require OAuth/API credentials and a separate security model.
-
-Content hygiene diagnostics are read-only audit tools for common editorial cleanup work: `list-orphaned-media` finds unattached media that is not used as a featured image or referenced in post content (`upload_files`), `list-posts-no-featured-image` finds published posts or pages without `_thumbnail_id` (`edit_posts`, plus `edit_pages` for pages), and `list-stuck-scheduled` finds scheduled posts whose publish time is already in the past (`edit_posts`). These abilities return empty `items` arrays when no matching problems are found.
-
-`upload-image` sideloads a public HTTP/HTTPS image URL into the media library with the same normalized media response shape as other media abilities. It requires `upload_files`, rejects local/private URL targets, enforces the site's upload size and allowed image MIME types, can write title/alt/caption metadata, and can attach the image to a post or page and set it as featured when the account can edit that target.
-
-`database-health` requires `manage_options` and returns read-only database bloat indicators for administrators: post revision count and revision-limit status, orphaned post meta count, expired transient count, autoloaded option size with a 900 KB threshold flag, and per-table row/data/index size details from `information_schema`. `performance-status` also requires `manage_options` and reports caching/performance configuration: external object cache status, `object-cache.php` and `advanced-cache.php` drop-in presence, active known page-cache plugins, `WP_MEMORY_LIMIT` versus PHP `memory_limit`, `WP_POST_REVISIONS`, autosave interval, and `CONCATENATE_SCRIPTS`. `backup-status` requires `manage_options` and detects active known backup plugins including UpdraftPlus, BackWPup, Duplicator, All-in-One WP Migration, BlogVault, WPvivid, Jetpack/VaultPress, and ManageWP Worker. It returns accessible last-backup and schedule details for UpdraftPlus, last-backup details for BackWPup, and a warning when no known backup plugin is active.
-
-`plugin-audit` requires `activate_plugins` and returns a read-only security and maintenance audit of installed plugins using local plugin metadata and WordPress core's cached update transient. It reports inactive plugins, cached updates and new versions, tested-up-to and minimum WordPress version metadata, potential abandonment when tested compatibility is at least two WordPress release lines behind the current site version, file-modification-age proxy days, and critical updates when the cached update response explicitly flags a security update.
-
-👉 **[See the full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities)** for every ability, its description, required capability, and minimum role.
-
----
+For the exact ability names, input behavior, and required capabilities, use the [full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities).
 
 ## Requirements
 
-| Requirement                                                    | Version                                                                                                          |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| WordPress                                                      | 6.9+                                                                                                             |
-| PHP                                                            | 8.0+                                                                                                             |
-| [MCP Adapter plugin](https://github.com/WordPress/mcp-adapter) | Latest                                                                                                           |
-| [Yoast SEO](https://wordpress.org/plugins/wordpress-seo/)      | Optional — structural SEO checks work without it; Yoast metadata, sitemap, and score checks require it |
-| [SEOPress](https://wordpress.org/plugins/wp-seopress/)         | Optional — structural SEO checks work without it; SEOPress metadata inspection and SEOPress-specific writes require it |
+| Requirement | Version |
+| --- | --- |
+| WordPress | 6.9+ |
+| PHP | 8.0+ |
+| [MCP Adapter](https://github.com/WordPress/mcp-adapter) | Latest |
+| [Yoast SEO](https://wordpress.org/plugins/wordpress-seo/) | Optional |
+| [SEOPress](https://wordpress.org/plugins/wp-seopress/) | Optional |
 
-> **Self-hosted WordPress only.** Both this plugin and the MCP Adapter require an install where custom plugins can be added — self-hosted WordPress or a managed host (WP Engine, Kinsta, Flywheel, etc.). They are not compatible with WordPress.com Free, Personal, or Premium plans.
+Self-hosted WordPress is required. This works on WordPress installs where custom plugins can be added, including most managed hosts. It does not work on WordPress.com Free, Personal, or Premium plans.
 
----
+## Install
 
-## Installation
-
-### 1. Install the MCP Adapter plugin
-
-This plugin depends on the MCP Adapter being installed and active. Install it first from the official [WordPress MCP Adapter project](https://github.com/WordPress/mcp-adapter) or its [latest release](https://github.com/WordPress/mcp-adapter/releases/latest), then upload and activate it in **WP Admin → Plugins → Add New → Upload Plugin**.
-
-### 2. Install Webmastery Site Toolkit for MCP
-
-> **Coming soon to the WordPress Plugin Directory** — this plugin has been submitted for review. Once approved you'll be able to install it from **WP Admin → Plugins → Add New** by searching its name. Until then, use one of the options below.
-
-**Option A — Upload zip (recommended)**
+Install the MCP Adapter first, then install this plugin.
 
 ```bash
 git clone https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp.git webmastery-site-toolkit-for-mcp
 zip -r webmastery-site-toolkit-for-mcp.zip webmastery-site-toolkit-for-mcp --exclude='webmastery-site-toolkit-for-mcp/.git/*'
 ```
 
-Then in WP Admin: **Plugins → Add New → Upload Plugin**, upload the zip, **Install Now**, **Activate**.
+Upload `webmastery-site-toolkit-for-mcp.zip` in **WP Admin > Plugins > Add New > Upload Plugin**, then activate it.
 
-**Option B — Direct file copy (server access)**
+## Connect Your MCP Client
 
-```bash
-cp -r webmastery-site-toolkit-for-mcp /var/www/html/wp-content/plugins/
-wp plugin activate webmastery-site-toolkit-for-mcp
-```
-
-### 3. Create a dedicated WordPress user
-
-Create a dedicated user for your agent rather than using your personal admin account — it limits what the agent can do and makes access easy to revoke. In **WP Admin → Users → Add New User**, set a username (e.g. `ai-editor`), an email, and the **Role** to **Editor**.
-
-> **Why Editor and not Administrator?** Editor covers posts, pages, taxonomy, comments, and media. User lookup, user access auditing, plugin management, and site-audit abilities require Administrator capabilities (`list_users`, `edit_users`, `activate_plugins`, `manage_options`) — keep a *separate* Administrator service account for those and use the Editor account for day-to-day content.
-
-### 4. Create an application password
-
-Application passwords are separate from the login password and can be revoked independently. Edit the dedicated user → **Application Passwords** → enter a name (e.g. `Claude Code`) → **Add New Application Password** → copy it immediately (it's shown once). It looks like `xxxx xxxx xxxx xxxx xxxx xxxx` — keep the spaces.
-
-### 5. Connect your MCP client
-
-Configure `@automattic/mcp-wordpress-remote` to point at the MCP Adapter endpoint on your site. Every client uses the same three environment variables; set `WP_API_URL` to the full `/wp-json/mcp/mcp-adapter-default-server` URL.
-
-Most clients use this JSON block (the root key and file location vary — see the table below):
+All local stdio clients use the same three environment variables. Set `WP_API_URL` to the full MCP Adapter endpoint for your site.
 
 ```json
 {
@@ -172,18 +106,7 @@ Most clients use this JSON block (the root key and file location vary — see th
 }
 ```
 
-| Client                     | Config file                                                                 | Root key      | Notes                                                                 |
-| -------------------------- | --------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------- |
-| **Claude Code**            | `.mcp.json` (project) or `~/.claude.json` (global)                          | `mcpServers`  | Or run `claude mcp add-json`. **Not** `~/.claude/settings.json`.      |
-| **Claude Desktop**         | `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) · `%APPDATA%\Claude\claude_desktop_config.json` (Win) | `mcpServers`  | —                                                                     |
-| **GitHub Copilot (VS Code)** | `.vscode/mcp.json` (workspace) or VS Code user profile (global)           | `servers`     | Requires VS Code 1.99+. Uses `servers`, **not** `mcpServers`.         |
-| **GitHub Copilot CLI**     | `~/.copilot/mcp-config.json`                                                 | `mcpServers`  | —                                                                     |
-| **Codex**                  | `~/.codex/config.toml` (global) or `.codex/config.toml` (project)           | TOML tables   | TOML, not JSON — see snippet below.                                   |
-| **Windsurf**               | `~/.codeium/windsurf/mcp_config.json`                                        | `mcpServers`  | —                                                                     |
-| **Gemini CLI**             | `~/.gemini/settings.json`                                                    | `mcpServers`  | —                                                                     |
-| **ChatGPT**                | Settings → Connected Apps (web UI)                                           | n/a           | Remote HTTP endpoints only; needs a publicly hosted server + Business/Enterprise/Edu plan. |
-
-**Codex** (`~/.codex/config.toml`) uses TOML instead of JSON:
+Codex uses TOML instead of JSON:
 
 ```toml
 [mcp_servers.wordpress]
@@ -196,60 +119,33 @@ WP_API_USERNAME = "ai-editor"
 WP_API_PASSWORD = "xxxx xxxx xxxx xxxx xxxx xxxx"
 ```
 
-### 6. Verify
+Other clients mostly differ by config file location and root key. See the [full setup guide](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#connect-your-mcp-client) for Claude Code, Claude Desktop, VS Code Copilot, Copilot CLI, Codex, Windsurf, Gemini CLI, and ChatGPT notes.
 
-See [Verification](#verification) below.
+## Verify
 
----
+Ask your MCP client to call `mcp-adapter-discover-abilities`. It should show the MCP Adapter discovery tools plus this plugin's `webmastery-site-toolkit-for-mcp/*` abilities.
 
-## Verification
+Try a few safe checks:
 
-`mcp-adapter-discover-abilities` is an MCP tool registered by the MCP Adapter plugin — not a CLI command. Invoke it through your assistant's chat by asking it to call the tool (e.g. *"Call mcp-adapter-discover-abilities"*). You should see the adapter's built-in meta/discovery abilities plus all abilities registered by this plugin.
+- `webmastery-site-toolkit-for-mcp/list-posts` - "List the 5 most recent published posts."
+- `webmastery-site-toolkit-for-mcp/get-site-info` - "Get safe public context for this WordPress site."
+- `webmastery-site-toolkit-for-mcp/webmaster-verification-status` - "Check public Google and Bing webmaster verification signals."
+- `webmastery-site-toolkit-for-mcp/plugin-audit` - "Audit installed plugins." Requires an Administrator service account.
 
-To confirm everything works, ask your agent to call a few:
-
-- `webmastery-site-toolkit-for-mcp/list-posts` — *"List the 5 most recent published posts"*
-- `webmastery-site-toolkit-for-mcp/bulk-publish-posts` — *"Publish these draft post IDs: 42, 43, and 44"*
-- `webmastery-site-toolkit-for-mcp/list-revisions` — *"Show saved revisions for post 42"*
-- `webmastery-site-toolkit-for-mcp/update-post-meta` — *"Set the campaign_brief custom field on post 42"*
-- `webmastery-site-toolkit-for-mcp/list-post-types` — *"Show eligible custom post types and their generated abilities"*
-- `webmastery-site-toolkit-for-mcp/list-posts-no-featured-image` — *"Find published posts missing a featured image"*
-- `webmastery-site-toolkit-for-mcp/list-stuck-scheduled` — *"Find scheduled posts that missed their publish time"*
-- `webmastery-site-toolkit-for-mcp/reply-comment` — *"Reply to comment 123 with a helpful follow-up"*
-- `webmastery-site-toolkit-for-mcp/update-comment` — *"Update comment 123 and approve it"*
-- `webmastery-site-toolkit-for-mcp/get-site-info` — *"Get stable public metadata for this WordPress site"*
-- `webmastery-site-toolkit-for-mcp/webmaster-verification-status` — *"Check public Google and Bing webmaster verification signals"*
-- `webmastery-site-toolkit-for-mcp/get-category` — *"Get category 12"*
-- `webmastery-site-toolkit-for-mcp/plugin-audit` (Administrator account) — *"Audit installed plugins for inactive, outdated, or potentially abandoned plugins"*
-- `webmastery-site-toolkit-for-mcp/user-access-audit` (Administrator account) — *"Audit administrator accounts and application passwords"*
-- `webmastery-site-toolkit-for-mcp/security-audit` (Administrator account) — *"Run a security audit of my WordPress site"*
-- `webmastery-site-toolkit-for-mcp/site-health-check` (Administrator account) — *"Check WordPress site health"*
-- `webmastery-site-toolkit-for-mcp/database-health` (Administrator account) — *"Audit database bloat and table sizes"*
-- `webmastery-site-toolkit-for-mcp/performance-status` (Administrator account) — *"Check caching and performance configuration"*
-- `webmastery-site-toolkit-for-mcp/backup-status` (Administrator account) — *"Check whether a known backup plugin is active and when it last ran"*
-
----
+If discovery shows fewer abilities than this repo documents, the connected WordPress site is running an older deployed copy of the plugin. Update the site plugin, then run discovery again.
 
 ## Security
 
-- All abilities enforce WordPress capability checks via `permission_callback` — an editor cannot call abilities that require admin caps.
-- Custom post type abilities use each CPT's registered capability map instead of generic post or page capabilities.
-- Site introspection abilities intentionally exclude filesystem paths, raw server internals, secrets, auth keys, salts, and configuration values beyond the documented fields.
-- `user-access-audit` is read-only and requires `edit_users` because it enumerates administrator accounts and application passwords issued to those accounts. It returns application password names and last-used timestamps, never password secrets.
-- `plugin-audit` is read-only and does not call WordPress.org directly; it uses the cached update transient already maintained by WordPress core. It requires `activate_plugins` because installed plugin names, basenames, versions, and compatibility metadata expose the site's plugin attack surface.
-- Performance status is Administrator-only because it reads configuration constants, plugin activation options, and cache drop-in presence from `wp-content`.
-- `delete-post`, `delete-page`, and `bulk-trash-posts` move content to trash, not permanent deletion; use `restore-post` / `restore-page` to undo individual items.
-- `reply-comment` requires `edit_posts` and object-level edit access to the related post; `update-comment` and moderation status changes require `moderate_comments`.
-- Content hygiene abilities are read-only diagnostics and still honor WordPress ownership scoping; Author-role accounts see only content and media they can edit, while Editors can audit site-wide editorial content.
-- `restore-revision` uses WordPress core revision restore APIs and requires `edit_posts` plus object-level edit access for the parent post or page.
-- `patch-content-block` and `patch-post-content` support optional hash preconditions and fail safely when a target is missing, ambiguous, or stale.
-- Post and page create/update meta writes are limited to REST-registered keys and supported Yoast SEO protected keys; unsupported keys fail with a structured `meta_write_failed` response. Dedicated post meta abilities require `edit_post` for the target post, reject unsafe keys and oversized values, support scalar and JSON object/array values, and deny `_`-prefixed protected keys unless the plugin explicitly allowlists them.
-- Content is sanitized on write. Reads and writes go through the WordPress API except `database-health`, which uses read-only `$wpdb` queries for administrator-only database diagnostics.
+- Use a dedicated service account, not your personal account.
+- Use **Editor** for routine content work and a separate **Administrator** account only for sensitive audits or plugin management.
+- WordPress capability checks gate every ability.
+- Deletes for posts and pages move content to trash; media deletion is permanent.
+- Block and partial-content edits can use hash preconditions and fail when a target is missing, ambiguous, or stale.
+- Site info abilities deliberately avoid secrets, filesystem paths, salts, auth keys, and raw server internals.
+- `plugin-audit`, `user-access-audit`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `site-health-check` are Administrator-only.
 
-📖 **[Full security model](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#security)**, including plugin-management safeguards and the complete sanitization rules.
+Read the [full security model](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#security) before giving an agent Administrator credentials.
 
----
+## Contributing
 
-## Contributing & versioning
-
-New abilities and feature requests are tracked in [GitHub Issues](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/issues). The project follows [Semantic Versioning](https://semver.org/) — see [`CONTRIBUTING.md`](CONTRIBUTING.md#versioning-policy) for the full release policy.
+New abilities and feature requests are tracked in [GitHub Issues](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/issues). The project follows [Semantic Versioning](https://semver.org/); see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy) for release and QA expectations.

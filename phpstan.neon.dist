@@ -1,0 +1,9 @@
+parameters:
+	level: 0
+	paths:
+		- webmastery-site-toolkit-for-mcp.php
+		- includes
+	bootstrapFiles:
+		- vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
+	treatPhpDocTypesAsCertain: false
+	reportUnmatchedIgnoredErrors: false

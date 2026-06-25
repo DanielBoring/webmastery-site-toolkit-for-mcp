@@ -1,0 +1,38 @@
+name: Release Package QA
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/release.yml'
+      - '.github/workflows/release-package-qa.yml'
+      - 'scripts/build-release.sh'
+      - 'scripts/release-qa.sh'
+      - 'scripts/validate-release-package.php'
+      - 'webmastery-site-toolkit-for-mcp.php'
+      - 'readme.txt'
+      - 'CHANGELOG.md'
+      - 'LICENSE'
+
+jobs:
+  release-package-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          fetch-depth: 1
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f # 2.35.5
+        with:
+          php-version: '8.0'
+          coverage: none
+
+      - name: Run Release Package QA
+        run: bash scripts/release-qa.sh

@@ -54,7 +54,7 @@ composer install
 composer qa
 ```
 
-`composer qa` runs WordPress Coding Standards, the lightweight E2E manifest validator, and `git diff --check`.
+`composer qa` runs the normal fast pre-PR checks: Static QA plus Unit Tests. See [`docs/qa-strategy.md`](docs/qa-strategy.md) for the full QA posture, including when to run Ability Contract QA, Full MCP E2E QA, and Release Package QA.
 
 ---
 
@@ -120,13 +120,24 @@ Set `annotations` accurately — `readonly: true` for read-only abilities, `dest
 
 Use the fastest command that covers your change:
 
+Environment-specific notes for GitHub Actions, Windows PowerShell, and Windows Git Bash live in [`docs/qa-strategy.md`](docs/qa-strategy.md#environment-notes).
+
 | Command | What it runs |
 | --- | --- |
-| `composer qa` | PHPCS, lightweight E2E manifest validation, and `git diff --check` |
-| `composer e2e` | Docker WordPress E2E against an already-running Compose stack |
-| `E2E_MANAGE_COMPOSE=1 composer e2e` | Docker WordPress E2E with automatic Compose startup and cleanup |
-| `scripts/qa-local.sh --e2e` | Unix/Git Bash wrapper for Composer QA plus managed Docker E2E |
-| `powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -E2E` | PowerShell wrapper for Composer QA plus managed Docker E2E |
+| `composer qa` | Fast local default: Static QA plus Unit Tests |
+| `composer qa:static` | PHP lint, PHPCS, PHPStan, Composer audit, manifest structure validation, and `git diff --check` |
+| `composer qa:unit` | PHPUnit unit tests |
+| `composer qa:contract` | Docker Ability Contract QA against an already-running Compose stack |
+| `composer qa:e2e` | Docker Full MCP E2E QA against an already-running Compose stack |
+| `composer qa:release` | Release Package QA, including built package validation and WordPress Plugin Check |
+| `E2E_MANAGE_COMPOSE=1 composer qa:contract` | Ability Contract QA with automatic Compose startup and cleanup |
+| `E2E_MANAGE_COMPOSE=1 composer qa:e2e` | Full MCP E2E QA with automatic Compose startup and cleanup |
+| `scripts/qa-local.sh --contract` | Unix/Git Bash wrapper for Composer QA plus managed Ability Contract QA |
+| `scripts/qa-local.sh --e2e` | Unix/Git Bash wrapper for Composer QA plus managed Full MCP E2E QA |
+| `scripts/qa-local.sh --release` | Unix/Git Bash wrapper for Composer QA plus Release Package QA |
+| `powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Contract` | PowerShell wrapper for Composer QA plus managed Ability Contract QA |
+| `powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -E2E` | PowerShell wrapper for Composer QA plus managed Full MCP E2E QA |
+| `powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Release` | PowerShell wrapper for Composer QA plus Release Package QA |
 | `powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -PreflightOnly` | Windows prerequisite check without installing dependencies or running QA |
 | `scripts/qa-local.sh --preflight-only` | Unix/Git Bash prerequisite check without installing dependencies or running QA |
 
@@ -150,7 +161,7 @@ If a Windows Composer installation cannot invoke `vendor/bin/phpcs` by name, run
 php vendor\squizlabs\php_codesniffer\bin\phpcs --standard=phpcs.xml.dist
 ```
 
-The lightweight manifest validator checks JSON structure, expected fields, roles, labels, and assertion shapes. Full ability registration coverage still requires Docker E2E because registered abilities are only available inside WordPress after the plugin and MCP Adapter load.
+The lightweight manifest validator checks JSON structure, expected fields, roles, labels, and assertion shapes. Full ability registration coverage still requires Ability Contract QA because registered abilities are only available inside WordPress after the plugin and MCP Adapter load.
 
 When checking GitHub Actions status from the CLI, include the PR number or branch before `--repo`:
 

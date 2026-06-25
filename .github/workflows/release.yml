@@ -17,6 +17,12 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Set up PHP
+        uses: shivammathur/setup-php@bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f # 2.35.5
+        with:
+          php-version: '8.0'
+          coverage: none
+
       - name: Validate release inputs
         id: validate
         shell: bash
@@ -72,33 +78,8 @@ jobs:
           echo "version=$TAG_VERSION" >> "$GITHUB_OUTPUT"
           echo "notes-file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
 
-      - name: Build plugin zip
-        shell: bash
-        run: |
-          set -euo pipefail
-          PACKAGE_DIR="build/webmastery-site-toolkit-for-mcp"
-          rm -rf "$PACKAGE_DIR"
-          mkdir -p "$PACKAGE_DIR"
-          rsync -r webmastery-site-toolkit-for-mcp.php readme.txt LICENSE includes "$PACKAGE_DIR/"
-          cd build
-          zip -r ../webmastery-site-toolkit-for-mcp-${{ steps.validate.outputs.version }}.zip webmastery-site-toolkit-for-mcp/
-
-      - name: Validate built artifact contents
-        shell: bash
-        run: |
-          set -euo pipefail
-          ZIP_FILE="webmastery-site-toolkit-for-mcp-${{ steps.validate.outputs.version }}.zip"
-          if [ ! -s "$ZIP_FILE" ]; then
-            echo "Missing or empty release artifact: $ZIP_FILE" >&2
-            exit 1
-          fi
-          unzip -l "$ZIP_FILE" > build/zip-listing.txt
-          grep -q 'webmastery-site-toolkit-for-mcp/webmastery-site-toolkit-for-mcp.php' build/zip-listing.txt
-          grep -q 'webmastery-site-toolkit-for-mcp/includes/' build/zip-listing.txt
-          if grep -E 'webmastery-site-toolkit-for-mcp/(\.git|\.github|assets|build|e2e-artifacts|scripts|tests|vendor)/|webmastery-site-toolkit-for-mcp/(BACKLOG|CHANGELOG|CONTRIBUTING|README)\.md|webmastery-site-toolkit-for-mcp/(composer\.(json|lock)|docker-compose\.yml|phpcs\.xml\.dist|\.gitattributes|\.gitignore)' build/zip-listing.txt; then
-            echo "Release artifact contains development, CI, test, or repository-only files" >&2
-            exit 1
-          fi
+      - name: Run Release Package QA
+        run: bash scripts/release-qa.sh "${{ steps.validate.outputs.version }}"
 
       - name: Create GitHub Release
         env:

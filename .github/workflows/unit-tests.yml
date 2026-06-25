@@ -1,4 +1,4 @@
-name: Static QA
+name: Unit Tests
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
     branches: [main, develop]
 
 jobs:
-  static-qa:
+  unit-tests:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -42,5 +42,5 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: Run Static QA
-        run: composer qa:static
+      - name: Run Unit Tests
+        run: composer qa:unit
