@@ -7,6 +7,7 @@ class Webmastery_MCP_SEO {
 	public static function register() {
 		self::register_analyze_post();
 		self::register_site_overview();
+		self::register_yoast_metadata();
 		self::register_score_ability( 'get-seo-scores', 'SEO Scores', '_yoast_wpseo_linkdex', 'Yoast SEO analysis scores.' );
 		self::register_score_ability( 'get-readability-scores', 'Readability Scores', '_yoast_wpseo_content_score', 'Yoast readability analysis scores.' );
 	}
@@ -197,6 +198,208 @@ class Webmastery_MCP_SEO {
 		] );
 	}
 
+	private static function register_yoast_metadata() {
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-yoast-metadata', [
+			'label'               => 'SEO: Yoast Metadata',
+			'description'         => 'Inspect Yoast SEO metadata and generated Yoast head data for a post, page, or URL.',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => [
+				'type'       => 'object',
+				'properties' => [
+					'post_id' => [ 'type' => 'integer', 'description' => 'Optional post or page ID to inspect.' ],
+					'url'     => [ 'type' => 'string', 'description' => 'Optional absolute URL to inspect through Yoast head output.' ],
+				],
+			],
+			'execute_callback'    => [ self::class, 'execute_yoast_metadata' ],
+			'permission_callback' => [ self::class, 'permission_yoast_metadata' ],
+			'meta'                => [
+				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+	}
+
+	public static function permission_yoast_metadata( $input = [] ) {
+		$id = absint( $input['post_id'] ?? 0 );
+		if ( $id ) {
+			$post = get_post( $id );
+			if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
+				return new WP_Error( 'not_found', 'Post or page not found.' );
+			}
+			if ( ! current_user_can( 'edit_post', $id ) ) {
+				return new WP_Error( 'forbidden', 'Requires edit_post capability for this post or page.' );
+			}
+
+			return true;
+		}
+
+		if ( ! empty( $input['url'] ) ) {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				return new WP_Error( 'forbidden', 'URL-level Yoast metadata inspection requires manage_options capability.' );
+			}
+
+			return true;
+		}
+
+		return new WP_Error( 'missing_target', 'Provide post_id or url.' );
+	}
+
+	private static function yoast_post_meta_keys() {
+		return [
+			'title'                    => '_yoast_wpseo_title',
+			'meta_description'         => '_yoast_wpseo_metadesc',
+			'focus_keyphrase'          => '_yoast_wpseo_focuskw',
+			'canonical_url'            => '_yoast_wpseo_canonical',
+			'breadcrumb_title'         => '_yoast_wpseo_bctitle',
+			'schema_page_type'         => '_yoast_wpseo_schema_page_type',
+			'schema_article_type'      => '_yoast_wpseo_schema_article_type',
+			'opengraph_title'          => '_yoast_wpseo_opengraph-title',
+			'opengraph_description'    => '_yoast_wpseo_opengraph-description',
+			'opengraph_image'          => '_yoast_wpseo_opengraph-image',
+			'twitter_title'            => '_yoast_wpseo_twitter-title',
+			'twitter_description'      => '_yoast_wpseo_twitter-description',
+			'twitter_image'            => '_yoast_wpseo_twitter-image',
+			'seo_score'                => '_yoast_wpseo_linkdex',
+			'readability_score'        => '_yoast_wpseo_content_score',
+			'inclusive_language_score' => '_yoast_wpseo_inclusive_language_score',
+			'primary_category'         => '_yoast_wpseo_primary_category',
+			'cornerstone'              => '_yoast_wpseo_is_cornerstone',
+			'robots_noindex'           => '_yoast_wpseo_meta-robots-noindex',
+			'robots_nofollow'          => '_yoast_wpseo_meta-robots-nofollow',
+			'robots_advanced'          => '_yoast_wpseo_meta-robots-adv',
+		];
+	}
+
+	private static function normalize_yoast_meta_value( $field, $value ) {
+		if ( '' === $value ) {
+			return null;
+		}
+
+		if ( in_array( $field, [ 'seo_score', 'readability_score', 'inclusive_language_score', 'primary_category' ], true ) ) {
+			return (int) $value;
+		}
+		if ( in_array( $field, [ 'cornerstone', 'robots_noindex', 'robots_nofollow' ], true ) ) {
+			return rest_sanitize_boolean( $value );
+		}
+
+		return $value;
+	}
+
+	private static function get_generated_yoast_head_for_post( $post ) {
+		$post_type_object = get_post_type_object( $post->post_type );
+		$rest_base        = $post_type_object->rest_base ?? $post->post_type;
+		$request          = new WP_REST_Request( 'GET', "/wp/v2/{$rest_base}/{$post->ID}" );
+		$request->set_param( 'context', 'edit' );
+		$response = rest_do_request( $request );
+
+		if ( $response->is_error() ) {
+			$error = $response->as_error();
+			return [
+				'available' => false,
+				'error'     => [
+					'code'    => $error->get_error_code(),
+					'message' => $error->get_error_message(),
+				],
+			];
+		}
+
+		$data = $response->get_data();
+
+		return [
+			'available'       => isset( $data['yoast_head_json'] ) || isset( $data['yoast_head'] ),
+			'yoast_head_json' => $data['yoast_head_json'] ?? null,
+			'yoast_head'      => $data['yoast_head'] ?? null,
+		];
+	}
+
+	private static function get_generated_yoast_head_for_url( $url ) {
+		$request = new WP_REST_Request( 'GET', '/yoast/v1/get_head' );
+		$request->set_param( 'url', $url );
+		$response = rest_do_request( $request );
+
+		if ( $response->is_error() ) {
+			$error = $response->as_error();
+			return [
+				'available' => false,
+				'error'     => [
+					'code'    => $error->get_error_code(),
+					'message' => $error->get_error_message(),
+				],
+			];
+		}
+
+		$data = $response->get_data();
+
+		return [
+			'available'       => isset( $data['json'] ) || isset( $data['html'] ),
+			'yoast_head_json' => $data['json'] ?? null,
+			'yoast_head'      => $data['html'] ?? null,
+		];
+	}
+
+	public static function execute_yoast_metadata( $input = [] ) {
+		$id  = absint( $input['post_id'] ?? 0 );
+		$url = esc_url_raw( (string) ( $input['url'] ?? '' ) );
+
+		if ( ! self::is_yoast_active() ) {
+			return [
+				'success' => true,
+				'data'    => [
+					'yoast_active' => false,
+					'note'         => 'Yoast SEO is not active, so Yoast metadata and head output are not available.',
+				],
+			];
+		}
+
+		if ( $id ) {
+			$post = get_post( $id );
+			if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
+				return [ 'success' => false, 'error' => [ 'code' => 'not_found', 'message' => 'Post or page not found.' ] ];
+			}
+			if ( ! current_user_can( 'edit_post', $id ) ) {
+				return [ 'success' => false, 'error' => [ 'code' => 'forbidden', 'message' => 'You do not have permission to inspect Yoast metadata for this post or page.' ] ];
+			}
+
+			$meta     = [];
+			$raw_meta = [];
+			foreach ( self::yoast_post_meta_keys() as $field => $meta_key ) {
+				$value              = get_post_meta( $id, $meta_key, true );
+				$meta[ $field ]     = self::normalize_yoast_meta_value( $field, $value );
+				$raw_meta[ $field ] = [
+					'key'   => $meta_key,
+					'value' => $value,
+				];
+			}
+
+			return [
+				'success' => true,
+				'data'    => [
+					'yoast_active'   => true,
+					'post_id'        => $id,
+					'post_type'      => $post->post_type,
+					'title'          => $post->post_title,
+					'url'            => get_permalink( $id ),
+					'metadata'       => $meta,
+					'raw_meta'       => $raw_meta,
+					'generated_head' => self::get_generated_yoast_head_for_post( $post ),
+				],
+			];
+		}
+
+		if ( '' === $url ) {
+			return [ 'success' => false, 'error' => [ 'code' => 'missing_target', 'message' => 'Provide post_id or url.' ] ];
+		}
+
+		return [
+			'success' => true,
+			'data'    => [
+				'yoast_active'   => true,
+				'url'            => $url,
+				'generated_head' => self::get_generated_yoast_head_for_url( $url ),
+			],
+		];
+	}
+
 	private static function is_yoast_active() {
 		return defined( 'WPSEO_VERSION' )
 			|| defined( 'WPSEO_FILE' )
@@ -340,6 +543,12 @@ class Webmastery_MCP_SEO {
 		$sitemap_response = wp_remote_head( $sitemap_url, [ 'timeout' => 5 ] );
 		$sitemap_ok       = ! is_wp_error( $sitemap_response ) && wp_remote_retrieve_response_code( $sitemap_response ) === 200;
 		$data['sitemap']  = [ 'url' => $sitemap_url, 'accessible' => $sitemap_ok ];
+		if ( $sitemap_ok ) {
+			$sitemap_body = wp_remote_retrieve_body( wp_remote_get( $sitemap_url, [ 'timeout' => 5 ] ) );
+			preg_match_all( '/<loc>(.*?)<\/loc>/i', $sitemap_body, $sitemap_matches );
+			$data['sitemap']['entries']     = array_values( array_map( 'esc_url_raw', $sitemap_matches[1] ?? [] ) );
+			$data['sitemap']['entry_count'] = count( $data['sitemap']['entries'] );
+		}
 
 		// Robots.txt
 		$robots_url         = home_url( '/robots.txt' );

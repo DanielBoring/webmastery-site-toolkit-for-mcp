@@ -539,6 +539,7 @@ $fixtures = array(
 	'delete_category_id' => e2e_ensure_term_id( 'MCP E2E Delete Category', 'category' ),
 	'delete_tag_id'      => e2e_ensure_term_id( 'mcp-e2e-delete-tag', 'post_tag' ),
 );
+$fixtures['category_id_string'] = (string) $fixtures['category_id'];
 
 $fixtures['post_id']         = e2e_insert_post( 'post', 'MCP E2E Post', 'Content for MCP E2E post.', $author_id );
 $fixtures['partial_post_id'] = e2e_insert_post(
@@ -656,6 +657,21 @@ wp_update_post(
 
 update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_linkdex', '82' );
 update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_content_score', '74' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_canonical', 'https://example.test/canonical-e2e/' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_bctitle', 'Yoast Breadcrumb E2E' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_schema_page_type', 'WebPage' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_schema_article_type', 'Article' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_opengraph-title', 'Yoast Open Graph E2E' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_opengraph-description', 'Yoast Open Graph description E2E.' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_opengraph-image', 'https://example.test/og-e2e.jpg' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_twitter-title', 'Yoast Twitter E2E' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_twitter-description', 'Yoast Twitter description E2E.' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_twitter-image', 'https://example.test/twitter-e2e.jpg' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_inclusive_language_score', '91' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_primary_category', (string) $fixtures['category_id'] );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_meta-robots-noindex', '1' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_meta-robots-nofollow', '0' );
+update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_meta-robots-adv', 'noarchive,nosnippet' );
 
 $fixtures['no_featured_post_id'] = e2e_insert_post( 'post', 'MCP E2E No Featured Image Post', 'Missing featured image fixture.', $author_id );
 $fixtures['no_featured_page_id'] = e2e_insert_post( 'page', 'MCP E2E No Featured Image Page', 'Missing featured image page fixture.', $editor_id );
