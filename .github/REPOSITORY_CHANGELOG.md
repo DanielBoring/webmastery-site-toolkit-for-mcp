@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added E2E manifest coverage for expanded Yoast SEO metadata writes and the read-only Yoast metadata inspection ability.
 - Added agent branch freshness preflight guidance to reduce avoidable PR merge conflicts.
 - Added Yoast SEO and SEOPress installation to local and CI E2E bootstrap coverage, including coexistence guardrails for Yoast-backed updates.
 - Added local QA preflight-only modes and clearer missing-tool guidance for PHP, Composer, Docker, and Bash prerequisites.

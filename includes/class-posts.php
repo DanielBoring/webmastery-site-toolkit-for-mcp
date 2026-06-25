@@ -61,10 +61,22 @@ class Webmastery_MCP_Posts {
 			'_yoast_wpseo_focuskw'                => 'string',
 			'_yoast_wpseo_metadesc'               => 'string',
 			'_yoast_wpseo_title'                  => 'string',
-			'_yoast_wpseo_is_cornerstone'         => 'boolean_string',
-			'_yoast_wpseo_meta-robots-noindex'    => 'boolean_string',
-			'_yoast_wpseo_meta-robots-nofollow'   => 'boolean_string',
-			'_yoast_wpseo_meta-robots-adv'        => 'string',
+			'_yoast_wpseo_canonical'              => 'url',
+			'_yoast_wpseo_bctitle'                => 'string',
+			'_yoast_wpseo_schema_page_type'       => 'string',
+			'_yoast_wpseo_schema_article_type'    => 'string',
+			'_yoast_wpseo_opengraph-title'        => 'string',
+			'_yoast_wpseo_opengraph-description'  => 'string',
+			'_yoast_wpseo_opengraph-image'        => 'url',
+			'_yoast_wpseo_twitter-title'          => 'string',
+			'_yoast_wpseo_twitter-description'    => 'string',
+			'_yoast_wpseo_twitter-image'          => 'url',
+			'_yoast_wpseo_inclusive_language_score' => 'integer_string',
+			'_yoast_wpseo_primary_category'         => 'integer_string',
+			'_yoast_wpseo_is_cornerstone'           => 'boolean_string',
+			'_yoast_wpseo_meta-robots-noindex'      => 'boolean_string',
+			'_yoast_wpseo_meta-robots-nofollow'     => 'boolean_string',
+			'_yoast_wpseo_meta-robots-adv'          => 'string',
 		];
 	}
 
@@ -183,6 +195,28 @@ class Webmastery_MCP_Posts {
 		];
 	}
 
+	private static function yoast_input_schema_props() {
+		return [
+			'yoast_meta_description'       => [ 'type' => 'string', 'description' => 'Yoast SEO meta description (stored as _yoast_wpseo_metadesc)' ],
+			'yoast_focus_keyword'          => [ 'type' => 'string', 'description' => 'Yoast SEO focus keyphrase (stored as _yoast_wpseo_focuskw)' ],
+			'yoast_seo_title'              => [ 'type' => 'string', 'description' => 'Yoast SEO title (stored as _yoast_wpseo_title)' ],
+			'yoast_canonical_url'          => [ 'type' => 'string', 'description' => 'Yoast canonical URL (stored as _yoast_wpseo_canonical)' ],
+			'yoast_breadcrumb_title'       => [ 'type' => 'string', 'description' => 'Yoast breadcrumb title (stored as _yoast_wpseo_bctitle)' ],
+			'yoast_schema_page_type'       => [ 'type' => 'string', 'description' => 'Yoast Schema.org page type (stored as _yoast_wpseo_schema_page_type)' ],
+			'yoast_schema_article_type'    => [ 'type' => 'string', 'description' => 'Yoast Schema.org article type (stored as _yoast_wpseo_schema_article_type)' ],
+			'yoast_opengraph_title'        => [ 'type' => 'string', 'description' => 'Yoast Open Graph title (stored as _yoast_wpseo_opengraph-title)' ],
+			'yoast_opengraph_description'  => [ 'type' => 'string', 'description' => 'Yoast Open Graph description (stored as _yoast_wpseo_opengraph-description)' ],
+			'yoast_opengraph_image'        => [ 'type' => 'string', 'description' => 'Yoast Open Graph image URL (stored as _yoast_wpseo_opengraph-image)' ],
+			'yoast_twitter_title'          => [ 'type' => 'string', 'description' => 'Yoast Twitter title (stored as _yoast_wpseo_twitter-title)' ],
+			'yoast_twitter_description'    => [ 'type' => 'string', 'description' => 'Yoast Twitter description (stored as _yoast_wpseo_twitter-description)' ],
+			'yoast_twitter_image'          => [ 'type' => 'string', 'description' => 'Yoast Twitter image URL (stored as _yoast_wpseo_twitter-image)' ],
+			'yoast_primary_category'       => [ 'type' => 'integer', 'description' => 'Yoast primary category term ID (stored as _yoast_wpseo_primary_category)' ],
+			'yoast_robots_noindex'         => [ 'type' => 'boolean', 'description' => 'Yoast robots noindex flag (stored as _yoast_wpseo_meta-robots-noindex)' ],
+			'yoast_robots_nofollow'        => [ 'type' => 'boolean', 'description' => 'Yoast robots nofollow flag (stored as _yoast_wpseo_meta-robots-nofollow)' ],
+			'yoast_robots_advanced'        => [ 'type' => 'string', 'description' => 'Yoast advanced robots directives, comma-separated (stored as _yoast_wpseo_meta-robots-adv)' ],
+		];
+	}
+
 	private static function normalize_meta_value( $value, $type = 'string' ) {
 		if ( null === $value ) {
 			return '';
@@ -198,6 +232,14 @@ class Webmastery_MCP_Posts {
 
 		if ( 'boolean_string' === $type ) {
 			return rest_sanitize_boolean( $value ) ? '1' : '0';
+		}
+		if ( 'integer_string' === $type ) {
+			return (string) absint( $value );
+		}
+		if ( 'url' === $type ) {
+			$raw_url = (string) $value;
+			$url     = esc_url_raw( $raw_url );
+			return '' === $raw_url || '' !== $url ? $url : null;
 		}
 
 		return sanitize_text_field( (string) $value );
@@ -231,6 +273,48 @@ class Webmastery_MCP_Posts {
 		}
 		if ( isset( $input['yoast_seo_title'] ) ) {
 			$requested['_yoast_wpseo_title'] = $input['yoast_seo_title'];
+		}
+		if ( isset( $input['yoast_canonical_url'] ) ) {
+			$requested['_yoast_wpseo_canonical'] = $input['yoast_canonical_url'];
+		}
+		if ( isset( $input['yoast_breadcrumb_title'] ) ) {
+			$requested['_yoast_wpseo_bctitle'] = $input['yoast_breadcrumb_title'];
+		}
+		if ( isset( $input['yoast_schema_page_type'] ) ) {
+			$requested['_yoast_wpseo_schema_page_type'] = $input['yoast_schema_page_type'];
+		}
+		if ( isset( $input['yoast_schema_article_type'] ) ) {
+			$requested['_yoast_wpseo_schema_article_type'] = $input['yoast_schema_article_type'];
+		}
+		if ( isset( $input['yoast_opengraph_title'] ) ) {
+			$requested['_yoast_wpseo_opengraph-title'] = $input['yoast_opengraph_title'];
+		}
+		if ( isset( $input['yoast_opengraph_description'] ) ) {
+			$requested['_yoast_wpseo_opengraph-description'] = $input['yoast_opengraph_description'];
+		}
+		if ( isset( $input['yoast_opengraph_image'] ) ) {
+			$requested['_yoast_wpseo_opengraph-image'] = $input['yoast_opengraph_image'];
+		}
+		if ( isset( $input['yoast_twitter_title'] ) ) {
+			$requested['_yoast_wpseo_twitter-title'] = $input['yoast_twitter_title'];
+		}
+		if ( isset( $input['yoast_twitter_description'] ) ) {
+			$requested['_yoast_wpseo_twitter-description'] = $input['yoast_twitter_description'];
+		}
+		if ( isset( $input['yoast_twitter_image'] ) ) {
+			$requested['_yoast_wpseo_twitter-image'] = $input['yoast_twitter_image'];
+		}
+		if ( isset( $input['yoast_primary_category'] ) ) {
+			$requested['_yoast_wpseo_primary_category'] = $input['yoast_primary_category'];
+		}
+		if ( isset( $input['yoast_robots_noindex'] ) ) {
+			$requested['_yoast_wpseo_meta-robots-noindex'] = $input['yoast_robots_noindex'];
+		}
+		if ( isset( $input['yoast_robots_nofollow'] ) ) {
+			$requested['_yoast_wpseo_meta-robots-nofollow'] = $input['yoast_robots_nofollow'];
+		}
+		if ( isset( $input['yoast_robots_advanced'] ) ) {
+			$requested['_yoast_wpseo_meta-robots-adv'] = $input['yoast_robots_advanced'];
 		}
 
 		$protected_keys = self::writable_protected_meta_keys();
@@ -1703,9 +1787,7 @@ class Webmastery_MCP_Posts {
 			$create_props['parent'] = [ 'type' => 'integer', 'description' => 'Parent page ID (0 for top-level)' ];
 		}
 
-		$create_props['yoast_meta_description'] = [ 'type' => 'string', 'description' => 'Yoast SEO meta description (stored as _yoast_wpseo_metadesc)' ];
-		$create_props['yoast_focus_keyword']    = [ 'type' => 'string', 'description' => 'Yoast SEO focus keyphrase (stored as _yoast_wpseo_focuskw)' ];
-		$create_props['yoast_seo_title']        = [ 'type' => 'string', 'description' => 'Yoast SEO title (stored as _yoast_wpseo_title)' ];
+		$create_props = array_merge( $create_props, self::yoast_input_schema_props() );
 
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/create-{$type}", [
 			'label'               => "Create {$label}",
@@ -1803,9 +1885,7 @@ class Webmastery_MCP_Posts {
 			$update_props['parent'] = [ 'type' => 'integer', 'description' => 'Parent page ID (0 for top-level)' ];
 		}
 
-		$update_props['yoast_meta_description'] = [ 'type' => 'string', 'description' => 'Yoast SEO meta description (stored as _yoast_wpseo_metadesc)' ];
-		$update_props['yoast_focus_keyword']    = [ 'type' => 'string', 'description' => 'Yoast SEO focus keyphrase (stored as _yoast_wpseo_focuskw)' ];
-		$update_props['yoast_seo_title']        = [ 'type' => 'string', 'description' => 'Yoast SEO title (stored as _yoast_wpseo_title)' ];
+		$update_props = array_merge( $update_props, self::yoast_input_schema_props() );
 
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/update-{$type}", [
 			'label'               => "Update {$label}",

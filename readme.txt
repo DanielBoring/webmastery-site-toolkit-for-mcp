@@ -72,12 +72,12 @@ Detect active known backup plugins, including UpdraftPlus, BackWPup, Duplicator,
 Check for common misconfigurations: debug mode, file editor exposure, SSL, admin username presence, core and plugin version currency, XML-RPC status, and auth key strength. Returns findings in fail/warn/pass buckets with actionable remediation steps.
 
 **SEO Analysis**
-Analyze individual posts for title length, word count, meta description, focus keyword placement, image alt text, internal links, and slug length. Get a site-wide overview including sitemap and robots.txt accessibility and counts of published posts missing optimization. Read Yoast SEO and readability score lists with pagination and optional post type, status, and modified-after filters.
+Analyze individual posts for title length, word count, meta description, focus keyword placement, image alt text, internal links, and slug length. Get a site-wide overview including sitemap and robots.txt accessibility and counts of published posts missing optimization. Read Yoast SEO and readability score lists with pagination and optional post type, status, and modified-after filters. Inspect stored Yoast canonical, breadcrumb, Schema.org, Open Graph, Twitter, inclusive-language score, primary category, robots directive metadata, and generated Yoast head output when Yoast exposes it through REST.
 
 **Webmaster Verification**
 Check public Google and Bing webmaster verification proof without API credentials. The read-only `webmaster-verification-status` ability reports Google Site Kit installed/active status, rendered homepage verification meta tags, `/BingSiteAuth.xml`, visible DNS TXT verification records when PHP can read them, `robots.txt` sitemap declarations, and same-host sitemap reachability using `pass`, `warn`, and `unknown` statuses.
 
-Post and page create/update abilities can write supported Yoast SEO protected meta keys such as `_yoast_wpseo_focuskw`, `_yoast_wpseo_metadesc`, and `_yoast_wpseo_title`. Unsupported protected or unregistered meta keys fail with structured details instead of being silently ignored. Dedicated post meta abilities can read, update, and delete unprotected custom fields, plus explicitly allowlisted protected keys, only after the current user can edit the target post.
+Post and page create/update abilities can write supported Yoast SEO protected meta keys for title, meta description, focus keyphrase, canonical URL, breadcrumb title, Schema.org page/article types, Open Graph metadata, Twitter metadata, primary category, and robots directives. Yoast-specific inputs only write `_yoast_wpseo_*` keys; they do not write or translate SEOPress metadata, and E2E coverage verifies SEOPress title, description, and target-keyword fields remain unchanged when Yoast metadata is updated on the same post. Unsupported protected or unregistered meta keys fail with structured details instead of being silently ignored. Dedicated post meta abilities can read, update, and delete unprotected custom fields, plus explicitly allowlisted protected keys, only after the current user can edit the target post.
 
 Public webmaster proof is different from confirmed Google Search Console or Bing Webmaster Tools account verification. Account-level confirmation is reported as `unknown` because it would require OAuth/API credentials and a separate security model.
 
@@ -112,7 +112,7 @@ Any client that speaks the Model Context Protocol and can connect to `@automatti
 
 No, but behavior differs depending on whether it is active:
 
-**With Yoast SEO:** All SEO checks run fully — structural analysis (title length, word count, image alt text, internal links, slug), meta description and focus keyword checks per post, site-wide counts of unoptimized posts, Yoast sitemap verification, and Yoast SEO/readability score lists.
+**With Yoast SEO:** All SEO checks run fully — structural analysis (title length, word count, image alt text, internal links, slug), meta description and focus keyword checks per post, site-wide counts of unoptimized posts, Yoast sitemap verification, Yoast SEO/readability score lists, expanded Yoast metadata writes, and read-only Yoast metadata/head inspection.
 
 **Without Yoast SEO:** Structural checks work correctly. However, `seo-analyze-post` will always flag "No Yoast meta description set" and "No Yoast focus keyword set" on every post, and `seo-site-overview` will report every published post as missing those fields. The sitemap check will also fail since it checks the Yoast-specific `/sitemap_index.xml` URL. `get-seo-scores` and `get-readability-scores` return empty results with a note. If you are not using Yoast, treat those specific warnings as not applicable.
 
