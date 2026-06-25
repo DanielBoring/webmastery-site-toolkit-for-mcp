@@ -8,6 +8,7 @@ class Webmastery_MCP_SEO {
 		self::register_analyze_post();
 		self::register_site_overview();
 		self::register_yoast_metadata();
+		self::register_seopress_metadata();
 		self::register_score_ability( 'get-seo-scores', 'SEO Scores', '_yoast_wpseo_linkdex', 'Yoast SEO analysis scores.' );
 		self::register_score_ability( 'get-readability-scores', 'Readability Scores', '_yoast_wpseo_content_score', 'Yoast readability analysis scores.' );
 	}
@@ -88,11 +89,18 @@ class Webmastery_MCP_SEO {
 			$good[] = [ 'check' => 'word_count', 'message' => "Content length is good ({$word_count} words)." ];
 		}
 
-		// Yoast meta description
-		$meta_desc                      = get_post_meta( $id, '_yoast_wpseo_metadesc', true );
-		$data['yoast_meta_description'] = $meta_desc;
+		$yoast_meta_desc                   = get_post_meta( $id, '_yoast_wpseo_metadesc', true );
+		$seopress_meta_desc                = get_post_meta( $id, '_seopress_titles_desc', true );
+		$meta_desc                         = '' !== $yoast_meta_desc ? $yoast_meta_desc : $seopress_meta_desc;
+		$data['yoast_meta_description']    = $yoast_meta_desc;
+		$data['seopress_meta_description'] = $seopress_meta_desc;
+		$data['seo_provider_meta_source']  = '' !== $yoast_meta_desc ? 'yoast' : ( '' !== $seopress_meta_desc ? 'seopress' : null );
+		$data['seo_plugins']               = [
+			'yoast_active'    => self::is_yoast_active(),
+			'seopress_active' => self::is_seopress_active(),
+		];
 		if ( empty( $meta_desc ) ) {
-			$issues[] = [ 'check' => 'meta_description', 'severity' => 'warn', 'message' => 'No Yoast meta description set.' ];
+			$issues[] = [ 'check' => 'meta_description', 'severity' => 'warn', 'message' => 'No Yoast SEO or SEOPress meta description set.' ];
 		} else {
 			$desc_len = mb_strlen( $meta_desc );
 			if ( $desc_len < 120 || $desc_len > 160 ) {
@@ -102,11 +110,14 @@ class Webmastery_MCP_SEO {
 			}
 		}
 
-		// Yoast focus keyword
-		$focus_kw                    = get_post_meta( $id, '_yoast_wpseo_focuskw', true );
-		$data['yoast_focus_keyword'] = $focus_kw;
+		$yoast_focus_kw                    = get_post_meta( $id, '_yoast_wpseo_focuskw', true );
+		$seopress_focus_kw                 = get_post_meta( $id, '_seopress_analysis_target_kw', true );
+		$focus_kw                          = '' !== $yoast_focus_kw ? $yoast_focus_kw : $seopress_focus_kw;
+		$data['yoast_focus_keyword']       = $yoast_focus_kw;
+		$data['seopress_focus_keywords']   = $seopress_focus_kw;
+		$data['seo_provider_focus_source'] = '' !== $yoast_focus_kw ? 'yoast' : ( '' !== $seopress_focus_kw ? 'seopress' : null );
 		if ( empty( $focus_kw ) ) {
-			$issues[] = [ 'check' => 'focus_keyword', 'severity' => 'warn', 'message' => 'No Yoast focus keyword set.' ];
+			$issues[] = [ 'check' => 'focus_keyword', 'severity' => 'warn', 'message' => 'No Yoast SEO focus keyphrase or SEOPress target keyword set.' ];
 		} elseif ( false !== stripos( $title, $focus_kw ) ) {
 			$good[] = [ 'check' => 'keyword_in_title', 'message' => "Focus keyword \"{$focus_kw}\" found in title." ];
 		} else {
@@ -219,6 +230,27 @@ class Webmastery_MCP_SEO {
 		] );
 	}
 
+	private static function register_seopress_metadata() {
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-seopress-metadata', [
+			'label'               => 'SEO: SEOPress Metadata',
+			'description'         => 'Inspect SEOPress metadata for a post or page.',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => [
+				'type'       => 'object',
+				'properties' => [
+					'post_id' => [ 'type' => 'integer', 'description' => 'Post or page ID to inspect.' ],
+				],
+				'required'   => [ 'post_id' ],
+			],
+			'execute_callback'    => [ self::class, 'execute_seopress_metadata' ],
+			'permission_callback' => [ self::class, 'permission_seopress_metadata' ],
+			'meta'                => [
+				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+	}
+
 	public static function permission_yoast_metadata( $input = [] ) {
 		$id = absint( $input['post_id'] ?? 0 );
 		if ( $id ) {
@@ -270,6 +302,30 @@ class Webmastery_MCP_SEO {
 		];
 	}
 
+	private static function seopress_post_meta_keys() {
+		return [
+			'title'                 => '_seopress_titles_title',
+			'meta_description'      => '_seopress_titles_desc',
+			'focus_keywords'        => '_seopress_analysis_target_kw',
+			'canonical_url'         => '_seopress_robots_canonical',
+			'opengraph_title'       => '_seopress_social_fb_title',
+			'opengraph_description' => '_seopress_social_fb_desc',
+			'opengraph_image'       => '_seopress_social_fb_img',
+			'twitter_title'         => '_seopress_social_twitter_title',
+			'twitter_description'   => '_seopress_social_twitter_desc',
+			'twitter_image'         => '_seopress_social_twitter_img',
+			'primary_category'      => '_seopress_robots_primary_cat',
+			'robots_noindex'        => '_seopress_robots_index',
+			'robots_nofollow'       => '_seopress_robots_follow',
+			'robots_noimageindex'   => '_seopress_robots_imageindex',
+			'robots_noarchive'      => '_seopress_robots_archive',
+			'robots_nosnippet'      => '_seopress_robots_snippet',
+			'breadcrumb_title'      => '_seopress_robots_breadcrumbs',
+			'news_sitemap_disabled' => '_seopress_news_disabled',
+			'video_sitemap_disabled' => '_seopress_video_disabled',
+		];
+	}
+
 	private static function normalize_yoast_meta_value( $field, $value ) {
 		if ( '' === $value ) {
 			return null;
@@ -279,6 +335,21 @@ class Webmastery_MCP_SEO {
 			return (int) $value;
 		}
 		if ( in_array( $field, [ 'cornerstone', 'robots_noindex', 'robots_nofollow' ], true ) ) {
+			return rest_sanitize_boolean( $value );
+		}
+
+		return $value;
+	}
+
+	private static function normalize_seopress_meta_value( $field, $value ) {
+		if ( '' === $value ) {
+			return null;
+		}
+
+		if ( 'primary_category' === $field ) {
+			return (int) $value;
+		}
+		if ( in_array( $field, [ 'robots_noindex', 'robots_nofollow', 'robots_noimageindex', 'robots_noarchive', 'robots_nosnippet', 'news_sitemap_disabled', 'video_sitemap_disabled' ], true ) ) {
 			return rest_sanitize_boolean( $value );
 		}
 
@@ -400,11 +471,81 @@ class Webmastery_MCP_SEO {
 		];
 	}
 
+	public static function permission_seopress_metadata( $input = [] ) {
+		$id   = absint( $input['post_id'] ?? 0 );
+		$post = get_post( $id );
+
+		if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
+			return new WP_Error( 'not_found', 'Post or page not found.' );
+		}
+		if ( ! current_user_can( 'edit_post', $id ) ) {
+			return new WP_Error( 'forbidden', 'Requires edit_post capability for this post or page.' );
+		}
+
+		return true;
+	}
+
+	public static function execute_seopress_metadata( $input = [] ) {
+		$id = absint( $input['post_id'] ?? 0 );
+
+		if ( ! self::is_seopress_active() ) {
+			return [
+				'success' => true,
+				'data'    => [
+					'seopress_active' => false,
+					'note'            => 'SEOPress is not active, so SEOPress metadata is not available.',
+				],
+			];
+		}
+
+		$post = get_post( $id );
+		if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
+			return [ 'success' => false, 'error' => [ 'code' => 'not_found', 'message' => 'Post or page not found.' ] ];
+		}
+		if ( ! current_user_can( 'edit_post', $id ) ) {
+			return [ 'success' => false, 'error' => [ 'code' => 'forbidden', 'message' => 'You do not have permission to inspect SEOPress metadata for this post or page.' ] ];
+		}
+
+		$meta     = [];
+		$raw_meta = [];
+		foreach ( self::seopress_post_meta_keys() as $field => $meta_key ) {
+			$value              = get_post_meta( $id, $meta_key, true );
+			$meta[ $field ]     = self::normalize_seopress_meta_value( $field, $value );
+			$raw_meta[ $field ] = [
+				'key'   => $meta_key,
+				'value' => $value,
+			];
+		}
+
+		return [
+			'success' => true,
+			'data'    => [
+				'seopress_active' => true,
+				'post_id'         => $id,
+				'post_type'       => $post->post_type,
+				'title'           => $post->post_title,
+				'url'             => get_permalink( $id ),
+				'metadata'        => $meta,
+				'raw_meta'        => $raw_meta,
+			],
+		];
+	}
+
 	private static function is_yoast_active() {
 		return defined( 'WPSEO_VERSION' )
 			|| defined( 'WPSEO_FILE' )
 			|| class_exists( 'WPSEO_Options' )
 			|| function_exists( 'wpseo_init' );
+	}
+
+	private static function is_seopress_active() {
+		$active_plugins = (array) get_option( 'active_plugins', [] );
+
+		return defined( 'SEOPRESS_VERSION' )
+			|| defined( 'SEOPRESS_PRO_VERSION' )
+			|| class_exists( 'SEOPress' )
+			|| function_exists( 'seopress_activation' )
+			|| in_array( 'wp-seopress/seopress.php', $active_plugins, true );
 	}
 
 	private static function score_input_schema() {
@@ -531,6 +672,7 @@ class Webmastery_MCP_SEO {
 				'total'        => (int) $query->found_posts,
 				'total_pages'  => (int) $query->max_num_pages,
 				'yoast_active' => true,
+				'seopress_active' => self::is_seopress_active(),
 			],
 		];
 	}
@@ -556,7 +698,12 @@ class Webmastery_MCP_SEO {
 		$robots_ok          = ! is_wp_error( $robots_response ) && wp_remote_retrieve_response_code( $robots_response ) === 200;
 		$data['robots_txt'] = [ 'url' => $robots_url, 'accessible' => $robots_ok ];
 
-		// Published posts missing Yoast focus keyword
+		$data['providers'] = [
+			'yoast_active'    => self::is_yoast_active(),
+			'seopress_active' => self::is_seopress_active(),
+		];
+
+		// Published posts missing Yoast focus keyword.
 		$no_keyword                          = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying Yoast fields; only runs on explicit admin request.
 			'post_type'      => [ 'post', 'page' ],
 			'post_status'    => 'publish',
@@ -580,7 +727,7 @@ class Webmastery_MCP_SEO {
 			'ids'   => array_slice( $no_keyword->posts, 0, 20 ),
 		];
 
-		// Posts with no Yoast meta description
+		// Posts with no Yoast meta description.
 		$no_desc                                = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying Yoast fields; only runs on explicit admin request.
 			'post_type'      => [ 'post', 'page' ],
 			'post_status'    => 'publish',
@@ -602,6 +749,52 @@ class Webmastery_MCP_SEO {
 		$data['posts_missing_meta_description'] = [
 			'count' => $no_desc->found_posts,
 			'ids'   => array_slice( $no_desc->posts, 0, 20 ),
+		];
+
+		$seopress_no_keyword                           = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying SEOPress fields; only runs on explicit admin request.
+			'post_type'      => [ 'post', 'page' ],
+			'post_status'    => 'publish',
+			'posts_per_page' => 50,
+			'meta_query'     => [
+				'relation' => 'OR',
+				[
+					'key'     => '_seopress_analysis_target_kw',
+					'compare' => 'NOT EXISTS',
+				],
+				[
+					'key'     => '_seopress_analysis_target_kw',
+					'value'   => '',
+					'compare' => '=',
+				],
+			],
+			'fields' => 'ids',
+		] );
+		$data['seopress_posts_missing_focus_keywords'] = [
+			'count' => $seopress_no_keyword->found_posts,
+			'ids'   => array_slice( $seopress_no_keyword->posts, 0, 20 ),
+		];
+
+		$seopress_no_desc                                = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying SEOPress fields; only runs on explicit admin request.
+			'post_type'      => [ 'post', 'page' ],
+			'post_status'    => 'publish',
+			'posts_per_page' => 50,
+			'meta_query'     => [
+				'relation' => 'OR',
+				[
+					'key'     => '_seopress_titles_desc',
+					'compare' => 'NOT EXISTS',
+				],
+				[
+					'key'     => '_seopress_titles_desc',
+					'value'   => '',
+					'compare' => '=',
+				],
+			],
+			'fields' => 'ids',
+		] );
+		$data['seopress_posts_missing_meta_description'] = [
+			'count' => $seopress_no_desc->found_posts,
+			'ids'   => array_slice( $seopress_no_desc->posts, 0, 20 ),
 		];
 
 		// Total published post/page count for context
