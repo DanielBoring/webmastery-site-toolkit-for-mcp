@@ -44,6 +44,16 @@ function e2e_ensure_application_password( $user_id, $name ) {
 	return $password['uuid'];
 }
 
+function e2e_require_active_plugin( $plugin_file, $label ) {
+	if ( ! function_exists( 'is_plugin_active' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	}
+
+	if ( ! is_plugin_active( $plugin_file ) ) {
+		throw new RuntimeException( "{$label} must be active for E2E coverage." );
+	}
+}
+
 function e2e_ensure_term_id( $name, $taxonomy ) {
 	$existing = term_exists( $name, $taxonomy );
 	if ( $existing ) {
@@ -428,12 +438,37 @@ function e2e_restore_case_setup( $restore ) {
 	}
 }
 
+function e2e_assert_post_meta_values( $assertions, $fixtures ) {
+	foreach ( $assertions as $assertion ) {
+		if ( ! is_array( $assertion ) ) {
+			throw new RuntimeException( 'assert_post_meta entries must be objects.' );
+		}
+
+		$post_id  = (int) e2e_resolve_placeholders( $assertion['post_id'] ?? 0, $fixtures );
+		$meta_key = (string) ( $assertion['meta_key'] ?? '' );
+		$expected = e2e_resolve_placeholders( $assertion['value'] ?? null, $fixtures );
+
+		if ( $post_id <= 0 || '' === $meta_key ) {
+			throw new RuntimeException( 'assert_post_meta requires post_id and meta_key.' );
+		}
+
+		if ( get_post_meta( $post_id, $meta_key, true ) !== $expected ) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 $manifest_path = WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/tests/e2e/abilities-manifest.json';
 $manifest      = json_decode( file_get_contents( $manifest_path ), true );
 
 if ( ! is_array( $manifest ) ) {
 	throw new RuntimeException( 'E2E ability manifest is missing or invalid JSON.' );
 }
+
+e2e_require_active_plugin( getenv( 'YOAST_PLUGIN_FILE' ) ?: 'wordpress-seo/wp-seo.php', 'Yoast SEO' );
+e2e_require_active_plugin( getenv( 'SEOPRESS_PLUGIN_FILE' ) ?: 'wp-seopress/seopress.php', 'SEOPress' );
 
 $admin         = get_user_by( 'login', 'admin' );
 $admin_id      = (int) $admin->ID;
@@ -587,6 +622,9 @@ wp_trash_post( $fixtures['restore_page_id'] );
 wp_set_post_categories( $fixtures['post_id'], array( $fixtures['category_id'] ) );
 wp_set_post_tags( $fixtures['post_id'], array( $fixtures['tag_id'] ) );
 wp_set_object_terms( $fixtures['book_id'], array( $fixtures['genre_id'] ), 'mcp_genre' );
+update_post_meta( $fixtures['post_id'], '_seopress_titles_title', 'SEOPress fixture title' );
+update_post_meta( $fixtures['post_id'], '_seopress_titles_desc', 'SEOPress fixture description' );
+update_post_meta( $fixtures['post_id'], '_seopress_analysis_target_kw', 'seopress fixture keyword' );
 update_post_meta( $fixtures['meta_post_id'], 'mcp_e2e_public_key', 'public meta value' );
 update_post_meta( $fixtures['meta_post_id'], '_mcp_e2e_protected_key', 'hidden protected value' );
 update_post_meta( $fixtures['delete_meta_post_id'], 'mcp_e2e_delete_key', 'delete me' );
@@ -615,10 +653,6 @@ wp_update_post(
 		'post_status' => 'pending',
 	)
 );
-
-if ( ! defined( 'WPSEO_VERSION' ) ) {
-	define( 'WPSEO_VERSION', 'e2e' );
-}
 
 update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_linkdex', '82' );
 update_post_meta( $fixtures['yoast_score_post_id'], '_yoast_wpseo_content_score', '74' );
@@ -861,6 +895,10 @@ foreach ( $manifest as $case ) {
 		if ( ! $exists || (int) get_post_thumbnail_id( (int) $post_id ) !== (int) $attachment_value ) {
 			$passed = false;
 		}
+	}
+
+	if ( $passed && ! empty( $case['assert_post_meta'] ) && is_array( $case['assert_post_meta'] ) ) {
+		$passed = e2e_assert_post_meta_values( $case['assert_post_meta'], $fixtures );
 	}
 
 	if ( $passed ) {
