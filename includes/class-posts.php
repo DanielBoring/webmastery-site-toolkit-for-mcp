@@ -88,11 +88,11 @@ class Webmastery_MCP_Posts {
 			'_seopress_social_twitter_desc'         => 'string',
 			'_seopress_social_twitter_img'          => 'url',
 			'_seopress_robots_primary_cat'          => 'integer_string',
-			'_seopress_robots_index'                => 'boolean_string',
-			'_seopress_robots_follow'               => 'boolean_string',
-			'_seopress_robots_imageindex'           => 'boolean_string',
-			'_seopress_robots_archive'              => 'boolean_string',
-			'_seopress_robots_snippet'              => 'boolean_string',
+			'_seopress_robots_index'                => 'seopress_boolean_string',
+			'_seopress_robots_follow'               => 'seopress_boolean_string',
+			'_seopress_robots_imageindex'           => 'seopress_boolean_string',
+			'_seopress_robots_archive'              => 'seopress_boolean_string',
+			'_seopress_robots_snippet'              => 'seopress_boolean_string',
 			'_seopress_robots_breadcrumbs'          => 'string',
 		];
 	}
@@ -247,11 +247,11 @@ class Webmastery_MCP_Posts {
 			'seopress_twitter_description'   => [ 'type' => 'string', 'description' => 'SEOPress Twitter/X description (stored as _seopress_social_twitter_desc)' ],
 			'seopress_twitter_image'         => [ 'type' => 'string', 'description' => 'SEOPress Twitter/X image URL (stored as _seopress_social_twitter_img)' ],
 			'seopress_primary_category'      => [ 'type' => 'integer', 'description' => 'SEOPress primary category term ID (stored as _seopress_robots_primary_cat)' ],
-			'seopress_robots_noindex'        => [ 'type' => 'boolean', 'description' => 'SEOPress noindex flag; true stores _seopress_robots_index=1' ],
-			'seopress_robots_nofollow'       => [ 'type' => 'boolean', 'description' => 'SEOPress nofollow flag; true stores _seopress_robots_follow=1' ],
-			'seopress_robots_noimageindex'   => [ 'type' => 'boolean', 'description' => 'SEOPress noimageindex flag; true stores _seopress_robots_imageindex=1' ],
-			'seopress_robots_noarchive'      => [ 'type' => 'boolean', 'description' => 'SEOPress noarchive flag; true stores _seopress_robots_archive=1' ],
-			'seopress_robots_nosnippet'      => [ 'type' => 'boolean', 'description' => 'SEOPress nosnippet flag; true stores _seopress_robots_snippet=1' ],
+			'seopress_robots_noindex'        => [ 'type' => 'boolean', 'description' => 'SEOPress noindex flag; true stores _seopress_robots_index=yes' ],
+			'seopress_robots_nofollow'       => [ 'type' => 'boolean', 'description' => 'SEOPress nofollow flag; true stores _seopress_robots_follow=yes' ],
+			'seopress_robots_noimageindex'   => [ 'type' => 'boolean', 'description' => 'SEOPress noimageindex flag; true stores _seopress_robots_imageindex=yes' ],
+			'seopress_robots_noarchive'      => [ 'type' => 'boolean', 'description' => 'SEOPress noarchive flag; true stores _seopress_robots_archive=yes' ],
+			'seopress_robots_nosnippet'      => [ 'type' => 'boolean', 'description' => 'SEOPress nosnippet flag; true stores _seopress_robots_snippet=yes' ],
 			'seopress_breadcrumb_title'      => [ 'type' => 'string', 'description' => 'SEOPress breadcrumb title (stored as _seopress_robots_breadcrumbs)' ],
 		];
 	}
@@ -271,6 +271,9 @@ class Webmastery_MCP_Posts {
 
 		if ( 'boolean_string' === $type ) {
 			return rest_sanitize_boolean( $value ) ? '1' : '0';
+		}
+		if ( 'seopress_boolean_string' === $type ) {
+			return rest_sanitize_boolean( $value ) ? 'yes' : '';
 		}
 		if ( 'integer_string' === $type ) {
 			return (string) absint( $value );

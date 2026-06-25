@@ -751,51 +751,53 @@ class Webmastery_MCP_SEO {
 			'ids'   => array_slice( $no_desc->posts, 0, 20 ),
 		];
 
-		$seopress_no_keyword                           = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying SEOPress fields; only runs on explicit admin request.
-			'post_type'      => [ 'post', 'page' ],
-			'post_status'    => 'publish',
-			'posts_per_page' => 50,
-			'meta_query'     => [
-				'relation' => 'OR',
-				[
-					'key'     => '_seopress_analysis_target_kw',
-					'compare' => 'NOT EXISTS',
+		if ( self::is_seopress_active() ) {
+			$seopress_no_keyword                           = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying SEOPress fields; only runs on explicit admin request when SEOPress is active.
+				'post_type'      => [ 'post', 'page' ],
+				'post_status'    => 'publish',
+				'posts_per_page' => 50,
+				'meta_query'     => [
+					'relation' => 'OR',
+					[
+						'key'     => '_seopress_analysis_target_kw',
+						'compare' => 'NOT EXISTS',
+					],
+					[
+						'key'     => '_seopress_analysis_target_kw',
+						'value'   => '',
+						'compare' => '=',
+					],
 				],
-				[
-					'key'     => '_seopress_analysis_target_kw',
-					'value'   => '',
-					'compare' => '=',
-				],
-			],
-			'fields' => 'ids',
-		] );
-		$data['seopress_posts_missing_focus_keywords'] = [
-			'count' => $seopress_no_keyword->found_posts,
-			'ids'   => array_slice( $seopress_no_keyword->posts, 0, 20 ),
-		];
+				'fields' => 'ids',
+			] );
+			$data['seopress_posts_missing_focus_keywords'] = [
+				'count' => $seopress_no_keyword->found_posts,
+				'ids'   => array_slice( $seopress_no_keyword->posts, 0, 20 ),
+			];
 
-		$seopress_no_desc                                = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying SEOPress fields; only runs on explicit admin request.
-			'post_type'      => [ 'post', 'page' ],
-			'post_status'    => 'publish',
-			'posts_per_page' => 50,
-			'meta_query'     => [
-				'relation' => 'OR',
-				[
-					'key'     => '_seopress_titles_desc',
-					'compare' => 'NOT EXISTS',
+			$seopress_no_desc                                = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying SEOPress fields; only runs on explicit admin request when SEOPress is active.
+				'post_type'      => [ 'post', 'page' ],
+				'post_status'    => 'publish',
+				'posts_per_page' => 50,
+				'meta_query'     => [
+					'relation' => 'OR',
+					[
+						'key'     => '_seopress_titles_desc',
+						'compare' => 'NOT EXISTS',
+					],
+					[
+						'key'     => '_seopress_titles_desc',
+						'value'   => '',
+						'compare' => '=',
+					],
 				],
-				[
-					'key'     => '_seopress_titles_desc',
-					'value'   => '',
-					'compare' => '=',
-				],
-			],
-			'fields' => 'ids',
-		] );
-		$data['seopress_posts_missing_meta_description'] = [
-			'count' => $seopress_no_desc->found_posts,
-			'ids'   => array_slice( $seopress_no_desc->posts, 0, 20 ),
-		];
+				'fields' => 'ids',
+			] );
+			$data['seopress_posts_missing_meta_description'] = [
+				'count' => $seopress_no_desc->found_posts,
+				'ids'   => array_slice( $seopress_no_desc->posts, 0, 20 ),
+			];
+		}
 
 		// Total published post/page count for context
 		$data['total_published'] = [
