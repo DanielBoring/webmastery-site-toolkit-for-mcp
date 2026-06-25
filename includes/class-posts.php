@@ -77,6 +77,23 @@ class Webmastery_MCP_Posts {
 			'_yoast_wpseo_meta-robots-noindex'      => 'boolean_string',
 			'_yoast_wpseo_meta-robots-nofollow'     => 'boolean_string',
 			'_yoast_wpseo_meta-robots-adv'          => 'string',
+			'_seopress_titles_title'                => 'string',
+			'_seopress_titles_desc'                 => 'string',
+			'_seopress_analysis_target_kw'          => 'string',
+			'_seopress_robots_canonical'            => 'url',
+			'_seopress_social_fb_title'             => 'string',
+			'_seopress_social_fb_desc'              => 'string',
+			'_seopress_social_fb_img'               => 'url',
+			'_seopress_social_twitter_title'        => 'string',
+			'_seopress_social_twitter_desc'         => 'string',
+			'_seopress_social_twitter_img'          => 'url',
+			'_seopress_robots_primary_cat'          => 'integer_string',
+			'_seopress_robots_index'                => 'seopress_boolean_string',
+			'_seopress_robots_follow'               => 'seopress_boolean_string',
+			'_seopress_robots_imageindex'           => 'seopress_boolean_string',
+			'_seopress_robots_archive'              => 'seopress_boolean_string',
+			'_seopress_robots_snippet'              => 'seopress_boolean_string',
+			'_seopress_robots_breadcrumbs'          => 'string',
 		];
 	}
 
@@ -188,7 +205,7 @@ class Webmastery_MCP_Posts {
 	private static function meta_schema() {
 		return [
 			'type'                 => 'object',
-			'description'          => 'Post meta to write. REST-registered keys and supported Yoast protected keys are persisted; unsupported protected keys fail with details instead of being silently ignored.',
+			'description'          => 'Post meta to write. REST-registered keys and supported Yoast SEO or SEOPress protected keys are persisted; unsupported protected keys fail with details instead of being silently ignored.',
 			'additionalProperties' => [
 				'type' => [ 'string', 'number', 'integer', 'boolean', 'null' ],
 			],
@@ -217,6 +234,28 @@ class Webmastery_MCP_Posts {
 		];
 	}
 
+	private static function seopress_input_schema_props() {
+		return [
+			'seopress_meta_description'      => [ 'type' => 'string', 'description' => 'SEOPress meta description (stored as _seopress_titles_desc)' ],
+			'seopress_focus_keywords'        => [ 'type' => 'string', 'description' => 'SEOPress target keywords (stored as _seopress_analysis_target_kw)' ],
+			'seopress_seo_title'             => [ 'type' => 'string', 'description' => 'SEOPress title (stored as _seopress_titles_title)' ],
+			'seopress_canonical_url'         => [ 'type' => 'string', 'description' => 'SEOPress canonical URL (stored as _seopress_robots_canonical)' ],
+			'seopress_opengraph_title'       => [ 'type' => 'string', 'description' => 'SEOPress Open Graph title (stored as _seopress_social_fb_title)' ],
+			'seopress_opengraph_description' => [ 'type' => 'string', 'description' => 'SEOPress Open Graph description (stored as _seopress_social_fb_desc)' ],
+			'seopress_opengraph_image'       => [ 'type' => 'string', 'description' => 'SEOPress Open Graph image URL (stored as _seopress_social_fb_img)' ],
+			'seopress_twitter_title'         => [ 'type' => 'string', 'description' => 'SEOPress Twitter/X title (stored as _seopress_social_twitter_title)' ],
+			'seopress_twitter_description'   => [ 'type' => 'string', 'description' => 'SEOPress Twitter/X description (stored as _seopress_social_twitter_desc)' ],
+			'seopress_twitter_image'         => [ 'type' => 'string', 'description' => 'SEOPress Twitter/X image URL (stored as _seopress_social_twitter_img)' ],
+			'seopress_primary_category'      => [ 'type' => 'integer', 'description' => 'SEOPress primary category term ID (stored as _seopress_robots_primary_cat)' ],
+			'seopress_robots_noindex'        => [ 'type' => 'boolean', 'description' => 'SEOPress noindex flag; true stores _seopress_robots_index=yes' ],
+			'seopress_robots_nofollow'       => [ 'type' => 'boolean', 'description' => 'SEOPress nofollow flag; true stores _seopress_robots_follow=yes' ],
+			'seopress_robots_noimageindex'   => [ 'type' => 'boolean', 'description' => 'SEOPress noimageindex flag; true stores _seopress_robots_imageindex=yes' ],
+			'seopress_robots_noarchive'      => [ 'type' => 'boolean', 'description' => 'SEOPress noarchive flag; true stores _seopress_robots_archive=yes' ],
+			'seopress_robots_nosnippet'      => [ 'type' => 'boolean', 'description' => 'SEOPress nosnippet flag; true stores _seopress_robots_snippet=yes' ],
+			'seopress_breadcrumb_title'      => [ 'type' => 'string', 'description' => 'SEOPress breadcrumb title (stored as _seopress_robots_breadcrumbs)' ],
+		];
+	}
+
 	private static function normalize_meta_value( $value, $type = 'string' ) {
 		if ( null === $value ) {
 			return '';
@@ -232,6 +271,9 @@ class Webmastery_MCP_Posts {
 
 		if ( 'boolean_string' === $type ) {
 			return rest_sanitize_boolean( $value ) ? '1' : '0';
+		}
+		if ( 'seopress_boolean_string' === $type ) {
+			return rest_sanitize_boolean( $value ) ? 'yes' : '';
 		}
 		if ( 'integer_string' === $type ) {
 			return (string) absint( $value );
@@ -315,6 +357,57 @@ class Webmastery_MCP_Posts {
 		}
 		if ( isset( $input['yoast_robots_advanced'] ) ) {
 			$requested['_yoast_wpseo_meta-robots-adv'] = $input['yoast_robots_advanced'];
+		}
+		if ( isset( $input['seopress_meta_description'] ) ) {
+			$requested['_seopress_titles_desc'] = $input['seopress_meta_description'];
+		}
+		if ( isset( $input['seopress_focus_keywords'] ) ) {
+			$requested['_seopress_analysis_target_kw'] = $input['seopress_focus_keywords'];
+		}
+		if ( isset( $input['seopress_seo_title'] ) ) {
+			$requested['_seopress_titles_title'] = $input['seopress_seo_title'];
+		}
+		if ( isset( $input['seopress_canonical_url'] ) ) {
+			$requested['_seopress_robots_canonical'] = $input['seopress_canonical_url'];
+		}
+		if ( isset( $input['seopress_opengraph_title'] ) ) {
+			$requested['_seopress_social_fb_title'] = $input['seopress_opengraph_title'];
+		}
+		if ( isset( $input['seopress_opengraph_description'] ) ) {
+			$requested['_seopress_social_fb_desc'] = $input['seopress_opengraph_description'];
+		}
+		if ( isset( $input['seopress_opengraph_image'] ) ) {
+			$requested['_seopress_social_fb_img'] = $input['seopress_opengraph_image'];
+		}
+		if ( isset( $input['seopress_twitter_title'] ) ) {
+			$requested['_seopress_social_twitter_title'] = $input['seopress_twitter_title'];
+		}
+		if ( isset( $input['seopress_twitter_description'] ) ) {
+			$requested['_seopress_social_twitter_desc'] = $input['seopress_twitter_description'];
+		}
+		if ( isset( $input['seopress_twitter_image'] ) ) {
+			$requested['_seopress_social_twitter_img'] = $input['seopress_twitter_image'];
+		}
+		if ( isset( $input['seopress_primary_category'] ) ) {
+			$requested['_seopress_robots_primary_cat'] = $input['seopress_primary_category'];
+		}
+		if ( isset( $input['seopress_robots_noindex'] ) ) {
+			$requested['_seopress_robots_index'] = $input['seopress_robots_noindex'];
+		}
+		if ( isset( $input['seopress_robots_nofollow'] ) ) {
+			$requested['_seopress_robots_follow'] = $input['seopress_robots_nofollow'];
+		}
+		if ( isset( $input['seopress_robots_noimageindex'] ) ) {
+			$requested['_seopress_robots_imageindex'] = $input['seopress_robots_noimageindex'];
+		}
+		if ( isset( $input['seopress_robots_noarchive'] ) ) {
+			$requested['_seopress_robots_archive'] = $input['seopress_robots_noarchive'];
+		}
+		if ( isset( $input['seopress_robots_nosnippet'] ) ) {
+			$requested['_seopress_robots_snippet'] = $input['seopress_robots_nosnippet'];
+		}
+		if ( isset( $input['seopress_breadcrumb_title'] ) ) {
+			$requested['_seopress_robots_breadcrumbs'] = $input['seopress_breadcrumb_title'];
 		}
 
 		$protected_keys = self::writable_protected_meta_keys();
@@ -1787,7 +1880,7 @@ class Webmastery_MCP_Posts {
 			$create_props['parent'] = [ 'type' => 'integer', 'description' => 'Parent page ID (0 for top-level)' ];
 		}
 
-		$create_props = array_merge( $create_props, self::yoast_input_schema_props() );
+		$create_props = array_merge( $create_props, self::yoast_input_schema_props(), self::seopress_input_schema_props() );
 
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/create-{$type}", [
 			'label'               => "Create {$label}",
@@ -1885,7 +1978,7 @@ class Webmastery_MCP_Posts {
 			$update_props['parent'] = [ 'type' => 'integer', 'description' => 'Parent page ID (0 for top-level)' ];
 		}
 
-		$update_props = array_merge( $update_props, self::yoast_input_schema_props() );
+		$update_props = array_merge( $update_props, self::yoast_input_schema_props(), self::seopress_input_schema_props() );
 
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/update-{$type}", [
 			'label'               => "Update {$label}",
