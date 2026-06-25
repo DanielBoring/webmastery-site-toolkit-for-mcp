@@ -9,7 +9,7 @@ License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
 
-Adds MCP-powered WordPress site abilities for posts, revisions, post meta, pages, custom post types, media, content hygiene, comments, plugins, SEO, webmaster verification signals, health, database health, performance status, backup status, security, users, and site info.
+Adds MCP-powered WordPress abilities for content, media, comments, SEO, audits, health, backups, security, users, plugins, and site info.
 
 == Description ==
 
