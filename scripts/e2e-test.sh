@@ -90,6 +90,29 @@ install_wordpress() {
 		--skip-email
 }
 
+configure_http_auth_forwarding() {
+	echo "Configuring E2E HTTP Authorization header forwarding..."
+	compose exec -T wordpress bash -lc 'cat > /var/www/html/.htaccess <<'"'"'HTACCESS'"'"'
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+# BEGIN WordPress
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+# END WordPress
+HTACCESS'
+}
+
+configure_application_passwords() {
+	echo "Configuring E2E Application Password availability..."
+	wp config set WP_ENVIRONMENT_TYPE local --type=constant
+}
+
 install_plugins() {
 	echo "Installing E2E custom post type fixture..."
 	compose exec -T wordpress mkdir -p /var/www/html/wp-content/mu-plugins
@@ -114,9 +137,36 @@ run_ability_manifest() {
 	wp eval-file "/var/www/html/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/ability-runner.php"
 }
 
+create_application_password() {
+	local user="$1"
+	local name="$2"
+
+	wp user application-password create "$user" "$name" --porcelain | tail -n 1 | tr -d '[:space:]'
+}
+
+run_mcp_crud() {
+	echo "Running protocol-level MCP CRUD E2E tests..."
+
+	local editor_password
+	local subscriber_password
+	local endpoint
+
+	editor_password="$(create_application_password editor_test "MCP CRUD E2E Editor")"
+	subscriber_password="$(create_application_password subscriber_test "MCP CRUD E2E Subscriber")"
+	endpoint="${MCP_CRUD_ENDPOINT:-http://localhost/wp-json/mcp/mcp-adapter-default-server}"
+
+	compose exec -T \
+		-e MCP_CRUD_ENDPOINT="$endpoint" \
+		-e MCP_CRUD_EDITOR_USER="editor_test" \
+		-e MCP_CRUD_EDITOR_PASSWORD="$editor_password" \
+		-e MCP_CRUD_SUBSCRIBER_USER="subscriber_test" \
+		-e MCP_CRUD_SUBSCRIBER_PASSWORD="$subscriber_password" \
+		wordpress php "/var/www/html/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/mcp-crud-runner.php"
+}
+
 run_php_lint() {
 	echo "Running PHP syntax checks..."
-	compose exec -T wordpress bash -lc "php -l /var/www/html/wp-content/plugins/${PLUGIN_SLUG}/webmastery-site-toolkit-for-mcp.php && find /var/www/html/wp-content/plugins/${PLUGIN_SLUG}/includes -name '*.php' -print0 | xargs -0 -n1 php -l"
+	compose exec -T wordpress bash -lc "php -l /var/www/html/wp-content/plugins/${PLUGIN_SLUG}/webmastery-site-toolkit-for-mcp.php && find /var/www/html/wp-content/plugins/${PLUGIN_SLUG}/includes /var/www/html/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e -name '*.php' -print0 | xargs -0 -n1 php -l"
 }
 
 run_debug_log_check() {
@@ -145,10 +195,13 @@ start_compose
 wait_for_wordpress_files
 install_wp_cli
 install_wordpress
+configure_http_auth_forwarding
+configure_application_passwords
 install_plugins
 compose exec -T wordpress rm -f /var/www/html/wp-content/debug.log
 run_php_lint
 run_ability_manifest
+run_mcp_crud
 run_debug_log_check
 
 echo "E2E QA completed successfully"
