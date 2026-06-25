@@ -83,6 +83,7 @@ jobs:
       mysql-version: ${{ steps.versions.outputs.mysql-version }}
       mcp-adapter-release: ${{ steps.versions.outputs.mcp-adapter-release }}
       mcp-adapter-version: ${{ steps.versions.outputs.mcp-adapter-version }}
+      seopress-version: ${{ steps.versions.outputs.seopress-version }}
       plugin-version: ${{ steps.versions.outputs.plugin-version }}
       registered-abilities: ${{ steps.versions.outputs.registered-abilities }}
       covered-abilities: ${{ steps.versions.outputs.covered-abilities }}
@@ -121,6 +122,7 @@ jobs:
           mysql_version="$(docker compose exec -T mysql mysql --version 2>/dev/null || echo unknown)"
           mcp_adapter_release="$(grep '^MCP_ADAPTER_ZIP=' scripts/e2e-test.sh | sed -E 's#.*releases/download/([^/]+)/.*#\1#')"
           mcp_adapter_version="$(docker compose exec -T wordpress wp --allow-root plugin get mcp-adapter --field=version 2>/dev/null || echo unknown)"
+          seopress_version="$(docker compose exec -T wordpress wp --allow-root plugin get wp-seopress --field=version 2>/dev/null || echo unknown)"
           plugin_version="$(docker compose exec -T wordpress wp --allow-root plugin get webmastery-site-toolkit-for-mcp --field=version 2>/dev/null || echo unknown)"
           summary_file="e2e-artifacts/e2e-summary.json"
           registered_abilities="$(jq -r '.registered_abilities // "unknown"' "$summary_file" 2>/dev/null || echo unknown)"
@@ -137,6 +139,7 @@ jobs:
             echo "mysql-version=${mysql_version:-unknown}"
             echo "mcp-adapter-release=${mcp_adapter_release:-unknown}"
             echo "mcp-adapter-version=${mcp_adapter_version:-unknown}"
+            echo "seopress-version=${seopress_version:-unknown}"
             echo "plugin-version=${plugin_version:-unknown}"
             echo "registered-abilities=${registered_abilities:-unknown}"
             echo "covered-abilities=${covered_abilities:-unknown}"
@@ -210,6 +213,7 @@ jobs:
           MYSQL_VERSION: ${{ needs.e2e-test.outputs.mysql-version }}
           MCP_ADAPTER_RELEASE: ${{ needs.e2e-test.outputs.mcp-adapter-release }}
           MCP_ADAPTER_VERSION: ${{ needs.e2e-test.outputs.mcp-adapter-version }}
+          SEOPRESS_VERSION: ${{ needs.e2e-test.outputs.seopress-version }}
           PLUGIN_VERSION: ${{ needs.e2e-test.outputs.plugin-version }}
           REGISTERED_ABILITIES: ${{ needs.e2e-test.outputs.registered-abilities }}
           COVERED_ABILITIES: ${{ needs.e2e-test.outputs.covered-abilities }}
@@ -261,6 +265,7 @@ jobs:
           VERSIONS+="- MySQL server: ${MYSQL_VERSION:-unknown}"$'\n'
           VERSIONS+="- MCP Adapter release: ${MCP_ADAPTER_RELEASE:-unknown}"$'\n'
           VERSIONS+="- MCP Adapter plugin: ${MCP_ADAPTER_VERSION:-unknown}"$'\n'
+          VERSIONS+="- SEOPress plugin: ${SEOPRESS_VERSION:-unknown}"$'\n'
           VERSIONS+="- Webmastery Site Toolkit for MCP: ${PLUGIN_VERSION:-unknown}"
 
           CHANGES=$'\n\n### Changed files\n\n'

@@ -4,6 +4,7 @@ set -Eeuo pipefail
 WORDPRESS_URL="${WORDPRESS_URL:-http://localhost}"
 PLUGIN_SLUG="webmastery-site-toolkit-for-mcp"
 MCP_ADAPTER_ZIP="https://github.com/WordPress/mcp-adapter/releases/download/v0.5.0/mcp-adapter.zip"
+SEOPRESS_PLUGIN_SLUG="${SEOPRESS_PLUGIN_SLUG:-wp-seopress}"
 E2E_ARTIFACTS_DIR="${E2E_ARTIFACTS_DIR:-e2e-artifacts}"
 E2E_MANAGE_COMPOSE="${E2E_MANAGE_COMPOSE:-0}"
 E2E_KEEP_COMPOSE="${E2E_KEEP_COMPOSE:-0}"
@@ -95,6 +96,9 @@ install_plugins() {
 
 	echo "Installing MCP Adapter..."
 	wp plugin install "$MCP_ADAPTER_ZIP" --activate --force
+
+	echo "Installing SEOPress..."
+	wp plugin install "$SEOPRESS_PLUGIN_SLUG" --activate --force
 
 	echo "Activating ${PLUGIN_SLUG}..."
 	wp plugin activate "$PLUGIN_SLUG"

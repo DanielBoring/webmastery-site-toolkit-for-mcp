@@ -18,12 +18,13 @@ For abilities with role or capability restrictions, include both:
 `scripts/e2e-test.sh` runs `tests/e2e/ability-runner.php`, which:
 
 1. Creates deterministic WordPress fixtures.
-2. Reads `tests/e2e/abilities-manifest.json`.
-3. Gets the currently registered abilities from `wp_get_abilities()`.
-4. Fails if any registered `webmastery-site-toolkit-for-mcp/*` ability is missing from the manifest.
-5. Fails if the manifest references an ability that is not registered.
-6. Executes every manifest case through `wp_get_ability()->execute()`.
-7. Writes `e2e-artifacts/e2e-summary.json` with coverage and result counts.
+2. Installs and activates the MCP Adapter and SEOPress plugin dependencies.
+3. Reads `tests/e2e/abilities-manifest.json`.
+4. Gets the currently registered abilities from `wp_get_abilities()`.
+5. Fails if any registered `webmastery-site-toolkit-for-mcp/*` ability is missing from the manifest.
+6. Fails if the manifest references an ability that is not registered.
+7. Executes every manifest case through `wp_get_ability()->execute()`.
+8. Writes `e2e-artifacts/e2e-summary.json` with coverage and result counts.
 
 ## Local QA entry points
 
@@ -50,6 +51,8 @@ E2E_MANAGE_COMPOSE=1 composer e2e
 ```
 
 Set `E2E_KEEP_COMPOSE=1` when you want to leave the containers running for debugging.
+
+The E2E bootstrap installs SEOPress from WordPress.org with the `wp-seopress` slug before activating this plugin. Set `SEOPRESS_PLUGIN_SLUG` to a different installable plugin slug only when testing against a specific compatible SEOPress package.
 
 PowerShell users can run:
 

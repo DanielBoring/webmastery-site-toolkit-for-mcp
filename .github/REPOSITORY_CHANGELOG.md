@@ -9,6 +9,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 ### Added
 
 - Added agent branch freshness preflight guidance to reduce avoidable PR merge conflicts.
+- Added SEOPress installation to local and CI E2E bootstrap coverage.
 - Added local QA preflight-only modes and clearer missing-tool guidance for PHP, Composer, Docker, and Bash prerequisites.
 - Added manifest E2E setup support for temporarily overriding active plugins in scoped ability cases.
 - Added cross-platform local QA helper scripts, a Composer QA command, and a lightweight E2E manifest validator for contributor preflight checks.
