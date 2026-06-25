@@ -18,7 +18,7 @@ For abilities with role or capability restrictions, include both:
 `scripts/e2e-test.sh` runs `tests/e2e/ability-runner.php`, which:
 
 1. Creates deterministic WordPress fixtures.
-2. Installs and activates the MCP Adapter and SEOPress plugin dependencies.
+2. Installs and activates the MCP Adapter, Yoast SEO, and SEOPress plugin dependencies.
 3. Reads `tests/e2e/abilities-manifest.json`.
 4. Gets the currently registered abilities from `wp_get_abilities()`.
 5. Fails if any registered `webmastery-site-toolkit-for-mcp/*` ability is missing from the manifest.
@@ -52,7 +52,9 @@ E2E_MANAGE_COMPOSE=1 composer e2e
 
 Set `E2E_KEEP_COMPOSE=1` when you want to leave the containers running for debugging.
 
-The E2E bootstrap installs SEOPress from WordPress.org with the `wp-seopress` slug before activating this plugin. Set `SEOPRESS_PLUGIN_SLUG` to a different installable plugin slug only when testing against a specific compatible SEOPress package.
+The E2E bootstrap installs Yoast SEO from WordPress.org with the `wordpress-seo` slug because current SEO abilities and assertions are Yoast-backed. It also installs SEOPress from WordPress.org with the `wp-seopress` slug so local and CI runs exercise coexistence and keep the issue #34 dependency available. Set `YOAST_PLUGIN_SLUG` or `SEOPRESS_PLUGIN_SLUG` only when testing against a specific compatible package.
+
+The runner fails early if either dependency is not active. Coexistence assertions seed SEOPress meta on a post that receives Yoast-backed updates and verify those Yoast paths do not mutate SEOPress meta.
 
 PowerShell users can run:
 

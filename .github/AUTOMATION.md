@@ -32,7 +32,7 @@ This repository uses GitHub Actions for two purposes:
 - Result and workflow URL come from the current workflow run.
 - PR head commit uses `github.event.pull_request.head.sha`; tested merge commit uses `github.sha`, which is GitHub's synthetic merge commit for pull request runs.
 - Ability coverage, manifest case totals, passed cases, failed cases, and negative permission cases come from `e2e-artifacts/e2e-summary.json`, written by `tests/e2e/ability-runner.php`.
-- WordPress, PHP, MySQL, MCP Adapter, SEOPress, and plugin versions are collected from the live Docker/WordPress runtime after E2E runs.
+- WordPress, PHP, MySQL, MCP Adapter, Yoast SEO, SEOPress, and plugin versions are collected from the live Docker/WordPress runtime after E2E runs.
 - Changed files come from the workflow's changed-file detection job.
 - Debug log status comes from the WordPress debug log scan step.
 
@@ -72,7 +72,7 @@ bash scripts/e2e-test.sh
 docker compose down -v
 ```
 
-The E2E bootstrap installs and activates SEOPress from WordPress.org so local and CI runs exercise SEO-related behavior against the expected dependency.
+The E2E bootstrap installs and activates Yoast SEO and SEOPress from WordPress.org. Current SEO ability assertions remain Yoast-backed, while SEOPress is active during the run to exercise dependency readiness and coexistence guardrails.
 
 ## Branch protection recommendation
 

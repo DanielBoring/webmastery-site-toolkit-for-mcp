@@ -95,6 +95,26 @@ foreach ( $manifest as $index => $case ) {
 		}
 	}
 
+	if ( array_key_exists( 'assert_post_meta', $case ) ) {
+		if ( ! is_array( $case['assert_post_meta'] ) ) {
+			$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_post_meta' ) . ' must be an array.';
+		} else {
+			foreach ( $case['assert_post_meta'] as $assertion_index => $assertion ) {
+				$assertion_number = $assertion_index + 1;
+				if ( ! is_array( $assertion ) ) {
+					$errors[] = webmastery_mcp_manifest_path( $case_number, "assert_post_meta {$assertion_number}" ) . ' must be an object.';
+					continue;
+				}
+
+				foreach ( array( 'post_id', 'meta_key', 'value' ) as $assertion_field ) {
+					if ( ! array_key_exists( $assertion_field, $assertion ) ) {
+						$errors[] = webmastery_mcp_manifest_path( $case_number, "assert_post_meta {$assertion_number}.{$assertion_field}" ) . ' is required.';
+					}
+				}
+			}
+		}
+	}
+
 	if ( '' !== $ability ) {
 		if ( ! isset( $ability_summary[ $ability ] ) ) {
 			$ability_summary[ $ability ] = array(
