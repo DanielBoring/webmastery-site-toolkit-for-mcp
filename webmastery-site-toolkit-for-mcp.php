@@ -3,7 +3,7 @@
  * Plugin Name: Webmastery Site Toolkit for MCP
  * Plugin URI:  https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
  * Description: Adds site management abilities for MCP-powered WordPress workflows: posts, pages, taxonomy, comments, media, content hygiene, plugins, user lookup, site info, health, performance, backups, security, and SEO analysis.
- * Version:     2.2.0
+ * Version:     2.3.0
  * Requires at least: 6.9
  * Requires PHP: 8.0
  * Author:      Daniel Boring

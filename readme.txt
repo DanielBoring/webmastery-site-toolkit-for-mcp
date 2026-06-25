@@ -4,7 +4,7 @@ Tags: mcp, ai, automation, content-management, artificial-intelligence
 Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 2.2.0
+Stable tag: 2.3.0
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
@@ -19,9 +19,6 @@ Webmastery Site Toolkit for MCP registers abilities across site management group
 
 **Posts**
 Create, read, update, partially patch, bulk publish drafts, bulk trash, and delete posts. Supports all statuses including scheduled (future) posts, category and tag assignment, pagination, human-readable author fields, and safer targeted content updates.
-
-**Revisions**
-List saved revisions for posts and pages and restore a post or page to a specific revision. Requires `edit_posts` plus object-level edit access to the parent content.
 
 **Revisions**
 List saved revisions for posts and pages and restore a post or page to a specific revision. Requires `edit_posts` plus object-level edit access to the parent content.
@@ -45,13 +42,13 @@ List, get, create, update, and delete categories and tags. Category creation and
 List comments with filters, create threaded replies as the authenticated user, update comment content, and approve, hold, trash, or mark comments as spam through the standard WordPress comment moderation flow.
 
 **Media**
-List, inspect, update, and permanently delete media attachments. Supports MIME type and search filters, pagination, alt text updates, title updates, and caption updates.
+List, inspect, update, upload public image URLs, and permanently delete media attachments. Supports MIME type and search filters, pagination, alt text updates, title updates, caption updates, URL safety checks, upload-size enforcement, and optional featured-image assignment.
 
 **Content Hygiene**
 Find common cleanup items: orphaned media not attached or referenced, published posts or pages missing featured images, and scheduled posts whose publish time is already in the past. These read-only diagnostics return empty item lists when no problems are found.
 
 **Users**
-List users with role/search/pagination filters and fetch a single user by ID. Useful for account audits and resolving numeric user IDs from responses that do not already include display names.
+List users with role/search/pagination filters, fetch a single user by ID, and audit administrator accounts and application passwords. Useful for account audits and resolving numeric user IDs from responses that do not already include display names.
 
 **Site Info**
 Inspect stable, non-sensitive context for the site, current authenticated user, and runtime environment. Site details include public URLs, language, WordPress version, active theme name/version, deterministic timezone fallback, multisite status, and permalink structure. User details include profile fields, roles, and a fixed key-capability summary. Environment details include PHP version, database server version, WordPress environment type, and locale only.
@@ -153,7 +150,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 
 == Changelog ==
 
-= Unreleased =
+= 2.3.0 =
 * Add a media sideload ability to upload public image URLs into the media library with URL safety checks, image MIME and upload-size enforcement, optional title/alt/caption metadata, and optional featured-image assignment.
 * Add a read-only webmaster verification status ability for public Google/Bing proof, homepage verification meta tags, Bing XML verification, visible DNS TXT records, robots.txt sitemap declarations, and sitemap reachability without Google or Bing API credentials.
 * Add an Administrator-only user access audit ability for administrator account inventory, default `admin` username detection, administrator application password reporting, warnings, and application-password collection metadata.
@@ -169,6 +166,7 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 * Add revision abilities to list saved post/page revisions and restore a post or page to a specific revision with `edit_posts` and object-level edit checks.
 * Add category and tag get-by-ID abilities requiring `read`, plus category and tag update abilities requiring `manage_categories`.
 * Add `author_name` and `author_login` to post and page responses so listings expose human-readable author details alongside the numeric author ID.
+* Add comment reply and update abilities with threaded reply creation, comment content updates, optional moderation status changes, capability checks, and normalized comment responses.
 
 = 2.2.0 =
 * Add Yoast SEO score and readability score abilities with pagination, filters, deterministic newest-modified-first ordering, and explicit empty results when Yoast SEO is not active.
@@ -236,8 +234,8 @@ For post and page body edits, `list-content-blocks` returns precise block paths 
 
 == Upgrade Notice ==
 
-= Unreleased =
-Adds media URL sideloading plus Administrator-only plugin audit and database health diagnostics plus bulk post trash and bulk draft-publish abilities for MCP clients.
+= 2.3.0 =
+Adds media URL sideloading, webmaster verification checks, content hygiene diagnostics, custom post type CRUD, post meta and revision tools, comment replies and updates, human-readable author fields, and Administrator-only plugin, user access, database, performance, and backup audits.
 
 = 2.2.0 =
 Adds Yoast score list abilities and fixes supported Yoast protected meta writes for post and page create/update workflows.
