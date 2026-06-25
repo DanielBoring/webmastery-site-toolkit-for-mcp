@@ -6,6 +6,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+## 2.3.0
+
 ### Added
 
 - Added a media sideload ability to upload public image URLs into the media library with URL safety checks, image MIME and upload-size enforcement, optional title/alt/caption metadata, and optional featured-image assignment.
