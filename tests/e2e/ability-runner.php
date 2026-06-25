@@ -600,6 +600,10 @@ add_option( 'mcp_e2e_autoloaded_option', 'autoloaded option fixture', '', true )
 $fixtures['comment_id']       = e2e_insert_comment( $fixtures['post_id'], 'approve' );
 $fixtures['trash_comment_id'] = e2e_insert_comment( $fixtures['post_id'], 'trash' );
 $fixtures['spam_comment_id']  = e2e_insert_comment( $fixtures['post_id'], 'spam' );
+$fixtures['reply_parent_comment_id'] = e2e_insert_comment( $fixtures['post_id'], 'reply-parent' );
+$fixtures['update_comment_id']       = e2e_insert_comment( $fixtures['post_id'], 'update' );
+$fixtures['status_comment_id']       = e2e_insert_comment( $fixtures['post_id'], 'status-update' );
+$fixtures['missing_comment_id']      = 987654321;
 $fixtures['media_id']          = e2e_insert_media( $fixtures['post_id'], $author_id, 'read-update' );
 $fixtures['delete_media_id']   = e2e_insert_media( $fixtures['post_id'], $author_id, 'delete' );
 $fixtures['featured_image_id'] = e2e_insert_media( $fixtures['post_id'], $author_id, 'featured-image', 'image/png' );

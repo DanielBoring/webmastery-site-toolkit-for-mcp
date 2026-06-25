@@ -42,7 +42,7 @@ Inspect Gutenberg block paths and hashes, then replace a single block in a post 
 List, get, create, update, and delete categories and tags. Category creation and updates support parent hierarchy.
 
 **Comments**
-List comments with filters, approve, trash, or mark as spam — all through the standard WordPress comment moderation flow.
+List comments with filters, create threaded replies as the authenticated user, update comment content, and approve, hold, trash, or mark comments as spam through the standard WordPress comment moderation flow.
 
 **Media**
 List, inspect, update, and permanently delete media attachments. Supports MIME type and search filters, pagination, alt text updates, title updates, and caption updates.
@@ -86,7 +86,7 @@ Public webmaster proof is different from confirmed Google Search Console or Bing
 
 When Yoast SEO is installed, all checks run fully including the Yoast sitemap verification and score-list abilities. Without Yoast, meta description and focus keyword checks will warn on every post (since those fields are never populated), the sitemap check will fail, and score-list abilities will return empty results with a note — the structural checks still work correctly.
 
-All abilities enforce WordPress capability checks — an editor cannot call abilities requiring admin caps. Bulk post operations require `delete_posts` for trashing or `edit_posts` for publishing drafts and return per-ID success and failure summaries. Custom post type abilities use each CPT's capability map rather than generic post or page capabilities. Site info abilities require `read` and deliberately exclude filesystem paths, secrets, auth keys, salts, and raw server internals. Content is sanitized on write using WordPress core functions.
+All abilities enforce WordPress capability checks — an editor cannot call abilities requiring admin caps. Bulk post operations require `delete_posts` for trashing or `edit_posts` for publishing drafts and return per-ID success and failure summaries. Comment replies require `edit_posts` and object-level edit access to the related post; comment content and moderation updates require `moderate_comments`. Custom post type abilities use each CPT's capability map rather than generic post or page capabilities. Site info abilities require `read` and deliberately exclude filesystem paths, secrets, auth keys, salts, and raw server internals. Content is sanitized on write using WordPress core functions.
 
 == Installation ==
 
@@ -122,6 +122,8 @@ No, but behavior differs depending on whether it is active:
 = What WordPress user role should I use? =
 
 For core content workflows, use the **Editor** role. It covers the editorial capabilities used by posts, pages, taxonomy, comments, media, and content hygiene diagnostics: `edit_posts`, `edit_pages`, `delete_posts`, `delete_pages`, `upload_files`, `manage_categories`, and `moderate_comments`.
+
+Comment reply abilities create child comments under an existing parent comment as the authenticated user after validating the parent and related post. Comment update abilities can change content and optionally set the moderation status to `approve`, `hold`, `spam`, or `trash`.
 
 Site introspection and public webmaster verification workflows (`get-site-info`, `get-user-info`, `get-environment-info`, and `webmaster-verification-status`) require only `read`, so they work with Subscriber and higher roles.
 
