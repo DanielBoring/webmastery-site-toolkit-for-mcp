@@ -8,8 +8,8 @@
 <!-- e.g. webmastery-site-toolkit-for-mcp/list-media — leave blank for bug fixes -->
 
 ## Testing
-<!-- How did you verify this works? Include local QA commands such as composer qa, scripts/qa-local.sh --e2e, scripts/qa-local.sh --preflight-only, scripts/qa-local.ps1 -E2E, or scripts/qa-local.ps1 -PreflightOnly, plus any manual ability calls and what they returned. -->
-<!-- E2E QA tests will run automatically on push. -->
+<!-- How did you verify this works? Include local QA commands such as composer qa, scripts/qa-local.sh --contract, scripts/qa-local.sh --e2e, scripts/qa-local.ps1 -Contract, scripts/qa-local.ps1 -E2E, or scripts/qa-local.ps1 -PreflightOnly, plus any manual ability calls and what they returned. See docs/qa-strategy.md for which command fits each change type. -->
+<!-- Static QA and Unit Tests run automatically on every PR. Docker QA runs automatically for runtime-impacting changes. -->
 
 ## Checklist
 - [ ] Capability checks use the narrowest relevant WordPress capability and return/surface `WP_Error` on failure
@@ -20,6 +20,6 @@
 - [ ] User-facing changes update relevant docs (`README.md`, `readme.txt`, `tests/e2e/README.md`, or other affected markdown)
 - [ ] Plugin-facing changes update `CHANGELOG.md` under `## Unreleased`
 - [ ] Repository, CI, contributor, GitHub platform, template, or agent workflow changes update `.github/REPOSITORY_CHANGELOG.md` under `## Unreleased`
-- [ ] Local QA checked with `composer qa` or a local QA wrapper, or the missing tool/blocker is documented above
+- [ ] Local QA checked with `composer qa` and the relevant Docker/release QA wrapper from `docs/qa-strategy.md`, or the missing tool/blocker is documented above
 - [ ] WordPress.org Detailed Plugin Guidelines were considered for public-facing or release-impacting changes such as naming, readme text, privacy/external calls, licensing, bundled assets, and release packaging
 - [ ] E2E QA is passing, or failures are unrelated and explained above

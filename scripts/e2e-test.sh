@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+export MSYS_NO_PATHCONV="${MSYS_NO_PATHCONV:-1}"
+
 WORDPRESS_URL="${WORDPRESS_URL:-http://localhost}"
 PLUGIN_SLUG="webmastery-site-toolkit-for-mcp"
 MCP_ADAPTER_ZIP="https://github.com/WordPress/mcp-adapter/releases/download/v0.5.0/mcp-adapter.zip"
@@ -9,6 +11,7 @@ SEOPRESS_PLUGIN_SLUG="${SEOPRESS_PLUGIN_SLUG:-wp-seopress}"
 E2E_ARTIFACTS_DIR="${E2E_ARTIFACTS_DIR:-e2e-artifacts}"
 E2E_MANAGE_COMPOSE="${E2E_MANAGE_COMPOSE:-0}"
 E2E_KEEP_COMPOSE="${E2E_KEEP_COMPOSE:-0}"
+QA_MODE="${1:-all}"
 
 compose() {
 	local project_args=()
@@ -16,11 +19,7 @@ compose() {
 		project_args=( --project-name "$COMPOSE_PROJECT_NAME" )
 	fi
 
-	if docker compose version >/dev/null 2>&1; then
-		docker compose "${project_args[@]}" "$@"
-	else
-		docker-compose "${project_args[@]}" "$@"
-	fi
+	docker compose "${project_args[@]}" "$@"
 }
 
 wp() {
@@ -144,6 +143,25 @@ create_application_password() {
 	wp user application-password create "$user" "$name" --porcelain | tail -n 1 | tr -d '[:space:]'
 }
 
+ensure_user() {
+	local user="$1"
+	local email="$2"
+	local role="$3"
+
+	if wp user get "$user" >/dev/null 2>&1; then
+		wp user set-role "$user" "$role" >/dev/null
+		return 0
+	fi
+
+	wp user create "$user" "$email" --role="$role" --user_pass=password123 >/dev/null
+}
+
+ensure_mcp_crud_users() {
+	echo "Ensuring MCP CRUD E2E users..."
+	ensure_user editor_test editor@test.local editor
+	ensure_user subscriber_test subscriber@test.local subscriber
+}
+
 run_mcp_crud() {
 	echo "Running protocol-level MCP CRUD E2E tests..."
 
@@ -151,6 +169,7 @@ run_mcp_crud() {
 	local subscriber_password
 	local endpoint
 
+	ensure_mcp_crud_users
 	editor_password="$(create_application_password editor_test "MCP CRUD E2E Editor")"
 	subscriber_password="$(create_application_password subscriber_test "MCP CRUD E2E Subscriber")"
 	endpoint="${MCP_CRUD_ENDPOINT:-http://localhost/wp-json/mcp/mcp-adapter-default-server}"
@@ -184,8 +203,18 @@ run_debug_log_check() {
 }
 
 echo "================================"
-echo "E2E Test Suite: WordPress MCP Abilities"
+echo "Docker QA Suite: WordPress MCP Abilities"
 echo "================================"
+
+case "$QA_MODE" in
+	contract|e2e|all)
+		;;
+	*)
+		echo "Unknown QA mode: ${QA_MODE}" >&2
+		echo "Usage: scripts/e2e-test.sh [contract|e2e|all]" >&2
+		exit 1
+		;;
+esac
 
 trap cleanup_compose EXIT
 
@@ -199,9 +228,18 @@ configure_http_auth_forwarding
 configure_application_passwords
 install_plugins
 compose exec -T wordpress rm -f /var/www/html/wp-content/debug.log
-run_php_lint
-run_ability_manifest
-run_mcp_crud
+
+if [ "$QA_MODE" = "contract" ] || [ "$QA_MODE" = "all" ]; then
+	echo "Running Ability Contract QA..."
+	run_php_lint
+	run_ability_manifest
+fi
+
+if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then
+	echo "Running Full MCP E2E QA..."
+	run_mcp_crud
+fi
+
 run_debug_log_check
 
-echo "E2E QA completed successfully"
+echo "Docker QA (${QA_MODE}) completed successfully"

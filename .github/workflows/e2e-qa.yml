@@ -1,4 +1,4 @@
-name: E2E QA Testing
+name: Docker QA
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect relevant file changes
+      - name: Detect runtime-impacting file changes
         id: filter
         shell: bash
         run: |
@@ -52,7 +52,7 @@ jobs:
 
           printf '%s\n' "$CHANGED_FILES"
 
-          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(\.github/workflows/e2e-qa\.yml|docker-compose\.yml|scripts/e2e-test\.sh|tests/e2e/|includes/|webmastery-site-toolkit-for-mcp\.php|readme\.txt|composer\.(json|lock)|phpcs\.xml\.dist|assets/)'; then
+          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(\.github/workflows/|docker-compose\.yml|scripts/|tests/|includes/|webmastery-site-toolkit-for-mcp\.php|readme\.txt|composer\.(json|lock)|phpcs\.xml\.dist|phpstan\.neon\.dist|phpunit\.xml\.dist|assets/)'; then
             echo "should-run=true" >> "$GITHUB_OUTPUT"
           else
             echo "should-run=false" >> "$GITHUB_OUTPUT"
@@ -64,13 +64,13 @@ jobs:
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
-  e2e-test:
+  ability-contract-qa:
     needs: changes
     if: needs.changes.outputs.should-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      COMPOSE_PROJECT_NAME: webmastery-site-toolkit-for-mcp-${{ github.event.pull_request.number || github.run_id }}
+      COMPOSE_PROJECT_NAME: webmastery-site-toolkit-for-mcp-contract-${{ github.event.pull_request.number || github.run_id }}
       MYSQL_PORT: 0
       WORDPRESS_PORT: 0
     permissions:
@@ -107,10 +107,10 @@ jobs:
           docker compose down -v --remove-orphans
           docker compose up -d
 
-      - name: Run E2E tests
-        run: bash scripts/e2e-test.sh
+      - name: Run Ability Contract QA
+        run: bash scripts/e2e-test.sh contract
 
-      - name: Collect tested versions
+      - name: Collect tested versions and contract summary
         id: versions
         if: always()
         shell: bash
@@ -158,23 +158,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "=== WordPress Debug Log ==="
           if ! docker compose exec -T wordpress test -f /var/www/html/wp-content/debug.log; then
-            echo "No debug log found"
             echo "status=no_debug_log" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-
           docker compose exec -T wordpress cat /var/www/html/wp-content/debug.log
           if docker compose exec -T wordpress grep -Eiq 'fatal error|parse error|uncaught|error' /var/www/html/wp-content/debug.log; then
             echo "status=error_entries_found" >> "$GITHUB_OUTPUT"
-            echo "Debug log contains fatal/error-level entries"
             exit 1
           fi
-
           echo "status=no_error_entries" >> "$GITHUB_OUTPUT"
 
-      - name: Collect E2E failure artifacts
+      - name: Collect failure artifacts
         if: failure()
         shell: bash
         run: |
@@ -184,48 +179,97 @@ jobs:
 
       - name: Clean up
         if: always()
-        run: docker compose down -v
+        run: docker compose down -v --remove-orphans
 
-      - name: Upload E2E failure artifacts
+      - name: Upload failure artifacts
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: e2e-failure-artifacts
+          name: ability-contract-failure-artifacts
+          path: e2e-artifacts/
+          if-no-files-found: ignore
+
+  full-mcp-e2e-qa:
+    needs: changes
+    if: needs.changes.outputs.should-run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COMPOSE_PROJECT_NAME: webmastery-site-toolkit-for-mcp-e2e-${{ github.event.pull_request.number || github.run_id }}
+      MYSQL_PORT: 0
+      WORDPRESS_PORT: 0
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          fetch-depth: 1
+
+      - name: Set up Docker Compose
+        run: docker compose version
+
+      - name: Start WordPress stack
+        run: |
+          docker compose down -v --remove-orphans
+          docker compose up -d
+
+      - name: Run Full MCP E2E QA
+        run: bash scripts/e2e-test.sh e2e
+
+      - name: Collect failure artifacts
+        if: failure()
+        shell: bash
+        run: |
+          mkdir -p e2e-artifacts
+          docker compose logs --no-color > e2e-artifacts/docker-compose.log || true
+          docker compose exec -T wordpress cat /var/www/html/wp-content/debug.log > e2e-artifacts/wordpress-debug.log 2>/dev/null || true
+
+      - name: Clean up
+        if: always()
+        run: docker compose down -v --remove-orphans
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: full-mcp-e2e-failure-artifacts
           path: e2e-artifacts/
           if-no-files-found: ignore
 
   comment-pr:
-    needs: [changes, e2e-test]
+    needs: [changes, ability-contract-qa, full-mcp-e2e-qa]
     if: github.event_name == 'pull_request' && needs.changes.outputs.should-run == 'true' && always()
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
       contents: read
     steps:
-      - name: Comment E2E result on PR
+      - name: Comment Docker QA result on PR
         env:
           GH_TOKEN: ${{ github.token }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
           ISSUE_NUMBER: ${{ github.event.pull_request.number }}
-          E2E_RESULT: ${{ needs.e2e-test.result }}
-          WORDPRESS_IMAGE: ${{ needs.e2e-test.outputs.wordpress-image }}
-          WORDPRESS_VERSION: ${{ needs.e2e-test.outputs.wordpress-version }}
-          PHP_VERSION: ${{ needs.e2e-test.outputs.php-version }}
-          MYSQL_IMAGE: ${{ needs.e2e-test.outputs.mysql-image }}
-          MYSQL_VERSION: ${{ needs.e2e-test.outputs.mysql-version }}
-          MCP_ADAPTER_RELEASE: ${{ needs.e2e-test.outputs.mcp-adapter-release }}
-          MCP_ADAPTER_VERSION: ${{ needs.e2e-test.outputs.mcp-adapter-version }}
-          YOAST_VERSION: ${{ needs.e2e-test.outputs.yoast-version }}
-          SEOPRESS_VERSION: ${{ needs.e2e-test.outputs.seopress-version }}
-          PLUGIN_VERSION: ${{ needs.e2e-test.outputs.plugin-version }}
-          REGISTERED_ABILITIES: ${{ needs.e2e-test.outputs.registered-abilities }}
-          COVERED_ABILITIES: ${{ needs.e2e-test.outputs.covered-abilities }}
-          TEST_CASES: ${{ needs.e2e-test.outputs.test-cases }}
-          NEGATIVE_CASES: ${{ needs.e2e-test.outputs.negative-cases }}
-          PASSED_CASES: ${{ needs.e2e-test.outputs.passed-cases }}
-          FAILED_CASES: ${{ needs.e2e-test.outputs.failed-cases }}
-          DEBUG_LOG_STATUS: ${{ needs.e2e-test.outputs.debug-log-status }}
+          CONTRACT_RESULT: ${{ needs.ability-contract-qa.result }}
+          E2E_RESULT: ${{ needs.full-mcp-e2e-qa.result }}
+          REGISTERED_ABILITIES: ${{ needs.ability-contract-qa.outputs.registered-abilities }}
+          COVERED_ABILITIES: ${{ needs.ability-contract-qa.outputs.covered-abilities }}
+          TEST_CASES: ${{ needs.ability-contract-qa.outputs.test-cases }}
+          NEGATIVE_CASES: ${{ needs.ability-contract-qa.outputs.negative-cases }}
+          PASSED_CASES: ${{ needs.ability-contract-qa.outputs.passed-cases }}
+          FAILED_CASES: ${{ needs.ability-contract-qa.outputs.failed-cases }}
+          DEBUG_LOG_STATUS: ${{ needs.ability-contract-qa.outputs.debug-log-status }}
+          WORDPRESS_IMAGE: ${{ needs.ability-contract-qa.outputs.wordpress-image }}
+          WORDPRESS_VERSION: ${{ needs.ability-contract-qa.outputs.wordpress-version }}
+          PHP_VERSION: ${{ needs.ability-contract-qa.outputs.php-version }}
+          MYSQL_IMAGE: ${{ needs.ability-contract-qa.outputs.mysql-image }}
+          MYSQL_VERSION: ${{ needs.ability-contract-qa.outputs.mysql-version }}
+          MCP_ADAPTER_RELEASE: ${{ needs.ability-contract-qa.outputs.mcp-adapter-release }}
+          MCP_ADAPTER_VERSION: ${{ needs.ability-contract-qa.outputs.mcp-adapter-version }}
+          YOAST_VERSION: ${{ needs.ability-contract-qa.outputs.yoast-version }}
+          SEOPRESS_VERSION: ${{ needs.ability-contract-qa.outputs.seopress-version }}
+          PLUGIN_VERSION: ${{ needs.ability-contract-qa.outputs.plugin-version }}
           CHANGED_FILES: ${{ needs.changes.outputs.changed-files }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -233,59 +277,37 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          status_label="$E2E_RESULT"
-          if [ "$E2E_RESULT" = "success" ]; then
-            status_label="passed"
-          fi
-
-          changed_files_count="unknown"
-          if [ -n "${CHANGED_FILES:-}" ] && [ "$CHANGED_FILES" != "manual-dispatch" ]; then
-            changed_files_count="$(printf '%s\n' "$CHANGED_FILES" | sed '/^$/d' | wc -l | tr -d ' ')"
-          elif [ "$CHANGED_FILES" = "manual-dispatch" ]; then
-            changed_files_count="manual-dispatch"
-          fi
-
-          RUN_FACTS=$'\n\n### Run facts\n\n'
-          RUN_FACTS+="- Result: ${status_label}"$'\n'
-          RUN_FACTS+="- PR head commit: ${PR_HEAD_SHA:-unknown}"$'\n'
-          RUN_FACTS+="- Tested merge commit: ${TESTED_SHA:-unknown}"$'\n'
-          RUN_FACTS+="- Changed files that triggered E2E: ${changed_files_count}"$'\n'
-          RUN_FACTS+="- WordPress debug log scan: ${DEBUG_LOG_STATUS:-unknown}"$'\n'
-          RUN_FACTS+="- Workflow run: ${RUN_URL:-unknown}"
-
-          COVERAGE=$'\n\n### Ability coverage from e2e-summary.json\n\n'
-          COVERAGE+="- Registered webmastery-site-toolkit-for-mcp abilities: ${REGISTERED_ABILITIES:-unknown}"$'\n'
-          COVERAGE+="- Manifest-covered abilities: ${COVERED_ABILITIES:-unknown}"$'\n'
-          COVERAGE+="- Manifest test cases: ${TEST_CASES:-unknown}"$'\n'
-          COVERAGE+="- Manifest cases passed: ${PASSED_CASES:-unknown}"$'\n'
-          COVERAGE+="- Manifest cases failed: ${FAILED_CASES:-unknown}"$'\n'
-          COVERAGE+="- Negative permission cases: ${NEGATIVE_CASES:-unknown}"
-
-          VERSIONS=$'\n\n### Tested runtime versions\n\n'
-          VERSIONS+="- WordPress Docker image: ${WORDPRESS_IMAGE:-unknown}"$'\n'
-          VERSIONS+="- WordPress core: ${WORDPRESS_VERSION:-unknown}"$'\n'
-          VERSIONS+="- PHP: ${PHP_VERSION:-unknown}"$'\n'
-          VERSIONS+="- MySQL Docker image: ${MYSQL_IMAGE:-unknown}"$'\n'
-          VERSIONS+="- MySQL server: ${MYSQL_VERSION:-unknown}"$'\n'
-          VERSIONS+="- MCP Adapter release: ${MCP_ADAPTER_RELEASE:-unknown}"$'\n'
-          VERSIONS+="- MCP Adapter plugin: ${MCP_ADAPTER_VERSION:-unknown}"$'\n'
-          VERSIONS+="- Yoast SEO plugin: ${YOAST_VERSION:-unknown}"$'\n'
-          VERSIONS+="- SEOPress plugin: ${SEOPRESS_VERSION:-unknown}"$'\n'
-          VERSIONS+="- Webmastery Site Toolkit for MCP: ${PLUGIN_VERSION:-unknown}"
-
-          CHANGES=$'\n\n### Changed files\n\n'
+          BODY=$'## Docker QA Summary\n\n'
+          BODY+="- Ability Contract QA: ${CONTRACT_RESULT:-unknown}"$'\n'
+          BODY+="- Full MCP E2E QA: ${E2E_RESULT:-unknown}"$'\n'
+          BODY+="- PR head commit: ${PR_HEAD_SHA:-unknown}"$'\n'
+          BODY+="- Tested merge commit: ${TESTED_SHA:-unknown}"$'\n'
+          BODY+="- WordPress debug log scan: ${DEBUG_LOG_STATUS:-unknown}"$'\n'
+          BODY+="- Workflow run: ${RUN_URL:-unknown}"$'\n'
+          BODY+=$'\n### Ability Contract Coverage\n\n'
+          BODY+="- Registered webmastery-site-toolkit-for-mcp abilities: ${REGISTERED_ABILITIES:-unknown}"$'\n'
+          BODY+="- Manifest-covered abilities: ${COVERED_ABILITIES:-unknown}"$'\n'
+          BODY+="- Manifest test cases: ${TEST_CASES:-unknown}"$'\n'
+          BODY+="- Manifest cases passed: ${PASSED_CASES:-unknown}"$'\n'
+          BODY+="- Manifest cases failed: ${FAILED_CASES:-unknown}"$'\n'
+          BODY+="- Negative permission cases: ${NEGATIVE_CASES:-unknown}"$'\n'
+          BODY+=$'\n### Tested Runtime\n\n'
+          BODY+="- WordPress Docker image: ${WORDPRESS_IMAGE:-unknown}"$'\n'
+          BODY+="- WordPress core: ${WORDPRESS_VERSION:-unknown}"$'\n'
+          BODY+="- PHP: ${PHP_VERSION:-unknown}"$'\n'
+          BODY+="- MySQL Docker image: ${MYSQL_IMAGE:-unknown}"$'\n'
+          BODY+="- MySQL server: ${MYSQL_VERSION:-unknown}"$'\n'
+          BODY+="- MCP Adapter release: ${MCP_ADAPTER_RELEASE:-unknown}"$'\n'
+          BODY+="- MCP Adapter plugin: ${MCP_ADAPTER_VERSION:-unknown}"$'\n'
+          BODY+="- Yoast SEO plugin: ${YOAST_VERSION:-unknown}"$'\n'
+          BODY+="- SEOPress plugin: ${SEOPRESS_VERSION:-unknown}"$'\n'
+          BODY+="- Webmastery Site Toolkit for MCP: ${PLUGIN_VERSION:-unknown}"$'\n'
+          BODY+=$'\n### Changed Files\n\n'
           if [ -n "${CHANGED_FILES:-}" ]; then
-            CHANGES+="$(printf '%s\n' "$CHANGED_FILES" | sed '/^$/d' | sed 's/^/- /')"
+            BODY+="$(printf '%s\n' "$CHANGED_FILES" | sed '/^$/d' | sed 's/^/- /')"
           else
-            CHANGES+="- unknown"
+            BODY+="- unknown"
           fi
-
-          if [ "$E2E_RESULT" = "success" ]; then
-            BODY=$'## E2E QA Tests Passed'
-          else
-            BODY=$'## E2E QA Tests Failed\n\nReview this workflow run and uploaded E2E failure artifacts for the failed setup/test phase details.'
-          fi
-          BODY+="$RUN_FACTS$COVERAGE$VERSIONS$CHANGES"
           gh api "repos/$OWNER/$REPO/issues/$ISSUE_NUMBER/comments" --method POST -f body="$BODY"
 
   skip-summary:
@@ -295,8 +317,8 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Report skipped run
+      - name: Report skipped Docker QA
         run: |
-          echo "E2E QA skipped: no relevant files changed."
+          echo "Docker QA skipped: no runtime-impacting files changed."
           echo "Changed files:"
           echo "${{ needs.changes.outputs.changed-files }}"

@@ -2,27 +2,40 @@
 set -Eeuo pipefail
 
 RUN_E2E=0
+RUN_CONTRACT=0
+RUN_RELEASE=0
 KEEP_COMPOSE=0
 PREFLIGHT_ONLY=0
 
 usage() {
 	cat <<'USAGE'
-Usage: scripts/qa-local.sh [--e2e] [--keep-compose] [--preflight-only]
+Usage: scripts/qa-local.sh [--contract] [--e2e] [--release] [--keep-compose] [--preflight-only]
 
 Runs local preflight QA:
-  - composer install --no-interaction
-  - composer qa
-  - optional Docker E2E via scripts/e2e-test.sh
+  - composer install --no-interaction --prefer-dist --no-progress
+  - composer qa (static + unit)
+  - optional Docker Ability Contract QA
+  - optional Docker Full MCP E2E QA
+  - optional Release Package QA
 
 Options:
+  --contract        run managed Docker Ability Contract QA
+  --e2e             run managed Docker Full MCP E2E QA
+  --release         run Release Package QA
   --preflight-only  check required commands and exit without running QA
 USAGE
 }
 
 while [ "$#" -gt 0 ]; do
 	case "$1" in
+		--contract)
+			RUN_CONTRACT=1
+			;;
 		--e2e)
 			RUN_E2E=1
+			;;
+		--release)
+			RUN_RELEASE=1
 			;;
 		--keep-compose)
 			KEEP_COMPOSE=1
@@ -85,7 +98,7 @@ require_command php
 require_command composer
 require_command git
 
-if [ "$RUN_E2E" = "1" ]; then
+if [ "$RUN_CONTRACT" = "1" ] || [ "$RUN_E2E" = "1" ] || [ "$RUN_RELEASE" = "1" ]; then
 	require_command docker
 	require_command bash
 fi
@@ -95,12 +108,19 @@ if [ "$PREFLIGHT_ONLY" = "1" ]; then
 	exit 0
 fi
 
-run_step composer install --no-interaction
+run_step composer install --no-interaction --prefer-dist --no-progress
 run_step composer qa
 
-if [ "$RUN_E2E" = "1" ]; then
+if [ "$RUN_CONTRACT" = "1" ]; then
+	E2E_MANAGE_COMPOSE=1 E2E_KEEP_COMPOSE="$KEEP_COMPOSE" run_step bash scripts/e2e-test.sh contract
+fi
 
-	E2E_MANAGE_COMPOSE=1 E2E_KEEP_COMPOSE="$KEEP_COMPOSE" run_step bash scripts/e2e-test.sh
+if [ "$RUN_E2E" = "1" ]; then
+	E2E_MANAGE_COMPOSE=1 E2E_KEEP_COMPOSE="$KEEP_COMPOSE" run_step bash scripts/e2e-test.sh e2e
+fi
+
+if [ "$RUN_RELEASE" = "1" ]; then
+	run_step bash scripts/release-qa.sh
 fi
 
 echo "Local QA completed successfully."

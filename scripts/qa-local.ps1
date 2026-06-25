@@ -1,5 +1,7 @@
 param(
+	[switch] $Contract,
 	[switch] $E2E,
+	[switch] $Release,
 	[switch] $KeepCompose,
 	[switch] $PreflightOnly
 )
@@ -40,7 +42,7 @@ Test-QACommand 'php'
 Test-QACommand 'composer'
 Test-QACommand 'git'
 
-if ($E2E) {
+if ($Contract -or $E2E -or $Release) {
 	Test-QACommand 'docker'
 	Test-QACommand 'bash'
 }
@@ -50,13 +52,23 @@ if ($PreflightOnly) {
 	exit 0
 }
 
-Invoke-QACommand 'Install Composer dependencies' 'composer' @('install', '--no-interaction')
+Invoke-QACommand 'Install Composer dependencies' 'composer' @('install', '--no-interaction', '--prefer-dist', '--no-progress')
 Invoke-QACommand 'Run Composer QA checks' 'composer' @('qa')
+
+if ($Contract) {
+	$keepComposeValue = if ($KeepCompose) { '1' } else { '0' }
+
+	Invoke-QACommand 'Run Docker Ability Contract QA' 'bash' @('-lc', "E2E_MANAGE_COMPOSE=1 E2E_KEEP_COMPOSE=$keepComposeValue bash scripts/e2e-test.sh contract")
+}
 
 if ($E2E) {
 	$keepComposeValue = if ($KeepCompose) { '1' } else { '0' }
 
-	Invoke-QACommand 'Run Docker E2E QA' 'bash' @('-lc', "E2E_MANAGE_COMPOSE=1 E2E_KEEP_COMPOSE=$keepComposeValue bash scripts/e2e-test.sh")
+	Invoke-QACommand 'Run Docker E2E QA' 'bash' @('-lc', "E2E_MANAGE_COMPOSE=1 E2E_KEEP_COMPOSE=$keepComposeValue bash scripts/e2e-test.sh e2e")
+}
+
+if ($Release) {
+	Invoke-QACommand 'Run Release Package QA' 'bash' @('-lc', 'bash scripts/release-qa.sh')
 }
 
 Write-Host 'Local QA completed successfully.'

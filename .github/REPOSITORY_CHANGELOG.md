@@ -8,6 +8,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added a five-layer QA strategy guide, PHPUnit/PHPStan QA commands, unit-test scaffolding, and separate GitHub Actions lanes for Static QA, Unit Tests, Ability Contract QA, Full MCP E2E QA, and Release Package QA.
+- Added environment-specific QA notes for GitHub Actions, Windows PowerShell, and Windows Git Bash.
 - Added secondary in-depth E2E CRUD QA that exercises real MCP Adapter HTTP JSON-RPC sessions against the default server.
 - Added E2E manifest coverage for expanded Yoast SEO metadata writes and the read-only Yoast metadata inspection ability.
 - Added E2E manifest coverage for SEOPress metadata writes and the read-only SEOPress metadata inspection ability.
