@@ -23,6 +23,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Expanded the QA strategy guide with a phased execution appendix for aligning existing commands, hardening fast checks, deepening Docker coverage, adding compatibility checks, scaling E2E maintainability, and introducing advanced quality signals.
 - Updated E2E PR comments to replace static success bullets with runtime-derived run facts, case pass/fail counts, debug-log status, changed files, and separate PR-head/tested-merge commit SHAs.
 - Updated E2E runner behavior so local runs can optionally manage Docker Compose startup and cleanup while preserving CI behavior.
 - Updated E2E ability manifest coverage counts and cases for bulk post operation abilities.

@@ -157,6 +157,96 @@ Docker Desktop must be running before Docker QA can start. WordPress, MCP Adapte
 
 Local Plugin Check output may include known warnings that are acceptable for this project. The release process should treat unexpected errors as blockers, while the documented warnings in `CONTRIBUTING.md` remain known review items.
 
+## Execution appendix
+
+Use this appendix to sequence QA improvements without turning every PR into a large infrastructure change. Each phase should land as a small PR with updated commands, workflows, documentation, and repository changelog entries.
+
+### Phase 0: keep the strategy and implementation aligned
+
+Before adding new QA depth, confirm the documented layers match the commands and workflows that exist in the repository.
+
+1. Reconcile release coverage: either make `scripts/release-qa.sh` run Full MCP E2E QA or update the trigger matrix so tag releases do not claim Full MCP E2E is covered by release QA.
+2. Keep `composer.json`, `scripts/qa-local.sh`, `scripts/qa-local.ps1`, GitHub Actions, and this document in sync whenever a QA command is renamed or split.
+3. Keep `.github/PULL_REQUEST_TEMPLATE.md` and `CONTRIBUTING.md` aligned with the QA commands contributors are expected to run.
+
+Exit criteria:
+
+- The command table, trigger matrix, local wrapper flags, and CI workflow names describe the same QA layers.
+- A maintainer can follow the release-preparation commands without needing undocumented steps.
+
+### Phase 1: harden the fast checks
+
+The fast checks should catch syntax, standards, type, dependency, and small helper regressions before Docker starts.
+
+1. Expand unit coverage beyond the initial helper tests to cover sanitization, response shape helpers, SEO metadata normalization, plugin safety logic, taxonomy helpers, and permission-denial result shapes.
+2. Add focused tests for failure paths, not only happy paths: invalid IDs, unsupported enum values, protected meta keys, ambiguous block targets, missing plugins, and denied capabilities.
+3. Raise PHPStan strictness gradually. Start from the current baseline, fix high-signal findings, then increase levels only when the new level is practical for day-to-day PRs.
+4. Consider adding CodeQL or Semgrep as a separate security-analysis workflow once PHPStan and Composer audit are stable.
+
+Exit criteria:
+
+- `composer qa` stays fast enough for every PR.
+- Unit tests cover representative logic from multiple ability groups.
+- Static QA failures are actionable and do not rely on broad ignored-error lists.
+
+### Phase 2: deepen Docker contract and transport coverage
+
+The Docker layers should prove WordPress integration and MCP transport behavior without duplicating every assertion in every layer.
+
+1. Keep Ability Contract QA broad: every registered ability must have manifest coverage, with positive and negative cases where permissions apply.
+2. Keep Full MCP E2E QA narrow but deep: it should prove real MCP Adapter session setup, tool discovery, ability execution, side effects, and denied-role propagation.
+3. Add the optional MCP manifest replay layer only when the project needs stronger transport coverage for selected abilities. Prefer focused replay for changed abilities and reserve full replay for release candidates or manual investigations.
+4. Improve artifacts by writing machine-readable summaries for both contract and transport runs, and upload them on failure.
+
+Exit criteria:
+
+- Contract failures identify ability, role, expected result, and assertion context.
+- Transport failures identify the MCP phase that failed: initialize, tools/list, discover, execute, side effect, denial, or cleanup.
+- Full MCP manifest replay remains optional and does not slow the default PR path.
+
+### Phase 3: add compatibility and dependency confidence
+
+Compatibility checks should run where they add signal without blocking routine PRs for unrelated matrix noise.
+
+1. Add a scheduled or manual compatibility workflow for supported PHP versions, current and minimum supported WordPress versions, and relevant database variants.
+2. Keep the default PR path on the minimum supported PHP version plus the primary Docker stack so compatibility regressions are caught early without excessive runtime.
+3. Add a floating-latest scheduled run for WordPress, MCP Adapter, Yoast SEO, SEOPress, and Plugin Check so upstream changes are detected before release week.
+4. Document which compatibility failures are release blockers and which require triage before being made required checks.
+
+Exit criteria:
+
+- Required PR checks remain stable and reasonably fast.
+- Scheduled compatibility checks expose upstream or version-specific breakage with enough context to reproduce locally.
+
+### Phase 4: scale E2E maintainability
+
+As the ability count grows, split large E2E surfaces by purpose instead of making one monolithic runner absorb every case.
+
+1. Group manifest cases by ability domain, such as posts/pages, custom post types, taxonomy, media, comments, SEO, diagnostics, plugins, and site introspection.
+2. Add runner filters for ability group, ability name, or manifest label so maintainers can reproduce focused failures locally.
+3. Consider CI sharding only after group filters exist and the full contract run becomes slow enough to justify parallel jobs.
+4. Preserve a full contract run for release candidates and manual dispatch even if PR checks become selective.
+
+Exit criteria:
+
+- A maintainer can run one affected ability group locally without editing the manifest.
+- CI can report which ability group failed.
+- Full release coverage remains available.
+
+### Phase 5: add advanced quality signals only where they pay off
+
+Coverage and mutation metrics are useful when applied to security-sensitive or heavily reused logic, but they should not become vanity gates.
+
+1. Add coverage reporting for unit tests after the fast unit layer has meaningful breadth.
+2. Set thresholds only for critical helper areas that are stable enough to support thresholds.
+3. Consider mutation testing for sanitization, capability, and response-shape helpers if ordinary coverage stops finding meaningful gaps.
+4. Treat new metrics as advisory first, then promote them to required gates only after they are stable and low-noise.
+
+Exit criteria:
+
+- Coverage reports help guide missing tests rather than blocking unrelated work.
+- Mutation testing, if added, is scoped to high-value code and can run manually or on schedule.
+
 ## How to read failures
 
 Static QA failures usually mean the code has a syntax, style, static-analysis, manifest-shape, dependency-audit, or whitespace problem. Fix these first because they are the cheapest.
