@@ -25,12 +25,18 @@
 
 Use it to let an agent draft or update content, manage media and comments, inspect site health, review SEO metadata, audit plugins and users, and gather safe site context without handing your personal admin account to the agent.
 
-> This README describes the current GitHub repo. The latest stable plugin header and WordPress.org `readme.txt` stable tag are `2.4.0`; see [CHANGELOG.md](CHANGELOG.md) for release notes.
+For release history, see [CHANGELOG.md](CHANGELOG.md).
 
 <table>
 <tr><td align="center"><strong>Without this plugin</strong><br/><img src="assets/before.png" alt="Before"></td>
 <td align="center"><strong>With this plugin</strong><br/><img src="assets/after.png" alt="After"></td></tr>
 </table>
+
+## Who This Is For
+
+- WordPress site owners who want safe AI-assisted content workflows.
+- Developers building MCP workflows around WordPress.
+- Technical editors and administrators managing content, SEO, and site operations.
 
 ## Quickstart
 
@@ -58,7 +64,7 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | Media | List, inspect, update, upload public image URLs, set featured images, and delete media | Author or Editor |
 | Content hygiene | Find orphaned media, posts/pages missing featured images, and stuck scheduled posts | Author or Editor |
 | Site info | Return safe public site, current-user, and environment context | Subscriber |
-| SEO and webmaster signals | Analyze content, inspect Yoast/SEOPress metadata, read Yoast scores, and check public Google/Bing proof | Author to Administrator |
+| SEO and webmaster signals | Analyze content, inspect and write supported Yoast/SEOPress metadata, read Yoast scores, inspect generated Yoast head data, and check sitemap/webmaster signals | Author to Administrator |
 | Plugins, users, health, security, performance, backups, database | Audit or manage sensitive site areas with explicit admin capabilities | Administrator |
 
 For the exact ability names, input behavior, and required capabilities, use the [full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities).
@@ -70,8 +76,8 @@ For the exact ability names, input behavior, and required capabilities, use the 
 | WordPress | 6.9+ |
 | PHP | 8.0+ |
 | [MCP Adapter](https://github.com/WordPress/mcp-adapter) | Latest |
-| [Yoast SEO](https://wordpress.org/plugins/wordpress-seo/) | Optional |
-| [SEOPress](https://wordpress.org/plugins/wp-seopress/) | Optional |
+| [Yoast SEO](https://wordpress.org/plugins/wordpress-seo/) | Optional; enables Yoast metadata, score, generated head, and sitemap diagnostics |
+| [SEOPress](https://wordpress.org/plugins/wp-seopress/) | Optional; enables SEOPress metadata inspection/writes and site overview diagnostics |
 
 Self-hosted WordPress is required. This works on WordPress installs where custom plugins can be added, including most managed hosts. It does not work on WordPress.com Free, Personal, or Premium plans.
 
