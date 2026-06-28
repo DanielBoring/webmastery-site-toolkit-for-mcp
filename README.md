@@ -25,7 +25,7 @@
 
 Use it to let an agent draft or update content, manage media and comments, inspect site health, review SEO metadata, audit plugins and users, and gather safe site context without handing your personal admin account to the agent.
 
-> This README describes the current GitHub repo, including unreleased `main` branch work. The latest stable plugin header and WordPress.org `readme.txt` stable tag remain `2.3.0`; see [CHANGELOG.md](CHANGELOG.md) for what is released versus unreleased.
+> This README describes the current GitHub repo. The latest stable plugin header and WordPress.org `readme.txt` stable tag are `2.4.0`; see [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 <table>
 <tr><td align="center"><strong>Without this plugin</strong><br/><img src="assets/before.png" alt="Before"></td>
