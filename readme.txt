@@ -4,7 +4,7 @@ Tags: mcp, ai, automation, content-management, artificial-intelligence
 Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 2.3.0
+Stable tag: 2.4.0
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
@@ -85,6 +85,10 @@ https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
 
 == Changelog ==
 
+= 2.4.0 =
+* Add expanded Yoast SEO free metadata coverage for canonical URLs, breadcrumb titles, Schema.org page/article types, Open Graph and Twitter metadata, primary category, robots directives, inclusive-language score inspection, generated Yoast head inspection, and deeper sitemap index diagnostics.
+* Add first-class SEOPress free metadata coverage for titles, descriptions, target keywords, canonical URLs, Open Graph and Twitter/X metadata, primary category, robots directives, breadcrumb titles, read-only metadata inspection, and SEOPress-specific site overview diagnostics.
+
 = 2.3.0 =
 * Add public image URL uploads with URL safety checks, image MIME and upload-size enforcement, optional metadata, and optional featured-image assignment.
 * Add public Google/Bing webmaster verification checks without Google or Bing API credentials.
@@ -107,6 +111,9 @@ https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
 * Add block inspection, single-block replacement, and safer partial post body edits.
 
 == Upgrade Notice ==
+
+= 2.4.0 =
+Adds expanded Yoast SEO and SEOPress free metadata coverage, including richer social, robots, canonical, breadcrumb, Schema, read-only inspection, and site overview diagnostics.
 
 = 2.3.0 =
 Adds media URL uploads, webmaster verification checks, content hygiene diagnostics, CPT CRUD, post meta, revisions, comment replies/updates, and Administrator-only site audits.
