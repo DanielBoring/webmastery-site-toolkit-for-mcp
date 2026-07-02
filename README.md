@@ -1,5 +1,5 @@
 <h2 align="center">
-  <img width="80%" alt="Webmastery Site Toolkit for MCP" src="assets/gh_banner.png"><br/>
+  <img width="80%" alt="Webmastery Site Toolkit for MCP" src="assets/Webmastery_Site_Toolkit_Banner.png"><br/>
   Webmastery Site Toolkit for MCP<br/>
   <sub>Give your AI agent editorial control over WordPress.</sub>
 </h2>
