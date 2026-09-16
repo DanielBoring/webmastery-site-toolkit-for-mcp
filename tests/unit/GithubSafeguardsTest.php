@@ -82,4 +82,11 @@ final class GithubSafeguardsTest extends TestCase {
 		self::assertStringContainsString('run: composer test:ci-safeguards', $workflow);
 		self::assertStringContainsString('extensions: zip', $workflow);
 	}
+
+	public function test_compatibility_promotion_only_blocks_open_pull_requests(): void {
+		$workflow = file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/compatibility-qa.yml');
+		self::assertIsString($workflow);
+		self::assertStringContainsString('gh pr list --state open', $workflow);
+		self::assertStringNotContainsString('gh pr list --state all', $workflow);
+	}
 }

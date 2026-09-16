@@ -280,12 +280,12 @@ jobs:
           adapter="$(php scripts/compatibility-baselines.php mcp_adapter "$proposal")"
           config_hash="$(sha256sum "$proposal" | cut -c1-12)"
           branch="automation/compatibility-wp-${wp//./-}-mcp-${adapter//./-}-${config_hash}"
-          # Reject older version-specific PRs as well as exact candidate PRs.
-          conflicts="$(gh pr list --state all --limit 1000 --json headRefName,url,state |
+          # Reject concurrent version-specific PRs without blocking later dependency updates.
+          conflicts="$(gh pr list --state open --limit 1000 --json headRefName,url,state |
             jq -r --arg prefix "automation/compatibility-wp-${wp//./-}-mcp-${adapter//./-}" \
             '.[] | select(.headRefName == $prefix or (.headRefName | startswith($prefix + "-"))) | "\(.state) \(.url)"')"
           if [ -n "$conflicts" ]; then
-            echo "::error::Existing open/closed/merged compatibility PR requires maintainer review: $conflicts. Do not recycle its head. Inspect checks and rerun on current main after resolving it."
+            echo "::error::Existing open compatibility PR requires maintainer review: $conflicts. Do not recycle its head. Inspect checks and rerun on current main after resolving it."
             exit 1
           fi
           remote_branches="$(git ls-remote --heads origin \
