@@ -31,12 +31,13 @@ An LLM caller can hallucinate an ID, or be steered by content it just read on th
 - `includes/class-plugins.php:181-191`, `:294` — existing `force` gate and schema property, the idiom to copy.
 
 **Additional context**
-- Pair with `03-trash-is-permanent-when-empty-trash-days-is-zero.md` (`force`) and `05-annotate-untrusted-site-content-in-responses.md` in one "safer destructive abilities" changelog entry, because all three change input schemas.
+- Pair with #109 (`03-trash-is-permanent-when-empty-trash-days-is-zero.md`) (`force`) and #108 (`05-annotate-untrusted-site-content-in-responses.md`) in one "safer destructive abilities" changelog entry, because all three change input schemas.
 - Manifest: update existing cases for these abilities to pass `confirm: true`; add negative cases without it (`expect_error_code: missing_confirmation`) and a `dry_run` case asserting no state change; add the abilities to `$required_failure_cases` in `scripts/validate-security-qa.php`.
 - Docs: README Security section ("Deletes …") and readme.txt FAQ "Are write operations safe?" should describe `confirm` / `dry_run`.
 
 - Assessment finding: **A-5** in `ASSESSMENT.md` (severity Medium → label `priority: medium`).
-- Related: `03-…`, `05-…`, `13-taxonomy-writes-use-global-cap-and-default-category-delete-reports-success.md`.
+- GitHub issue: #116 (filed 2026-09-16)
+- Related: #109, #108, #117 (`13-taxonomy-writes-use-global-cap-and-default-category-delete-reports-success.md`).
 - Environment reference:
 - WordPress version: 7.0.x on the reference site (plugin floor: 6.9+; E2E fixture: 7.0.1)
 - PHP version: 8.4.x on the reference site (plugin floor: 8.0; CI runs 8.0)

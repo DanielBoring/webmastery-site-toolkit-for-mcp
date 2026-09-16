@@ -46,4 +46,5 @@ Related payload problem (`ASSESSMENT.md` B-11): `normalize()` always includes fu
 - Live: verified the 55 KB single-item payload on the reference site; query counts inferred from code.
 
 - Assessment finding: **B-7 (and B-11)** in `ASSESSMENT.md` (severity Medium → label `priority: medium`).
-- Related: `05-…` (untrusted content volume); `18-…` (shared `query_readable` helper).
+- GitHub issue: #121 (filed 2026-09-16)
+- Related: #108 (untrusted content volume); #119 (shared `query_readable` helper).

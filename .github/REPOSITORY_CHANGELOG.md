@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added a dry-run-first, manually dispatched issue backlog importer that converts `ISSUES/` Markdown files into labeled GitHub Issues and skips source/title duplicates on reruns.
 - Added WordPress.org plugin directory branding assets (icon and banner PNGs in `.wordpress-org/`) for the plugin-deploy action to sync to the SVN assets section.
 - Added protected WordPress.org SVN deployment to the tag-based release workflow, including pinned action usage, GitHub Actions secret guidance, SemVer/SVN tag policy, and full release documentation coverage.
 - Added CI/CD, security, and release strategy guides with official GitHub and WordPress references for maintainers operating the approved WordPress.org plugin.

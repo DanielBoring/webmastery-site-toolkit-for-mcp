@@ -45,4 +45,5 @@ This is a "late per-object check / partial write" defect, not a privilege escala
 - Verified by reading the code; not run live (no eligible CPTs on the reference site).
 
 - Assessment finding: **A-3** in `ASSESSMENT.md` (severity Medium → label `priority: medium`).
-- Related: `18-shared-helpers-for-duplicated-permission-input-and-response-code.md` (one shared create/update pipeline would make the ordering impossible to get wrong twice).
+- GitHub issue: #107 (filed 2026-09-16)
+- Related: #119 (`18-shared-helpers-for-duplicated-permission-input-and-response-code.md`) (one shared create/update pipeline would make the ordering impossible to get wrong twice).

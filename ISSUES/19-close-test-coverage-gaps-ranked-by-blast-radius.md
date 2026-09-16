@@ -42,7 +42,8 @@ The manifest is the plugin's security regression net; the untested paths today a
 - Repository-facing change: `.github/REPOSITORY_CHANGELOG.md`; update `tests/e2e/README.md` role table.
 
 - Assessment finding: **B-4** in `ASSESSMENT.md` (severity Medium → label `priority: medium`).
-- Related: `01-…`, `03-…`, `06-…`, `07-…`, `13-…`, `17-…`.
+- GitHub issue: #120 (filed 2026-09-16)
+- Related: #105, #109, #110, #115, #117, #127.
 - Environment reference:
 - WordPress version: 7.0.x on the reference site (plugin floor: 6.9+; E2E fixture: 7.0.1)
 - PHP version: 8.4.x on the reference site (plugin floor: 8.0; CI runs 8.0)

@@ -47,4 +47,5 @@ This contradicts `docs/security-strategy.md` ("Writes and deletes → object-spe
 - Not exercised on the live reference site because the connected MCP account is an administrator; the finding is verified by reading the plugin and WordPress 6.9 core source.
 
 - Assessment finding: **A-1** in `ASSESSMENT.md` (severity Medium → label `priority: medium`).
-- Related: `19-close-test-coverage-gaps-ranked-by-blast-radius.md` (adds the `comment_moderator` role); `18-shared-helpers-for-duplicated-permission-input-and-response-code.md` (shared object-permission helper).
+- GitHub issue: #105 (filed 2026-09-16)
+- Related: #120 (`19-close-test-coverage-gaps-ranked-by-blast-radius.md`) (adds the `comment_moderator` role); #119 (`18-shared-helpers-for-duplicated-permission-input-and-response-code.md`) (shared object-permission helper).

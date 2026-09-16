@@ -53,4 +53,5 @@ Tests: the runner supports per-case `setup` (`tests/e2e/ability-runner.php:374-4
 - Not reproducible on the reference site (trash is enabled there); verified against WordPress 6.9 core source.
 
 - Assessment finding: **A-4** in `ASSESSMENT.md` (severity Medium → label `priority: medium`).
-- Related: `04-destructive-abilities-need-confirm-dry-run-and-bounds.md` (shares the `force`/`confirm` idiom and schema change); `20-docs-drift-readme-readme-txt-plugin-header.md` (wording fix).
+- GitHub issue: #109 (filed 2026-09-16)
+- Related: #116 (`04-destructive-abilities-need-confirm-dry-run-and-bounds.md`) (shares the `force`/`confirm` idiom and schema change); #124 (`20-docs-drift-readme-readme-txt-plugin-header.md`) (wording fix).

@@ -39,4 +39,5 @@ Route all writes through the shared input helper from issue 18 that slashes exac
 - Verified from source; not run live (writes were out of scope).
 
 - Assessment finding: **B-8** in `ASSESSMENT.md` (severity Low → label `priority: low`).
-- Related: `18-shared-helpers-for-duplicated-permission-input-and-response-code.md`.
+- GitHub issue: #122 (filed 2026-09-16)
+- Related: #119 (`18-shared-helpers-for-duplicated-permission-input-and-response-code.md`).

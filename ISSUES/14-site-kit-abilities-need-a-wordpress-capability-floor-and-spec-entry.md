@@ -32,7 +32,8 @@ assignees: ''
 - The response normalisers (`:439-595`) already strip OAuth, owner and raw-settings material; this issue is only about the gate.
 
 - Assessment finding: **A-11** in `ASSESSMENT.md` (severity Low → label `priority: low`).
-- Related: `20-docs-drift-readme-readme-txt-plugin-header.md` (security-strategy update).
+- GitHub issue: #125 (filed 2026-09-16)
+- Related: #124 (`20-docs-drift-readme-readme-txt-plugin-header.md`) (security-strategy update).
 - Environment reference:
 - WordPress version: 7.0.x on the reference site (plugin floor: 6.9+; E2E fixture: 7.0.1)
 - PHP version: 8.4.x on the reference site (plugin floor: 8.0; CI runs 8.0)

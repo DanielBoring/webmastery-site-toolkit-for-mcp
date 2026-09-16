@@ -41,4 +41,5 @@ assignees: ''
 - Verified against WordPress 6.9 core source; not run live.
 
 - Assessment finding: **A-8** in `ASSESSMENT.md` (severity Low → label `priority: low`).
-- Related: `18-shared-helpers-for-duplicated-permission-input-and-response-code.md` (the helper removes three copies of this block).
+- GitHub issue: #113 (filed 2026-09-16)
+- Related: #119 (`18-shared-helpers-for-duplicated-permission-input-and-response-code.md`) (the helper removes three copies of this block).

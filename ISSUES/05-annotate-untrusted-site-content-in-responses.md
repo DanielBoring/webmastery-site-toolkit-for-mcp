@@ -12,7 +12,7 @@ Cross-cutting: post/page/CPT/revision responses, `webmastery-site-toolkit-for-mc
 **What should it do?**
 1. Add a field-level marker for untrusted content. Options: an `untrusted_fields` array in each response (e.g. `["content","excerpt","title"]`), or `description: "Untrusted site content"` on those properties in an `output_schema`. Affected normalisers: post `content`/`excerpt`/`title`; revision bodies; comment body, `author`, `author_email`, `author_url`; media `title`, `caption`, `alt_text`; raw Yoast head HTML/JSON; application-password `app_name` (user-chosen text).
 2. Never build human-readable `message` strings from stored content. `seo-analyze-post` interpolates the stored focus keyword into `message` ("Focus keyword \"…\" found in title."); keep it in a data field only.
-3. Optional `content_format: "text"` input on list abilities that returns `wp_strip_all_tags()` output instead of raw HTML/blocks (see also `11-…` note in `ASSESSMENT.md` B-11 about a `fields: summary` mode).
+3. Optional `content_format: "text"` input on list abilities that returns `wp_strip_all_tags()` output instead of raw HTML/blocks (see also #112 note in `ASSESSMENT.md` B-11 about a `fields: summary` mode).
 4. Keep `meta.annotations` accurate as abilities change. MCP Adapter 0.5.0 does forward them (`includes/Domain/Tools/RegisterAbilityAsMcpTool.php:141-152` maps them via `McpAnnotationMapper` and sets `annotations.title` from the label); confirm the emitted hint names once with `tools/list`.
 5. Add an "Agent threat model" section to `docs/security-strategy.md`: prompt injection through stored content is in scope; the mitigations are confirmation inputs (issue 04), annotations and field markers — not content filtering.
 
@@ -37,7 +37,8 @@ Anyone who can leave a comment, register a username, submit a guest post, or nam
 - Exact MCP hint key names emitted by `McpAnnotationMapper` were not inspected (the class was not at the path probed); one `tools/list` call in per-tool mode will show them.
 
 - Assessment finding: **A-14** in `ASSESSMENT.md` (severity Medium → label `priority: medium`).
-- Related: `04-destructive-abilities-need-confirm-dry-run-and-bounds.md`; `16-single-error-contract-across-abilities.md`.
+- GitHub issue: #108 (filed 2026-09-16)
+- Related: #116 (`04-destructive-abilities-need-confirm-dry-run-and-bounds.md`); #118 (`16-single-error-contract-across-abilities.md`).
 - Environment reference:
 - WordPress version: 7.0.x on the reference site (plugin floor: 6.9+; E2E fixture: 7.0.1)
 - PHP version: 8.4.x on the reference site (plugin floor: 8.0; CI runs 8.0)

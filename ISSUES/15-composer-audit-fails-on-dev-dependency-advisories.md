@@ -49,4 +49,5 @@ n/a — repository tooling (`composer qa:static`, `.github/workflows/coding-stan
 - Exposure is dev-only (code-scanning tools run on CI); nothing in the shipped ZIP is affected.
 
 - Assessment finding: **B-6.1** in `ASSESSMENT.md` (severity Medium → label `priority: medium`).
-- Related: `21-release-workflow-should-rerun-static-and-unit-qa.md`.
+- GitHub issue: #128 (filed 2026-09-16)
+- Related: #123 (`21-release-workflow-should-rerun-static-and-unit-qa.md`).

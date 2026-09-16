@@ -48,7 +48,8 @@ An agent has to branch on error codes to recover (retry, reload hashes, ask the 
 - Breaking for clients that string-match `error`; call it out in the 2.6.0 upgrade notice.
 
 - Assessment finding: **B-1 (and B-12)** in `ASSESSMENT.md` (severity High → label `priority: high`).
-- Related: `17-decompose-class-posts.md`; `18-shared-helpers-for-duplicated-permission-input-and-response-code.md`; `19-close-test-coverage-gaps-ranked-by-blast-radius.md`.
+- GitHub issue: #118 (filed 2026-09-16)
+- Related: #127 (`17-decompose-class-posts.md`); #119 (`18-shared-helpers-for-duplicated-permission-input-and-response-code.md`); #120 (`19-close-test-coverage-gaps-ranked-by-blast-radius.md`).
 - Environment reference:
 - WordPress version: 7.0.x on the reference site (plugin floor: 6.9+; E2E fixture: 7.0.1)
 - PHP version: 8.4.x on the reference site (plugin floor: 8.0; CI runs 8.0)

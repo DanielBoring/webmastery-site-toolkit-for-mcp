@@ -35,7 +35,8 @@ The QA gates are excellent on PRs; the release path and the merge path are the t
 - Repository-facing change: `.github/REPOSITORY_CHANGELOG.md`; update `docs/ci-cd-strategy.md` and `.github/AUTOMATION.md`.
 
 - Assessment finding: **B-6.2** in `ASSESSMENT.md` (severity Medium → label `priority: medium`).
-- Related: `15-composer-audit-fails-on-dev-dependency-advisories.md`.
+- GitHub issue: #123 (filed 2026-09-16)
+- Related: #128 (`15-composer-audit-fails-on-dev-dependency-advisories.md`).
 - Environment reference:
 - WordPress version: 7.0.x on the reference site (plugin floor: 6.9+; E2E fixture: 7.0.1)
 - PHP version: 8.4.x on the reference site (plugin floor: 8.0; CI runs 8.0)
