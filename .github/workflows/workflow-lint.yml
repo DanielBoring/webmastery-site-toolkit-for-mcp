@@ -1,0 +1,47 @@
+name: Workflow lint
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  workflow-lint:
+    name: Workflow lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Install pinned workflow linters
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/workflow-linters
+          cd build/workflow-linters
+          curl --fail --silent --show-error --location --retry 3 --connect-timeout 20 --max-time 120 -o actionlint.tar.gz https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          curl --fail --silent --show-error --location --retry 3 --connect-timeout 20 --max-time 120 -o shellcheck.tar.gz https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.gz
+          curl --fail --silent --show-error --location --retry 3 --connect-timeout 20 --max-time 120 -o zizmor.tar.gz https://github.com/zizmorcore/zizmor/releases/download/v1.30.1/zizmor-x86_64-unknown-linux-gnu.tar.gz
+          echo '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint.tar.gz' | sha256sum --check --strict
+          echo 'b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6  shellcheck.tar.gz' | sha256sum --check --strict
+          echo 'e65324f4430c2717591937edcec90ccbefaf14c174f8ec9415e03ca875b46e1a  zizmor.tar.gz' | sha256sum --check --strict
+          tar -xzf actionlint.tar.gz actionlint
+          tar -xzf shellcheck.tar.gz --strip-components=1 shellcheck-v0.11.0/shellcheck
+          tar -xzf zizmor.tar.gz zizmor
+          echo "$PWD" >> "$GITHUB_PATH"
+
+      - name: Lint all repository workflows and shell scripts
+        run: php scripts/workflow-lint.php

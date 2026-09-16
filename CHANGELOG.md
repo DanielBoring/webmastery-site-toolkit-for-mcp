@@ -8,7 +8,12 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Added
 
+- Added private vulnerability reporting guidance and the supported-release security policy to the plugin FAQ.
 - Added read-only Google Site Kit compatibility abilities for setup and authentication status, module state, current-user permissions, and same-site PageSpeed summaries, with Site Kit-native permission enforcement and sensitive upstream fields removed.
+
+### Changed
+
+- Updated WordPress tested compatibility to 7.1 after passing ability and MCP transport checks on PHP 8.2 and 8.4.
 
 ## 2.5.0
 

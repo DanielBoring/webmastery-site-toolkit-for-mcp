@@ -58,7 +58,9 @@ Current runtime enforcement:
 
 - Composer dependencies are audited with `composer audit --locked`.
 - Dependency changes should be reviewed carefully in PRs.
-- Use GitHub Dependency Review or Dependabot features when available to prevent vulnerable dependencies from entering the repository.
+- Dependabot checks Composer and GitHub Actions dependencies weekly. Alerts and automatic security-update PRs are enabled; updates still require normal QA and review.
+- Do not suppress a Composer advisory to restore a green merge gate. Update compatible tooling while preserving the plugin's declared PHP floor.
+- Pin routine test dependencies and verify executable downloads before use. Floating compatibility lanes must record exact tested versions before proposing pin changes.
 - Release workflows should build from the reviewed repository state and validate package contents before publishing.
 
 ## Secrets and workflow security
@@ -67,7 +69,9 @@ Current runtime enforcement:
 - Prefer GitHub Actions `GITHUB_TOKEN` with explicit job-level `permissions`.
 - Do not expose secrets to workflows running untrusted PR code.
 - Rotate any secret that appears in logs or repository history.
-- Keep release credentials outside repository files. WordPress.org SVN deployment uses GitHub Actions secrets named `SVN_USERNAME` and `SVN_PASSWORD`; prefer storing them as protected `wordpress-org` environment secrets so they are only available after approval. Repository-level GitHub Secrets can work as a fallback, but the publish job must remain protected by the environment gate.
+- Keep release credentials outside repository files. `SVN_USERNAME` and `SVN_PASSWORD` are stored only in the protected `wordpress-org` environment and become available after required review. Do not duplicate them as repository-level secrets.
+- Secret scanning and push protection are enabled. They are additional detection controls, not proof that a change contains no credentials.
+- Production tags are restricted, release commits must be in `main` history, and the approved artifact must be the artifact deployed. Administrator tag-rule bypass does not bypass the environment approval.
 
 ## WordPress.org guideline security and privacy expectations
 
@@ -82,12 +86,14 @@ The Detailed Plugin Guidelines make plugin developers responsible for all plugin
 
 ## Vulnerability response
 
-1. Prefer private reporting for suspected exploitable vulnerabilities.
+1. Use [private vulnerability reporting](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/advisories/new) for suspected exploitable vulnerabilities. The feature is enabled; the public policy is [SECURITY.md](../SECURITY.md).
 2. Triage severity, affected versions, exploitability, and whether WordPress.org users are exposed.
 3. Fix on a private branch or security advisory fork when appropriate.
 4. Add regression tests or manifest cases that would have caught the issue.
 5. Release a patched version and publish advisory notes when needed.
 6. If the vulnerability affects a released package, coordinate WordPress.org plugin update timing and user communication.
+
+Security fixes target the latest stable release, without separate backports for older releases. Response and resolution are best-effort, without a fixed deadline. Reports should use disposable reproductions and omit credentials or private site data.
 
 ## Official references
 

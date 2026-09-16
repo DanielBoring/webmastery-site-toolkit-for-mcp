@@ -3,47 +3,40 @@ set -Eeuo pipefail
 
 VERSION="${1:-}"
 PLUGIN_SLUG="webmastery-site-toolkit-for-mcp"
+if [[ ( "${CI:-}" == "true" || "${GITHUB_ACTIONS:-}" == "true" ) && "${SKIP_PLUGIN_CHECK:-0}" != "0" ]]; then
+	echo "Plugin Check cannot be bypassed in CI." >&2
+	exit 1
+fi
+ZIP_FILE="${RELEASE_ZIP:-}"
+if [[ -z "$ZIP_FILE" ]]; then
+	ZIP_FILE="$(bash scripts/build-release.sh "$VERSION")"
+fi
+php scripts/validate-release-package.php "$ZIP_FILE" "$VERSION"
 
-php_run() {
-	if command -v php >/dev/null 2>&1; then
-		php "$@"
-		return $?
-	fi
-
-	if ! command -v docker >/dev/null 2>&1; then
-		echo "PHP is required. Install PHP or Docker to run PHP through the Composer image." >&2
-		exit 1
-	fi
-
-	local mount_path
-	if command -v cygpath >/dev/null 2>&1; then
-		mount_path="$(cygpath -w "$(pwd)")"
-	else
-		mount_path="$(pwd)"
-	fi
-
-	docker run --rm -v "${mount_path}:/app" -w /app composer:2 php "$@"
-}
-
-ZIP_FILE="$(bash scripts/build-release.sh "$VERSION")"
-php_run scripts/validate-release-package.php "$ZIP_FILE" "$VERSION"
-
-if [ "${SKIP_PLUGIN_CHECK:-0}" = "1" ]; then
-	echo "Skipping WordPress Plugin Check because SKIP_PLUGIN_CHECK=1."
+# Runtime checks consume an extraction of the original ZIP, not the staging tree.
+PACKAGE_ROOT="build/release-check"
+rm -rf "$PACKAGE_ROOT"
+php scripts/release-tools.php extract "$ZIP_FILE" "$PACKAGE_ROOT"
+if [[ "${SKIP_PLUGIN_CHECK:-0}" == "1" ]]; then
+	echo "LOCAL ONLY: package validation passed; Plugin Check and runtime QA NOT RUN."
 	exit 0
 fi
 
-if ! command -v docker >/dev/null 2>&1; then
-	echo "Docker is required for WordPress Plugin Check. Set SKIP_PLUGIN_CHECK=1 to run package validation only." >&2
+PLUGIN_CHECK_VERSION="${PLUGIN_CHECK_VERSION:-$(php scripts/compatibility-baselines.php plugin_check)}"
+if [[ "$PLUGIN_CHECK_VERSION" != "latest" && ! "$PLUGIN_CHECK_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+	echo "Invalid PLUGIN_CHECK_VERSION." >&2
 	exit 1
 fi
-
+command -v docker >/dev/null || { echo "Docker is required for release runtime QA." >&2; exit 1; }
 export E2E_MANAGE_COMPOSE=1
 export E2E_KEEP_COMPOSE=1
 trap 'docker compose down -v --remove-orphans >/dev/null 2>&1 || true' EXIT
-
 bash scripts/e2e-test.sh all
-docker compose exec -T wordpress wp --allow-root plugin install plugin-check --activate --force
-docker compose exec -T wordpress rm -rf "/var/www/html/wp-content/plugins/${PLUGIN_SLUG}-package"
-docker compose cp "build/${PLUGIN_SLUG}" "wordpress:/var/www/html/wp-content/plugins/${PLUGIN_SLUG}-package"
-docker compose exec -T wordpress wp --allow-root plugin check "${PLUGIN_SLUG}-package" --slug="$PLUGIN_SLUG"
+
+source scripts/release-plugin-check.sh
+check_package "$PLUGIN_CHECK_VERSION"
+if [[ "${REQUIRE_CURRENT_PLUGIN_CHECK:-0}" == "1" && "$PLUGIN_CHECK_VERSION" != "latest" ]]; then
+	check_package latest
+fi
+# Detect any unexpected runtime-side change to the archive before handoff.
+php scripts/validate-release-package.php "$ZIP_FILE" "$VERSION"

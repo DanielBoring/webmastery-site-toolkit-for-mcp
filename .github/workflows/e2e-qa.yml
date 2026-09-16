@@ -5,65 +5,71 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
   push:
-    branches: [main, develop]
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   changes:
     name: Detect Docker QA changes
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
     outputs:
       should-run: ${{ steps.filter.outputs.should-run }}
-      changed-files: ${{ steps.filter.outputs.changed-files }}
     steps:
       - name: Checkout code
         uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Detect runtime-impacting file changes
         id: filter
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             echo "should-run=true" >> "$GITHUB_OUTPUT"
-            echo "changed-files=manual-dispatch" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
-            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-            MERGE_BASE="$(git merge-base "$BASE_SHA" "$HEAD_SHA" || true)"
-            if [ -z "$MERGE_BASE" ]; then
-              MERGE_BASE="$BASE_SHA"
-            fi
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            MERGE_BASE="$(git merge-base "$BASE_SHA" "$HEAD_SHA")"
             CHANGED_FILES="$(git diff --name-only "$MERGE_BASE" "$HEAD_SHA")"
           else
-            BEFORE_SHA="${{ github.event.before }}"
             if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
-              CHANGED_FILES="$(git diff-tree --no-commit-id --name-only -r "${{ github.sha }}")"
+              CHANGED_FILES="$(git ls-tree -r --name-only "$CURRENT_SHA")"
             else
-              CHANGED_FILES="$(git diff --name-only "$BEFORE_SHA" "${{ github.sha }}")"
+              CHANGED_FILES="$(git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA")"
             fi
           fi
 
           printf '%s\n' "$CHANGED_FILES"
 
-          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(\.github/compatibility-versions\.json|\.github/workflows/|docker-compose\.yml|scripts/|tests/|includes/|webmastery-site-toolkit-for-mcp\.php|readme\.txt|composer\.(json|lock)|phpcs\.xml\.dist|phpstan\.neon\.dist|phpunit\.xml\.dist|assets/)'; then
+          # Conservatively test Git-quoted paths (e.g. names containing newlines or non-ASCII).
+          if grep -E '^("|\.github/compatibility-versions\.json|\.github/workflows/|docker-compose\.yml|scripts/|tests/|includes/|webmastery-site-toolkit-for-mcp\.php|readme\.txt|composer\.(json|lock)|phpcs\.xml\.dist|phpstan\.neon\.dist|phpunit\.xml\.dist|assets/)' <<< "$CHANGED_FILES" > /dev/null; then
             echo "should-run=true" >> "$GITHUB_OUTPUT"
           else
+            status=$?
+            if [ "$status" -ne 1 ]; then
+              echo "Runtime change detection failed." >&2
+              exit "$status"
+            fi
             echo "should-run=false" >> "$GITHUB_OUTPUT"
           fi
-
-          {
-            echo 'changed-files<<EOF'
-            printf '%s\n' "$CHANGED_FILES"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
 
   ability-contract-qa:
     name: 3 - Ability Contract QA
@@ -100,6 +106,7 @@ jobs:
         uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Set up Docker Compose
         run: docker compose version
@@ -164,32 +171,28 @@ jobs:
             echo "status=no_debug_log" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          docker compose exec -T wordpress cat /var/www/html/wp-content/debug.log
           if docker compose exec -T wordpress grep -Eiq 'fatal error|parse error|uncaught|php (fatal error|parse error|warning|notice|deprecated)|deprecated|warning|notice|error' /var/www/html/wp-content/debug.log; then
             echo "status=error_entries_found" >> "$GITHUB_OUTPUT"
             exit 1
           fi
           echo "status=no_error_entries" >> "$GITHUB_OUTPUT"
 
-      - name: Collect failure artifacts
-        if: failure()
-        shell: bash
-        run: |
-          mkdir -p e2e-artifacts
-          docker compose logs --no-color > e2e-artifacts/docker-compose.log || true
-          docker compose exec -T wordpress cat /var/www/html/wp-content/debug.log > e2e-artifacts/wordpress-debug.log 2>/dev/null || true
+      - name: Publish contract job summary
+        if: ${{ always() }}
+        run: php scripts/docker-qa-summary.php e2e-artifacts/e2e-summary.json build/qa-summary-contract.json contract
 
       - name: Clean up
         if: always()
         run: docker compose down -v --remove-orphans
 
-      - name: Upload failure artifacts
-        if: failure()
+      - name: Upload contract summary
+        if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ability-contract-failure-artifacts
-          path: e2e-artifacts/
+          name: ability-contract-summary
+          path: build/qa-summary-contract.json
           if-no-files-found: ignore
+          retention-days: 7
 
   full-mcp-e2e-qa:
     name: 4 - Full MCP E2E QA
@@ -208,6 +211,7 @@ jobs:
         uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Set up Docker Compose
         run: docker compose version
@@ -220,34 +224,52 @@ jobs:
       - name: Run Full MCP E2E QA
         run: bash scripts/e2e-test.sh e2e
 
-      - name: Collect failure artifacts
-        if: failure()
-        shell: bash
-        run: |
-          mkdir -p e2e-artifacts
-          docker compose logs --no-color > e2e-artifacts/docker-compose.log || true
-          docker compose exec -T wordpress cat /var/www/html/wp-content/debug.log > e2e-artifacts/wordpress-debug.log 2>/dev/null || true
+      - name: Publish transport job summary
+        if: ${{ always() }}
+        run: php scripts/docker-qa-summary.php e2e-artifacts/mcp-crud-summary.json build/qa-summary-transport.json transport
 
       - name: Clean up
         if: always()
         run: docker compose down -v --remove-orphans
 
-      - name: Upload failure artifacts
-        if: failure()
+      - name: Upload transport summary
+        if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: full-mcp-e2e-failure-artifacts
-          path: e2e-artifacts/
+          name: full-mcp-e2e-summary
+          path: build/qa-summary-transport.json
           if-no-files-found: ignore
+          retention-days: 7
+
+  docker-qa-gate:
+    name: Docker QA gate
+    needs: [changes, ability-contract-qa, full-mcp-e2e-qa]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout gate predicate
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Require successful detector and expected runtime results
+        env:
+          DETECTOR: ${{ needs.changes.result }}
+          SHOULD_RUN: ${{ needs.changes.outputs.should-run }}
+          CONTRACT: ${{ needs.ability-contract-qa.result }}
+          TRANSPORT: ${{ needs.full-mcp-e2e-qa.result }}
+        run: php scripts/docker-qa-gate.php "$DETECTOR" "$SHOULD_RUN" "$CONTRACT" "$TRANSPORT"
 
   comment-pr:
     name: Docker QA PR comment
     needs: [changes, ability-contract-qa, full-mcp-e2e-qa]
-    if: github.event_name == 'pull_request' && needs.changes.outputs.should-run == 'true' && always()
+    if: ${{ always() && !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' && github.event.pull_request.user.login != 'dependabot[bot]' && needs.changes.result == 'success' && needs.changes.outputs.should-run == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       pull-requests: write
-      contents: read
     steps:
       - name: Comment Docker QA result on PR
         env:
@@ -274,7 +296,6 @@ jobs:
           YOAST_VERSION: ${{ needs.ability-contract-qa.outputs.yoast-version }}
           SEOPRESS_VERSION: ${{ needs.ability-contract-qa.outputs.seopress-version }}
           PLUGIN_VERSION: ${{ needs.ability-contract-qa.outputs.plugin-version }}
-          CHANGED_FILES: ${{ needs.changes.outputs.changed-files }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           TESTED_SHA: ${{ github.sha }}
@@ -306,24 +327,15 @@ jobs:
           BODY+="- Yoast SEO plugin: ${YOAST_VERSION:-unknown}"$'\n'
           BODY+="- SEOPress plugin: ${SEOPRESS_VERSION:-unknown}"$'\n'
           BODY+="- Webmastery Site Toolkit for MCP: ${PLUGIN_VERSION:-unknown}"$'\n'
-          BODY+=$'\n### Changed Files\n\n'
-          if [ -n "${CHANGED_FILES:-}" ]; then
-            BODY+="$(printf '%s\n' "$CHANGED_FILES" | sed '/^$/d' | sed 's/^/- /')"
-          else
-            BODY+="- unknown"
-          fi
           gh api "repos/$OWNER/$REPO/issues/$ISSUE_NUMBER/comments" --method POST -f body="$BODY"
 
   skip-summary:
     name: Docker QA skip summary
     needs: changes
-    if: needs.changes.outputs.should-run != 'true'
+    if: needs.changes.result == 'success' && needs.changes.outputs.should-run == 'false'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    timeout-minutes: 2
     steps:
       - name: Report skipped Docker QA
         run: |
-          echo "Docker QA skipped: no runtime-impacting files changed."
-          echo "Changed files:"
-          echo "${{ needs.changes.outputs.changed-files }}"
+          echo "Docker QA skipped: no runtime-impacting files changed." >> "$GITHUB_STEP_SUMMARY"

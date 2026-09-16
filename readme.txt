@@ -2,7 +2,7 @@
 Contributors: deboring
 Tags: mcp, ai, automation, content-management, claude
 Requires at least: 6.9
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.0
 Stable tag: 2.5.0
 License: GPL-2.0+
@@ -95,6 +95,12 @@ The connected WordPress site may be running an older plugin version. Update the 
 
 The complete ability reference and client setup guide are maintained at:
 https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
+
+= How do I report a security vulnerability? =
+
+Report suspected vulnerabilities privately at https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/advisories/new rather than in public issues or support threads. Include affected versions, the ability, the minimum required role, and reproduction steps on a test site. Do not include credentials or private site data.
+
+Security fixes target the latest stable release. Reports receive a best-effort response without a guaranteed deadline. See https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/policy for the full policy.
 
 == Changelog ==
 

@@ -1,33 +1,35 @@
-# GitHub Automation Setup Summary
+# GitHub automation setup
 
-The repository automation has been consolidated and hardened around two workflows:
+The maintained workflow inventory and operating procedures are in
+[AUTOMATION.md](AUTOMATION.md). Do not use the former two-workflow setup summary
+as a release checklist.
 
-1. **E2E QA** (`.github/workflows/e2e-qa.yml`)
-2. **Tag-based Release** (`.github/workflows/release.yml`)
+## GitHub controls verified on September 16, 2026
 
-Removed workflows:
-- `.github/workflows/auto-pr-from-issue.yml`
-- `.github/workflows/auto-close-issue.yml`
-- `.github/workflows/auto-release.yml`
+- `wordpress-org` requires DanielBoring's approval, permits self-review for solo
+  maintenance, disallows administrator bypass, and accepts only `v*` tags.
+- SVN credentials remain environment-scoped; they are not repository secrets.
+- `main` requires a pull request and resolved review conversations. Its history
+  cannot be force-pushed or deleted, including by an administrator.
+- Release-tag creation, updates, and deletion are restricted to repository
+  administrators through the tag ruleset's explicit bypass.
+- Actions tokens default to read-only; individual jobs request necessary writes.
+  Actions-created pull requests are enabled, but their PR workflows need approval.
+- Private vulnerability reporting, Dependabot alerts and security updates, secret
+  scanning, and push protection are enabled.
+- Automatic deletion of merged head branches was already enabled. No branch,
+  environment, or secret cleanup was performed.
 
-## Trigger map
+## Required-check activation
 
-| Event | Workflow | Result |
-|------|------|------|
-| Pull request opened/synchronized/reopened | `e2e-qa.yml` | Runs changed-file detection and executes Docker E2E QA when in scope. |
-| Push to `main` or `develop` | `e2e-qa.yml` | Runs changed-file detection and executes Docker E2E QA when in scope. |
-| Manual dispatch | `e2e-qa.yml` | Executes on-demand E2E QA run. |
-| Push tag `v*` | `release.yml` | Validates plugin version/release notes, builds artifact, validates contents, publishes release. |
+Require `1 - Static QA`, `2 - Unit Tests`, and `Docker QA gate` only after the
+updated workflows have successful real PR-event runs, including a bot PR.
+The `main-ci-gates` ruleset (23522901) is staged **disabled**, bound to the GitHub
+Actions app (15368), with no bypass actors. It must not be treated as enforced
+until it is activated and read back from GitHub. `workflow_dispatch` results do
+not satisfy required branch-ruleset checks. Activate it before merging a passing
+compatibility baseline PR.
 
-## Contributor flow
-
-1. Create issue.
-2. Create branch and open PR.
-3. Include `Closes #N` in PR body when merge should close the issue.
-4. Merge after E2E passes.
-5. Push release tag (`vX.Y.Z`) when publishing.
-
-## Notes
-
-- Issue closure uses native GitHub closing keywords (no custom close workflow).
-- See `.github/AUTOMATION.md` for detailed behavior and security model.
+Repository files describe intended automation; they cannot prove live settings
+remain unchanged. Read back the effective rules and environment policy before
+the next production release.

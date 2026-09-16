@@ -21,12 +21,10 @@ if [[ ! -d "$directory" ]]; then
 	exit 1
 fi
 
-for command in gh; do
-	if ! command -v "$command" >/dev/null 2>&1; then
-		echo "Required command not found: $command" >&2
-		exit 1
-	fi
-done
+if ! command -v gh >/dev/null 2>&1; then
+	echo "Required command not found: gh" >&2
+	exit 1
+fi
 
 python_command=""
 for candidate in python3 python; do

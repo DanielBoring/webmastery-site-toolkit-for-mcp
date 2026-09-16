@@ -5,7 +5,8 @@ export MSYS_NO_PATHCONV="${MSYS_NO_PATHCONV:-1}"
 
 WORDPRESS_URL="${WORDPRESS_URL:-http://localhost}"
 PLUGIN_SLUG="webmastery-site-toolkit-for-mcp"
-MCP_ADAPTER_ZIP="${MCP_ADAPTER_ZIP:-https://github.com/WordPress/mcp-adapter/releases/download/v0.5.0/mcp-adapter.zip}"
+DEPENDENCY_POLICY="${DEPENDENCY_POLICY:-pinned}"
+CONTAINER_PLUGIN_ROOT="/var/www/html/wp-content/plugins/${PLUGIN_SLUG}"
 YOAST_PLUGIN_SLUG="${YOAST_PLUGIN_SLUG:-wordpress-seo}"
 SEOPRESS_PLUGIN_SLUG="${SEOPRESS_PLUGIN_SLUG:-wp-seopress}"
 E2E_ARTIFACTS_DIR="${E2E_ARTIFACTS_DIR:-e2e-artifacts}"
@@ -68,9 +69,44 @@ wait_for_wordpress_files() {
 }
 
 install_wp_cli() {
-	echo "Ensuring WP-CLI is installed..."
-	compose exec -T wordpress bash -lc 'if ! command -v wp >/dev/null 2>&1; then curl -fsSLo /usr/local/bin/wp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && chmod +x /usr/local/bin/wp; fi'
+	echo "Installing verified WP-CLI ${WP_CLI_VERSION}..."
+	compose exec -T wordpress bash "${CONTAINER_PLUGIN_ROOT}/scripts/compatibility-download.sh" \
+		"https://github.com/wp-cli/wp-cli/releases/download/v${WP_CLI_VERSION}/wp-cli-${WP_CLI_VERSION}.phar" \
+		"$WP_CLI_SHA512" sha512 /var/www/html/wp-cli-verified.phar
+	compose exec -T wordpress install -m 755 /var/www/html/wp-cli-verified.phar /usr/local/bin/wp
 	wp --info
+}
+
+baseline() {
+	compose exec -T wordpress php "${CONTAINER_PLUGIN_ROOT}/scripts/compatibility-baselines.php" "$1"
+}
+
+load_dependencies() {
+	WP_CLI_VERSION="$(baseline wp_cli)"
+	WP_CLI_SHA512="$(baseline wp_cli_sha512)"
+	if [ -n "${MCP_ADAPTER_ZIP:-}" ]; then
+		if [ -z "${MCP_ADAPTER_SHA256:-}" ]; then
+			echo "MCP_ADAPTER_ZIP overrides require MCP_ADAPTER_SHA256 from the same trusted release." >&2
+			return 1
+		fi
+	else
+		MCP_ADAPTER_ZIP="https://github.com/WordPress/mcp-adapter/releases/download/v$(baseline mcp_adapter)/mcp-adapter.zip"
+		MCP_ADAPTER_SHA256="${MCP_ADAPTER_SHA256:-$(baseline mcp_adapter_sha256)}"
+	fi
+	case "$DEPENDENCY_POLICY" in
+		pinned)
+			YOAST_VERSION="$(baseline yoast)"
+			SEOPRESS_VERSION="$(baseline seopress)"
+			;;
+		latest-seo)
+			YOAST_VERSION=latest
+			SEOPRESS_VERSION=latest
+			;;
+		*)
+			echo "DEPENDENCY_POLICY must be pinned or latest-seo." >&2
+			return 1
+			;;
+	esac
 }
 
 install_wordpress() {
@@ -91,6 +127,8 @@ install_wordpress() {
 
 configure_http_auth_forwarding() {
 	echo "Configuring E2E HTTP Authorization header forwarding..."
+	# Apache directives must reach the container without host-shell expansion.
+	# shellcheck disable=SC2016
 	compose exec -T wordpress bash -lc 'cat > /var/www/html/.htaccess <<'"'"'HTACCESS'"'"'
 SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
 # BEGIN WordPress
@@ -113,19 +151,27 @@ configure_application_passwords() {
 }
 
 install_plugins() {
+	local yoast_version_args=()
+	local seopress_version_args=()
+	if [ "$DEPENDENCY_POLICY" = "pinned" ]; then
+		yoast_version_args=( --version="$YOAST_VERSION" )
+		seopress_version_args=( --version="$SEOPRESS_VERSION" )
+	fi
 	echo "Installing E2E custom post type fixture..."
 	compose exec -T wordpress mkdir -p /var/www/html/wp-content/mu-plugins
 	compose exec -T wordpress cp "/var/www/html/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/custom-post-types-fixture.php" /var/www/html/wp-content/mu-plugins/webmastery-mcp-e2e-cpts.php
 	compose exec -T wordpress cp "/var/www/html/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/site-kit-fixture.php" /var/www/html/wp-content/mu-plugins/webmastery-mcp-e2e-site-kit.php
 
 	echo "Installing MCP Adapter..."
-	wp plugin install "$MCP_ADAPTER_ZIP" --activate --force
+	compose exec -T wordpress bash "${CONTAINER_PLUGIN_ROOT}/scripts/compatibility-download.sh" \
+		"$MCP_ADAPTER_ZIP" "$MCP_ADAPTER_SHA256" sha256 /var/www/html/mcp-adapter-verified.zip
+	wp plugin install /var/www/html/mcp-adapter-verified.zip --activate --force
 
 	echo "Installing Yoast SEO..."
-	wp plugin install "$YOAST_PLUGIN_SLUG" --activate --force
+	wp plugin install "$YOAST_PLUGIN_SLUG" "${yoast_version_args[@]}" --activate --force
 
 	echo "Installing SEOPress..."
-	wp plugin install "$SEOPRESS_PLUGIN_SLUG" --activate --force
+	wp plugin install "$SEOPRESS_PLUGIN_SLUG" "${seopress_version_args[@]}" --activate --force
 
 	echo "Activating ${PLUGIN_SLUG}..."
 	wp plugin activate "$PLUGIN_SLUG"
@@ -203,44 +249,51 @@ run_debug_log_check() {
 	fi
 }
 
-echo "================================"
-echo "Docker QA Suite: WordPress MCP Abilities"
-echo "================================"
+main() {
+	echo "================================"
+	echo "Docker QA Suite: WordPress MCP Abilities"
+	echo "================================"
 
-case "$QA_MODE" in
-	contract|e2e|all)
-		;;
-	*)
-		echo "Unknown QA mode: ${QA_MODE}" >&2
-		echo "Usage: scripts/e2e-test.sh [contract|e2e|all]" >&2
-		exit 1
-		;;
-esac
+	case "$QA_MODE" in
+		contract|e2e|all)
+			;;
+		*)
+			echo "Unknown QA mode: ${QA_MODE}" >&2
+			echo "Usage: scripts/e2e-test.sh [contract|e2e|all]" >&2
+			exit 1
+			;;
+	esac
 
-trap cleanup_compose EXIT
+	trap cleanup_compose EXIT
 
-rm -rf "$E2E_ARTIFACTS_DIR"
-mkdir -p "$E2E_ARTIFACTS_DIR"
-start_compose
-wait_for_wordpress_files
-install_wp_cli
-install_wordpress
-configure_http_auth_forwarding
-configure_application_passwords
-install_plugins
-compose exec -T wordpress rm -f /var/www/html/wp-content/debug.log
+	rm -rf "$E2E_ARTIFACTS_DIR"
+	mkdir -p "$E2E_ARTIFACTS_DIR"
+	start_compose
+	wait_for_wordpress_files
+	load_dependencies
+	install_wp_cli
+	install_wordpress
+	configure_http_auth_forwarding
+	configure_application_passwords
+	install_plugins
+	compose exec -T wordpress rm -f /var/www/html/wp-content/debug.log
 
-if [ "$QA_MODE" = "contract" ] || [ "$QA_MODE" = "all" ]; then
-	echo "Running Ability Contract QA..."
-	run_php_lint
-	run_ability_manifest
+	if [ "$QA_MODE" = "contract" ] || [ "$QA_MODE" = "all" ]; then
+		echo "Running Ability Contract QA..."
+		run_php_lint
+		run_ability_manifest
+	fi
+
+	if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then
+		echo "Running Full MCP E2E QA..."
+		run_mcp_crud
+	fi
+
+	run_debug_log_check
+
+	echo "Docker QA (${QA_MODE}) completed successfully"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	main "$@"
 fi
-
-if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then
-	echo "Running Full MCP E2E QA..."
-	run_mcp_crud
-fi
-
-run_debug_log_check
-
-echo "Docker QA (${QA_MODE}) completed successfully"

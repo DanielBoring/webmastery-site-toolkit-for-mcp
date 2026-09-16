@@ -82,7 +82,7 @@ Site Kit does not publish these routes as a supported third-party API. The adapt
 
 | Requirement | Version |
 | --- | --- |
-| WordPress | 6.9+ |
+| WordPress | 6.9+; tested through 7.1 |
 | PHP | 8.0+ |
 | [MCP Adapter](https://github.com/WordPress/mcp-adapter) | Latest |
 | [Yoast SEO](https://wordpress.org/plugins/wordpress-seo/) | Optional; enables Yoast metadata, score, generated head, and sitemap diagnostics |
@@ -170,6 +170,8 @@ If discovery shows fewer abilities than this repo documents, the connected WordP
 - `get-environment-info`, `plugin-audit`, `user-access-audit`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `site-health-check` are Administrator-only.
 
 Read the [full security model](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#security) before giving an agent Administrator credentials.
+
+Report suspected vulnerabilities through [private vulnerability reporting](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/advisories/new), not public issues. See [SECURITY.md](SECURITY.md) for supported versions and reporting guidance.
 
 ## Contributing
 

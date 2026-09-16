@@ -32,6 +32,10 @@ $iterator = new RecursiveIteratorIterator(
 $zip->addEmptyDir( basename( $source_dir ) );
 
 foreach ( $iterator as $file ) {
+	if ( $file->isLink() || ( ! $file->isDir() && ! $file->isFile() ) ) {
+		fwrite( STDERR, "Non-regular file in package.\n" );
+		exit( 1 );
+	}
 	$path          = str_replace( '\\', '/', $file->getPathname() );
 	$relative_path = ltrim( substr( $path, strlen( str_replace( '\\', '/', $base_dir ) ) ), '/' );
 
