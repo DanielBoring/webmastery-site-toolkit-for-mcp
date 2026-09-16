@@ -55,40 +55,34 @@ composer validate:security-qa
 
 These commands validate manifest JSON structure, required fields, allowed roles, expected result values, labels, assertion shapes, required security-sensitive coverage, and risky static permission callback patterns. They cannot replace full E2E coverage because they do not bootstrap WordPress or compare the manifest to `wp_get_abilities()`.
 
-For Docker Ability Contract QA, either start Compose yourself and run:
+For both Docker layers, use a disposable Compose project with automatically assigned host ports. In Bash:
 
 ```bash
-docker compose up -d
-composer qa:contract
-docker compose down -v
+export COMPOSE_PROJECT_NAME="webmastery-qa-$(date +%s)-$RANDOM"
+export MYSQL_PORT=0 WORDPRESS_PORT=0
+E2E_MANAGE_COMPOSE=1 bash scripts/e2e-test.sh all
 ```
 
-For Docker Full MCP E2E QA, either start Compose yourself and run:
-
-```bash
-docker compose up -d
-composer qa:e2e
-docker compose down -v
-```
-
-Or let the Docker QA script manage Compose:
-
-```bash
-E2E_MANAGE_COMPOSE=1 composer qa:contract
-E2E_MANAGE_COMPOSE=1 composer qa:e2e
-```
+Use `contract` or `e2e` instead of `all` for a single layer. For an already-running disposable stack, keep its `COMPOSE_PROJECT_NAME` and omit `E2E_MANAGE_COMPOSE=1`.
 
 Set `E2E_KEEP_COMPOSE=1` when you want to leave the containers running for debugging.
+
+Use a unique `COMPOSE_PROJECT_NAME` for disposable validation, especially on a shared machine. The runner manages only that project; do not point automatic cleanup at an existing development stack.
 
 The E2E bootstrap installs Yoast SEO from WordPress.org with the `wordpress-seo` slug and SEOPress from WordPress.org with the `wp-seopress` slug because SEO abilities and assertions cover both providers. Set `YOAST_PLUGIN_SLUG` or `SEOPRESS_PLUGIN_SLUG` only when testing against a specific compatible package. It also installs `tests/e2e/site-kit-fixture.php` as a controlled must-use plugin so Site Kit route and response changes fail deterministically without requiring Google account credentials.
 
 The runner fails early if either dependency is not active. Coexistence assertions seed SEOPress meta on a post that receives Yoast-backed updates and verify those Yoast paths do not mutate SEOPress meta; separate SEOPress assertions verify SEOPress-specific write and read paths.
+
+Routine QA uses reviewed WP-CLI, MCP Adapter, SEO-plugin, and Plugin Check pins from `.github/compatibility-versions.json`. WP-CLI and adapter downloads must pass digest verification before execution/installation. Candidate overrides must supply the matching digest; do not reuse the baseline digest for a different release. The scheduled compatibility workflow explicitly opts into floating dependencies and records the versions it actually tests.
 
 Set `MCP_CRUD_ENDPOINT` only when you need the secondary CRUD runner to target a non-default MCP Adapter endpoint. By default it uses `http://localhost/wp-json/mcp/mcp-adapter-default-server` from inside the WordPress container.
 
 PowerShell users can run:
 
 ```powershell
+$env:COMPOSE_PROJECT_NAME = "webmastery-qa-$([guid]::NewGuid().ToString('N').Substring(0, 12))"
+$env:MYSQL_PORT = '0'
+$env:WORDPRESS_PORT = '0'
 powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Contract
 powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -E2E
 ```
@@ -112,3 +106,5 @@ The E2E PR comment includes:
 These counts make it visible when an enhancement adds new ability coverage.
 
 Full E2E artifacts also include `mcp-crud-summary.json` for the secondary protocol-level CRUD QA phase.
+
+GitHub Actions retains available JSON summaries on successful runs as well as failures, with bounded retention. Fork/read-only bot PRs use job summaries without requiring a write token for comments. `Docker QA gate` accepts skipped Docker jobs only when successful change detection explicitly identifies a non-runtime change.

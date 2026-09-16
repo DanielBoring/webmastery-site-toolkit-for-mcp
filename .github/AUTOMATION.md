@@ -12,9 +12,10 @@ This repository uses GitHub Actions for layered WordPress.org plugin QA plus tag
 | release-impacting `pull_request` or `workflow_dispatch` | `.github/workflows/release-package-qa.yml` | Runs `5 - Release Package QA` without publishing a GitHub release. |
 | `schedule` or `workflow_dispatch` | `.github/workflows/compatibility-qa.yml` | Discovers current upstream versions, runs `6 - Compatibility QA` against baseline and candidate combinations, and opens a reviewed baseline-update PR after successful scheduled candidate tests. |
 | `workflow_dispatch` | `.github/workflows/import-issue-backlog.yml` | Previews or imports Markdown files from `ISSUES/` as GitHub Issues, preserving titles, labels, and bodies while skipping duplicates. |
-| `push` to `main` or `develop` | Static, unit, and Docker QA workflows | Re-runs the appropriate numbered checks after merge. |
-| `workflow_dispatch` | Static, unit, Docker, or release workflows | Runs the selected QA layer on demand. |
-| `push` tag `v*` | `.github/workflows/release.yml` | Runs release validation and `5 - Release Package QA`, waits for protected `wordpress-org` approval, deploys to WordPress.org SVN, then publishes a GitHub release. |
+| `push` to `main` | Static, unit, and Docker QA workflows | Re-runs the appropriate numbered checks after merge. |
+| `workflow_dispatch` | Static, unit, Docker, or release-package QA workflows | Runs the selected QA layer on demand; does not publish or satisfy required PR checks. |
+| `pull_request`, `push` to `main`, `workflow_dispatch` | Workflow lint | Runs actionlint, ShellCheck, and zizmor separately from PHP-only local QA. |
+| `push` tag `v*` | `.github/workflows/release.yml` | Requires main ancestry and static/unit QA, validates the package, waits for `wordpress-org` approval, and publishes the validated artifact. |
 
 ## Workflow details
 
@@ -24,9 +25,10 @@ This repository uses GitHub Actions for layered WordPress.org plugin QA plus tag
 1. Detect whether changed files are runtime-impacting.
 2. If in scope, run Ability Contract QA with `scripts/e2e-test.sh contract`.
 3. Run Full MCP E2E QA with `scripts/e2e-test.sh e2e`.
-4. Upload Docker/WordPress failure artifacts when either Docker lane fails.
-5. Post a PR comment from an isolated comment job with runtime-derived run facts, contract coverage, tested dependency versions, and changed files.
-6. Always clean up Docker resources.
+4. Always publish available JSON summaries with bounded retention; collect detailed logs on failure.
+5. Post a PR comment from an isolated, checkout-free job only when the PR context permits writes. Fork and read-only bot runs retain job summaries.
+6. Always clean up the run's disposable Docker resources.
+7. Report `Docker QA gate`: require successful change detection and both runtime jobs, or positively identified non-runtime changes with intentionally skipped jobs. Failed detection, invalid outputs, and failure-induced skips cannot pass the gate.
 
 **PR comment data sources**
 - Result and workflow URL come from the current workflow run.
@@ -60,26 +62,30 @@ The weekly/manual compatibility matrix reads pinned versions from `.github/compa
 - the latest stable WordPress release with the pinned MCP Adapter baseline
 - a combined-latest lane only when both upstream projects release newer versions in the same weekly interval
 
-Each lane pulls fresh Docker images, runs Ability Contract QA plus Full MCP E2E QA, rejects WordPress debug-log warnings/notices/deprecations/errors, and records the resolved WordPress, PHP, MySQL, MCP Adapter, and plugin versions in the job summary. A failure therefore identifies whether the regression is at the support floor, pinned baseline, latest WordPress, latest Adapter, or combined candidate.
+Additional lanes exercise PHP 8.4, MySQL 8.4, current SEO dependencies, and current Plugin Check against the package. PHP 8.0 remains the advertised plugin minimum; PHP 8.0 syntax/unit checks are not WordPress integration evidence for that floor. See the runtime coverage limitation in `docs/qa-strategy.md`.
 
-When one or both latest versions are newer than the pinned baselines and every compatibility lane passes, the scheduled workflow runs `scripts/update-compatibility-baselines.php` and opens a version-specific pull request. The PR updates `.github/compatibility-versions.json`, the default WordPress Docker image, and the pinned MCP Adapter ZIP. It is never auto-merged. The workflow explicitly dispatches Static QA, Unit Tests, Docker QA, and Release Package QA for the bot-created branch because events created with `GITHUB_TOKEN` do not recursively trigger workflows.
+Runtime lanes pull images, run Ability Contract QA plus Full MCP E2E QA, reject debug-log warnings/notices/deprecations/errors, and record tested versions. An unavailable candidate image is an infrastructure failure, not permission to promote an untested baseline.
+
+After all required candidate checks pass, `scripts/update-compatibility-baselines.php` updates the schema-preserving baseline configuration, concrete runtime references, and `readme.txt` `Tested up to`. Baseline PRs are never auto-merged. Changed main history, stale candidate branches, and closed PRs require explicit handling rather than overwriting earlier decisions. The run summary explains promotion or the reason it did not happen; persistent scheduled failures update one tracking issue.
+
+The repository permits Actions to create PRs. PRs created with `GITHUB_TOKEN` generate approval-required PR-event runs: a maintainer must select **Approve workflows to run**. Those checks, not dispatched runs, must satisfy branch protection. A GitHub App is an alternative if automatic check startup becomes necessary; no long-lived token is required for the current flow.
 
 ### Release (`release.yml`)
 
 **Execution flow**
 1. Trigger on tag push matching `v*`.
-2. Validate `tag version == plugin header version == readme stable tag`.
-3. Verify plugin release notes exist in `readme.txt` for the tagged version.
-4. Run `scripts/release-qa.sh` to run contract and transport Docker QA, build the plugin ZIP, validate required/forbidden contents, and run WordPress Plugin Check against the built package.
-5. Fail if a release for the same tag already exists.
-6. Wait for approval in the protected `wordpress-org` GitHub Environment.
-7. Deploy `build/webmastery-site-toolkit-for-mcp` to WordPress.org SVN with `SLUG=webmastery-site-toolkit-for-mcp` and SVN tag `X.Y.Z`.
-8. Publish the GitHub release with the built ZIP and notes from `readme.txt`.
+2. Require an exact `vX.Y.Z` tag whose commit is an ancestor of freshly fetched `main`; run `composer qa`.
+3. Validate source and archive metadata, changelog/upgrade entries, support requirements, and tested-baseline consistency.
+4. Build once, run Docker QA and Plugin Check, and retain the ZIP, release notes, listing assets, source SHA, and integrity manifest in a run-scoped artifact.
+5. Wait for approval in the protected `wordpress-org` environment.
+6. Serialize production publication across release tags, download and verify the artifact, and reject version regression or mismatched existing release contents.
+7. Deploy the package extracted from that ZIP to SVN and publish that same ZIP to GitHub with build provenance.
+8. Verify WordPress.org publication. Report partial publication explicitly if SVN succeeds but listing confirmation or GitHub publication fails; recover from the existing validated artifact without rewriting tags.
 
 **WordPress.org deployment**
 - The SVN deploy step uses `10up/action-wordpress-plugin-deploy` pinned to an immutable commit.
-- `SVN_USERNAME` and `SVN_PASSWORD` are read from GitHub Actions secrets. Prefer `wordpress-org` environment secrets; repository-level secrets can work as a fallback when the job is still environment-gated.
-- The workflow deploys code only. WordPress.org listing assets are intentionally deferred until a `.wordpress-org/` asset directory is added and reviewed.
+- `SVN_USERNAME` and `SVN_PASSWORD` are stored only in the protected `wordpress-org` environment. Do not duplicate them as repository secrets.
+- The workflow deploys the curated package and supported listing assets from `.wordpress-org/`. Unrecognized files such as `logo.png` are not Plugin Directory assets and must not enter the deploy artifact.
 - WordPress.org SVN is production. Use release package QA, compatibility QA, and staging WordPress installs for test coverage rather than a separate WordPress.org test SVN.
 
 ## Issue and PR process
@@ -104,6 +110,8 @@ The E2E bootstrap installs and activates Yoast SEO and SEOPress from WordPress.o
 
 ## Branch protection recommendation
 
-Require `1 - Static QA` and `2 - Unit Tests` before every merge. Require `3 - Ability Contract QA` and `4 - Full MCP E2E QA` before merging runtime-impacting PRs.
+Require the stable checks `1 - Static QA`, `2 - Unit Tests`, and `Docker QA gate` from GitHub Actions before every merge. The Docker gate enforces the runtime-dependent checks without allowing a failed prerequisite to appear as an intentional skip. Do not require workflow-level path-filtered Release Package QA.
+
+The `main-ci-gates` ruleset is staged disabled until the updated workflows have successful real PR runs, including a baseline bot PR. Activate it before merging the baseline promotion. See [SETUP-COMPLETE.md](SETUP-COMPLETE.md) for the last verified settings and the remaining activation step.
 
 Keep `6 - Compatibility QA` scheduled/manual until the matrix is stable enough to promote selected jobs to branch protection. Manual dispatch tests versions without opening a PR unless `open_update_pr` is selected.

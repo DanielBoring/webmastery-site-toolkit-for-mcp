@@ -14,7 +14,7 @@ services:
       retries: 10
 
   wordpress:
-    image: ${WORDPRESS_IMAGE:-wordpress:7.0.1-php8.2-apache}
+    image: ${WORDPRESS_IMAGE:-wordpress:7.1-php8.2-apache}
     depends_on:
       mysql:
         condition: service_healthy

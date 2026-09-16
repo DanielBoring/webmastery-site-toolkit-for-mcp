@@ -10,6 +10,8 @@ Thanks for your interest in contributing. This document covers how to report bug
 - **Feature requests** — open a GitHub Issue describing the ability you want and why it's useful for AI agents
 - **Pull requests** — bug fixes and features from the backlog are welcome; see below for conventions
 
+Suspected security vulnerabilities must use [private vulnerability reporting](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/advisories/new), not public issues. Read [SECURITY.md](SECURITY.md) before submitting a report; redact credentials and private site data.
+
 ---
 
 ## Development setup
@@ -56,6 +58,10 @@ composer qa
 ```
 
 `composer qa` runs the normal fast pre-PR checks: Static QA plus Unit Tests. See [`docs/qa-strategy.md`](docs/qa-strategy.md) for the full QA posture, including when to run Ability Contract QA, Full MCP E2E QA, Release Package QA, and Compatibility QA.
+
+Workflow and shell changes also need the dedicated workflow lint checks. These tools are separate from the PHP-only `composer qa` path. Docker validation must use a disposable, uniquely named Compose project; do not run cleanup commands against a shared development stack.
+
+`composer lint:workflows` requires actionlint 1.7.12, ShellCheck 0.11.0, and zizmor 1.30.1 on `PATH`. Install the pinned upstream releases and verify their checksums as shown in `.github/workflows/workflow-lint.yml`; the command rejects missing or mismatched versions.
 
 The repo strategy docs explain how maintainers operate the project:
 
@@ -121,6 +127,10 @@ Set `annotations` accurately — `readonly: true` for read-only abilities, `dest
 7. Review the WordPress.org Detailed Plugin Guidelines when the change affects naming, readme text, privacy/external calls, licensing/assets, or release packaging
 8. Open a PR with a clear description of what changed and why
 
+Before merge, require successful `1 - Static QA`, `2 - Unit Tests`, and `Docker QA gate` checks from real PR runs. The Docker gate accepts skipped runtime jobs only after successful change detection identifies a non-runtime change. Fork and read-only bot PRs retain job summaries without requiring a writable comment token.
+
+GitHub Actions-created baseline PRs need a maintainer to approve their PR-event workflows. Manually dispatched QA is useful for investigation but does not satisfy required branch-ruleset checks. Do not substitute a green dispatch run for a green PR check.
+
 ---
 
 ## Local QA commands
@@ -134,6 +144,9 @@ Environment-specific notes for GitHub Actions, Windows PowerShell, and Windows G
 | `composer qa` | Fast local default: Static QA plus Unit Tests |
 | `composer qa:static` | PHP lint, PHPCS, PHPStan, Composer audit, manifest structure validation, security QA validation, and `git diff --check` |
 | `composer qa:unit` | PHPUnit unit tests |
+| `composer lint:workflows` | Actionlint, ShellCheck, and offline zizmor using the required versions already on `PATH` |
+| `composer test:release-safeguards` | Package/metadata/artifact regression tests plus local Git tag/ancestry fixtures; requires PHP ZipArchive and Bash, not Docker |
+| `composer test:ci-safeguards` | All release safeguards plus verified-download and pinned/floating dependency tests; also runs in the PHP 8.0/8.4 CI unit jobs |
 | `composer validate:security-qa` | Static security QA policy checks for risky permission callbacks and required permission-hardening manifest cases |
 | `composer qa:contract` | Docker Ability Contract QA against an already-running Compose stack |
 | `composer qa:e2e` | Docker Full MCP E2E QA against an already-running Compose stack |
@@ -225,6 +238,8 @@ Release checklist:
 8. Confirm the protected `wordpress-org` GitHub Environment and `SVN_USERNAME` / `SVN_PASSWORD` GitHub Actions secrets are configured.
 9. Tag and push `vX.Y.Z` to trigger the release workflow.
 10. Approve the protected WordPress.org deployment after release QA passes.
+
+Release tags must point into reviewed `main` history. Release QA must run static/unit checks as well as package validation. Approve the source SHA and validated artifact, not a rebuilt replacement. Publishing is serialized across all release tags; if SVN succeeds but a later step fails, follow the partial-failure procedure rather than moving a tag or starting a different build.
 
 ---
 

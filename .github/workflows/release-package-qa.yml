@@ -13,12 +13,26 @@ on:
       - 'scripts/build-release.sh'
       - 'scripts/release-qa.sh'
       - 'scripts/validate-release-package.php'
+      - 'scripts/create-release-zip.php'
+      - 'scripts/release-*.php'
+      - 'scripts/release-*.sh'
+      - 'scripts/test-release-*'
+      - 'scripts/compatibility-baselines.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - '.wordpress-org/**'
       - 'tests/e2e/**'
       - 'webmastery-site-toolkit-for-mcp.php'
       - 'includes/**'
       - 'readme.txt'
       - 'CHANGELOG.md'
       - 'LICENSE'
+
+permissions: {}
+
+concurrency:
+  group: release-package-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   release-package-qa:
@@ -33,12 +47,20 @@ jobs:
         uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Set up PHP
         uses: shivammathur/setup-php@bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f # 2.35.5
         with:
-          php-version: '8.0'
+          php-version: '8.2'
+          extensions: zip
           coverage: none
+
+      - name: Test release safeguard regressions
+        run: |
+          php scripts/test-release-safeguards.php
+          bash scripts/test-release-tag-check.sh
+          bash scripts/test-release-plugin-check.sh
 
       - name: Run Release Package QA
         run: bash scripts/release-qa.sh

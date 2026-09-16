@@ -21,6 +21,8 @@ Related strategy guides:
 | 5 - Release Package QA | `composer qa:release` or `bash scripts/release-qa.sh` | Release metadata is aligned, Ability Contract QA and Full MCP E2E QA pass, the release zip contains only packaged plugin files, and WordPress Plugin Check evaluates the built package instead of the development checkout. This check must pass before the protected WordPress.org SVN deploy job can run. | Release PRs, tags, and manual dispatch. |
 | 6 - Compatibility QA | `.github/workflows/compatibility-qa.yml` | Scheduled/manual Docker QA discovers official upstream releases, isolates pinned and candidate WordPress/MCP Adapter combinations, and promotes passing versions through a maintainer-reviewed PR while exercising ability contracts, MCP transport, and debug-log cleanliness. | Weekly schedule, manual dispatch after an upstream release, release-candidate investigation, and upstream-breakage triage. |
 
+Static QA runs the full toolchain on PHP 8.0 and syntax checks on PHP 8.4; Unit Tests run on both versions. Each workflow has a stable aggregate result. `Docker QA gate` reports successful change detection and the required Docker results; failure-induced skips cannot pass it. A separate workflow lint check runs actionlint, ShellCheck, and zizmor without making local PHP QA depend on Docker.
+
 ## Security QA policy
 
 Security QA is a cross-cutting gate, not just a separate scanner. The permission issue fixed in PR #90 showed that valid syntax, WPCS, and broad ability coverage are not enough unless the tests explicitly prove the permission model.
@@ -68,7 +70,7 @@ Both layers matter. Contract QA catches broad ability drift and permission regre
 | Security-sensitive PR | Required | Required | Required | Required | Required when release-bound | Manual before release when risk is broad |
 | Push to `main` | Required | Required | Required when runtime files changed | Required when runtime files changed | Skipped | Scheduled/manual |
 | Release PR | Required | Required | Required | Required | Required | Manual for release candidates |
-| Tag `v*` | Covered by release workflow setup and prior PR checks | Covered by prior PR checks | Covered by Release Package QA | Covered by Release Package QA | Required | Covered by scheduled/manual release-candidate run |
+| Tag `v*` | Required by release workflow | Required by release workflow | Covered by Release Package QA | Covered by Release Package QA | Required | Review current compatibility evidence before approval |
 | `workflow_dispatch` | Runs selected workflow | Runs selected workflow | Runs | Runs | Runs | Runs |
 | Weekly schedule | Skipped | Skipped | Skipped | Skipped | Skipped | Runs |
 
@@ -80,6 +82,7 @@ Require these checks before merging any PR:
 
 - `1 - Static QA`
 - `2 - Unit Tests`
+- `Docker QA gate`
 
 Require these checks before merging runtime-impacting, ability, or security-sensitive PRs:
 
@@ -93,6 +96,8 @@ Require release/package QA before publishing a release:
 Use `6 - Compatibility QA` as a scheduled/manual maintainer gate at first. Promote individual compatibility jobs to required only after they are stable and low-noise.
 
 The important GitHub concept is "required status checks." A workflow can run on many events, but branch protection decides which successful checks are required before a PR can merge.
+
+The staged `main-ci-gates` ruleset must be activated only after successful real PR runs of the new checks, including a bot PR. `workflow_dispatch` job results do not satisfy branch-ruleset requirements. The path-filtered Release Package QA workflow must not become a required PR check in its current form.
 
 ## Which command should I run?
 
@@ -182,6 +187,16 @@ The current compatibility workflow reads `.github/compatibility-versions.json`, 
 - both latest releases together when both changed during the same interval
 
 All lanes pull fresh images, run both Ability Contract QA and Full MCP E2E QA, fail on WordPress debug-log warnings/notices/deprecations/errors, and record resolved dependency versions in the GitHub Actions job summary. After a successful scheduled run, newer versions are proposed in an automated PR that updates the baseline file and the concrete runtime pins. Maintainer approval and merge remain mandatory.
+
+Additional coverage separates PHP 8.4, MySQL 8.4, floating SEO dependencies, and current Plugin Check package validation. Package-check lanes run the applicable package command; they are not interchangeable with the contract/transport lanes. Ordinary QA uses the reviewed dependency pins and executable-download digests in `.github/compatibility-versions.json`.
+
+Only tested candidates may update baselines or `readme.txt` `Tested up to`. Missing images, failed discovery, stale source history, and unavailable dependencies are explicit failures that block promotion. Baseline updates preserve the full configuration and PHP image suffix. Approval of the bot PR's genuine PR-event workflows is required; a successful manual dispatch is not a substitute.
+
+### Runtime coverage limitation
+
+The advertised plugin minimum remains PHP 8.0. Syntax and unit tests exercise that version, but the supported-floor WordPress Docker lane uses PHP 8.1. This is a documented integration-coverage gap, not authorization to raise the plugin minimum or claim PHP 8.0 WordPress integration was tested. Add a maintained PHP 8.0 integration fixture or make a separate support-policy decision before changing that claim.
+
+PHPCompatibilityWP's available stable rules depend on the older PHPCompatibility engine. Installing those rules alone does not establish PHP 8.4 compatibility. Runtime evidence remains necessary; a future compatibility-sniff dependency must be reviewed for its actual supported language versions.
 
 When compatibility failures occur, triage them as:
 

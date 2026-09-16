@@ -8,6 +8,10 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added a private security policy and issue routing, with latest-stable security fixes and best-effort reporting expectations.
+- Added stable fail-closed PR gates, PHP 8.4 coverage, retained Docker summaries, and dedicated workflow/shell security linting.
+- Added verified test-dependency pins and compatibility promotion checks, including current-toolchain package coverage.
+- Added release ancestry/static/unit gates, validated-artifact transfer, package metadata regression coverage, production serialization, and publication recovery checks.
 - Added a dry-run-first, manually dispatched issue backlog importer that converts `ISSUES/` Markdown files into labeled GitHub Issues and skips source/title duplicates on reruns.
 - Added WordPress.org plugin directory branding assets (icon and banner PNGs in `.wordpress-org/`) for the plugin-deploy action to sync to the SVN assets section.
 - Added protected WordPress.org SVN deployment to the tag-based release workflow, including pinned action usage, GitHub Actions secret guidance, SemVer/SVN tag policy, and full release documentation coverage.
@@ -30,6 +34,13 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Made the case-study listing fixture use explicit ID ordering so expected results do not depend on whether setup spans a timestamp boundary.
+- Fixed floating Plugin Check and SEO installs to omit the version flag, and made package QA reject Plugin Check errors even when WP-CLI returns success.
+- Advanced the verified WordPress baseline and `Tested up to` header to 7.1 while retaining MCP Adapter 0.5.0 and the other dependency pins.
+- Patched vulnerable Composer development dependencies and added weekly Composer/GitHub Actions updates.
+- Configured production review and deployment-tag restrictions, main history protection, release-tag controls, read-only default Actions tokens, private reporting, Dependabot security features, secret scanning, and push protection. Required CI rules are staged disabled until the new real PR checks pass.
+- Replaced the assumption that dispatched bot checks satisfy merge protection with an explicit approval-based PR workflow path.
+- Updated CI, QA, release, and contributor guidance to distinguish enforced GitHub settings from pending check activation and to document the remaining PHP 8.0 integration-coverage gap.
 - Expanded Compatibility QA to discover official WordPress and MCP Adapter releases, isolate baseline and candidate combinations, record resolved runtime versions, and open a maintainer-reviewed baseline-update PR only after all candidate tests pass.
 - Updated README.md to lead with the 70+ ability count and supported MCP clients, and to make the WordPress.org search-and-install flow the primary installation path while moving the GitHub release ZIP and clone steps into a manual/development install note.
 - Expanded repo governance documentation so the official WordPress.org Detailed Plugin Guidelines are explicitly mapped to QA release readiness, security/privacy review, release strategy, contributor guidance, and PR review.

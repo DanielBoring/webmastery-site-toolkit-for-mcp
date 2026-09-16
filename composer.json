@@ -18,6 +18,7 @@
 		"diff-check": "git diff --check",
 		"e2e": "bash scripts/e2e-test.sh all",
 		"lint:php": "php scripts/php-lint.php",
+		"lint:workflows": "php scripts/workflow-lint.php",
 		"phpcs": "php vendor/squizlabs/php_codesniffer/bin/phpcs --standard=phpcs.xml.dist",
 		"phpcbf": "php vendor/squizlabs/php_codesniffer/bin/phpcbf --standard=phpcs.xml.dist",
 		"phpstan": "php vendor/phpstan/phpstan/phpstan analyse --configuration=phpstan.neon.dist --memory-limit=2G",
@@ -40,6 +41,16 @@
 		"qa:unit": "php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist",
 		"test": [
 			"@qa:unit"
+		],
+		"test:ci-safeguards": [
+			"@test:release-safeguards",
+			"bash tests/compatibility-download-test.sh",
+			"bash tests/compatibility-dependency-policy-test.sh"
+		],
+		"test:release-safeguards": [
+			"php scripts/test-release-safeguards.php",
+			"bash scripts/test-release-tag-check.sh",
+			"bash scripts/test-release-plugin-check.sh"
 		],
 		"validate:e2e-manifest": "php scripts/validate-e2e-manifest.php",
 		"validate:security-qa": "php scripts/validate-security-qa.php"
