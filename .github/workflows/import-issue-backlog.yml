@@ -1,0 +1,33 @@
+name: 7 - Issue Backlog Import
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Preview the import without creating issues
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: issue-backlog-import
+  cancel-in-progress: false
+
+jobs:
+  import-issues:
+    name: Import issue backlog
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          fetch-depth: 1
+
+      - name: Import issue backlog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/import-issues.sh ISSUES "${{ inputs.dry_run }}"

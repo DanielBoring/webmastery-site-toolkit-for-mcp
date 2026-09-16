@@ -11,6 +11,7 @@ This repository uses GitHub Actions for layered WordPress.org plugin QA plus tag
 | `pull_request` (`opened`, `synchronize`, `reopened`) | `.github/workflows/e2e-qa.yml` | Detects runtime-impacting files, then runs `3 - Ability Contract QA` and `4 - Full MCP E2E QA` when in scope. |
 | release-impacting `pull_request` or `workflow_dispatch` | `.github/workflows/release-package-qa.yml` | Runs `5 - Release Package QA` without publishing a GitHub release. |
 | `schedule` or `workflow_dispatch` | `.github/workflows/compatibility-qa.yml` | Discovers current upstream versions, runs `6 - Compatibility QA` against baseline and candidate combinations, and opens a reviewed baseline-update PR after successful scheduled candidate tests. |
+| `workflow_dispatch` | `.github/workflows/import-issue-backlog.yml` | Previews or imports Markdown files from `ISSUES/` as GitHub Issues, preserving titles, labels, and bodies while skipping duplicates. |
 | `push` to `main` or `develop` | Static, unit, and Docker QA workflows | Re-runs the appropriate numbered checks after merge. |
 | `workflow_dispatch` | Static, unit, Docker, or release workflows | Runs the selected QA layer on demand. |
 | `push` tag `v*` | `.github/workflows/release.yml` | Runs release validation and `5 - Release Package QA`, waits for protected `wordpress-org` approval, deploys to WordPress.org SVN, then publishes a GitHub release. |
@@ -84,6 +85,9 @@ When one or both latest versions are newer than the pinned baselines and every c
 ## Issue and PR process
 
 - Use normal issue triage and branch-based PR flow.
+- Backlog Markdown files under `ISSUES/` are source documents; merging them does not create GitHub Issues automatically.
+- Run `7 - Issue Backlog Import` manually with `dry_run` enabled to preview candidates. Re-run it with `dry_run` disabled to create them.
+- The importer uses each file's `title` and `labels` front matter, strips the front matter from the issue body, and adds an invisible source marker. Existing issues with the same marker or exact title are skipped, so reruns are safe.
 - Include `Closes #N` / `Fixes #N` / `Resolves #N` in PR body when merge should close an issue.
 - GitHub native issue closing handles closure on merge; no custom close workflow is used.
 

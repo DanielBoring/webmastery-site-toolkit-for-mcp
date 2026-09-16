@@ -32,7 +32,8 @@ Permission callbacks already receive raw input through the adapter; today they o
 - Expect friction from closures with `$input = []` defaults and mixed return types at level 5; the baseline absorbs it.
 
 - Assessment finding: **B-9 (and B-10)** in `ASSESSMENT.md` (severity Low → label `priority: low`).
-- Related: `10-update-parent-has-no-permission-or-hierarchy-check.md`; `18-…`.
+- GitHub issue: #126 (filed 2026-09-16)
+- Related: #106 (`10-update-parent-has-no-permission-or-hierarchy-check.md`); #119.
 - Environment reference:
 - WordPress version: 7.0.x on the reference site (plugin floor: 6.9+; E2E fixture: 7.0.1)
 - PHP version: 8.4.x on the reference site (plugin floor: 8.0; CI runs 8.0)

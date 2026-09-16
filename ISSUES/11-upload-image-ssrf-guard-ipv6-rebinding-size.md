@@ -45,4 +45,5 @@ Mitigations already in place (verified): `download_url()` uses `wp_safe_remote_g
 - Verified from plugin and core source; not run live (uploads are writes).
 
 - Assessment finding: **A-9** in `ASSESSMENT.md` (severity Low → label `priority: low`).
-- Related: `19-close-test-coverage-gaps-ranked-by-blast-radius.md`.
+- GitHub issue: #112 (filed 2026-09-16)
+- Related: #120 (`19-close-test-coverage-gaps-ranked-by-blast-radius.md`).

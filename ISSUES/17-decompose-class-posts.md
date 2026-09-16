@@ -44,7 +44,8 @@ Reviewability of the security boundary: today the permission helpers, the meta a
 - Follow `.github/copilot-instructions.md`: update `tests/e2e/README.md` / `CONTRIBUTING.md` file maps, and log the change under `.github/REPOSITORY_CHANGELOG.md` (no user-facing behaviour change).
 
 - Assessment finding: **B-2** in `ASSESSMENT.md` (severity Medium → label `priority: medium`).
-- Related: `16-…`; `18-…`; `19-…`; `07-patch-abilities-kses-entire-post-body.md`.
+- GitHub issue: #127 (filed 2026-09-16)
+- Related: #118; #119; #120; #115 (`07-patch-abilities-kses-entire-post-body.md`).
 - Environment reference:
 - WordPress version: 7.0.x on the reference site (plugin floor: 6.9+; E2E fixture: 7.0.1)
 - PHP version: 8.4.x on the reference site (plugin floor: 8.0; CI runs 8.0)

@@ -43,4 +43,5 @@ In both cases: add an `assert_missing_paths` manifest case for `data.google.site
 - Not tested as a Subscriber (no low-privilege credential was available); the `read` gate is verified from source.
 
 - Assessment finding: **A-7** in `ASSESSMENT.md` (severity Medium → label `priority: medium`).
-- Related: `20-docs-drift-readme-readme-txt-plugin-header.md`; `14-site-kit-abilities-need-a-wordpress-capability-floor-and-spec-entry.md`.
+- GitHub issue: #114 (filed 2026-09-16)
+- Related: #124 (`20-docs-drift-readme-readme-txt-plugin-header.md`); #125 (`14-site-kit-abilities-need-a-wordpress-capability-floor-and-spec-entry.md`).

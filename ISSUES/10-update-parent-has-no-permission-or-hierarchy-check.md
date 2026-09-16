@@ -41,4 +41,5 @@ assignees: ''
 - Verified from source; not run live.
 
 - Assessment finding: **A-10** in `ASSESSMENT.md` (severity Low → label `priority: low`).
-- Related: `24-raise-phpstan-level-and-close-schema-only-validation.md` (`additionalProperties: false`); `18-…` (shared input helpers).
+- GitHub issue: #106 (filed 2026-09-16)
+- Related: #126 (`24-raise-phpstan-level-and-close-schema-only-validation.md`) (`additionalProperties: false`); #119 (shared input helpers).

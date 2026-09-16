@@ -45,4 +45,5 @@ assignees: ''
 - Live reference site: `get-post-meta` on a real post returned `_yoast_wpseo_*` (allowlisted) and `footnotes` (non-protected); no gated third-party key was present to demonstrate the bypass, so this is verified from plugin and core source.
 
 - Assessment finding: **A-2** in `ASSESSMENT.md` (severity Medium → label `priority: medium`).
-- Related: `18-shared-helpers-for-duplicated-permission-input-and-response-code.md`; `17-decompose-class-posts.md` (meta code moves to `class-post-meta.php`).
+- GitHub issue: #110 (filed 2026-09-16)
+- Related: #119 (`18-shared-helpers-for-duplicated-permission-input-and-response-code.md`); #127 (`17-decompose-class-posts.md`) (meta code moves to `class-post-meta.php`).

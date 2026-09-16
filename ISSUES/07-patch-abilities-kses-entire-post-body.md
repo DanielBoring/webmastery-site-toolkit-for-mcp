@@ -44,4 +44,5 @@ After replacing one block or one section, both abilities re-serialise the entire
 - Verified by reading the code; the patch abilities were not run on the live reference site (writes were out of scope for the review).
 
 - Assessment finding: **A-6** in `ASSESSMENT.md` (severity Medium → label `priority: medium`).
-- Related: `17-decompose-class-posts.md` (the patch code moves to `class-content-patch.php`; fix this in the same PR).
+- GitHub issue: #115 (filed 2026-09-16)
+- Related: #127 (`17-decompose-class-posts.md`) (the patch code moves to `class-content-patch.php`; fix this in the same PR).

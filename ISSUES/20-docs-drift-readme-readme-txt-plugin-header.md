@@ -50,4 +50,5 @@ Documentation — `README.md`, `readme.txt`, `webmastery-site-toolkit-for-mcp.ph
 - Per `.github/copilot-instructions.md`, user-facing doc changes go in `CHANGELOG.md` under Unreleased; header/strategy edits are repository-facing.
 
 - Assessment finding: **B-5** in `ASSESSMENT.md` (severity Low → label `priority: low`).
-- Related: `03-…`, `05-…`, `09-…`, `14-…`, `16-…`.
+- GitHub issue: #124 (filed 2026-09-16)
+- Related: #109, #108, #114, #125, #118.

@@ -45,4 +45,5 @@ All three are Administrator-only, but these payloads go to a model provider, and
 - Live (reference site): `database-health.table_sizes[].table` returned the real `$wpdb->prefix` on every row plus several `wp_<plugin>_*` tables whose names identify the plugins that created them — the prefix plus a plugin fingerprint. `security-audit` on that site passed the SSL check and did not hit the `debug_log` branch (logging disabled).
 
 - Assessment finding: **A-12** in `ASSESSMENT.md` (severity Low → label `priority: low`).
-- Related: `20-docs-drift-readme-readme-txt-plugin-header.md`.
+- GitHub issue: #111 (filed 2026-09-16)
+- Related: #124 (`20-docs-drift-readme-readme-txt-plugin-header.md`).

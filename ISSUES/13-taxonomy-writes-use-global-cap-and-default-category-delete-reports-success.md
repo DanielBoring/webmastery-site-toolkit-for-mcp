@@ -38,8 +38,9 @@ Separately, `wp_delete_term()` returns `0` for the default category without dele
 3. Manifest: add the default-category case and a denial case for each delete ability (none exist today).
 
 **Additional context**
-- Also part of `04-destructive-abilities-need-confirm-dry-run-and-bounds.md`: `delete-category` reassigns posts to the default category silently and is irreversible; `confirm: true` applies here too.
+- Also part of #116 (`04-destructive-abilities-need-confirm-dry-run-and-bounds.md`): `delete-category` reassigns posts to the default category silently and is irreversible; `confirm: true` applies here too.
 - Verified from source; not run live.
 
 - Assessment finding: **A-13** in `ASSESSMENT.md` (severity Low → label `priority: low`).
-- Related: `04-…`; `19-close-test-coverage-gaps-ranked-by-blast-radius.md`.
+- GitHub issue: #117 (filed 2026-09-16)
+- Related: #116; #120 (`19-close-test-coverage-gaps-ranked-by-blast-radius.md`).

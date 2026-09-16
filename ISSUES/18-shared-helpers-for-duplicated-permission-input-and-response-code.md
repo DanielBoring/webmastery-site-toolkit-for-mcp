@@ -41,7 +41,8 @@ Every copy is a place where a security fix (issues 01, 06, 08, 10) has to be app
 - Repository-facing change: log under `.github/REPOSITORY_CHANGELOG.md`.
 
 - Assessment finding: **B-3** in `ASSESSMENT.md` (severity Medium → label `priority: medium`).
-- Related: `16-…`; `17-…`; `08-…`; `23-wp-slash-applied-inconsistently.md`.
+- GitHub issue: #119 (filed 2026-09-16)
+- Related: #118; #127; #113; #122 (`23-wp-slash-applied-inconsistently.md`).
 - Environment reference:
 - WordPress version: 7.0.x on the reference site (plugin floor: 6.9+; E2E fixture: 7.0.1)
 - PHP version: 8.4.x on the reference site (plugin floor: 8.0; CI runs 8.0)
