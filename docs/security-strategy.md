@@ -30,6 +30,7 @@ Use these defaults:
 | Ability type | Permission expectation |
 | --- | --- |
 | Public-safe read-only data | `read`, with documentation explaining why the response is safe. |
+| Delegated third-party permission | A local WordPress capability floor **plus** the exact upstream route permission, in permission and direct execution paths. Site Kit module, permission, and PageSpeed abilities require `read` before provider/route discovery or upstream work; a missing provider, route, or callable permission check fails closed. Normal REST dispatch must still authorize the request. Reverify effective permissions whenever supported upstream versions or their minimum version change; fixtures alone do not establish real-provider behavior. |
 | Object reads | Object-aware checks such as `read_post`, `edit_post`, or mapped CPT capabilities before returning full object payloads. |
 | List/query abilities | Query-level capability plus per-object/status filtering before normalizing results and totals. |
 | Writes and deletes | Object-specific `edit_*` / `delete_*` checks and status-specific publish/private/schedule checks. |

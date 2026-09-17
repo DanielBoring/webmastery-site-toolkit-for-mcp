@@ -17,6 +17,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Site Kit module, permission, and PageSpeed abilities now require WordPress `read` before any upstream work, in addition to Site Kit's route authorization. Direct execution also rejects missing or unusable upstream permission callbacks. Site Kit-authorized shared-dashboard users remain eligible; status keeps its existing administrator capability gate.
 - Custom post type update abilities now validate requested taxonomy assignments (registration and assign-terms permission) before saving title, content, or status changes, matching the create ability's behavior. Invalid or unauthorized taxonomy requests are now rejected before any changes are persisted, instead of after the post was already updated.
 
 ## 2.5.0

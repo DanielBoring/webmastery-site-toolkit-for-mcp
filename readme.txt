@@ -79,6 +79,10 @@ No. Structural SEO checks still work without either plugin. Yoast-specific metad
 
 Only for the optional Site Kit status, module, permission, and PageSpeed abilities. The integration is a read-only compatibility adapter over Site Kit's internal REST routes, which Google does not publish as a supported third-party API. It checks route availability at runtime and preserves Site Kit's own setup, dashboard-sharing, and datapoint permissions.
 
+Module, permission, and PageSpeed abilities require the WordPress read capability before any upstream work, plus the exact Site Kit route's permission check. Missing providers, routes, or callable permission checks deny access. Read alone is not sufficient; a Subscriber is allowed only when Site Kit also authorizes that user. Status retains its separate manage_options requirement.
+
+The official Site Kit 1.187.0 routes were inspected without Google data calls on a disposable installation. Module-list and permission routes require Site Kit splash or dashboard access; this version's PageSpeed route resolves to Site Kit setup or post-insights access. Effective checks also depend on setup, authentication, sharing, and network state. This does not establish compatibility for every historical version or grant ordinary Subscribers dashboard access. See the repository README for exact capability names and version-specific sources.
+
 PageSpeed requests are limited to URLs on the current site and are processed by Google's PageSpeed service through Site Kit. Responses omit OAuth scopes and proxy details, module owner identities, screenshots, third-party entity lists, and full Lighthouse payloads.
 
 = Are write operations safe? =
@@ -103,6 +107,9 @@ Report suspected vulnerabilities privately at https://github.com/DanielBoring/we
 Security fixes target the latest stable release. Reports receive a best-effort response without a guaranteed deadline. See https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/policy for the full policy.
 
 == Changelog ==
+
+= Unreleased =
+* Require WordPress read access in addition to Site Kit route permissions for module, permission, and PageSpeed abilities, including direct execution. Missing delegated permission callbacks now fail closed.
 
 = 2.5.0 =
 * Expand targeted content patching to pages and public editor-enabled custom post types with object-level permissions and explicit unsupported-type errors.
