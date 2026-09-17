@@ -1,4 +1,9 @@
 <?php
+if ( 'cli' !== PHP_SAPI ) {
+	http_response_code( 403 );
+	exit( 'This test runner is CLI-only.' );
+}
+
 /**
  * Isolated real-core trash regressions. Run in a fresh PHP process, not wp eval-file.
  */

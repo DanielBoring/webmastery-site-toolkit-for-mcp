@@ -8,7 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
-- Added fresh-process enabled/disabled WordPress trash regressions to Ability Contract QA, with persisted row/metadata/taxonomy/descendant/comment checks, deletion API/hook observation, permission/error precedence, mixed bulk outcomes, and comment-status characterization. Retain both runtime summaries as PR artifacts and add the missing affected post/page/comment trash manifest denials.
+- Added fresh-process enabled/disabled WordPress trash regressions to Ability Contract QA, with persisted row/metadata/taxonomy/descendant/comment checks, deletion API/hook observation, permission/error precedence, mixed bulk outcomes, and comment-status characterization. Reject web access to the mutating runner before argument handling or WordPress bootstrap. Retain both runtime summaries as PR artifacts and add the missing affected post/page/comment trash manifest denials.
 - Added a private security policy and issue routing, with latest-stable security fixes and best-effort reporting expectations.
 - Added stable fail-closed PR gates, PHP 8.4 coverage, retained Docker summaries, and dedicated workflow/shell security linting.
 - Added verified test-dependency pins and compatibility promotion checks, including current-toolchain package coverage.
