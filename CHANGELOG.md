@@ -17,6 +17,9 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Category and tag writes now respect the registered taxonomy's editing/deletion capabilities and existing-term permissions, including direct execution. Default Editor/Administrator access, read behavior, and successful response shapes are unchanged; sites with custom restrictions now receive explicit denials before writes.
+- Refused or failed term deletions no longer report success. WordPress's default-category protection is respected, and a zero/false deletion result remains a failure even if site permission filters allow the attempt.
+
 - Targeted block and section patches no longer sanitize unrelated stored HTML in the rebuilt body. Exact patches now match the original raw search fragment. Replacement fragments remain sanitized, object permissions are unchanged, and WordPress's normal capability-dependent save filters still apply.
 - Site Kit module, permission, and PageSpeed abilities now require WordPress `read` before any upstream work, in addition to Site Kit's route authorization. Direct execution also rejects missing or unusable upstream permission callbacks. Site Kit-authorized shared-dashboard users remain eligible; status keeps its existing administrator capability gate.
 - Post, page, custom post type, and bulk post trash abilities now refuse with `trash_disabled` when WordPress trash is disabled, preventing permanent deletion behind a misleading trash-success response. Normal trash behavior, permissions, and per-ID bulk summaries are unchanged; no permanent-delete override is added.

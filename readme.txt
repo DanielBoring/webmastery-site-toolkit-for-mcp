@@ -97,6 +97,12 @@ Write operations go through WordPress APIs and capability checks. Posts, pages, 
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
 
+= Who can create, update, or delete categories and tags? =
+
+Editors and Administrators can manage them with WordPress's default capabilities. Create/update uses the registered taxonomy's edit_terms capability; deletion uses delete_terms. Updating or deleting an existing term also checks WordPress's edit_term or delete_term capability for that term, including site-specific policy filters. Custom taxonomy capability mappings are respected instead of always requiring manage_categories. Creation retains management-level access rather than allowing everyone who can assign tags.
+
+The default category cannot be deleted under core's permission mapping. Failed or refused deletion returns an error rather than deleted: true, even when site filters override the initial permission denial. Ordinary term deletion remains permanent and follows WordPress's relationship reassignment behavior. Read permissions and successful response shapes are unchanged.
+
 = Will a targeted patch change HTML elsewhere in the content? =
 
 Block and section patches sanitize only the replacement fragment, not the entire rebuilt body. Exact patches compare old_content against the original raw content, including markup that would be removed by HTML sanitization. Both abilities still require permission to edit the specific object.
@@ -129,6 +135,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Changelog ==
 
 = Unreleased =
+* Respect taxonomy-specific create/update/delete capabilities and per-term update/delete restrictions, including direct execution.
+* Report refused or failed term deletion as failure instead of claiming the default category was deleted.
 * Preserve unrelated stored HTML during targeted block and section patches without bypassing WordPress save filters. Match exact targets against raw content while continuing to sanitize replacement fragments.
 * Require WordPress read access in addition to Site Kit route permissions for module, permission, and PageSpeed abilities, including direct execution. Missing delegated permission callbacks now fail closed.
 * Prevent permanent deletion by post, page, custom post type, and bulk post trash abilities when WordPress trash is disabled. Return an explicit refusal without changing existing enabled-trash behavior.
@@ -173,6 +181,9 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Add block inspection, single-block replacement, and safer partial post body edits.
 
 == Upgrade Notice ==
+
+= Unreleased =
+Sites with remapped taxonomy capabilities or per-term restrictions now have those write policies enforced. Default-category and other refused deletions no longer report success.
 
 = 2.5.0 =
 Targeted partial-content patches now support pages and eligible custom post types while preserving object-level edit permissions.

@@ -54,7 +54,7 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | Blocks and revisions | Inspect Gutenberg block paths/hashes, replace one block, list revisions, restore a revision | Author or Editor |
 | Post meta | Read, update, and delete safe custom fields; write supported Yoast SEO and SEOPress metadata | Author or Editor |
 | Custom post types | Discover eligible public CPTs, generate list/get/create/update/delete abilities, and patch targeted content for editor-enabled types with CPT capability-map and object/status-aware filtering | CPT capability map |
-| Taxonomy | List, get, create, update, and delete categories and tags | Subscriber to Editor |
+| Taxonomy | List/get categories and tags; create/update/delete with taxonomy-specific and per-term write checks | Subscriber for reads; Editor by default for writes |
 | Comments | List, reply, update, approve, hold, trash, or mark spam | Editor |
 | Media | List, inspect, update, upload public image URLs, set featured images, and delete media | Author or Editor |
 | Content hygiene | Find orphaned media, posts/pages missing featured images, and stuck scheduled posts | Author or Editor |
@@ -65,6 +65,20 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | Plugins, users, health, security, performance, backups, database | Audit or manage sensitive site areas with explicit admin capabilities | Administrator |
 
 For the exact ability names, input behavior, and required capabilities, use the [full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities).
+
+### Category and tag write permissions
+
+| Abilities | Required WordPress access |
+| --- | --- |
+| `create-category`, `create-tag` | Registered taxonomy's `edit_terms` capability |
+| `update-category`, `update-tag` | Taxonomy's `edit_terms` and `edit_term` for the existing term |
+| `delete-category`, `delete-tag` | Taxonomy's `delete_terms` and `delete_term` for the existing term |
+
+These names use the `webmastery-site-toolkit-for-mcp/` prefix. WordPress's final `current_user_can()` result applies, including capability mapping and site filters. Default mappings still allow Editors and Administrators to manage terms; custom mappings can grant tag management without `manage_categories`, or deny it despite that global capability. Creation intentionally requires term-editing access, not the more permissive nonhierarchical REST `assign_terms` policy. Granting a core alias such as `edit_post_tags` alone does not override WordPress's mapping of that alias.
+
+Both permission callbacks and direct execution enforce write checks. Category/tag list and get permissions are unchanged. For callers with the taxonomy capability, missing IDs or IDs from the other taxonomy still return the existing `success: false` not-found envelope. Object-policy denials now fail before writes instead of bypassing the site's restrictions.
+
+Term deletion is permanent and uses WordPress's normal relationship handling (including category reassignment). Core denies deleting the default category through `delete_term`; if site filters override that denial, an underlying `0` or `false` deletion result still returns `success: false`, never `deleted: true`. Successful deletion keeps the existing `{ "success": true, "data": { "id": 123, "deleted": true } }` shape. On a disposable site, a `delete-category` request with `{ "category_id": <default-category-ID> }` must fail and a subsequent `get-category` must still find it.
 
 ### Targeted content patching
 
