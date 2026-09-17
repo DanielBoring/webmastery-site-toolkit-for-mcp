@@ -311,6 +311,10 @@ function webmastery_mcp_e2e_write_summary( string $path, array $summary ): void 
 	file_put_contents( $path, webmastery_mcp_e2e_json( $summary ) . "\n" );
 }
 
+if ( defined( 'WEBMASTERY_MCP_E2E_CLIENT_ONLY' ) && WEBMASTERY_MCP_E2E_CLIENT_ONLY ) {
+	return;
+}
+
 $wordpress_url = rtrim( webmastery_mcp_e2e_env( 'WORDPRESS_URL', 'http://localhost' ), '/' );
 $endpoint      = webmastery_mcp_e2e_env( 'MCP_CRUD_ENDPOINT', $wordpress_url . '/wp-json/mcp/mcp-adapter-default-server' );
 $artifact_path = webmastery_mcp_e2e_env( 'MCP_CRUD_ARTIFACT', __DIR__ . '/../../e2e-artifacts/mcp-crud-summary.json' );

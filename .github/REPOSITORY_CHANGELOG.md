@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added Site Kit local-capability and delegated-permission regression coverage, required manifest scenarios, real MCP fixture checks, a separate read-only upstream permission inspector, and matching contributor/PR guidance.
 - Added fresh-process enabled/disabled WordPress trash regressions to Ability Contract QA, with persisted row/metadata/taxonomy/descendant/comment checks, deletion API/hook observation, permission/error precedence, mixed bulk outcomes, and comment-status characterization. Reject web access to the mutating runner before argument handling or WordPress bootstrap. Retain both runtime summaries as PR artifacts and add the missing affected post/page/comment trash manifest denials.
 - Added focused webmaster verification privacy/cache regressions with deterministic HTTP/DNS/plugin inspection counters, real WordPress transient/HTTP-count contract assertions, and required Subscriber/Author omission assertions in the security validator.
 - Added a private security policy and issue routing, with latest-stable security fixes and best-effort reporting expectations.
@@ -36,6 +37,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Site Kit permission regression QA now fails explicitly if its required JSON evidence cannot be written, rather than reporting success without a persisted summary.
 - Refreshed setup, CI, QA, automation, and release documentation for verified active main CI enforcement on September 17, 2026. Recorded the passing compatibility pipeline and all five approved bot PR workflows, retained routine approval requirements, and distinguished PR #140's unmerged MCP Adapter 0.6.1 candidate from main's 0.5.0 baseline. Preserved older verification dates for controls not rechecked.
 - Fixed compatibility baseline CLI parsing of the workflow's `--mcp-adapter-sha256` and `--wp-cli-sha512` options. Added real-argv fixture regressions for both metadata-generation jobs, promotion/no-op behavior, and rejection before writes without relaxing the supported-option or validation rules.
 - Limited compatibility promotion conflict detection to open pull requests so completed baseline updates do not block later auxiliary dependency updates for the same WordPress and MCP Adapter versions.

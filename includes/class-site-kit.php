@@ -101,10 +101,18 @@ class Webmastery_MCP_Site_Kit {
 	}
 
 	public static function permission_modules() {
+		if ( ! current_user_can( 'read' ) ) {
+			return new WP_Error( 'forbidden', 'Requires read capability.' );
+		}
+
 		return self::check_route_permission( self::REST_ROOT . '/core/modules/data/list' );
 	}
 
 	public static function permission_permissions() {
+		if ( ! current_user_can( 'read' ) ) {
+			return new WP_Error( 'forbidden', 'Requires read capability.' );
+		}
+
 		return self::check_route_permission(
 			self::REST_ROOT . '/core/user/data/permissions',
 			[],
@@ -113,6 +121,10 @@ class Webmastery_MCP_Site_Kit {
 	}
 
 	public static function permission_pagespeed( $input = [] ) {
+		if ( ! current_user_can( 'read' ) ) {
+			return new WP_Error( 'forbidden', 'Requires read capability.' );
+		}
+
 		return self::check_route_permission(
 			self::REST_ROOT . '/modules/pagespeed-insights/data/pagespeed',
 			[
@@ -170,7 +182,11 @@ class Webmastery_MCP_Site_Kit {
 	}
 
 	public static function execute_modules() {
-		$modules = self::dispatch_route( self::REST_ROOT . '/core/modules/data/list' );
+		if ( ! current_user_can( 'read' ) ) {
+			return new WP_Error( 'forbidden', 'Requires read capability.' );
+		}
+
+		$modules = self::dispatch_route( self::REST_ROOT . '/core/modules/data/list', [], '', true );
 		if ( is_wp_error( $modules ) ) {
 			return $modules;
 		}
@@ -187,10 +203,15 @@ class Webmastery_MCP_Site_Kit {
 	}
 
 	public static function execute_permissions() {
+		if ( ! current_user_can( 'read' ) ) {
+			return new WP_Error( 'forbidden', 'Requires read capability.' );
+		}
+
 		$permissions = self::dispatch_route(
 			self::REST_ROOT . '/core/user/data/permissions',
 			[],
-			self::PERMISSIONS_MINIMUM_VERSION
+			self::PERMISSIONS_MINIMUM_VERSION,
+			true
 		);
 		if ( is_wp_error( $permissions ) ) {
 			return $permissions;
@@ -203,12 +224,16 @@ class Webmastery_MCP_Site_Kit {
 	}
 
 	public static function execute_pagespeed( $input = [] ) {
+		if ( ! current_user_can( 'read' ) ) {
+			return new WP_Error( 'forbidden', 'Requires read capability.' );
+		}
+
 		$validated = self::validate_pagespeed_input( $input );
 		if ( is_wp_error( $validated ) ) {
 			return $validated;
 		}
 
-		$modules = self::dispatch_route( self::REST_ROOT . '/core/modules/data/list' );
+		$modules = self::dispatch_route( self::REST_ROOT . '/core/modules/data/list', [], '', true );
 		if ( is_wp_error( $modules ) ) {
 			return $modules;
 		}
@@ -233,7 +258,9 @@ class Webmastery_MCP_Site_Kit {
 
 		$result = self::dispatch_route(
 			self::REST_ROOT . '/modules/pagespeed-insights/data/pagespeed',
-			$validated
+			$validated,
+			'',
+			true
 		);
 		if ( is_wp_error( $result ) ) {
 			return $result;
@@ -334,10 +361,15 @@ class Webmastery_MCP_Site_Kit {
 		return true;
 	}
 
-	private static function dispatch_route( $path, $params = [], $minimum_version = '' ) {
+	private static function dispatch_route( $path, $params = [], $minimum_version = '', $require_permission_callback = false ) {
 		$route = self::find_route( $path, 'GET', $minimum_version );
 		if ( is_wp_error( $route ) ) {
 			return $route;
+		}
+
+		// REST dispatch skips absent permission callbacks; delegated reads must fail closed.
+		if ( $require_permission_callback && ! is_callable( $route['endpoint']['permission_callback'] ?? null ) ) {
+			return new WP_Error( 'site_kit_unsupported', 'The required Site Kit route has no usable permission check.' );
 		}
 
 		$request  = self::build_request( $path, $params, $route['url_params'] );

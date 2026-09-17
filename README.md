@@ -73,11 +73,23 @@ These optional read-only abilities use Site Kit's registered internal REST route
 | Ability | Result | Required access |
 | --- | --- | --- |
 | `webmastery-site-toolkit-for-mcp/get-site-kit-status` | Plugin/version, site connection/setup, and current-user authentication/reauthentication state | `manage_options` and Site Kit setup access |
-| `webmastery-site-toolkit-for-mcp/list-site-kit-modules` | Safe module activation, connection, sharing, and dependency state | Site Kit dashboard access, including allowed shared-dashboard users |
-| `webmastery-site-toolkit-for-mcp/get-site-kit-permissions` | Current user's normalized Site Kit capability and per-module sharing matrix | Site Kit dashboard access; Site Kit 1.82.0+ |
-| `webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed` | Curated field data, category scores, and selected audit metrics for a same-site URL | Site Kit PageSpeed datapoint access |
+| `webmastery-site-toolkit-for-mcp/list-site-kit-modules` | Safe module activation, connection, sharing, and dependency state | WordPress `read` plus Site Kit's module-list route permission |
+| `webmastery-site-toolkit-for-mcp/get-site-kit-permissions` | Current user's normalized Site Kit capability and per-module sharing matrix | WordPress `read` plus Site Kit's user-permissions route permission; retains the 1.82.0 minimum-version diagnostic when that route is missing |
+| `webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed` | Curated field data, category scores, and selected audit metrics for a same-site URL | WordPress `read` plus Site Kit's module-list and PageSpeed datapoint route permissions |
 
 Site Kit does not publish these routes as a supported third-party API. The adapter checks route availability at runtime and returns `site_kit_unavailable` or `site_kit_unsupported` instead of assuming a specific Site Kit implementation.
+
+The three delegated abilities check `read` before plugin discovery, route lookup, or upstream work in both permission and direct execution callbacks. This is a minimum, not an access grant: the exact upstream GET route must expose a callable permission check, and normal WordPress REST dispatch still enforces it. Missing providers, routes, or usable permission callbacks fail closed. Status keeps its separate `manage_options` gate, without an additional `read` requirement.
+
+**Upstream permission inspection:** the official WordPress.org Site Kit **1.187.0** package was checksum-verified and inspected on a disposable WordPress 7.1 / PHP 8.2 installation, without Google credentials or data/API calls. These are version-specific observations, not guarantees about historical or future releases:
+
+| GET route under `/google-site-kit/v1` | Site Kit 1.187.0 permission semantics |
+| --- | --- |
+| `/core/modules/data/list` | `googlesitekit_view_splash` OR `googlesitekit_view_dashboard` ([source](https://plugins.svn.wordpress.org/google-site-kit/tags/1.187.0/includes/Core/Modules/REST_Modules_Controller.php), lines 209-225) |
+| `/core/user/data/permissions` | `googlesitekit_view_splash` OR `googlesitekit_view_dashboard` ([source](https://plugins.svn.wordpress.org/google-site-kit/tags/1.187.0/includes/Core/Permissions/Permissions.php), lines 709-718) |
+| `/modules/pagespeed-insights/data/pagespeed` | Registered through the generic module/datapoint route. The resolver honors a permission-aware datapoint's own check; this version's PageSpeed definition uses the default `googlesitekit_setup` OR `googlesitekit_view_posts_insights` ([controller](https://plugins.svn.wordpress.org/google-site-kit/tags/1.187.0/includes/Core/Modules/REST_Modules_Controller.php), lines 613-623, 655-657, 1027-1058; [datapoint](https://plugins.svn.wordpress.org/google-site-kit/tags/1.187.0/includes/Modules/PageSpeed_Insights.php), lines 77-84). |
+
+These effective Site Kit capabilities incorporate setup, authentication, verification, sharing, and network rules; they are not fixed WordPress role checks. In 1.187.0 the default dynamic grants map dashboard/insights capabilities to `edit_posts` and setup/authentication to `manage_options`, with additional restrictions. The unconnected inspection allowed the administrator's route permission checks and denied an ordinary Subscriber's; no PageSpeed data request was executed. This plugin does **not** add an `edit_posts` or `manage_options` floor to the delegated abilities, so a Subscriber whom Site Kit legitimately authorizes is not excluded locally. The controlled shared-Subscriber fixture proves that local behavior, not that an ordinary Subscriber receives all real Site Kit routes. Unknown versions remain route-probed; reverify these semantics when supported upstream versions or the minimum version change. See [inspection and fixture instructions](tests/e2e/README.md#site-kit-permission-regressions).
 
 ## Requirements
 
@@ -168,8 +180,8 @@ If discovery shows fewer abilities than this repo documents, the connected WordP
 - Comment trash and comment updates with `status: "trash"` set the comment status through `wp_set_comment_status()`, retaining the row even when site trash is disabled. Media deletion remains permanent.
 - Block and partial-content edits can use hash preconditions and fail when a target is missing, ambiguous, or stale.
 - Subscriber-safe site info deliberately avoids secrets, filesystem paths, salts, auth keys, raw server internals, WordPress version, and theme version. `get-environment-info` requires `manage_options`.
+- Site Kit module, permission, and PageSpeed abilities require WordPress `read` **and** Site Kit's own REST permission callbacks, failing closed when a required route or callable permission check is absent. Status separately requires `manage_options`. Responses omit OAuth scopes/proxy details, module owner identities, raw settings, screenshots, third-party entities, and full Lighthouse payloads. PageSpeed only accepts URLs on the current site, although Google processes those requests through Site Kit's PageSpeed service.
 - Webmaster verification checks require `read`, including direct execution. Callers without `activate_plugins` receive neither `data.google.site_kit` nor `data.checks.google_site_kit`; plugin inspection is skipped and the summary counts only authorized checks. Public results, including failures and unknowns, share a 60-second cache scoped to the site, home URL, and result schema. Warm calls do not repeat HTTP/DNS work; private plugin state is inspected separately on each authorized call and is never cached with public results. Concurrent cold misses or early transient eviction can repeat work, so this is not a strict rate limit.
-- Site Kit abilities defer to Site Kit's own REST permission callbacks. They omit OAuth scopes/proxy details, module owner identities, raw settings, screenshots, third-party entities, and full Lighthouse payloads. PageSpeed only accepts URLs on the current site, although Google processes those requests through Site Kit's PageSpeed service.
 - `get-environment-info`, `plugin-audit`, `user-access-audit`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `site-health-check` are Administrator-only.
 
 Read the [full security model](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#security) before giving an agent Administrator credentials.

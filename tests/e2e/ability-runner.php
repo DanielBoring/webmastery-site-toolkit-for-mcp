@@ -385,6 +385,11 @@ function e2e_apply_case_setup( $case ) {
 
 	$restore = array();
 
+	if ( 'allow' === ( $setup['wstm125_site_kit_permission'] ?? '' ) ) {
+		add_filter( 'wstm125_site_kit_permission', '__return_true' );
+		$restore['wstm125_site_kit_permission'] = true;
+	}
+
 	if ( array_key_exists( 'active_plugins', $setup ) && is_array( $setup['active_plugins'] ) ) {
 		$restore['active_plugins'] = get_option( 'active_plugins', array() );
 		update_option( 'active_plugins', array_values( array_map( 'strval', $setup['active_plugins'] ) ) );
@@ -435,6 +440,10 @@ function e2e_apply_case_setup( $case ) {
 }
 
 function e2e_restore_case_setup( $restore ) {
+	if ( ! empty( $restore['wstm125_site_kit_permission'] ) ) {
+		remove_filter( 'wstm125_site_kit_permission', '__return_true' );
+	}
+
 	if ( array_key_exists( 'active_plugins', $restore ) ) {
 		update_option( 'active_plugins', $restore['active_plugins'] );
 	}
@@ -483,6 +492,12 @@ $editor_id     = e2e_ensure_user( 'editor_test', 'editor@test.local', 'editor' )
 $subscriber_id = e2e_ensure_user( 'subscriber_test', 'subscriber@test.local', 'subscriber' );
 $no_role_id    = e2e_ensure_user( 'no_role_test', 'no-role@test.local', 'subscriber' );
 ( new WP_User( $no_role_id ) )->set_role( '' );
+e2e_ensure_role( 'wstm125_no_read', 'Site Kit no read fixture', array( 'wstm125_site_kit_shared' ) );
+e2e_ensure_role( 'wstm125_read', 'Site Kit read fixture', array( 'wstm125_site_kit_shared', 'read' ) );
+$wstm125_no_read_id = e2e_ensure_user( 'wstm125_no_read', 'wstm125-no-read@test.local', 'wstm125_no_read' );
+$wstm125_read_id = e2e_ensure_user( 'wstm125_read', 'wstm125-read@test.local', 'wstm125_read' );
+( new WP_User( $wstm125_no_read_id ) )->set_role( 'wstm125_no_read' );
+( new WP_User( $wstm125_read_id ) )->set_role( 'wstm125_read' );
 e2e_ensure_application_password( $admin_id, 'MCP E2E App Password' );
 
 e2e_ensure_role(
@@ -843,6 +858,8 @@ set_site_transient(
 );
 
 $roles = array(
+	'wstm125_no_read' => $wstm125_no_read_id,
+	'wstm125_read' => $wstm125_read_id,
 	'admin'        => $admin_id,
 	'author'       => $author_id,
 	'editor'       => $editor_id,
@@ -855,6 +872,8 @@ $roles = array(
 	'case_manager' => $case_manager_id,
 	'user_lister'  => $user_lister_id,
 );
+
+require __DIR__ . '/site-kit-permissions-runner.php';
 
 $registered = array_filter(
 	array_keys( wp_get_abilities() ),

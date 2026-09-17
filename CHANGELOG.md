@@ -17,6 +17,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Site Kit module, permission, and PageSpeed abilities now require WordPress `read` before any upstream work, in addition to Site Kit's route authorization. Direct execution also rejects missing or unusable upstream permission callbacks. Site Kit-authorized shared-dashboard users remain eligible; status keeps its existing administrator capability gate.
 - Post, page, custom post type, and bulk post trash abilities now refuse with `trash_disabled` when WordPress trash is disabled, preventing permanent deletion behind a misleading trash-success response. Normal trash behavior, permissions, and per-ID bulk summaries are unchanged; no permanent-delete override is added.
 - Webmaster verification now omits WordPress-only Site Kit installation/activation details for callers without plugin activation permission, skips private inspection, and summarizes only authorized checks. Public checks remain available with `read`; direct execution enforces the same gate before any work.
 - Public webmaster verification results, including failures and unknowns, now share a site/home/schema-scoped 60-second cache to avoid repeated HTTP/DNS work on warm calls. Privileged plugin state remains fresh per request and is never stored in the shared public cache.
