@@ -385,6 +385,11 @@ function e2e_apply_case_setup( $case ) {
 
 	$restore = array();
 
+	if ( 'allow' === ( $setup['wstm125_site_kit_permission'] ?? '' ) ) {
+		add_filter( 'wstm125_site_kit_permission', '__return_true' );
+		$restore['wstm125_site_kit_permission'] = true;
+	}
+
 	if ( array_key_exists( 'active_plugins', $setup ) && is_array( $setup['active_plugins'] ) ) {
 		$restore['active_plugins'] = get_option( 'active_plugins', array() );
 		update_option( 'active_plugins', array_values( array_map( 'strval', $setup['active_plugins'] ) ) );
@@ -435,6 +440,10 @@ function e2e_apply_case_setup( $case ) {
 }
 
 function e2e_restore_case_setup( $restore ) {
+	if ( ! empty( $restore['wstm125_site_kit_permission'] ) ) {
+		remove_filter( 'wstm125_site_kit_permission', '__return_true' );
+	}
+
 	if ( array_key_exists( 'active_plugins', $restore ) ) {
 		update_option( 'active_plugins', $restore['active_plugins'] );
 	}
@@ -483,6 +492,12 @@ $editor_id     = e2e_ensure_user( 'editor_test', 'editor@test.local', 'editor' )
 $subscriber_id = e2e_ensure_user( 'subscriber_test', 'subscriber@test.local', 'subscriber' );
 $no_role_id    = e2e_ensure_user( 'no_role_test', 'no-role@test.local', 'subscriber' );
 ( new WP_User( $no_role_id ) )->set_role( '' );
+e2e_ensure_role( 'wstm125_no_read', 'Site Kit no read fixture', array( 'wstm125_site_kit_shared' ) );
+e2e_ensure_role( 'wstm125_read', 'Site Kit read fixture', array( 'wstm125_site_kit_shared', 'read' ) );
+$wstm125_no_read_id = e2e_ensure_user( 'wstm125_no_read', 'wstm125-no-read@test.local', 'wstm125_no_read' );
+$wstm125_read_id = e2e_ensure_user( 'wstm125_read', 'wstm125-read@test.local', 'wstm125_read' );
+( new WP_User( $wstm125_no_read_id ) )->set_role( 'wstm125_no_read' );
+( new WP_User( $wstm125_read_id ) )->set_role( 'wstm125_read' );
 e2e_ensure_application_password( $admin_id, 'MCP E2E App Password' );
 
 e2e_ensure_role(
@@ -843,10 +858,22 @@ set_site_transient(
 	)
 );
 
+require_once __DIR__ . '/patch-html-runner.php';
+wp_set_current_user( $editor_id );
+$wstm115_content = WSTM115_Patch_HTML_Tests::html_block() . WSTM115_Patch_HTML_Tests::paragraph( 'Manifest target.' );
+$fixtures['wstm115_block_post_id'] = WSTM115_Patch_HTML_Tests::seed( $wstm115_content, $editor_id );
+$fixtures['wstm115_exact_post_id'] = WSTM115_Patch_HTML_Tests::seed( $wstm115_content, $editor_id );
+$fixtures['wstm115_untouched_hash'] = hash( 'sha256', WSTM115_Patch_HTML_Tests::html_block() );
+$wstm115_filtered_editor_id = e2e_ensure_user( 'wstm115_filtered_editor', 'wstm115-filtered-editor@test.local', 'editor' );
+( new WP_User( $wstm115_filtered_editor_id ) )->add_cap( 'unfiltered_html', false );
+
 $roles = array(
+	'wstm125_no_read' => $wstm125_no_read_id,
+	'wstm125_read' => $wstm125_read_id,
 	'admin'        => $admin_id,
 	'author'       => $author_id,
 	'editor'       => $editor_id,
+	'filtered_editor' => $wstm115_filtered_editor_id,
 	'limited_editor' => $limited_editor_id,
 	'subscriber'   => $subscriber_id,
 	'no_role'      => $no_role_id,
@@ -856,6 +883,8 @@ $roles = array(
 	'case_manager' => $case_manager_id,
 	'user_lister'  => $user_lister_id,
 );
+
+require __DIR__ . '/site-kit-permissions-runner.php';
 
 $registered = array_filter(
 	array_keys( wp_get_abilities() ),
@@ -911,6 +940,8 @@ if ( $missing || $extra ) {
 	exit( 1 );
 }
 
+require_once __DIR__ . '/wstm114-verification-fixture.php';
+
 foreach ( $manifest as $case ) {
 	$case = e2e_resolve_placeholders( $case, $fixtures );
 
@@ -927,11 +958,17 @@ foreach ( $manifest as $case ) {
 
 	$ability = wp_get_ability( $ability_name );
 	$input   = e2e_resolve_placeholders( $case['input'] ?? null, $fixtures );
+	$wstm114 = 'webmastery-site-toolkit-for-mcp/webmaster-verification-status' === $ability_name
+		? wstm114_verification_prepare( $case )
+		: null;
 	$restore = e2e_apply_case_setup( $case );
 	$result  = $ability->execute( $input );
 	e2e_restore_case_setup( $restore );
 	$ok      = ! is_wp_error( $result ) && e2e_result_is_success( $result );
 	$passed  = ( 'success' === $expect && $ok ) || ( 'failure' === $expect && ! $ok );
+	if ( null !== $wstm114 ) {
+		$passed = wstm114_verification_assert( $case, $result, $wstm114 ) && $passed;
+	}
 
 	if ( $passed && ! empty( $case['expect_error_code'] ) ) {
 		$passed = $case['expect_error_code'] === e2e_result_error_code( $result );
@@ -1042,4 +1079,6 @@ $summary['taxonomy_write_regressions'] = array(
 );
 e2e_write_summary( $summary );
 
-exit( $summary['failed'] > 0 || $taxonomy_summary['failed'] > 0 ? 1 : 0 );
+$patch_html_summary = ( new WSTM115_Patch_HTML_Tests( $roles ) )->run();
+
+exit( $summary['failed'] > 0 || $patch_html_summary['failed'] > 0 || $taxonomy_summary['failed'] > 0 ? 1 : 0 );

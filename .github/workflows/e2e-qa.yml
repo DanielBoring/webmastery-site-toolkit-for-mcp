@@ -119,6 +119,15 @@ jobs:
       - name: Run Ability Contract QA
         run: bash scripts/e2e-test.sh contract
 
+      - name: Upload isolated trash safety results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trash-safety-results
+          path: e2e-artifacts/trash-safety-*.json
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Collect tested versions and contract summary
         id: versions
         if: always()
@@ -200,6 +209,15 @@ jobs:
         with:
           name: taxonomy-write-summary
           path: e2e-artifacts/taxonomy-write-summary.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload patch HTML regression evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: patch-html-regression-evidence
+          path: e2e-artifacts/patch-html-summary.json
           if-no-files-found: ignore
           retention-days: 7
 

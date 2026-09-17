@@ -311,6 +311,10 @@ function webmastery_mcp_e2e_write_summary( string $path, array $summary ): void 
 	file_put_contents( $path, webmastery_mcp_e2e_json( $summary ) . "\n" );
 }
 
+if ( defined( 'WEBMASTERY_MCP_E2E_CLIENT_ONLY' ) && WEBMASTERY_MCP_E2E_CLIENT_ONLY ) {
+	return;
+}
+
 $wordpress_url = rtrim( webmastery_mcp_e2e_env( 'WORDPRESS_URL', 'http://localhost' ), '/' );
 $endpoint      = webmastery_mcp_e2e_env( 'MCP_CRUD_ENDPOINT', $wordpress_url . '/wp-json/mcp/mcp-adapter-default-server' );
 $artifact_path = webmastery_mcp_e2e_env( 'MCP_CRUD_ARTIFACT', __DIR__ . '/../../e2e-artifacts/mcp-crud-summary.json' );
@@ -419,6 +423,24 @@ try {
 
 	$subscriber_client->initialize();
 	webmastery_mcp_e2e_pass( $summary, 'initialize subscriber MCP HTTP session' );
+
+	$wstm114 = webmastery_mcp_e2e_execute_ability(
+		$subscriber_client,
+		'webmastery-site-toolkit-for-mcp/webmaster-verification-status',
+		array(),
+		'wstm114 public verification as subscriber'
+	);
+	webmastery_mcp_e2e_assert( true === ( $wstm114['success'] ?? false ), 'wstm114 public verification did not succeed.' );
+	$wstm114_data = $wstm114['data'];
+	webmastery_mcp_e2e_assert( ! array_key_exists( 'site_kit', $wstm114_data['google'] ), 'wstm114 leaked google.site_kit through MCP.' );
+	webmastery_mcp_e2e_assert( ! array_key_exists( 'google_site_kit', $wstm114_data['checks'] ), 'wstm114 leaked checks.google_site_kit through MCP.' );
+	webmastery_mcp_e2e_assert( 7 === count( $wstm114_data['checks'] ), 'wstm114 did not return exactly the public checks.' );
+	$wstm114_summary = array( 'pass' => 0, 'warn' => 0, 'unknown' => 0 );
+	foreach ( $wstm114_data['checks'] as $wstm114_check ) {
+		++$wstm114_summary[ $wstm114_check['status'] ];
+	}
+	webmastery_mcp_e2e_assert( $wstm114_summary === $wstm114_data['summary'], 'wstm114 summary does not match public checks.' );
+	webmastery_mcp_e2e_pass( $summary, 'wstm114 public verification omits private fields through MCP' );
 
 	$denied = webmastery_mcp_e2e_execute_ability(
 		$subscriber_client,

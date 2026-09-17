@@ -30,48 +30,33 @@ class Webmastery_MCP_Webmaster_Verification {
 	}
 
 	public static function execute( $input = array() ) {
-		$home_url      = home_url( '/' );
-		$home_response = self::request_url( $home_url );
-		$home_reached  = self::is_success_response( $home_response );
+		$permission = self::permission();
+		if ( is_wp_error( $permission ) ) {
+			return $permission;
+		}
 
-		$checks = array(
-			'google_site_kit'       => self::check_google_site_kit(),
-			'google_homepage_meta'  => self::check_meta_tag(
-				$home_response,
-				'google-site-verification',
-				'Google homepage verification meta tag'
-			),
-			'bing_homepage_meta'    => self::check_meta_tag(
-				$home_response,
-				'msvalidate.01',
-				'Bing homepage verification meta tag'
-			),
-			'bing_site_auth_xml'    => self::check_bing_site_auth_xml(),
-			'dns_txt_verification'  => self::check_dns_txt_records(),
-			'robots_txt'            => self::check_robots_txt(),
-			'account_verification'  => self::result(
-				'unknown',
-				'Google Search Console and Bing Webmaster Tools account verification cannot be confirmed from public signals.',
-				'API-backed account confirmation would require OAuth/API credentials and a separate security model.'
-			),
-		);
-
-		$sitemap_checks = self::check_sitemaps( $checks['robots_txt']['sitemap_urls'] );
-		$checks         = array_merge( $checks, $sitemap_checks );
-		$summary        = self::summarize( $checks );
+		$home_url = home_url( '/' );
+		$public   = self::public_checks( $home_url );
+		$checks   = $public['checks'];
+		$google   = array();
+		if ( current_user_can( 'activate_plugins' ) ) {
+			$site_kit           = self::check_google_site_kit();
+			$checks             = array_merge( array( 'google_site_kit' => $site_kit ), $checks );
+			$google['site_kit'] = $site_kit;
+		}
+		$summary = self::summarize( $checks );
 
 		return array(
 			'success' => true,
 			'data'    => array(
 				'home_url'    => $home_url,
-				'home_reached' => $home_reached,
+				'home_reached' => $public['home_reached'],
 				'summary'     => $summary,
 				'checks'      => $checks,
-				'google'      => array(
-					'site_kit'             => $checks['google_site_kit'],
+				'google'      => array_merge( $google, array(
 					'homepage_meta'        => $checks['google_homepage_meta'],
 					'account_verification' => $checks['account_verification'],
-				),
+				) ),
 				'bing'        => array(
 					'homepage_meta'        => $checks['bing_homepage_meta'],
 					'site_auth_xml'        => $checks['bing_site_auth_xml'],
@@ -87,6 +72,45 @@ class Webmastery_MCP_Webmaster_Verification {
 				),
 			),
 		);
+	}
+
+	private static function public_checks( $home_url ) {
+		// The schema version and site/home scope keep shared public results separate.
+		$cache_key = 'webmastery_mcp_verification_v1_' . hash( 'sha256', get_current_blog_id() . ':' . $home_url );
+		$cached    = get_transient( $cache_key );
+		if ( false !== $cached ) {
+			return $cached;
+		}
+
+		$home_response = self::request_url( $home_url );
+		$checks        = array(
+			'google_homepage_meta' => self::check_meta_tag(
+				$home_response,
+				'google-site-verification',
+				'Google homepage verification meta tag'
+			),
+			'bing_homepage_meta'   => self::check_meta_tag(
+				$home_response,
+				'msvalidate.01',
+				'Bing homepage verification meta tag'
+			),
+			'bing_site_auth_xml'   => self::check_bing_site_auth_xml(),
+			'dns_txt_verification' => self::check_dns_txt_records(),
+			'robots_txt'           => self::check_robots_txt(),
+			'account_verification' => self::result(
+				'unknown',
+				'Google Search Console and Bing Webmaster Tools account verification cannot be confirmed from public signals.',
+				'API-backed account confirmation would require OAuth/API credentials and a separate security model.'
+			),
+		);
+		$public        = array(
+			'home_reached' => self::is_success_response( $home_response ),
+			'checks'       => array_merge( $checks, self::check_sitemaps( $checks['robots_txt']['sitemap_urls'] ) ),
+		);
+
+		// Cache failures too, but never cache private checks or a caller's summary.
+		set_transient( $cache_key, $public, 60 );
+		return $public;
 	}
 
 	private static function check_google_site_kit() {
