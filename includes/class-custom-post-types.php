@@ -669,7 +669,7 @@ class Webmastery_MCP_Custom_Post_Types {
 			self::ability_name( 'delete', $ability_base ),
 			[
 				'label'               => "Delete {$label}",
-				'description'         => "Move a {$label} custom post type item to trash.",
+				'description'         => "Move a {$label} custom post type item to trash. Refuses to delete when site trash is disabled.",
 				'category'            => self::NAMESPACE,
 				'input_schema'        => [
 					'type'       => 'object',
@@ -687,6 +687,10 @@ class Webmastery_MCP_Custom_Post_Types {
 					}
 					if ( ! current_user_can( self::cap( $post_type_object, 'delete_post' ), $id ) ) {
 						return self::error_response( 'forbidden', 'You do not have permission to delete this custom post type item.' );
+					}
+
+					if ( defined( 'EMPTY_TRASH_DAYS' ) && ! EMPTY_TRASH_DAYS ) {
+						return self::error_response( 'trash_disabled', 'Trash is disabled on this site; the custom post type item was not deleted.' );
 					}
 
 					$result = wp_trash_post( $id );
