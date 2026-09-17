@@ -8,7 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
-- Added taxonomy write regression QA for all six write abilities: default roles, remapped capabilities, WordPress alias/filter semantics, per-term denials, unchanged persisted data/hooks on denial, not-found precedence, and truthful default-category deletion. Contract QA retains a dedicated JSON summary; unit tests separately force rare zero/false/storage-error return paths. Security manifest validation now requires negative coverage for all six writes.
+- Added taxonomy write regression QA for all six write abilities: default roles, remapped capabilities, WordPress alias/filter semantics, per-term denials, unchanged persisted data/hooks on denial, not-found precedence, and truthful default-category deletion. Contract CI always attempts to retain the dedicated synthetic-fixture JSON summary for seven days, including failed runs when available; unit tests separately force rare zero/false/storage-error return paths. Security manifest validation now requires negative coverage for all six writes.
 
 - Added a private security policy and issue routing, with latest-stable security fixes and best-effort reporting expectations.
 - Added stable fail-closed PR gates, PHP 8.4 coverage, retained Docker summaries, and dedicated workflow/shell security linting.
