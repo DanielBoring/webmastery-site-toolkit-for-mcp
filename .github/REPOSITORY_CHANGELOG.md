@@ -35,6 +35,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Site Kit permission regression QA now fails explicitly if its required JSON evidence cannot be written, rather than reporting success without a persisted summary.
 - Fixed compatibility baseline CLI parsing of the workflow's `--mcp-adapter-sha256` and `--wp-cli-sha512` options. Added real-argv fixture regressions for both metadata-generation jobs, promotion/no-op behavior, and rejection before writes without relaxing the supported-option or validation rules.
 - Limited compatibility promotion conflict detection to open pull requests so completed baseline updates do not block later auxiliary dependency updates for the same WordPress and MCP Adapter versions.
 - Made the case-study listing fixture use explicit ID ordering so expected results do not depend on whether setup spans a timestamp boundary.

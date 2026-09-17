@@ -117,10 +117,14 @@ try {
 	wp_set_current_user( $wstm125_original_user );
 }
 $wstm125_failed = count( array_filter( $wstm125_results, static function ( $case ) { return ! $case['passed']; } ) );
-file_put_contents(
-	WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/e2e-artifacts/issue125-permission-summary.json',
+$wstm125_summary_path = WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/e2e-artifacts/issue125-permission-summary.json';
+$wstm125_written = file_put_contents(
+	$wstm125_summary_path,
 	wp_json_encode( array( 'passed' => count( $wstm125_results ) - $wstm125_failed, 'failed' => $wstm125_failed, 'cases' => $wstm125_results ), JSON_PRETTY_PRINT )
 );
+if ( false === $wstm125_written ) {
+	throw new RuntimeException( "Could not write Site Kit permission regression summary: {$wstm125_summary_path}" );
+}
 if ( $wstm125_failed ) {
 	throw new RuntimeException( "{$wstm125_failed} Site Kit permission regression cases failed." );
 }
