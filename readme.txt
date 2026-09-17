@@ -96,6 +96,14 @@ The connected WordPress site may be running an older plugin version. Update the 
 The complete ability reference and client setup guide are maintained at:
 https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
 
+= What do the security and database diagnostics reveal? =
+
+Both abilities require manage_options. The security audit's ssl finding checks the configured public home option, respecting normal option filters and WP_HOME: HTTPS passes, HTTP fails, and malformed or unknown schemes warn. The MCP request scheme and admin-only TLS policy do not determine this finding. It does not verify certificates, reachability, redirects, or the final filtered front-end URL.
+
+Debug-log findings omit filesystem paths. Enabled logging warns that access is unverified, even when a neighboring .htaccess file exists or the location is outside wp-content; neither proves that web access is denied. Disabled logging still passes. Necessary logging need not be disabled merely because it is enabled.
+
+Database query failures return a contextual database_health_query_failed error without raw SQL/server error details, leaving WordPress's own logging unchanged. Successful table-size reports still return prefixed table names, including matching plugin tables. These Administrator-only diagnostics are not fully redacted.
+
 = How do I report a security vulnerability? =
 
 Report suspected vulnerabilities privately at https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/advisories/new rather than in public issues or support threads. Include affected versions, the ability, the minimum required role, and reproduction steps on a test site. Do not include credentials or private site data.
@@ -103,6 +111,12 @@ Report suspected vulnerabilities privately at https://github.com/DanielBoring/we
 Security fixes target the latest stable release. Reports receive a best-effort response without a guaranteed deadline. See https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/policy for the full policy.
 
 == Changelog ==
+
+= Unreleased =
+
+* Report the configured public home URL scheme independently of the MCP request and admin-only TLS policy.
+* Omit debug-log paths and warn when log access is unverified rather than claiming protection.
+* Omit raw database errors while retaining failure context; successful table reports still include prefixed table names.
 
 = 2.5.0 =
 * Expand targeted content patching to pages and public editor-enabled custom post types with object-level permissions and explicit unsupported-type errors.

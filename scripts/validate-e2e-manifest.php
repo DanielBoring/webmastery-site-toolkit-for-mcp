@@ -84,6 +84,22 @@ foreach ( $manifest as $index => $case ) {
 		$errors[] = webmastery_mcp_manifest_path( $case_number, 'expect' ) . ' must be success or failure.';
 	}
 
+	if ( isset( $case['assert_diagnostic_findings'] ) ) {
+		$findings = $case['assert_diagnostic_findings'];
+		if ( ! is_array( $findings ) || ! $findings || 'webmastery-site-toolkit-for-mcp/security-audit' !== $ability ) {
+			$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_diagnostic_findings' ) . ' must be a nonempty security-audit check map.';
+		} else {
+			foreach ( $findings as $check => $finding ) {
+				if ( ! is_string( $check ) || ! is_array( $finding )
+					|| ! in_array( $finding['bucket'] ?? null, array( 'pass', 'warn', 'fail' ), true )
+					|| ! is_string( $finding['label'] ?? null ) || '' === $finding['label']
+					|| array( 'bucket', 'label' ) !== array_keys( $finding ) ) {
+					$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_diagnostic_findings' ) . ' requires bucket and label for each check.';
+				}
+			}
+		}
+	}
+
 	$role = (string) ( $case['role'] ?? 'subscriber' );
 	if ( ! isset( $allowed_roles[ $role ] ) ) {
 		$errors[] = webmastery_mcp_manifest_path( $case_number, 'role' ) . " uses unknown role: {$role}";

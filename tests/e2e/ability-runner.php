@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/diagnostics-fixture.php';
+
 function e2e_ensure_user( $login, $email, $role ) {
 	$user = get_user_by( 'login', $login );
 	if ( $user ) {
@@ -385,6 +387,10 @@ function e2e_apply_case_setup( $case ) {
 
 	$restore = array();
 
+	if ( isset( $setup['diagnostics'] ) ) {
+		$restore['diagnostics'] = new Webmastery_MCP_Diagnostics_Fixture( $setup['diagnostics'] );
+	}
+
 	if ( array_key_exists( 'active_plugins', $setup ) && is_array( $setup['active_plugins'] ) ) {
 		$restore['active_plugins'] = get_option( 'active_plugins', array() );
 		update_option( 'active_plugins', array_values( array_map( 'strval', $setup['active_plugins'] ) ) );
@@ -435,6 +441,9 @@ function e2e_apply_case_setup( $case ) {
 }
 
 function e2e_restore_case_setup( $restore ) {
+	if ( isset( $restore['diagnostics'] ) ) {
+		$restore['diagnostics']->restore();
+	}
 	if ( array_key_exists( 'active_plugins', $restore ) ) {
 		update_option( 'active_plugins', $restore['active_plugins'] );
 	}
@@ -927,8 +936,11 @@ foreach ( $manifest as $case ) {
 	$ability = wp_get_ability( $ability_name );
 	$input   = e2e_resolve_placeholders( $case['input'] ?? null, $fixtures );
 	$restore = e2e_apply_case_setup( $case );
-	$result  = $ability->execute( $input );
-	e2e_restore_case_setup( $restore );
+	try {
+		$result = $ability->execute( $input );
+	} finally {
+		e2e_restore_case_setup( $restore );
+	}
 	$ok      = ! is_wp_error( $result ) && e2e_result_is_success( $result );
 	$passed  = ( 'success' === $expect && $ok ) || ( 'failure' === $expect && ! $ok );
 
@@ -964,6 +976,23 @@ foreach ( $manifest as $case ) {
 		foreach ( (array) $case['assert_values'] as $path => $expected_value ) {
 			$actual_value = e2e_get_path_value( $result, $path, $exists );
 			if ( ! $exists || $expected_value !== $actual_value ) {
+				$passed = false;
+				break;
+			}
+		}
+	}
+
+	if ( $passed && isset( $case['assert_diagnostic_findings'] ) ) {
+		foreach ( $case['assert_diagnostic_findings'] as $check => $expected ) {
+			$findings = array();
+			foreach ( array( 'pass', 'warn', 'fail' ) as $bucket ) {
+				foreach ( $result['data'][ $bucket ] ?? array() as $finding ) {
+					if ( $check === ( $finding['check'] ?? '' ) ) {
+						$findings[] = array( 'bucket' => $bucket, 'label' => $finding['label'] );
+					}
+				}
+			}
+			if ( array( $expected ) !== $findings ) {
 				$passed = false;
 				break;
 			}

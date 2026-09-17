@@ -42,13 +42,13 @@ class Webmastery_MCP_Security {
 
 		// Debug log
 		if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
-			$log_path            = is_string( WP_DEBUG_LOG ) ? WP_DEBUG_LOG : WP_CONTENT_DIR . '/debug.log';
-			$publicly_accessible = str_starts_with( $log_path, WP_CONTENT_DIR )
+			$log_path         = is_string( WP_DEBUG_LOG ) ? WP_DEBUG_LOG : WP_CONTENT_DIR . '/debug.log';
+			$unprotected_hint = str_starts_with( $log_path, WP_CONTENT_DIR )
 				&& ! file_exists( dirname( $log_path ) . '/.htaccess' );
-			if ( $publicly_accessible ) {
-				$warn[] = [ 'check' => 'debug_log', 'label' => 'Debug log may be publicly accessible', 'detail' => 'Protect ' . esc_html( $log_path ) . ' with .htaccess or move it outside the web root.' ];
+			if ( $unprotected_hint ) {
+				$warn[] = [ 'check' => 'debug_log', 'label' => 'Debug log may be publicly accessible', 'detail' => 'The configured log location appears to be inside wp-content without a neighboring .htaccess file. Verify server access rules or move the log outside the web root. Public access has not been tested.' ];
 			} else {
-				$pass[] = [ 'check' => 'debug_log', 'label' => 'Debug log is protected or outside web root' ];
+				$warn[] = [ 'check' => 'debug_log', 'label' => 'Debug log access is unverified', 'detail' => 'A neighboring .htaccess file or a location outside wp-content does not prove that web access is denied. Verify server access rules and the log location relative to the web root.' ];
 			}
 		} else {
 			$pass[] = [ 'check' => 'debug_log', 'label' => 'Debug logging is disabled' ];
@@ -61,11 +61,16 @@ class Webmastery_MCP_Security {
 			$warn[] = [ 'check' => 'file_editor', 'label' => 'Theme/plugin file editor is enabled', 'detail' => 'Add define(\'DISALLOW_FILE_EDIT\', true) to wp-config.php to prevent file editing via admin.' ];
 		}
 
-		// SSL
-		if ( is_ssl() ) {
-			$pass[] = [ 'check' => 'ssl', 'label' => 'Site is served over HTTPS' ];
+		// Read configuration directly: home_url() can change its scheme based on the current request.
+		$home_url    = get_option( 'home' );
+		$home_parts  = is_string( $home_url ) && ! preg_match( '/[\x00-\x20\x7f]/', $home_url ) ? wp_parse_url( $home_url ) : false;
+		$home_scheme = is_array( $home_parts ) && ! empty( $home_parts['host'] ) ? strtolower( $home_parts['scheme'] ?? '' ) : '';
+		if ( 'https' === $home_scheme ) {
+			$pass[] = [ 'check' => 'ssl', 'label' => 'Public home URL is configured to use HTTPS' ];
+		} elseif ( 'http' === $home_scheme ) {
+			$fail[] = [ 'check' => 'ssl', 'label' => 'Public home URL is configured to use HTTP', 'detail' => 'Review the public home URL configuration. This check does not test certificates, reachability, or HTTPS redirects.' ];
 		} else {
-			$fail[] = [ 'check' => 'ssl', 'label' => 'Site is not using HTTPS', 'detail' => 'Install an SSL certificate and redirect all traffic to HTTPS.' ];
+			$warn[] = [ 'check' => 'ssl', 'label' => 'Public home URL scheme is unknown', 'detail' => 'The home option is not a recognized absolute HTTP or HTTPS URL. Review its configuration; transport security has not been tested.' ];
 		}
 
 		// Admin username
