@@ -75,4 +75,32 @@ function esc_url_raw( $url ): string {
 	return filter_var( $url, FILTER_VALIDATE_URL ) ? $url : '';
 }
 
+/**
+ * Minimal, test-controlled taxonomy stubs used only by CustomPostTypesHelpersTest.
+ *
+ * $GLOBALS['wstm_test_taxonomies'] maps a taxonomy name to either `false` (not
+ * registered) or an object with an `object_types` array and a `cap->assign_terms`
+ * capability name, mirroring the subset of `get_taxonomy()`/`is_object_in_taxonomy()`
+ * behavior that `validate_taxonomy_terms()` relies on.
+ *
+ * $GLOBALS['wstm_test_user_caps'] lists the capabilities the fake current user has.
+ */
+function get_taxonomy( $taxonomy ) {
+	return $GLOBALS['wstm_test_taxonomies'][ $taxonomy ] ?? false;
+}
+
+function is_object_in_taxonomy( $post_type, $taxonomy ) {
+	$taxonomy_object = $GLOBALS['wstm_test_taxonomies'][ $taxonomy ] ?? false;
+	if ( ! $taxonomy_object ) {
+		return false;
+	}
+
+	return in_array( $post_type, $taxonomy_object->object_types ?? array(), true );
+}
+
+function current_user_can( $capability ) {
+	return in_array( $capability, $GLOBALS['wstm_test_user_caps'] ?? array(), true );
+}
+
 require_once dirname(__DIR__, 2) . '/includes/class-posts.php';
+require_once dirname(__DIR__, 2) . '/includes/class-custom-post-types.php';
