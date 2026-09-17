@@ -177,6 +177,39 @@ class Webmastery_MCP_Posts {
 		return ! is_protected_meta( $key, 'post' ) || isset( self::allowed_protected_post_meta_keys()[ $key ] );
 	}
 
+	private static function uses_post_meta_compatibility_auth( $key, $type ) {
+		return isset( self::allowed_protected_post_meta_keys()[ $key ] )
+			&& ! isset( get_registered_meta_keys( 'post' )[ $key ] )
+			&& ! isset( get_registered_meta_keys( 'post', $type )[ $key ] )
+			&& ! has_filter( "auth_post_meta_{$key}" )
+			&& ! has_filter( "auth_post_meta_{$key}_for_{$type}" )
+			&& ! has_filter( "auth_post_{$type}_meta_{$key}" );
+	}
+
+	private static function can_edit_post_meta_key( $post_id, $key, $cap = 'edit_post_meta' ) {
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return false;
+		}
+
+		$type = get_post_type( $post_id );
+		if ( ! self::uses_post_meta_compatibility_auth( $key, $type ) ) {
+			return current_user_can( $cap, $post_id, $key );
+		}
+
+		// Unregistered SEO keys need a protected-key default, not a bypass of core capability filters.
+		$hook    = "auth_post_meta_{$key}_for_{$type}";
+		$user_id = get_current_user_id();
+		$allow   = static function ( $allowed, $meta_key, $object_id, $checked_user_id, $checked_cap ) use ( $key, $post_id, $user_id, $cap ) {
+			return $key === $meta_key && $post_id === $object_id && $user_id === $checked_user_id && $cap === $checked_cap ? true : $allowed;
+		};
+		add_filter( $hook, $allow, 10, 5 );
+		try {
+			return current_user_can( $cap, $post_id, $key );
+		} finally {
+			remove_filter( $hook, $allow, 10 );
+		}
+	}
+
 	private static function normalize_post_meta_value( $value, $depth = 0 ) {
 		if ( $depth > self::POST_META_VALUE_MAX_DEPTH ) {
 			return new WP_Error( 'invalid_meta_value', 'meta_value nesting is too deep.' );
@@ -344,7 +377,7 @@ class Webmastery_MCP_Posts {
 	}
 
 	private static function registered_rest_meta_keys( $type ) {
-		$registered = get_registered_meta_keys( 'post', $type );
+		$registered = array_merge( get_registered_meta_keys( 'post' ), get_registered_meta_keys( 'post', $type ) );
 		$keys       = [];
 
 		foreach ( $registered as $key => $args ) {
@@ -356,7 +389,7 @@ class Webmastery_MCP_Posts {
 		return $keys;
 	}
 
-	private static function prepare_meta_writes( $input, $type ) {
+	private static function prepare_meta_writes( $input, $type, $post_id = 0 ) {
 		$requested = [];
 
 		if ( isset( $input['meta'] ) && is_array( $input['meta'] ) ) {
@@ -508,6 +541,23 @@ class Webmastery_MCP_Posts {
 				'key'    => $key,
 				'reason' => is_protected_meta( $key, 'post' ) ? 'unsupported_protected_meta' : 'not_registered_for_rest',
 			];
+		}
+
+		foreach ( $prepared['writes'] as $key => $value ) {
+			$reason = '';
+			if ( $post_id ) {
+				// Like core REST, an upsert uses edit_post_meta even when update_post_meta adds the first row.
+				if ( ! self::can_edit_post_meta_key( $post_id, $key ) ) {
+					$reason = 'forbidden';
+				}
+			}
+			if ( $reason ) {
+				unset( $prepared['writes'][ $key ] );
+				$prepared['not_written'][] = [
+					'key'    => $key,
+					'reason' => $reason,
+				];
+			}
 		}
 
 		return $prepared;
@@ -1690,7 +1740,7 @@ class Webmastery_MCP_Posts {
 		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key,WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Ability schema and response field names, not query arguments.
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-post-meta', [
 			'label'               => 'Get Post Meta',
-			'description'         => 'Get allowed custom field values for a post. Protected keys are hidden unless explicitly allowlisted by the plugin.',
+			'description'         => 'Get custom field values the caller can edit for this post. Listings omit unauthorized keys; explicit requests fail. Protected keys also require the plugin allowlist.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
@@ -1721,12 +1771,15 @@ class Webmastery_MCP_Posts {
 					if ( ! self::can_access_post_meta_key( $key ) ) {
 						return self::error_response( 'protected_meta_key', 'Protected meta keys are denied unless explicitly allowlisted.' );
 					}
+					if ( ! self::can_edit_post_meta_key( $post_id, $key ) ) {
+						return self::error_response( 'forbidden', 'You do not have permission to read this meta key.' );
+					}
 
 					$meta[ $key ] = array_map( [ self::class, 'normalize_post_meta_response_value' ], get_post_meta( $post_id, $key, false ) );
 				} else {
 					foreach ( get_post_meta( $post_id ) as $key => $values ) {
 						$key = (string) $key;
-						if ( ! self::can_access_post_meta_key( $key ) ) {
+						if ( ! self::can_access_post_meta_key( $key ) || ! self::can_edit_post_meta_key( $post_id, $key ) ) {
 							continue;
 						}
 
@@ -1786,6 +1839,9 @@ class Webmastery_MCP_Posts {
 				}
 				if ( ! self::can_access_post_meta_key( $key ) ) {
 					return self::error_response( 'protected_meta_key', 'Protected meta keys are denied unless explicitly allowlisted.' );
+				}
+				if ( ! self::can_edit_post_meta_key( $post_id, $key ) ) {
+					return self::error_response( 'forbidden', 'You do not have permission to update this meta key.' );
 				}
 
 				$value = self::prepare_post_meta_update_value( $key, $input['meta_value'] ?? null );
@@ -1848,6 +1904,9 @@ class Webmastery_MCP_Posts {
 				}
 				if ( ! self::can_access_post_meta_key( $key ) ) {
 					return self::error_response( 'protected_meta_key', 'Protected meta keys are denied unless explicitly allowlisted.' );
+				}
+				if ( ! self::can_edit_post_meta_key( $post_id, $key, 'delete_post_meta' ) ) {
+					return self::error_response( 'forbidden', 'You do not have permission to delete this meta key.' );
 				}
 
 				$before_count  = count( get_post_meta( $post_id, $key, false ) );
@@ -2112,7 +2171,7 @@ class Webmastery_MCP_Posts {
 					return [ 'success' => false, 'error' => 'You do not have permission to publish this ' . $type . '.' ];
 				}
 
-				$meta_writes = self::prepare_meta_writes( $input, $type );
+				$meta_writes = self::prepare_meta_writes( $input, $type, $id );
 				if ( ! empty( $meta_writes['not_written'] ) ) {
 					return self::meta_write_error_response( $meta_writes );
 				}
