@@ -75,17 +75,23 @@ function e2e_delete_term_by_slug( $slug, $taxonomy ) {
 	}
 }
 
-function e2e_insert_post( $type, $title, $content, $author_id, $status = 'publish' ) {
-	$id = wp_insert_post(
-		array(
-			'post_type'    => $type,
-			'post_title'   => $title,
-			'post_content' => $content,
-			'post_status'  => $status,
-			'post_author'  => $author_id,
-		),
-		true
+function e2e_insert_post( $type, $title, $content, $author_id, $status = 'publish', $slug = '' ) {
+	$post_args = array(
+		'post_type'    => $type,
+		'post_title'   => $title,
+		'post_content' => $content,
+		'post_status'  => $status,
+		'post_author'  => $author_id,
 	);
+
+	// An explicit slug gives regression fixtures (e.g. wstm107_*) a
+	// deterministic post_name to assert against, instead of relying on
+	// WordPress's auto-generated slug from the title.
+	if ( '' !== $slug ) {
+		$post_args['post_name'] = $slug;
+	}
+
+	$id = wp_insert_post( $post_args, true );
 
 	if ( is_wp_error( $id ) ) {
 		throw new RuntimeException( $id->get_error_message() );
@@ -668,7 +674,7 @@ $fixtures['book_id']         = e2e_insert_post( 'mcp_book', 'MCP E2E Book', 'Con
 $fixtures['private_book_id'] = e2e_insert_post( 'mcp_book', 'MCP E2E Private Book', 'Private CPT fixture.', $book_manager_id, 'private' );
 $fixtures['trash_filter_book_id'] = e2e_insert_post( 'mcp_book', 'MCP E2E Trash Filter Book', 'Trash CPT fixture.', $book_manager_id, 'draft' );
 $fixtures['delete_book_id']  = e2e_insert_post( 'mcp_book', 'MCP E2E Delete Book', 'Delete CPT fixture.', $book_manager_id );
-$fixtures['wstm107_book_id'] = e2e_insert_post( 'mcp_book', 'WSTM107 Taxonomy Guard Book', 'Original content for taxonomy guard book.', $book_manager_id, 'draft' );
+$fixtures['wstm107_book_id'] = e2e_insert_post( 'mcp_book', 'WSTM107 Taxonomy Guard Book', 'Original content for taxonomy guard book.', $book_manager_id, 'draft', 'wstm107-taxonomy-guard-book' );
 $fixtures['case_id']         = e2e_insert_post( 'mcp_case_study', 'MCP E2E Case Study', 'Content for MCP E2E case study.', $case_manager_id );
 $fixtures['delete_case_id']  = e2e_insert_post( 'mcp_case_study', 'MCP E2E Delete Case Study', 'Delete CPT fixture.', $case_manager_id );
 $fixtures['block_path_page_id'] = e2e_insert_post(

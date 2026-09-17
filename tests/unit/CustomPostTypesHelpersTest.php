@@ -96,6 +96,26 @@ final class CustomPostTypesHelpersTest extends TestCase {
 		$this->assertSame( 'invalid_taxonomy', $result->get_error_code() );
 	}
 
+	public function test_mixed_allowed_and_forbidden_registered_taxonomy_payload_is_rejected(): void {
+		self::register_taxonomy( 'mcp_genre', array( 'mcp_book' ), 'assign_mcp_genres' );
+		self::register_taxonomy( 'wstm107_restricted_shelf', array( 'mcp_book' ), 'assign_wstm107_restricted_shelves' );
+		$GLOBALS['wstm_test_user_caps'] = array( 'assign_mcp_genres' );
+
+		$result = self::call_private(
+			'validate_taxonomy_terms',
+			array(
+				'mcp_book',
+				array(
+					'mcp_genre'                 => array( 1 ),
+					'wstm107_restricted_shelf'  => array( 2 ),
+				),
+			)
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'forbidden', $result->get_error_code() );
+	}
+
 	public function test_valid_taxonomy_with_assign_capability_passes(): void {
 		self::register_taxonomy( 'mcp_genre', array( 'mcp_book' ), 'assign_mcp_genres' );
 		$GLOBALS['wstm_test_user_caps'] = array( 'assign_mcp_genres' );
