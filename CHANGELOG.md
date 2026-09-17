@@ -17,7 +17,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
-- Security audit HTTPS findings now describe the configured public home URL rather than the MCP request or admin-only TLS policy; malformed configuration is explicitly unknown.
+- Security audit HTTPS findings now describe the configured public home URL rather than the MCP request or admin-only TLS policy. Missing/unsupported schemes or hosts, whitespace/control characters, malformed percent escapes, and invalid authority syntax are explicitly unknown; this is a local syntax guard, not full URL or DNS validation.
 - Debug-log findings no longer disclose filesystem paths and warn when access is unverified instead of treating a neighboring `.htaccess` file or a location outside `wp-content` as proof of protection.
 - Database health query errors retain their error code and context without raw database error details. Successful reports still return prefixed table identifiers, including matching plugin tables; identifier redaction is deferred.
 - Custom post type update abilities now validate requested taxonomy assignments (registration and assign-terms permission) before saving title, content, or status changes, matching the create ability's behavior. Invalid or unauthorized taxonomy requests are now rejected before any changes are persisted, instead of after the post was already updated.

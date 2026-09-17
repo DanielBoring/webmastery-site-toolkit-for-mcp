@@ -98,7 +98,7 @@ https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
 
 = What do the security and database diagnostics reveal? =
 
-Both abilities require manage_options. The security audit's ssl finding checks the configured public home option, respecting normal option filters and WP_HOME: HTTPS passes, HTTP fails, and malformed or unknown schemes warn. The MCP request scheme and admin-only TLS policy do not determine this finding. It does not verify certificates, reachability, redirects, or the final filtered front-end URL.
+Both abilities require manage_options. The security audit's ssl finding checks the configured public home option, respecting normal option filters and WP_HOME: recognized HTTPS passes and HTTP fails. Missing/unsupported schemes or hosts, whitespace/control characters, malformed percent escapes, and invalid authority syntax warn as unknown. This local syntax guard preserves local names, Unicode/IDN forms, escaped components, and bracketed IPv6 (including escaped zone IDs) or IPvFuture literals. It is not a complete URL, DNS-name, or internationalized-name validator and imposes no address-routability policy. The MCP request scheme and admin-only TLS policy do not determine this finding. It does not verify certificates, reachability, redirects, or the final filtered front-end URL.
 
 Debug-log findings omit filesystem paths. Enabled logging warns that access is unverified, even when a neighboring .htaccess file exists or the location is outside wp-content; neither proves that web access is denied. Disabled logging still passes. Necessary logging need not be disabled merely because it is enabled.
 
@@ -115,6 +115,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 = Unreleased =
 
 * Report the configured public home URL scheme independently of the MCP request and admin-only TLS policy.
+* Warn on malformed percent escapes or authority syntax without rejecting valid local, internationalized, or IPv6 configurations.
 * Omit debug-log paths and warn when log access is unverified rather than claiming protection.
 * Omit raw database errors while retaining failure context; successful table reports still include prefixed table names.
 

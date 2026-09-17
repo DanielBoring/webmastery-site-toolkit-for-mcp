@@ -9,6 +9,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 ### Added
 
 - Added focused diagnostic configuration/privacy regression coverage, scoped database-error fixtures, and permission cases while preserving the existing table-identifier contract.
+- Added paired diagnostic authority-syntax cases covering malformed escapes and valid local, internationalized, escaped, and IP-literal configurations without modifying the original diagnostic proof runner.
 - Added a private security policy and issue routing, with latest-stable security fixes and best-effort reporting expectations.
 - Added stable fail-closed PR gates, PHP 8.4 coverage, retained Docker summaries, and dedicated workflow/shell security linting.
 - Added verified test-dependency pins and compatibility promotion checks, including current-toolchain package coverage.

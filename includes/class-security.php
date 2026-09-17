@@ -62,9 +62,7 @@ class Webmastery_MCP_Security {
 		}
 
 		// Read configuration directly: home_url() can change its scheme based on the current request.
-		$home_url    = get_option( 'home' );
-		$home_parts  = is_string( $home_url ) && ! preg_match( '/[\x00-\x20\x7f]/', $home_url ) ? wp_parse_url( $home_url ) : false;
-		$home_scheme = is_array( $home_parts ) && ! empty( $home_parts['host'] ) ? strtolower( $home_parts['scheme'] ?? '' ) : '';
+		$home_scheme = self::configured_home_scheme( get_option( 'home' ) );
 		if ( 'https' === $home_scheme ) {
 			$pass[] = [ 'check' => 'ssl', 'label' => 'Public home URL is configured to use HTTPS' ];
 		} elseif ( 'http' === $home_scheme ) {
@@ -145,5 +143,31 @@ class Webmastery_MCP_Security {
 				'pass' => $pass,
 			],
 		];
+	}
+
+	private static function configured_home_scheme( $home_url ) {
+		if ( ! is_string( $home_url ) || preg_match( '/[\x00-\x20\x7f]|%(?![0-9a-f]{2})/i', $home_url ) ) {
+			return '';
+		}
+
+		$parts      = wp_parse_url( $home_url );
+		$name_chars = 'a-z0-9._~!$&\'()*+,;=%\x80-\xff\-';
+		$authority  = '#\Ahttps?://(?:[' . $name_chars . ':]*@)?(\[[^\]]+\]|[' . $name_chars . ']+)(?::[0-9]*)?(?:[/?\#]|\z)#i';
+		if ( ! is_array( $parts ) || ! preg_match( $authority, $home_url, $matches ) ) {
+			return '';
+		}
+
+		$host = $matches[1];
+		if ( '[' === $host[0] ) {
+			$literal = substr( $host, 1, -1 );
+			// Scoped IPv6 uses an escaped zone delimiter; validate syntax, not address routability.
+			$ipv6      = preg_replace( '/%25[a-z0-9._~%\-]+\z/i', '', $literal );
+			$ipvfuture = preg_match( '#\Av[0-9a-f]+\.[a-z0-9._~!$&\'()*+,;=:\-]+\z#i', $literal );
+			if ( ! filter_var( $ipv6, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) && ! $ipvfuture ) {
+				return '';
+			}
+		}
+
+		return strtolower( $parts['scheme'] );
 	}
 }

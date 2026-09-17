@@ -80,6 +80,20 @@ final class DiagnosticsTest extends TestCase {
 		$this->assertStringNotContainsString( 'secret', json_encode( $matches ) );
 	}
 
+	public static function authority_cases(): array {
+		$cases = json_decode( file_get_contents( dirname( __DIR__ ) . '/fixtures/diagnostics-authority.json' ), true, 512, JSON_THROW_ON_ERROR );
+		$result = array();
+		foreach ( $cases as $case ) {
+			$result[ $case['id'] ] = array( $case['home'], $case['bucket'] );
+		}
+		return $result;
+	}
+
+	/** @dataProvider authority_cases */
+	public function test_configured_home_authority_syntax( string $home, string $bucket ): void {
+		$this->test_configured_home_scheme_without_request_or_admin_policy( $home, $bucket );
+	}
+
 	public function test_database_errors_retain_each_context_without_raw_details(): void {
 		$GLOBALS['wpdb'] = (object) array( 'last_error' => 'SELECT private_prefix_table /srv/private RAW_SENTINEL' );
 		$method = new ReflectionMethod( Webmastery_MCP_Database_Health::class, 'database_error' );
