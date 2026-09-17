@@ -52,7 +52,7 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | --- | --- | --- |
 | Posts and pages | Create, list, read, update, restore, trash, bulk publish, bulk trash, and patch targeted content with object/status-aware filtering for private, trash, draft, pending, and scheduled content | Author or Editor |
 | Blocks and revisions | Inspect Gutenberg block paths/hashes, replace one block, list revisions, restore a revision | Author or Editor |
-| Post meta | Read, update, and delete safe custom fields; write supported Yoast SEO and SEOPress metadata | Author or Editor |
+| Post meta | Read, update, and delete custom fields subject to object and key-level authorization; write supported Yoast SEO and SEOPress metadata | Object edit access plus the key's capabilities |
 | Custom post types | Discover eligible public CPTs, generate list/get/create/update/delete abilities, and patch targeted content for editor-enabled types with CPT capability-map and object/status-aware filtering | CPT capability map |
 | Taxonomy | List, get, create, update, and delete categories and tags | Subscriber to Editor |
 | Comments | List, reply, update, approve, hold, trash, or mark spam | Editor |
@@ -64,6 +64,24 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | Plugins, users, health, security, performance, backups, database | Audit or manage sensitive site areas with explicit admin capabilities | Administrator |
 
 For the exact ability names, input behavior, and required capabilities, use the [full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities).
+
+### Post metadata authorization
+
+All metadata operations require `edit_post` for the actual object. An Author can usually edit their own posts; pages and other authors' posts generally need an Editor. Registered metadata authorization callbacks can impose additional requirements.
+
+| Input surface | Key-level policy |
+| --- | --- |
+| `get-post-meta` | Requires `edit_post_meta` for each returned key. A denied requested key returns `forbidden`; listing all metadata omits denied keys. WordPress has no equivalent general-purpose read-meta capability, so this is an intentionally conservative read policy. |
+| `update-post-meta` | Requires `edit_post_meta`, including first writes and unchanged values, matching core REST's capability choice for upserts. |
+| `delete-post-meta` | Requires `delete_post_meta`, even when the key is absent. |
+| `update-post` / `update-page` metadata and SEO aliases | Authorizes every requested key against the existing object before changing any post fields or metadata. Denied batches return `meta_write_failed` with `data.meta.not_written` entries whose reason is `forbidden`; nothing in the update is persisted. |
+| `create-post` / `create-page` metadata and SEO aliases | Accepts only key policies provably unrestricted before an ID exists: no custom key authorization filters, or WordPress's known `__return_true` defaults. Other policies fail before insertion with `meta_write_failed` and reason `authorization_requires_post`, even for administrators. |
+
+Protected keys remain restricted to the existing supported surfaces. For unregistered allowlisted Yoast/SEOPress keys without any key authorization hooks, the compatibility allowance supplies only the protected-key default; existing-object capability filters still run. It never replaces a registered restrictive callback. Final WordPress capability mapping remains authoritative, including explicit primitive-capability grants from roles or other plugins. For example, Yoast can grant `edit_post_meta` for its keys even when a key callback returns false; this plugin does not override that upstream policy.
+
+**Breaking change (unreleased; major-release review required):** current Yoast and SEOPress metadata callbacks need a persisted post ID. Their affected `meta` keys and corresponding `yoast_*` / `seopress_*` aliases can no longer be included in a single create call. Create the post or page without metadata, then send the returned ID to its update ability with the desired metadata. Ordinary authorized SEO updates and genuinely unregistered allowlisted SEO create inputs remain supported. No post is created when the first call rejects metadata.
+
+For verification on a disposable site, register a string field `access_level` with `show_in_rest: true` and an `auth_callback` requiring `manage_options`. An Editor's `update-post-meta` for that key must return `forbidden`; an Editor's `update-post` containing both new content and `meta.access_level` must leave the stored content, status, and metadata unchanged. An Administrator can update the existing field. A create call containing the callback-backed field must instead request the two-step workflow.
 
 ### Google Site Kit compatibility abilities
 

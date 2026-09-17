@@ -25,7 +25,7 @@ Highlights:
 * Inspect Gutenberg blocks and patch one targeted block or content section in posts, pages, and eligible custom post types instead of rewriting the full content.
 * Manage categories, tags, comments, media metadata, featured images, and public image URL uploads.
 * Discover eligible public custom post types and use generated CRUD abilities for each one.
-* Read, update, and delete safe post meta, including supported Yoast SEO and SEOPress metadata fields.
+* Read, update, and delete post meta with object and key-level capability checks, including supported Yoast SEO and SEOPress fields.
 * Run content hygiene checks for orphaned media, missing featured images, and stuck scheduled posts.
 * Inspect safe site and current-user context, with runtime environment details reserved for Administrator accounts.
 * Audit plugins, administrator accounts, backups, performance settings, database bloat, site health, and security posture.
@@ -81,6 +81,18 @@ Only for the optional Site Kit status, module, permission, and PageSpeed abiliti
 
 PageSpeed requests are limited to URLs on the current site and are processed by Google's PageSpeed service through Site Kit. Responses omit OAuth scopes and proxy details, module owner identities, screenshots, third-party entity lists, and full Lighthouse payloads.
 
+= How are post metadata permissions enforced? =
+
+Metadata reads and upserts require edit_post_meta for the actual post and key; deletion requires delete_post_meta. Object-level edit_post access is always required. Reading all metadata omits keys the caller cannot edit; requesting a denied key returns forbidden. Protected-key safeguards still apply. Registered auth callbacks and WordPress's final capability mapping are respected; the SEO allowlist does not override a restrictive callback. Other plugins can still grant primitive metadata capabilities through WordPress.
+
+Post/page updates preflight the entire metadata batch, including SEO aliases, before saving content, status, or metadata. A denied batch returns meta_write_failed with per-key forbidden details and leaves the object unchanged.
+
+= Why can callback-backed metadata require two calls to create content? =
+
+WordPress metadata authorization can depend on a real post ID, its status, or stored data. Create calls accept only known-unrestricted key policies. Custom callbacks require creating without metadata, then using the returned ID in update-post or update-page. Rejected creates return meta_write_failed with authorization_requires_post details and do not create a post.
+
+This unreleased breaking change affects current Yoast and SEOPress create metadata and corresponding aliases because their callbacks require a persisted ID. It requires major-release review, not a minor-release rollout. Existing-object SEO updates and genuinely unregistered allowlisted SEO create fields remain supported.
+
 = Are write operations safe? =
 
 Write operations go through WordPress APIs and capability checks. Posts and pages move to trash rather than being permanently deleted. Media deletion is permanent. Block and partial-content patching can use hashes so stale or ambiguous edits fail safely.
@@ -103,6 +115,10 @@ Report suspected vulnerabilities privately at https://github.com/DanielBoring/we
 Security fixes target the latest stable release. Reports receive a best-effort response without a guaranteed deadline. See https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/policy for the full policy.
 
 == Changelog ==
+
+= Unreleased =
+* Enforce key-level WordPress metadata authorization for reads, updates, deletes, and post/page metadata batches without partially saving denied updates.
+* Breaking: require a create-then-update workflow for metadata policies that need a persisted post, including current Yoast and SEOPress create inputs.
 
 = 2.5.0 =
 * Expand targeted content patching to pages and public editor-enabled custom post types with object-level permissions and explicit unsupported-type errors.
@@ -142,6 +158,9 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Add block inspection, single-block replacement, and safer partial post body edits.
 
 == Upgrade Notice ==
+
+= Unreleased =
+Breaking metadata authorization change awaiting major-release review: clients using callback-backed metadata in create calls must create without metadata, then update using the returned post/page ID.
 
 = 2.5.0 =
 Targeted partial-content patches now support pages and eligible custom post types while preserving object-level edit permissions.

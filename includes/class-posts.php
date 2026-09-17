@@ -210,6 +210,32 @@ class Webmastery_MCP_Posts {
 		}
 	}
 
+	private static function post_meta_auth_requires_post( $key, $type ) {
+		global $wp_filter;
+
+		// Core needs a persisted ID. Only known-unrestricted key policies can be accepted before insertion.
+		$hook         = has_filter( "auth_post_meta_{$key}_for_{$type}" )
+			? "auth_post_meta_{$key}_for_{$type}"
+			: "auth_post_meta_{$key}";
+		$unrestricted = ! is_protected_meta( $key, 'post' ) || self::uses_post_meta_compatibility_auth( $key, $type );
+
+		foreach ( [ $hook, "auth_post_{$type}_meta_{$key}" ] as $auth_hook ) {
+			if ( ! has_filter( $auth_hook ) ) {
+				continue;
+			}
+			foreach ( $wp_filter[ $auth_hook ]->callbacks as $callbacks ) {
+				foreach ( $callbacks as $callback ) {
+					if ( '__return_true' !== $callback['function'] ) {
+						return true;
+					}
+				}
+			}
+			$unrestricted = true;
+		}
+
+		return ! $unrestricted;
+	}
+
 	private static function normalize_post_meta_value( $value, $depth = 0 ) {
 		if ( $depth > self::POST_META_VALUE_MAX_DEPTH ) {
 			return new WP_Error( 'invalid_meta_value', 'meta_value nesting is too deep.' );
@@ -294,7 +320,7 @@ class Webmastery_MCP_Posts {
 	private static function meta_schema() {
 		return [
 			'type'                 => 'object',
-			'description'          => 'Post meta to write. REST-registered keys and supported Yoast SEO or SEOPress protected keys are persisted; unsupported protected keys fail with details instead of being silently ignored.',
+			'description'          => 'Post meta to write. Supports REST-registered keys and allowlisted SEO keys, subject to key authorization. Create calls reject policies requiring a persisted ID: create without meta, then update. Rejected batches return meta_write_failed details before saving.',
 			'additionalProperties' => [
 				'type' => [ 'string', 'number', 'integer', 'boolean', 'null' ],
 			],
@@ -550,6 +576,8 @@ class Webmastery_MCP_Posts {
 				if ( ! self::can_edit_post_meta_key( $post_id, $key ) ) {
 					$reason = 'forbidden';
 				}
+			} elseif ( self::post_meta_auth_requires_post( $key, $type ) ) {
+				$reason = 'authorization_requires_post';
 			}
 			if ( $reason ) {
 				unset( $prepared['writes'][ $key ] );
@@ -2052,7 +2080,7 @@ class Webmastery_MCP_Posts {
 
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/create-{$type}", [
 			'label'               => "Create {$label}",
-			'description'         => "Create a new WordPress {$type}.",
+			'description'         => "Create a new WordPress {$type}. Metadata and SEO aliases with custom authorization require a second update call using the created ID; including them here fails before insertion.",
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',

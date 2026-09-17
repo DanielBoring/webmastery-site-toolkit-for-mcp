@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/post-meta-authorization-fixture.php';
+
 function e2e_ensure_user( $login, $email, $role ) {
 	$user = get_user_by( 'login', $login );
 	if ( $user ) {
@@ -580,6 +582,7 @@ $fixtures = array(
 	'delete_tag_id'      => e2e_ensure_term_id( 'mcp-e2e-delete-tag', 'post_tag' ),
 );
 $fixtures['category_id_string'] = (string) $fixtures['category_id'];
+$fixtures = array_merge( $fixtures, wstm110_meta_fixtures( $author_id, $editor_id ) );
 
 $fixtures['post_id']         = e2e_insert_post( 'post', 'MCP E2E Post', 'Content for MCP E2E post.', $author_id );
 $fixtures['partial_post_id'] = e2e_insert_post(
@@ -905,8 +908,14 @@ foreach ( $manifest as $case ) {
 	$ability = wp_get_ability( $ability_name );
 	$input   = e2e_resolve_placeholders( $case['input'] ?? null, $fixtures );
 	$restore = e2e_apply_case_setup( $case );
-	$result  = $ability->execute( $input );
-	e2e_restore_case_setup( $restore );
+	$meta_state = wstm110_meta_setup( $case );
+	$result = null;
+	try {
+		$result = $ability->execute( $input );
+	} finally {
+		$meta_state_ok = wstm110_meta_finish( $meta_state, $case, $result, $fixtures );
+		e2e_restore_case_setup( $restore );
+	}
 	$ok      = ! is_wp_error( $result ) && e2e_result_is_success( $result );
 	$passed  = ( 'success' === $expect && $ok ) || ( 'failure' === $expect && ! $ok );
 
@@ -991,6 +1000,8 @@ foreach ( $manifest as $case ) {
 	if ( $passed && ! empty( $case['assert_post_meta'] ) && is_array( $case['assert_post_meta'] ) ) {
 		$passed = e2e_assert_post_meta_values( $case['assert_post_meta'], $fixtures );
 	}
+
+	$passed = $passed && $meta_state_ok;
 
 	if ( $passed ) {
 		$summary['passed']++;

@@ -138,7 +138,9 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/create-page',
 	'webmastery-site-toolkit-for-mcp/create-post',
 	'webmastery-site-toolkit-for-mcp/deactivate-plugin',
+	'webmastery-site-toolkit-for-mcp/delete-post-meta',
 	'webmastery-site-toolkit-for-mcp/get-environment-info',
+	'webmastery-site-toolkit-for-mcp/get-post-meta',
 	'webmastery-site-toolkit-for-mcp/get-user',
 	'webmastery-site-toolkit-for-mcp/list-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/list-cpt-mcp-case-study',
@@ -149,12 +151,43 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/update-page',
 	'webmastery-site-toolkit-for-mcp/update-post',
+	'webmastery-site-toolkit-for-mcp/update-post-meta',
 );
 
 foreach ( $required_failure_cases as $ability ) {
 	if ( empty( $summary[ $ability ]['failure'] ) ) {
 		$errors[] = "{$ability} must keep at least one negative permission/security manifest case.";
 	}
+}
+
+$required_meta_denials = array(
+	'wstm110 read restricted key denied' => 'forbidden',
+	'wstm110 update restricted key denied' => 'forbidden',
+	'wstm110 no-op restricted key denied' => 'forbidden',
+	'wstm110 delete restricted key denied' => 'forbidden',
+	'wstm110 update SEO callback denied' => 'forbidden',
+	'wstm110 update mixed metadata atomic denial' => 'meta_write_failed',
+	'wstm110 page mixed metadata atomic denial' => 'meta_write_failed',
+	'wstm110 Yoast alias atomic denial' => 'meta_write_failed',
+	'wstm110 SEOPress alias atomic denial' => 'meta_write_failed',
+	'wstm110 create custom callback requires real post' => 'meta_write_failed',
+	'wstm110 create page callback requires real post' => 'meta_write_failed',
+);
+foreach ( $required_meta_denials as $label => $code ) {
+	$found = false;
+	foreach ( $manifest as $case ) {
+		if ( $label === ( $case['label'] ?? '' ) && 'failure' === ( $case['expect'] ?? '' )
+			&& $code === ( $case['expect_error_code'] ?? '' ) && ! empty( $case['setup']['wstm110_meta_auth'] ) ) {
+			$found = true;
+			break;
+		}
+	}
+	if ( ! $found ) {
+		$errors[] = "{$label} must keep its metadata authorization denial and persisted-state fixture.";
+	}
+}
+if ( ! webmastery_mcp_security_qa_has_missing_path_case( $manifest, 'webmastery-site-toolkit-for-mcp/get-post-meta', array( 'data.meta.wstm110_restricted', 'data.meta._yoast_wpseo_title', 'data.meta._seopress_titles_title' ) ) ) {
+	$errors[] = 'Post metadata listings must keep restricted-key absence assertions.';
 }
 
 foreach ( array( 'list-posts', 'list-pages' ) as $ability_slug ) {

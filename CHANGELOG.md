@@ -6,6 +6,14 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+### Breaking changes
+
+- Post and page creation now rejects metadata policies that require a persisted object before saving anything. This includes current Yoast and SEOPress create metadata and their corresponding field aliases. Clients must create without metadata, then update the returned object. This change requires major-release review and is not suitable for the planned 2.6.0 minor release.
+
+### Fixed
+
+- Enforce WordPress key-level metadata capabilities for reads, upserts, deletes, and post/page metadata batches, including SEO aliases. Denied updates leave content, status, and metadata unchanged; metadata listings omit keys the caller cannot edit. Preserve authorized SEO updates and the unregistered protected-key compatibility allowance without overriding registered authorization.
+
 ### Added
 
 - Added private vulnerability reporting guidance and the supported-release security policy to the plugin FAQ.
