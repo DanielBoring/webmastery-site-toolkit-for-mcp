@@ -44,6 +44,12 @@ Only public checks and homepage reachability are stored in a shared 60-second Wo
 
 Regression evidence separates deterministic namespaced HTTP/DNS/plugin-boundary fixtures from real WordPress capability/transient contract checks and real MCP HTTP transport QA. The security validator requires successful Subscriber and Author cases with both omission paths, denial coverage, and explicit contract HTTP counts.
 
+## Trash safety
+
+Post, page, generated CPT, and bulk post trash abilities must refuse before calling `wp_trash_post()` when `EMPTY_TRASH_DAYS` is falsy: core otherwise falls back to permanent deletion. Validate existence/type and object-delete permission first; retain existing errors and use `trash_disabled` only for authorized, existing items. Bulk operations keep per-ID failures and existing totals, not a new global-error contract. This safety fix adds no force/permanent-delete route.
+
+Comment moderation uses `wp_set_comment_status( ..., 'trash' )`, not `wp_trash_comment()`. Its row-preserving behavior with trash disabled is characterized separately; do not assume the post-trash fallback applies to this different API. This does not change retention policies or other plugins' hooks.
+
 ## Security-sensitive test policy
 
 Security-sensitive abilities must have E2E manifest coverage showing both allowed and denied behavior. Add `assert_missing_paths` when a response should omit sensitive fields for lower-privilege users.
@@ -59,6 +65,7 @@ Current static enforcement:
 Current runtime enforcement:
 
 - Ability Contract QA executes all manifest cases in WordPress.
+- Contract QA also boots fresh PHP processes with `EMPTY_TRASH_DAYS=30` and `0`, asserting the actual constant, registered-ability results, persisted rows, and zero permanent-deletion API filters/hooks. Enabled trash/restore and disabled comment-status behavior are checked independently. These configuration-specific checks are direct PHP ability calls, not HTTP MCP coverage.
 - Full MCP E2E verifies real MCP Adapter authentication, discovery, execution, and subscriber denial.
 - Docker QA fails when the WordPress debug log contains warnings, notices, deprecations, or errors.
 

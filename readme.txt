@@ -89,9 +89,15 @@ Public results, including failures and unknowns, are cached for 60 seconds per s
 
 = Are write operations safe? =
 
-Write operations go through WordPress APIs and capability checks. Posts and pages move to trash rather than being permanently deleted. Media deletion is permanent. Block and partial-content patching can use hashes so stale or ambiguous edits fail safely.
+Write operations go through WordPress APIs and capability checks. Posts, pages, and custom post type items move to trash rather than being permanently deleted. Media deletion is permanent. Block and partial-content patching can use hashes so stale or ambiguous edits fail safely.
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
+
+= What happens if WordPress trash is disabled? =
+
+When EMPTY_TRASH_DAYS is 0 or another falsy value, post, page, and custom post type trash abilities refuse with trash_disabled before changing the item. Bulk post trash reports a failure for each authorized ID rather than a false success; inspect its per-ID failures and counts even when the summary itself succeeds. Missing items, wrong types, and permission failures keep their existing precedence. There is no permanent-delete override.
+
+Comment trash and comment updates with status "trash" still retain the comment row and set its status through WordPress's comment-status API. They do not use the post-trash deletion fallback.
 
 = What if discovery shows fewer abilities than the documentation? =
 
@@ -111,6 +117,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Changelog ==
 
 = Unreleased =
+* Prevent permanent deletion by post, page, custom post type, and bulk post trash abilities when WordPress trash is disabled. Return an explicit refusal without changing existing enabled-trash behavior.
 * Restrict webmaster verification's WordPress-only Site Kit state to callers with plugin activation permission; retain public checks for Subscribers and Authors.
 * Cache public webmaster verification results for 60 seconds without sharing private plugin state or caller-specific summaries.
 

@@ -56,6 +56,8 @@ These two checks both use Docker WordPress, but they prove different things.
 
 Ability Contract QA is the plugin contract layer. It asks: "Inside WordPress, did this plugin register the abilities we expect, and do the manifest cases pass with the right permissions and response shapes?" It is broad and ability-driven.
 
+Contract QA additionally runs `tests/e2e/trash-safety-runner.php` in two fresh PHP processes. Each defines and verifies `EMPTY_TRASH_DAYS` before loading actual WordPress core: `30` for normal trash/restore and `0` for refusal before mutation. These lanes exercise registered abilities, not stubs, and report separately from the ordinary manifest counts. See [`tests/e2e/README.md`](../tests/e2e/README.md#isolated-trash-safety-regressions) for assertions and coverage boundaries.
+
 Full MCP E2E QA is the real transport layer. It asks: "Can an MCP client actually talk to WordPress through the MCP Adapter and perform real work?" It is narrower but deeper, because it uses Application Passwords, MCP session initialization, `tools/list`, ability discovery, and real CRUD calls over HTTP JSON-RPC.
 
 Both layers matter. Contract QA catches broad ability drift and permission regressions. Full MCP E2E catches transport and integration problems that direct PHP execution cannot see.
