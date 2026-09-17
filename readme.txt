@@ -87,6 +87,14 @@ Write operations go through WordPress APIs and capability checks. Posts and page
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
 
+= How are image URL uploads limited? =
+
+Image URL uploads require upload_files and, when attaching to a post or page, edit_post for that object. The existing WordPress maximum upload size is enforced during streaming, with at most one extra sentinel byte in the temporary file and cancellation of oversized responses. Actual file size, allowed image MIME, HTTP integrity checks, and basic PNG/JPEG/GIF headers are checked before attachment creation. Generic HTTP Content-Type headers alone do not reject valid images. Invalid, zero, or overflowing configured limits fail explicitly.
+
+WordPress safe HTTP redirects, TLS checks, and Content-MD5 verification remain in use. The plugin also checks resolved IPv4/IPv6 answers and DNS aliases for the initial URL and redirect targets. Private/local addresses and failed, cyclic, or excessive alias resolution are rejected. IPv6 literals and AAAA-only hosts remain unsupported. Core's same-site exception does not bypass the plugin's private-address checks. These checks do not pin DNS or eliminate the race between DNS validation and connection.
+
+The byte limit is per response, not a total network or CPU budget: socket buffering and compressed decoding can exceed it before cancellation, while temporary file bytes stay bounded. Core transport differences for compressed/chunked images remain. Additional image formats enabled by WordPress filters still use core MIME handling.
+
 = What if discovery shows fewer abilities than the documentation? =
 
 The connected WordPress site may be running an older plugin version. Update the plugin on that site, then call `mcp-adapter-discover-abilities` again.
@@ -103,6 +111,10 @@ Report suspected vulnerabilities privately at https://github.com/DanielBoring/we
 Security fixes target the latest stable release. Reports receive a best-effort response without a guaranteed deadline. See https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/policy for the full policy.
 
 == Changelog ==
+
+= Unreleased =
+* Enforce the existing image upload size limit during retrieval and cancel oversized responses; preserve safe HTTP, MIME, and integrity checks.
+* Check IPv6 DNS answers and aliases alongside IPv4 for image URLs and redirect targets, without claiming complete DNS-rebinding protection.
 
 = 2.5.0 =
 * Expand targeted content patching to pages and public editor-enabled custom post types with object-level permissions and explicit unsupported-type errors.
@@ -142,6 +154,9 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Add block inspection, single-block replacement, and safer partial post body edits.
 
 == Upgrade Notice ==
+
+= Unreleased =
+Image downloads now stop oversized transfers at the existing upload limit. Invalid configured limits and failed DNS checks return explicit errors; no upload limit, PHP floor, or supported core version is changed.
 
 = 2.5.0 =
 Targeted partial-content patches now support pages and eligible custom post types while preserving object-level edit permissions.

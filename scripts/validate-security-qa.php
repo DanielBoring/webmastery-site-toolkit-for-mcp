@@ -149,6 +149,7 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/update-page',
 	'webmastery-site-toolkit-for-mcp/update-post',
+	'webmastery-site-toolkit-for-mcp/upload-image',
 );
 
 foreach ( $required_failure_cases as $ability ) {
@@ -177,6 +178,31 @@ if ( ! webmastery_mcp_security_qa_has_missing_path_case( $manifest, 'webmastery-
 
 if ( ! webmastery_mcp_security_qa_has_missing_path_case( $manifest, 'webmastery-site-toolkit-for-mcp/get-site-info', array( 'data.wordpress_version', 'data.active_theme.version' ) ) ) {
 	$errors[] = 'webmastery-site-toolkit-for-mcp/get-site-info must keep version fingerprinting absence assertions for low-privilege cases.';
+}
+
+$media_requirements = [
+	'upload-image with featured image metadata' => [ 'author', 'success', null ],
+	'upload-image as subscriber' => [ 'subscriber', 'failure', null ],
+	'upload-image rejects private URL' => [ 'author', 'failure', 'invalid_url' ],
+	'upload-image rejects non-image MIME' => [ 'author', 'failure', 'unsupported_mime_type' ],
+	'upload-image rejects empty file' => [ 'author', 'failure', 'invalid_file' ],
+	'upload-image rejects incomplete PNG header' => [ 'author', 'failure', 'invalid_file' ],
+	'upload-image rejects IPv6 literal' => [ 'author', 'failure', 'invalid_url' ],
+	'upload-image requires featured image target' => [ 'author', 'failure', 'missing_post_id' ],
+];
+foreach ( $media_requirements as $label => [ $role, $expect, $code ] ) {
+	$found = false;
+	foreach ( $manifest as $case ) {
+		if ( 'webmastery-site-toolkit-for-mcp/upload-image' === ( $case['ability'] ?? '' )
+			&& $label === ( $case['label'] ?? '' ) && $role === ( $case['role'] ?? '' )
+			&& $expect === ( $case['expect'] ?? '' ) && ( null === $code || $code === ( $case['expect_error_code'] ?? '' ) ) ) {
+			$found = true;
+			break;
+		}
+	}
+	if ( ! $found ) {
+		$errors[] = "upload-image must retain its {$label} manifest scenario with the expected role and result.";
+	}
 }
 
 if ( $errors ) {

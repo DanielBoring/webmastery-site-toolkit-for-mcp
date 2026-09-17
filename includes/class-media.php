@@ -107,6 +107,19 @@ class Webmastery_MCP_Media {
 	}
 
 	private static function is_private_ip( $ip ) {
+		if ( false === filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+			return true;
+		}
+		$packed = inet_pton( $ip );
+		if ( false !== $packed && 16 === strlen( $packed ) ) {
+			if ( "\xff" === $packed[0] ) {
+				return true;
+			}
+			if ( str_repeat( "\0", 10 ) . "\xff\xff" === substr( $packed, 0, 12 ) ) {
+				return self::is_private_ip( inet_ntop( substr( $packed, 12 ) ) );
+			}
+		}
+
 		return false === filter_var(
 			$ip,
 			FILTER_VALIDATE_IP,
@@ -114,7 +127,45 @@ class Webmastery_MCP_Media {
 		);
 	}
 
-	private static function validate_public_image_url( $url ) {
+	protected static function resolve_image_ipv4( $host ) {
+		return gethostbynamel( $host );
+	}
+
+	protected static function resolve_image_dns( $host ) {
+		if ( ! function_exists( 'dns_get_record' ) ) {
+			return false;
+		}
+		// A resolver failure is distinct from a successful response without AAAA records.
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Returned failures become explicit WP_Error responses.
+		return @dns_get_record( $host, DNS_AAAA | DNS_CNAME );
+	}
+
+	private static function validate_image_dns( $host, $visited = [] ) {
+		if ( isset( $visited[ $host ] ) || count( $visited ) >= 16 ) {
+			return new WP_Error( 'invalid_url', 'Image hostname has a cyclic or excessive DNS alias chain.' );
+		}
+		$visited[ $host ] = true;
+		$records          = static::resolve_image_dns( $host );
+		if ( false === $records ) {
+			return new WP_Error( 'invalid_url', 'Could not resolve image hostname IPv6 records.' );
+		}
+
+		foreach ( $records as $record ) {
+			if ( 'AAAA' === $record['type'] && self::is_private_ip( $record['ipv6'] ) ) {
+				return new WP_Error( 'invalid_url', 'Image URL must not resolve to a private or reserved address.' );
+			}
+			if ( 'CNAME' === $record['type'] ) {
+				$result = static::validate_image_dns( strtolower( rtrim( $record['target'], '.' ) ), $visited );
+				if ( is_wp_error( $result ) ) {
+					return $result;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	protected static function validate_public_image_url( $url ) {
 		$url = esc_url_raw( trim( (string) $url ), [ 'http', 'https' ] );
 
 		if ( '' === $url ) {
@@ -133,20 +184,172 @@ class Webmastery_MCP_Media {
 			return new WP_Error( 'invalid_url', 'Image URL must not target a local host.' );
 		}
 
-		if ( filter_var( $host, FILTER_VALIDATE_IP ) && self::is_private_ip( $host ) ) {
-			return new WP_Error( 'invalid_url', 'Image URL must not target a private or reserved address.' );
+		if ( false !== strpbrk( $host, ':[]' ) ) {
+			return new WP_Error( 'invalid_url', 'Image URL must use a hostname or public IPv4 address supported by the safe HTTP API.' );
 		}
 
-		$resolved_ips = gethostbynamel( $host );
-		if ( is_array( $resolved_ips ) ) {
-			foreach ( $resolved_ips as $resolved_ip ) {
-				if ( self::is_private_ip( $resolved_ip ) ) {
-					return new WP_Error( 'invalid_url', 'Image URL must not resolve to a private or reserved address.' );
-				}
+		if ( filter_var( $host, FILTER_VALIDATE_IP ) ) {
+			return self::is_private_ip( $host )
+				? new WP_Error( 'invalid_url', 'Image URL must not target a private or reserved address.' )
+				: $url;
+		}
+
+		$resolved_ips = static::resolve_image_ipv4( $host );
+		if ( ! is_array( $resolved_ips ) || [] === $resolved_ips ) {
+			return new WP_Error( 'invalid_url', 'Could not resolve image hostname IPv4 records.' );
+		}
+		foreach ( $resolved_ips as $resolved_ip ) {
+			if ( self::is_private_ip( $resolved_ip ) ) {
+				return new WP_Error( 'invalid_url', 'Image URL must not resolve to a private or reserved address.' );
 			}
 		}
 
-		return $url;
+		$result = static::validate_image_dns( $host );
+		return is_wp_error( $result ) ? $result : $url;
+	}
+
+	private static function download_bounded_image( $url, $max_size ) {
+		$filename         = null;
+		$too_large        = false;
+		$uses_curl        = false;
+		$hooks            = null;
+		$curl_handles     = [];
+		$progress_option  = defined( 'CURLOPT_XFERINFOFUNCTION' ) ? CURLOPT_XFERINFOFUNCTION : ( defined( 'CURLOPT_PROGRESSFUNCTION' ) ? CURLOPT_PROGRESSFUNCTION : null );
+		$existing_streams = get_resources( 'stream' );
+		$owned_stream     = null;
+		$identify_stream  = static function () use ( &$filename, &$existing_streams, &$owned_stream ) {
+			if ( null === $filename || null !== $owned_stream ) {
+				return;
+			}
+			foreach ( get_resources( 'stream' ) as $stream ) {
+				$meta = stream_get_meta_data( $stream );
+				if ( ! in_array( $stream, $existing_streams, true )
+					&& ( $meta['uri'] ?? null ) === $filename && 'wb' === $meta['mode'] ) {
+					$owned_stream = $stream;
+					return;
+				}
+			}
+		};
+		$progress         = static function ( $bytes, $received ) use ( $max_size, &$too_large, &$uses_curl, $identify_stream ) {
+			$identify_stream();
+			if ( strlen( $bytes ) > $max_size - $received ) {
+				$too_large = true;
+				if ( ! $uses_curl ) {
+					throw new \WpOrg\Requests\Exception( 'Downloaded image exceeds the maximum allowed upload size.', 'webmastery_image_size' );
+				}
+			}
+		};
+		$curl_progress    = static function ( $handle ) use ( &$too_large, &$uses_curl, &$curl_handles, $progress_option ) {
+			$curl_handles[] = $handle;
+			$uses_curl      = true;
+			// Throwing from a PHP write callback alone does not stop all cURL versions.
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Configure cancellation on core's existing transport, not a separate request.
+			$enabled = curl_setopt( $handle, CURLOPT_NOPROGRESS, false );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Requests' own write callback and byte clamp are retained.
+			$configured = curl_setopt( $handle, $progress_option, static function () use ( &$too_large ) {
+				return $too_large ? 1 : 0;
+			} );
+			if ( ! $enabled || ! $configured ) {
+				throw new \WpOrg\Requests\Exception( 'Could not configure bounded image transfer.', 'webmastery_image_transport' );
+			}
+		};
+		$install_progress = static function ( &$request_url, &$headers, &$data, &$type, &$options ) use ( &$filename, &$hooks, &$uses_curl, &$existing_streams, &$owned_stream, $progress, $curl_progress ) {
+			if ( null !== $filename && ( $options['filename'] ?? null ) === $filename ) {
+				$uses_curl        = false;
+				$existing_streams = get_resources( 'stream' );
+				$owned_stream     = null;
+			}
+			if ( null !== $filename && ( $options['filename'] ?? null ) === $filename && $hooks !== $options['hooks'] ) {
+				$hooks = $options['hooks'];
+				$hooks->register( 'request.progress', $progress );
+				$hooks->register( 'curl.before_send', $curl_progress );
+				$hooks->register( 'requests.before_redirect', static function ( $location ) {
+					$result = self::validate_public_image_url( $location );
+					if ( is_wp_error( $result ) ) {
+						// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- HTTP errors are returned to the caller, not rendered as HTML.
+						throw new \WpOrg\Requests\Exception( $result->get_error_message(), 'webmastery_image_url' );
+					}
+				} );
+			}
+		};
+		$close_file       = static function () use ( &$owned_stream, $identify_stream ) {
+			// Exceptions can skip Requests' fclose(), including timeouts before the first body chunk.
+			$identify_stream();
+			if ( is_resource( $owned_stream ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the new HTTP output resource, not pre-existing or read-only handles.
+				fclose( $owned_stream );
+			}
+		};
+		$close_stream     = static function ( $response, $context, $transport, $args, $request_url ) use ( $url, &$filename, $close_file ) {
+			if ( $url === $request_url && null !== $filename && ( $args['filename'] ?? null ) === $filename ) {
+				$close_file();
+			}
+		};
+		$identify_request = static function ( $args, $request_url ) use ( $url, &$filename ) {
+			if ( $url === $request_url && ! empty( $args['stream'] ) && ! empty( $args['filename'] ) && null === $filename ) {
+				$filename = $args['filename'];
+			}
+			return $args;
+		};
+		$bound            = static function ( $args, $request_url ) use ( $url, $max_size, &$filename ) {
+			if ( $url === $request_url && null !== $filename && ( $args['filename'] ?? null ) === $filename ) {
+				$args['limit_response_size'] = $max_size + 1;
+			}
+			return $args;
+		};
+		$complete         = static function ( $response, $args, $request_url ) use ( $url, $max_size, &$filename ) {
+			if ( $url !== $request_url || null === $filename || ( $args['filename'] ?? null ) !== $filename ) {
+				return $response;
+			}
+			clearstatcache( true, $filename );
+			$size = filesize( $filename );
+			if ( false !== $size && $size > $max_size ) {
+				return new WP_Error( 'file_too_large', 'Downloaded image exceeds the maximum allowed upload size.' );
+			}
+
+			// Compare identity bodies only: compressed wire length is not decoded file length.
+			$encoding = wp_remote_retrieve_header( $response, 'content-encoding' );
+			$length   = wp_remote_retrieve_header( $response, 'content-length' );
+			if ( 200 === wp_remote_retrieve_response_code( $response ) && '' !== $length
+				&& ( '' === $encoding || 'identity' === strtolower( $encoding ) )
+				&& '' === wp_remote_retrieve_header( $response, 'transfer-encoding' )
+				&& ( ! ctype_digit( (string) $length ) || ltrim( (string) $length, '0' ) !== (string) $size )
+				&& ! ( 0 === $size && '0' === (string) $length ) ) {
+				return new WP_Error( 'download_failed', 'Downloaded image length does not match the HTTP response.' );
+			}
+			return $response;
+		};
+
+		// Keep core's status, MD5, redirects, TLS, filename handling and error cleanup.
+		add_filter( 'http_request_args', $identify_request, PHP_INT_MIN, 2 );
+		add_filter( 'http_request_args', $bound, PHP_INT_MAX, 2 );
+		add_filter( 'http_response', $complete, PHP_INT_MAX, 3 );
+		add_action( 'requests-requests.before_request', $install_progress, PHP_INT_MAX, 5 );
+		add_action( 'http_api_debug', $close_stream, PHP_INT_MAX, 5 );
+		$result = null;
+		try {
+			$result = download_url( $url );
+			if ( $too_large && is_string( $result ) ) {
+				wp_delete_file( $result );
+			}
+			return $too_large ? new WP_Error( 'file_too_large', 'Downloaded image exceeds the maximum allowed upload size.' ) : $result;
+		} finally {
+			$close_file();
+			if ( ( null === $result || is_wp_error( $result ) ) && null !== $filename && file_exists( $filename ) ) {
+				wp_delete_file( $filename );
+			}
+			foreach ( $curl_handles as $handle ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Do not leave cancellation state on a reused core handle.
+				curl_setopt( $handle, CURLOPT_NOPROGRESS, true );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Release the request-local callback after success or failure.
+				curl_setopt( $handle, $progress_option, null );
+			}
+			remove_filter( 'http_request_args', $identify_request, PHP_INT_MIN );
+			remove_filter( 'http_request_args', $bound, PHP_INT_MAX );
+			remove_filter( 'http_response', $complete, PHP_INT_MAX );
+			remove_action( 'requests-requests.before_request', $install_progress, PHP_INT_MAX );
+			remove_action( 'http_api_debug', $close_stream, PHP_INT_MAX );
+		}
 	}
 
 	public static function upload_image_permission( $input = [] ) {
@@ -293,28 +496,41 @@ class Webmastery_MCP_Media {
 					return self::error_response( $permission->get_error_code(), $permission->get_error_message() );
 				}
 
-				$image_url = self::validate_public_image_url( $input['image_url'] ?? '' );
-				if ( is_wp_error( $image_url ) ) {
-					return self::error_response( $image_url->get_error_code(), $image_url->get_error_message() );
-				}
-
 				$post_id      = absint( $input['post_id'] ?? 0 );
 				$set_featured = ! empty( $input['set_featured'] );
 				if ( $set_featured && ! $post_id ) {
 					return self::error_response( 'missing_post_id', 'post_id is required when set_featured is true.' );
 				}
 
+				$image_url = self::validate_public_image_url( $input['image_url'] ?? '' );
+				if ( is_wp_error( $image_url ) ) {
+					return self::error_response( $image_url->get_error_code(), $image_url->get_error_message() );
+				}
+
+				$configured_size = wp_max_upload_size();
+				$max_size        = is_int( $configured_size ) || is_string( $configured_size )
+					? filter_var( $configured_size, FILTER_VALIDATE_INT, [
+						'options' => [ 'min_range' => 1, 'max_range' => PHP_INT_MAX - 1 ],
+					] )
+					: false;
+				if ( false === $max_size ) {
+					return self::error_response( 'invalid_upload_limit', 'The maximum upload size must be a positive integer below PHP_INT_MAX.' );
+				}
+
 				require_once ABSPATH . 'wp-admin/includes/file.php';
 				require_once ABSPATH . 'wp-admin/includes/image.php';
 				require_once ABSPATH . 'wp-admin/includes/media.php';
 
-				$tmp = download_url( $image_url );
+				$tmp = self::download_bounded_image( $image_url, $max_size );
 				if ( is_wp_error( $tmp ) ) {
+					if ( 'file_too_large' === $tmp->get_error_code() ) {
+						return self::error_response( 'file_too_large', $tmp->get_error_message(), [ 'max_bytes' => $max_size ] );
+					}
 					return self::error_response( 'download_failed', $tmp->get_error_message() );
 				}
 
+				clearstatcache( true, $tmp );
 				$file_size = filesize( $tmp );
-				$max_size  = wp_max_upload_size();
 				if ( false === $file_size || $file_size <= 0 ) {
 					wp_delete_file( $tmp );
 					return self::error_response( 'invalid_file', 'Downloaded image file is empty.' );
@@ -340,6 +556,10 @@ class Webmastery_MCP_Media {
 				if ( '' === $mime || ! str_starts_with( $mime, 'image/' ) ) {
 					wp_delete_file( $tmp );
 					return self::error_response( 'unsupported_mime_type', 'Downloaded file must be an allowed image MIME type.' );
+				}
+				if ( in_array( $mime, [ 'image/png', 'image/jpeg', 'image/gif' ], true ) && false === wp_getimagesize( $tmp ) ) {
+					wp_delete_file( $tmp );
+					return self::error_response( 'invalid_file', 'Downloaded image dimensions could not be read.' );
 				}
 				if ( ! empty( $filetype['proper_filename'] ) ) {
 					$filename = sanitize_file_name( $filetype['proper_filename'] );

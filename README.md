@@ -155,6 +155,18 @@ Try a few safe checks:
 
 If discovery shows fewer abilities than this repo documents, the connected WordPress site is running an older deployed copy of the plugin. Update the site plugin, then run discovery again.
 
+## Image URL uploads
+
+`webmastery-site-toolkit-for-mcp/upload-image` requires `upload_files` (normally Author or above), plus `edit_post` for an optional target post or page. For example, on a disposable site, upload an image you control with `{"image_url":"https://your-public-host.example/image.png","post_id":123,"set_featured":true,"title":"Example","alt_text":"Example image","caption":"Example caption"}`. Verify the returned attachment metadata and the target's featured image.
+
+The existing `wp_max_upload_size()` limit is enforced during retrieval: the temporary file is capped at the limit plus one sentinel byte, and oversized responses are cancelled instead of drained. The actual file size and allowed image MIME are still checked before sideloading. Empty files, incomplete PNG/JPEG/GIF headers, HTTP length mismatches, and failed integrity checks are rejected; image headers/dimensions are not proof of complete image integrity. Generic or incorrect HTTP Content-Type alone does not reject valid image bytes. Zero, invalid, or overflowing upload limits return `invalid_upload_limit` rather than disabling the bound.
+
+Downloads retain WordPress's safe HTTP API, redirect limits, TLS verification, 200-only success, and Content-MD5 verification. A/AAAA answers and CNAME targets are checked before the initial request and through the request's redirect hook; private/reserved addresses, local names, failed DNS resolution, cyclic aliases, and alias chains exceeding 16 lookups are rejected. This is defense in depth, **not DNS pinning or complete rebinding protection**: DNS and the connection can still resolve differently. IPv6 literals and AAAA-only hosts remain unsupported by the core safe-URL path. Core's same-site exception does not override the plugin's private-address checks.
+
+The bound applies per response, not to aggregate redirect traffic, headers, or socket buffering. Native cancellation can receive buffered data beyond the limit. cURL bounds decoded file bytes, but a compressed input chunk can expand into multiple decoded callbacks before cancellation; this is not a decoded-work or CPU quota. Fsockopen retains core's streamed encoded-byte behavior and may reject compressed/chunked images that cURL accepts; the plugin does not add an unbounded decompression stage. Formats enabled through WordPress filters retain core MIME handling; the basic PNG/JPEG/GIF header check does not impose a new decoder requirement on SVG, HEIC, AVIF, or other formats.
+
+The download captures its temporary-file identity before ordinary HTTP argument filters and removes its scoped hooks afterward, so nested requests are not limited accidentally. Installed plugins still control WordPress HTTP hooks and can override or preempt requests; this is not an isolation boundary against arbitrary trusted plugin code.
+
 ## Security Best Practices
 
 - Use a dedicated service account, not your personal account.

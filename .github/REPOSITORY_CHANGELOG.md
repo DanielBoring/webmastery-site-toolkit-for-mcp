@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added CLI-only image download fixtures covering real cURL/Fsockopen cancellation, byte counts, integrity and failure cleanup, handle isolation, and DNS policy tests. Contract CI retains synthetic client/server evidence for seven days; required media manifest roles and rejection scenarios are enforced.
 - Added a private security policy and issue routing, with latest-stable security fixes and best-effort reporting expectations.
 - Added stable fail-closed PR gates, PHP 8.4 coverage, retained Docker summaries, and dedicated workflow/shell security linting.
 - Added verified test-dependency pins and compatibility promotion checks, including current-toolchain package coverage.

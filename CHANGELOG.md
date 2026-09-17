@@ -17,6 +17,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Image URL uploads now enforce the existing WordPress upload-size limit during streaming and cancel oversized responses, with cleanup on rejection. Safe HTTP redirects, TLS, Content-MD5, actual-size and MIME checks remain intact; invalid limits and incomplete basic raster headers fail explicitly.
+- Image URL validation checks mixed IPv4/IPv6 DNS answers and bounded CNAME chains, including redirect targets. DNS failures are explicit; these checks do not pin DNS or eliminate rebinding races.
 - Custom post type update abilities now validate requested taxonomy assignments (registration and assign-terms permission) before saving title, content, or status changes, matching the create ability's behavior. Invalid or unauthorized taxonomy requests are now rejected before any changes are persisted, instead of after the post was already updated.
 
 ## 2.5.0
