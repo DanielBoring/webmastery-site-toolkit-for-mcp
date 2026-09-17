@@ -17,6 +17,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Webmaster verification now omits WordPress-only Site Kit installation/activation details for callers without plugin activation permission, skips private inspection, and summarizes only authorized checks. Public checks remain available with `read`; direct execution enforces the same gate before any work.
+- Public webmaster verification results, including failures and unknowns, now share a site/home/schema-scoped 60-second cache to avoid repeated HTTP/DNS work on warm calls. Privileged plugin state remains fresh per request and is never stored in the shared public cache.
 - Custom post type update abilities now validate requested taxonomy assignments (registration and assign-terms permission) before saving title, content, or status changes, matching the create ability's behavior. Invalid or unauthorized taxonomy requests are now rejected before any changes are persisted, instead of after the post was already updated.
 
 ## 2.5.0

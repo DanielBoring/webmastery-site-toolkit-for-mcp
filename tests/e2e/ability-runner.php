@@ -910,6 +910,8 @@ if ( $missing || $extra ) {
 	exit( 1 );
 }
 
+require_once __DIR__ . '/wstm114-verification-fixture.php';
+
 foreach ( $manifest as $case ) {
 	$case = e2e_resolve_placeholders( $case, $fixtures );
 
@@ -926,11 +928,17 @@ foreach ( $manifest as $case ) {
 
 	$ability = wp_get_ability( $ability_name );
 	$input   = e2e_resolve_placeholders( $case['input'] ?? null, $fixtures );
+	$wstm114 = 'webmastery-site-toolkit-for-mcp/webmaster-verification-status' === $ability_name
+		? wstm114_verification_prepare( $case )
+		: null;
 	$restore = e2e_apply_case_setup( $case );
 	$result  = $ability->execute( $input );
 	e2e_restore_case_setup( $restore );
 	$ok      = ! is_wp_error( $result ) && e2e_result_is_success( $result );
 	$passed  = ( 'success' === $expect && $ok ) || ( 'failure' === $expect && ! $ok );
+	if ( null !== $wstm114 ) {
+		$passed = wstm114_verification_assert( $case, $result, $wstm114 ) && $passed;
+	}
 
 	if ( $passed && ! empty( $case['expect_error_code'] ) ) {
 		$passed = $case['expect_error_code'] === e2e_result_error_code( $result );
