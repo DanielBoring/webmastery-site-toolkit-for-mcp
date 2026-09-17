@@ -78,15 +78,15 @@ Both layers matter. Contract QA catches broad ability drift and permission regre
 
 Runtime-impacting paths include plugin source, tests, scripts, Docker configuration, Composer files, workflow files, package metadata, assets, and `readme.txt`.
 
-## Branch protection recommendation
+## Required main CI checks
 
-Require these checks before merging any PR:
+The active `main-ci-gates` ruleset requires exactly these GitHub Actions checks before merging any PR into `main`:
 
 - `1 - Static QA`
 - `2 - Unit Tests`
 - `Docker QA gate`
 
-Require these checks before merging runtime-impacting, ability, or security-sensitive PRs:
+For runtime-impacting, ability, or security-sensitive PRs, `Docker QA gate` requires both runtime checks to pass; they are not separate required-check entries in the ruleset:
 
 - `3 - Ability Contract QA`
 - `4 - Full MCP E2E QA`
@@ -99,7 +99,7 @@ Use `6 - Compatibility QA` as a scheduled/manual maintainer gate at first. Promo
 
 The important GitHub concept is "required status checks." A workflow can run on many events, but branch protection decides which successful checks are required before a PR can merge.
 
-The staged `main-ci-gates` ruleset must be activated only after successful real PR runs of the new checks, including a bot PR. `workflow_dispatch` job results do not satisfy branch-ruleset requirements. The path-filtered Release Package QA workflow must not become a required PR check in its current form.
+Enforcement was activated and read back on September 17, 2026, after all five genuine PR-event workflows passed on bot PR #140. See the [dated setup evidence](../.github/SETUP-COMPLETE.md#rollout-evidence), which distinguishes the dispatched compatibility pipeline from the approved PR-event checks. `workflow_dispatch` job results do not satisfy branch-ruleset requirements. Future `GITHUB_TOKEN`-created PRs still need maintainer workflow approval; the initial rollout did not create an auto-approval bypass. The path-filtered Release Package QA workflow must not become a required PR check in its current form.
 
 ## Which command should I run?
 
@@ -193,6 +193,8 @@ All lanes pull fresh images, run both Ability Contract QA and Full MCP E2E QA, f
 Additional coverage separates PHP 8.4, MySQL 8.4, floating SEO dependencies, and current Plugin Check package validation. Package-check lanes run the applicable package command; they are not interchangeable with the contract/transport lanes. Ordinary QA uses the reviewed dependency pins and executable-download digests in `.github/compatibility-versions.json`.
 
 Only tested candidates may update baselines or `readme.txt` `Tested up to`. Missing images, failed discovery, stale source history, and unavailable dependencies are explicit failures that block promotion. Baseline updates preserve the full configuration and PHP image suffix. Approval of the bot PR's genuine PR-event workflows is required; a successful manual dispatch is not a substitute.
+
+At the September 17, 2026 verification, `main` at `3dae8aa` still pins MCP Adapter 0.5.0. The passing compatibility pipeline proposed 0.6.1 and its matching verified SHA-256 in PR #140, which remained open and unmerged. Passing candidate and PR checks do not adopt that baseline or change WordPress, `Tested up to`, other dependency pins, or PHP support.
 
 ### Runtime coverage limitation
 

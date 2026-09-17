@@ -149,6 +149,7 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/update-page',
 	'webmastery-site-toolkit-for-mcp/update-post',
+	'webmastery-site-toolkit-for-mcp/webmaster-verification-status',
 );
 
 foreach ( $required_failure_cases as $ability ) {
@@ -177,6 +178,24 @@ if ( ! webmastery_mcp_security_qa_has_missing_path_case( $manifest, 'webmastery-
 
 if ( ! webmastery_mcp_security_qa_has_missing_path_case( $manifest, 'webmastery-site-toolkit-for-mcp/get-site-info', array( 'data.wordpress_version', 'data.active_theme.version' ) ) ) {
 	$errors[] = 'webmastery-site-toolkit-for-mcp/get-site-info must keep version fingerprinting absence assertions for low-privilege cases.';
+}
+
+$verification = 'webmastery-site-toolkit-for-mcp/webmaster-verification-status';
+foreach ( array( 'subscriber', 'author' ) as $role ) {
+	$role_cases = array_filter(
+		$manifest,
+		static function ( $case ) use ( $role ) {
+			return $role === ( $case['role'] ?? '' ) && 'success' === ( $case['expect'] ?? '' );
+		}
+	);
+	if ( ! webmastery_mcp_security_qa_has_missing_path_case( $role_cases, $verification, array( 'data.google.site_kit', 'data.checks.google_site_kit' ) ) ) {
+		$errors[] = "{$verification} must keep successful {$role} cases omitting both private Site Kit projections.";
+	}
+}
+foreach ( $manifest as $case ) {
+	if ( $verification === ( $case['ability'] ?? '' ) && ( ! isset( $case['assert_wstm114_http_calls'] ) || ! is_int( $case['assert_wstm114_http_calls'] ) || $case['assert_wstm114_http_calls'] < 0 ) ) {
+		$errors[] = "{$verification} must assert actual HTTP counts for every fixture case.";
+	}
 }
 
 if ( $errors ) {

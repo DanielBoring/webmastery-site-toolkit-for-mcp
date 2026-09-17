@@ -60,6 +60,7 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | Content hygiene | Find orphaned media, posts/pages missing featured images, and stuck scheduled posts | Author or Editor |
 | Site info | Return safe site basics and current-user context; runtime, WordPress version, database, and theme-version details require Administrator access | Subscriber to Administrator |
 | SEO and webmaster signals | Analyze content, inspect and write supported Yoast/SEOPress metadata, read Yoast scores, inspect generated Yoast head data, and check sitemap/webmaster signals | Author to Administrator |
+| Public webmaster verification | Check public Google/Bing meta tags, Bing XML, DNS TXT, robots.txt, and sitemap reachability; WordPress-only Site Kit state requires `activate_plugins` | Subscriber (`read`); privileged plugin-state addition |
 | Google Site Kit | Inspect setup/authentication status, modules, effective permissions, and same-site PageSpeed summaries through Site Kit's permission-aware REST routes | Shared dashboard user to Administrator |
 | Plugins, users, health, security, performance, backups, database | Audit or manage sensitive site areas with explicit admin capabilities | Administrator |
 
@@ -148,7 +149,7 @@ Try a few safe checks:
 
 - `webmastery-site-toolkit-for-mcp/list-posts` - "List the 5 most recent published posts."
 - `webmastery-site-toolkit-for-mcp/get-site-info` - "Get safe public context for this WordPress site."
-- `webmastery-site-toolkit-for-mcp/webmaster-verification-status` - "Check public Google and Bing webmaster verification signals."
+- `webmastery-site-toolkit-for-mcp/webmaster-verification-status` - "Check public Google and Bing webmaster verification signals." Requires `read`; Subscribers and Authors receive public checks only. Site Kit installation/activation details require `activate_plugins`.
 - `webmastery-site-toolkit-for-mcp/list-site-kit-modules` - "List the Google services available to this Site Kit user."
 - `webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed` - "Get a mobile PageSpeed summary for this site's home page."
 - `webmastery-site-toolkit-for-mcp/plugin-audit` - "Audit installed plugins." Requires an Administrator service account.
@@ -167,6 +168,7 @@ If discovery shows fewer abilities than this repo documents, the connected WordP
 - Comment trash and comment updates with `status: "trash"` set the comment status through `wp_set_comment_status()`, retaining the row even when site trash is disabled. Media deletion remains permanent.
 - Block and partial-content edits can use hash preconditions and fail when a target is missing, ambiguous, or stale.
 - Subscriber-safe site info deliberately avoids secrets, filesystem paths, salts, auth keys, raw server internals, WordPress version, and theme version. `get-environment-info` requires `manage_options`.
+- Webmaster verification checks require `read`, including direct execution. Callers without `activate_plugins` receive neither `data.google.site_kit` nor `data.checks.google_site_kit`; plugin inspection is skipped and the summary counts only authorized checks. Public results, including failures and unknowns, share a 60-second cache scoped to the site, home URL, and result schema. Warm calls do not repeat HTTP/DNS work; private plugin state is inspected separately on each authorized call and is never cached with public results. Concurrent cold misses or early transient eviction can repeat work, so this is not a strict rate limit.
 - Site Kit abilities defer to Site Kit's own REST permission callbacks. They omit OAuth scopes/proxy details, module owner identities, raw settings, screenshots, third-party entities, and full Lighthouse payloads. PageSpeed only accepts URLs on the current site, although Google processes those requests through Site Kit's PageSpeed service.
 - `get-environment-info`, `plugin-audit`, `user-access-audit`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `site-health-check` are Administrator-only.
 
