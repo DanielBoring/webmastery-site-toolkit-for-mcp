@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Documented the agent threat model, client-side approval and recovery guidance, annotation scope, and delegated Site Kit access expectations without changing runtime permissions or response contracts.
 - Added a private security policy and issue routing, with latest-stable security fixes and best-effort reporting expectations.
 - Added stable fail-closed PR gates, PHP 8.4 coverage, retained Docker summaries, and dedicated workflow/shell security linting.
 - Added verified test-dependency pins and compatibility promotion checks, including current-toolchain package coverage.

@@ -13,6 +13,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Changed
 
+- Clarified agent handling of untrusted site content, comment reply/moderation access, dynamic ability counts, and the distinction between plugin results and MCP gateway responses.
+- Expanded the plugin header description to include custom post types, blocks/revisions, webmaster verification, and optional Google Site Kit diagnostics.
 - Updated WordPress tested compatibility to 7.1 after passing ability and MCP transport checks on PHP 8.2 and 8.4.
 
 ### Fixed
