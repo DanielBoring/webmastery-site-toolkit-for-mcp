@@ -108,10 +108,12 @@ docker compose down -v
 
 The E2E bootstrap installs and activates Yoast SEO and SEOPress from WordPress.org. Current SEO ability assertions remain Yoast-backed, while SEOPress is active during the run to exercise dependency readiness and coexistence guardrails.
 
-## Branch protection recommendation
+## Active main CI enforcement
 
 Require the stable checks `1 - Static QA`, `2 - Unit Tests`, and `Docker QA gate` from GitHub Actions before every merge. The Docker gate enforces the runtime-dependent checks without allowing a failed prerequisite to appear as an intentional skip. Do not require workflow-level path-filtered Release Package QA.
 
-The `main-ci-gates` ruleset is staged disabled until the updated workflows have successful real PR runs, including a baseline bot PR. Activate it before merging the baseline promotion. See [SETUP-COMPLETE.md](SETUP-COMPLETE.md) for the last verified settings and the remaining activation step.
+The `main-ci-gates` ruleset (23522901) is **active**, verified on September 17, 2026. Under explicit maintainer authorization, enforcement was activated only after all five genuine PR-event workflows for bot PR #140 passed. It targets only `main`, has no excluded refs or bypass actors, and binds exactly the three checks above to GitHub Actions integration 15368. Only enforcement changed; both `strict_required_status_checks_policy` and `do_not_enforce_on_create` remain `false`. See [SETUP-COMPLETE.md](SETUP-COMPLETE.md) for read-back details, public run evidence, and separately dated settings.
+
+Initial rollout is complete, but routine approvals remain: future `GITHUB_TOKEN`-created PRs need maintainer workflow approval, and baseline merges and production releases need their own review. PR #140 was open and unmerged at verification; its passing MCP Adapter 0.6.1 candidate does not replace the 0.5.0 baseline on `main` at `3dae8aa`.
 
 Keep `6 - Compatibility QA` scheduled/manual until the matrix is stable enough to promote selected jobs to branch protection. Manual dispatch tests versions without opening a PR unless `open_update_pr` is selected.

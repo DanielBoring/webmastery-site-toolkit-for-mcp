@@ -85,7 +85,7 @@ function esc_url_raw( $url ): string {
 }
 
 /**
- * Minimal, test-controlled taxonomy stubs used only by CustomPostTypesHelpersTest.
+ * Minimal, test-controlled taxonomy stubs for CPT helpers and taxonomy writes.
  *
  * $GLOBALS['wstm_test_taxonomies'] maps a taxonomy name to either `false` (not
  * registered) or an object with an `object_types` array and a `cap->assign_terms`
@@ -107,10 +107,28 @@ function is_object_in_taxonomy( $post_type, $taxonomy ) {
 	return in_array( $post_type, $taxonomy_object->object_types ?? array(), true );
 }
 
-function current_user_can( $capability ) {
+function current_user_can( $capability, ...$args ) {
+	if ( isset( $GLOBALS['wstm_test_cap_calls'] ) ) {
+		$GLOBALS['wstm_test_cap_calls'][] = array_merge( array( $capability ), $args );
+	}
 	return in_array( $capability, $GLOBALS['wstm_test_user_caps'] ?? array(), true );
+}
+
+function wp_register_ability( $name, $args ) {
+	$GLOBALS['wstm_test_abilities'][ $name ] = $args;
+}
+
+function get_term( $id, $taxonomy = '' ) {
+	return $GLOBALS['wstm_test_terms'][ $taxonomy ][ $id ] ?? null;
+}
+
+// Controlled return values only; real deletion and meta-cap mapping are covered in Docker.
+function wp_delete_term( $id, $taxonomy ) {
+	$GLOBALS['wstm_test_delete_calls'][] = array( $id, $taxonomy );
+	return $GLOBALS['wstm_test_delete_result'];
 }
 
 require_once dirname(__DIR__, 2) . '/includes/class-post-scheduling.php';
 require_once dirname(__DIR__, 2) . '/includes/class-posts.php';
 require_once dirname(__DIR__, 2) . '/includes/class-custom-post-types.php';
+require_once dirname(__DIR__, 2) . '/includes/class-taxonomy.php';
