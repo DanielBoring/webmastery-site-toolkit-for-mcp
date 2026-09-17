@@ -88,6 +88,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Fixed
 
+- Made the image-download fault-injection fixture use the available native cURL progress callback on PHP 8.1 as well as newer PHP versions, without changing production behavior or regression assertions.
 - Avoided Docker Compose project-name collisions between local and GitHub Actions E2E runs.
 
 ### Removed

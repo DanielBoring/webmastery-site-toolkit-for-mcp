@@ -146,7 +146,8 @@ add_action( 'requests-requests.before_request', $route, 10, 5 );
 add_action( 'http_api_debug', $capture );
 $override_cancel = static function ( $handle ) use ( &$case ) {
 	if ( 'limit-error-after-success' === $case ) {
-		curl_setopt( $handle, CURLOPT_XFERINFOFUNCTION, static function () { return 0; } );
+		$progress_option = defined( 'CURLOPT_XFERINFOFUNCTION' ) ? CURLOPT_XFERINFOFUNCTION : CURLOPT_PROGRESSFUNCTION;
+		curl_setopt( $handle, $progress_option, static function () { return 0; } );
 	}
 };
 $override_file = static function ( $response, $context, $class, $args ) use ( &$case, &$success_override ) {
