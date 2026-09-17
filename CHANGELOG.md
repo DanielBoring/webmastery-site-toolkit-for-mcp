@@ -17,6 +17,9 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Reject malformed, missing, or too-soon scheduling dates before creating or updating posts, pages, and custom post types. Preserve valid existing schedules, legacy date parsing, and explicit-offset instants across repeated DST hours.
+- Retain validated future dates when scheduling draft or pending content with a previously unset GMT date instead of letting WordPress reset the date and publish immediately.
+
 - Custom post type update abilities now validate requested taxonomy assignments (registration and assign-terms permission) before saving title, content, or status changes, matching the create ability's behavior. Invalid or unauthorized taxonomy requests are now rejected before any changes are persisted, instead of after the post was already updated.
 
 ## 2.5.0

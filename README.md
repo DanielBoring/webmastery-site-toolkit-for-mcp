@@ -155,6 +155,20 @@ Try a few safe checks:
 
 If discovery shows fewer abilities than this repo documents, the connected WordPress site is running an older deployed copy of the plugin. Update the site plugin, then run discovery again.
 
+## Scheduling posts, pages, and custom post types
+
+Create/update abilities accept `status: "future"` and `scheduled_date`. Creating a schedule or moving non-scheduled content to `future` requires a nonempty date **at least 60 seconds ahead when validated**, matching WordPress core's scheduling cutoff. Prefer an ISO 8601 value with `Z` or an explicit offset, for example `2030-12-01T09:00:00-05:00`. Use a comfortably future date: even an ordinary clock tick between validation and core's later time check can make a date exactly 60 seconds ahead publish immediately. This is preflight validation, not an atomic status guarantee against elapsed time or third-party hooks.
+
+An ordinary edit to an already-scheduled item may omit `scheduled_date`, with `status` omitted or still `future`. Both stored date strings are retained, and the stored GMT date must still meet the cutoff. Near-now or overdue schedules must be given a new safe date, or an explicit nonfuture status. Changing the site timezone does not invalidate an otherwise valid stored schedule or silently rewrite its dates. WordPress remains responsible for cron timing; timezone changes can affect the cron event's local-date conversion.
+
+Malformed dates, invalid calendar/time values (such as February 30), and missing or unsafe future dates fail before the ability writes content, metadata, or terms. New scheduling errors use `success: false` with `error.code` and `error.message`: `invalid_scheduled_date`, `missing_scheduled_date`, or `scheduled_date_too_soon`. Existing permission and other error responses are unchanged. An explicitly blank date is not a request to reuse an existing future schedule.
+
+For 2.x compatibility, valid PHP `strtotime()` date families remain supported, including relative dates. Offset-less input keeps its previous PHP-default timezone interpretation, normally **UTC**, not the site's local timezone. Named-zone DST folds/gaps retain PHP's resolution, including gap normalization; explicit offsets preserve the specified instant even during a repeated local hour. Local and GMT dates are formatted from the same instant without a lossy local-to-GMT round trip.
+
+With a nonfuture or omitted status on non-scheduled content, a valid supplied date still sets the date arguments rather than being ignored. Normal WordPress rules apply: draft/pending updates with a previously zero GMT date can reset that date to now, and `publish` with a sufficiently future date can become `future`. The scheduling fix does not change those nonfuture semantics or publish capabilities.
+
+On a disposable test site, verify a future create with an explicit offset, an update with no new date, and a malformed-date attempt. Check the actual status and stored local/GMT dates, and confirm the rejected attempt left the item unchanged. The automated regression matrix is described in [the E2E guide](tests/e2e/README.md).
+
 ## Security Best Practices
 
 - Use a dedicated service account, not your personal account.

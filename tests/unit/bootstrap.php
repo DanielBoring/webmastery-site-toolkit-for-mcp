@@ -3,6 +3,15 @@
 declare(strict_types=1);
 
 define( 'ABSPATH', dirname(__DIR__, 2) . '/' );
+define( 'MINUTE_IN_SECONDS', 60 );
+
+function wp_timezone(): DateTimeZone {
+	return new DateTimeZone( $GLOBALS['wstm_test_timezone'] ?? 'UTC' );
+}
+
+function wp_date( $format, $timestamp ): string {
+	return ( new DateTimeImmutable( '@' . $timestamp ) )->setTimezone( wp_timezone() )->format( $format );
+}
 
 if ( ! class_exists( 'WP_Error' ) ) {
 	class WP_Error {
@@ -102,5 +111,6 @@ function current_user_can( $capability ) {
 	return in_array( $capability, $GLOBALS['wstm_test_user_caps'] ?? array(), true );
 }
 
+require_once dirname(__DIR__, 2) . '/includes/class-post-scheduling.php';
 require_once dirname(__DIR__, 2) . '/includes/class-posts.php';
 require_once dirname(__DIR__, 2) . '/includes/class-custom-post-types.php';

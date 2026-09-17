@@ -8,6 +8,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added deterministic scheduling boundary tests, eight-ability scheduling/permission coverage, no-write and cron regression evidence, and actual HTTP scheduling error envelopes. Docker QA retains dedicated scheduling JSON for seven days and fails when that evidence cannot be written.
+
 - Added a private security policy and issue routing, with latest-stable security fixes and best-effort reporting expectations.
 - Added stable fail-closed PR gates, PHP 8.4 coverage, retained Docker summaries, and dedicated workflow/shell security linting.
 - Added verified test-dependency pins and compatibility promotion checks, including current-toolchain package coverage.

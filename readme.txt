@@ -87,6 +87,16 @@ Write operations go through WordPress APIs and capability checks. Posts and page
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
 
+= How are scheduled dates validated? =
+
+Posts, pages, and custom post types require a nonempty scheduled_date when creating or newly requesting future status. The date must be valid and at least 60 seconds ahead when validated. Malformed calendar/time values, missing dates, and dates too close to now fail before content, metadata, or terms are written. Errors use success:false and error.code/error.message, with invalid_scheduled_date, missing_scheduled_date, or scheduled_date_too_soon.
+
+An edit to an already-scheduled item may omit the date to retain its valid stored local/GMT dates; its GMT date must still meet the cutoff. Near-now/overdue schedules require a new safe date or an explicit nonfuture status. Changing the site timezone does not cause stored dates to be rewritten or rejected solely because they no longer match the current timezone.
+
+Prefer ISO 8601 with Z or an explicit offset and a comfortably future time. A normal clock tick between validation and WordPress's later check can cross the 60-second boundary; this is not an atomic status guarantee. WordPress and other plugins still control persistence hooks and cron execution.
+
+Legacy relative dates and offset-less parsing remain supported. Offset-less values normally mean UTC, not site-local time. Named-timezone DST folds/gaps retain PHP's resolution; explicit offsets preserve their instant. A valid date supplied for other statuses still sets date arguments under normal WordPress rules, including the existing zero-GMT draft/pending update reset and publish-to-future conversion.
+
 = What if discovery shows fewer abilities than the documentation? =
 
 The connected WordPress site may be running an older plugin version. Update the plugin on that site, then call `mcp-adapter-discover-abilities` again.
@@ -103,6 +113,10 @@ Report suspected vulnerabilities privately at https://github.com/DanielBoring/we
 Security fixes target the latest stable release. Reports receive a best-effort response without a guaranteed deadline. See https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/policy for the full policy.
 
 == Changelog ==
+
+= Unreleased =
+* Validate scheduled dates before post, page, or custom post type writes, preserving valid existing schedules and explicit-offset instants.
+* Prevent WordPress from discarding validated scheduling dates when updating drafts or pending items with zero GMT dates.
 
 = 2.5.0 =
 * Expand targeted content patching to pages and public editor-enabled custom post types with object-level permissions and explicit unsupported-type errors.

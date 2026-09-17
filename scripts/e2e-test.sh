@@ -282,6 +282,8 @@ main() {
 		echo "Running Ability Contract QA..."
 		run_php_lint
 		run_ability_manifest
+		echo "Running scheduling side-effect regressions..."
+		compose exec -T wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/scheduling-runner.php"
 	fi
 
 	if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then
