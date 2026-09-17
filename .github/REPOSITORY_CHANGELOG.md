@@ -8,6 +8,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added deterministic scheduling boundary tests, eight-ability scheduling/permission coverage, no-write and cron regression evidence, and actual HTTP scheduling error envelopes. Docker QA retains dedicated scheduling JSON for seven days and fails when that evidence cannot be written.
+
 - Added taxonomy write regression QA for all six write abilities: default roles, remapped capabilities, WordPress alias/filter semantics, per-term denials, unchanged persisted data/hooks on denial, not-found precedence, and truthful default-category deletion. Contract CI always attempts to retain the dedicated synthetic-fixture JSON summary for seven days, including failed runs when available; unit tests separately force rare zero/false/storage-error return paths. Security manifest validation now requires negative coverage for all six writes.
 
 - Added real-core targeted patch HTML regressions with persisted raw-content and untouched-block hash evidence, replacement sanitization, effective-capability save filtering, target/precondition failures, and object-denial checks. The contract lane runs these checks and retains `patch-html-summary.json`; the manifest and security validator also protect affected ability coverage.

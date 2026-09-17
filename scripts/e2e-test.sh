@@ -292,6 +292,8 @@ main() {
 		echo "Running Ability Contract QA..."
 		run_php_lint
 		run_ability_manifest
+		echo "Running scheduling side-effect regressions..."
+		compose exec -T wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/scheduling-runner.php"
 		run_trash_safety
 	fi
 

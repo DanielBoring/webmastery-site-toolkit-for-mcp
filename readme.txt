@@ -97,6 +97,16 @@ Write operations go through WordPress APIs and capability checks. Posts, pages, 
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
 
+= How are scheduled dates validated? =
+
+Posts, pages, and custom post types require a nonempty scheduled_date when creating or newly requesting future status. The date must be valid and at least 60 seconds ahead when validated. Malformed calendar/time values, missing dates, and dates too close to now fail before content, metadata, or terms are written. Errors use success:false and error.code/error.message, with invalid_scheduled_date, missing_scheduled_date, or scheduled_date_too_soon.
+
+An edit to an already-scheduled item may omit the date to retain its valid stored local/GMT dates; its GMT date must still meet the cutoff. Near-now/overdue schedules require a new safe date or an explicit nonfuture status. Changing the site timezone does not cause stored dates to be rewritten or rejected solely because they no longer match the current timezone.
+
+Prefer ISO 8601 with Z or an explicit offset and a comfortably future time. A normal clock tick between validation and WordPress's later check can cross the 60-second boundary; this is not an atomic status guarantee. WordPress and other plugins still control persistence hooks and cron execution.
+
+Legacy relative dates and offset-less parsing remain supported. Offset-less values normally mean UTC, not site-local time. Named-timezone DST folds/gaps retain PHP's resolution; explicit offsets preserve their instant. A valid date supplied for other statuses still sets date arguments under normal WordPress rules, including the existing zero-GMT draft/pending update reset and publish-to-future conversion.
+
 = Who can create, update, or delete categories and tags? =
 
 Editors and Administrators can manage them with WordPress's default capabilities. Create/update uses the registered taxonomy's edit_terms capability; deletion uses delete_terms. Updating or deleting an existing term also checks WordPress's edit_term or delete_term capability for that term, including site-specific policy filters. Custom taxonomy capability mappings are respected instead of always requiring manage_categories. Creation retains management-level access rather than allowing everyone who can assign tags.
@@ -135,6 +145,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Changelog ==
 
 = Unreleased =
+* Validate scheduled dates before post, page, or custom post type writes, preserving valid existing schedules and explicit-offset instants.
+* Prevent WordPress from discarding validated scheduling dates when updating drafts or pending items with zero GMT dates.
 * Respect taxonomy-specific create/update/delete capabilities and per-term update/delete restrictions, including direct execution.
 * Report refused or failed term deletion as failure instead of claiming the default category was deleted.
 * Preserve unrelated stored HTML during targeted block and section patches without bypassing WordPress save filters. Match exact targets against raw content while continuing to sanitize replacement fragments.

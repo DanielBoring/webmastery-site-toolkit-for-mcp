@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+if ( PHP_SAPI !== 'cli' ) {
+	http_response_code( 403 );
+	exit( 'CLI only.' );
+}
+
 final class Webmastery_MCP_E2E_Failure extends RuntimeException {}
 
 final class Webmastery_MCP_E2E_Client {
@@ -308,7 +313,10 @@ function webmastery_mcp_e2e_write_summary( string $path, array $summary ): void 
 		throw new Webmastery_MCP_E2E_Failure( "Could not create artifact directory: {$dir}" );
 	}
 
-	file_put_contents( $path, webmastery_mcp_e2e_json( $summary ) . "\n" );
+	$json = webmastery_mcp_e2e_json( $summary ) . "\n";
+	if ( file_put_contents( $path, $json ) !== strlen( $json ) ) {
+		throw new Webmastery_MCP_E2E_Failure( "Could not write complete artifact: {$path}" );
+	}
 }
 
 if ( defined( 'WEBMASTERY_MCP_E2E_CLIENT_ONLY' ) && WEBMASTERY_MCP_E2E_CLIENT_ONLY ) {
@@ -408,6 +416,36 @@ try {
 	webmastery_mcp_e2e_assert( $updated_title === ( $update['data']['title'] ?? null ), 'update-post returned the wrong title.' );
 	webmastery_mcp_e2e_assert( 'Updated through real MCP HTTP JSON-RPC.' === ( $update['data']['content'] ?? null ), 'update-post returned the wrong content.' );
 	webmastery_mcp_e2e_pass( $summary, 'update post through MCP' );
+
+	foreach ( array( 'create', 'update' ) as $operation ) {
+		foreach ( array(
+			'invalid_scheduled_date' => array( 'scheduled_date' => 'bad date' ),
+			'missing_scheduled_date' => array(),
+			'scheduled_date_too_soon' => array( 'scheduled_date' => '2001-01-01T00:00:00Z' ),
+		) as $code => $date_input ) {
+			$parameters = array_merge( array( 'title' => 'Must not persist', 'content' => 'Must not persist', 'status' => 'future' ), $date_input );
+			if ( 'update' === $operation ) {
+				$parameters['post_id'] = $created_post_id;
+			}
+			$raw = $editor_client->call( 'tools/call', array(
+				'name' => 'mcp-adapter-execute-ability',
+				'arguments' => array( 'ability_name' => 'webmastery-site-toolkit-for-mcp/' . $operation . '-post', 'parameters' => $parameters ),
+			) );
+			$summary['scheduling_envelopes'][] = array( 'operation' => $operation, 'code' => $code, 'tool_result' => $raw );
+			$payload = webmastery_mcp_e2e_extract_tool_payload( $raw, 'scheduling error' );
+			webmastery_mcp_e2e_assert( true !== ( $raw['isError'] ?? false ), 'Scheduling callback error unexpectedly became a tool-level error.' );
+			webmastery_mcp_e2e_assert( true === ( $payload['success'] ?? null ) && false === ( $payload['data']['success'] ?? null ), 'Expected successful gateway wrapping failed scheduling ability.' );
+			webmastery_mcp_e2e_assert( $code === ( $payload['data']['error']['code'] ?? null ), 'Scheduling error code was not preserved through HTTP.' );
+			webmastery_mcp_e2e_pass( $summary, "{$operation} scheduling {$code} HTTP envelope" );
+		}
+	}
+	$unchanged = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/get-post', array( 'post_id' => $created_post_id ), 'unchanged after schedule errors' );
+	webmastery_mcp_e2e_assert( $updated_title === ( $unchanged['data']['title'] ?? null ) && 'draft' === ( $unchanged['data']['status'] ?? null ), 'HTTP scheduling error mutated the draft.' );
+	$scheduled = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/update-post', array( 'post_id' => $created_post_id, 'status' => 'future', 'scheduled_date' => '+2 days' ), 'schedule draft through HTTP' );
+	webmastery_mcp_e2e_assert( true === ( $scheduled['success'] ?? false ) && 'future' === ( $scheduled['data']['status'] ?? null ), 'HTTP draft scheduling did not retain future status.' );
+	$retained = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/update-post', array( 'post_id' => $created_post_id, 'title' => $updated_title ), 'retain schedule through HTTP' );
+	webmastery_mcp_e2e_assert( true === ( $retained['success'] ?? false ) && 'future' === ( $retained['data']['status'] ?? null ), 'HTTP ordinary scheduled edit did not retain future status.' );
+	webmastery_mcp_e2e_pass( $summary, 'HTTP scheduling rejection preserves draft and valid scheduling survives ordinary edit' );
 
 	$delete = webmastery_mcp_e2e_execute_ability(
 		$editor_client,

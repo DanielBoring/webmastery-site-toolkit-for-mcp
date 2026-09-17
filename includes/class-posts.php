@@ -1984,7 +1984,7 @@ class Webmastery_MCP_Posts {
 			'title'   => [ 'type' => 'string', 'description' => "{$label} title" ],
 			'content' => [ 'type' => 'string', 'description' => "{$label} content (HTML)" ],
 			'status'         => [ 'type' => 'string', 'enum' => [ 'draft', 'publish', 'pending', 'private', 'future' ], 'default' => 'draft' ],
-			'scheduled_date' => [ 'type' => 'string', 'description' => 'ISO 8601 datetime to publish (required when status is future, e.g. 2025-12-01T09:00:00)' ],
+			'scheduled_date' => [ 'type' => 'string', 'description' => 'Date to set post_date. New future schedules require a valid date at least 60 seconds ahead at validation. Prefer ISO 8601 with Z or an explicit offset; legacy relative and offset-less parsing is retained (normally UTC).' ],
 			'excerpt'        => [ 'type' => 'string' ],
 			'slug'           => [ 'type' => 'string' ],
 			'meta'           => self::meta_schema(),
@@ -2026,14 +2026,10 @@ class Webmastery_MCP_Posts {
 					'post_title'   => sanitize_text_field( $input['title'] ),
 					'post_content' => wp_kses_post( $input['content'] ),
 					'post_status'  => in_array( $input['status'] ?? 'draft', [ 'draft', 'publish', 'pending', 'private', 'future' ], true )
-										? $input['status']
+										? ( $input['status'] ?? 'draft' )
 										: 'draft',
 				];
 
-				if ( ! empty( $input['scheduled_date'] ) ) {
-					$args['post_date']     = wp_date( 'Y-m-d H:i:s', strtotime( sanitize_text_field( $input['scheduled_date'] ) ) );
-					$args['post_date_gmt'] = get_gmt_from_date( $args['post_date'] );
-				}
 				if ( ! empty( $input['excerpt'] ) ) {
 					$args['post_excerpt'] = sanitize_text_field( $input['excerpt'] );
 				}
@@ -2043,6 +2039,12 @@ class Webmastery_MCP_Posts {
 				if ( 'page' === $type && isset( $input['parent'] ) ) {
 					$args['post_parent'] = absint( $input['parent'] );
 				}
+
+				$schedule = Webmastery_MCP_Post_Scheduling::prepare( $input );
+				if ( is_wp_error( $schedule ) ) {
+					return self::error_response( $schedule->get_error_code(), $schedule->get_error_message() );
+				}
+				$args = array_merge( $args, $schedule );
 
 				$id = wp_insert_post( wp_slash( $args ), true );
 
@@ -2082,7 +2084,7 @@ class Webmastery_MCP_Posts {
 			'title'      => [ 'type' => 'string' ],
 			'content'    => [ 'type' => 'string' ],
 			'status'         => [ 'type' => 'string', 'enum' => [ 'draft', 'publish', 'pending', 'private', 'future' ] ],
-			'scheduled_date' => [ 'type' => 'string', 'description' => 'ISO 8601 datetime to publish (required when status is future)' ],
+			'scheduled_date' => [ 'type' => 'string', 'description' => 'Date to set post_date. New future schedules require a valid date at least 60 seconds ahead at validation; omit to retain a valid existing future schedule. Prefer ISO 8601 with an explicit offset; legacy parsing is retained.' ],
 			'excerpt'        => [ 'type' => 'string' ],
 			'slug'           => [ 'type' => 'string' ],
 			'meta'           => self::meta_schema(),
@@ -2143,13 +2145,15 @@ class Webmastery_MCP_Posts {
 				if ( isset( $input['status'] ) && in_array( $input['status'], [ 'draft', 'publish', 'pending', 'private', 'future' ], true ) ) {
 					$args['post_status'] = $input['status'];
 				}
-				if ( ! empty( $input['scheduled_date'] ) ) {
-					$args['post_date']     = wp_date( 'Y-m-d H:i:s', strtotime( sanitize_text_field( $input['scheduled_date'] ) ) );
-					$args['post_date_gmt'] = get_gmt_from_date( $args['post_date'] );
-				}
 				if ( 'page' === $type && isset( $input['parent'] ) ) {
 					$args['post_parent'] = absint( $input['parent'] );
 				}
+
+				$schedule = Webmastery_MCP_Post_Scheduling::prepare( $input, $post );
+				if ( is_wp_error( $schedule ) ) {
+					return self::error_response( $schedule->get_error_code(), $schedule->get_error_message() );
+				}
+				$args = array_merge( $args, $schedule );
 
 				$result = wp_update_post( wp_slash( $args ), true );
 

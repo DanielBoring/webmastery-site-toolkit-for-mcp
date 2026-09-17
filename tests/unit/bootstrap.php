@@ -3,6 +3,15 @@
 declare(strict_types=1);
 
 define( 'ABSPATH', dirname(__DIR__, 2) . '/' );
+define( 'MINUTE_IN_SECONDS', 60 );
+
+function wp_timezone(): DateTimeZone {
+	return new DateTimeZone( $GLOBALS['wstm_test_timezone'] ?? 'UTC' );
+}
+
+function wp_date( $format, $timestamp ): string {
+	return ( new DateTimeImmutable( '@' . $timestamp ) )->setTimezone( wp_timezone() )->format( $format );
+}
 
 if ( ! class_exists( 'WP_Error' ) ) {
 	class WP_Error {
@@ -119,6 +128,7 @@ function wp_delete_term( $id, $taxonomy ) {
 	return $GLOBALS['wstm_test_delete_result'];
 }
 
+require_once dirname(__DIR__, 2) . '/includes/class-post-scheduling.php';
 require_once dirname(__DIR__, 2) . '/includes/class-posts.php';
 require_once dirname(__DIR__, 2) . '/includes/class-custom-post-types.php';
 require_once dirname(__DIR__, 2) . '/includes/class-taxonomy.php';

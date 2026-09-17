@@ -17,6 +17,9 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Reject malformed, missing, or too-soon scheduling dates before creating or updating posts, pages, and custom post types. Preserve valid existing schedules, legacy date parsing, and explicit-offset instants across repeated DST hours.
+- Retain validated future dates when scheduling draft or pending content with a previously unset GMT date instead of letting WordPress reset the date and publish immediately.
+
 - Category and tag writes now respect the registered taxonomy's editing/deletion capabilities and existing-term permissions, including direct execution. Default Editor/Administrator access, read behavior, and successful response shapes are unchanged; sites with custom restrictions now receive explicit denials before writes.
 - Refused or failed term deletions no longer report success. WordPress's default-category protection is respected, and a zero/false deletion result remains a failure even if site permission filters allow the attempt.
 
