@@ -81,6 +81,12 @@ Only for the optional Site Kit status, module, permission, and PageSpeed abiliti
 
 PageSpeed requests are limited to URLs on the current site and are processed by Google's PageSpeed service through Site Kit. Responses omit OAuth scopes and proxy details, module owner identities, screenshots, third-party entity lists, and full Lighthouse payloads.
 
+= Can Subscribers check public webmaster verification? =
+
+Yes. The webmaster verification check requires `read` and checks public homepage meta tags, Bing XML, DNS TXT, robots.txt, and sitemap reachability without Google or Bing API credentials. It does not confirm account ownership. WordPress-only Site Kit installation and activation details require `activate_plugins`; other callers receive neither private projection, and their summary counts only public checks.
+
+Public results, including failures and unknowns, are cached for 60 seconds per site, home URL, and result schema. Warm calls reuse HTTP/DNS results; privileged plugin state is inspected separately on each call and never stored in the public cache. Concurrent cold misses or early cache eviction can repeat requests, so this is not a strict rate limit.
+
 = Are write operations safe? =
 
 Write operations go through WordPress APIs and capability checks. Posts and pages move to trash rather than being permanently deleted. Media deletion is permanent. Block and partial-content patching can use hashes so stale or ambiguous edits fail safely.
@@ -103,6 +109,10 @@ Report suspected vulnerabilities privately at https://github.com/DanielBoring/we
 Security fixes target the latest stable release. Reports receive a best-effort response without a guaranteed deadline. See https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/policy for the full policy.
 
 == Changelog ==
+
+= Unreleased =
+* Restrict webmaster verification's WordPress-only Site Kit state to callers with plugin activation permission; retain public checks for Subscribers and Authors.
+* Cache public webmaster verification results for 60 seconds without sharing private plugin state or caller-specific summaries.
 
 = 2.5.0 =
 * Expand targeted content patching to pages and public editor-enabled custom post types with object-level permissions and explicit unsupported-type errors.
