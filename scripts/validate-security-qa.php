@@ -140,6 +140,9 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/deactivate-plugin',
 	'webmastery-site-toolkit-for-mcp/get-environment-info',
 	'webmastery-site-toolkit-for-mcp/get-user',
+	'webmastery-site-toolkit-for-mcp/list-site-kit-modules',
+	'webmastery-site-toolkit-for-mcp/get-site-kit-permissions',
+	'webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed',
 	'webmastery-site-toolkit-for-mcp/list-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/list-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/list-media',
@@ -151,6 +154,7 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/update-page',
 	'webmastery-site-toolkit-for-mcp/update-post',
+	'webmastery-site-toolkit-for-mcp/webmaster-verification-status',
 );
 
 foreach ( $required_failure_cases as $ability ) {
@@ -175,6 +179,38 @@ foreach ( array( 'patch-content-block', 'patch-post-content' ) as $ability_slug 
 	}
 }
 
+foreach ( array( 'list-site-kit-modules', 'get-site-kit-permissions', 'get-site-kit-pagespeed' ) as $slug ) {
+	$ability = "webmastery-site-toolkit-for-mcp/{$slug}";
+	$required = array( 'local-denial' => false, 'read-allowed' => false, 'subscriber-allowed' => false, 'upstream-denial' => false );
+	foreach ( $manifest as $case ) {
+		if ( $ability !== ( $case['ability'] ?? '' ) ) {
+			continue;
+		}
+		$role = $case['role'] ?? '';
+		$expect = $case['expect'] ?? '';
+		$allow = 'allow' === ( $case['setup']['wstm125_site_kit_permission'] ?? '' );
+		if ( 'wstm125_no_read' === $role && 'failure' === $expect && $allow && 'ability_invalid_permissions' === ( $case['expect_error_code'] ?? '' ) ) {
+			$required['local-denial'] = true;
+		}
+		if ( 'wstm125_read' === $role && 'success' === $expect ) {
+			$required['read-allowed'] = true;
+		}
+		if ( 'subscriber' === $role ) {
+			if ( 'success' === $expect && $allow ) {
+				$required['subscriber-allowed'] = true;
+			}
+			if ( 'failure' === $expect && ! $allow ) {
+				$required['upstream-denial'] = true;
+			}
+		}
+	}
+	foreach ( $required as $scenario => $present ) {
+		if ( ! $present ) {
+			$errors[] = "{$ability} must keep its Site Kit {$scenario} manifest case.";
+		}
+	}
+}
+
 foreach ( array( 'list-posts', 'list-pages' ) as $ability_slug ) {
 	$ability = "webmastery-site-toolkit-for-mcp/{$ability_slug}";
 	if ( ! webmastery_mcp_security_qa_has_filtered_total_case( $manifest, $ability, 'private' ) ) {
@@ -195,6 +231,24 @@ if ( ! webmastery_mcp_security_qa_has_missing_path_case( $manifest, 'webmastery-
 
 if ( ! webmastery_mcp_security_qa_has_missing_path_case( $manifest, 'webmastery-site-toolkit-for-mcp/get-site-info', array( 'data.wordpress_version', 'data.active_theme.version' ) ) ) {
 	$errors[] = 'webmastery-site-toolkit-for-mcp/get-site-info must keep version fingerprinting absence assertions for low-privilege cases.';
+}
+
+$verification = 'webmastery-site-toolkit-for-mcp/webmaster-verification-status';
+foreach ( array( 'subscriber', 'author' ) as $role ) {
+	$role_cases = array_filter(
+		$manifest,
+		static function ( $case ) use ( $role ) {
+			return $role === ( $case['role'] ?? '' ) && 'success' === ( $case['expect'] ?? '' );
+		}
+	);
+	if ( ! webmastery_mcp_security_qa_has_missing_path_case( $role_cases, $verification, array( 'data.google.site_kit', 'data.checks.google_site_kit' ) ) ) {
+		$errors[] = "{$verification} must keep successful {$role} cases omitting both private Site Kit projections.";
+	}
+}
+foreach ( $manifest as $case ) {
+	if ( $verification === ( $case['ability'] ?? '' ) && ( ! isset( $case['assert_wstm114_http_calls'] ) || ! is_int( $case['assert_wstm114_http_calls'] ) || $case['assert_wstm114_http_calls'] < 0 ) ) {
+		$errors[] = "{$verification} must assert actual HTTP counts for every fixture case.";
+	}
 }
 
 if ( $errors ) {
