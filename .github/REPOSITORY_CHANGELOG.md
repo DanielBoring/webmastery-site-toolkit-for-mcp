@@ -35,6 +35,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Made the image-download fault-injection fixture use the available native cURL progress callback on PHP 8.1 as well as newer PHP versions, without changing production behavior or regression assertions.
 - Fixed compatibility baseline CLI parsing of the workflow's `--mcp-adapter-sha256` and `--wp-cli-sha512` options. Added real-argv fixture regressions for both metadata-generation jobs, promotion/no-op behavior, and rejection before writes without relaxing the supported-option or validation rules.
 - Limited compatibility promotion conflict detection to open pull requests so completed baseline updates do not block later auxiliary dependency updates for the same WordPress and MCP Adapter versions.
 - Made the case-study listing fixture use explicit ID ordering so expected results do not depend on whether setup spans a timestamp boundary.
@@ -88,7 +89,6 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Fixed
 
-- Made the image-download fault-injection fixture use the available native cURL progress callback on PHP 8.1 as well as newer PHP versions, without changing production behavior or regression assertions.
 - Avoided Docker Compose project-name collisions between local and GitHub Actions E2E runs.
 
 ### Removed
