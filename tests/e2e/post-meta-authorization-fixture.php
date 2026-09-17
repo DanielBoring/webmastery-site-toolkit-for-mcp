@@ -71,6 +71,13 @@ function wstm110_meta_setup( $case ) {
 		wstm110_meta_register( '', 'wstm110_global', array( 'type' => 'string', 'single' => true, 'show_in_rest' => true, 'auth_callback' => 'wstm110_meta_auth' ), $registrations );
 		wstm110_meta_register( 'page', 'wstm110_global', array( 'type' => 'string', 'single' => true, 'show_in_rest' => true, 'auth_callback' => '__return_true' ), $registrations );
 
+		if ( ! empty( $case['setup']['wstm110_registered_unrestricted_seo'] ) ) {
+			foreach ( array( 'post', 'page' ) as $type ) {
+				foreach ( array( '_yoast_wpseo_focuskw', '_seopress_analysis_target_kw' ) as $key ) {
+					wstm110_meta_register( $type, $key, array( 'type' => 'string', 'single' => true, 'show_in_rest' => true, 'auth_callback' => '__return_true' ), $registrations );
+				}
+			}
+		}
 		if ( ! empty( $case['setup']['wstm110_unregistered_seo'] ) ) {
 			foreach ( array( '_yoast_wpseo_focuskw', '_seopress_analysis_target_kw' ) as $key ) {
 				foreach ( array( '', 'post', 'page' ) as $type ) {
@@ -142,6 +149,22 @@ function wstm110_meta_finish( $state, $case, $result, &$fixtures ) {
 		foreach ( $result['data']['meta']['written'] as $key => $value ) {
 			$passed = $passed && $value === get_post_meta( $result['data']['id'], $key, true );
 		}
+	}
+	if ( 'success' === $case['expect'] && in_array( $case['ability'], array( 'webmastery-site-toolkit-for-mcp/create-post', 'webmastery-site-toolkit-for-mcp/create-page' ), true ) ) {
+		$id      = is_array( $result ) ? ( $result['data']['id'] ?? 0 ) : 0;
+		$post    = $id ? get_post( $id ) : null;
+		$ids     = wstm110_post_ids();
+		$type    = 'webmastery-site-toolkit-for-mcp/create-page' === $case['ability'] ? 'page' : 'post';
+		$created = $post && array( $id ) === array_values( array_diff( $ids, $state['ids'] ) )
+			&& array() === array_diff( $state['ids'], $ids )
+			&& $type === $post->post_type
+			&& $case['input']['title'] === $post->post_title
+			&& $case['input']['content'] === $post->post_content
+			&& ( $case['input']['status'] ?? 'draft' ) === $post->post_status;
+		if ( ! $created ) {
+			echo "FAIL metadata create did not persist exactly one complete post/page\n";
+		}
+		$passed = $passed && $created;
 	}
 	if ( ! empty( $case['setup']['wstm110_capture_created'] ) && is_array( $result ) && ! empty( $result['success'] ) ) {
 		$fixtures[ $case['setup']['wstm110_capture_created'] ] = $result['data']['id'];

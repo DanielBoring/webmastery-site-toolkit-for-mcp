@@ -173,17 +173,30 @@ $required_meta_denials = array(
 	'wstm110 create custom callback requires real post' => 'meta_write_failed',
 	'wstm110 create page callback requires real post' => 'meta_write_failed',
 );
-foreach ( $required_meta_denials as $label => $code ) {
-	$found = false;
-	foreach ( $manifest as $case ) {
-		if ( $label === ( $case['label'] ?? '' ) && 'failure' === ( $case['expect'] ?? '' )
-			&& $code === ( $case['expect_error_code'] ?? '' ) && ! empty( $case['setup']['wstm110_meta_auth'] ) ) {
-			$found = true;
-			break;
+$required_provider_meta_denials = array(
+	'create-post writes Yoast meta requires a persisted post' => 'meta_write_failed',
+	'create-post writes Yoast free metadata fields requires a persisted post' => 'meta_write_failed',
+	'create-post writes SEOPress free metadata fields requires a persisted post' => 'meta_write_failed',
+	'wstm110 real Yoast page create denied' => 'meta_write_failed',
+	'wstm110 real SEOPress page create denied' => 'meta_write_failed',
+);
+foreach ( array( 'wstm110_meta_auth' => $required_meta_denials, 'wstm110_state' => $required_provider_meta_denials ) as $setup_key => $required_cases ) {
+	foreach ( $required_cases as $label => $code ) {
+		$found = false;
+		foreach ( $manifest as $case ) {
+			if ( 'wstm110_state' === $setup_key && ( ! empty( $case['setup']['wstm110_meta_auth'] )
+				|| 'authorization_requires_post' !== ( $case['assert_values']['data.meta.not_written.0.reason'] ?? '' ) ) ) {
+				continue;
+			}
+			if ( $label === ( $case['label'] ?? '' ) && 'failure' === ( $case['expect'] ?? '' )
+				&& $code === ( $case['expect_error_code'] ?? '' ) && ! empty( $case['setup'][ $setup_key ] ) ) {
+				$found = true;
+				break;
+			}
 		}
-	}
-	if ( ! $found ) {
-		$errors[] = "{$label} must keep its metadata authorization denial and persisted-state fixture.";
+		if ( ! $found ) {
+			$errors[] = "{$label} must keep its metadata authorization denial and {$setup_key} persisted-state fixture.";
+		}
 	}
 }
 if ( ! webmastery_mcp_security_qa_has_missing_path_case( $manifest, 'webmastery-site-toolkit-for-mcp/get-post-meta', array( 'data.meta.wstm110_restricted', 'data.meta._yoast_wpseo_title', 'data.meta._seopress_titles_title' ) ) ) {

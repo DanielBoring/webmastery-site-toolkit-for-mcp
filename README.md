@@ -67,7 +67,7 @@ For the exact ability names, input behavior, and required capabilities, use the 
 
 ### Post metadata authorization
 
-All metadata operations require `edit_post` for the actual object. An Author can usually edit their own posts; pages and other authors' posts generally need an Editor. Registered metadata authorization callbacks can impose additional requirements.
+Existing-object metadata operations require `edit_post` for the actual object. An Author can usually edit their own posts; pages and other authors' posts generally need an Editor. Registered metadata authorization callbacks can impose additional requirements.
 
 | Input surface | Key-level policy |
 | --- | --- |
@@ -75,7 +75,9 @@ All metadata operations require `edit_post` for the actual object. An Author can
 | `update-post-meta` | Requires `edit_post_meta`, including first writes and unchanged values, matching core REST's capability choice for upserts. |
 | `delete-post-meta` | Requires `delete_post_meta`, even when the key is absent. |
 | `update-post` / `update-page` metadata and SEO aliases | Authorizes every requested key against the existing object before changing any post fields or metadata. Denied batches return `meta_write_failed` with `data.meta.not_written` entries whose reason is `forbidden`; nothing in the update is persisted. |
-| `create-post` / `create-page` metadata and SEO aliases | Accepts only key policies provably unrestricted before an ID exists: no custom key authorization filters, or WordPress's known `__return_true` defaults. Other policies fail before insertion with `meta_write_failed` and reason `authorization_requires_post`, even for administrators. |
+| `create-post` / `create-page` metadata and SEO aliases | Checks create/publish capabilities, then conservatively accepts only known-unrestricted key authorization policies before an ID exists: no custom key authorization filters, or WordPress's known `__return_true` defaults. Other policies fail before insertion with `meta_write_failed` and reason `authorization_requires_post`, even for administrators. |
+
+The pre-insertion key-policy check is not a real-ID `edit_post_meta` capability evaluation. It cannot evaluate object-dependent `map_meta_cap` or `user_has_cap` filters for metadata before the object exists. Those filters still apply to the create/publish capability checks themselves; real-ID metadata capability evaluation, including those global filters, applies on the subsequent update. A subtype key authorization hook takes precedence over the global key hook; an explicit `__return_true` policy can therefore permit creation for that subtype even if the global registration is restrictive.
 
 Protected keys remain restricted to the existing supported surfaces. For unregistered allowlisted Yoast/SEOPress keys without any key authorization hooks, the compatibility allowance supplies only the protected-key default; existing-object capability filters still run. It never replaces a registered restrictive callback. Final WordPress capability mapping remains authoritative, including explicit primitive-capability grants from roles or other plugins. For example, Yoast can grant `edit_post_meta` for its keys even when a key callback returns false; this plugin does not override that upstream policy.
 

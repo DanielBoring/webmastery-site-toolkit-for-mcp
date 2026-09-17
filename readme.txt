@@ -83,13 +83,15 @@ PageSpeed requests are limited to URLs on the current site and are processed by 
 
 = How are post metadata permissions enforced? =
 
-Metadata reads and upserts require edit_post_meta for the actual post and key; deletion requires delete_post_meta. Object-level edit_post access is always required. Reading all metadata omits keys the caller cannot edit; requesting a denied key returns forbidden. Protected-key safeguards still apply. Registered auth callbacks and WordPress's final capability mapping are respected; the SEO allowlist does not override a restrictive callback. Other plugins can still grant primitive metadata capabilities through WordPress.
+Existing-object metadata reads and upserts require edit_post_meta for the actual post and key; deletion requires delete_post_meta. These existing-object operations also require edit_post access. Reading all metadata omits keys the caller cannot edit; requesting a denied key returns forbidden. Protected-key safeguards still apply. Registered auth callbacks and WordPress's final capability mapping are respected; the SEO allowlist does not override a restrictive callback. Other plugins can still grant primitive metadata capabilities through WordPress.
 
 Post/page updates preflight the entire metadata batch, including SEO aliases, before saving content, status, or metadata. A denied batch returns meta_write_failed with per-key forbidden details and leaves the object unchanged.
 
 = Why can callback-backed metadata require two calls to create content? =
 
-WordPress metadata authorization can depend on a real post ID, its status, or stored data. Create calls accept only known-unrestricted key policies. Custom callbacks require creating without metadata, then using the returned ID in update-post or update-page. Rejected creates return meta_write_failed with authorization_requires_post details and do not create a post.
+WordPress metadata authorization can depend on a real post ID, its status, or stored data. Create calls check create/publish capabilities, then conservatively accept only known-unrestricted key authorization policies. Custom callbacks require creating without metadata, then using the returned ID in update-post or update-page. Rejected creates return meta_write_failed with authorization_requires_post details and do not create a post.
+
+The pre-insertion policy check is not a real-ID edit_post_meta evaluation. Object-dependent metadata map_meta_cap and user_has_cap filters cannot run against a nonexistent object; their real-ID metadata evaluation applies on the subsequent update. These global filters still apply to create/publish capability checks. An explicit unrestricted subtype key policy takes precedence over a restrictive global key registration.
 
 This unreleased breaking change affects current Yoast and SEOPress create metadata and corresponding aliases because their callbacks require a persisted ID. It requires major-release review, not a minor-release rollout. Existing-object SEO updates and genuinely unregistered allowlisted SEO create fields remain supported.
 
