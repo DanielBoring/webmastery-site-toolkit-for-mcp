@@ -693,7 +693,7 @@ class Webmastery_MCP_Posts {
 	private static function register_bulk_trash_posts() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/bulk-trash-posts', [
 			'label'               => 'Bulk Trash Posts',
-			'description'         => 'Move multiple WordPress posts to trash and return per-post successes and failures.',
+			'description'         => 'Move multiple WordPress posts to trash and return per-post successes and failures. Refuses to delete when site trash is disabled.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => self::bulk_post_ids_schema( 'Post IDs to move to trash.' ),
 			'execute_callback'    => function ( $input ) {
@@ -718,6 +718,15 @@ class Webmastery_MCP_Posts {
 							'id'      => $id,
 							'code'    => 'forbidden',
 							'message' => 'You do not have permission to delete this post.',
+						];
+						continue;
+					}
+
+					if ( defined( 'EMPTY_TRASH_DAYS' ) && ! EMPTY_TRASH_DAYS ) {
+						$failures[] = [
+							'id'      => $id,
+							'code'    => 'trash_disabled',
+							'message' => 'Trash is disabled on this site; the post was not deleted.',
 						];
 						continue;
 					}
@@ -2177,7 +2186,7 @@ class Webmastery_MCP_Posts {
 		// --- delete (trash) ---
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/delete-{$type}", [
 			'label'               => "Delete {$label}",
-			'description'         => "Move a WordPress {$type} to trash.",
+			'description'         => "Move a WordPress {$type} to trash. Refuses to delete when site trash is disabled.",
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
@@ -2195,6 +2204,10 @@ class Webmastery_MCP_Posts {
 				}
 				if ( ! current_user_can( 'delete_post', $id ) ) {
 					return [ 'success' => false, 'error' => 'You do not have permission to delete this ' . $type . '.' ];
+				}
+
+				if ( defined( 'EMPTY_TRASH_DAYS' ) && ! EMPTY_TRASH_DAYS ) {
+					return self::error_response( 'trash_disabled', 'Trash is disabled on this site; the ' . $type . ' was not deleted.' );
 				}
 
 				$result = wp_trash_post( $id );

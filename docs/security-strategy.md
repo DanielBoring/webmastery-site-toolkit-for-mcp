@@ -37,6 +37,20 @@ Use these defaults:
 | Plugin, environment, database, backup, performance, security, or runtime details | Administrator-level capabilities such as `manage_options` or plugin-management capabilities. |
 | User identity data | Restrict login/email fields to callers with user-management capabilities; use `assert_missing_paths` for lower-privilege cases. |
 
+### Webmaster verification privacy and caching
+
+Public webmaster verification remains a `read` ability. Both the permission callback and direct execution deny callers without `read` before HTTP, DNS, transient access, or private plugin inspection. Only callers with `activate_plugins` receive WordPress-only Site Kit installation, activation, and basename fields at `data.google.site_kit` and `data.checks.google_site_kit`. Other callers skip plugin inspection entirely; their summary is computed from public checks, not from a private result later redacted. Privileged response fields keep their existing shape. Clients without plugin activation permission must treat both private paths as absent.
+
+Only public checks and homepage reachability are stored in a shared 60-second WordPress transient, keyed by schema version, blog ID, and home URL. Failures and unknown results are cached without changing their statuses or details. Caller-specific summaries and private plugin state are never stored; authorized plugin inspection runs separately on each request. This bounds warm repeats, not concurrent cold misses: there is no cross-request lock/coalescing guarantee, and WordPress can evict transients early. The repository has no existing shared locking primitive; this fix does not add a locking framework or change outbound URL policy.
+
+Regression evidence separates deterministic namespaced HTTP/DNS/plugin-boundary fixtures from real WordPress capability/transient contract checks and real MCP HTTP transport QA. The security validator requires successful Subscriber and Author cases with both omission paths, denial coverage, and explicit contract HTTP counts.
+
+## Trash safety
+
+Post, page, generated CPT, and bulk post trash abilities must refuse before calling `wp_trash_post()` when `EMPTY_TRASH_DAYS` is falsy: core otherwise falls back to permanent deletion. Validate existence/type and object-delete permission first; retain existing errors and use `trash_disabled` only for authorized, existing items. Bulk operations keep per-ID failures and existing totals, not a new global-error contract. This safety fix adds no force/permanent-delete route.
+
+Comment moderation uses `wp_set_comment_status( ..., 'trash' )`, not `wp_trash_comment()`. Its row-preserving behavior with trash disabled is characterized separately; do not assume the post-trash fallback applies to this different API. This does not change retention policies or other plugins' hooks.
+
 ## Security-sensitive test policy
 
 Security-sensitive abilities must have E2E manifest coverage showing both allowed and denied behavior. Add `assert_missing_paths` when a response should omit sensitive fields for lower-privilege users.
@@ -52,6 +66,7 @@ Current static enforcement:
 Current runtime enforcement:
 
 - Ability Contract QA executes all manifest cases in WordPress.
+- Contract QA also boots fresh PHP processes with `EMPTY_TRASH_DAYS=30` and `0`, asserting the actual constant, registered-ability results, persisted rows, and zero permanent-deletion API filters/hooks. Enabled trash/restore and disabled comment-status behavior are checked independently. These configuration-specific checks are direct PHP ability calls, not HTTP MCP coverage.
 - Full MCP E2E verifies real MCP Adapter authentication, discovery, execution, and subscriber denial.
 - Docker QA fails when the WordPress debug log contains warnings, notices, deprecations, or errors.
 
