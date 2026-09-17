@@ -98,9 +98,21 @@ function is_object_in_taxonomy( $post_type, $taxonomy ) {
 	return in_array( $post_type, $taxonomy_object->object_types ?? array(), true );
 }
 
-function current_user_can( $capability ) {
+function current_user_can( $capability, ...$args ) {
+	if ( isset( $GLOBALS['wstm_test_object_capability'] ) ) {
+		return ( $GLOBALS['wstm_test_object_capability'] )( $capability, ...$args );
+	}
 	return in_array( $capability, $GLOBALS['wstm_test_user_caps'] ?? array(), true );
 }
 
+function get_post( $id ) {
+	return $GLOBALS['wstm_test_posts'][ $id ] ?? null;
+}
+
+function is_post_type_hierarchical( $type ): bool {
+	return in_array( $type, $GLOBALS['wstm_test_hierarchical_types'] ?? array(), true );
+}
+
+require_once dirname(__DIR__, 2) . '/includes/class-post-parent.php';
 require_once dirname(__DIR__, 2) . '/includes/class-posts.php';
 require_once dirname(__DIR__, 2) . '/includes/class-custom-post-types.php';

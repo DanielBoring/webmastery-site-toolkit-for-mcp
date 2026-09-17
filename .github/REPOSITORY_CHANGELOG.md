@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added parent-assignment regression coverage across direct callbacks, the WordPress ability wrapper, and real MCP HTTP, with fixture-only corrupt graphs, stored-state/write-hook evidence, an unchanged normal 85-ability audit, and dedicated detailed JSON artifacts retained for seven days.
 - Added a private security policy and issue routing, with latest-stable security fixes and best-effort reporting expectations.
 - Added stable fail-closed PR gates, PHP 8.4 coverage, retained Docker summaries, and dedicated workflow/shell security linting.
 - Added verified test-dependency pins and compatibility promotion checks, including current-toolchain package coverage.

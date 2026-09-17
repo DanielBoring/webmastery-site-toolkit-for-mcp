@@ -17,6 +17,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Page and custom post type create/update abilities reject invalid or unauthorized parent assignments before saving other requested changes. Valid hierarchical parents, detach-to-zero, and omitted parents remain supported; unsupported positive parents on nonhierarchical custom post types are now rejected.
 - Custom post type update abilities now validate requested taxonomy assignments (registration and assign-terms permission) before saving title, content, or status changes, matching the create ability's behavior. Invalid or unauthorized taxonomy requests are now rejected before any changes are persisted, instead of after the post was already updated.
 
 ## 2.5.0

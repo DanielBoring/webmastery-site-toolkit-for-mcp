@@ -552,6 +552,11 @@ e2e_ensure_role(
 	]
 );
 e2e_ensure_role(
+	'wstm106_page_editor',
+	'WSTM106 Page Editor',
+	[ 'read', 'edit_pages', 'edit_published_pages', 'publish_pages' ]
+);
+e2e_ensure_role(
 	'user_lister',
 	'User Lister',
 	[
@@ -566,6 +571,8 @@ $limited_book_manager_id = e2e_ensure_user( 'limited_book_manager_test', 'limite
 $wstm107_book_editor_no_assign_id = e2e_ensure_user( 'wstm107_book_editor_test', 'wstm107-book-editor@test.local', 'wstm107_book_editor_no_assign' );
 $case_manager_id         = e2e_ensure_user( 'case_manager_test', 'case-manager@test.local', 'case_manager' );
 $user_lister_id          = e2e_ensure_user( 'user_lister_test', 'user-lister@test.local', 'user_lister' );
+$wstm106_page_editor_id = e2e_ensure_user( 'wstm106_page_editor', 'wstm106-page-editor@test.local', 'wstm106_page_editor' );
+( new WP_User( $wstm106_page_editor_id ) )->set_role( 'wstm106_page_editor' );
 ( new WP_User( $limited_editor_id ) )->set_role( 'limited_editor' );
 ( new WP_User( $book_manager_id ) )->set_role( 'book_manager' );
 ( new WP_User( $limited_book_manager_id ) )->set_role( 'limited_book_manager' );
@@ -600,6 +607,12 @@ $fixtures = array(
 	'delete_tag_id'      => e2e_ensure_term_id( 'mcp-e2e-delete-tag', 'post_tag' ),
 );
 $fixtures['category_id_string'] = (string) $fixtures['category_id'];
+
+$fixtures['wstm106_page_id'] = e2e_insert_post( 'page', 'WSTM106 Original', 'WSTM106 original content.', $wstm106_page_editor_id, 'draft', 'wstm106-original' );
+$fixtures['wstm106_parent_id'] = e2e_insert_post( 'page', 'WSTM106 Allowed Parent', 'Allowed parent.', $wstm106_page_editor_id, 'draft' );
+$fixtures['wstm106_denied_parent_id'] = e2e_insert_post( 'page', 'WSTM106 Denied Parent', 'Denied parent.', $editor_id, 'draft' );
+$fixtures['wstm106_book_id'] = e2e_insert_post( 'mcp_book', 'WSTM106 Original Book', 'Original book.', $book_manager_id, 'draft', 'wstm106-original-book' );
+$fixtures['wstm106_case_id'] = e2e_insert_post( 'mcp_case_study', 'WSTM106 Original Case', 'Original case.', $case_manager_id, 'draft', 'wstm106-original-case' );
 
 $fixtures['post_id']         = e2e_insert_post( 'post', 'MCP E2E Post', 'Content for MCP E2E post.', $author_id );
 $fixtures['partial_post_id'] = e2e_insert_post(
@@ -854,6 +867,7 @@ $roles = array(
 	'wstm107_book_editor_no_assign' => $wstm107_book_editor_no_assign_id,
 	'case_manager' => $case_manager_id,
 	'user_lister'  => $user_lister_id,
+	'wstm106_page_editor' => $wstm106_page_editor_id,
 );
 
 $registered = array_filter(
