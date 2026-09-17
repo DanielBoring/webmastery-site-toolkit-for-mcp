@@ -55,7 +55,7 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | Post meta | Read, update, and delete safe custom fields; write supported Yoast SEO and SEOPress metadata | Author or Editor |
 | Custom post types | Discover eligible public CPTs, generate list/get/create/update/delete abilities, and patch targeted content for editor-enabled types with CPT capability-map and object/status-aware filtering | CPT capability map |
 | Taxonomy | List, get, create, update, and delete categories and tags | Subscriber to Editor |
-| Comments | List, reply, update, approve, hold, trash, or mark spam | Editor |
+| Comments | List, reply, update, approve, hold, trash, or mark spam; moderation requires access to the specific comment | Editor; custom roles need `moderate_comments` plus `edit_comment` for moderation |
 | Media | List, inspect, update, upload public image URLs, set featured images, and delete media | Author or Editor |
 | Content hygiene | Find orphaned media, posts/pages missing featured images, and stuck scheduled posts | Author or Editor |
 | Site info | Return safe site basics and current-user context; runtime, WordPress version, database, and theme-version details require Administrator access | Subscriber to Administrator |
@@ -155,11 +155,14 @@ Try a few safe checks:
 
 If discovery shows fewer abilities than this repo documents, the connected WordPress site is running an older deployed copy of the plugin. Update the site plugin, then run discovery again.
 
+For comment permission checks, use a disposable site: a custom account with only `read` and `moderate_comments` must be denied when updating, approving, trashing, or marking a comment as spam on a post it cannot edit. Confirm both comment content and status remain unchanged, including when an update supplies a status. An Editor with access to that post should succeed.
+
 ## Security Best Practices
 
 - Use a dedicated service account, not your personal account.
 - Use **Editor** for routine content work and a separate **Administrator** account only for sensitive audits or plugin management.
 - WordPress capability checks gate every ability.
+- Updating or moderating comments requires both `moderate_comments` and WordPress's object-specific `edit_comment` capability. Custom roles cannot moderate another author's post or a custom post type without its mapped edit capabilities. This does not change comment listing or reply permissions.
 - List abilities for posts, pages, custom post types, media, and SEO scores filter every returned object before exposing full details; private, trashed, draft, pending, and scheduled content is only returned when WordPress grants the matching object/status capability.
 - Creating or updating content as `publish`, `private`, or `future` requires the relevant publish capability, and bulk publishing requires `publish_posts`.
 - Author display names remain in content responses, but login names are omitted from post, page, CPT, revision, and content-hygiene responses. User login and email fields are only returned from user lookup abilities when the caller can edit that user.

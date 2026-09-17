@@ -65,6 +65,8 @@ It requires a WordPress site where custom plugins can be installed. Self-hosted 
 
 Use a dedicated Editor account for normal content workflows: posts, pages, taxonomy, comments, media, revisions, content blocks, and content hygiene.
 
+Comment updates, approval, trash, and spam actions require both moderate_comments and edit_comment for the specific comment. A custom moderator role also needs the mapped edit permissions for the comment's post; owning a post alone does not remove the moderate_comments requirement.
+
 Use a separate dedicated Administrator account only when you need Administrator-only workflows such as runtime environment details, plugin management, user access audits, site health, database health, performance status, backup status, security audits, or site-wide SEO overview.
 
 = Why use a dedicated account? =

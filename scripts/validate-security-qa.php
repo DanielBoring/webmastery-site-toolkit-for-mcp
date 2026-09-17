@@ -132,6 +132,7 @@ foreach ( $manifest as $case ) {
 
 $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/activate-plugin',
+	'webmastery-site-toolkit-for-mcp/approve-comment',
 	'webmastery-site-toolkit-for-mcp/bulk-publish-posts',
 	'webmastery-site-toolkit-for-mcp/create-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study',
@@ -145,6 +146,9 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/list-media',
 	'webmastery-site-toolkit-for-mcp/list-users',
 	'webmastery-site-toolkit-for-mcp/security-audit',
+	'webmastery-site-toolkit-for-mcp/spam-comment',
+	'webmastery-site-toolkit-for-mcp/trash-comment',
+	'webmastery-site-toolkit-for-mcp/update-comment',
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/update-page',
@@ -154,6 +158,28 @@ $required_failure_cases = array(
 foreach ( $required_failure_cases as $ability ) {
 	if ( empty( $summary[ $ability ]['failure'] ) ) {
 		$errors[] = "{$ability} must keep at least one negative permission/security manifest case.";
+	}
+}
+
+foreach ( array( 'update', 'approve', 'trash', 'spam' ) as $action ) {
+	$ability = "webmastery-site-toolkit-for-mcp/{$action}-comment";
+	$wstm105_covered = false;
+	foreach ( $manifest as $case ) {
+		if (
+			$ability === ( $case['ability'] ?? '' )
+			&& 'wstm105_moderator' === ( $case['role'] ?? '' )
+			&& 'failure' === ( $case['expect'] ?? '' )
+			&& 'ability_invalid_permissions' === ( $case['expect_error_code'] ?? '' )
+			&& isset( $case['input']['comment_id'], $case['assert_comment_state']['comment_id'], $case['assert_comment_state']['content'], $case['assert_comment_state']['status'] )
+			&& $case['input']['comment_id'] === $case['assert_comment_state']['comment_id']
+			&& ( 'update' !== $action || 'spam' === ( $case['input']['status'] ?? '' ) )
+		) {
+			$wstm105_covered = true;
+			break;
+		}
+	}
+	if ( ! $wstm105_covered ) {
+		$errors[] = "{$ability} must keep a moderate_comments-only denial with persisted content/status assertions (including a status input for update-comment).";
 	}
 }
 

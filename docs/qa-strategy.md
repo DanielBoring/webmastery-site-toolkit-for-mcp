@@ -46,6 +46,7 @@ Security-sensitive abilities must include:
 
 - `permission_callback => '__return_true'` is blocked in plugin ability registrations unless intentionally allow-listed in the validator after explicit security review.
 - The permission-hardening regression cases from PR #90 must keep negative manifest coverage.
+- Comment update, approval, trash, and spam abilities must keep moderator-only denial cases with persisted content/status assertions, including an update that supplies a moderation status.
 - Sensitive identity and fingerprinting absence assertions must remain in the manifest.
 
 This validator is intentionally conservative. It should catch known dangerous patterns without replacing human review, WordPress.org review, or future deeper static analysis such as CodeQL or Semgrep.

@@ -14,6 +14,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 ### Changed
 
 - Updated WordPress tested compatibility to 7.1 after passing ability and MCP transport checks on PHP 8.2 and 8.4.
+- Required object-specific comment edit permission as well as moderation permission for comment updates, approval, trash, and spam actions, preventing custom moderator roles from changing comments on posts they cannot edit. Missing comments now fail at the permission boundary, which WordPress's ability execution API reports as `ability_invalid_permissions`.
 
 ## 2.5.0
 

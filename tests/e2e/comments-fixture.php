@@ -1,0 +1,162 @@
+<?php
+
+function wstm105_comment_fixtures( $author_id, $book_id ) {
+	// Only the deliberately orphaned fixture has no post author to notify.
+	add_filter( 'notify_post_author', 'wstm105_notify_post_author', 10, 2 );
+	e2e_ensure_role( 'wstm105_moderator', 'Comment moderator only', array( 'read', 'moderate_comments' ) );
+	e2e_ensure_role( 'wstm105_own_editor', 'Own draft comment moderator', array( 'read', 'edit_posts', 'moderate_comments' ) );
+	$roles = array();
+	foreach ( array( 'wstm105_moderator', 'wstm105_own_editor' ) as $role ) {
+		$roles[ $role ] = e2e_ensure_user( $role, "{$role}@test.local", $role );
+		( new WP_User( $roles[ $role ] ) )->set_role( $role );
+	}
+
+	$posts = array(
+		'other'  => e2e_insert_post( 'post', 'WSTM105 other post', 'Comment authorization fixture.', $author_id ),
+		'own'    => e2e_insert_post( 'post', 'WSTM105 own draft', 'Comment authorization fixture.', $roles['wstm105_own_editor'], 'draft' ),
+		'author' => e2e_insert_post( 'post', 'WSTM105 author post', 'Comment authorization fixture.', $author_id ),
+		'orphan' => 987654321,
+		'cpt'    => $book_id,
+	);
+	$posts['admin'] = $posts['other'];
+	$fixtures = array();
+	foreach ( array( 'update', 'approve', 'trash', 'spam' ) as $action ) {
+		foreach ( $posts as $scope => $post_id ) {
+			$key = "wstm105_{$action}_{$scope}";
+			$fixtures[ $key ] = e2e_insert_comment( $post_id, $key );
+		}
+	}
+	$fixtures['wstm105_other_post'] = $posts['other'];
+	$fixtures['wstm105_update_hold'] = e2e_insert_comment( $posts['other'], 'wstm105_update_hold' );
+	wp_set_comment_status( $fixtures['wstm105_update_hold'], 'approve' );
+	return array( 'roles' => $roles, 'fixtures' => $fixtures );
+}
+
+function wstm105_notify_post_author( $notify, $comment_id ) {
+	$comment = get_comment( $comment_id );
+	return $comment && 987654321 === (int) $comment->comment_post_ID ? false : $notify;
+}
+
+function wstm105_comment_state( $comment_id ) {
+	clean_comment_cache( $comment_id );
+	$comment = get_comment( $comment_id );
+	if ( ! $comment ) {
+		throw new RuntimeException( "WSTM105 comment {$comment_id} disappeared." );
+	}
+	return array(
+		'content' => $comment->comment_content,
+		'status'  => wp_get_comment_status( $comment_id ),
+	);
+}
+
+function wstm105_assert_comment_state( $assertion ) {
+	$actual = wstm105_comment_state( $assertion['comment_id'] );
+	foreach ( array( 'content', 'status' ) as $field ) {
+		if ( $actual[ $field ] !== $assertion[ $field ] ) {
+			echo "FAIL WSTM105 persisted comment {$field}: " . wp_json_encode( $actual ) . "\n";
+			return false;
+		}
+	}
+	return true;
+}
+
+function wstm105_assert( $condition, $message ) {
+	if ( ! $condition ) {
+		throw new RuntimeException( "WSTM105 {$message}" );
+	}
+}
+
+function wstm105_check_direct_callbacks( $roles, $fixtures ) {
+	$checks = 0;
+	foreach ( array( 'update', 'approve', 'trash', 'spam' ) as $action ) {
+		$ability = wp_get_ability( "webmastery-site-toolkit-for-mcp/{$action}-comment" );
+		$property = new ReflectionProperty( WP_Ability::class, 'execute_callback' );
+		$property->setAccessible( true );
+		$execute = $property->getValue( $ability );
+		$property = new ReflectionProperty( WP_Ability::class, 'permission_callback' );
+		$property->setAccessible( true );
+		$permission = $property->getValue( $ability );
+		$scenarios = array(
+			array( 'wstm105_moderator', 'other', true, false ),
+			array( 'wstm105_own_editor', 'other', true, false ),
+			array( 'wstm105_own_editor', 'own', true, true ),
+			array( 'author', 'author', false, true ),
+			array( 'editor', 'other', true, true ),
+			array( 'admin', 'other', true, true ),
+			array( 'editor', 'cpt', true, false ),
+			array( 'wstm105_moderator', 'orphan', true, false ),
+			array( 'wstm105_own_editor', 'orphan', true, true ),
+		);
+		foreach ( $scenarios as list( $role, $scope, $moderate, $edit ) ) {
+			$post_id = get_comment( $fixtures[ "wstm105_{$action}_{$scope}" ] )->comment_post_ID;
+			$comment_id = e2e_insert_comment( $post_id, "wstm105-direct-{$action}-{$role}-{$scope}" );
+			$input = array( 'comment_id' => $comment_id, 'content' => 'Updated directly.', 'status' => 'spam' );
+			wp_set_current_user( $roles[ $role ] );
+			wstm105_assert( $moderate === current_user_can( 'moderate_comments' ) && $edit === current_user_can( 'edit_comment', $comment_id ), "{$role}/{$scope} fixture capability mismatch." );
+			$allowed = $moderate && $edit;
+			$before = wstm105_comment_state( $comment_id );
+			$result = $permission( $input );
+			wstm105_assert( $allowed ? true === $result : is_wp_error( $result ) && 'forbidden' === $result->get_error_code(), "{$action} permission callback mismatch for {$role}/{$scope}." );
+			wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Permission callback mutated a comment.' );
+			$result = $execute( $input );
+			$after = wstm105_comment_state( $comment_id );
+			wstm105_assert( $allowed === e2e_result_is_success( $result ), "{$action} direct execution mismatch for {$role}/{$scope}." );
+			if ( ! $allowed ) {
+				wstm105_assert( $before === $after, "{$action} direct denial changed persisted content/status." );
+				wstm105_assert( false === $result['success'] && ! empty( $result['error'] ), 'Direct denial must preserve the error response.' );
+			} else {
+				$status = array( 'update' => 'spam', 'approve' => 'approved', 'trash' => 'trash', 'spam' => 'spam' )[ $action ];
+				wstm105_assert( $status === $after['status'], "{$action} did not persist the expected status." );
+				wstm105_assert( ( 'update' === $action ? 'Updated directly.' : $before['content'] ) === $after['content'], "{$action} persisted unexpected content." );
+				wstm105_assert( $comment_id === $result['data']['id'] && $status === $result['data']['status'], 'Success response contract changed.' );
+			}
+			$checks++;
+		}
+
+		wp_set_current_user( $roles['editor'] );
+		$input = array( 'comment_id' => $fixtures['missing_comment_id'], 'content' => 'Missing.' );
+		$result = $permission( $input );
+		wstm105_assert( is_wp_error( $result ) && 'not_found' === $result->get_error_code(), "{$action} missing permission error changed." );
+		$result = $execute( $input );
+		wstm105_assert( false === $result['success'], "{$action} missing comment succeeded." );
+		wstm105_assert( 'update' === $action ? 'not_found' === $result['error']['code'] : 'Comment not found.' === $result['error'], 'Missing direct response contract changed.' );
+		$checks++;
+
+		$comment_id = $fixtures[ "wstm105_{$action}_other" ];
+		$before = wstm105_comment_state( $comment_id );
+		$invalid_inputs = array( null, false, 7, 'invalid', new stdClass(), array(), array( 'comment_id' => array( $comment_id ) ), array( 'comment_id' => new stdClass() ), array( 'comment_id' => true ), array( 'comment_id' => -$comment_id ), array( 'comment_id' => 1.5 ) );
+		foreach ( $invalid_inputs as $input ) {
+			wstm105_assert( is_wp_error( $permission( $input ) ), "{$action} permission accepted malformed input." );
+			$result = $execute( $input );
+			wstm105_assert( false === $result['success'] && ! empty( $result['error'] ), "{$action} direct malformed input must fail explicitly." );
+			wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Malformed input changed persisted state.' );
+			$checks++;
+		}
+
+		$deny = static function ( $caps, $cap, $user_id, $args ) use ( $comment_id ) {
+			return 'edit_comment' === $cap && $comment_id === ( $args[0] ?? null ) ? array( 'do_not_allow' ) : $caps;
+		};
+		add_filter( 'map_meta_cap', $deny, 10, 4 );
+		try {
+			$input = array( 'comment_id' => $comment_id, 'content' => 'Filtered out.', 'status' => 'trash' );
+			$result = $permission( $input );
+			wstm105_assert( is_wp_error( $result ) && 'forbidden' === $result->get_error_code(), 'Custom edit_comment mapping bypassed by permission callback.' );
+			wstm105_assert( false === $execute( $input )['success'], 'Custom edit_comment mapping bypassed by execution.' );
+			wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Custom capability denial changed persisted state.' );
+		} finally {
+			remove_filter( 'map_meta_cap', $deny, 10 );
+		}
+		$checks++;
+
+		if ( 'update' === $action ) {
+			foreach ( array( array( 'content' => array() ), array( 'content' => new stdClass() ), array( 'content' => '' ), array( 'status' => array() ), array( 'status' => new stdClass() ), array( 'status' => 'pending' ) ) as $invalid ) {
+				$input = array_merge( array( 'comment_id' => $comment_id, 'content' => 'Must not persist.' ), $invalid );
+				$result = $execute( $input );
+				wstm105_assert( false === $result['success'], 'Invalid comment update accepted.' );
+				wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Invalid update changed content/status before validation.' );
+				$checks++;
+			}
+		}
+	}
+	echo "PASS WSTM105 {$checks} direct callback authorization checks\n";
+}

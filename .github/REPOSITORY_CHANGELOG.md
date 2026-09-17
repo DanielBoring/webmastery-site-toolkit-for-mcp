@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added comment moderation regression fixtures, direct-callback checks, persisted content/status assertions, and required moderator-only denial cases in the security QA policy.
 - Added a private security policy and issue routing, with latest-stable security fixes and best-effort reporting expectations.
 - Added stable fail-closed PR gates, PHP 8.4 coverage, retained Docker summaries, and dedicated workflow/shell security linting.
 - Added verified test-dependency pins and compatibility promotion checks, including current-toolchain package coverage.

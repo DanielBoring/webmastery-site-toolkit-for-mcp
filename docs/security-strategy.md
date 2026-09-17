@@ -36,6 +36,10 @@ Use these defaults:
 | Plugin, environment, database, backup, performance, security, or runtime details | Administrator-level capabilities such as `manage_options` or plugin-management capabilities. |
 | User identity data | Restrict login/email fields to callers with user-management capabilities; use `assert_missing_paths` for lower-privilege cases. |
 
+Comment updates, approval, trash, and spam require **both** `moderate_comments` and `edit_comment` on the resolved comment, in the permission callback and again before execution. WordPress maps `edit_comment` to the parent post's `edit_post` capabilities, or to `edit_posts` for an orphaned comment; the plugin delegates that mapping to core, including capability filters. Comment listing and replies retain their separate existing policies.
+
+This is the plugin's moderation policy, not a claim of REST permission parity: WordPress 7.1's REST comment controller accepts `moderate_comments` **or** `edit_comment`. Callback failures use `forbidden` or `not_found`; `WP_Ability::execute()` wraps permission failures as `ability_invalid_permissions`. Consequently missing comments also fail at that earlier boundary, while direct execute callbacks retain their existing response shapes.
+
 ## Security-sensitive test policy
 
 Security-sensitive abilities must have E2E manifest coverage showing both allowed and denied behavior. Add `assert_missing_paths` when a response should omit sensitive fields for lower-privilege users.
@@ -51,6 +55,7 @@ Current static enforcement:
 Current runtime enforcement:
 
 - Ability Contract QA executes all manifest cases in WordPress.
+- Comment moderation cases verify persisted content and status on denied calls, including status-bearing updates. Direct callback checks also cover the moderation capability floor, custom post type maps, own-post access, orphan comments, malformed input, missing comments, and capability-filter denials.
 - Full MCP E2E verifies real MCP Adapter authentication, discovery, execution, and subscriber denial.
 - Docker QA fails when the WordPress debug log contains warnings, notices, deprecations, or errors.
 
