@@ -60,6 +60,8 @@ The required-check names refer to stable aggregate jobs, not matrix-expanded nam
 
 The production environment, main-history/PR rules, and tag protections were applied and read back on September 16, 2026. `main-ci-gates` is staged **disabled** until the changed workflows have successful real PR runs, including an Actions-created baseline PR. Enable it before merging that promotion; do not describe the merge checks as enforced while this activation is pending.
 
+Passing Dependabot PR checks or fixing the compatibility CLI gate does not fulfill the Actions-created baseline PR requirement. Issue #123 remains open until the outstanding activation evidence and safeguards work are complete.
+
 ## Workflow permissions
 
 Use least privilege per job:
@@ -126,6 +128,10 @@ Pipeline linting is a separate opt-in local toolchain and GitHub workflow; PHP-o
 3. For Docker failures, inspect the PR comment and uploaded artifacts.
 4. For release failures, distinguish package metadata/content failures, Plugin Check failures, protected environment approval issues, SVN deployment failures, and GitHub Release creation failures.
 5. For scheduled compatibility failures, reproduce manually before changing required branch protection.
+
+Compatibility metadata generation uses the same updater CLI in the current Plugin Check and proposed-commit jobs. Both pass all eight version/digest options, including `--mcp-adapter-sha256` and `--wp-cli-sha512`, followed by `--confirmed-wordpress`. A parser failure here occurs before Plugin Check executes; passing runtime lanes alone is not a passing checker or promotion.
+
+Run `composer qa:unit -- --filter CompatibilityBaselinesTest` for the local regression. It launches the actual CLI with workflow-shaped argv in disposable fixture roots, checks both workflow call sites, verifies promotion and no-op output, and confirms invalid/duplicate/unknown options and invalid references leave all baseline files unchanged. These tests also run in `composer qa`; they do not promote repository pins or replace the required runtime/package and real PR-event evidence.
 
 ## Official references
 
