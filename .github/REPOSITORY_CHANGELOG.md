@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added real-core targeted patch HTML regressions with persisted raw-content and untouched-block hash evidence, replacement sanitization, effective-capability save filtering, target/precondition failures, and object-denial checks. The contract lane runs these checks and retains `patch-html-summary.json`; the manifest and security validator also protect affected ability coverage.
 - Added a private security policy and issue routing, with latest-stable security fixes and best-effort reporting expectations.
 - Added stable fail-closed PR gates, PHP 8.4 coverage, retained Docker summaries, and dedicated workflow/shell security linting.
 - Added verified test-dependency pins and compatibility promotion checks, including current-toolchain package coverage.

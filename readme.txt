@@ -87,6 +87,14 @@ Write operations go through WordPress APIs and capability checks. Posts and page
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
 
+= Will a targeted patch change HTML elsewhere in the content? =
+
+Block and section patches sanitize only the replacement fragment, not the entire rebuilt body. Exact patches compare old_content against the original raw content, including markup that would be removed by HTML sanitization. Both abilities still require permission to edit the specific object.
+
+WordPress's normal save filters remain active. Existing iframe, script, style, form, SVG, and event-attribute markup can be preserved only when the caller has effective unfiltered_html permission. Multisite, DISALLOW_UNFILTERED_HTML, and capability policies can deny that permission even to an Administrator. Replacement fragments are always filtered, and full-content updates still sanitize all supplied content.
+
+Block and heading patches retain WordPress's existing parse/serialize normalization, including noncanonical block delimiters and empty freeform separators. Exact patches leave surrounding raw bytes alone, subject to WordPress's save filters. On a test site, compare the untouched block hashes from list-content-blocks before and after patching a neighboring block.
+
 = What if discovery shows fewer abilities than the documentation? =
 
 The connected WordPress site may be running an older plugin version. Update the plugin on that site, then call `mcp-adapter-discover-abilities` again.
@@ -103,6 +111,9 @@ Report suspected vulnerabilities privately at https://github.com/DanielBoring/we
 Security fixes target the latest stable release. Reports receive a best-effort response without a guaranteed deadline. See https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/policy for the full policy.
 
 == Changelog ==
+
+= Unreleased =
+* Preserve unrelated stored HTML during targeted block and section patches without bypassing WordPress save filters. Match exact targets against raw content while continuing to sanitize replacement fragments.
 
 = 2.5.0 =
 * Expand targeted content patching to pages and public editor-enabled custom post types with object-level permissions and explicit unsupported-type errors.

@@ -17,6 +17,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Targeted block and section patches no longer sanitize unrelated stored HTML in the rebuilt body. Exact patches now match the original raw search fragment. Replacement fragments remain sanitized, object permissions are unchanged, and WordPress's normal capability-dependent save filters still apply.
 - Custom post type update abilities now validate requested taxonomy assignments (registration and assign-terms permission) before saving title, content, or status changes, matching the create ability's behavior. Invalid or unauthorized taxonomy requests are now rejected before any changes are persisted, instead of after the post was already updated.
 
 ## 2.5.0

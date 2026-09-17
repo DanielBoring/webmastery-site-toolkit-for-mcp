@@ -1253,7 +1253,7 @@ class Webmastery_MCP_Posts {
 					wp_slash(
 						[
 							'ID'           => $post->ID,
-							'post_content' => wp_kses_post( serialize_blocks( $blocks ) ),
+							'post_content' => serialize_blocks( $blocks ),
 						]
 					),
 					true
@@ -1434,7 +1434,7 @@ class Webmastery_MCP_Posts {
 
 					$patch = self::patch_content_by_exact_match(
 						$current_content,
-						wp_kses_post( $input['old_content'] ),
+						$input['old_content'],
 						$replacement_content
 					);
 				} else {
@@ -1447,7 +1447,7 @@ class Webmastery_MCP_Posts {
 
 				$args = [
 					'ID'           => $id,
-					'post_content' => wp_kses_post( $patch['content'] ),
+					'post_content' => $patch['content'],
 				];
 
 				$result = wp_update_post( wp_slash( $args ), true );

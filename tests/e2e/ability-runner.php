@@ -842,10 +842,20 @@ set_site_transient(
 	)
 );
 
+require_once __DIR__ . '/patch-html-runner.php';
+wp_set_current_user( $editor_id );
+$wstm115_content = WSTM115_Patch_HTML_Tests::html_block() . WSTM115_Patch_HTML_Tests::paragraph( 'Manifest target.' );
+$fixtures['wstm115_block_post_id'] = WSTM115_Patch_HTML_Tests::seed( $wstm115_content, $editor_id );
+$fixtures['wstm115_exact_post_id'] = WSTM115_Patch_HTML_Tests::seed( $wstm115_content, $editor_id );
+$fixtures['wstm115_untouched_hash'] = hash( 'sha256', WSTM115_Patch_HTML_Tests::html_block() );
+$wstm115_filtered_editor_id = e2e_ensure_user( 'wstm115_filtered_editor', 'wstm115-filtered-editor@test.local', 'editor' );
+( new WP_User( $wstm115_filtered_editor_id ) )->add_cap( 'unfiltered_html', false );
+
 $roles = array(
 	'admin'        => $admin_id,
 	'author'       => $author_id,
 	'editor'       => $editor_id,
+	'filtered_editor' => $wstm115_filtered_editor_id,
 	'limited_editor' => $limited_editor_id,
 	'subscriber'   => $subscriber_id,
 	'no_role'      => $no_role_id,
@@ -1035,4 +1045,6 @@ foreach ( $manifest as $case ) {
 echo "SUMMARY {$summary['passed']} passed, {$summary['failed']} failed\n";
 e2e_write_summary( $summary );
 
-exit( $summary['failed'] > 0 ? 1 : 0 );
+$patch_html_summary = ( new WSTM115_Patch_HTML_Tests( $roles ) )->run();
+
+exit( $summary['failed'] > 0 || $patch_html_summary['failed'] > 0 ? 1 : 0 );
