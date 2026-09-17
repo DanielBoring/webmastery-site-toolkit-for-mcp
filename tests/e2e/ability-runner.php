@@ -535,6 +535,17 @@ e2e_ensure_role(
 	]
 );
 e2e_ensure_role(
+	'wstm107_book_editor_no_assign',
+	'WSTM107 Book Editor Without Taxonomy Assignment',
+	[
+		'read',
+		'edit_mcp_books',
+		'edit_others_mcp_books',
+		'edit_published_mcp_books',
+		'publish_mcp_books',
+	]
+);
+e2e_ensure_role(
 	'user_lister',
 	'User Lister',
 	[
@@ -546,11 +557,13 @@ e2e_ensure_role(
 $limited_editor_id       = e2e_ensure_user( 'limited_editor_test', 'limited-editor@test.local', 'limited_editor' );
 $book_manager_id         = e2e_ensure_user( 'book_manager_test', 'book-manager@test.local', 'book_manager' );
 $limited_book_manager_id = e2e_ensure_user( 'limited_book_manager_test', 'limited-book-manager@test.local', 'limited_book_manager' );
+$wstm107_book_editor_no_assign_id = e2e_ensure_user( 'wstm107_book_editor_test', 'wstm107-book-editor@test.local', 'wstm107_book_editor_no_assign' );
 $case_manager_id         = e2e_ensure_user( 'case_manager_test', 'case-manager@test.local', 'case_manager' );
 $user_lister_id          = e2e_ensure_user( 'user_lister_test', 'user-lister@test.local', 'user_lister' );
 ( new WP_User( $limited_editor_id ) )->set_role( 'limited_editor' );
 ( new WP_User( $book_manager_id ) )->set_role( 'book_manager' );
 ( new WP_User( $limited_book_manager_id ) )->set_role( 'limited_book_manager' );
+( new WP_User( $wstm107_book_editor_no_assign_id ) )->set_role( 'wstm107_book_editor_no_assign' );
 ( new WP_User( $case_manager_id ) )->set_role( 'case_manager' );
 ( new WP_User( $user_lister_id ) )->set_role( 'user_lister' );
 
@@ -568,6 +581,7 @@ $fixtures = array(
 	'limited_editor_id'  => $limited_editor_id,
 	'book_manager_id'    => $book_manager_id,
 	'limited_book_manager_id' => $limited_book_manager_id,
+	'wstm107_book_editor_no_assign_id' => $wstm107_book_editor_no_assign_id,
 	'case_manager_id'    => $case_manager_id,
 	'user_lister_id'     => $user_lister_id,
 	'category_id'        => e2e_ensure_term_id( 'MCP E2E Category', 'category' ),
@@ -654,6 +668,7 @@ $fixtures['book_id']         = e2e_insert_post( 'mcp_book', 'MCP E2E Book', 'Con
 $fixtures['private_book_id'] = e2e_insert_post( 'mcp_book', 'MCP E2E Private Book', 'Private CPT fixture.', $book_manager_id, 'private' );
 $fixtures['trash_filter_book_id'] = e2e_insert_post( 'mcp_book', 'MCP E2E Trash Filter Book', 'Trash CPT fixture.', $book_manager_id, 'draft' );
 $fixtures['delete_book_id']  = e2e_insert_post( 'mcp_book', 'MCP E2E Delete Book', 'Delete CPT fixture.', $book_manager_id );
+$fixtures['wstm107_book_id'] = e2e_insert_post( 'mcp_book', 'WSTM107 Taxonomy Guard Book', 'Original content for taxonomy guard book.', $book_manager_id, 'draft' );
 $fixtures['case_id']         = e2e_insert_post( 'mcp_case_study', 'MCP E2E Case Study', 'Content for MCP E2E case study.', $case_manager_id );
 $fixtures['delete_case_id']  = e2e_insert_post( 'mcp_case_study', 'MCP E2E Delete Case Study', 'Delete CPT fixture.', $case_manager_id );
 $fixtures['block_path_page_id'] = e2e_insert_post(
@@ -830,6 +845,7 @@ $roles = array(
 	'no_role'      => $no_role_id,
 	'book_manager' => $book_manager_id,
 	'limited_book_manager' => $limited_book_manager_id,
+	'wstm107_book_editor_no_assign' => $wstm107_book_editor_no_assign_id,
 	'case_manager' => $case_manager_id,
 	'user_lister'  => $user_lister_id,
 );

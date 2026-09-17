@@ -630,6 +630,11 @@ class Webmastery_MCP_Custom_Post_Types {
 						return self::error_response( 'forbidden', 'You do not have permission to publish this custom post type item.' );
 					}
 
+					$validated_terms = self::validate_taxonomy_terms( $post_type_name, $input['taxonomy_terms'] ?? [] );
+					if ( is_wp_error( $validated_terms ) ) {
+						return self::error_response( $validated_terms->get_error_code(), $validated_terms->get_error_message() );
+					}
+
 					$args       = self::sanitized_post_args( $input, [ 'draft', 'publish', 'pending', 'private', 'future' ] );
 					$args['ID'] = $id;
 

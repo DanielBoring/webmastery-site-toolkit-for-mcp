@@ -15,6 +15,10 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 - Updated WordPress tested compatibility to 7.1 after passing ability and MCP transport checks on PHP 8.2 and 8.4.
 
+### Fixed
+
+- Custom post type update abilities now validate requested taxonomy assignments (registration and assign-terms permission) before saving title, content, or status changes, matching the create ability's behavior. Invalid or unauthorized taxonomy requests are now rejected before any changes are persisted, instead of after the post was already updated.
+
 ## 2.5.0
 
 ### Added

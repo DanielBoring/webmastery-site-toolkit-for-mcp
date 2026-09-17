@@ -15,6 +15,7 @@ $allowed_roles = array(
 	'no_role'      => true,
 	'subscriber'   => true,
 	'user_lister'  => true,
+	'wstm107_book_editor_no_assign' => true,
 );
 
 function webmastery_mcp_manifest_fail( array $errors ): void {
