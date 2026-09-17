@@ -97,6 +97,14 @@ Write operations go through WordPress APIs and capability checks. Posts, pages, 
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
 
+= Will a targeted patch change HTML elsewhere in the content? =
+
+Block and section patches sanitize only the replacement fragment, not the entire rebuilt body. Exact patches compare old_content against the original raw content, including markup that would be removed by HTML sanitization. Both abilities still require permission to edit the specific object.
+
+WordPress's normal save filters remain active. Existing iframe, script, style, form, SVG, and event-attribute markup can be preserved only when the caller has effective unfiltered_html permission. Multisite, DISALLOW_UNFILTERED_HTML, and capability policies can deny that permission even to an Administrator. Replacement fragments are always filtered, and full-content updates still sanitize all supplied content.
+
+Block and heading patches retain WordPress's existing parse/serialize normalization, including noncanonical block delimiters and empty freeform separators. Exact patches leave surrounding raw bytes alone, subject to WordPress's save filters. On a test site, compare the untouched block hashes from list-content-blocks before and after patching a neighboring block.
+
 = What happens if WordPress trash is disabled? =
 
 When EMPTY_TRASH_DAYS is 0 or another falsy value, post, page, and custom post type trash abilities refuse with trash_disabled before changing the item. Bulk post trash reports a failure for each authorized ID rather than a false success; inspect its per-ID failures and counts even when the summary itself succeeds. Missing items, wrong types, and permission failures keep their existing precedence. There is no permanent-delete override.
@@ -121,6 +129,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Changelog ==
 
 = Unreleased =
+* Preserve unrelated stored HTML during targeted block and section patches without bypassing WordPress save filters. Match exact targets against raw content while continuing to sanitize replacement fragments.
 * Require WordPress read access in addition to Site Kit route permissions for module, permission, and PageSpeed abilities, including direct execution. Missing delegated permission callbacks now fail closed.
 * Prevent permanent deletion by post, page, custom post type, and bulk post trash abilities when WordPress trash is disabled. Return an explicit refusal without changing existing enabled-trash behavior.
 * Restrict webmaster verification's WordPress-only Site Kit state to callers with plugin activation permission; retain public checks for Subscribers and Authors.

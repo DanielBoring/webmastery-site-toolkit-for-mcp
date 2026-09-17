@@ -147,6 +147,8 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/list-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/list-media',
 	'webmastery-site-toolkit-for-mcp/list-users',
+	'webmastery-site-toolkit-for-mcp/patch-content-block',
+	'webmastery-site-toolkit-for-mcp/patch-post-content',
 	'webmastery-site-toolkit-for-mcp/security-audit',
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study',
@@ -158,6 +160,22 @@ $required_failure_cases = array(
 foreach ( $required_failure_cases as $ability ) {
 	if ( empty( $summary[ $ability ]['failure'] ) ) {
 		$errors[] = "{$ability} must keep at least one negative permission/security manifest case.";
+	}
+}
+
+foreach ( array( 'patch-content-block', 'patch-post-content' ) as $ability_slug ) {
+	foreach ( array( 'editor' => 'success', 'subscriber' => 'failure' ) as $role => $expect ) {
+		$matches = array_filter(
+			$manifest,
+			static function ( $case ) use ( $ability_slug, $role, $expect ) {
+				return "webmastery-site-toolkit-for-mcp/{$ability_slug}" === ( $case['ability'] ?? '' )
+					&& $role === ( $case['role'] ?? '' )
+					&& $expect === ( $case['expect'] ?? '' );
+			}
+		);
+		if ( empty( $matches ) ) {
+			$errors[] = "{$ability_slug} must keep a {$role} {$expect} manifest case.";
+		}
 	}
 }
 

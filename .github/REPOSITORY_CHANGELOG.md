@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added real-core targeted patch HTML regressions with persisted raw-content and untouched-block hash evidence, replacement sanitization, effective-capability save filtering, target/precondition failures, and object-denial checks. The contract lane runs these checks and retains `patch-html-summary.json`; the manifest and security validator also protect affected ability coverage.
 - Added Site Kit local-capability and delegated-permission regression coverage, required manifest scenarios, real MCP fixture checks, a separate read-only upstream permission inspector, and matching contributor/PR guidance.
 - Added fresh-process enabled/disabled WordPress trash regressions to Ability Contract QA, with persisted row/metadata/taxonomy/descendant/comment checks, deletion API/hook observation, permission/error precedence, mixed bulk outcomes, and comment-status characterization. Reject web access to the mutating runner before argument handling or WordPress bootstrap. Retain both runtime summaries as PR artifacts and add the missing affected post/page/comment trash manifest denials.
 - Added focused webmaster verification privacy/cache regressions with deterministic HTTP/DNS/plugin inspection counters, real WordPress transient/HTTP-count contract assertions, and required Subscriber/Author omission assertions in the security validator.

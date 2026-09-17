@@ -66,6 +66,19 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 
 For the exact ability names, input behavior, and required capabilities, use the [full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities).
 
+### Targeted content patching
+
+| Ability | Target | Required access |
+| --- | --- | --- |
+| `webmastery-site-toolkit-for-mcp/patch-content-block` | One Gutenberg block by path or unique hash in a post or page | `edit_post` for the specific object |
+| `webmastery-site-toolkit-for-mcp/patch-post-content` | A heading section or unique exact raw-content match in a post, page, or public, UI-visible, editor-enabled CPT | `edit_post` for the specific object, resolved through its capability map |
+
+Both abilities sanitize the **replacement fragment** with `wp_kses_post()`, not the entire rebuilt body. This prevents the plugin from stripping unrelated iframe, script, style, form, SVG, or event-attribute markup already stored elsewhere. Exact-match `old_content` is compared byte-for-byte against raw stored content, without sanitizing the search needle.
+
+WordPress's normal save pipeline still applies. Preserving markup that KSES would strip requires the caller's **effective `unfiltered_html` capability**; a role name alone is not sufficient. Multisite, `DISALLOW_UNFILTERED_HTML`, or capability policies can deny it even to an Administrator. Callers without it remain subject to core's save-time KSES filtering. New replacement markup is filtered regardless of this capability, and full-content update abilities still sanitize all supplied content.
+
+Block-path, block-hash, and heading patches retain the existing WordPress parse/serialize behavior, which can normalize noncanonical block delimiters and omit empty freeform separators. They are not raw byte-splicing operations. Exact patches do not parse or serialize the surrounding content.
+
 ### Google Site Kit compatibility abilities
 
 These optional read-only abilities use Site Kit's registered internal REST routes in the current WordPress user context. They do not read Site Kit options, instantiate Site Kit internals, expose OAuth credentials, or change Site Kit settings.
@@ -168,6 +181,8 @@ Try a few safe checks:
 
 If discovery shows fewer abilities than this repo documents, the connected WordPress site is running an older deployed copy of the plugin. Update the site plugin, then run discovery again.
 
+To verify patch preservation on a disposable site, use an account with effective `unfiltered_html`, save a Custom HTML block beside a paragraph, and call `list-content-blocks`. Patch only the paragraph with `patch-content-block`, supplying its path and the returned content/block hashes as preconditions. List the blocks again: the untouched Custom HTML block's hash should be unchanged. For an exact patch, use the original raw markup as `old_content`, not rendered or sanitized HTML.
+
 ## Security Best Practices
 
 - Use a dedicated service account, not your personal account.
@@ -179,6 +194,7 @@ If discovery shows fewer abilities than this repo documents, the connected WordP
 - Deletes for posts, pages, and custom post type items move content to trash. If `EMPTY_TRASH_DAYS` is `0` or another falsy value, these abilities refuse with `trash_disabled` before mutation instead of allowing WordPress to permanently delete the item. Bulk post trash reports this per authorized ID in `data.failures`, with no false success entries; its existing top-level summary remains successful even when every ID fails. Missing/type and permission errors take precedence. No permanent-delete override is offered.
 - Comment trash and comment updates with `status: "trash"` set the comment status through `wp_set_comment_status()`, retaining the row even when site trash is disabled. Media deletion remains permanent.
 - Block and partial-content edits can use hash preconditions and fail when a target is missing, ambiguous, or stale.
+- Targeted patches sanitize replacements only and retain WordPress's capability-dependent save filters; they do not grant unfiltered HTML write access.
 - Subscriber-safe site info deliberately avoids secrets, filesystem paths, salts, auth keys, raw server internals, WordPress version, and theme version. `get-environment-info` requires `manage_options`.
 - Site Kit module, permission, and PageSpeed abilities require WordPress `read` **and** Site Kit's own REST permission callbacks, failing closed when a required route or callable permission check is absent. Status separately requires `manage_options`. Responses omit OAuth scopes/proxy details, module owner identities, raw settings, screenshots, third-party entities, and full Lighthouse payloads. PageSpeed only accepts URLs on the current site, although Google processes those requests through Site Kit's PageSpeed service.
 - Webmaster verification checks require `read`, including direct execution. Callers without `activate_plugins` receive neither `data.google.site_kit` nor `data.checks.google_site_kit`; plugin inspection is skipped and the summary counts only authorized checks. Public results, including failures and unknowns, share a 60-second cache scoped to the site, home URL, and result schema. Warm calls do not repeat HTTP/DNS work; private plugin state is inspected separately on each authorized call and is never cached with public results. Concurrent cold misses or early transient eviction can repeat work, so this is not a strict rate limit.
