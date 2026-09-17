@@ -112,7 +112,7 @@ class Webmastery_MCP_Media {
 		}
 		$packed = inet_pton( $ip );
 		if ( false !== $packed && 16 === strlen( $packed ) ) {
-			if ( "\xff" === $packed[0] ) {
+			if ( "\xff" === $packed[0] || "\x20\x01\x0d\xb8" === substr( $packed, 0, 4 ) ) {
 				return true;
 			}
 			if ( str_repeat( "\0", 10 ) . "\xff\xff" === substr( $packed, 0, 12 ) ) {

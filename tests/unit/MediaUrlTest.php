@@ -50,8 +50,22 @@ final class MediaUrlTest extends TestCase {
 		return array_map( static fn( $ip ) => [ $ip ], [
 			'127.0.0.1', '10.1.2.3', '192.168.1.1', '169.254.169.254', '0.0.0.0',
 			'::', '::1', 'fc00::1', 'fd12:3456::1', 'fe80::1', '2001:db8::1', 'ff02::1',
+			'2001:db8::', '2001:db8:ffff:ffff:ffff:ffff:ffff:ffff',
 			'::ffff:127.0.0.1', '::ffff:10.0.0.1', '::ffff:169.254.169.254', '::ffff:7f00:1', 'not-an-ip',
 		] );
+	}
+
+	/** @dataProvider documentationNeighbors */
+	public function test_adjacent_documentation_addresses_remain_allowed( string $address ): void {
+		$method = new ReflectionMethod( Webmastery_MCP_Media::class, 'is_private_ip' );
+		$method->setAccessible( true );
+		self::assertFalse( $method->invoke( null, $address ) );
+		MediaResolverFixture::$dns = [ 'image.test' => [ [ 'type' => 'AAAA', 'ipv6' => $address ] ] ];
+		self::assertIsString( MediaResolverFixture::validate( 'https://image.test/x.png' ) );
+	}
+
+	public static function documentationNeighbors(): array {
+		return [ [ '2001:db7:ffff:ffff:ffff:ffff:ffff:ffff' ], [ '2001:db9::' ] ];
 	}
 
 	/** @dataProvider literalUrls */

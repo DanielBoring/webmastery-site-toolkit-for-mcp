@@ -114,7 +114,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 * Enforce the existing image upload size limit during retrieval and cancel oversized responses; preserve safe HTTP, MIME, and integrity checks.
-* Check IPv6 DNS answers and aliases alongside IPv4 for image URLs and redirect targets, without claiming complete DNS-rebinding protection.
+* Check IPv6 DNS answers and aliases alongside IPv4 for image URLs and redirect targets, with consistent documentation-address rejection across PHP versions and without claiming complete DNS-rebinding protection.
 
 = 2.5.0 =
 * Expand targeted content patching to pages and public editor-enabled custom post types with object-level permissions and explicit unsupported-type errors.
