@@ -591,6 +591,7 @@ $fixtures = array(
 	'case_manager_id'    => $case_manager_id,
 	'user_lister_id'     => $user_lister_id,
 	'category_id'        => e2e_ensure_term_id( 'MCP E2E Category', 'category' ),
+	'default_category_id' => (int) get_option( 'default_category' ),
 	'tag_id'             => e2e_ensure_term_id( 'mcp-e2e-tag', 'post_tag' ),
 	'genre_id'           => e2e_ensure_term_id( 'MCP E2E Genre', 'mcp_genre' ),
 	'parent_category_id' => e2e_ensure_term_id( 'MCP E2E Parent Category', 'category' ),
@@ -1033,6 +1034,12 @@ foreach ( $manifest as $case ) {
 }
 
 echo "SUMMARY {$summary['passed']} passed, {$summary['failed']} failed\n";
+require_once __DIR__ . '/taxonomy-write-runner.php';
+$taxonomy_summary = wstm117_run_taxonomy_tests();
+$summary['taxonomy_write_regressions'] = array(
+	'passed' => $taxonomy_summary['passed'],
+	'failed' => $taxonomy_summary['failed'],
+);
 e2e_write_summary( $summary );
 
-exit( $summary['failed'] > 0 ? 1 : 0 );
+exit( $summary['failed'] > 0 || $taxonomy_summary['failed'] > 0 ? 1 : 0 );

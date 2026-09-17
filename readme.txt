@@ -87,6 +87,12 @@ Write operations go through WordPress APIs and capability checks. Posts and page
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
 
+= Who can create, update, or delete categories and tags? =
+
+Editors and Administrators can manage them with WordPress's default capabilities. Create/update uses the registered taxonomy's edit_terms capability; deletion uses delete_terms. Updating or deleting an existing term also checks WordPress's edit_term or delete_term capability for that term, including site-specific policy filters. Custom taxonomy capability mappings are respected instead of always requiring manage_categories. Creation retains management-level access rather than allowing everyone who can assign tags.
+
+The default category cannot be deleted under core's permission mapping. Failed or refused deletion returns an error rather than deleted: true, even when site filters override the initial permission denial. Ordinary term deletion remains permanent and follows WordPress's relationship reassignment behavior. Read permissions and successful response shapes are unchanged.
+
 = What if discovery shows fewer abilities than the documentation? =
 
 The connected WordPress site may be running an older plugin version. Update the plugin on that site, then call `mcp-adapter-discover-abilities` again.
@@ -103,6 +109,10 @@ Report suspected vulnerabilities privately at https://github.com/DanielBoring/we
 Security fixes target the latest stable release. Reports receive a best-effort response without a guaranteed deadline. See https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/policy for the full policy.
 
 == Changelog ==
+
+= Unreleased =
+* Respect taxonomy-specific create/update/delete capabilities and per-term update/delete restrictions, including direct execution.
+* Report refused or failed term deletion as failure instead of claiming the default category was deleted.
 
 = 2.5.0 =
 * Expand targeted content patching to pages and public editor-enabled custom post types with object-level permissions and explicit unsupported-type errors.
@@ -142,6 +152,9 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Add block inspection, single-block replacement, and safer partial post body edits.
 
 == Upgrade Notice ==
+
+= Unreleased =
+Sites with remapped taxonomy capabilities or per-term restrictions now have those write policies enforced. Default-category and other refused deletions no longer report success.
 
 = 2.5.0 =
 Targeted partial-content patches now support pages and eligible custom post types while preserving object-level edit permissions.

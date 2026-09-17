@@ -136,8 +136,12 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/create-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/create-page',
+	'webmastery-site-toolkit-for-mcp/create-category',
+	'webmastery-site-toolkit-for-mcp/create-tag',
 	'webmastery-site-toolkit-for-mcp/create-post',
 	'webmastery-site-toolkit-for-mcp/deactivate-plugin',
+	'webmastery-site-toolkit-for-mcp/delete-category',
+	'webmastery-site-toolkit-for-mcp/delete-tag',
 	'webmastery-site-toolkit-for-mcp/get-environment-info',
 	'webmastery-site-toolkit-for-mcp/get-user',
 	'webmastery-site-toolkit-for-mcp/list-cpt-mcp-book',
@@ -148,6 +152,8 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/update-page',
+	'webmastery-site-toolkit-for-mcp/update-category',
+	'webmastery-site-toolkit-for-mcp/update-tag',
 	'webmastery-site-toolkit-for-mcp/update-post',
 );
 

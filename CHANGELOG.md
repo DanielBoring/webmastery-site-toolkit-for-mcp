@@ -17,6 +17,9 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Category and tag writes now respect the registered taxonomy's editing/deletion capabilities and existing-term permissions, including direct execution. Default Editor/Administrator access, read behavior, and successful response shapes are unchanged; sites with custom restrictions now receive explicit denials before writes.
+- Refused or failed term deletions no longer report success. WordPress's default-category protection is respected, and a zero/false deletion result remains a failure even if site permission filters allow the attempt.
+
 - Custom post type update abilities now validate requested taxonomy assignments (registration and assign-terms permission) before saving title, content, or status changes, matching the create ability's behavior. Invalid or unauthorized taxonomy requests are now rejected before any changes are persisted, instead of after the post was already updated.
 
 ## 2.5.0
