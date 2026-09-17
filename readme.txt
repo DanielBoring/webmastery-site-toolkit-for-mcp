@@ -87,6 +87,10 @@ Write operations go through WordPress APIs and capability checks. Posts and page
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
 
+= Can metadata and media text contain backslashes? =
+
+Yes. Post/page metadata and media titles, captions, and alt text preserve backslashes through WordPress storage. Use normal JSON escaping, not an extra WordPress slashing layer. Existing text, HTML, and SEO-provider sanitization still applies; responses reflect sanitized stored values. Allowed metadata keys and object permissions are unchanged. Post/page create/update metadata accepts scalar values; the direct post-meta update ability also supports JSON-compatible arrays and objects.
+
 = What if discovery shows fewer abilities than the documentation? =
 
 The connected WordPress site may be running an older plugin version. Update the plugin on that site, then call `mcp-adapter-discover-abilities` again.
@@ -103,6 +107,9 @@ Report suspected vulnerabilities privately at https://github.com/DanielBoring/we
 Security fixes target the latest stable release. Reports receive a best-effort response without a guaranteed deadline. See https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/policy for the full policy.
 
 == Changelog ==
+
+= Unreleased =
+* Preserve backslashes in post/page metadata and media upload/update titles, captions, and alt text while retaining existing sanitization and permissions.
 
 = 2.5.0 =
 * Expand targeted content patching to pages and public editor-enabled custom post types with object-level permissions and explicit unsupported-type errors.

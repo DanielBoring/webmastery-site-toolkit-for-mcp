@@ -65,6 +65,14 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 
 For the exact ability names, input behavior, and required capabilities, use the [full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities).
 
+### Backslashes in writes
+
+Post/page metadata and media titles, captions, and alt text preserve backslashes through WordPress storage, including repeated or trailing backslashes and escaped quotes. Send decoded values normally; do not add an extra WordPress slashing layer in your MCP client. JSON still requires its usual escaping: `"C:\\path\\"` represents `C:\path\`.
+
+Existing text/HTML sanitization and registered metadata or SEO-provider sanitizers still apply. Responses report sanitized stored values, not necessarily the original input. Post/page create/update metadata remains scalar; `update-post-meta` also supports JSON-compatible arrays and objects. Allowed metadata keys and capability requirements are unchanged: updates require access to the target object, and uploads require `upload_files` plus access to any parent post.
+
+On a disposable draft, write `yoast_meta_description` with JSON value `"C:\\path\\"` using `update-post`, then read `_yoast_wpseo_metadesc` using `get-post-meta` with the same post ID and explicit `meta_key`. Compare the stored value with `data.meta.written` from the update response, allowing any provider sanitization.
+
 ### Google Site Kit compatibility abilities
 
 These optional read-only abilities use Site Kit's registered internal REST routes in the current WordPress user context. They do not read Site Kit options, instantiate Site Kit internals, expose OAuth credentials, or change Site Kit settings.

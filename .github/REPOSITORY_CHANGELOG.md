@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added backslash persistence regressions for prepared metadata, media text, direct structured metadata, permission-denied no-write controls, and authenticated MCP post writes.
 - Added a private security policy and issue routing, with latest-stable security fixes and best-effort reporting expectations.
 - Added stable fail-closed PR gates, PHP 8.4 coverage, retained Docker summaries, and dedicated workflow/shell security linting.
 - Added verified test-dependency pins and compatibility promotion checks, including current-toolchain package coverage.

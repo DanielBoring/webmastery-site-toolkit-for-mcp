@@ -75,6 +75,23 @@ function esc_url_raw( $url ): string {
 	return filter_var( $url, FILTER_VALIDATE_URL ) ? $url : '';
 }
 
+function wp_slash( $value ) {
+	if ( is_array( $value ) ) {
+		return array_map( 'wp_slash', $value );
+	}
+
+	return is_string( $value ) ? addslashes( $value ) : $value;
+}
+
+function update_post_meta( $post_id, $key, $value ) {
+	$GLOBALS['wstm_test_meta_writes'][] = array( $post_id, $key, $value );
+	return true;
+}
+
+function get_post_meta( $post_id, $key, $single = false ) {
+	return $GLOBALS['wstm_test_stored_meta'][ $post_id ][ $key ] ?? '';
+}
+
 /**
  * Minimal, test-controlled taxonomy stubs used only by CustomPostTypesHelpersTest.
  *

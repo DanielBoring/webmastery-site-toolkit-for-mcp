@@ -17,6 +17,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Preserved backslashes in post/page metadata and media upload/update titles, captions, and alt text without bypassing text, HTML, or metadata-provider sanitization.
 - Custom post type update abilities now validate requested taxonomy assignments (registration and assign-terms permission) before saving title, content, or status changes, matching the create ability's behavior. Invalid or unauthorized taxonomy requests are now rejected before any changes are persisted, instead of after the post was already updated.
 
 ## 2.5.0
