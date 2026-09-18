@@ -45,7 +45,7 @@ Compatibility QA starts as scheduled/manual. Promote matrix jobs to branch prote
 
 ## Branch protection
 
-Branch protection should require unique status check names before merge. GitHub warns that duplicate job names across workflows can create ambiguous status checks, so workflow and job display names should remain stable and unique.
+The active `main-ci-gates` ruleset requires unique status check names before merge. GitHub warns that duplicate job names across workflows can create ambiguous status checks, so workflow and job display names should remain stable and unique.
 
 Recommended `main` protection:
 
@@ -58,9 +58,11 @@ Recommended `main` protection:
 
 The required-check names refer to stable aggregate jobs, not matrix-expanded names. Bind them to the GitHub Actions app. Do not require the path-filtered Release Package QA workflow unless it is redesigned to always report a final result.
 
-The production environment, main-history/PR rules, and tag protections were applied and read back on September 16, 2026. `main-ci-gates` is staged **disabled** until the changed workflows have successful real PR runs, including an Actions-created baseline PR. Enable it before merging that promotion; do not describe the merge checks as enforced while this activation is pending.
+On September 17, 2026, `main-ci-gates` (23522901) was activated with explicit maintainer authorization after successful genuine PR-event checks on Actions-created baseline PR #140. Read-back of the ruleset, effective `main` rules, and required PR checks confirmed enforcement. It applies only to `refs/heads/main`, with no exclusions or bypass actors, and requires exactly `1 - Static QA`, `2 - Unit Tests`, and `Docker QA gate`, each bound to GitHub Actions integration 15368. Only enforcement changed; `strict_required_status_checks_policy=false` and `do_not_enforce_on_create=false` remain unchanged.
 
-Passing Dependabot PR checks or fixing the compatibility CLI gate does not fulfill the Actions-created baseline PR requirement. Issue #123 remains open until the outstanding activation evidence and safeguards work are complete.
+The initial CI rollout is complete. See the [dated setup and rollout evidence](../.github/SETUP-COMPLETE.md#rollout-evidence) for the passing compatibility pipeline and all five approved PR-event workflows. PR #140 was still open and unmerged at verification: MCP Adapter 0.6.1 is a tested candidate, while `main` at `3dae8aa` retains 0.5.0. Future bot PR workflow approvals, baseline review/merge, and production release approval remain separate maintainer decisions.
+
+The production environment, main-history/PR rules, and tag protections were last read back on September 16, 2026; the September 17 CI activation check did not reverify those settings or establish completion of unrelated safeguards work.
 
 ## Workflow permissions
 
@@ -84,7 +86,7 @@ Recommended `wordpress-org` environment settings:
 3. Store the WordPress.org SVN-specific password, not the normal account password.
 4. Treat approval as confirmation that the validated tag should publish to WordPress.org production SVN.
 
-Configured reviewer: DanielBoring, with self-review allowed for solo maintenance and administrator environment bypass disabled. Only tags matching `v*` may deploy. The tag ruleset separately restricts creation/update/deletion to repository administrators; it does not grant permission to bypass environment approval.
+As last verified on September 16, 2026, the configured reviewer is DanielBoring, with self-review allowed for solo maintenance and administrator environment bypass disabled. Only tags matching `v*` may deploy. The tag ruleset separately restricts creation/update/deletion to repository administrators; it does not grant permission to bypass environment approval.
 
 There is no separate WordPress.org test SVN. Use pull request checks, `5 - Release Package QA`, manual compatibility checks, and staging WordPress installs for pre-production confidence.
 
@@ -101,7 +103,16 @@ Scheduled jobs should detect drift that a PR did not cause:
 
 ## Artifact and reporting policy
 
-Docker jobs retain available contract/MCP summary JSON on success and failure, with bounded retention, and write readable job summaries. Collect detailed diagnostics on failure:
+Docker jobs retain available contract/MCP summary JSON on success and failure, with bounded retention, and write readable job summaries.
+
+Parent-assignment regressions also retain dedicated detailed JSON for seven
+days on success or failure: direct-callback and ability-wrapper reports from
+Contract QA, and an actual HTTP report from Full MCP E2E QA. These include
+fixture-only before/after database state and write-hook observations, not live
+site data. Missing expected parent evidence is an artifact-upload error, not a
+successful substitute summary.
+
+Collect detailed diagnostics on failure:
 
 - Docker Compose logs
 - WordPress debug log

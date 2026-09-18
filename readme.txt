@@ -79,17 +79,73 @@ No. Structural SEO checks still work without either plugin. Yoast-specific metad
 
 Only for the optional Site Kit status, module, permission, and PageSpeed abilities. The integration is a read-only compatibility adapter over Site Kit's internal REST routes, which Google does not publish as a supported third-party API. It checks route availability at runtime and preserves Site Kit's own setup, dashboard-sharing, and datapoint permissions.
 
+Module, permission, and PageSpeed abilities require the WordPress read capability before any upstream work, plus the exact Site Kit route's permission check. Missing providers, routes, or callable permission checks deny access. Read alone is not sufficient; a Subscriber is allowed only when Site Kit also authorizes that user. Status retains its separate manage_options requirement.
+
+The official Site Kit 1.187.0 routes were inspected without Google data calls on a disposable installation. Module-list and permission routes require Site Kit splash or dashboard access; this version's PageSpeed route resolves to Site Kit setup or post-insights access. Effective checks also depend on setup, authentication, sharing, and network state. This does not establish compatibility for every historical version or grant ordinary Subscribers dashboard access. See the repository README for exact capability names and version-specific sources.
+
 PageSpeed requests are limited to URLs on the current site and are processed by Google's PageSpeed service through Site Kit. Responses omit OAuth scopes and proxy details, module owner identities, screenshots, third-party entity lists, and full Lighthouse payloads.
+
+= Can Subscribers check public webmaster verification? =
+
+Yes. The webmaster verification check requires `read` and checks public homepage meta tags, Bing XML, DNS TXT, robots.txt, and sitemap reachability without Google or Bing API credentials. It does not confirm account ownership. WordPress-only Site Kit installation and activation details require `activate_plugins`; other callers receive neither private projection, and their summary counts only public checks.
+
+Public results, including failures and unknowns, are cached for 60 seconds per site, home URL, and result schema. Warm calls reuse HTTP/DNS results; privileged plugin state is inspected separately on each call and never stored in the public cache. Concurrent cold misses or early cache eviction can repeat requests, so this is not a strict rate limit.
 
 = Are write operations safe? =
 
-Write operations go through WordPress APIs and capability checks. Posts and pages move to trash rather than being permanently deleted. Media deletion is permanent. Block and partial-content patching can use hashes so stale or ambiguous edits fail safely.
+Write operations go through WordPress APIs and capability checks. Posts, pages, and custom post type items move to trash rather than being permanently deleted. Media deletion is permanent. Block and partial-content patching can use hashes so stale or ambiguous edits fail safely.
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
 
 = Can metadata and media text contain backslashes? =
 
 Yes. Post/page metadata and media titles, captions, and alt text preserve backslashes through WordPress storage. Use normal JSON escaping, not an extra WordPress slashing layer. Existing text, HTML, and SEO-provider sanitization still applies; responses reflect sanitized stored values. Allowed metadata keys and object permissions are unchanged. Post/page create/update metadata accepts scalar values; the direct post-meta update ability also supports JSON-compatible arrays and objects.
+
+= What are the rules for page and custom post type parents? =
+
+A positive parent must exist, have the same hierarchical post type, and be editable by the connected account. A requested parent cannot create a cycle or lead into an existing cyclic hierarchy. Invalid or unauthorized assignments fail before any of the request's content, status, metadata, or taxonomy changes are saved.
+
+Set parent to 0 to detach an item. Omit parent to leave it unchanged on update. Reassigning the same parent still requires permission to edit that parent, but not every ancestor. Custom post types use their registered edit capability and WordPress capability filters.
+
+Positive parent values on nonhierarchical custom post types are rejected; older versions persisted this unsupported extra field. Zero and omitted parents remain accepted. Built-in post abilities still ignore an extra parent field.
+
+= How are image URL uploads limited? =
+
+Image URL uploads require upload_files and, when attaching to a post or page, edit_post for that object. The existing WordPress maximum upload size is enforced during streaming, with at most one extra sentinel byte in the temporary file and cancellation of oversized responses. Actual file size, allowed image MIME, HTTP integrity checks, and basic PNG/JPEG/GIF headers are checked before attachment creation. Generic HTTP Content-Type headers alone do not reject valid images. Invalid, zero, or overflowing configured limits fail explicitly.
+
+WordPress safe HTTP redirects, TLS checks, and Content-MD5 verification remain in use. The plugin also checks resolved IPv4/IPv6 answers and DNS aliases for the initial URL and redirect targets. Private/local addresses and failed, cyclic, or excessive alias resolution are rejected. IPv6 literals and AAAA-only hosts remain unsupported. Core's same-site exception does not bypass the plugin's private-address checks. These checks do not pin DNS or eliminate the race between DNS validation and connection.
+
+The byte limit is per response, not a total network or CPU budget: socket buffering and compressed decoding can exceed it before cancellation, while temporary file bytes stay bounded. Core transport differences for compressed/chunked images remain. Additional image formats enabled by WordPress filters still use core MIME handling.
+
+= How are scheduled dates validated? =
+
+Posts, pages, and custom post types require a nonempty scheduled_date when creating or newly requesting future status. The date must be valid and at least 60 seconds ahead when validated. Malformed calendar/time values, missing dates, and dates too close to now fail before content, metadata, or terms are written. Errors use success:false and error.code/error.message, with invalid_scheduled_date, missing_scheduled_date, or scheduled_date_too_soon.
+
+An edit to an already-scheduled item may omit the date to retain its valid stored local/GMT dates; its GMT date must still meet the cutoff. Near-now/overdue schedules require a new safe date or an explicit nonfuture status. Changing the site timezone does not cause stored dates to be rewritten or rejected solely because they no longer match the current timezone.
+
+Prefer ISO 8601 with Z or an explicit offset and a comfortably future time. A normal clock tick between validation and WordPress's later check can cross the 60-second boundary; this is not an atomic status guarantee. WordPress and other plugins still control persistence hooks and cron execution.
+
+Legacy relative dates and offset-less parsing remain supported. Offset-less values normally mean UTC, not site-local time. Named-timezone DST folds/gaps retain PHP's resolution; explicit offsets preserve their instant. A valid date supplied for other statuses still sets date arguments under normal WordPress rules, including the existing zero-GMT draft/pending update reset and publish-to-future conversion.
+
+= Who can create, update, or delete categories and tags? =
+
+Editors and Administrators can manage them with WordPress's default capabilities. Create/update uses the registered taxonomy's edit_terms capability; deletion uses delete_terms. Updating or deleting an existing term also checks WordPress's edit_term or delete_term capability for that term, including site-specific policy filters. Custom taxonomy capability mappings are respected instead of always requiring manage_categories. Creation retains management-level access rather than allowing everyone who can assign tags.
+
+The default category cannot be deleted under core's permission mapping. Failed or refused deletion returns an error rather than deleted: true, even when site filters override the initial permission denial. Ordinary term deletion remains permanent and follows WordPress's relationship reassignment behavior. Read permissions and successful response shapes are unchanged.
+
+= Will a targeted patch change HTML elsewhere in the content? =
+
+Block and section patches sanitize only the replacement fragment, not the entire rebuilt body. Exact patches compare old_content against the original raw content, including markup that would be removed by HTML sanitization. Both abilities still require permission to edit the specific object.
+
+WordPress's normal save filters remain active. Existing iframe, script, style, form, SVG, and event-attribute markup can be preserved only when the caller has effective unfiltered_html permission. Multisite, DISALLOW_UNFILTERED_HTML, and capability policies can deny that permission even to an Administrator. Replacement fragments are always filtered, and full-content updates still sanitize all supplied content.
+
+Block and heading patches retain WordPress's existing parse/serialize normalization, including noncanonical block delimiters and empty freeform separators. Exact patches leave surrounding raw bytes alone, subject to WordPress's save filters. On a test site, compare the untouched block hashes from list-content-blocks before and after patching a neighboring block.
+
+= What happens if WordPress trash is disabled? =
+
+When EMPTY_TRASH_DAYS is 0 or another falsy value, post, page, and custom post type trash abilities refuse with trash_disabled before changing the item. Bulk post trash reports a failure for each authorized ID rather than a false success; inspect its per-ID failures and counts even when the summary itself succeeds. Missing items, wrong types, and permission failures keep their existing precedence. There is no permanent-delete override.
+
+Comment trash and comment updates with status "trash" still retain the comment row and set its status through WordPress's comment-status API. They do not use the post-trash deletion fallback.
 
 = What if discovery shows fewer abilities than the documentation? =
 
@@ -110,6 +166,17 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 * Preserve backslashes in post/page metadata and media upload/update titles, captions, and alt text while retaining existing sanitization and permissions.
+* Enforce the existing image upload size limit during retrieval and cancel oversized responses; preserve safe HTTP, MIME, and integrity checks.
+* Check IPv6 DNS answers and aliases alongside IPv4 for image URLs and redirect targets, with consistent documentation-address rejection across PHP versions and without claiming complete DNS-rebinding protection.
+* Validate scheduled dates before post, page, or custom post type writes, preserving valid existing schedules and explicit-offset instants.
+* Prevent WordPress from discarding validated scheduling dates when updating drafts or pending items with zero GMT dates.
+* Respect taxonomy-specific create/update/delete capabilities and per-term update/delete restrictions, including direct execution.
+* Report refused or failed term deletion as failure instead of claiming the default category was deleted.
+* Preserve unrelated stored HTML during targeted block and section patches without bypassing WordPress save filters. Match exact targets against raw content while continuing to sanitize replacement fragments.
+* Require WordPress read access in addition to Site Kit route permissions for module, permission, and PageSpeed abilities, including direct execution. Missing delegated permission callbacks now fail closed.
+* Prevent permanent deletion by post, page, custom post type, and bulk post trash abilities when WordPress trash is disabled. Return an explicit refusal without changing existing enabled-trash behavior.
+* Restrict webmaster verification's WordPress-only Site Kit state to callers with plugin activation permission; retain public checks for Subscribers and Authors.
+* Cache public webmaster verification results for 60 seconds without sharing private plugin state or caller-specific summaries.
 
 = 2.5.0 =
 * Expand targeted content patching to pages and public editor-enabled custom post types with object-level permissions and explicit unsupported-type errors.
@@ -149,6 +216,11 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Add block inspection, single-block replacement, and safer partial post body edits.
 
 == Upgrade Notice ==
+
+= Unreleased =
+Image downloads now stop oversized transfers at the existing upload limit. Invalid configured limits and failed DNS checks return explicit errors; no upload limit, PHP floor, or supported core version is changed.
+
+Sites with remapped taxonomy capabilities or per-term restrictions now have those write policies enforced. Default-category and other refused deletions no longer report success.
 
 = 2.5.0 =
 Targeted partial-content patches now support pages and eligible custom post types while preserving object-level edit permissions.
