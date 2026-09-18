@@ -48,6 +48,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Updated the verified `actions/cache` pin to v6.1.0 on GitHub-hosted QA runners, retaining Composer cache paths, keys, and restore-key behavior.
 - Updated the verified `setup-php` action pin to 2.37.2, retaining the PHP 8.0/8.4 QA matrix and existing release inputs and permissions.
 - Pinned checkout workflows directly to the verified `actions/checkout` v6.0.3 commit instead of its annotated tag object; checkout inputs and permissions are unchanged.
 - Made the image-download fault-injection fixture use the available native cURL progress callback on PHP 8.1 as well as newer PHP versions, without changing production behavior or regression assertions.
