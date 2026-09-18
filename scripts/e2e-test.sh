@@ -181,6 +181,15 @@ install_plugins() {
 run_ability_manifest() {
 	echo "Running manifest-driven ability E2E tests..."
 	wp eval-file "/var/www/html/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/ability-runner.php"
+	compose exec -T wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/media-download-runner.php"
+}
+
+run_trash_safety() {
+	echo "Running isolated enabled/disabled trash safety boots..."
+	local mode
+	for mode in enabled disabled; do
+		compose exec -T wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/trash-safety-runner.php" "$mode"
+	done
 }
 
 create_application_password() {
@@ -228,12 +237,41 @@ run_mcp_crud() {
 		-e MCP_CRUD_SUBSCRIBER_USER="subscriber_test" \
 		-e MCP_CRUD_SUBSCRIBER_PASSWORD="$subscriber_password" \
 		wordpress php "/var/www/html/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/mcp-crud-runner.php"
+
+	wp eval-file "/var/www/html/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/site-kit-mcp-runner.php"
 }
 
 run_php_lint() {
 	echo "Running PHP syntax checks..."
 	compose exec -T wordpress bash -lc "php -l /var/www/html/wp-content/plugins/${PLUGIN_SLUG}/webmastery-site-toolkit-for-mcp.php && find /var/www/html/wp-content/plugins/${PLUGIN_SLUG}/includes /var/www/html/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e -name '*.php' -print0 | xargs -0 -n1 php -l"
 }
+
+run_parent_assignment_qa() (
+	# Dedicated CPTs must not affect the normal 85-ability registration audit.
+	local fixture="/var/www/html/wp-content/mu-plugins/wstm-issue106-parent.php"
+	local boundaries=()
+	local boundary
+	local status
+	trap 'compose exec -T wordpress rm -f /var/www/html/wp-content/mu-plugins/wstm-issue106-parent.php' EXIT
+	compose exec -T wordpress cp "${CONTAINER_PLUGIN_ROOT}/tests/e2e/parent-assignment-fixture.php" "$fixture"
+	compose exec -T wordpress wp --allow-root config set DISABLE_WP_CRON true --raw
+	status="$(compose exec -T wordpress curl --silent --show-error --output /tmp/wstm106-cli-response --write-out '%{http_code}' "http://localhost/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/parent-assignment-runner.php")"
+	if [ "$status" != "403" ]; then
+		echo "Parent runner must reject non-CLI requests before bootstrap (HTTP ${status})." >&2
+		exit 1
+	fi
+	compose exec -T wordpress grep -Fxq 'CLI only.' /tmp/wstm106-cli-response
+	if [ "$QA_MODE" = "contract" ] || [ "$QA_MODE" = "all" ]; then
+		boundaries+=( direct ability )
+	fi
+	if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then
+		boundaries+=( http )
+	fi
+	for boundary in "${boundaries[@]}"; do
+		compose exec -T -e WSTM106_BOUNDARY="$boundary" \
+			wordpress php -d memory_limit=1G "${CONTAINER_PLUGIN_ROOT}/tests/e2e/parent-assignment-runner.php"
+	done
+)
 
 run_debug_log_check() {
 	echo "Checking WordPress debug log..."
@@ -282,6 +320,9 @@ main() {
 		echo "Running Ability Contract QA..."
 		run_php_lint
 		run_ability_manifest
+		echo "Running scheduling side-effect regressions..."
+		compose exec -T wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/scheduling-runner.php"
+		run_trash_safety
 	fi
 
 	if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then
@@ -289,6 +330,7 @@ main() {
 		run_mcp_crud
 	fi
 
+	run_parent_assignment_qa
 	run_debug_log_check
 
 	echo "Docker QA (${QA_MODE}) completed successfully"

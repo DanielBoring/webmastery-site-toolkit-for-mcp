@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+if ( PHP_SAPI !== 'cli' ) {
+	http_response_code( 403 );
+	exit( 'CLI only.' );
+}
+
 final class Webmastery_MCP_E2E_Failure extends RuntimeException {}
 
 final class Webmastery_MCP_E2E_Client {
@@ -308,7 +313,14 @@ function webmastery_mcp_e2e_write_summary( string $path, array $summary ): void 
 		throw new Webmastery_MCP_E2E_Failure( "Could not create artifact directory: {$dir}" );
 	}
 
-	file_put_contents( $path, webmastery_mcp_e2e_json( $summary ) . "\n" );
+	$json = webmastery_mcp_e2e_json( $summary ) . "\n";
+	if ( file_put_contents( $path, $json ) !== strlen( $json ) ) {
+		throw new Webmastery_MCP_E2E_Failure( "Could not write complete artifact: {$path}" );
+	}
+}
+
+if ( defined( 'WEBMASTERY_MCP_E2E_CLIENT_ONLY' ) && WEBMASTERY_MCP_E2E_CLIENT_ONLY ) {
+	return;
 }
 
 $wordpress_url = rtrim( webmastery_mcp_e2e_env( 'WORDPRESS_URL', 'http://localhost' ), '/' );
@@ -368,6 +380,7 @@ try {
 			'title'   => $title_marker,
 			'content' => 'Created through real MCP HTTP JSON-RPC.',
 			'status'  => 'draft',
+			'yoast_meta_description' => 'C:\\path\\ \"quoted\"',
 		),
 		'create post'
 	);
@@ -376,6 +389,7 @@ try {
 	$summary['created_post_id'] = $created_post_id;
 	webmastery_mcp_e2e_assert( $created_post_id > 0, 'create-post did not return a post ID.' );
 	webmastery_mcp_e2e_assert( 'draft' === ( $create['data']['status'] ?? null ), 'create-post did not create a draft post.' );
+	webmastery_mcp_e2e_assert( 'C:\\path\\ \"quoted\"' === ( $create['data']['meta']['written']['_yoast_wpseo_metadesc'] ?? null ), 'create-post did not preserve metadata backslashes.' );
 	webmastery_mcp_e2e_pass( $summary, 'create post through MCP' );
 
 	$get = webmastery_mcp_e2e_execute_ability(
@@ -397,13 +411,45 @@ try {
 			'post_id' => $created_post_id,
 			'title'   => $updated_title,
 			'content' => 'Updated through real MCP HTTP JSON-RPC.',
+			'yoast_meta_description' => '\\\\server\\share\\',
 		),
 		'update post'
 	);
 	webmastery_mcp_e2e_assert( true === ( $update['success'] ?? false ), 'update-post did not succeed: ' . webmastery_mcp_e2e_json( $update ) );
 	webmastery_mcp_e2e_assert( $updated_title === ( $update['data']['title'] ?? null ), 'update-post returned the wrong title.' );
 	webmastery_mcp_e2e_assert( 'Updated through real MCP HTTP JSON-RPC.' === ( $update['data']['content'] ?? null ), 'update-post returned the wrong content.' );
+	webmastery_mcp_e2e_assert( '\\\\server\\share\\' === ( $update['data']['meta']['written']['_yoast_wpseo_metadesc'] ?? null ), 'update-post did not preserve metadata backslashes.' );
 	webmastery_mcp_e2e_pass( $summary, 'update post through MCP' );
+
+	foreach ( array( 'create', 'update' ) as $operation ) {
+		foreach ( array(
+			'invalid_scheduled_date' => array( 'scheduled_date' => 'bad date' ),
+			'missing_scheduled_date' => array(),
+			'scheduled_date_too_soon' => array( 'scheduled_date' => '2001-01-01T00:00:00Z' ),
+		) as $code => $date_input ) {
+			$parameters = array_merge( array( 'title' => 'Must not persist', 'content' => 'Must not persist', 'status' => 'future' ), $date_input );
+			if ( 'update' === $operation ) {
+				$parameters['post_id'] = $created_post_id;
+			}
+			$raw = $editor_client->call( 'tools/call', array(
+				'name' => 'mcp-adapter-execute-ability',
+				'arguments' => array( 'ability_name' => 'webmastery-site-toolkit-for-mcp/' . $operation . '-post', 'parameters' => $parameters ),
+			) );
+			$summary['scheduling_envelopes'][] = array( 'operation' => $operation, 'code' => $code, 'tool_result' => $raw );
+			$payload = webmastery_mcp_e2e_extract_tool_payload( $raw, 'scheduling error' );
+			webmastery_mcp_e2e_assert( true !== ( $raw['isError'] ?? false ), 'Scheduling callback error unexpectedly became a tool-level error.' );
+			webmastery_mcp_e2e_assert( true === ( $payload['success'] ?? null ) && false === ( $payload['data']['success'] ?? null ), 'Expected successful gateway wrapping failed scheduling ability.' );
+			webmastery_mcp_e2e_assert( $code === ( $payload['data']['error']['code'] ?? null ), 'Scheduling error code was not preserved through HTTP.' );
+			webmastery_mcp_e2e_pass( $summary, "{$operation} scheduling {$code} HTTP envelope" );
+		}
+	}
+	$unchanged = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/get-post', array( 'post_id' => $created_post_id ), 'unchanged after schedule errors' );
+	webmastery_mcp_e2e_assert( $updated_title === ( $unchanged['data']['title'] ?? null ) && 'draft' === ( $unchanged['data']['status'] ?? null ), 'HTTP scheduling error mutated the draft.' );
+	$scheduled = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/update-post', array( 'post_id' => $created_post_id, 'status' => 'future', 'scheduled_date' => '+2 days' ), 'schedule draft through HTTP' );
+	webmastery_mcp_e2e_assert( true === ( $scheduled['success'] ?? false ) && 'future' === ( $scheduled['data']['status'] ?? null ), 'HTTP draft scheduling did not retain future status.' );
+	$retained = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/update-post', array( 'post_id' => $created_post_id, 'title' => $updated_title ), 'retain schedule through HTTP' );
+	webmastery_mcp_e2e_assert( true === ( $retained['success'] ?? false ) && 'future' === ( $retained['data']['status'] ?? null ), 'HTTP ordinary scheduled edit did not retain future status.' );
+	webmastery_mcp_e2e_pass( $summary, 'HTTP scheduling rejection preserves draft and valid scheduling survives ordinary edit' );
 
 	$delete = webmastery_mcp_e2e_execute_ability(
 		$editor_client,
@@ -419,6 +465,24 @@ try {
 
 	$subscriber_client->initialize();
 	webmastery_mcp_e2e_pass( $summary, 'initialize subscriber MCP HTTP session' );
+
+	$wstm114 = webmastery_mcp_e2e_execute_ability(
+		$subscriber_client,
+		'webmastery-site-toolkit-for-mcp/webmaster-verification-status',
+		array(),
+		'wstm114 public verification as subscriber'
+	);
+	webmastery_mcp_e2e_assert( true === ( $wstm114['success'] ?? false ), 'wstm114 public verification did not succeed.' );
+	$wstm114_data = $wstm114['data'];
+	webmastery_mcp_e2e_assert( ! array_key_exists( 'site_kit', $wstm114_data['google'] ), 'wstm114 leaked google.site_kit through MCP.' );
+	webmastery_mcp_e2e_assert( ! array_key_exists( 'google_site_kit', $wstm114_data['checks'] ), 'wstm114 leaked checks.google_site_kit through MCP.' );
+	webmastery_mcp_e2e_assert( 7 === count( $wstm114_data['checks'] ), 'wstm114 did not return exactly the public checks.' );
+	$wstm114_summary = array( 'pass' => 0, 'warn' => 0, 'unknown' => 0 );
+	foreach ( $wstm114_data['checks'] as $wstm114_check ) {
+		++$wstm114_summary[ $wstm114_check['status'] ];
+	}
+	webmastery_mcp_e2e_assert( $wstm114_summary === $wstm114_data['summary'], 'wstm114 summary does not match public checks.' );
+	webmastery_mcp_e2e_pass( $summary, 'wstm114 public verification omits private fields through MCP' );
 
 	$denied = webmastery_mcp_e2e_execute_ability(
 		$subscriber_client,
