@@ -9,6 +9,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 ### Added
 
 - Documented the agent threat model, client-side approval and recovery guidance, annotation scope, and delegated Site Kit access expectations without changing runtime permissions or response contracts.
+- Added focused diagnostic configuration/privacy regression coverage, scoped database-error fixtures, and permission cases while preserving the existing table-identifier contract.
+- Added paired diagnostic authority-syntax cases covering malformed escapes and valid local, internationalized, escaped, and IP-literal configurations without modifying the original diagnostic proof runner.
 - Added backslash persistence regressions for prepared metadata, media text, direct structured metadata, permission-denied no-write controls, and authenticated MCP post writes.
 - Added parent-assignment regression coverage across direct callbacks, the WordPress ability wrapper, and real MCP HTTP, with fixture-only corrupt graphs, stored-state/write-hook evidence, an unchanged normal 85-ability audit, and dedicated detailed JSON artifacts retained for seven days.
 - Added CLI-only image download fixtures covering real cURL/Fsockopen cancellation, byte counts, integrity and failure cleanup, handle isolation, and DNS policy tests. Contract CI retains synthetic client/server evidence for seven days; required media manifest roles and rejection scenarios are enforced.

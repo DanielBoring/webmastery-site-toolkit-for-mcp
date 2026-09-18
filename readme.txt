@@ -162,6 +162,14 @@ See the [Agent threat model](https://github.com/DanielBoring/webmastery-site-too
 The complete ability reference and client setup guide are maintained at:
 https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
 
+= What do the security and database diagnostics reveal? =
+
+Both abilities require manage_options. The security audit's ssl finding checks the configured public home option, respecting normal option filters and WP_HOME: recognized HTTPS passes and HTTP fails. Missing/unsupported schemes or hosts, whitespace/control characters, malformed percent escapes, and invalid authority syntax warn as unknown. This local syntax guard preserves local names, Unicode/IDN forms, escaped components, and bracketed IPv6 (including escaped zone IDs) or IPvFuture literals. It is not a complete URL, DNS-name, or internationalized-name validator and imposes no address-routability policy. The MCP request scheme and admin-only TLS policy do not determine this finding. It does not verify certificates, reachability, redirects, or the final filtered front-end URL.
+
+Debug-log findings omit filesystem paths. Enabled logging warns that access is unverified, even when a neighboring .htaccess file exists or the location is outside wp-content; neither proves that web access is denied. Disabled logging still passes. Necessary logging need not be disabled merely because it is enabled.
+
+Database query failures return a contextual database_health_query_failed error without raw SQL/server error details, leaving WordPress's own logging unchanged. Successful table-size reports still return prefixed table names, including matching plugin tables. These Administrator-only diagnostics are not fully redacted.
+
 = How do I report a security vulnerability? =
 
 Report suspected vulnerabilities privately at https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/advisories/new rather than in public issues or support threads. Include affected versions, the ability, the minimum required role, and reproduction steps on a test site. Do not include credentials or private site data.
@@ -171,6 +179,11 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Changelog ==
 
 = Unreleased =
+
+* Report the configured public home URL scheme independently of the MCP request and admin-only TLS policy.
+* Warn on malformed percent escapes or authority syntax without rejecting valid local, internationalized, or IPv6 configurations.
+* Omit debug-log paths and warn when log access is unverified rather than claiming protection.
+* Omit raw database errors while retaining failure context; successful table reports still include prefixed table names.
 * Preserve backslashes in post/page metadata and media upload/update titles, captions, and alt text while retaining existing sanitization and permissions.
 * Enforce the existing image upload size limit during retrieval and cancel oversized responses; preserve safe HTTP, MIME, and integrity checks.
 * Check IPv6 DNS answers and aliases alongside IPv4 for image URLs and redirect targets, with consistent documentation-address rejection across PHP versions and without claiming complete DNS-rebinding protection.
