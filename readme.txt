@@ -67,6 +67,8 @@ Use a dedicated Editor account for normal content workflows: posts, pages, taxon
 
 Comment updates, approval, trash, and spam actions require both moderate_comments and edit_comment for the specific comment. A custom moderator role also needs the mapped edit permissions for the comment's post; owning a post alone does not remove the moderate_comments requirement.
 
+Missing-comment error shapes are preserved. Invalid or nonpositive IDs cannot fall back to a global comment or silently select another ID. Listing and reply permissions are unchanged.
+
 Use a separate dedicated Administrator account only when you need Administrator-only workflows such as runtime environment details, plugin management, user access audits, site health, database health, performance status, backup status, security audits, or site-wide SEO overview.
 
 = Why use a dedicated account? =

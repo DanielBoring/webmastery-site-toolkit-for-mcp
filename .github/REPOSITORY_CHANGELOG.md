@@ -8,7 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
-- Added comment moderation regression fixtures, direct-callback checks, persisted content/status assertions, and required moderator-only denial cases in the security QA policy.
+- Added comment moderation regression fixtures, mapped-CPT controls, persisted content/status assertions, and mandatory denial/error-compatibility cases in the security QA policy. Dedicated direct/ability/HTTP comment evidence is retained for seven days, including raw transport envelopes and comment/metadata state hashes.
 - Added a software development lifecycle overview that maps issue intake, design, implementation, QA, release, and maintenance to the repository's strategy documents and sources of truth.
 - Documented the agent threat model, client-side approval and recovery guidance, annotation scope, and delegated Site Kit access expectations without changing runtime permissions or response contracts.
 - Added focused diagnostic configuration/privacy regression coverage, scoped database-error fixtures, and permission cases while preserving the existing table-identifier contract.

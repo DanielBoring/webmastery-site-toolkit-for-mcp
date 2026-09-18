@@ -84,12 +84,21 @@ class Webmastery_MCP_Comments {
 
 	private static function moderate_permission() {
 		return function ( $input = [] ) {
-			$comment = self::moderate_comment_or_error( $input );
+			$comment = self::moderate_comment_or_error( $input, true );
+			// Keep input/not-found errors in execution, not the ability permission wrapper.
+			if ( is_wp_error( $comment ) && in_array( $comment->get_error_code(), [ 'invalid_input', 'not_found' ], true ) ) {
+				return true;
+			}
 			return is_wp_error( $comment ) ? $comment : true;
 		};
 	}
 
-	private static function moderate_comment_or_error( $input = [] ) {
+	private static function moderate_comment_or_error( $input = [], $permission_check = false ) {
+		$can_moderate = current_user_can( 'moderate_comments' );
+		if ( $permission_check && ! $can_moderate ) {
+			return new WP_Error( 'forbidden', 'Requires moderate_comments capability.' );
+		}
+
 		if ( ! is_array( $input ) ) {
 			return new WP_Error( 'invalid_input', 'Comment input must be an object.' );
 		}
@@ -99,16 +108,17 @@ class Webmastery_MCP_Comments {
 			! ( is_int( $id ) || is_float( $id ) || is_string( $id ) )
 			|| false === filter_var( $id, FILTER_VALIDATE_INT, [ 'options' => [ 'min_range' => 1 ] ] )
 		) {
-			return new WP_Error( 'invalid_comment_id', 'Comment ID must be a positive integer.' );
-		}
-
-		if ( ! current_user_can( 'moderate_comments' ) ) {
-			return new WP_Error( 'forbidden', 'Requires moderate_comments capability.' );
+			// Never pass zero to get_comment(): it can resolve the global comment.
+			return new WP_Error( 'not_found', 'Comment not found.' );
 		}
 
 		$comment = self::get_comment_or_error( $id );
 		if ( is_wp_error( $comment ) ) {
 			return $comment;
+		}
+
+		if ( ! $can_moderate ) {
+			return new WP_Error( 'forbidden', 'Requires moderate_comments capability.' );
 		}
 
 		if ( ! current_user_can( 'edit_comment', (int) $comment->comment_ID ) ) {

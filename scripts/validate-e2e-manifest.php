@@ -17,6 +17,7 @@ $allowed_roles = array(
 	'user_lister'  => true,
 	'wstm105_moderator' => true,
 	'wstm105_own_editor' => true,
+	'wstm105_mapped_moderator' => true,
 	'wstm107_book_editor_no_assign' => true,
 	'wstm106_page_editor' => true,
 	'wstm125_no_read' => true,

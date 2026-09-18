@@ -269,6 +269,8 @@ Clients must check HTTP/JSON-RPC errors, MCP tool errors, the gateway result, an
 
 For comment permission checks, use a disposable site: a custom account with only `read` and `moderate_comments` must be denied when updating, approving, trashing, or marking a comment as spam on a post it cannot edit. Confirm both comment content and status remain unchanged, including when an update supplies a status. An Editor with access to that post should succeed.
 
+Missing-comment responses are unchanged: authorized updates return `not_found`, while approve/trash/spam return the existing `"Comment not found."` string error. Callers without `moderate_comments` still fail at the permission boundary. The MCP gateway can successfully deliver a failed inner ability response; inspect `data.success`, not just outer transport success. Invalid/nonpositive IDs are rejected without falling back to a global comment or coercing a negative ID into another target.
+
 ## Security Best Practices
 
 - Use a dedicated service account, not your personal account.

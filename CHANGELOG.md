@@ -17,7 +17,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 - Expanded the plugin header description to include custom post types, blocks/revisions, webmaster verification, and optional Google Site Kit diagnostics.
 - Shortened the Unreleased upgrade notice to fit WordPress.org's 300-character limit while retaining upload, taxonomy, and compatibility guidance.
 - Updated WordPress tested compatibility to 7.1 after passing ability and MCP transport checks on PHP 8.2 and 8.4.
-- Required object-specific comment edit permission as well as moderation permission for comment updates, approval, trash, and spam actions, preventing custom moderator roles from changing comments on posts they cannot edit. Missing comments now fail at the permission boundary, which WordPress's ability execution API reports as `ability_invalid_permissions`.
+- Required object-specific comment edit permission as well as moderation permission for comment updates, approval, trash, and spam actions, preventing custom moderator roles from changing comments on posts they cannot edit. Existing missing-comment responses and the moderation capability floor remain unchanged; invalid/nonpositive IDs cannot target a global comment or another ID through coercion.
 
 ### Fixed
 

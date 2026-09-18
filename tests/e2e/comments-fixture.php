@@ -3,12 +3,13 @@
 function wstm105_comment_fixtures( $author_id, $book_id ) {
 	// Only the deliberately orphaned fixture has no post author to notify.
 	add_filter( 'notify_post_author', 'wstm105_notify_post_author', 10, 2 );
-	e2e_ensure_role( 'wstm105_moderator', 'Comment moderator only', array( 'read', 'moderate_comments' ) );
+	e2e_ensure_role( 'comment_moderator', 'Comment moderator only', array( 'read', 'moderate_comments' ) );
 	e2e_ensure_role( 'wstm105_own_editor', 'Own draft comment moderator', array( 'read', 'edit_posts', 'moderate_comments' ) );
+	e2e_ensure_role( 'wstm105_mapped_moderator', 'Mapped CPT comment moderator', array( 'read', 'moderate_comments', 'edit_mcp_books', 'edit_others_mcp_books', 'edit_published_mcp_books' ) );
 	$roles = array();
-	foreach ( array( 'wstm105_moderator', 'wstm105_own_editor' ) as $role ) {
-		$roles[ $role ] = e2e_ensure_user( $role, "{$role}@test.local", $role );
-		( new WP_User( $roles[ $role ] ) )->set_role( $role );
+	foreach ( array( 'wstm105_moderator' => 'comment_moderator', 'wstm105_own_editor' => 'wstm105_own_editor', 'wstm105_mapped_moderator' => 'wstm105_mapped_moderator' ) as $key => $role ) {
+		$roles[ $key ] = e2e_ensure_user( $key, "{$key}@test.local", $role );
+		( new WP_User( $roles[ $key ] ) )->set_role( $role );
 	}
 
 	$posts = array(
@@ -17,6 +18,7 @@ function wstm105_comment_fixtures( $author_id, $book_id ) {
 		'author' => e2e_insert_post( 'post', 'WSTM105 author post', 'Comment authorization fixture.', $author_id ),
 		'orphan' => 987654321,
 		'cpt'    => $book_id,
+		'cpt_allowed' => $book_id,
 	);
 	$posts['admin'] = $posts['other'];
 	$fixtures = array();
@@ -84,6 +86,7 @@ function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 			array( 'editor', 'other', true, true ),
 			array( 'admin', 'other', true, true ),
 			array( 'editor', 'cpt', true, false ),
+			array( 'wstm105_mapped_moderator', 'cpt', true, true ),
 			array( 'wstm105_moderator', 'orphan', true, false ),
 			array( 'wstm105_own_editor', 'orphan', true, true ),
 		);
@@ -116,7 +119,7 @@ function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 		wp_set_current_user( $roles['editor'] );
 		$input = array( 'comment_id' => $fixtures['missing_comment_id'], 'content' => 'Missing.' );
 		$result = $permission( $input );
-		wstm105_assert( is_wp_error( $result ) && 'not_found' === $result->get_error_code(), "{$action} missing permission error changed." );
+		wstm105_assert( true === $result, "{$action} missing comment must reach the existing execute error." );
 		$result = $execute( $input );
 		wstm105_assert( false === $result['success'], "{$action} missing comment succeeded." );
 		wstm105_assert( 'update' === $action ? 'not_found' === $result['error']['code'] : 'Comment not found.' === $result['error'], 'Missing direct response contract changed.' );
@@ -126,7 +129,7 @@ function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 		$before = wstm105_comment_state( $comment_id );
 		$invalid_inputs = array( null, false, 7, 'invalid', new stdClass(), array(), array( 'comment_id' => array( $comment_id ) ), array( 'comment_id' => new stdClass() ), array( 'comment_id' => true ), array( 'comment_id' => -$comment_id ), array( 'comment_id' => 1.5 ) );
 		foreach ( $invalid_inputs as $input ) {
-			wstm105_assert( is_wp_error( $permission( $input ) ), "{$action} permission accepted malformed input." );
+			wstm105_assert( true === $permission( $input ), "{$action} malformed input must be deferred to guarded execution." );
 			$result = $execute( $input );
 			wstm105_assert( false === $result['success'] && ! empty( $result['error'] ), "{$action} direct malformed input must fail explicitly." );
 			wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Malformed input changed persisted state.' );
