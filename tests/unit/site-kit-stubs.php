@@ -18,10 +18,6 @@ function home_url( $path = '/' ) {
 	return 'http://localhost' . $path;
 }
 
-function wp_parse_url( $url ) {
-	return parse_url( $url );
-}
-
 final class WP_REST_Request {
 	public string $path;
 	public array $params = array();

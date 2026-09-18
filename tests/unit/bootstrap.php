@@ -84,6 +84,10 @@ function esc_url_raw( $url ): string {
 	return filter_var( $url, FILTER_VALIDATE_URL ) ? $url : '';
 }
 
+function wp_parse_url( $url, $component = -1 ) {
+	return parse_url( $url, $component );
+}
+
 /**
  * Minimal, test-controlled taxonomy stubs for CPT helpers and taxonomy writes.
  *

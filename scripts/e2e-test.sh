@@ -181,6 +181,7 @@ install_plugins() {
 run_ability_manifest() {
 	echo "Running manifest-driven ability E2E tests..."
 	wp eval-file "/var/www/html/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/ability-runner.php"
+	compose exec -T wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/media-download-runner.php"
 }
 
 run_trash_safety() {

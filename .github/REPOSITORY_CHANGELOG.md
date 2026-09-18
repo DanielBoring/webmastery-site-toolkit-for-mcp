@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added CLI-only image download fixtures covering real cURL/Fsockopen cancellation, byte counts, integrity and failure cleanup, handle isolation, and DNS policy tests. Contract CI retains synthetic client/server evidence for seven days; required media manifest roles and rejection scenarios are enforced.
 - Added deterministic scheduling boundary tests, eight-ability scheduling/permission coverage, no-write and cron regression evidence, and actual HTTP scheduling error envelopes. Docker QA retains dedicated scheduling JSON for seven days and fails when that evidence cannot be written.
 
 - Added taxonomy write regression QA for all six write abilities: default roles, remapped capabilities, WordPress alias/filter semantics, per-term denials, unchanged persisted data/hooks on denial, not-found precedence, and truthful default-category deletion. Contract CI always attempts to retain the dedicated synthetic-fixture JSON summary for seven days, including failed runs when available; unit tests separately force rare zero/false/storage-error return paths. Security manifest validation now requires negative coverage for all six writes.
@@ -42,6 +43,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Made the image-download fault-injection fixture use the available native cURL progress callback on PHP 8.1 as well as newer PHP versions, without changing production behavior or regression assertions.
+- Shared the component-aware URL parsing stub in the unit-test bootstrap so Media and Site Kit tests can load together without duplicate function declarations; retained the guarded Media fallback and namespaced verification helper.
 - Site Kit permission regression QA now fails explicitly if its required JSON evidence cannot be written, rather than reporting success without a persisted summary.
 - Refreshed setup, CI, QA, automation, and release documentation for verified active main CI enforcement on September 17, 2026. Recorded the passing compatibility pipeline and all five approved bot PR workflows, retained routine approval requirements, and distinguished PR #140's unmerged MCP Adapter 0.6.1 candidate from main's 0.5.0 baseline. Preserved older verification dates for controls not rechecked.
 - Fixed compatibility baseline CLI parsing of the workflow's `--mcp-adapter-sha256` and `--wp-cli-sha512` options. Added real-argv fixture regressions for both metadata-generation jobs, promotion/no-op behavior, and rejection before writes without relaxing the supported-option or validation rules.

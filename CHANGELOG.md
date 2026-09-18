@@ -17,6 +17,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Image URL uploads now enforce the existing WordPress upload-size limit during streaming and cancel oversized responses, with cleanup on rejection. Safe HTTP redirects, TLS, Content-MD5, actual-size and MIME checks remain intact; invalid limits and incomplete basic raster headers fail explicitly.
+- Image URL validation checks mixed IPv4/IPv6 DNS answers and bounded CNAME chains, including redirect targets. IPv6 documentation addresses are rejected consistently across PHP versions. DNS failures are explicit; these checks do not pin DNS or eliminate rebinding races.
 - Reject malformed, missing, or too-soon scheduling dates before creating or updating posts, pages, and custom post types. Preserve valid existing schedules, legacy date parsing, and explicit-offset instants across repeated DST hours.
 - Retain validated future dates when scheduling draft or pending content with a previously unset GMT date instead of letting WordPress reset the date and publish immediately.
 
