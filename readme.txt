@@ -4,7 +4,7 @@ Tags: mcp, ai, automation, content-management, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 2.5.0
+Stable tag: 2.6.0
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
@@ -178,8 +178,11 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 == Changelog ==
 
-= Unreleased =
+= 2.6.0 =
 
+* Add read-only Google Site Kit setup, module, current-user permission, and same-site PageSpeed abilities with Site Kit-native authorization and sensitive upstream fields removed.
+* Reject invalid or unauthorized page and custom post type parents before saving other changes; retain valid hierarchical parents, detach-to-zero, and omitted parents.
+* Validate custom post type update taxonomy registration and assign-terms permission before saving any requested changes, matching creation.
 * Report the configured public home URL scheme independently of the MCP request and admin-only TLS policy.
 * Warn on malformed percent escapes or authority syntax without rejecting valid local, internationalized, or IPv6 configurations.
 * Omit debug-log paths and warn when log access is unverified rather than claiming protection.
@@ -196,6 +199,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Prevent permanent deletion by post, page, custom post type, and bulk post trash abilities when WordPress trash is disabled. Return an explicit refusal without changing existing enabled-trash behavior.
 * Restrict webmaster verification's WordPress-only Site Kit state to callers with plugin activation permission; retain public checks for Subscribers and Authors.
 * Cache public webmaster verification results for 60 seconds without sharing private plugin state or caller-specific summaries.
+* Update tested WordPress compatibility to 7.1; retain WordPress 6.9 and PHP 8.0 minimum requirements.
+* Document private vulnerability reporting, untrusted-content handling, and the distinction between ability results and MCP gateway responses.
 
 = 2.5.0 =
 * Expand targeted content patching to pages and public editor-enabled custom post types with object-level permissions and explicit unsupported-type errors.
@@ -236,7 +241,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 == Upgrade Notice ==
 
-= Unreleased =
+= 2.6.0 =
 Image downloads stop at the existing upload limit; invalid limits and DNS failures return errors. Remapped taxonomy and per-term write restrictions are enforced; refused deletions report failure. Upload limits, the PHP floor, and supported WordPress versions are unchanged.
 
 = 2.5.0 =
