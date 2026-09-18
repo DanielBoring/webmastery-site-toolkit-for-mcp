@@ -97,6 +97,10 @@ Write operations go through WordPress APIs and capability checks. Posts, pages, 
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
 
+= Can metadata and media text contain backslashes? =
+
+Yes. Post/page metadata and media titles, captions, and alt text preserve backslashes through WordPress storage. Use normal JSON escaping, not an extra WordPress slashing layer. Existing text, HTML, and SEO-provider sanitization still applies; responses reflect sanitized stored values. Allowed metadata keys and object permissions are unchanged. Post/page create/update metadata accepts scalar values; the direct post-meta update ability also supports JSON-compatible arrays and objects.
+
 = What are the rules for page and custom post type parents? =
 
 A positive parent must exist, have the same hierarchical post type, and be editable by the connected account. A requested parent cannot create a cycle or lead into an existing cyclic hierarchy. Invalid or unauthorized assignments fail before any of the request's content, status, metadata, or taxonomy changes are saved.
@@ -161,6 +165,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Changelog ==
 
 = Unreleased =
+* Preserve backslashes in post/page metadata and media upload/update titles, captions, and alt text while retaining existing sanitization and permissions.
 * Enforce the existing image upload size limit during retrieval and cancel oversized responses; preserve safe HTTP, MIME, and integrity checks.
 * Check IPv6 DNS answers and aliases alongside IPv4 for image URLs and redirect targets, with consistent documentation-address rejection across PHP versions and without claiming complete DNS-rebinding protection.
 * Validate scheduled dates before post, page, or custom post type writes, preserving valid existing schedules and explicit-offset instants.
