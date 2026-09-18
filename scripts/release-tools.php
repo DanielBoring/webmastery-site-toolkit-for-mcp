@@ -20,6 +20,15 @@ try {
 		case 'extract':
 			release_extract($argv[2], $argv[3]);
 			break;
+		case 'runtime-package':
+			release_validate_package($root, $argv[3]);
+			release_require(release_tree($argv[2]) === release_zip_files($argv[3]), 'Runtime plugin root does not exactly match the original ZIP.');
+			break;
+		case 'runtime-package-after':
+			release_validate_package($root, $argv[3]);
+			release_validate_runtime_tree($argv[2], $argv[3]);
+			echo "PASS runtime production tree still matches original ZIP; only empty bind placeholders permitted.\n";
+			break;
 		case 'compare-tree':
 			release_require(release_tree($argv[2]) === release_zip_files($argv[3]), 'SVN tag does not match validated ZIP; refuse retagging.');
 			break;

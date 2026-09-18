@@ -148,12 +148,12 @@ Environment-specific notes for GitHub Actions, Windows PowerShell, and Windows G
 | `composer qa:static` | PHP lint, PHPCS, PHPStan, Composer audit, manifest structure validation, security QA validation, and `git diff --check` |
 | `composer qa:unit` | PHPUnit unit tests |
 | `composer lint:workflows` | Actionlint, ShellCheck, and offline zizmor using the required versions already on `PATH` |
-| `composer test:release-safeguards` | Package/metadata/artifact regression tests plus local Git tag/ancestry fixtures; requires PHP ZipArchive and Bash, not Docker |
+| `composer test:release-safeguards` | Package/metadata/artifact, package-runtime orchestration and checker regressions plus local Git tag/ancestry fixtures; requires PHP ZipArchive and Bash, not Docker |
 | `composer test:ci-safeguards` | All release safeguards plus verified-download and pinned/floating dependency tests; also runs in the PHP 8.0/8.4 CI unit jobs |
 | `composer validate:security-qa` | Static security QA policy checks for risky permission callbacks and required permission-hardening manifest cases |
 | `composer qa:contract` | Docker Ability Contract QA against an already-running Compose stack |
 | `composer qa:e2e` | Docker Full MCP E2E QA against an already-running Compose stack |
-| `composer qa:release` | Release Package QA, including Docker contract/transport QA, built package validation, and WordPress Plugin Check |
+| `composer qa:release` | Release Package QA: original-ZIP extraction as the Docker plugin root, contract/transport QA, exact package validation, and WordPress Plugin Check on a separate pristine extraction |
 | `E2E_MANAGE_COMPOSE=1 composer qa:contract` | Ability Contract QA with automatic Compose startup and cleanup |
 | `E2E_MANAGE_COMPOSE=1 composer qa:e2e` | Full MCP E2E QA with automatic Compose startup and cleanup |
 | `scripts/qa-local.sh --contract` | Unix/Git Bash wrapper for Composer QA plus managed Ability Contract QA |
