@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/diagnostics-fixture.php';
+
 function e2e_ensure_user( $login, $email, $role ) {
 	$user = get_user_by( 'login', $login );
 	if ( $user ) {
@@ -385,6 +387,10 @@ function e2e_apply_case_setup( $case ) {
 
 	$restore = array();
 
+	if ( isset( $setup['diagnostics'] ) ) {
+		$restore['diagnostics'] = new Webmastery_MCP_Diagnostics_Fixture( $setup['diagnostics'] );
+	}
+
 	if ( 'allow' === ( $setup['wstm125_site_kit_permission'] ?? '' ) ) {
 		add_filter( 'wstm125_site_kit_permission', '__return_true' );
 		$restore['wstm125_site_kit_permission'] = true;
@@ -440,6 +446,10 @@ function e2e_apply_case_setup( $case ) {
 }
 
 function e2e_restore_case_setup( $restore ) {
+	if ( isset( $restore['diagnostics'] ) ) {
+		$restore['diagnostics']->restore();
+	}
+
 	if ( ! empty( $restore['wstm125_site_kit_permission'] ) ) {
 		remove_filter( 'wstm125_site_kit_permission', '__return_true' );
 	}
@@ -976,8 +986,11 @@ foreach ( $manifest as $case ) {
 		? wstm114_verification_prepare( $case )
 		: null;
 	$restore = e2e_apply_case_setup( $case );
-	$result  = $ability->execute( $input );
-	e2e_restore_case_setup( $restore );
+	try {
+		$result = $ability->execute( $input );
+	} finally {
+		e2e_restore_case_setup( $restore );
+	}
 	$ok      = ! is_wp_error( $result ) && e2e_result_is_success( $result );
 	$passed  = ( 'success' === $expect && $ok ) || ( 'failure' === $expect && ! $ok );
 	if ( null !== $wstm114 ) {
@@ -1016,6 +1029,23 @@ foreach ( $manifest as $case ) {
 		foreach ( (array) $case['assert_values'] as $path => $expected_value ) {
 			$actual_value = e2e_get_path_value( $result, $path, $exists );
 			if ( ! $exists || $expected_value !== $actual_value ) {
+				$passed = false;
+				break;
+			}
+		}
+	}
+
+	if ( $passed && isset( $case['assert_diagnostic_findings'] ) ) {
+		foreach ( $case['assert_diagnostic_findings'] as $check => $expected ) {
+			$findings = array();
+			foreach ( array( 'pass', 'warn', 'fail' ) as $bucket ) {
+				foreach ( $result['data'][ $bucket ] ?? array() as $finding ) {
+					if ( $check === ( $finding['check'] ?? '' ) ) {
+						$findings[] = array( 'bucket' => $bucket, 'label' => $finding['label'] );
+					}
+				}
+			}
+			if ( array( $expected ) !== $findings ) {
 				$passed = false;
 				break;
 			}
