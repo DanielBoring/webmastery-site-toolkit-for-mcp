@@ -22,13 +22,145 @@ final class CompatibilityBaselinesTest extends TestCase {
 	}
 
 	protected function tearDown(): void {
-		foreach ( array( '/.github/compatibility-versions.json', '/docker-compose.yml', '/readme.txt' ) as $file ) {
+		foreach ( array( '/.github/compatibility-versions.json', '/docker-compose.yml', '/readme.txt', '/scripts/update-compatibility-baselines.php', '/scripts/compatibility-baselines.php' ) as $file ) {
 			if ( file_exists( $this->root . $file ) ) {
 				unlink( $this->root . $file );
 			}
 		}
+		if ( is_dir( $this->root . '/scripts' ) ) {
+			rmdir( $this->root . '/scripts' );
+		}
 		rmdir( $this->root . '/.github' );
 		rmdir( $this->root );
+	}
+
+	private function snapshot(): array {
+		$contents = array();
+		foreach ( array( '/.github/compatibility-versions.json', '/docker-compose.yml', '/readme.txt' ) as $file ) {
+			$contents[ $file ] = file_get_contents( $this->root . $file );
+		}
+		return $contents;
+	}
+
+	private function runCli( array $arguments ): array {
+		if ( ! is_dir( $this->root . '/scripts' ) ) {
+			mkdir( $this->root . '/scripts' );
+			foreach ( array( 'update-compatibility-baselines.php', 'compatibility-baselines.php' ) as $script ) {
+				self::assertTrue( copy( dirname( __DIR__, 2 ) . '/scripts/' . $script, $this->root . '/scripts/' . $script ) );
+			}
+		}
+		// Execute the real entry point with argv; its own location selects the disposable root.
+		$process = proc_open(
+			array_merge( array( PHP_BINARY, $this->root . '/scripts/update-compatibility-baselines.php' ), $arguments ),
+			array( 0 => array( 'pipe', 'r' ), 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ),
+			$pipes,
+			$this->root
+		);
+		self::assertIsResource( $process );
+		fclose( $pipes[0] );
+		$stdout = stream_get_contents( $pipes[1] );
+		$stderr = stream_get_contents( $pipes[2] );
+		fclose( $pipes[1] );
+		fclose( $pipes[2] );
+		return array( proc_close( $process ), $stdout, str_replace( "\r\n", "\n", $stderr ) );
+	}
+
+	private function cliArguments( array $options ): array {
+		$arguments = array();
+		foreach ( $options as $key => $value ) {
+			$arguments[] = "--{$key}={$value}";
+		}
+		return $arguments;
+	}
+
+	/** @dataProvider workflowJobProvider */
+	public function testWorkflowCliPromotionAndNoOp( string $job ): void {
+		$workflow = file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/compatibility-qa.yml' );
+		self::assertSame( 1, preg_match( '/^  ' . preg_quote( $job, '/' ) . ':\n(.*?)(?=^  [a-z-]+:|\z)/ms', $workflow, $section ) );
+		self::assertSame( 1, preg_match( '/for key in ([a-z0-9_ ]+); do/', $section[1], $loop ) );
+		$keys = explode( ' ', $loop[1] );
+		self::assertSame( array( 'wordpress', 'mcp_adapter', 'mcp_adapter_sha256', 'wp_cli', 'wp_cli_sha512', 'yoast', 'seopress', 'plugin_check' ), $keys );
+		self::assertStringContainsString( 'args+=("--${key//_/-}=$(php scripts/compatibility-baselines.php "$key" "$proposal")")', $section[1] );
+		self::assertStringContainsString( 'php scripts/update-compatibility-baselines.php "${args[@]}" --confirmed-wordpress="$wp"', $section[1] );
+		$proposal = $this->baseline;
+		$options = array();
+		foreach ( $keys as $key ) {
+			$proposal[ $key ] = '99.1.2';
+		}
+		$proposal['mcp_adapter_sha256'] = str_repeat( 'a', 64 );
+		$proposal['wp_cli_sha512'] = str_repeat( 'b', 128 );
+		foreach ( $keys as $key ) {
+			$options[ str_replace( '_', '-', $key ) ] = $proposal[ $key ];
+		}
+		$options['confirmed-wordpress'] = $proposal['wordpress'];
+		$arguments = $this->cliArguments( $options );
+		self::assertSame( array( 0, "Updated compatibility baselines.\n", '' ), $this->runCli( $arguments ) );
+		self::assertEquals( $proposal, webmastery_mcp_read_baselines( $this->root . '/.github/compatibility-versions.json' ) );
+		self::assertSame( "image: \${WORDPRESS_IMAGE:-wordpress:99.1.2-php8.4-apache}\n", file_get_contents( $this->root . '/docker-compose.yml' ) );
+		self::assertSame( "=== Fixture ===\nTested up to: 99.1\nRequires PHP: 8.0\n", file_get_contents( $this->root . '/readme.txt' ) );
+		$before = $this->snapshot();
+		self::assertSame( array( 0, "Compatibility baselines unchanged.\n", '' ), $this->runCli( $arguments ) );
+		self::assertSame( $before, $this->snapshot() );
+	}
+
+	public static function workflowJobProvider(): array {
+		return array(
+			'current checker metadata' => array( 'current-plugin-check' ),
+			'proposed commit metadata' => array( 'open-update-pr' ),
+		);
+	}
+
+	/** @dataProvider invalidCliProvider */
+	public function testCliRejectsInvalidArgumentsBeforeAnyWrite( array $overrides, array $remove, array $extra, string $error ): void {
+		$options = array_merge( $this->options(), array( 'wp-cli' => '99.1.0', 'wp-cli-sha512' => str_repeat( 'b', 128 ) ), $overrides );
+		foreach ( $remove as $key ) {
+			unset( $options[ $key ] );
+		}
+		$before = $this->snapshot();
+		$result = $this->runCli( array_merge( $this->cliArguments( $options ), $extra ) );
+		self::assertSame( 1, $result[0] );
+		self::assertSame( '', $result[1] );
+		self::assertStringStartsWith( 'ERROR ', $result[2] );
+		self::assertStringContainsString( $error, $result[2] );
+		self::assertSame( $before, $this->snapshot() );
+	}
+
+	public static function invalidCliProvider(): array {
+		return array(
+			'duplicate version' => array( array(), array(), array( '--wordpress=99.1.2' ), 'Expected unique' ),
+			'duplicate adapter digest' => array( array(), array(), array( '--mcp-adapter-sha256=' . str_repeat( 'a', 64 ) ), 'Expected unique' ),
+			'duplicate cli digest' => array( array(), array(), array( '--wp-cli-sha512=' . str_repeat( 'b', 128 ) ), 'Expected unique' ),
+			'unknown digit option' => array( array(), array(), array( '--sha123=abc' ), 'Unknown or invalid option: sha123' ),
+			'unknown option' => array( array(), array(), array( '--typo=abc' ), 'Unknown or invalid option: typo' ),
+			'empty value' => array( array(), array(), array( '--yoast=' ), 'Expected unique' ),
+			'positional argument' => array( array(), array(), array( 'yoast=99.1' ), 'Expected unique' ),
+			'missing equals' => array( array(), array(), array( '--yoast' ), 'Expected unique' ),
+			'underscore option' => array( array(), array(), array( '--plugin_check=99.1' ), 'Expected unique' ),
+			'missing wordpress' => array( array(), array( 'wordpress' ), array(), 'Required:' ),
+			'missing adapter' => array( array(), array( 'mcp-adapter' ), array(), 'Required:' ),
+			'missing confirmation' => array( array(), array( 'confirmed-wordpress' ), array(), 'WordPress promotion requires' ),
+			'wrong confirmation' => array( array( 'confirmed-wordpress' => '99.2.0' ), array(), array(), 'WordPress promotion requires' ),
+			'missing adapter digest' => array( array(), array( 'mcp-adapter-sha256' ), array(), 'Changing mcp_adapter requires' ),
+			'missing cli digest' => array( array(), array( 'wp-cli-sha512' ), array(), 'Changing wp_cli requires' ),
+			'short adapter digest' => array( array( 'mcp-adapter-sha256' => 'abcd' ), array(), array(), 'invalid compatibility baseline: mcp_adapter_sha256' ),
+			'nonhex adapter digest' => array( array( 'mcp-adapter-sha256' => str_repeat( 'g', 64 ) ), array(), array(), 'invalid compatibility baseline: mcp_adapter_sha256' ),
+			'short cli digest' => array( array( 'wp-cli-sha512' => str_repeat( 'a', 64 ) ), array(), array(), 'invalid compatibility baseline: wp_cli_sha512' ),
+			'nonhex cli digest' => array( array( 'wp-cli-sha512' => str_repeat( 'g', 128 ) ), array(), array(), 'invalid compatibility baseline: wp_cli_sha512' ),
+			'invalid version' => array( array( 'wordpress' => '99.1;echo unsafe' ), array(), array(), 'Invalid version or downgrade' ),
+			'invalid schema version' => array( array( 'mcp-adapter' => '99.1' ), array(), array(), 'invalid compatibility baseline: mcp_adapter' ),
+			'downgrade' => array( array( 'wordpress' => '1.0', 'confirmed-wordpress' => '1.0' ), array(), array(), 'Invalid version or downgrade' ),
+		);
+	}
+
+	/** @dataProvider invalidReferenceProvider */
+	public function testCliRejectsInvalidReferencesBeforeAnyWrite( string $file, string $contents ): void {
+		file_put_contents( $this->root . $file, $contents );
+		$before = $this->snapshot();
+		$result = $this->runCli( $this->cliArguments( $this->options() ) );
+		self::assertSame( 1, $result[0] );
+		self::assertSame( '', $result[1] );
+		self::assertStringStartsWith( 'ERROR Expected exactly one version reference', $result[2] );
+		self::assertSame( $before, $this->snapshot() );
 	}
 
 	private function writeConfig( array $config ): void {
