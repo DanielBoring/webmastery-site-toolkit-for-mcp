@@ -62,4 +62,30 @@ final class PostsHelpersTest extends TestCase {
 			$response
 		);
 	}
+
+	public function test_exact_patch_matches_raw_markup_without_touching_surrounding_bytes(): void {
+		$needle = '<iframe src="https://example.org/embed"></iframe>';
+		$before = '<script>const path = "C:\\\\site";</script>';
+		$after  = '<p onclick="void(0)">Keep "quotes" and apostrophe\'s.</p>';
+		$result = self::call_private( 'patch_content_by_exact_match', array( $before . $needle . $after, $needle, '<p>Replacement</p>' ) );
+
+		$this->assertSame( $before . '<p>Replacement</p>' . $after, $result['content'] );
+		$this->assertSame( array( 'type' => 'exact' ), $result['target'] );
+		$this->assertNull( $result['replaced_blocks'] );
+	}
+
+	public function test_exact_patch_rejects_duplicate_raw_markup(): void {
+		$needle = '<form><input name="email"></form>';
+		$result = self::call_private( 'patch_content_by_exact_match', array( $needle . $needle, $needle, '<p>Replacement</p>' ) );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'ambiguous_target', $result->get_error_code() );
+	}
+
+	public function test_exact_patch_does_not_match_sanitized_lookalike(): void {
+		$result = self::call_private( 'patch_content_by_exact_match', array( '<p>Keep</p>', '<p onclick="void(0)">Keep</p>', '<p>Replacement</p>' ) );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'target_not_found', $result->get_error_code() );
+	}
 }
