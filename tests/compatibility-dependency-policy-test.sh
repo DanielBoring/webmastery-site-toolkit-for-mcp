@@ -27,4 +27,41 @@ if grep -q -- '--version=' <<< "$output"; then
 	echo 'Floating SEO must omit --version rather than request a release literally named latest.' >&2
 	exit 1
 fi
-echo 'Compatibility dependency policy tests passed without Docker or network.'
+assert_cron_isolated() {
+	if [ "$cron_configured" != 1 ]; then
+		echo 'Request-triggered cron must be disabled before bootstrap and fixtures.' >&2
+		exit 1
+	fi
+}
+
+# Exercise main's ordering without Docker, network, or filesystem mutations.
+rm() { :; }
+mkdir() { :; }
+start_compose() { :; }
+cleanup_compose() { :; }
+wait_for_wordpress_files() { :; }
+load_dependencies() { :; }
+install_wp_cli() { :; }
+wp() {
+	if [ "$*" != 'config set DISABLE_WP_CRON true --raw' ]; then
+		echo "Unexpected bootstrap command: $*" >&2
+		exit 1
+	fi
+	cron_configured=$(( cron_configured + 1 ))
+}
+install_wordpress() { assert_cron_isolated; }
+configure_http_auth_forwarding() { assert_cron_isolated; }
+configure_application_passwords() { assert_cron_isolated; }
+install_plugins() { assert_cron_isolated; }
+run_php_lint() { assert_cron_isolated; }
+run_ability_manifest() { assert_cron_isolated; }
+run_trash_safety() { assert_cron_isolated; }
+run_mcp_crud() { assert_cron_isolated; }
+run_parent_assignment_qa() { assert_cron_isolated; }
+run_debug_log_check() { assert_cron_isolated; }
+for QA_MODE in contract e2e all; do
+	cron_configured=0
+	main >/dev/null
+	assert_cron_isolated
+done
+echo 'Compatibility dependency policy and QA bootstrap tests passed without Docker or network.'
