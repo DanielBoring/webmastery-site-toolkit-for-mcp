@@ -181,6 +181,15 @@ install_plugins() {
 run_ability_manifest() {
 	echo "Running manifest-driven ability E2E tests..."
 	wp eval-file "/var/www/html/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/ability-runner.php"
+	compose exec -T wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/media-download-runner.php"
+}
+
+run_trash_safety() {
+	echo "Running isolated enabled/disabled trash safety boots..."
+	local mode
+	for mode in enabled disabled; do
+		compose exec -T wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/trash-safety-runner.php" "$mode"
+	done
 }
 
 create_application_password() {
@@ -228,6 +237,8 @@ run_mcp_crud() {
 		-e MCP_CRUD_SUBSCRIBER_USER="subscriber_test" \
 		-e MCP_CRUD_SUBSCRIBER_PASSWORD="$subscriber_password" \
 		wordpress php "/var/www/html/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/mcp-crud-runner.php"
+
+	wp eval-file "/var/www/html/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/site-kit-mcp-runner.php"
 }
 
 run_php_lint() {
@@ -309,6 +320,9 @@ main() {
 		echo "Running Ability Contract QA..."
 		run_php_lint
 		run_ability_manifest
+		echo "Running scheduling side-effect regressions..."
+		compose exec -T wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/scheduling-runner.php"
+		run_trash_safety
 	fi
 
 	if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then

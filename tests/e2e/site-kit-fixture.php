@@ -15,7 +15,8 @@ function webmastery_mcp_e2e_site_kit_admin_permission() {
 }
 
 function webmastery_mcp_e2e_site_kit_dashboard_permission() {
-	return current_user_can( 'edit_posts' );
+	do_action( 'wstm125_site_kit_permission_called' );
+	return apply_filters( 'wstm125_site_kit_permission', current_user_can( 'edit_posts' ) || current_user_can( 'wstm125_site_kit_shared' ) );
 }
 
 function webmastery_mcp_e2e_site_kit_modules() {
