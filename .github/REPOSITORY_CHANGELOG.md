@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Documented the agent threat model, client-side approval and recovery guidance, annotation scope, and delegated Site Kit access expectations without changing runtime permissions or response contracts.
 - Added focused diagnostic configuration/privacy regression coverage, scoped database-error fixtures, and permission cases while preserving the existing table-identifier contract.
 - Added paired diagnostic authority-syntax cases covering malformed escapes and valid local, internationalized, escaped, and IP-literal configurations without modifying the original diagnostic proof runner.
 - Added backslash persistence regressions for prepared metadata, media text, direct structured metadata, permission-denied no-write controls, and authenticated MCP post writes.
@@ -48,6 +49,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 ### Changed
 
 - Updated the verified `actions/cache` pin to v6.1.0 on GitHub-hosted QA runners, retaining Composer cache paths, keys, and restore-key behavior.
+- Updated the verified `setup-php` action pin to 2.37.2, retaining the PHP 8.0/8.4 QA matrix and existing release inputs and permissions.
+- Pinned checkout workflows directly to the verified `actions/checkout` v6.0.3 commit instead of its annotated tag object; checkout inputs and permissions are unchanged.
 - Made the image-download fault-injection fixture use the available native cURL progress callback on PHP 8.1 as well as newer PHP versions, without changing production behavior or regression assertions.
 - Shared the component-aware URL parsing stub in the unit-test bootstrap so Media and Site Kit tests can load together without duplicate function declarations; retained the guarded Media fallback and namespaced verification helper.
 - Site Kit permission regression QA now fails explicitly if its required JSON evidence cannot be written, rather than reporting success without a persisted summary.
