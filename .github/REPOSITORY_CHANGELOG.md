@@ -48,6 +48,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Pinned checkout workflows directly to the verified `actions/checkout` v6.0.3 commit instead of its annotated tag object; checkout inputs and permissions are unchanged.
 - Made the image-download fault-injection fixture use the available native cURL progress callback on PHP 8.1 as well as newer PHP versions, without changing production behavior or regression assertions.
 - Shared the component-aware URL parsing stub in the unit-test bootstrap so Media and Site Kit tests can load together without duplicate function declarations; retained the guarded Media fallback and namespaced verification helper.
 - Site Kit permission regression QA now fails explicitly if its required JSON evidence cannot be written, rather than reporting success without a persisted summary.
