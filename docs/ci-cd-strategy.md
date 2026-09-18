@@ -2,6 +2,8 @@
 
 This repository uses GitHub Actions as the automation layer for pull request checks, Docker WordPress validation, scheduled compatibility checks, and release publishing. The CI/CD strategy explains how automation is organized; the QA strategy explains what confidence each check provides.
 
+See the [Software Development Lifecycle](sdlc-overview.md) for where CI/CD connects the stages of the development process.
+
 ## Goals
 
 1. Keep the default pull request path fast enough for routine contribution.

@@ -4,6 +4,8 @@ This repository uses layered QA for a public WordPress.org plugin. The goal is t
 
 The plugin is now reviewed as a WordPress.org plugin, so QA must prove more than "the code runs." It must also prove ability permissions, object-level access, response privacy, WordPress compatibility, and package contents stay aligned with WordPress.org expectations.
 
+See the [Software Development Lifecycle](sdlc-overview.md) for where QA fits in the complete development process.
+
 Related strategy guides:
 
 - [`ci-cd-strategy.md`](ci-cd-strategy.md) explains GitHub Actions automation, branch protection, workflow permissions, schedules, artifacts, and failure handling.
