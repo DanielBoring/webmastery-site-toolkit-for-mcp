@@ -28,6 +28,27 @@ add_action(
 			]
 		);
 
+		// Second mcp_book taxonomy used only to exercise mixed allowed/forbidden
+		// registered-taxonomy update payloads for issue #107; no fixture role is
+		// granted its assign_terms capability, so it is always forbidden in
+		// wstm107_* regression cases.
+		register_taxonomy(
+			'wstm107_restricted_shelf',
+			[ 'mcp_book' ],
+			[
+				'label'        => 'WSTM107 Restricted Shelves',
+				'public'       => false,
+				'show_ui'      => false,
+				'show_in_rest' => false,
+				'capabilities' => [
+					'manage_terms' => 'manage_wstm107_restricted_shelves',
+					'edit_terms'   => 'edit_wstm107_restricted_shelves',
+					'delete_terms' => 'delete_wstm107_restricted_shelves',
+					'assign_terms' => 'assign_wstm107_restricted_shelves',
+				],
+			]
+		);
+
 		register_post_type(
 			'mcp_book',
 			[

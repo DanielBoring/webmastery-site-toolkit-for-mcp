@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/diagnostics-fixture.php';
+
 function e2e_ensure_user( $login, $email, $role ) {
 	$user = get_user_by( 'login', $login );
 	if ( $user ) {
@@ -75,17 +77,23 @@ function e2e_delete_term_by_slug( $slug, $taxonomy ) {
 	}
 }
 
-function e2e_insert_post( $type, $title, $content, $author_id, $status = 'publish' ) {
-	$id = wp_insert_post(
-		array(
-			'post_type'    => $type,
-			'post_title'   => $title,
-			'post_content' => $content,
-			'post_status'  => $status,
-			'post_author'  => $author_id,
-		),
-		true
+function e2e_insert_post( $type, $title, $content, $author_id, $status = 'publish', $slug = '' ) {
+	$post_args = array(
+		'post_type'    => $type,
+		'post_title'   => $title,
+		'post_content' => $content,
+		'post_status'  => $status,
+		'post_author'  => $author_id,
 	);
+
+	// An explicit slug gives regression fixtures (e.g. wstm107_*) a
+	// deterministic post_name to assert against, instead of relying on
+	// WordPress's auto-generated slug from the title.
+	if ( '' !== $slug ) {
+		$post_args['post_name'] = $slug;
+	}
+
+	$id = wp_insert_post( $post_args, true );
 
 	if ( is_wp_error( $id ) ) {
 		throw new RuntimeException( $id->get_error_message() );
@@ -379,6 +387,15 @@ function e2e_apply_case_setup( $case ) {
 
 	$restore = array();
 
+	if ( isset( $setup['diagnostics'] ) ) {
+		$restore['diagnostics'] = new Webmastery_MCP_Diagnostics_Fixture( $setup['diagnostics'] );
+	}
+
+	if ( 'allow' === ( $setup['wstm125_site_kit_permission'] ?? '' ) ) {
+		add_filter( 'wstm125_site_kit_permission', '__return_true' );
+		$restore['wstm125_site_kit_permission'] = true;
+	}
+
 	if ( array_key_exists( 'active_plugins', $setup ) && is_array( $setup['active_plugins'] ) ) {
 		$restore['active_plugins'] = get_option( 'active_plugins', array() );
 		update_option( 'active_plugins', array_values( array_map( 'strval', $setup['active_plugins'] ) ) );
@@ -429,6 +446,14 @@ function e2e_apply_case_setup( $case ) {
 }
 
 function e2e_restore_case_setup( $restore ) {
+	if ( isset( $restore['diagnostics'] ) ) {
+		$restore['diagnostics']->restore();
+	}
+
+	if ( ! empty( $restore['wstm125_site_kit_permission'] ) ) {
+		remove_filter( 'wstm125_site_kit_permission', '__return_true' );
+	}
+
 	if ( array_key_exists( 'active_plugins', $restore ) ) {
 		update_option( 'active_plugins', $restore['active_plugins'] );
 	}
@@ -477,6 +502,12 @@ $editor_id     = e2e_ensure_user( 'editor_test', 'editor@test.local', 'editor' )
 $subscriber_id = e2e_ensure_user( 'subscriber_test', 'subscriber@test.local', 'subscriber' );
 $no_role_id    = e2e_ensure_user( 'no_role_test', 'no-role@test.local', 'subscriber' );
 ( new WP_User( $no_role_id ) )->set_role( '' );
+e2e_ensure_role( 'wstm125_no_read', 'Site Kit no read fixture', array( 'wstm125_site_kit_shared' ) );
+e2e_ensure_role( 'wstm125_read', 'Site Kit read fixture', array( 'wstm125_site_kit_shared', 'read' ) );
+$wstm125_no_read_id = e2e_ensure_user( 'wstm125_no_read', 'wstm125-no-read@test.local', 'wstm125_no_read' );
+$wstm125_read_id = e2e_ensure_user( 'wstm125_read', 'wstm125-read@test.local', 'wstm125_read' );
+( new WP_User( $wstm125_no_read_id ) )->set_role( 'wstm125_no_read' );
+( new WP_User( $wstm125_read_id ) )->set_role( 'wstm125_read' );
 e2e_ensure_application_password( $admin_id, 'MCP E2E App Password' );
 
 e2e_ensure_role(
@@ -535,6 +566,22 @@ e2e_ensure_role(
 	]
 );
 e2e_ensure_role(
+	'wstm107_book_editor_no_assign',
+	'WSTM107 Book Editor Without Taxonomy Assignment',
+	[
+		'read',
+		'edit_mcp_books',
+		'edit_others_mcp_books',
+		'edit_published_mcp_books',
+		'publish_mcp_books',
+	]
+);
+e2e_ensure_role(
+	'wstm106_page_editor',
+	'WSTM106 Page Editor',
+	[ 'read', 'edit_pages', 'edit_published_pages', 'publish_pages' ]
+);
+e2e_ensure_role(
 	'user_lister',
 	'User Lister',
 	[
@@ -546,11 +593,15 @@ e2e_ensure_role(
 $limited_editor_id       = e2e_ensure_user( 'limited_editor_test', 'limited-editor@test.local', 'limited_editor' );
 $book_manager_id         = e2e_ensure_user( 'book_manager_test', 'book-manager@test.local', 'book_manager' );
 $limited_book_manager_id = e2e_ensure_user( 'limited_book_manager_test', 'limited-book-manager@test.local', 'limited_book_manager' );
+$wstm107_book_editor_no_assign_id = e2e_ensure_user( 'wstm107_book_editor_test', 'wstm107-book-editor@test.local', 'wstm107_book_editor_no_assign' );
 $case_manager_id         = e2e_ensure_user( 'case_manager_test', 'case-manager@test.local', 'case_manager' );
 $user_lister_id          = e2e_ensure_user( 'user_lister_test', 'user-lister@test.local', 'user_lister' );
+$wstm106_page_editor_id = e2e_ensure_user( 'wstm106_page_editor', 'wstm106-page-editor@test.local', 'wstm106_page_editor' );
+( new WP_User( $wstm106_page_editor_id ) )->set_role( 'wstm106_page_editor' );
 ( new WP_User( $limited_editor_id ) )->set_role( 'limited_editor' );
 ( new WP_User( $book_manager_id ) )->set_role( 'book_manager' );
 ( new WP_User( $limited_book_manager_id ) )->set_role( 'limited_book_manager' );
+( new WP_User( $wstm107_book_editor_no_assign_id ) )->set_role( 'wstm107_book_editor_no_assign' );
 ( new WP_User( $case_manager_id ) )->set_role( 'case_manager' );
 ( new WP_User( $user_lister_id ) )->set_role( 'user_lister' );
 
@@ -568,9 +619,11 @@ $fixtures = array(
 	'limited_editor_id'  => $limited_editor_id,
 	'book_manager_id'    => $book_manager_id,
 	'limited_book_manager_id' => $limited_book_manager_id,
+	'wstm107_book_editor_no_assign_id' => $wstm107_book_editor_no_assign_id,
 	'case_manager_id'    => $case_manager_id,
 	'user_lister_id'     => $user_lister_id,
 	'category_id'        => e2e_ensure_term_id( 'MCP E2E Category', 'category' ),
+	'default_category_id' => (int) get_option( 'default_category' ),
 	'tag_id'             => e2e_ensure_term_id( 'mcp-e2e-tag', 'post_tag' ),
 	'genre_id'           => e2e_ensure_term_id( 'MCP E2E Genre', 'mcp_genre' ),
 	'parent_category_id' => e2e_ensure_term_id( 'MCP E2E Parent Category', 'category' ),
@@ -580,6 +633,12 @@ $fixtures = array(
 	'delete_tag_id'      => e2e_ensure_term_id( 'mcp-e2e-delete-tag', 'post_tag' ),
 );
 $fixtures['category_id_string'] = (string) $fixtures['category_id'];
+
+$fixtures['wstm106_page_id'] = e2e_insert_post( 'page', 'WSTM106 Original', 'WSTM106 original content.', $wstm106_page_editor_id, 'draft', 'wstm106-original' );
+$fixtures['wstm106_parent_id'] = e2e_insert_post( 'page', 'WSTM106 Allowed Parent', 'Allowed parent.', $wstm106_page_editor_id, 'draft' );
+$fixtures['wstm106_denied_parent_id'] = e2e_insert_post( 'page', 'WSTM106 Denied Parent', 'Denied parent.', $editor_id, 'draft' );
+$fixtures['wstm106_book_id'] = e2e_insert_post( 'mcp_book', 'WSTM106 Original Book', 'Original book.', $book_manager_id, 'draft', 'wstm106-original-book' );
+$fixtures['wstm106_case_id'] = e2e_insert_post( 'mcp_case_study', 'WSTM106 Original Case', 'Original case.', $case_manager_id, 'draft', 'wstm106-original-case' );
 
 $fixtures['post_id']         = e2e_insert_post( 'post', 'MCP E2E Post', 'Content for MCP E2E post.', $author_id );
 $fixtures['partial_post_id'] = e2e_insert_post(
@@ -654,6 +713,7 @@ $fixtures['book_id']         = e2e_insert_post( 'mcp_book', 'MCP E2E Book', 'Con
 $fixtures['private_book_id'] = e2e_insert_post( 'mcp_book', 'MCP E2E Private Book', 'Private CPT fixture.', $book_manager_id, 'private' );
 $fixtures['trash_filter_book_id'] = e2e_insert_post( 'mcp_book', 'MCP E2E Trash Filter Book', 'Trash CPT fixture.', $book_manager_id, 'draft' );
 $fixtures['delete_book_id']  = e2e_insert_post( 'mcp_book', 'MCP E2E Delete Book', 'Delete CPT fixture.', $book_manager_id );
+$fixtures['wstm107_book_id'] = e2e_insert_post( 'mcp_book', 'WSTM107 Taxonomy Guard Book', 'Original content for taxonomy guard book.', $book_manager_id, 'draft', 'wstm107-taxonomy-guard-book' );
 $fixtures['case_id']         = e2e_insert_post( 'mcp_case_study', 'MCP E2E Case Study', 'Content for MCP E2E case study.', $case_manager_id );
 $fixtures['delete_case_id']  = e2e_insert_post( 'mcp_case_study', 'MCP E2E Delete Case Study', 'Delete CPT fixture.', $case_manager_id );
 $fixtures['block_path_page_id'] = e2e_insert_post(
@@ -824,19 +884,35 @@ set_site_transient(
 	)
 );
 
+require_once __DIR__ . '/patch-html-runner.php';
+wp_set_current_user( $editor_id );
+$wstm115_content = WSTM115_Patch_HTML_Tests::html_block() . WSTM115_Patch_HTML_Tests::paragraph( 'Manifest target.' );
+$fixtures['wstm115_block_post_id'] = WSTM115_Patch_HTML_Tests::seed( $wstm115_content, $editor_id );
+$fixtures['wstm115_exact_post_id'] = WSTM115_Patch_HTML_Tests::seed( $wstm115_content, $editor_id );
+$fixtures['wstm115_untouched_hash'] = hash( 'sha256', WSTM115_Patch_HTML_Tests::html_block() );
+$wstm115_filtered_editor_id = e2e_ensure_user( 'wstm115_filtered_editor', 'wstm115-filtered-editor@test.local', 'editor' );
+( new WP_User( $wstm115_filtered_editor_id ) )->add_cap( 'unfiltered_html', false );
+
 $roles = array(
+	'wstm125_no_read' => $wstm125_no_read_id,
+	'wstm125_read' => $wstm125_read_id,
 	'admin'        => $admin_id,
 	'author'       => $author_id,
 	'editor'       => $editor_id,
+	'filtered_editor' => $wstm115_filtered_editor_id,
 	'limited_editor' => $limited_editor_id,
 	'subscriber'   => $subscriber_id,
 	'no_role'      => $no_role_id,
 	'book_manager' => $book_manager_id,
 	'limited_book_manager' => $limited_book_manager_id,
+	'wstm107_book_editor_no_assign' => $wstm107_book_editor_no_assign_id,
 	'case_manager' => $case_manager_id,
 	'user_lister'  => $user_lister_id,
+	'wstm106_page_editor' => $wstm106_page_editor_id,
 );
 $roles = array_merge( $roles, $wstm105['roles'] );
+
+require __DIR__ . '/site-kit-permissions-runner.php';
 
 $registered = array_filter(
 	array_keys( wp_get_abilities() ),
@@ -892,6 +968,8 @@ if ( $missing || $extra ) {
 	exit( 1 );
 }
 
+require_once __DIR__ . '/wstm114-verification-fixture.php';
+
 foreach ( $manifest as $case ) {
 	$case = e2e_resolve_placeholders( $case, $fixtures );
 
@@ -908,11 +986,20 @@ foreach ( $manifest as $case ) {
 
 	$ability = wp_get_ability( $ability_name );
 	$input   = e2e_resolve_placeholders( $case['input'] ?? null, $fixtures );
+	$wstm114 = 'webmastery-site-toolkit-for-mcp/webmaster-verification-status' === $ability_name
+		? wstm114_verification_prepare( $case )
+		: null;
 	$restore = e2e_apply_case_setup( $case );
-	$result  = $ability->execute( $input );
-	e2e_restore_case_setup( $restore );
+	try {
+		$result = $ability->execute( $input );
+	} finally {
+		e2e_restore_case_setup( $restore );
+	}
 	$ok      = ! is_wp_error( $result ) && e2e_result_is_success( $result );
 	$passed  = ( 'success' === $expect && $ok ) || ( 'failure' === $expect && ! $ok );
+	if ( null !== $wstm114 ) {
+		$passed = wstm114_verification_assert( $case, $result, $wstm114 ) && $passed;
+	}
 
 	if ( $passed && ! empty( $case['expect_error_code'] ) ) {
 		$passed = $case['expect_error_code'] === e2e_result_error_code( $result );
@@ -946,6 +1033,23 @@ foreach ( $manifest as $case ) {
 		foreach ( (array) $case['assert_values'] as $path => $expected_value ) {
 			$actual_value = e2e_get_path_value( $result, $path, $exists );
 			if ( ! $exists || $expected_value !== $actual_value ) {
+				$passed = false;
+				break;
+			}
+		}
+	}
+
+	if ( $passed && isset( $case['assert_diagnostic_findings'] ) ) {
+		foreach ( $case['assert_diagnostic_findings'] as $check => $expected ) {
+			$findings = array();
+			foreach ( array( 'pass', 'warn', 'fail' ) as $bucket ) {
+				foreach ( $result['data'][ $bucket ] ?? array() as $finding ) {
+					if ( $check === ( $finding['check'] ?? '' ) ) {
+						$findings[] = array( 'bucket' => $bucket, 'label' => $finding['label'] );
+					}
+				}
+			}
+			if ( array( $expected ) !== $findings ) {
 				$passed = false;
 				break;
 			}
@@ -1022,6 +1126,14 @@ foreach ( $manifest as $case ) {
 wstm105_check_direct_callbacks( $roles, $fixtures );
 
 echo "SUMMARY {$summary['passed']} passed, {$summary['failed']} failed\n";
+require_once __DIR__ . '/taxonomy-write-runner.php';
+$taxonomy_summary = wstm117_run_taxonomy_tests();
+$summary['taxonomy_write_regressions'] = array(
+	'passed' => $taxonomy_summary['passed'],
+	'failed' => $taxonomy_summary['failed'],
+);
 e2e_write_summary( $summary );
 
-exit( $summary['failed'] > 0 ? 1 : 0 );
+$patch_html_summary = ( new WSTM115_Patch_HTML_Tests( $roles ) )->run();
+
+exit( $summary['failed'] > 0 || $patch_html_summary['failed'] > 0 || $taxonomy_summary['failed'] > 0 ? 1 : 0 );

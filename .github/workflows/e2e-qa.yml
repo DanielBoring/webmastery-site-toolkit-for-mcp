@@ -24,7 +24,7 @@ jobs:
       should-run: ${{ steps.filter.outputs.should-run }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -103,7 +103,7 @@ jobs:
       debug-log-status: ${{ steps.debug-log.outputs.status }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -118,6 +118,15 @@ jobs:
 
       - name: Run Ability Contract QA
         run: bash scripts/e2e-test.sh contract
+
+      - name: Upload isolated trash safety results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trash-safety-results
+          path: e2e-artifacts/trash-safety-*.json
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Collect tested versions and contract summary
         id: versions
@@ -190,8 +199,49 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ability-contract-summary
-          path: build/qa-summary-contract.json
+          path: |
+            build/qa-summary-contract.json
+            e2e-artifacts/media-download-fixed.json
+            e2e-artifacts/media-server-fixed.jsonl
           if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload scheduling regression evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scheduling-regression
+          path: e2e-artifacts/scheduling-regression.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload taxonomy write regression evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: taxonomy-write-summary
+          path: e2e-artifacts/taxonomy-write-summary.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload patch HTML regression evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: patch-html-regression-evidence
+          path: e2e-artifacts/patch-html-summary.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload detailed parent contract evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: parent-assignment-contract-evidence
+          path: |
+            e2e-artifacts/parent-assignment-direct.json
+            e2e-artifacts/parent-assignment-ability.json
+          if-no-files-found: error
           retention-days: 7
 
   full-mcp-e2e-qa:
@@ -208,7 +258,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -237,8 +287,19 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: full-mcp-e2e-summary
-          path: build/qa-summary-transport.json
+          path: |
+            build/qa-summary-transport.json
+            e2e-artifacts/mcp-crud-summary.json
           if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload detailed parent HTTP evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: parent-assignment-http-evidence
+          path: e2e-artifacts/parent-assignment-http.json
+          if-no-files-found: error
           retention-days: 7
 
   docker-qa-gate:
@@ -251,7 +312,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout gate predicate
-        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
       - name: Require successful detector and expected runtime results

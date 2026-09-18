@@ -3,6 +3,15 @@
 declare(strict_types=1);
 
 define( 'ABSPATH', dirname(__DIR__, 2) . '/' );
+define( 'MINUTE_IN_SECONDS', 60 );
+
+function wp_timezone(): DateTimeZone {
+	return new DateTimeZone( $GLOBALS['wstm_test_timezone'] ?? 'UTC' );
+}
+
+function wp_date( $format, $timestamp ): string {
+	return ( new DateTimeImmutable( '@' . $timestamp ) )->setTimezone( wp_timezone() )->format( $format );
+}
 
 if ( ! class_exists( 'WP_Error' ) ) {
 	class WP_Error {
@@ -75,4 +84,85 @@ function esc_url_raw( $url ): string {
 	return filter_var( $url, FILTER_VALIDATE_URL ) ? $url : '';
 }
 
+function wp_slash( $value ) {
+	if ( is_array( $value ) ) {
+		return array_map( 'wp_slash', $value );
+	}
+
+	return is_string( $value ) ? addslashes( $value ) : $value;
+}
+
+function update_post_meta( $post_id, $key, $value ) {
+	$GLOBALS['wstm_test_meta_writes'][] = array( $post_id, $key, $value );
+	return true;
+}
+
+function get_post_meta( $post_id, $key, $single = false ) {
+	return $GLOBALS['wstm_test_stored_meta'][ $post_id ][ $key ] ?? '';
+}
+
+function wp_parse_url( $url, $component = -1 ) {
+	return parse_url( $url, $component );
+}
+
+/**
+ * Minimal, test-controlled taxonomy stubs for CPT helpers and taxonomy writes.
+ *
+ * $GLOBALS['wstm_test_taxonomies'] maps a taxonomy name to either `false` (not
+ * registered) or an object with an `object_types` array and a `cap->assign_terms`
+ * capability name, mirroring the subset of `get_taxonomy()`/`is_object_in_taxonomy()`
+ * behavior that `validate_taxonomy_terms()` relies on.
+ *
+ * $GLOBALS['wstm_test_user_caps'] lists the capabilities the fake current user has.
+ */
+function get_taxonomy( $taxonomy ) {
+	return $GLOBALS['wstm_test_taxonomies'][ $taxonomy ] ?? false;
+}
+
+function is_object_in_taxonomy( $post_type, $taxonomy ) {
+	$taxonomy_object = $GLOBALS['wstm_test_taxonomies'][ $taxonomy ] ?? false;
+	if ( ! $taxonomy_object ) {
+		return false;
+	}
+
+	return in_array( $post_type, $taxonomy_object->object_types ?? array(), true );
+}
+
+function current_user_can( $capability, ...$args ) {
+	if ( isset( $GLOBALS['wstm_test_cap_calls'] ) ) {
+		$GLOBALS['wstm_test_cap_calls'][] = array_merge( array( $capability ), $args );
+	}
+	if ( isset( $GLOBALS['wstm_test_object_capability'] ) ) {
+		return ( $GLOBALS['wstm_test_object_capability'] )( $capability, ...$args );
+	}
+	return in_array( $capability, $GLOBALS['wstm_test_user_caps'] ?? array(), true );
+}
+
+function get_post( $id ) {
+	return $GLOBALS['wstm_test_posts'][ $id ] ?? null;
+}
+
+function is_post_type_hierarchical( $type ): bool {
+	return in_array( $type, $GLOBALS['wstm_test_hierarchical_types'] ?? array(), true );
+}
+
+require_once dirname(__DIR__, 2) . '/includes/class-post-parent.php';
+
+function wp_register_ability( $name, $args ) {
+	$GLOBALS['wstm_test_abilities'][ $name ] = $args;
+}
+
+function get_term( $id, $taxonomy = '' ) {
+	return $GLOBALS['wstm_test_terms'][ $taxonomy ][ $id ] ?? null;
+}
+
+// Controlled return values only; real deletion and meta-cap mapping are covered in Docker.
+function wp_delete_term( $id, $taxonomy ) {
+	$GLOBALS['wstm_test_delete_calls'][] = array( $id, $taxonomy );
+	return $GLOBALS['wstm_test_delete_result'];
+}
+
+require_once dirname(__DIR__, 2) . '/includes/class-post-scheduling.php';
 require_once dirname(__DIR__, 2) . '/includes/class-posts.php';
+require_once dirname(__DIR__, 2) . '/includes/class-custom-post-types.php';
+require_once dirname(__DIR__, 2) . '/includes/class-taxonomy.php';
