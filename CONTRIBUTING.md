@@ -66,6 +66,8 @@ Workflow and shell changes also need the dedicated workflow lint checks. These t
 
 The repo strategy docs explain how maintainers operate the project:
 
+- [`docs/sdlc-overview.md`](docs/sdlc-overview.md) maps the complete lifecycle from issue intake through design, implementation, QA, release, and maintenance.
+- [`docs/qa-strategy.md`](docs/qa-strategy.md) explains the validation layers, what each check proves, and when each check runs.
 - [`docs/ci-cd-strategy.md`](docs/ci-cd-strategy.md) covers GitHub Actions, branch protection, workflow permissions, scheduled checks, and artifact policy.
 - [`docs/security-strategy.md`](docs/security-strategy.md) covers ability permissions, sensitive data, dependency and secret handling, and vulnerability response.
 - [`docs/release-strategy.md`](docs/release-strategy.md) covers versioning, release readiness, GitHub releases, WordPress.org SVN publishing, hotfixes, and rollback policy.
