@@ -93,7 +93,7 @@ if ( isset( $_SERVER['SCRIPT_FILENAME'] ) && realpath( $_SERVER['SCRIPT_FILENAME
 	try {
 		$options = array();
 		foreach ( array_slice( $argv, 1 ) as $argument ) {
-			if ( ! preg_match( '/^--([a-z-]+)=(.+)$/D', $argument, $match ) || isset( $options[ $match[1] ] ) ) {
+			if ( ! preg_match( '/^--([a-z0-9-]+)=(.+)$/D', $argument, $match ) || isset( $options[ $match[1] ] ) ) {
 				throw new InvalidArgumentException( 'Expected unique --name=value options.' );
 			}
 			$options[ $match[1] ] = $match[2];
