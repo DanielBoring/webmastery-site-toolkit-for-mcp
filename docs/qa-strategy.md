@@ -56,6 +56,8 @@ These two checks both use Docker WordPress, but they prove different things.
 
 Ability Contract QA is the plugin contract layer. It asks: "Inside WordPress, did this plugin register the abilities we expect, and do the manifest cases pass with the right permissions and response shapes?" It is broad and ability-driven.
 
+Contract QA additionally runs `tests/e2e/trash-safety-runner.php` in two fresh PHP processes. Each defines and verifies `EMPTY_TRASH_DAYS` before loading actual WordPress core: `30` for normal trash/restore and `0` for refusal before mutation. These lanes exercise registered abilities, not stubs, and report separately from the ordinary manifest counts. See [`tests/e2e/README.md`](../tests/e2e/README.md#isolated-trash-safety-regressions) for assertions and coverage boundaries.
+
 Full MCP E2E QA is the real transport layer. It asks: "Can an MCP client actually talk to WordPress through the MCP Adapter and perform real work?" It is narrower but deeper, because it uses Application Passwords, MCP session initialization, `tools/list`, ability discovery, and real CRUD calls over HTTP JSON-RPC.
 
 Both layers matter. Contract QA catches broad ability drift and permission regressions. Full MCP E2E catches transport and integration problems that direct PHP execution cannot see.
@@ -76,15 +78,15 @@ Both layers matter. Contract QA catches broad ability drift and permission regre
 
 Runtime-impacting paths include plugin source, tests, scripts, Docker configuration, Composer files, workflow files, package metadata, assets, and `readme.txt`.
 
-## Branch protection recommendation
+## Required main CI checks
 
-Require these checks before merging any PR:
+The active `main-ci-gates` ruleset requires exactly these GitHub Actions checks before merging any PR into `main`:
 
 - `1 - Static QA`
 - `2 - Unit Tests`
 - `Docker QA gate`
 
-Require these checks before merging runtime-impacting, ability, or security-sensitive PRs:
+For runtime-impacting, ability, or security-sensitive PRs, `Docker QA gate` requires both runtime checks to pass; they are not separate required-check entries in the ruleset:
 
 - `3 - Ability Contract QA`
 - `4 - Full MCP E2E QA`
@@ -97,7 +99,7 @@ Use `6 - Compatibility QA` as a scheduled/manual maintainer gate at first. Promo
 
 The important GitHub concept is "required status checks." A workflow can run on many events, but branch protection decides which successful checks are required before a PR can merge.
 
-The staged `main-ci-gates` ruleset must be activated only after successful real PR runs of the new checks, including a bot PR. `workflow_dispatch` job results do not satisfy branch-ruleset requirements. The path-filtered Release Package QA workflow must not become a required PR check in its current form.
+Enforcement was activated and read back on September 17, 2026, after all five genuine PR-event workflows passed on bot PR #140. See the [dated setup evidence](../.github/SETUP-COMPLETE.md#rollout-evidence), which distinguishes the dispatched compatibility pipeline from the approved PR-event checks. `workflow_dispatch` job results do not satisfy branch-ruleset requirements. Future `GITHUB_TOKEN`-created PRs still need maintainer workflow approval; the initial rollout did not create an auto-approval bypass. The path-filtered Release Package QA workflow must not become a required PR check in its current form.
 
 ## Which command should I run?
 
@@ -191,6 +193,10 @@ All lanes pull fresh images, run both Ability Contract QA and Full MCP E2E QA, f
 Additional coverage separates PHP 8.4, MySQL 8.4, floating SEO dependencies, and current Plugin Check package validation. Package-check lanes run the applicable package command; they are not interchangeable with the contract/transport lanes. Ordinary QA uses the reviewed dependency pins and executable-download digests in `.github/compatibility-versions.json`.
 
 Only tested candidates may update baselines or `readme.txt` `Tested up to`. Missing images, failed discovery, stale source history, and unavailable dependencies are explicit failures that block promotion. Baseline updates preserve the full configuration and PHP image suffix. Approval of the bot PR's genuine PR-event workflows is required; a successful manual dispatch is not a substitute.
+
+The checked-in primary baseline is WordPress 7.1 with MCP Adapter 0.6.1 and its verified SHA-256. This adapter update leaves WordPress, `Tested up to`, other dependency pins, and PHP support unchanged.
+
+At the September 17, 2026 verification, `main` at `3dae8aa` pinned MCP Adapter 0.5.0. The passing compatibility pipeline proposed 0.6.1 in PR #140, which then remained open and unmerged. Those historical results do not replace current-source compatibility and genuine PR checks before promotion.
 
 ### Runtime coverage limitation
 

@@ -104,7 +104,11 @@ Recommended settings:
 4. Restrict release-tag creation, updates, and deletion through the tag ruleset. Repository administrators have the explicit tag-rule bypass, not an environment-approval bypass.
 5. Use the WordPress.org SVN-specific password, not the normal WordPress.org account password.
 
-These controls were read back from GitHub on September 16, 2026. Recheck effective settings before releases; documentation alone does not enforce them. Main CI requirements remain staged until the new PR checks have passed and the `main-ci-gates` ruleset is activated.
+These environment, secret-scope, and tag controls were last read back from GitHub on September 16, 2026; they were not reverified by the September 17 CI activation check. Recheck effective settings before releases; documentation alone does not enforce them.
+
+Main CI enforcement is **active**, verified on September 17, 2026: `main-ci-gates` requires `1 - Static QA`, `2 - Unit Tests`, and `Docker QA gate` from GitHub Actions. The [setup evidence](../.github/SETUP-COMPLETE.md#rollout-evidence) records the completed initial rollout, including all five approved bot PR workflows. Activation does not replace per-release package QA or protected production approval.
+
+At that verification, PR #140's MCP Adapter 0.6.1 candidate had passed compatibility and PR package QA but remained open and unmerged. Main at `3dae8aa` used 0.5.0. The checked-in adapter baseline is now 0.6.1; baseline validation or adoption does not authorize a production release. Future Actions-created PR workflows still require maintainer approval before their genuine PR checks can satisfy the ruleset.
 
 ### Partial failure recovery
 

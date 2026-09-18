@@ -17,6 +17,20 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Page and custom post type create/update abilities reject invalid or unauthorized parent assignments before saving other requested changes. Valid hierarchical parents, detach-to-zero, and omitted parents remain supported; unsupported positive parents on nonhierarchical custom post types are now rejected.
+- Image URL uploads now enforce the existing WordPress upload-size limit during streaming and cancel oversized responses, with cleanup on rejection. Safe HTTP redirects, TLS, Content-MD5, actual-size and MIME checks remain intact; invalid limits and incomplete basic raster headers fail explicitly.
+- Image URL validation checks mixed IPv4/IPv6 DNS answers and bounded CNAME chains, including redirect targets. IPv6 documentation addresses are rejected consistently across PHP versions. DNS failures are explicit; these checks do not pin DNS or eliminate rebinding races.
+- Reject malformed, missing, or too-soon scheduling dates before creating or updating posts, pages, and custom post types. Preserve valid existing schedules, legacy date parsing, and explicit-offset instants across repeated DST hours.
+- Retain validated future dates when scheduling draft or pending content with a previously unset GMT date instead of letting WordPress reset the date and publish immediately.
+
+- Category and tag writes now respect the registered taxonomy's editing/deletion capabilities and existing-term permissions, including direct execution. Default Editor/Administrator access, read behavior, and successful response shapes are unchanged; sites with custom restrictions now receive explicit denials before writes.
+- Refused or failed term deletions no longer report success. WordPress's default-category protection is respected, and a zero/false deletion result remains a failure even if site permission filters allow the attempt.
+
+- Targeted block and section patches no longer sanitize unrelated stored HTML in the rebuilt body. Exact patches now match the original raw search fragment. Replacement fragments remain sanitized, object permissions are unchanged, and WordPress's normal capability-dependent save filters still apply.
+- Site Kit module, permission, and PageSpeed abilities now require WordPress `read` before any upstream work, in addition to Site Kit's route authorization. Direct execution also rejects missing or unusable upstream permission callbacks. Site Kit-authorized shared-dashboard users remain eligible; status keeps its existing administrator capability gate.
+- Post, page, custom post type, and bulk post trash abilities now refuse with `trash_disabled` when WordPress trash is disabled, preventing permanent deletion behind a misleading trash-success response. Normal trash behavior, permissions, and per-ID bulk summaries are unchanged; no permanent-delete override is added.
+- Webmaster verification now omits WordPress-only Site Kit installation/activation details for callers without plugin activation permission, skips private inspection, and summarizes only authorized checks. Public checks remain available with `read`; direct execution enforces the same gate before any work.
+- Public webmaster verification results, including failures and unknowns, now share a site/home/schema-scoped 60-second cache to avoid repeated HTTP/DNS work on warm calls. Privileged plugin state remains fresh per request and is never stored in the shared public cache.
 - Custom post type update abilities now validate requested taxonomy assignments (registration and assign-terms permission) before saving title, content, or status changes, matching the create ability's behavior. Invalid or unauthorized taxonomy requests are now rejected before any changes are persisted, instead of after the post was already updated.
 
 ## 2.5.0
