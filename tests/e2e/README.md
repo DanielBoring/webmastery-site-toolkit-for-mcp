@@ -11,6 +11,83 @@ Current coverage is 75 base registered abilities plus 5 generated abilities per 
 
 `update-cpt-mcp-book` regression coverage (issue #107) proves taxonomy assignment is pre-validated before `wp_update_post()` writes anything: each denial case (a nonexistent taxonomy, a registered taxonomy the actor lacks `assign_terms` capability for, and a mixed payload combining one allowed and one forbidden *registered* taxonomy alongside the existing allowed-plus-nonexistent case) submits a full `title`/`content`/`status`/`slug`/`taxonomy_terms` payload, and the paired read confirms the fixture's title, content, status, slug, and taxonomy terms are all unchanged. A second fixture taxonomy, `wstm107_restricted_shelf`, is registered only for `mcp_book` and granted to no role, so it is always forbidden and exercises the mixed allowed/forbidden registered-taxonomy path independently of the nonexistent-taxonomy case. The fixture post used for these cases (`wstm107_book_id`) is created with an explicit, deterministic slug so the unchanged-slug assertions are stable.
 
+## Diagnostic configuration and privacy regressions
+
+The manifest retains existing diagnostic success/role cases and adds both request/configuration scheme mismatches, admin-only TLS, all six database query error contexts, and explicit lower-privilege field absence. `setup.diagnostics` installs scoped option/request/query fixtures and restores them in `finally`. `assert_diagnostic_findings` matches a check's bucket and label without relying on its array index or unrelated findings. Intentionally failed queries suppress database errors only within the disposable fixture; production logging is unchanged.
+
+For focused baseline/fixed evidence, run `wp eval-file tests/e2e/diagnostics-runner.php` from the plugin directory in an isolated, disposable WordPress installation with the plugin active, users `admin`, `editor_test`, and `subscriber_test`, and a fixture table named with the current prefix plus `wstm111_plugin_data` (`id int PRIMARY KEY, value varchar(20)`, one fixture row). The runner returns JSON with individual predicates, responses, source/runner hashes, SQL read traces, outbound-call counts, and before/after hashes of options, posts, postmeta, users, and usermeta. It exits nonzero if any predicate fails. Run the **same runner** against baseline and fixed production sources.
+
+The default mode exercises direct callbacks and the real ability wrapper, malformed/case-varied home options, permissions, all six real failed-query contexts, successful counters, and unchanged prefixed table identifiers. Direct callbacks are called as admin; permission denials use the actual permission callback and wrapper, not a claim that `execute()` alone authenticates callers. The core wrapper returns `ability_invalid_permissions` while these permission callbacks retain `forbidden`.
+
+For authority-syntax regressions, run `wp eval-file tests/e2e/diagnostics-authority-runner.php` with the same prerequisites. It retains the unchanged original direct-runner report and adds the shared `tests/fixtures/diagnostics-authority.json` cases through direct callbacks and real wrappers, including read-only snapshots, response shape, and zero-outbound checks. Use the same runner against both production revisions. The syntax guard checks percent triplets and authority grammar, including bracketed IP literals; it deliberately does not validate DNS/IDN normalization, routability, or every path/query character. Valid local, Unicode/IDN, and percent-escaped configurations must retain their configured HTTP/HTTPS classification.
+
+Use argument `debug` in separate PHP processes with `WP_DEBUG_LOG` disabled, `true`, custom inside/outside-content paths containing JSON/HTML punctuation, and a neighboring `.htaccess` fixture. Enabled logging must warn that access is unverified; disabled logging must still pass. Use argument `home` with an HTTPS `WP_HOME` constant to exercise WordPress's normal option filter. Do not put fixture configuration or tables on a real site.
+
+HTTPS request variables in these tests are simulations, not actual TLS, certificate, reachability, or redirect tests. Run authenticated MCP HTTP checks separately when changing these findings. WordPress 6.9/7.1 on PHP 8.2 covers the WordPress floor, not PHP 8.0; the PHP floor requires its own runtime. Table prefix/plugin-table redaction remains deferred for compatibility review.
+
+## Backslash persistence regressions
+
+The `wstm122` manifest cases cover post/page create/update SEO metadata, media upload/update title/caption/alt text, and the already-correct direct structured metadata path. Assertions include repeated/trailing backslashes, escaped quotes, regex-style JSON text, sanitized HTML/text, and denied updates with unchanged stored metadata. Uploads use the existing in-process HTTP image fixture; they do not download a live image or relax production URL checks. The HTTP CRUD runner also asserts metadata backslashes on both post creation and update. Existing ordinary content/backslash and allowed/denied cases remain in place.
+
+## Parent-assignment regression proof (#106)
+
+Normal manifest QA retains its 85 registered abilities and all existing cases.
+Parent cases add a page-limited actor, allowed and denied assignments, ordinary
+draft create/update controls without scheduling, and nonhierarchical CPT
+positive-parent rejection and zero-parent compatibility.
+
+After normal manifest/transport QA, `scripts/e2e-test.sh` temporarily installs
+`parent-assignment-fixture.php` and invokes the CLI-only
+`parent-assignment-runner.php`. Four additional hierarchical fixture CPTs
+exercise default, generated, explicit, and unmapped primitive capability maps.
+The dedicated runtime therefore enumerates 105 abilities; it does not replace
+or inflate the normal 85-ability manifest audit.
+
+Each WordPress version has 453 dedicated cases: 151 direct registered execute
+callbacks, 151 `WP_Ability::execute()` calls, and 151 real authenticated MCP
+HTTP calls. Contract QA runs the first two boundaries; Full MCP E2E QA runs
+HTTP. Reports retain raw responses, exact requested capabilities, mixed
+payloads, before/after post and revision rows, metadata, term relationships,
+relevant publish cron events, and pre-write/write hooks. Positive controls
+verify both persistence and observation. HTTP hooks are observed in the actual
+server request rather than inferred from an in-process mock.
+
+The matrix covers inaccessible/missing/wrong-type parents, self/descendant
+requests, pre-existing loops, 260-level valid ancestry, inaccessible ancestors,
+same-parent, omitted-parent, detach-zero, final capability filters, negative-ID
+`absint()` compatibility, and existing error precedence. Ordinary Authors are
+page-denial controls, not assumed page editors. The page check uses `edit_post`,
+not the page object's alias; unmapped CPT capability behavior is tested as-is.
+
+Detailed update fixtures start published and request a future status/date, to
+exercise mixed writes without depending on the separate draft scheduling
+behavior tracked in #113. Draft positives remain in the normal manifest.
+Calibration attempts must be kept separate from accepted baseline/fixed proof.
+
+The sole direct database mutation seeds a pre-existing corrupt parent loop
+inside the disposable fixture database. It is not evidence that a normal API
+creates a stored cycle. WordPress 6.9 and 7.1 normally reset self/descendant
+assignments to zero while saving other fields, and can repair an unrelated
+ancestor loop during an update. Fixed rejections instead leave every observed
+graph member unchanged and never enter those core write/repair hooks.
+
+Run the identical runner against base and fixed source with `WSTM106_MODE`
+set to `baseline` or `fixed`; use `WSTM106_BOUNDARY=all` for all three boundaries,
+or `direct`, `ability`, or `http` individually. Set `WSTM106_ARTIFACT` to a
+separate absolute container path for each run and copy the resulting JSON
+outside the disposable runtime before cleanup. Baseline mode records unsafe
+outcomes and checks positive/existing-denial controls; it does not assert the
+fix. Preserve runner/fixture hashes and production revision alongside results.
+
+Both standalone HTTP access rejection and required evidence-write failures
+are explicit. CI retains `parent-assignment-direct.json`,
+`parent-assignment-ability.json`, and `parent-assignment-http.json` as dedicated
+seven-day artifacts on successful or failed runs. Do not use these mutating
+fixtures on a shared/live site. Use an owned `wstm-issue106-*` Compose project,
+ephemeral ports, and inventory its named/anonymous volumes before removing only
+those resources. Fixture application passwords are revoked; destroying the
+owned runtime removes its remaining test sessions and data.
+
 ## Scheduling regressions
 
 The contract phase also runs the CLI-only `scheduling-runner.php`. It exercises post/page create and update plus both fixture CPT capability maps, including malformed/missing/past/near-now dates, calendar overflow, valid offsets and relative dates, draft/pending zero-GMT scheduling, existing schedules, explicit status changes, DST folds/gaps, and site timezone changes. The manifest separately includes allowed and denied scheduling cases for all eight affected abilities.

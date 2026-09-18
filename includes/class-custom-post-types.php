@@ -575,6 +575,13 @@ class Webmastery_MCP_Custom_Post_Types {
 					}
 					$args = array_merge( $args, $schedule );
 
+					if ( isset( $args['post_parent'] ) ) {
+						$parent_valid = Webmastery_MCP_Post_Parent::validate( $post_type_name, $args['post_parent'], 0, self::cap( $post_type_object, 'edit_post' ) );
+						if ( is_wp_error( $parent_valid ) ) {
+							return self::error_response( $parent_valid->get_error_code(), $parent_valid->get_error_message() );
+						}
+					}
+
 					$id = wp_insert_post( wp_slash( $args ), true );
 
 					if ( is_wp_error( $id ) ) {
@@ -645,6 +652,13 @@ class Webmastery_MCP_Custom_Post_Types {
 						return self::error_response( $schedule->get_error_code(), $schedule->get_error_message() );
 					}
 					$args = array_merge( $args, $schedule );
+
+					if ( isset( $args['post_parent'] ) ) {
+						$parent_valid = Webmastery_MCP_Post_Parent::validate( $post_type_name, $args['post_parent'], $id, self::cap( $post_type_object, 'edit_post' ) );
+						if ( is_wp_error( $parent_valid ) ) {
+							return self::error_response( $parent_valid->get_error_code(), $parent_valid->get_error_message() );
+						}
+					}
 
 					$result = wp_update_post( wp_slash( $args ), true );
 
