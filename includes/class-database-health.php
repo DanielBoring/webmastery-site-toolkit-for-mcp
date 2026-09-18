@@ -246,14 +246,11 @@ class Webmastery_MCP_Database_Health {
 	}
 
 	private static function database_error( $context ) {
-		global $wpdb;
-
 		return new WP_Error(
 			'database_health_query_failed',
 			sprintf(
-				'Database health query failed while reading %1$s: %2$s',
-				$context,
-				$wpdb->last_error
+				'Database health query failed while reading %s.',
+				$context
 			)
 		);
 	}

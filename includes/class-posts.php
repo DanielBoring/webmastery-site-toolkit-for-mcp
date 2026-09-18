@@ -517,7 +517,7 @@ class Webmastery_MCP_Posts {
 		$written = [];
 
 		foreach ( $writes as $key => $value ) {
-			update_post_meta( $post_id, $key, $value );
+			update_post_meta( $post_id, $key, wp_slash( $value ) );
 			$written[ $key ] = get_post_meta( $post_id, $key, true );
 		}
 
@@ -2046,6 +2046,13 @@ class Webmastery_MCP_Posts {
 				}
 				$args = array_merge( $args, $schedule );
 
+				if ( isset( $args['post_parent'] ) ) {
+					$parent_valid = Webmastery_MCP_Post_Parent::validate( $type, $args['post_parent'] );
+					if ( is_wp_error( $parent_valid ) ) {
+						return self::error_response( $parent_valid->get_error_code(), $parent_valid->get_error_message() );
+					}
+				}
+
 				$id = wp_insert_post( wp_slash( $args ), true );
 
 				if ( is_wp_error( $id ) ) {
@@ -2154,6 +2161,13 @@ class Webmastery_MCP_Posts {
 					return self::error_response( $schedule->get_error_code(), $schedule->get_error_message() );
 				}
 				$args = array_merge( $args, $schedule );
+
+				if ( isset( $args['post_parent'] ) ) {
+					$parent_valid = Webmastery_MCP_Post_Parent::validate( $type, $args['post_parent'], $id );
+					if ( is_wp_error( $parent_valid ) ) {
+						return self::error_response( $parent_valid->get_error_code(), $parent_valid->get_error_message() );
+					}
+				}
 
 				$result = wp_update_post( wp_slash( $args ), true );
 

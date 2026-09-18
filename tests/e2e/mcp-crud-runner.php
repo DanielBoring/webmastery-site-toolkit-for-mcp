@@ -380,6 +380,7 @@ try {
 			'title'   => $title_marker,
 			'content' => 'Created through real MCP HTTP JSON-RPC.',
 			'status'  => 'draft',
+			'yoast_meta_description' => 'C:\\path\\ \"quoted\"',
 		),
 		'create post'
 	);
@@ -388,6 +389,7 @@ try {
 	$summary['created_post_id'] = $created_post_id;
 	webmastery_mcp_e2e_assert( $created_post_id > 0, 'create-post did not return a post ID.' );
 	webmastery_mcp_e2e_assert( 'draft' === ( $create['data']['status'] ?? null ), 'create-post did not create a draft post.' );
+	webmastery_mcp_e2e_assert( 'C:\\path\\ \"quoted\"' === ( $create['data']['meta']['written']['_yoast_wpseo_metadesc'] ?? null ), 'create-post did not preserve metadata backslashes.' );
 	webmastery_mcp_e2e_pass( $summary, 'create post through MCP' );
 
 	$get = webmastery_mcp_e2e_execute_ability(
@@ -409,12 +411,14 @@ try {
 			'post_id' => $created_post_id,
 			'title'   => $updated_title,
 			'content' => 'Updated through real MCP HTTP JSON-RPC.',
+			'yoast_meta_description' => '\\\\server\\share\\',
 		),
 		'update post'
 	);
 	webmastery_mcp_e2e_assert( true === ( $update['success'] ?? false ), 'update-post did not succeed: ' . webmastery_mcp_e2e_json( $update ) );
 	webmastery_mcp_e2e_assert( $updated_title === ( $update['data']['title'] ?? null ), 'update-post returned the wrong title.' );
 	webmastery_mcp_e2e_assert( 'Updated through real MCP HTTP JSON-RPC.' === ( $update['data']['content'] ?? null ), 'update-post returned the wrong content.' );
+	webmastery_mcp_e2e_assert( '\\\\server\\share\\' === ( $update['data']['meta']['written']['_yoast_wpseo_metadesc'] ?? null ), 'update-post did not preserve metadata backslashes.' );
 	webmastery_mcp_e2e_pass( $summary, 'update post through MCP' );
 
 	foreach ( array( 'create', 'update' ) as $operation ) {

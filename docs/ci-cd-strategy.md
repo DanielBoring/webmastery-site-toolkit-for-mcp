@@ -103,7 +103,16 @@ Scheduled jobs should detect drift that a PR did not cause:
 
 ## Artifact and reporting policy
 
-Docker jobs retain available contract/MCP summary JSON on success and failure, with bounded retention, and write readable job summaries. Collect detailed diagnostics on failure:
+Docker jobs retain available contract/MCP summary JSON on success and failure, with bounded retention, and write readable job summaries.
+
+Parent-assignment regressions also retain dedicated detailed JSON for seven
+days on success or failure: direct-callback and ability-wrapper reports from
+Contract QA, and an actual HTTP report from Full MCP E2E QA. These include
+fixture-only before/after database state and write-hook observations, not live
+site data. Missing expected parent evidence is an artifact-upload error, not a
+successful substitute summary.
+
+Collect detailed diagnostics on failure:
 
 - Docker Compose logs
 - WordPress debug log
