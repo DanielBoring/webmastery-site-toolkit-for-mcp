@@ -14,14 +14,8 @@ E2E_MANAGE_COMPOSE="${E2E_MANAGE_COMPOSE:-0}"
 E2E_KEEP_COMPOSE="${E2E_KEEP_COMPOSE:-0}"
 QA_MODE="${1:-all}"
 
-compose() {
-	local project_args=()
-	if [ -n "${COMPOSE_PROJECT_NAME:-}" ]; then
-		project_args=( --project-name "$COMPOSE_PROJECT_NAME" )
-	fi
-
-	docker compose "${project_args[@]}" "$@"
-}
+# shellcheck source=scripts/qa-compose.sh
+source "$(dirname "${BASH_SOURCE[0]}")/qa-compose.sh"
 
 wp() {
 	compose exec -T wordpress wp --allow-root "$@"
@@ -305,6 +299,17 @@ main() {
 			exit 1
 			;;
 	esac
+
+	if [ -n "${E2E_PACKAGE_ROOT:-}${E2E_PACKAGE_ZIP:-}" ]; then
+		: "${E2E_PACKAGE_ROOT:?Package runtime requires E2E_PACKAGE_ROOT}"
+		: "${E2E_PACKAGE_ZIP:?Package runtime requires E2E_PACKAGE_ZIP}"
+		if [ "$E2E_MANAGE_COMPOSE" != "1" ] || [ "$E2E_ARTIFACTS_DIR" != "e2e-artifacts" ]; then
+			echo "Package runtime requires managed Compose and the e2e-artifacts output mount." >&2
+			exit 1
+		fi
+		host_php scripts/release-tools.php runtime-package "$E2E_PACKAGE_ROOT" "$E2E_PACKAGE_ZIP"
+		echo "Release runtime plugin root: ${E2E_PACKAGE_ROOT} (verified against ${E2E_PACKAGE_ZIP})"
+	fi
 
 	trap cleanup_compose EXIT
 

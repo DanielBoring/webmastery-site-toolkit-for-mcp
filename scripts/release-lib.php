@@ -183,6 +183,34 @@ function release_extract(string $zip, string $target): void {
 	release_require(release_zip_files($zip) === release_tree($target . '/' . RELEASE_SLUG), 'Extracted package differs from ZIP.');
 }
 
+/** Check host-side runtime bytes, allowing only Docker's empty nested-bind scaffolding. */
+function release_validate_runtime_tree(string $directory, string $zip): void {
+	$expected = release_zip_files($zip);
+	$actual = release_tree($directory);
+	foreach (array('scripts/compatibility-baselines.php', 'scripts/compatibility-download.sh', '.github/compatibility-versions.json') as $placeholder) {
+		if (isset($actual[$placeholder])) {
+			release_require(hash('sha256', '') === $actual[$placeholder], "Nonempty runtime mount placeholder: {$placeholder}");
+			unset($actual[$placeholder]);
+		}
+	}
+	release_require($actual === $expected, 'Runtime production files changed or unexpected files appeared after QA.');
+	$directories = array_fill_keys(array('tests', 'scripts', '.github', 'e2e-artifacts'), true);
+	foreach (array_keys($expected) as $name) {
+		$parent = dirname($name);
+		while ('.' !== $parent) {
+			$directories[$parent] = true;
+			$parent = dirname($parent);
+		}
+	}
+	$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::SELF_FIRST);
+	foreach ($iterator as $entry) {
+		if ($entry->isDir()) {
+			$name = str_replace('\\', '/', substr($entry->getPathname(), strlen(rtrim($directory, '/\\')) + 1));
+			release_require(isset($directories[$name]), "Unexpected runtime directory after QA: {$name}");
+		}
+	}
+}
+
 function release_asset_names(string $root): array {
 	$names = array();
 	foreach (release_tree($root . '/.wordpress-org') as $name => $digest) {
