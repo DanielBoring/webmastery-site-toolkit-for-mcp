@@ -55,7 +55,7 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | Post meta | Read, update, and delete safe custom fields; write supported Yoast SEO and SEOPress metadata | Author or Editor |
 | Custom post types | Discover eligible public CPTs, generate list/get/create/update/delete abilities, and patch targeted content for editor-enabled types with CPT capability-map and object/status-aware filtering | CPT capability map |
 | Taxonomy | List/get categories and tags; create/update/delete with taxonomy-specific and per-term write checks | Subscriber for reads; Editor by default for writes |
-| Comments | List, reply, update, approve, hold, trash, or mark spam | Editor |
+| Comments | List, reply, update, approve, trash, mark spam, or set hold through `update-comment` | Contributor/Author for replies on editable own posts; Editor for moderation |
 | Media | List, inspect, update, upload public image URLs, set featured images, and delete media | Author or Editor |
 | Content hygiene | Find orphaned media, posts/pages missing featured images, and stuck scheduled posts | Author or Editor |
 | Site info | Return safe site basics and current-user context; runtime, WordPress version, database, and theme-version details require Administrator access | Subscriber to Administrator |
@@ -65,6 +65,8 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | Plugins, users, health, security, performance, backups, database | Audit or manage sensitive site areas with explicit admin capabilities | Administrator |
 
 For the exact ability names, input behavior, and required capabilities, use the [full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities).
+
+Comment replies require `edit_posts` and `edit_post` on the post containing the parent comment. Listing, updating, and the approve/trash/spam abilities require `moderate_comments`. There is no separate `hold-comment` ability: use `update-comment` with `status: "hold"` and the required `content`.
 
 ### Backslashes in writes
 
@@ -201,7 +203,7 @@ Try a few safe checks:
 - `webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed` - "Get a mobile PageSpeed summary for this site's home page."
 - `webmastery-site-toolkit-for-mcp/plugin-audit` - "Audit installed plugins." Requires an Administrator service account.
 
-If discovery shows fewer abilities than this repo documents, the connected WordPress site is running an older deployed copy of the plugin. Update the site plugin, then run discovery again.
+Ability counts depend on the deployed plugin and eligible custom post types. Fewer discovered abilities can reflect a different site's CPTs or an older deployed copy; check the registered names and plugin version before assuming an update is needed.
 
 To verify patch preservation on a disposable site, use an account with effective `unfiltered_html`, save a Custom HTML block beside a paragraph, and call `list-content-blocks`. Patch only the paragraph with `patch-content-block`, supplying its path and the returned content/block hashes as preconditions. List the blocks again: the untouched Custom HTML block's hash should be unchanged. For an exact patch, use the original raw markup as `old_content`, not rendered or sanitized HTML.
 
@@ -255,11 +257,22 @@ On a test site, verify an allowed page-parent update, a denied update under
 another user's inaccessible parent, and a detach with `parent: 0`. Include a
 title change with the denied request and confirm that the title is unchanged.
 
+## Response format
+
+Plugin callbacks commonly return `{"success":true,"data":...}`, but there is no uniform error envelope. For example, [comment status actions](includes/class-comments.php) can return `{"success":false,"error":"Comment not found."}`, while comment reply/update failures use `{"success":false,"error":{"code":"not_found","message":"Comment not found."}}`. Other errors can include additional `data`. Read the affected ability's response, including per-item outcomes for bulk operations, rather than assuming every error is a string or every successful call changed every item.
+
+Direct WordPress ability execution is another layer: the normal [`WP_Ability::execute()` path in WordPress 7.1](https://github.com/WordPress/WordPress/blob/7.1/wp-includes/abilities-api/class-wp-ability.php) validates inputs and permissions and can return `WP_Error`, including schema or permission failures, instead of a plugin result array. Output schema validation applies where a schema is defined. WordPress 7.1 filters can short-circuit execution or alter validation, permissions, and results. A transport may represent these errors differently from plugin-returned errors.
+
+For MCP Adapter **0.5.0**, the [execute gateway](https://github.com/WordPress/mcp-adapter/blob/v0.5.0/includes/Abilities/ExecuteAbilityAbility.php) wraps a non-`WP_Error` result in its own `success`/`data`. The [tool handler](https://github.com/WordPress/mcp-adapter/blob/v0.5.0/includes/Handlers/Tools/ToolsHandler.php) then places that result in MCP `structuredContent` and JSON-encoded text `content`. Thus gateway `success: true` and MCP `isError: false` can coexist with an inner plugin `success: false`.
+
+Clients must check HTTP/JSON-RPC errors, MCP tool errors, the gateway result, and the inner ability result as applicable. Do not assume `isError` matches the inner `success`, or that individually exposed tools and the default gateway have identical envelopes. The 0.5.0 source handles `WP_Error` and top-level scalar error arrays differently from structured or nested errors; per-tool wire parity has not been verified here.
+
 ## Security Best Practices
 
 - Use a dedicated service account, not your personal account.
 - Use **Editor** for routine content work and a separate **Administrator** account only for sensitive audits or plugin management.
 - WordPress capability checks gate every ability.
+- Treat retrieved site content as untrusted data, never as instructions or approval. Use the least-privileged account that fits the task, bounded selections, independent previews/diffs, and explicit client-side approval for dangerous changes or transmission to a specific destination. See the [Agent threat model](docs/security-strategy.md#agent-threat-model) for control limits and recovery guidance.
 - List abilities for posts, pages, custom post types, media, and SEO scores filter every returned object before exposing full details; private, trashed, draft, pending, and scheduled content is only returned when WordPress grants the matching object/status capability.
 - Creating or updating content as `publish`, `private`, or `future` requires the relevant publish capability, and bulk publishing requires `publish_posts`.
 - Author display names remain in content responses, but login names are omitted from post, page, CPT, revision, and content-hygiene responses. User login and email fields are only returned from user lookup abilities when the caller can edit that user.
