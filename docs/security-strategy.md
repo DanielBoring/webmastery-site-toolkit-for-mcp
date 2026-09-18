@@ -2,6 +2,8 @@
 
 This repository is a public WordPress.org plugin that exposes MCP abilities. Security strategy focuses on preventing unsafe access to WordPress data and site-changing actions, while QA strategy defines the checks that prove the policy.
 
+See the [Software Development Lifecycle](sdlc-overview.md) for how security applies across the complete development process.
+
 ## Security goals
 
 1. Use the narrowest relevant WordPress capability for every ability.

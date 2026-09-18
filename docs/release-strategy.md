@@ -2,6 +2,8 @@
 
 Release strategy explains how reviewed repository changes become a GitHub release and a WordPress.org plugin update. CI/CD strategy explains the automation mechanics; QA strategy explains the validation layers.
 
+See the [Software Development Lifecycle](sdlc-overview.md) for where release fits in the complete development process.
+
 ## Release goals
 
 1. Ship only reviewed, tested, package-ready plugin files.

@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added a software development lifecycle overview that maps issue intake, design, implementation, QA, release, and maintenance to the repository's strategy documents and sources of truth.
 - Documented the agent threat model, client-side approval and recovery guidance, annotation scope, and delegated Site Kit access expectations without changing runtime permissions or response contracts.
 - Added focused diagnostic configuration/privacy regression coverage, scoped database-error fixtures, and permission cases while preserving the existing table-identifier contract.
 - Added paired diagnostic authority-syntax cases covering malformed escapes and valid local, internationalized, escaped, and IP-literal configurations without modifying the original diagnostic proof runner.
