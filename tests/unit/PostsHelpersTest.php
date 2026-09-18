@@ -38,6 +38,36 @@ final class PostsHelpersTest extends TestCase {
 		$this->assertSame( '', self::call_private( 'normalize_meta_value', array( false, 'seopress_boolean_string' ) ) );
 	}
 
+	/**
+	 * @dataProvider metadata_write_values
+	 */
+	public function test_apply_meta_writes_slashes_at_persistence_and_reads_stored_value( string $value ): void {
+		$GLOBALS['wstm_test_meta_writes'] = array();
+		$GLOBALS['wstm_test_stored_meta'] = array( 42 => array( 'example' => 'provider-sanitized value' ) );
+
+		try {
+			$normalized = self::call_private( 'normalize_meta_value', array( $value ) );
+			$this->assertSame( $value, $normalized );
+			$result = self::call_private( 'apply_meta_writes', array( 42, array( 'example' => $normalized ) ) );
+
+			$this->assertSame( array( array( 42, 'example', addslashes( $value ) ) ), $GLOBALS['wstm_test_meta_writes'] );
+			$this->assertSame( array( 'example' => 'provider-sanitized value' ), $result );
+		} finally {
+			unset( $GLOBALS['wstm_test_meta_writes'], $GLOBALS['wstm_test_stored_meta'] );
+		}
+	}
+
+	public static function metadata_write_values(): array {
+		return array(
+			'plain'    => array( 'ordinary text' ),
+			'path'     => array( 'C:\path\file' ),
+			'repeated' => array( '\\\\server\\share' ),
+			'trailing' => array( 'C:\\path\\' ),
+			'quotes'   => array( 'A \"quoted\" value' ),
+			'json'     => array( '{"pattern":"\\\\d+\\w"}' ),
+		);
+	}
+
 	public function test_error_response_shape_is_stable(): void {
 		$response = self::call_private(
 			'error_response',
