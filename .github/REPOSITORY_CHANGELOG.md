@@ -48,6 +48,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Updated the development-only PHPStan engine to 2.2.14, retaining PHP 8.0 compatibility and the existing analysis level; stronger analysis and schema coverage remain separate work.
 - Updated development-only WordPress stubs to 7.1.0 for static analysis; the plugin's WordPress 6.9 and PHP 8.0 minimum requirements are unchanged.
 - Updated the verified `actions/cache` pin to v6.1.0 on GitHub-hosted QA runners, retaining Composer cache paths, keys, and restore-key behavior.
 - Updated the verified `setup-php` action pin to 2.37.2, retaining the PHP 8.0/8.4 QA matrix and existing release inputs and permissions.
