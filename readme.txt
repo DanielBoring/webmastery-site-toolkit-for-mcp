@@ -97,6 +97,14 @@ Write operations go through WordPress APIs and capability checks. Posts, pages, 
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
 
+= What are the rules for page and custom post type parents? =
+
+A positive parent must exist, have the same hierarchical post type, and be editable by the connected account. A requested parent cannot create a cycle or lead into an existing cyclic hierarchy. Invalid or unauthorized assignments fail before any of the request's content, status, metadata, or taxonomy changes are saved.
+
+Set parent to 0 to detach an item. Omit parent to leave it unchanged on update. Reassigning the same parent still requires permission to edit that parent, but not every ancestor. Custom post types use their registered edit capability and WordPress capability filters.
+
+Positive parent values on nonhierarchical custom post types are rejected; older versions persisted this unsupported extra field. Zero and omitted parents remain accepted. Built-in post abilities still ignore an extra parent field.
+
 = How are image URL uploads limited? =
 
 Image URL uploads require upload_files and, when attaching to a post or page, edit_post for that object. The existing WordPress maximum upload size is enforced during streaming, with at most one extra sentinel byte in the temporary file and cancellation of oversized responses. Actual file size, allowed image MIME, HTTP integrity checks, and basic PNG/JPEG/GIF headers are checked before attachment creation. Generic HTTP Content-Type headers alone do not reject valid images. Invalid, zero, or overflowing configured limits fail explicitly.

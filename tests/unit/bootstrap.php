@@ -115,8 +115,21 @@ function current_user_can( $capability, ...$args ) {
 	if ( isset( $GLOBALS['wstm_test_cap_calls'] ) ) {
 		$GLOBALS['wstm_test_cap_calls'][] = array_merge( array( $capability ), $args );
 	}
+	if ( isset( $GLOBALS['wstm_test_object_capability'] ) ) {
+		return ( $GLOBALS['wstm_test_object_capability'] )( $capability, ...$args );
+	}
 	return in_array( $capability, $GLOBALS['wstm_test_user_caps'] ?? array(), true );
 }
+
+function get_post( $id ) {
+	return $GLOBALS['wstm_test_posts'][ $id ] ?? null;
+}
+
+function is_post_type_hierarchical( $type ): bool {
+	return in_array( $type, $GLOBALS['wstm_test_hierarchical_types'] ?? array(), true );
+}
+
+require_once dirname(__DIR__, 2) . '/includes/class-post-parent.php';
 
 function wp_register_ability( $name, $args ) {
 	$GLOBALS['wstm_test_abilities'][ $name ] = $args;

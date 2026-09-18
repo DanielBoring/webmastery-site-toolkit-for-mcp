@@ -16,6 +16,7 @@ $allowed_roles = array(
 	'subscriber'   => true,
 	'user_lister'  => true,
 	'wstm107_book_editor_no_assign' => true,
+	'wstm106_page_editor' => true,
 	'wstm125_no_read' => true,
 	'wstm125_read' => true,
 );

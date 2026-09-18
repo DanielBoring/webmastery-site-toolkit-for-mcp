@@ -17,6 +17,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Page and custom post type create/update abilities reject invalid or unauthorized parent assignments before saving other requested changes. Valid hierarchical parents, detach-to-zero, and omitted parents remain supported; unsupported positive parents on nonhierarchical custom post types are now rejected.
 - Image URL uploads now enforce the existing WordPress upload-size limit during streaming and cancel oversized responses, with cleanup on rejection. Safe HTTP redirects, TLS, Content-MD5, actual-size and MIME checks remain intact; invalid limits and incomplete basic raster headers fail explicitly.
 - Image URL validation checks mixed IPv4/IPv6 DNS answers and bounded CNAME chains, including redirect targets. IPv6 documentation addresses are rejected consistently across PHP versions. DNS failures are explicit; these checks do not pin DNS or eliminate rebinding races.
 - Reject malformed, missing, or too-soon scheduling dates before creating or updating posts, pages, and custom post types. Preserve valid existing schedules, legacy date parsing, and explicit-offset instants across repeated DST hours.

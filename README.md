@@ -223,6 +223,30 @@ With a nonfuture or omitted status on non-scheduled content, a valid supplied da
 
 On a disposable test site, verify a future create with an explicit offset, an update with no new date, and a malformed-date attempt. Check the actual status and stored local/GMT dates, and confirm the rejected attempt left the item unchanged. The automated regression matrix is described in [the E2E guide](tests/e2e/README.md).
 
+### Parent assignments
+
+Page and hierarchical custom-post-type create/update abilities accept `parent`.
+A positive parent ID must identify an editable item of the same hierarchical
+type and must not create a cycle or lead into an existing cyclic hierarchy.
+Invalid or unauthorized requests fail before the ability saves any content,
+status, metadata, or taxonomy changes. Existing permission and other input
+errors retain their precedence.
+
+Use `parent: 0` to detach an item, or omit `parent` to leave it unchanged on
+update. Assigning the same parent still checks that immediate parent's edit
+permission; ancestors do not require edit permission. Pages use `edit_post`
+and CPTs use their registered edit capability, including WordPress capability
+filters. An ordinary Author cannot edit pages by default.
+
+Positive `parent` values on nonhierarchical CPTs are rejected, even though
+older versions persisted this unsupported extra field. Zero and omitted
+parents remain accepted. Built-in post abilities continue to ignore extra
+`parent` fields; their schemas are not newly closed.
+
+On a test site, verify an allowed page-parent update, a denied update under
+another user's inaccessible parent, and a detach with `parent: 0`. Include a
+title change with the denied request and confirm that the title is unchanged.
+
 ## Security Best Practices
 
 - Use a dedicated service account, not your personal account.

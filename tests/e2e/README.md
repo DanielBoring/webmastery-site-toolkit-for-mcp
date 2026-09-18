@@ -11,6 +11,65 @@ Current coverage is 75 base registered abilities plus 5 generated abilities per 
 
 `update-cpt-mcp-book` regression coverage (issue #107) proves taxonomy assignment is pre-validated before `wp_update_post()` writes anything: each denial case (a nonexistent taxonomy, a registered taxonomy the actor lacks `assign_terms` capability for, and a mixed payload combining one allowed and one forbidden *registered* taxonomy alongside the existing allowed-plus-nonexistent case) submits a full `title`/`content`/`status`/`slug`/`taxonomy_terms` payload, and the paired read confirms the fixture's title, content, status, slug, and taxonomy terms are all unchanged. A second fixture taxonomy, `wstm107_restricted_shelf`, is registered only for `mcp_book` and granted to no role, so it is always forbidden and exercises the mixed allowed/forbidden registered-taxonomy path independently of the nonexistent-taxonomy case. The fixture post used for these cases (`wstm107_book_id`) is created with an explicit, deterministic slug so the unchanged-slug assertions are stable.
 
+## Parent-assignment regression proof (#106)
+
+Normal manifest QA retains its 85 registered abilities and all existing cases.
+Parent cases add a page-limited actor, allowed and denied assignments, ordinary
+draft create/update controls without scheduling, and nonhierarchical CPT
+positive-parent rejection and zero-parent compatibility.
+
+After normal manifest/transport QA, `scripts/e2e-test.sh` temporarily installs
+`parent-assignment-fixture.php` and invokes the CLI-only
+`parent-assignment-runner.php`. Four additional hierarchical fixture CPTs
+exercise default, generated, explicit, and unmapped primitive capability maps.
+The dedicated runtime therefore enumerates 105 abilities; it does not replace
+or inflate the normal 85-ability manifest audit.
+
+Each WordPress version has 453 dedicated cases: 151 direct registered execute
+callbacks, 151 `WP_Ability::execute()` calls, and 151 real authenticated MCP
+HTTP calls. Contract QA runs the first two boundaries; Full MCP E2E QA runs
+HTTP. Reports retain raw responses, exact requested capabilities, mixed
+payloads, before/after post and revision rows, metadata, term relationships,
+relevant publish cron events, and pre-write/write hooks. Positive controls
+verify both persistence and observation. HTTP hooks are observed in the actual
+server request rather than inferred from an in-process mock.
+
+The matrix covers inaccessible/missing/wrong-type parents, self/descendant
+requests, pre-existing loops, 260-level valid ancestry, inaccessible ancestors,
+same-parent, omitted-parent, detach-zero, final capability filters, negative-ID
+`absint()` compatibility, and existing error precedence. Ordinary Authors are
+page-denial controls, not assumed page editors. The page check uses `edit_post`,
+not the page object's alias; unmapped CPT capability behavior is tested as-is.
+
+Detailed update fixtures start published and request a future status/date, to
+exercise mixed writes without depending on the separate draft scheduling
+behavior tracked in #113. Draft positives remain in the normal manifest.
+Calibration attempts must be kept separate from accepted baseline/fixed proof.
+
+The sole direct database mutation seeds a pre-existing corrupt parent loop
+inside the disposable fixture database. It is not evidence that a normal API
+creates a stored cycle. WordPress 6.9 and 7.1 normally reset self/descendant
+assignments to zero while saving other fields, and can repair an unrelated
+ancestor loop during an update. Fixed rejections instead leave every observed
+graph member unchanged and never enter those core write/repair hooks.
+
+Run the identical runner against base and fixed source with `WSTM106_MODE`
+set to `baseline` or `fixed`; use `WSTM106_BOUNDARY=all` for all three boundaries,
+or `direct`, `ability`, or `http` individually. Set `WSTM106_ARTIFACT` to a
+separate absolute container path for each run and copy the resulting JSON
+outside the disposable runtime before cleanup. Baseline mode records unsafe
+outcomes and checks positive/existing-denial controls; it does not assert the
+fix. Preserve runner/fixture hashes and production revision alongside results.
+
+Both standalone HTTP access rejection and required evidence-write failures
+are explicit. CI retains `parent-assignment-direct.json`,
+`parent-assignment-ability.json`, and `parent-assignment-http.json` as dedicated
+seven-day artifacts on successful or failed runs. Do not use these mutating
+fixtures on a shared/live site. Use an owned `wstm-issue106-*` Compose project,
+ephemeral ports, and inventory its named/anonymous volumes before removing only
+those resources. Fixture application passwords are revoked; destroying the
+owned runtime removes its remaining test sessions and data.
+
 ## Scheduling regressions
 
 The contract phase also runs the CLI-only `scheduling-runner.php`. It exercises post/page create and update plus both fixture CPT capability maps, including malformed/missing/past/near-now dates, calendar overflow, valid offsets and relative dates, draft/pending zero-GMT scheduling, existing schedules, explicit status changes, DST folds/gaps, and site timezone changes. The manifest separately includes allowed and denied scheduling cases for all eight affected abilities.
