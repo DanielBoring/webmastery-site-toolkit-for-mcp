@@ -108,7 +108,7 @@ These environment, secret-scope, and tag controls were last read back from GitHu
 
 Main CI enforcement is **active**, verified on September 17, 2026: `main-ci-gates` requires `1 - Static QA`, `2 - Unit Tests`, and `Docker QA gate` from GitHub Actions. The [setup evidence](../.github/SETUP-COMPLETE.md#rollout-evidence) records the completed initial rollout, including all five approved bot PR workflows. Activation does not replace per-release package QA or protected production approval.
 
-At that verification, PR #140's MCP Adapter 0.6.1 candidate had passed compatibility and PR package QA but remained open and unmerged. Main at `3dae8aa` still uses 0.5.0; candidate success is neither baseline adoption nor release authorization. Future Actions-created PR workflows still require maintainer approval before their genuine PR checks can satisfy the ruleset.
+At that verification, PR #140's MCP Adapter 0.6.1 candidate had passed compatibility and PR package QA but remained open and unmerged. Main at `3dae8aa` used 0.5.0. The checked-in adapter baseline is now 0.6.1; baseline validation or adoption does not authorize a production release. Future Actions-created PR workflows still require maintainer approval before their genuine PR checks can satisfy the ruleset.
 
 ### Partial failure recovery
 

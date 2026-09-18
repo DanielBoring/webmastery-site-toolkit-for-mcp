@@ -194,7 +194,9 @@ Additional coverage separates PHP 8.4, MySQL 8.4, floating SEO dependencies, and
 
 Only tested candidates may update baselines or `readme.txt` `Tested up to`. Missing images, failed discovery, stale source history, and unavailable dependencies are explicit failures that block promotion. Baseline updates preserve the full configuration and PHP image suffix. Approval of the bot PR's genuine PR-event workflows is required; a successful manual dispatch is not a substitute.
 
-At the September 17, 2026 verification, `main` at `3dae8aa` still pins MCP Adapter 0.5.0. The passing compatibility pipeline proposed 0.6.1 and its matching verified SHA-256 in PR #140, which remained open and unmerged. Passing candidate and PR checks do not adopt that baseline or change WordPress, `Tested up to`, other dependency pins, or PHP support.
+The checked-in primary baseline is WordPress 7.1 with MCP Adapter 0.6.1 and its verified SHA-256. This adapter update leaves WordPress, `Tested up to`, other dependency pins, and PHP support unchanged.
+
+At the September 17, 2026 verification, `main` at `3dae8aa` pinned MCP Adapter 0.5.0. The passing compatibility pipeline proposed 0.6.1 in PR #140, which then remained open and unmerged. Those historical results do not replace current-source compatibility and genuine PR checks before promotion.
 
 ### Runtime coverage limitation
 

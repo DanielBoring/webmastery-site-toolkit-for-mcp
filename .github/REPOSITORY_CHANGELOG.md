@@ -48,6 +48,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Updated the verified MCP Adapter baseline to 0.6.1 and its matching SHA-256; distinguished current configuration from the historical 0.5.0 rollout evidence without changing WordPress or PHP support.
 - Updated the development-only PHPStan engine to 2.2.14, retaining PHP 8.0 compatibility and the existing analysis level; stronger analysis and schema coverage remain separate work.
 - Updated development-only WordPress stubs to 7.1.0 for static analysis; the plugin's WordPress 6.9 and PHP 8.0 minimum requirements are unchanged.
 - Updated the verified `actions/cache` pin to v6.1.0 on GitHub-hosted QA runners, retaining Composer cache paths, keys, and restore-key behavior.
