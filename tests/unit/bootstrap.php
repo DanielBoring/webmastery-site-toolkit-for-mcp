@@ -84,6 +84,23 @@ function esc_url_raw( $url ): string {
 	return filter_var( $url, FILTER_VALIDATE_URL ) ? $url : '';
 }
 
+function wp_slash( $value ) {
+	if ( is_array( $value ) ) {
+		return array_map( 'wp_slash', $value );
+	}
+
+	return is_string( $value ) ? addslashes( $value ) : $value;
+}
+
+function update_post_meta( $post_id, $key, $value ) {
+	$GLOBALS['wstm_test_meta_writes'][] = array( $post_id, $key, $value );
+	return true;
+}
+
+function get_post_meta( $post_id, $key, $single = false ) {
+	return $GLOBALS['wstm_test_stored_meta'][ $post_id ][ $key ] ?? '';
+}
+
 function wp_parse_url( $url, $component = -1 ) {
 	return parse_url( $url, $component );
 }
@@ -115,8 +132,21 @@ function current_user_can( $capability, ...$args ) {
 	if ( isset( $GLOBALS['wstm_test_cap_calls'] ) ) {
 		$GLOBALS['wstm_test_cap_calls'][] = array_merge( array( $capability ), $args );
 	}
+	if ( isset( $GLOBALS['wstm_test_object_capability'] ) ) {
+		return ( $GLOBALS['wstm_test_object_capability'] )( $capability, ...$args );
+	}
 	return in_array( $capability, $GLOBALS['wstm_test_user_caps'] ?? array(), true );
 }
+
+function get_post( $id ) {
+	return $GLOBALS['wstm_test_posts'][ $id ] ?? null;
+}
+
+function is_post_type_hierarchical( $type ): bool {
+	return in_array( $type, $GLOBALS['wstm_test_hierarchical_types'] ?? array(), true );
+}
+
+require_once dirname(__DIR__, 2) . '/includes/class-post-parent.php';
 
 function wp_register_ability( $name, $args ) {
 	$GLOBALS['wstm_test_abilities'][ $name ] = $args;

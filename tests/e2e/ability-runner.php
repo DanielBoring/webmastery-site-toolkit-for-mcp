@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/diagnostics-fixture.php';
+
 function e2e_ensure_user( $login, $email, $role ) {
 	$user = get_user_by( 'login', $login );
 	if ( $user ) {
@@ -385,6 +387,10 @@ function e2e_apply_case_setup( $case ) {
 
 	$restore = array();
 
+	if ( isset( $setup['diagnostics'] ) ) {
+		$restore['diagnostics'] = new Webmastery_MCP_Diagnostics_Fixture( $setup['diagnostics'] );
+	}
+
 	if ( 'allow' === ( $setup['wstm125_site_kit_permission'] ?? '' ) ) {
 		add_filter( 'wstm125_site_kit_permission', '__return_true' );
 		$restore['wstm125_site_kit_permission'] = true;
@@ -440,6 +446,10 @@ function e2e_apply_case_setup( $case ) {
 }
 
 function e2e_restore_case_setup( $restore ) {
+	if ( isset( $restore['diagnostics'] ) ) {
+		$restore['diagnostics']->restore();
+	}
+
 	if ( ! empty( $restore['wstm125_site_kit_permission'] ) ) {
 		remove_filter( 'wstm125_site_kit_permission', '__return_true' );
 	}
@@ -567,6 +577,11 @@ e2e_ensure_role(
 	]
 );
 e2e_ensure_role(
+	'wstm106_page_editor',
+	'WSTM106 Page Editor',
+	[ 'read', 'edit_pages', 'edit_published_pages', 'publish_pages' ]
+);
+e2e_ensure_role(
 	'user_lister',
 	'User Lister',
 	[
@@ -581,6 +596,8 @@ $limited_book_manager_id = e2e_ensure_user( 'limited_book_manager_test', 'limite
 $wstm107_book_editor_no_assign_id = e2e_ensure_user( 'wstm107_book_editor_test', 'wstm107-book-editor@test.local', 'wstm107_book_editor_no_assign' );
 $case_manager_id         = e2e_ensure_user( 'case_manager_test', 'case-manager@test.local', 'case_manager' );
 $user_lister_id          = e2e_ensure_user( 'user_lister_test', 'user-lister@test.local', 'user_lister' );
+$wstm106_page_editor_id = e2e_ensure_user( 'wstm106_page_editor', 'wstm106-page-editor@test.local', 'wstm106_page_editor' );
+( new WP_User( $wstm106_page_editor_id ) )->set_role( 'wstm106_page_editor' );
 ( new WP_User( $limited_editor_id ) )->set_role( 'limited_editor' );
 ( new WP_User( $book_manager_id ) )->set_role( 'book_manager' );
 ( new WP_User( $limited_book_manager_id ) )->set_role( 'limited_book_manager' );
@@ -616,6 +633,12 @@ $fixtures = array(
 	'delete_tag_id'      => e2e_ensure_term_id( 'mcp-e2e-delete-tag', 'post_tag' ),
 );
 $fixtures['category_id_string'] = (string) $fixtures['category_id'];
+
+$fixtures['wstm106_page_id'] = e2e_insert_post( 'page', 'WSTM106 Original', 'WSTM106 original content.', $wstm106_page_editor_id, 'draft', 'wstm106-original' );
+$fixtures['wstm106_parent_id'] = e2e_insert_post( 'page', 'WSTM106 Allowed Parent', 'Allowed parent.', $wstm106_page_editor_id, 'draft' );
+$fixtures['wstm106_denied_parent_id'] = e2e_insert_post( 'page', 'WSTM106 Denied Parent', 'Denied parent.', $editor_id, 'draft' );
+$fixtures['wstm106_book_id'] = e2e_insert_post( 'mcp_book', 'WSTM106 Original Book', 'Original book.', $book_manager_id, 'draft', 'wstm106-original-book' );
+$fixtures['wstm106_case_id'] = e2e_insert_post( 'mcp_case_study', 'WSTM106 Original Case', 'Original case.', $case_manager_id, 'draft', 'wstm106-original-case' );
 
 $fixtures['post_id']         = e2e_insert_post( 'post', 'MCP E2E Post', 'Content for MCP E2E post.', $author_id );
 $fixtures['partial_post_id'] = e2e_insert_post(
@@ -882,6 +905,7 @@ $roles = array(
 	'wstm107_book_editor_no_assign' => $wstm107_book_editor_no_assign_id,
 	'case_manager' => $case_manager_id,
 	'user_lister'  => $user_lister_id,
+	'wstm106_page_editor' => $wstm106_page_editor_id,
 );
 
 require __DIR__ . '/site-kit-permissions-runner.php';
@@ -962,8 +986,11 @@ foreach ( $manifest as $case ) {
 		? wstm114_verification_prepare( $case )
 		: null;
 	$restore = e2e_apply_case_setup( $case );
-	$result  = $ability->execute( $input );
-	e2e_restore_case_setup( $restore );
+	try {
+		$result = $ability->execute( $input );
+	} finally {
+		e2e_restore_case_setup( $restore );
+	}
 	$ok      = ! is_wp_error( $result ) && e2e_result_is_success( $result );
 	$passed  = ( 'success' === $expect && $ok ) || ( 'failure' === $expect && ! $ok );
 	if ( null !== $wstm114 ) {
@@ -1002,6 +1029,23 @@ foreach ( $manifest as $case ) {
 		foreach ( (array) $case['assert_values'] as $path => $expected_value ) {
 			$actual_value = e2e_get_path_value( $result, $path, $exists );
 			if ( ! $exists || $expected_value !== $actual_value ) {
+				$passed = false;
+				break;
+			}
+		}
+	}
+
+	if ( $passed && isset( $case['assert_diagnostic_findings'] ) ) {
+		foreach ( $case['assert_diagnostic_findings'] as $check => $expected ) {
+			$findings = array();
+			foreach ( array( 'pass', 'warn', 'fail' ) as $bucket ) {
+				foreach ( $result['data'][ $bucket ] ?? array() as $finding ) {
+					if ( $check === ( $finding['check'] ?? '' ) ) {
+						$findings[] = array( 'bucket' => $bucket, 'label' => $finding['label'] );
+					}
+				}
+			}
+			if ( array( $expected ) !== $findings ) {
 				$passed = false;
 				break;
 			}

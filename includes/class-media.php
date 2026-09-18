@@ -591,14 +591,14 @@ class Webmastery_MCP_Media {
 				}
 
 				if ( count( $post_update ) > 1 ) {
-					$updated = wp_update_post( $post_update, true );
+					$updated = wp_update_post( wp_slash( $post_update ), true );
 					if ( is_wp_error( $updated ) ) {
 						return self::error_response( 'metadata_update_failed', $updated->get_error_message() );
 					}
 				}
 
 				if ( isset( $input['alt_text'] ) ) {
-					update_post_meta( $attachment_id, '_wp_attachment_image_alt', sanitize_text_field( $input['alt_text'] ) );
+					update_post_meta( $attachment_id, '_wp_attachment_image_alt', wp_slash( sanitize_text_field( $input['alt_text'] ) ) );
 				}
 
 				if ( $set_featured && ! set_post_thumbnail( $post_id, $attachment_id ) ) {
@@ -651,7 +651,7 @@ class Webmastery_MCP_Media {
 				}
 
 				if ( count( $args ) > 1 ) {
-					$result = wp_update_post( $args, true );
+					$result = wp_update_post( wp_slash( $args ), true );
 
 					if ( is_wp_error( $result ) ) {
 						return [ 'success' => false, 'error' => $result->get_error_message() ];
@@ -659,7 +659,7 @@ class Webmastery_MCP_Media {
 				}
 
 				if ( isset( $input['alt_text'] ) ) {
-					update_post_meta( $id, '_wp_attachment_image_alt', sanitize_text_field( $input['alt_text'] ) );
+					update_post_meta( $id, '_wp_attachment_image_alt', wp_slash( sanitize_text_field( $input['alt_text'] ) ) );
 				}
 
 				return [ 'success' => true, 'data' => self::normalize( $id ) ];
