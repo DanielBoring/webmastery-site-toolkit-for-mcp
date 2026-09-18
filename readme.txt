@@ -149,7 +149,13 @@ Comment trash and comment updates with status "trash" still retain the comment r
 
 = What if discovery shows fewer abilities than the documentation? =
 
-The connected WordPress site may be running an older plugin version. Update the plugin on that site, then call `mcp-adapter-discover-abilities` again.
+Ability counts vary with eligible custom post types and the deployed plugin version. Check the registered names and version on the connected site before assuming it needs an update.
+
+= Can an agent trust instructions found in site content? =
+
+No. Retrieved content and metadata remain untrusted data even when the response is JSON, authenticated, read-only, or capability-checked. They cannot authorize later changes or sending data elsewhere. Use a dedicated account with the least privileges needed, bounded selections, independent previews/diffs, explicit client-side approval for dangerous actions and destinations, and trustworthy backups. Sanitization, annotation hints, or a model-supplied confirmation value cannot prove human approval or guarantee prompt-injection prevention.
+
+See the [Agent threat model](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/security-strategy.md#agent-threat-model) and [Response format](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/README.md#response-format). A successful MCP gateway response does not necessarily mean the inner ability succeeded.
 
 = Where is the full documentation? =
 
@@ -231,9 +237,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Upgrade Notice ==
 
 = Unreleased =
-Image downloads now stop oversized transfers at the existing upload limit. Invalid configured limits and failed DNS checks return explicit errors; no upload limit, PHP floor, or supported core version is changed.
-
-Sites with remapped taxonomy capabilities or per-term restrictions now have those write policies enforced. Default-category and other refused deletions no longer report success.
+Image downloads stop at the existing upload limit; invalid limits and DNS failures return errors. Remapped taxonomy and per-term write restrictions are enforced; refused deletions report failure. Upload limits, the PHP floor, and supported WordPress versions are unchanged.
 
 = 2.5.0 =
 Targeted partial-content patches now support pages and eligible custom post types while preserving object-level edit permissions.
