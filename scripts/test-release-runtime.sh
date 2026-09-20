@@ -78,7 +78,7 @@ docker() {
 		*"test -f /var/www/html/wp-content/debug.log") return 1 ;;
 		*"wp --allow-root core is-installed") return 1 ;;
 		*"application-password create"*) printf 'fixture-password\n' ;;
-		*"--write-out"*"/tests/e2e/parent-assignment-runner.php"|*"--write-out"*"/tests/e2e/post-meta-authorization-runner.php") printf '403' ;;
+		*"--write-out"*"/tests/e2e/parent-assignment-runner.php"|*"--write-out"*"/tests/e2e/post-meta-authorization-runner.php"|*"--write-out"*"/tests/e2e/error-contract-runner.php") printf '403' ;;
 	esac
 }
 export -f docker
@@ -98,7 +98,7 @@ expect_failure() {
 
 bash scripts/release-qa.sh > "$WORK/success.log" 2>&1
 [[ "$(sha256sum "$RELEASE_ZIP")" == "$IDENTITY" ]]
-for runner in ability-runner media-download-runner scheduling-runner trash-safety-runner mcp-crud-runner site-kit-mcp-runner parent-assignment-runner post-meta-authorization-runner; do
+for runner in ability-runner media-download-runner scheduling-runner trash-safety-runner mcp-crud-runner site-kit-mcp-runner parent-assignment-runner post-meta-authorization-runner error-contract-runner; do
 	grep -F "/tests/e2e/${runner}.php" "$TRACE" > /dev/null
 done
 for boundary in direct ability http; do

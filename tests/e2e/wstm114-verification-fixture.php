@@ -20,8 +20,8 @@ function wstm114_verification_assert( array $case, $result, array $fixture ): bo
 		echo "FAIL wstm114 HTTP count: expected {$case['assert_wstm114_http_calls']}, got {$fixture['state']->http_calls}\n";
 		return false;
 	}
-	if ( is_wp_error( $result ) ) {
-		return 'failure' === $case['expect'];
+	if ( is_array( $result ) && false === ( $result['success'] ?? null ) ) {
+		return 'failure' === $case['expect'] && 'ability_invalid_permissions' === wstm118_error_reason( $result );
 	}
 	$data = $result['data'];
 	$summary = array( 'pass' => 0, 'warn' => 0, 'unknown' => 0 );
