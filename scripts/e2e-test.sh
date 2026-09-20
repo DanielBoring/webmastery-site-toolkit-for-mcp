@@ -358,11 +358,15 @@ main() {
 		echo "Running scheduling side-effect regressions..."
 		compose exec -T wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/scheduling-runner.php"
 		run_trash_safety
+		echo "Running comment authorization and compatibility regressions..."
+		compose exec -T -e WSTM105_BOUNDARY=direct wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/comments-runner.php"
+		compose exec -T -e WSTM105_BOUNDARY=ability wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/comments-runner.php"
 	fi
 
 	if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then
 		echo "Running Full MCP E2E QA..."
 		run_mcp_crud
+		compose exec -T -e WSTM105_BOUNDARY=http wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/comments-runner.php"
 	fi
 
 	run_parent_assignment_qa

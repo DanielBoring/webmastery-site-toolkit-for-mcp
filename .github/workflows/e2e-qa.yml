@@ -255,6 +255,17 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Upload comment contract evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: comment-contract-evidence
+          path: |
+            e2e-artifacts/comments-direct.json
+            e2e-artifacts/comments-ability.json
+          if-no-files-found: error
+          retention-days: 7
+
   full-mcp-e2e-qa:
     name: 4 - Full MCP E2E QA
     needs: changes
@@ -319,6 +330,15 @@ jobs:
         with:
           name: post-meta-authorization-http-evidence
           path: e2e-artifacts/post-meta-authorization-http.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload comment HTTP evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: comment-http-evidence
+          path: e2e-artifacts/comments-http.json
           if-no-files-found: error
           retention-days: 7
 

@@ -83,13 +83,49 @@ class Webmastery_MCP_Comments {
 	}
 
 	private static function moderate_permission() {
-		return function () {
-			if ( ! current_user_can( 'moderate_comments' ) ) {
-				return new WP_Error( 'forbidden', 'Requires moderate_comments capability.' );
+		return function ( $input = [] ) {
+			$comment = self::moderate_comment_or_error( $input, true );
+			// Keep input/not-found errors in execution, not the ability permission wrapper.
+			if ( is_wp_error( $comment ) && in_array( $comment->get_error_code(), [ 'invalid_input', 'not_found' ], true ) ) {
+				return true;
 			}
-
-			return true;
+			return is_wp_error( $comment ) ? $comment : true;
 		};
+	}
+
+	private static function moderate_comment_or_error( $input = [], $permission_check = false ) {
+		$can_moderate = current_user_can( 'moderate_comments' );
+		if ( $permission_check && ! $can_moderate ) {
+			return new WP_Error( 'forbidden', 'Requires moderate_comments capability.' );
+		}
+
+		if ( ! is_array( $input ) ) {
+			return new WP_Error( 'invalid_input', 'Comment input must be an object.' );
+		}
+
+		$id = $input['comment_id'] ?? null;
+		if (
+			! ( is_int( $id ) || is_float( $id ) || is_string( $id ) )
+			|| false === filter_var( $id, FILTER_VALIDATE_INT, [ 'options' => [ 'min_range' => 1 ] ] )
+		) {
+			// Never pass zero to get_comment(): it can resolve the global comment.
+			return new WP_Error( 'not_found', 'Comment not found.' );
+		}
+
+		$comment = self::get_comment_or_error( $id );
+		if ( is_wp_error( $comment ) ) {
+			return $comment;
+		}
+
+		if ( ! $can_moderate ) {
+			return new WP_Error( 'forbidden', 'Requires moderate_comments capability.' );
+		}
+
+		if ( ! current_user_can( 'edit_comment', (int) $comment->comment_ID ) ) {
+			return new WP_Error( 'forbidden', 'Requires edit_comment capability for this comment.' );
+		}
+
+		return $comment;
 	}
 
 	private static function register_list() {
@@ -240,13 +276,17 @@ class Webmastery_MCP_Comments {
 				'required'   => [ 'comment_id', 'content' ],
 			],
 			'execute_callback'    => function ( $input ) {
-				$comment = self::get_comment_or_error( $input['comment_id'] ?? 0 );
+				$comment = self::moderate_comment_or_error( $input );
 
 				if ( is_wp_error( $comment ) ) {
 					return self::error_response( $comment->get_error_code(), $comment->get_error_message() );
 				}
 
-				$content = wp_kses_post( (string) ( $input['content'] ?? '' ) );
+				if ( ! isset( $input['content'] ) || ! is_string( $input['content'] ) ) {
+					return self::error_response( 'invalid_content', 'Comment content must be a string.' );
+				}
+
+				$content = wp_kses_post( $input['content'] );
 
 				if ( '' === trim( wp_strip_all_tags( $content ) ) ) {
 					return self::error_response( 'invalid_content', 'Comment content is required.' );
@@ -254,7 +294,11 @@ class Webmastery_MCP_Comments {
 
 				$status = null;
 				if ( array_key_exists( 'status', $input ) && null !== $input['status'] && '' !== $input['status'] ) {
-					$status   = sanitize_key( (string) $input['status'] );
+					if ( ! is_string( $input['status'] ) ) {
+						return self::error_response( 'invalid_status', 'Comment status must be a string.' );
+					}
+
+					$status   = sanitize_key( $input['status'] );
 					$statuses = self::allowed_update_statuses();
 
 					if ( ! isset( $statuses[ $status ] ) ) {
@@ -324,13 +368,13 @@ class Webmastery_MCP_Comments {
 				'required'   => [ 'comment_id' ],
 			],
 			'execute_callback'    => function ( $input ) use ( $wp_status, $label ) {
-				$id      = absint( $input['comment_id'] );
-				$comment = get_comment( $id );
+				$comment = self::moderate_comment_or_error( $input );
 
-				if ( ! $comment ) {
-					return [ 'success' => false, 'error' => 'Comment not found.' ];
+				if ( is_wp_error( $comment ) ) {
+					return [ 'success' => false, 'error' => $comment->get_error_message() ];
 				}
 
+				$id     = (int) $comment->comment_ID;
 				$result = wp_set_comment_status( $id, $wp_status );
 
 				if ( ! $result ) {
