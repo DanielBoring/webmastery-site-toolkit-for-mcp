@@ -28,7 +28,7 @@ class Webmastery_MCP_Content_Hygiene {
 	private static function permission( $cap ) {
 		return function () use ( $cap ) {
 			if ( ! current_user_can( $cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability." );
 			}
 
 			return true;
@@ -38,10 +38,10 @@ class Webmastery_MCP_Content_Hygiene {
 	public static function posts_no_featured_image_permission( $input = [] ) {
 		$post_type = sanitize_key( $input['post_type'] ?? 'post' );
 		if ( 'page' === $post_type && ! current_user_can( 'edit_pages' ) ) {
-			return new WP_Error( 'forbidden', 'Requires edit_pages capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_pages capability.' );
 		}
 		if ( ! current_user_can( 'edit_posts' ) ) {
-			return new WP_Error( 'forbidden', 'Requires edit_posts capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_posts capability.' );
 		}
 
 		return true;
@@ -182,7 +182,7 @@ class Webmastery_MCP_Content_Hygiene {
 	}
 
 	private static function database_error( $context ) {
-		return new WP_Error(
+		return Webmastery_MCP_Response::local_error(
 			'content_hygiene_query_failed',
 			sprintf(
 				'Content hygiene query failed while reading %s.',

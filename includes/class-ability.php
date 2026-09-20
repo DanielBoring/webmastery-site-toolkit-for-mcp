@@ -17,7 +17,7 @@ final class Webmastery_MCP_Ability extends WP_Ability {
 			return true;
 		}
 		if ( ! is_wp_error( $result ) ) {
-			$result = new WP_Error( 'forbidden', 'You do not have permission to execute this ability.' );
+			$result = Webmastery_MCP_Response::local_error( 'forbidden', 'You do not have permission to execute this ability.' );
 		}
 		return Webmastery_MCP_Response::permission_error( $result );
 	}

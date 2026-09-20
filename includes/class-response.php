@@ -3,6 +3,7 @@
 defined( 'ABSPATH' ) || exit;
 
 require_once __DIR__ . '/class-response-error.php';
+require_once __DIR__ . '/class-local-error.php';
 
 /**
  * The public failure vocabulary, independent of WordPress and MCP carriers.
@@ -52,9 +53,22 @@ final class Webmastery_MCP_Response {
 			return $data['webmastery_error'];
 		}
 		$reason = (string) $error->get_error_code();
-		// External database/HTTP/plugin errors must not expose SQL, paths, or credentials.
-		$unsafe  = [ 'ability_callback_exception', 'ability_invalid_output', 'ability_invalid_execute_callback', 'ability_invalid_permission_callback', 'ability_missing_input_schema' ];
-		$message = in_array( $reason, $unsafe, true ) ? 'The ability could not complete the operation.' : $error->get_error_message();
+		if ( ! $error instanceof Webmastery_MCP_Local_Error ) {
+			// A familiar provider code is not provenance. Never publish its message or data.
+			$core_messages = [
+				'ability_invalid_input'               => 'Ability input does not match its schema.',
+				'ability_invalid_permissions'         => 'You do not have permission to execute this ability.',
+				'ability_invalid_output'              => 'The ability could not complete the operation.',
+				'ability_callback_exception'          => 'The ability could not complete the operation.',
+				'ability_invalid_execute_callback'    => 'The ability could not complete the operation.',
+				'ability_invalid_permission_callback' => 'The ability could not complete the operation.',
+				'ability_missing_input_schema'        => 'The ability could not complete the operation.',
+			];
+			return isset( $core_messages[ $reason ] )
+				? self::legacy_error( $reason, $core_messages[ $reason ] )
+				: self::error( 'upstream_failed', 'An external operation failed.', [], 'external_error' );
+		}
+		$message = $error->get_error_message();
 		$details = [];
 		if ( is_array( $data ) ) {
 			foreach ( [ 'context', 'detected_version', 'minimum_version', 'max_bytes' ] as $key ) {
@@ -64,6 +78,10 @@ final class Webmastery_MCP_Response {
 			}
 		}
 		return self::legacy_error( $reason, $message, $details );
+	}
+
+	public static function local_error( string $reason, string $message, array $data = [] ): WP_Error {
+		return new Webmastery_MCP_Local_Error( $reason, $message, $data );
 	}
 
 	public static function item_error( int $id, string $reason, string $message, array $details = [] ): array {

@@ -63,7 +63,7 @@ final class ResponseTest extends TestCase {
 	}
 
 	public function test_native_permission_carrier_keeps_status_and_json_object_shape(): void {
-		$original = new WP_Error( 'missing_capability', 'Requires capability.', array( 'status' => 403 ) );
+		$original = Webmastery_MCP_Response::local_error( 'missing_capability', 'Requires capability.', array( 'status' => 403 ) );
 		$error = Webmastery_MCP_Response::permission_error( $original );
 		$this->assertInstanceOf( WP_Error::class, $error );
 		$this->assertSame( 'forbidden', $error->get_error_code() );
@@ -82,6 +82,22 @@ final class ResponseTest extends TestCase {
 		$this->assertSame( 42, $result['id'] );
 		$this->assertSame( 'precondition_failed', $result['code'] );
 		$this->assertSame( 'trash_disabled', $result['reason'] );
+	}
+
+	public function test_known_external_code_collisions_are_not_trusted_diagnostics(): void {
+		foreach ( array( 'invalid_input', 'forbidden', 'invalid_meta_key', 'database_health_query_failed' ) as $reason ) {
+			$error = new WP_Error( $reason, 'REVIEW_SENTINEL SQL /private/path', array( 'status' => 403, 'context' => 'REVIEW_SENTINEL context' ) );
+			$result = Webmastery_MCP_Response::from_wp_error( $error );
+			$this->assertSame( 'external_error', $result['error']['reason'] );
+			$this->assertSame( 'upstream_failed', $result['error']['code'] );
+			$this->assertStringNotContainsString( 'REVIEW_SENTINEL', json_encode( $result ) );
+			$carrier = Webmastery_MCP_Response::permission_error( $error );
+			$this->assertSame( 403, $carrier->get_error_data()['status'] );
+			$this->assertStringNotContainsString( 'REVIEW_SENTINEL', $carrier->get_error_message() );
+		}
+		$core = Webmastery_MCP_Response::from_wp_error( new WP_Error( 'ability_invalid_input', 'REVIEW_SENTINEL input value' ) );
+		$this->assertSame( 'ability_invalid_input', $core['error']['reason'] );
+		$this->assertSame( 'Ability input does not match its schema.', $core['error']['message'] );
 	}
 
 	public function test_unknown_canonical_codes_are_programmer_errors(): void {

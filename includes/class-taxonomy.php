@@ -31,19 +31,19 @@ class Webmastery_MCP_Taxonomy {
 	private static function check_write_permission( $taxonomy, $action, $term_id = null ) {
 		$tax = get_taxonomy( $taxonomy );
 		if ( ! $tax ) {
-			return new WP_Error( 'invalid_taxonomy', 'Taxonomy is not registered.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_taxonomy', 'Taxonomy is not registered.' );
 		}
 
 		$capability = 'delete' === $action ? $tax->cap->delete_terms : $tax->cap->edit_terms;
 		if ( ! current_user_can( $capability ) ) {
-			return new WP_Error( 'forbidden', "Requires {$capability} capability." );
+			return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$capability} capability." );
 		}
 
 		if ( null !== $term_id ) {
 			$term = get_term( $term_id, $taxonomy );
 			// Leave missing/wrong-taxonomy errors to the existing execute response.
 			if ( $term && ! is_wp_error( $term ) && ! current_user_can( "{$action}_term", $term_id ) ) {
-				return new WP_Error( 'forbidden', "Cannot {$action} this term." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Cannot {$action} this term." );
 			}
 		}
 
@@ -89,7 +89,7 @@ class Webmastery_MCP_Taxonomy {
 			},
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'read' ) ) {
-					return new WP_Error( 'forbidden', 'Requires read capability.' );
+					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
 				}
 				return true;
 			},
@@ -128,7 +128,7 @@ class Webmastery_MCP_Taxonomy {
 			},
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'read' ) ) {
-					return new WP_Error( 'forbidden', 'Requires read capability.' );
+					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
 				}
 				return true;
 			},

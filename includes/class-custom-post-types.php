@@ -225,7 +225,7 @@ class Webmastery_MCP_Custom_Post_Types {
 
 		return function () use ( $cap ) {
 			if ( ! current_user_can( $cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability." );
 			}
 
 			return true;
@@ -241,10 +241,10 @@ class Webmastery_MCP_Custom_Post_Types {
 			$post = get_post( $id );
 
 			if ( ! $post || $post->post_type !== $type ) {
-				return new WP_Error( 'not_found', 'Custom post type item not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', 'Custom post type item not found.' );
 			}
 			if ( ! current_user_can( $cap, $id ) ) {
-				return new WP_Error( 'forbidden', "Requires {$cap} capability for this custom post type item." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability for this custom post type item." );
 			}
 
 			return true;
@@ -261,13 +261,13 @@ class Webmastery_MCP_Custom_Post_Types {
 			$status = $input['status'] ?? 'draft';
 
 			if ( ! current_user_can( $create_cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$create_cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$create_cap} capability." );
 			}
 			if ( in_array( $status, [ 'publish', 'private', 'future' ], true ) && ! current_user_can( $publish_cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$publish_cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$publish_cap} capability." );
 			}
 			if ( ! empty( $input['parent'] ) && ! current_user_can( $edit_cap, absint( $input['parent'] ) ) ) {
-				return new WP_Error( 'forbidden', "Requires {$edit_cap} capability for the parent {$type} item." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$edit_cap} capability for the parent {$type} item." );
 			}
 
 			return true;
@@ -293,7 +293,7 @@ class Webmastery_MCP_Custom_Post_Types {
 		}
 
 		if ( ! is_array( $taxonomy_terms ) ) {
-			return new WP_Error( 'invalid_taxonomy_terms', 'taxonomy_terms must be an object keyed by taxonomy name.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_taxonomy_terms', 'taxonomy_terms must be an object keyed by taxonomy name.' );
 		}
 
 		foreach ( $taxonomy_terms as $taxonomy => $terms ) {
@@ -301,12 +301,12 @@ class Webmastery_MCP_Custom_Post_Types {
 			$taxonomy_object = get_taxonomy( $taxonomy );
 
 			if ( ! $taxonomy_object || ! is_object_in_taxonomy( $post_type, $taxonomy ) ) {
-				return new WP_Error( 'invalid_taxonomy', "Taxonomy {$taxonomy} is not registered for this custom post type." );
+				return Webmastery_MCP_Response::local_error( 'invalid_taxonomy', "Taxonomy {$taxonomy} is not registered for this custom post type." );
 			}
 
 			$assign_cap = $taxonomy_object->cap->assign_terms ?? 'assign_terms';
 			if ( ! current_user_can( $assign_cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$assign_cap} capability to assign {$taxonomy} terms." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$assign_cap} capability to assign {$taxonomy} terms." );
 			}
 		}
 
@@ -416,7 +416,7 @@ class Webmastery_MCP_Custom_Post_Types {
 				},
 				'permission_callback' => function () {
 					if ( ! current_user_can( 'read' ) ) {
-						return new WP_Error( 'forbidden', 'Requires read capability.' );
+						return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
 					}
 
 					return true;

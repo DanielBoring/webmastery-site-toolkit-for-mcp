@@ -18,10 +18,10 @@ class Webmastery_MCP_SEO {
 		$post = get_post( $id );
 
 		if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
-			return new WP_Error( 'not_found', 'Post not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', 'Post not found.' );
 		}
 		if ( ! current_user_can( 'edit_post', $id ) ) {
-			return new WP_Error( 'forbidden', 'Requires edit_post capability for this post.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_post capability for this post.' );
 		}
 		return true;
 	}
@@ -198,7 +198,7 @@ class Webmastery_MCP_SEO {
 			'execute_callback'    => [ self::class, 'execute_site_overview' ],
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'manage_options' ) ) {
-					return new WP_Error( 'forbidden', 'Requires manage_options capability.' );
+					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
 				}
 				return true;
 			},
@@ -256,10 +256,10 @@ class Webmastery_MCP_SEO {
 		if ( $id ) {
 			$post = get_post( $id );
 			if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
-				return new WP_Error( 'not_found', 'Post or page not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', 'Post or page not found.' );
 			}
 			if ( ! current_user_can( 'edit_post', $id ) ) {
-				return new WP_Error( 'forbidden', 'Requires edit_post capability for this post or page.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_post capability for this post or page.' );
 			}
 
 			return true;
@@ -267,13 +267,13 @@ class Webmastery_MCP_SEO {
 
 		if ( ! empty( $input['url'] ) ) {
 			if ( ! current_user_can( 'manage_options' ) ) {
-				return new WP_Error( 'forbidden', 'URL-level Yoast metadata inspection requires manage_options capability.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'URL-level Yoast metadata inspection requires manage_options capability.' );
 			}
 
 			return true;
 		}
 
-		return new WP_Error( 'missing_target', 'Provide post_id or url.' );
+		return Webmastery_MCP_Response::local_error( 'missing_target', 'Provide post_id or url.' );
 	}
 
 	private static function yoast_post_meta_keys() {
@@ -476,10 +476,10 @@ class Webmastery_MCP_SEO {
 		$post = get_post( $id );
 
 		if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
-			return new WP_Error( 'not_found', 'Post or page not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', 'Post or page not found.' );
 		}
 		if ( ! current_user_can( 'edit_post', $id ) ) {
-			return new WP_Error( 'forbidden', 'Requires edit_post capability for this post or page.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_post capability for this post or page.' );
 		}
 
 		return true;
@@ -572,10 +572,10 @@ class Webmastery_MCP_SEO {
 			},
 			'permission_callback' => function ( $input = [] ) {
 				if ( 'page' === ( $input['post_type'] ?? null ) && ! current_user_can( 'edit_pages' ) ) {
-					return new WP_Error( 'forbidden', 'Requires edit_pages capability.' );
+					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_pages capability.' );
 				}
 				if ( ! current_user_can( 'edit_posts' ) ) {
-					return new WP_Error( 'forbidden', 'Requires edit_posts capability.' );
+					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_posts capability.' );
 				}
 				return true;
 			},

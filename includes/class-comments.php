@@ -32,7 +32,7 @@ class Webmastery_MCP_Comments {
 		$comment = get_comment( absint( $comment_id ) );
 
 		if ( ! $comment ) {
-			return new WP_Error( 'not_found', 'Comment not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', 'Comment not found.' );
 		}
 
 		return $comment;
@@ -42,7 +42,7 @@ class Webmastery_MCP_Comments {
 		$post = get_post( (int) $comment->comment_post_ID );
 
 		if ( ! $post ) {
-			return new WP_Error( 'not_found', 'Comment post not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', 'Comment post not found.' );
 		}
 
 		return $post;
@@ -60,7 +60,7 @@ class Webmastery_MCP_Comments {
 	private static function reply_permission() {
 		return function () {
 			if ( ! current_user_can( 'edit_posts' ) ) {
-				return new WP_Error( 'forbidden', 'Requires edit_posts capability.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_posts capability.' );
 			}
 
 			return true;
@@ -81,11 +81,11 @@ class Webmastery_MCP_Comments {
 	private static function moderate_comment_or_error( $input = [], $permission_check = false ) {
 		$can_moderate = current_user_can( 'moderate_comments' );
 		if ( $permission_check && ! $can_moderate ) {
-			return new WP_Error( 'forbidden', 'Requires moderate_comments capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires moderate_comments capability.' );
 		}
 
 		if ( ! is_array( $input ) ) {
-			return new WP_Error( 'invalid_input', 'Comment input must be an object.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_input', 'Comment input must be an object.' );
 		}
 
 		$id = $input['comment_id'] ?? null;
@@ -94,7 +94,7 @@ class Webmastery_MCP_Comments {
 			|| false === filter_var( $id, FILTER_VALIDATE_INT, [ 'options' => [ 'min_range' => 1 ] ] )
 		) {
 			// Never pass zero to get_comment(): it can resolve the global comment.
-			return new WP_Error( 'not_found', 'Comment not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', 'Comment not found.' );
 		}
 
 		$comment = self::get_comment_or_error( $id );
@@ -103,11 +103,11 @@ class Webmastery_MCP_Comments {
 		}
 
 		if ( ! $can_moderate ) {
-			return new WP_Error( 'forbidden', 'Requires moderate_comments capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires moderate_comments capability.' );
 		}
 
 		if ( ! current_user_can( 'edit_comment', (int) $comment->comment_ID ) ) {
-			return new WP_Error( 'forbidden', 'Requires edit_comment capability for this comment.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_comment capability for this comment.' );
 		}
 
 		return $comment;
@@ -156,7 +156,7 @@ class Webmastery_MCP_Comments {
 			},
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'moderate_comments' ) ) {
-					return new WP_Error( 'forbidden', 'Requires moderate_comments capability.' );
+					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires moderate_comments capability.' );
 				}
 				return true;
 			},

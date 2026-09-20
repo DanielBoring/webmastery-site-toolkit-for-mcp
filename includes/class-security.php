@@ -12,7 +12,7 @@ class Webmastery_MCP_Security {
 			'execute_callback'    => [ self::class, 'execute' ],
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'manage_options' ) ) {
-					return new WP_Error( 'forbidden', 'Requires manage_options capability.' );
+					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
 				}
 				return true;
 			},

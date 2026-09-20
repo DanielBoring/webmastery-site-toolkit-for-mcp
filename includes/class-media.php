@@ -49,7 +49,7 @@ class Webmastery_MCP_Media {
 	private static function permission( $cap ) {
 		return function () use ( $cap ) {
 			if ( ! current_user_can( $cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability." );
 			}
 			return true;
 		};
@@ -127,17 +127,17 @@ class Webmastery_MCP_Media {
 
 	private static function validate_image_dns( $host, $visited = [] ) {
 		if ( isset( $visited[ $host ] ) || count( $visited ) >= 16 ) {
-			return new WP_Error( 'invalid_url', 'Image hostname has a cyclic or excessive DNS alias chain.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image hostname has a cyclic or excessive DNS alias chain.' );
 		}
 		$visited[ $host ] = true;
 		$records          = static::resolve_image_dns( $host );
 		if ( false === $records ) {
-			return new WP_Error( 'invalid_url', 'Could not resolve image hostname IPv6 records.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_url', 'Could not resolve image hostname IPv6 records.' );
 		}
 
 		foreach ( $records as $record ) {
 			if ( 'AAAA' === $record['type'] && self::is_private_ip( $record['ipv6'] ) ) {
-				return new WP_Error( 'invalid_url', 'Image URL must not resolve to a private or reserved address.' );
+				return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must not resolve to a private or reserved address.' );
 			}
 			if ( 'CNAME' === $record['type'] ) {
 				$result = static::validate_image_dns( strtolower( rtrim( $record['target'], '.' ) ), $visited );
@@ -154,7 +154,7 @@ class Webmastery_MCP_Media {
 		$url = esc_url_raw( trim( (string) $url ), [ 'http', 'https' ] );
 
 		if ( '' === $url ) {
-			return new WP_Error( 'invalid_url', 'Image URL must be a valid http or https URL.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must be a valid http or https URL.' );
 		}
 
 		$parts  = wp_parse_url( $url );
@@ -162,30 +162,30 @@ class Webmastery_MCP_Media {
 		$host   = strtolower( trim( (string) ( $parts['host'] ?? '' ), " \t\n\r\0\x0B." ) );
 
 		if ( ! in_array( $scheme, [ 'http', 'https' ], true ) || '' === $host ) {
-			return new WP_Error( 'invalid_url', 'Image URL must include an http or https scheme and host.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must include an http or https scheme and host.' );
 		}
 
 		if ( 'localhost' === $host || str_ends_with( $host, '.localhost' ) || str_ends_with( $host, '.local' ) ) {
-			return new WP_Error( 'invalid_url', 'Image URL must not target a local host.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must not target a local host.' );
 		}
 
 		if ( false !== strpbrk( $host, ':[]' ) ) {
-			return new WP_Error( 'invalid_url', 'Image URL must use a hostname or public IPv4 address supported by the safe HTTP API.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must use a hostname or public IPv4 address supported by the safe HTTP API.' );
 		}
 
 		if ( filter_var( $host, FILTER_VALIDATE_IP ) ) {
 			return self::is_private_ip( $host )
-				? new WP_Error( 'invalid_url', 'Image URL must not target a private or reserved address.' )
+				? Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must not target a private or reserved address.' )
 				: $url;
 		}
 
 		$resolved_ips = static::resolve_image_ipv4( $host );
 		if ( ! is_array( $resolved_ips ) || [] === $resolved_ips ) {
-			return new WP_Error( 'invalid_url', 'Could not resolve image hostname IPv4 records.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_url', 'Could not resolve image hostname IPv4 records.' );
 		}
 		foreach ( $resolved_ips as $resolved_ip ) {
 			if ( self::is_private_ip( $resolved_ip ) ) {
-				return new WP_Error( 'invalid_url', 'Image URL must not resolve to a private or reserved address.' );
+				return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must not resolve to a private or reserved address.' );
 			}
 		}
 
@@ -289,7 +289,7 @@ class Webmastery_MCP_Media {
 			clearstatcache( true, $filename );
 			$size = filesize( $filename );
 			if ( false !== $size && $size > $max_size ) {
-				return new WP_Error( 'file_too_large', 'Downloaded image exceeds the maximum allowed upload size.' );
+				return Webmastery_MCP_Response::local_error( 'file_too_large', 'Downloaded image exceeds the maximum allowed upload size.' );
 			}
 
 			// Compare identity bodies only: compressed wire length is not decoded file length.
@@ -300,7 +300,7 @@ class Webmastery_MCP_Media {
 				&& '' === wp_remote_retrieve_header( $response, 'transfer-encoding' )
 				&& ( ! ctype_digit( (string) $length ) || ltrim( (string) $length, '0' ) !== (string) $size )
 				&& ! ( 0 === $size && '0' === (string) $length ) ) {
-				return new WP_Error( 'download_failed', 'Downloaded image length does not match the HTTP response.' );
+				return Webmastery_MCP_Response::local_error( 'download_failed', 'Downloaded image length does not match the HTTP response.' );
 			}
 			return $response;
 		};
@@ -317,7 +317,7 @@ class Webmastery_MCP_Media {
 			if ( $too_large && is_string( $result ) ) {
 				wp_delete_file( $result );
 			}
-			return $too_large ? new WP_Error( 'file_too_large', 'Downloaded image exceeds the maximum allowed upload size.' ) : $result;
+			return $too_large ? Webmastery_MCP_Response::local_error( 'file_too_large', 'Downloaded image exceeds the maximum allowed upload size.' ) : $result;
 		} finally {
 			$close_file();
 			if ( ( null === $result || is_wp_error( $result ) ) && null !== $filename && file_exists( $filename ) ) {
@@ -339,7 +339,7 @@ class Webmastery_MCP_Media {
 
 	public static function upload_image_permission( $input = [] ) {
 		if ( ! current_user_can( 'upload_files' ) ) {
-			return new WP_Error( 'forbidden', 'Requires upload_files capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires upload_files capability.' );
 		}
 
 		$post_id = absint( $input['post_id'] ?? 0 );
@@ -349,11 +349,11 @@ class Webmastery_MCP_Media {
 
 		$post = get_post( $post_id );
 		if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
-			return new WP_Error( 'not_found', 'Post or page not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', 'Post or page not found.' );
 		}
 
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
-			return new WP_Error( 'forbidden', 'Requires edit_post capability for this post or page.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_post capability for this post or page.' );
 		}
 
 		return true;
@@ -365,10 +365,10 @@ class Webmastery_MCP_Media {
 			$attachment = get_post( $id );
 
 			if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
-				return new WP_Error( 'not_found', 'Media item not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', 'Media item not found.' );
 			}
 			if ( ! current_user_can( $cap, $id ) ) {
-				return new WP_Error( 'forbidden', "Requires {$cap} capability for this media item." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability for this media item." );
 			}
 			return true;
 		};
@@ -509,7 +509,7 @@ class Webmastery_MCP_Media {
 				$tmp = self::download_bounded_image( $image_url, $max_size );
 				if ( is_wp_error( $tmp ) ) {
 					if ( 'file_too_large' === $tmp->get_error_code() ) {
-						return Webmastery_MCP_Response::legacy_error( 'file_too_large', $tmp->get_error_message(), [ 'max_bytes' => $max_size ] );
+						return Webmastery_MCP_Response::legacy_error( 'file_too_large', 'Image exceeds maximum upload size.', [ 'max_bytes' => $max_size ] );
 					}
 					return Webmastery_MCP_Response::legacy_error( 'download_failed', 'Failed to download image.' );
 				}

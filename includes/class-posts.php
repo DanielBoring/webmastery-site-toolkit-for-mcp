@@ -161,13 +161,13 @@ class Webmastery_MCP_Posts {
 		$key = (string) $key;
 
 		if ( '' === $key ) {
-			return new WP_Error( 'invalid_meta_key', 'meta_key is required.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_meta_key', 'meta_key is required.' );
 		}
 		if ( strlen( $key ) > self::POST_META_KEY_MAX_LENGTH ) {
-			return new WP_Error( 'invalid_meta_key', 'meta_key must be 255 bytes or fewer.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_meta_key', 'meta_key must be 255 bytes or fewer.' );
 		}
 		if ( ! preg_match( '/^[A-Za-z0-9_\-:.]+$/', $key ) ) {
-			return new WP_Error( 'invalid_meta_key', 'meta_key may only contain letters, numbers, underscores, hyphens, colons, and periods.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_meta_key', 'meta_key may only contain letters, numbers, underscores, hyphens, colons, and periods.' );
 		}
 
 		return $key;
@@ -212,11 +212,11 @@ class Webmastery_MCP_Posts {
 
 	private static function normalize_post_meta_value( $value, $depth = 0 ) {
 		if ( $depth > self::POST_META_VALUE_MAX_DEPTH ) {
-			return new WP_Error( 'invalid_meta_value', 'meta_value nesting is too deep.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_meta_value', 'meta_value nesting is too deep.' );
 		}
 
 		if ( null === $value ) {
-			return new WP_Error( 'invalid_meta_value', 'meta_value must be a scalar, object, or array.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_meta_value', 'meta_value must be a scalar, object, or array.' );
 		}
 
 		if ( is_string( $value ) ) {
@@ -246,7 +246,7 @@ class Webmastery_MCP_Posts {
 			return $normalized;
 		}
 
-		return new WP_Error( 'invalid_meta_value', 'meta_value must be a scalar, object, or array.' );
+		return Webmastery_MCP_Response::local_error( 'invalid_meta_value', 'meta_value must be a scalar, object, or array.' );
 	}
 
 	private static function validate_post_meta_value( $value ) {
@@ -257,10 +257,10 @@ class Webmastery_MCP_Posts {
 
 		$encoded = wp_json_encode( $normalized );
 		if ( false === $encoded ) {
-			return new WP_Error( 'invalid_meta_value', 'meta_value could not be encoded safely.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_meta_value', 'meta_value could not be encoded safely.' );
 		}
 		if ( strlen( $encoded ) > self::POST_META_VALUE_MAX_BYTES ) {
-			return new WP_Error( 'invalid_meta_value', 'meta_value must encode to 100000 bytes or fewer.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_meta_value', 'meta_value must encode to 100000 bytes or fewer.' );
 		}
 
 		return $normalized;
@@ -272,7 +272,7 @@ class Webmastery_MCP_Posts {
 		if ( isset( $protected_keys[ $key ] ) ) {
 			$normalized = self::normalize_meta_value( $value, $protected_keys[ $key ] );
 			if ( null === $normalized ) {
-				return new WP_Error( 'invalid_meta_value', 'meta_value is not valid for this protected meta key.' );
+				return Webmastery_MCP_Response::local_error( 'invalid_meta_value', 'meta_value is not valid for this protected meta key.' );
 			}
 
 			return $normalized;
@@ -574,7 +574,7 @@ class Webmastery_MCP_Posts {
 	private static function permission( $cap ) {
 		return function () use ( $cap ) {
 			if ( ! current_user_can( $cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability." );
 			}
 			return true;
 		};
@@ -586,10 +586,10 @@ class Webmastery_MCP_Posts {
 			$post = get_post( $id );
 
 			if ( ! $post || $post->post_type !== $type ) {
-				return new WP_Error( 'not_found', ucfirst( $type ) . ' not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', ucfirst( $type ) . ' not found.' );
 			}
 			if ( ! current_user_can( $cap, $id ) ) {
-				return new WP_Error( 'forbidden', "Requires {$cap} capability for this {$type}." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability for this {$type}." );
 			}
 			return true;
 		};
@@ -602,13 +602,13 @@ class Webmastery_MCP_Posts {
 			$status      = $input['status'] ?? 'draft';
 
 			if ( ! current_user_can( $edit_cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$edit_cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$edit_cap} capability." );
 			}
 			if ( in_array( $status, [ 'publish', 'private', 'future' ], true ) && ! current_user_can( $publish_cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$publish_cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$publish_cap} capability." );
 			}
 			if ( 'page' === $type && ! empty( $input['parent'] ) && ! current_user_can( 'edit_post', absint( $input['parent'] ) ) ) {
-				return new WP_Error( 'forbidden', 'Requires edit_post capability for the parent page.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_post capability for the parent page.' );
 			}
 			return true;
 		};
@@ -620,10 +620,10 @@ class Webmastery_MCP_Posts {
 			$post = get_post( $id );
 
 			if ( ! $post || $post->post_type !== $type ) {
-				return new WP_Error( 'not_found', ucfirst( $type ) . ' not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', ucfirst( $type ) . ' not found.' );
 			}
 			if ( ! current_user_can( 'delete_post', $id ) ) {
-				return new WP_Error( 'forbidden', "Requires delete_post capability for this {$type}." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires delete_post capability for this {$type}." );
 			}
 
 			return true;
@@ -636,15 +636,15 @@ class Webmastery_MCP_Posts {
 			$post = get_post( $id );
 
 			if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
-				return new WP_Error( 'not_found', 'Post or page not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', 'Post or page not found.' );
 			}
 
 			$cap = 'post' === $post->post_type ? 'edit_posts' : 'edit_pages';
 			if ( ! current_user_can( $cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability." );
 			}
 			if ( ! current_user_can( 'edit_post', $id ) ) {
-				return new WP_Error( 'forbidden', 'Requires edit_post capability for this post or page.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_post capability for this post or page.' );
 			}
 
 			return true;
@@ -657,10 +657,10 @@ class Webmastery_MCP_Posts {
 			$post = get_post( $id );
 
 			if ( ! $post ) {
-				return new WP_Error( 'not_found', 'Post not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', 'Post not found.' );
 			}
 			if ( ! current_user_can( 'edit_post', $id ) ) {
-				return new WP_Error( 'forbidden', 'Requires edit_post capability for this post.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_post capability for this post.' );
 			}
 
 			return true;
@@ -673,20 +673,20 @@ class Webmastery_MCP_Posts {
 			$post = get_post( $id );
 
 			if ( ! $post ) {
-				return new WP_Error( 'not_found', 'Post or revision not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', 'Post or revision not found.' );
 			}
 
 			$parent_id = 'revision' === $post->post_type ? (int) $post->post_parent : (int) $post->ID;
 			$parent    = get_post( $parent_id );
 
 			if ( ! $parent || ! in_array( $parent->post_type, [ 'post', 'page' ], true ) ) {
-				return new WP_Error( 'not_found', 'Post or page not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', 'Post or page not found.' );
 			}
 			if ( ! current_user_can( 'edit_posts' ) ) {
-				return new WP_Error( 'forbidden', 'Requires edit_posts capability.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_posts capability.' );
 			}
 			if ( ! current_user_can( 'edit_post', $parent_id ) ) {
-				return new WP_Error( 'forbidden', 'Requires edit_post capability for this post or page.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_post capability for this post or page.' );
 			}
 
 			return true;
@@ -816,7 +816,7 @@ class Webmastery_MCP_Posts {
 					);
 
 					if ( is_wp_error( $result ) ) {
-						$failures[] = Webmastery_MCP_Response::item_error( $id, $result->get_error_code(), $result->get_error_message() );
+						$failures[] = Webmastery_MCP_Response::item_error( $id, 'update_failed', 'Failed to publish post.' );
 						continue;
 					}
 
@@ -841,10 +841,10 @@ class Webmastery_MCP_Posts {
 		$post = get_post( $id );
 
 		if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
-			return new WP_Error( 'not_found', 'Post or page not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', 'Post or page not found.' );
 		}
 		if ( ! current_user_can( 'edit_post', $id ) ) {
-			return new WP_Error( 'forbidden', 'You do not have permission to update this post or page.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'You do not have permission to update this post or page.' );
 		}
 
 		return $post;
@@ -922,13 +922,13 @@ class Webmastery_MCP_Posts {
 		$post         = get_post( $id );
 
 		if ( ! in_array( $content_type, [ 'post', 'page' ], true ) ) {
-			return new WP_Error( 'invalid_content_type', 'content_type must be post or page.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_content_type', 'content_type must be post or page.' );
 		}
 		if ( ! $post || $post->post_type !== $content_type ) {
-			return new WP_Error( 'not_found', ucfirst( $content_type ) . ' not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', ucfirst( $content_type ) . ' not found.' );
 		}
 		if ( ! current_user_can( 'edit_post', $id ) ) {
-			return new WP_Error( 'forbidden', 'You do not have permission to edit this ' . $content_type . '.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'You do not have permission to edit this ' . $content_type . '.' );
 		}
 
 		return $post;
@@ -951,12 +951,12 @@ class Webmastery_MCP_Posts {
 		$post = get_post( $id );
 
 		if ( ! $post ) {
-			return new WP_Error( 'not_found', 'Content not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', 'Content not found.' );
 		}
 
 		$content_type = sanitize_key( $content_type );
 		if ( '' !== $content_type && $post->post_type !== $content_type ) {
-			return new WP_Error( 'content_type_mismatch', 'content_type does not match the requested content ID.' );
+			return Webmastery_MCP_Response::local_error( 'content_type_mismatch', 'content_type does not match the requested content ID.' );
 		}
 
 		$post_type_object = get_post_type_object( $post->post_type );
@@ -967,10 +967,10 @@ class Webmastery_MCP_Posts {
 			&& ! empty( $post_type_object->show_ui );
 
 		if ( ( ! $is_builtin && ! $is_eligible_cpt ) || ! post_type_supports( $post->post_type, 'editor' ) ) {
-			return new WP_Error( 'unsupported_type', 'patch-post-content supports posts, pages, and public editor-enabled custom post types.' );
+			return Webmastery_MCP_Response::local_error( 'unsupported_type', 'patch-post-content supports posts, pages, and public editor-enabled custom post types.' );
 		}
 		if ( ! current_user_can( 'edit_post', $id ) ) {
-			return new WP_Error( 'forbidden', 'You do not have permission to patch this content.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'You do not have permission to patch this content.' );
 		}
 
 		return $post;
@@ -982,10 +982,10 @@ class Webmastery_MCP_Posts {
 			$post = get_post( $id );
 
 			if ( ! $post ) {
-				return new WP_Error( 'not_found', 'Content not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', 'Content not found.' );
 			}
 			if ( ! current_user_can( 'edit_post', $id ) ) {
-				return new WP_Error( 'forbidden', 'You do not have permission to patch this content.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'You do not have permission to patch this content.' );
 			}
 
 			return true;
@@ -1023,7 +1023,7 @@ class Webmastery_MCP_Posts {
 		$path = trim( (string) $path );
 
 		if ( '' === $path || ! preg_match( '/^\d+(?:\.\d+)*$/', $path ) ) {
-			return new WP_Error( 'invalid_block_path', 'block_path must be a dotted numeric path like 0 or 2.1.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_block_path', 'block_path must be a dotted numeric path like 0 or 2.1.' );
 		}
 
 		return array_map( 'absint', explode( '.', $path ) );
@@ -1035,7 +1035,7 @@ class Webmastery_MCP_Posts {
 
 		foreach ( $segments as $segment ) {
 			if ( ! is_array( $current_blocks ) || ! array_key_exists( $segment, $current_blocks ) ) {
-				return new WP_Error( 'target_not_found', 'Block path not found.' );
+				return Webmastery_MCP_Response::local_error( 'target_not_found', 'Block path not found.' );
 			}
 
 			$current_block  = $current_blocks[ $segment ];
@@ -1049,7 +1049,7 @@ class Webmastery_MCP_Posts {
 		$segment = array_shift( $segments );
 
 		if ( ! array_key_exists( $segment, $blocks ) ) {
-			return new WP_Error( 'target_not_found', 'Block path not found.' );
+			return Webmastery_MCP_Response::local_error( 'target_not_found', 'Block path not found.' );
 		}
 
 		if ( empty( $segments ) ) {
@@ -1058,7 +1058,7 @@ class Webmastery_MCP_Posts {
 		}
 
 		if ( empty( $blocks[ $segment ]['innerBlocks'] ) || ! is_array( $blocks[ $segment ]['innerBlocks'] ) ) {
-			return new WP_Error( 'target_not_found', 'Block path not found.' );
+			return Webmastery_MCP_Response::local_error( 'target_not_found', 'Block path not found.' );
 		}
 
 		return self::replace_block_by_segments( $blocks[ $segment ]['innerBlocks'], $segments, $replacement_block );
@@ -1292,10 +1292,10 @@ class Webmastery_MCP_Posts {
 		}
 
 		if ( 0 === count( $matches ) ) {
-			return new WP_Error( 'target_not_found', 'Heading target not found.' );
+			return Webmastery_MCP_Response::local_error( 'target_not_found', 'Heading target not found.' );
 		}
 		if ( count( $matches ) > 1 ) {
-			return new WP_Error( 'ambiguous_target', 'Heading target matched more than once.' );
+			return Webmastery_MCP_Response::local_error( 'ambiguous_target', 'Heading target matched more than once.' );
 		}
 
 		$heading_index      = $matches[0];
@@ -1331,10 +1331,10 @@ class Webmastery_MCP_Posts {
 		$count = substr_count( $content, $old_content );
 
 		if ( 0 === $count ) {
-			return new WP_Error( 'target_not_found', 'Exact content target not found.' );
+			return Webmastery_MCP_Response::local_error( 'target_not_found', 'Exact content target not found.' );
 		}
 		if ( $count > 1 ) {
-			return new WP_Error( 'ambiguous_target', 'Exact content target matched more than once.' );
+			return Webmastery_MCP_Response::local_error( 'ambiguous_target', 'Exact content target matched more than once.' );
 		}
 
 		return [
