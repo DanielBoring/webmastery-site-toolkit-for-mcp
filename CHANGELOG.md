@@ -6,14 +6,6 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
-### Breaking changes
-
-- Post and page creation now rejects metadata policies that require a persisted object before saving anything. This includes current Yoast and SEOPress create metadata and their corresponding field aliases. Clients must create without metadata, then update the returned object. This change requires major-release review and is not suitable for the planned 2.6.0 minor release.
-
-### Fixed
-
-- Enforce WordPress key-level metadata capabilities for reads, upserts, deletes, and post/page metadata batches, including SEO aliases. Denied updates leave content, status, and metadata unchanged; metadata listings omit keys the caller cannot edit. Preserve authorized SEO updates and the unregistered protected-key compatibility allowance without overriding registered authorization.
-
 ### Added
 
 - Added private vulnerability reporting guidance and the supported-release security policy to the plugin FAQ.
@@ -21,7 +13,34 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Changed
 
+- Clarified agent handling of untrusted site content, comment reply/moderation access, dynamic ability counts, and the distinction between plugin results and MCP gateway responses.
+- Expanded the plugin header description to include custom post types, blocks/revisions, webmaster verification, and optional Google Site Kit diagnostics.
+- Shortened the Unreleased upgrade notice to fit WordPress.org's 300-character limit while retaining upload, taxonomy, and compatibility guidance.
 - Updated WordPress tested compatibility to 7.1 after passing ability and MCP transport checks on PHP 8.2 and 8.4.
+
+### Fixed
+
+- Enforce effective WordPress key-level capabilities in the standalone post-meta read, upsert, and delete tools, including absent and unchanged values. Metadata listings omit denied keys; successful response shapes and protected-key eligibility remain unchanged. Metadata inside post/page create/update requests and separate SEO read paths are not covered by this partial fix and retain unresolved authorization risks.
+
+- Security audit HTTPS findings now describe the configured public home URL rather than the MCP request or admin-only TLS policy. Missing/unsupported schemes or hosts, whitespace/control characters, malformed percent escapes, and invalid authority syntax are explicitly unknown; this is a local syntax guard, not full URL or DNS validation.
+- Debug-log findings no longer disclose filesystem paths and warn when access is unverified instead of treating a neighboring `.htaccess` file or a location outside `wp-content` as proof of protection.
+- Database health query errors retain their error code and context without raw database error details. Successful reports still return prefixed table identifiers, including matching plugin tables; identifier redaction is deferred.
+- Preserved backslashes in post/page metadata and media upload/update titles, captions, and alt text without bypassing text, HTML, or metadata-provider sanitization.
+- Page and custom post type create/update abilities reject invalid or unauthorized parent assignments before saving other requested changes. Valid hierarchical parents, detach-to-zero, and omitted parents remain supported; unsupported positive parents on nonhierarchical custom post types are now rejected.
+- Image URL uploads now enforce the existing WordPress upload-size limit during streaming and cancel oversized responses, with cleanup on rejection. Safe HTTP redirects, TLS, Content-MD5, actual-size and MIME checks remain intact; invalid limits and incomplete basic raster headers fail explicitly.
+- Image URL validation checks mixed IPv4/IPv6 DNS answers and bounded CNAME chains, including redirect targets. IPv6 documentation addresses are rejected consistently across PHP versions. DNS failures are explicit; these checks do not pin DNS or eliminate rebinding races.
+- Reject malformed, missing, or too-soon scheduling dates before creating or updating posts, pages, and custom post types. Preserve valid existing schedules, legacy date parsing, and explicit-offset instants across repeated DST hours.
+- Retain validated future dates when scheduling draft or pending content with a previously unset GMT date instead of letting WordPress reset the date and publish immediately.
+
+- Category and tag writes now respect the registered taxonomy's editing/deletion capabilities and existing-term permissions, including direct execution. Default Editor/Administrator access, read behavior, and successful response shapes are unchanged; sites with custom restrictions now receive explicit denials before writes.
+- Refused or failed term deletions no longer report success. WordPress's default-category protection is respected, and a zero/false deletion result remains a failure even if site permission filters allow the attempt.
+
+- Targeted block and section patches no longer sanitize unrelated stored HTML in the rebuilt body. Exact patches now match the original raw search fragment. Replacement fragments remain sanitized, object permissions are unchanged, and WordPress's normal capability-dependent save filters still apply.
+- Site Kit module, permission, and PageSpeed abilities now require WordPress `read` before any upstream work, in addition to Site Kit's route authorization. Direct execution also rejects missing or unusable upstream permission callbacks. Site Kit-authorized shared-dashboard users remain eligible; status keeps its existing administrator capability gate.
+- Post, page, custom post type, and bulk post trash abilities now refuse with `trash_disabled` when WordPress trash is disabled, preventing permanent deletion behind a misleading trash-success response. Normal trash behavior, permissions, and per-ID bulk summaries are unchanged; no permanent-delete override is added.
+- Webmaster verification now omits WordPress-only Site Kit installation/activation details for callers without plugin activation permission, skips private inspection, and summarizes only authorized checks. Public checks remain available with `read`; direct execution enforces the same gate before any work.
+- Public webmaster verification results, including failures and unknowns, now share a site/home/schema-scoped 60-second cache to avoid repeated HTTP/DNS work on warm calls. Privileged plugin state remains fresh per request and is never stored in the shared public cache.
+- Custom post type update abilities now validate requested taxonomy assignments (registration and assign-terms permission) before saving title, content, or status changes, matching the create ability's behavior. Invalid or unauthorized taxonomy requests are now rejected before any changes are persisted, instead of after the post was already updated.
 
 ## 2.5.0
 

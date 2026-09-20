@@ -52,38 +52,72 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | --- | --- | --- |
 | Posts and pages | Create, list, read, update, restore, trash, bulk publish, bulk trash, and patch targeted content with object/status-aware filtering for private, trash, draft, pending, and scheduled content | Author or Editor |
 | Blocks and revisions | Inspect Gutenberg block paths/hashes, replace one block, list revisions, restore a revision | Author or Editor |
-| Post meta | Read, update, and delete custom fields subject to object and key-level authorization; write supported Yoast SEO and SEOPress metadata | Object edit access plus the key's capabilities |
+| Post meta | Read, update, and delete individual custom fields, including supported SEO keys, with object and key-level checks | Object edit access plus the key's effective capabilities |
 | Custom post types | Discover eligible public CPTs, generate list/get/create/update/delete abilities, and patch targeted content for editor-enabled types with CPT capability-map and object/status-aware filtering | CPT capability map |
-| Taxonomy | List, get, create, update, and delete categories and tags | Subscriber to Editor |
-| Comments | List, reply, update, approve, hold, trash, or mark spam | Editor |
+| Taxonomy | List/get categories and tags; create/update/delete with taxonomy-specific and per-term write checks | Subscriber for reads; Editor by default for writes |
+| Comments | List, reply, update, approve, trash, mark spam, or set hold through `update-comment` | Contributor/Author for replies on editable own posts; Editor for moderation |
 | Media | List, inspect, update, upload public image URLs, set featured images, and delete media | Author or Editor |
 | Content hygiene | Find orphaned media, posts/pages missing featured images, and stuck scheduled posts | Author or Editor |
 | Site info | Return safe site basics and current-user context; runtime, WordPress version, database, and theme-version details require Administrator access | Subscriber to Administrator |
 | SEO and webmaster signals | Analyze content, inspect and write supported Yoast/SEOPress metadata, read Yoast scores, inspect generated Yoast head data, and check sitemap/webmaster signals | Author to Administrator |
+| Public webmaster verification | Check public Google/Bing meta tags, Bing XML, DNS TXT, robots.txt, and sitemap reachability; WordPress-only Site Kit state requires `activate_plugins` | Subscriber (`read`); privileged plugin-state addition |
 | Google Site Kit | Inspect setup/authentication status, modules, effective permissions, and same-site PageSpeed summaries through Site Kit's permission-aware REST routes | Shared dashboard user to Administrator |
 | Plugins, users, health, security, performance, backups, database | Audit or manage sensitive site areas with explicit admin capabilities | Administrator |
 
 For the exact ability names, input behavior, and required capabilities, use the [full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities).
 
-### Post metadata authorization
+Comment replies require `edit_posts` and `edit_post` on the post containing the parent comment. Listing, updating, and the approve/trash/spam abilities require `moderate_comments`. There is no separate `hold-comment` ability: use `update-comment` with `status: "hold"` and the required `content`.
 
-Existing-object metadata operations require `edit_post` for the actual object. An Author can usually edit their own posts; pages and other authors' posts generally need an Editor. Registered metadata authorization callbacks can impose additional requirements.
+### Standalone post metadata authorization
 
-| Input surface | Key-level policy |
+`get-post-meta`, `update-post-meta`, and `delete-post-meta` require `edit_post` for the actual object and preserve the existing protected-key eligibility rules. Ordinary Authors can usually operate on their own posts; pages and other authors' posts generally require an Editor, and individual keys may impose additional requirements.
+
+| Standalone ability | Key-level policy |
 | --- | --- |
-| `get-post-meta` | Requires `edit_post_meta` for each returned key. A denied requested key returns `forbidden`; listing all metadata omits denied keys. WordPress has no equivalent general-purpose read-meta capability, so this is an intentionally conservative read policy. |
-| `update-post-meta` | Requires `edit_post_meta`, including first writes and unchanged values, matching core REST's capability choice for upserts. |
-| `delete-post-meta` | Requires `delete_post_meta`, even when the key is absent. |
-| `update-post` / `update-page` metadata and SEO aliases | Authorizes every requested key against the existing object before changing any post fields or metadata. Denied batches return `meta_write_failed` with `data.meta.not_written` entries whose reason is `forbidden`; nothing in the update is persisted. |
-| `create-post` / `create-page` metadata and SEO aliases | Checks create/publish capabilities, then conservatively accepts only known-unrestricted key authorization policies before an ID exists: no custom key authorization filters, or WordPress's known `__return_true` defaults. Other policies fail before insertion with `meta_write_failed` and reason `authorization_requires_post`, even for administrators. |
+| `get-post-meta` | Requires `edit_post_meta`. An explicit denied key returns `forbidden`; listings omit denied keys. This conservative read policy is specific to this plugin, not a general WordPress read-meta capability. |
+| `update-post-meta` | Requires `edit_post_meta` for existing, absent, and unchanged values. Successful response fields and structured-value support are unchanged. The capability choice matches core REST upserts, but denial of unauthorized no-ops is intentionally stricter than REST's same-value shortcut. |
+| `delete-post-meta` | Requires `delete_post_meta`, including when the key is absent. Authorized deletion retains the existing `deleted_count` response. |
 
-The pre-insertion key-policy check is not a real-ID `edit_post_meta` capability evaluation. It cannot evaluate object-dependent `map_meta_cap` or `user_has_cap` filters for metadata before the object exists. Those filters still apply to the create/publish capability checks themselves; real-ID metadata capability evaluation, including those global filters, applies on the subsequent update. A subtype key authorization hook takes precedence over the global key hook; an explicit `__return_true` policy can therefore permit creation for that subtype even if the global registration is restrictive.
+Registered global/subtype policies and WordPress's effective `map_meta_cap` / `user_has_cap` filters remain authoritative. Supported, genuinely unregistered SEO keys with no key authorization hooks receive only a temporary protected-key default, not an exception to capability filters. Other plugins may explicitly grant primitive metadata capabilities: Yoast's effective edit policy can permit a key whose registration callback returns false, while its delete policy can differ.
 
-Protected keys remain restricted to the existing supported surfaces. For unregistered allowlisted Yoast/SEOPress keys without any key authorization hooks, the compatibility allowance supplies only the protected-key default; existing-object capability filters still run. It never replaces a registered restrictive callback. Final WordPress capability mapping remains authoritative, including explicit primitive-capability grants from roles or other plugins. For example, Yoast can grant `edit_post_meta` for its keys even when a key callback returns false; this plugin does not override that upstream policy.
+**Scope and unresolved risk:** this hardening applies only to these three standalone abilities. Metadata and SEO aliases inside post/page create or update requests retain their existing behavior and do not receive these key-level checks. Separate SEO inspection/analysis/scoring abilities retain their existing read policies. Those paths can still bypass restrictive per-key policy; using the standalone tools is not a site-wide security boundary. This partial fix does not resolve the creation-policy decision or establish release readiness.
 
-**Breaking change (unreleased; major-release review required):** current Yoast and SEOPress metadata callbacks need a persisted post ID. Their affected `meta` keys and corresponding `yoast_*` / `seopress_*` aliases can no longer be included in a single create call. Create the post or page without metadata, then send the returned ID to its update ability with the desired metadata. Ordinary authorized SEO updates and genuinely unregistered allowlisted SEO create inputs remain supported. No post is created when the first call rejects metadata.
+For verification on a disposable site, register a nonprotected string key with an authorization callback requiring `manage_options`, seed a draft, and call the standalone abilities as its Author. An explicit read, an upsert (including the same value), and a deletion must return `forbidden`; the listing must omit the key and storage must remain unchanged. An Administrator with effective object/key permission can read, update, and delete it. Existing one-call provider create workflows are not migrated to two calls by this change.
 
-For verification on a disposable site, register a string field `access_level` with `show_in_rest: true` and an `auth_callback` requiring `manage_options`. An Editor's `update-post-meta` for that key must return `forbidden`; an Editor's `update-post` containing both new content and `meta.access_level` must leave the stored content, status, and metadata unchanged. An Administrator can update the existing field. A create call containing the callback-backed field must instead request the two-step workflow.
+### Backslashes in writes
+
+Post/page metadata and media titles, captions, and alt text preserve backslashes through WordPress storage, including repeated or trailing backslashes and escaped quotes. Send decoded values normally; do not add an extra WordPress slashing layer in your MCP client. JSON still requires its usual escaping: `"C:\\path\\"` represents `C:\path\`.
+
+Existing text/HTML sanitization and registered metadata or SEO-provider sanitizers still apply. Responses report sanitized stored values, not necessarily the original input. Post/page create/update metadata remains scalar; `update-post-meta` also supports JSON-compatible arrays and objects. Allowed metadata keys are unchanged. Standalone metadata operations also enforce the key-level policy above; uploads require `upload_files` plus access to any parent post.
+
+On a disposable draft, write `yoast_meta_description` with JSON value `"C:\\path\\"` using `update-post`, then read `_yoast_wpseo_metadesc` using `get-post-meta` with the same post ID and explicit `meta_key`. Compare the stored value with `data.meta.written` from the update response, allowing any provider sanitization.
+
+### Category and tag write permissions
+
+| Abilities | Required WordPress access |
+| --- | --- |
+| `create-category`, `create-tag` | Registered taxonomy's `edit_terms` capability |
+| `update-category`, `update-tag` | Taxonomy's `edit_terms` and `edit_term` for the existing term |
+| `delete-category`, `delete-tag` | Taxonomy's `delete_terms` and `delete_term` for the existing term |
+
+These names use the `webmastery-site-toolkit-for-mcp/` prefix. WordPress's final `current_user_can()` result applies, including capability mapping and site filters. Default mappings still allow Editors and Administrators to manage terms; custom mappings can grant tag management without `manage_categories`, or deny it despite that global capability. Creation intentionally requires term-editing access, not the more permissive nonhierarchical REST `assign_terms` policy. Granting a core alias such as `edit_post_tags` alone does not override WordPress's mapping of that alias.
+
+Both permission callbacks and direct execution enforce write checks. Category/tag list and get permissions are unchanged. For callers with the taxonomy capability, missing IDs or IDs from the other taxonomy still return the existing `success: false` not-found envelope. Object-policy denials now fail before writes instead of bypassing the site's restrictions.
+
+Term deletion is permanent and uses WordPress's normal relationship handling (including category reassignment). Core denies deleting the default category through `delete_term`; if site filters override that denial, an underlying `0` or `false` deletion result still returns `success: false`, never `deleted: true`. Successful deletion keeps the existing `{ "success": true, "data": { "id": 123, "deleted": true } }` shape. On a disposable site, a `delete-category` request with `{ "category_id": <default-category-ID> }` must fail and a subsequent `get-category` must still find it.
+
+### Targeted content patching
+
+| Ability | Target | Required access |
+| --- | --- | --- |
+| `webmastery-site-toolkit-for-mcp/patch-content-block` | One Gutenberg block by path or unique hash in a post or page | `edit_post` for the specific object |
+| `webmastery-site-toolkit-for-mcp/patch-post-content` | A heading section or unique exact raw-content match in a post, page, or public, UI-visible, editor-enabled CPT | `edit_post` for the specific object, resolved through its capability map |
+
+Both abilities sanitize the **replacement fragment** with `wp_kses_post()`, not the entire rebuilt body. This prevents the plugin from stripping unrelated iframe, script, style, form, SVG, or event-attribute markup already stored elsewhere. Exact-match `old_content` is compared byte-for-byte against raw stored content, without sanitizing the search needle.
+
+WordPress's normal save pipeline still applies. Preserving markup that KSES would strip requires the caller's **effective `unfiltered_html` capability**; a role name alone is not sufficient. Multisite, `DISALLOW_UNFILTERED_HTML`, or capability policies can deny it even to an Administrator. Callers without it remain subject to core's save-time KSES filtering. New replacement markup is filtered regardless of this capability, and full-content update abilities still sanitize all supplied content.
+
+Block-path, block-hash, and heading patches retain the existing WordPress parse/serialize behavior, which can normalize noncanonical block delimiters and omit empty freeform separators. They are not raw byte-splicing operations. Exact patches do not parse or serialize the surrounding content.
 
 ### Google Site Kit compatibility abilities
 
@@ -92,11 +126,23 @@ These optional read-only abilities use Site Kit's registered internal REST route
 | Ability | Result | Required access |
 | --- | --- | --- |
 | `webmastery-site-toolkit-for-mcp/get-site-kit-status` | Plugin/version, site connection/setup, and current-user authentication/reauthentication state | `manage_options` and Site Kit setup access |
-| `webmastery-site-toolkit-for-mcp/list-site-kit-modules` | Safe module activation, connection, sharing, and dependency state | Site Kit dashboard access, including allowed shared-dashboard users |
-| `webmastery-site-toolkit-for-mcp/get-site-kit-permissions` | Current user's normalized Site Kit capability and per-module sharing matrix | Site Kit dashboard access; Site Kit 1.82.0+ |
-| `webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed` | Curated field data, category scores, and selected audit metrics for a same-site URL | Site Kit PageSpeed datapoint access |
+| `webmastery-site-toolkit-for-mcp/list-site-kit-modules` | Safe module activation, connection, sharing, and dependency state | WordPress `read` plus Site Kit's module-list route permission |
+| `webmastery-site-toolkit-for-mcp/get-site-kit-permissions` | Current user's normalized Site Kit capability and per-module sharing matrix | WordPress `read` plus Site Kit's user-permissions route permission; retains the 1.82.0 minimum-version diagnostic when that route is missing |
+| `webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed` | Curated field data, category scores, and selected audit metrics for a same-site URL | WordPress `read` plus Site Kit's module-list and PageSpeed datapoint route permissions |
 
 Site Kit does not publish these routes as a supported third-party API. The adapter checks route availability at runtime and returns `site_kit_unavailable` or `site_kit_unsupported` instead of assuming a specific Site Kit implementation.
+
+The three delegated abilities check `read` before plugin discovery, route lookup, or upstream work in both permission and direct execution callbacks. This is a minimum, not an access grant: the exact upstream GET route must expose a callable permission check, and normal WordPress REST dispatch still enforces it. Missing providers, routes, or usable permission callbacks fail closed. Status keeps its separate `manage_options` gate, without an additional `read` requirement.
+
+**Upstream permission inspection:** the official WordPress.org Site Kit **1.187.0** package was checksum-verified and inspected on a disposable WordPress 7.1 / PHP 8.2 installation, without Google credentials or data/API calls. These are version-specific observations, not guarantees about historical or future releases:
+
+| GET route under `/google-site-kit/v1` | Site Kit 1.187.0 permission semantics |
+| --- | --- |
+| `/core/modules/data/list` | `googlesitekit_view_splash` OR `googlesitekit_view_dashboard` ([source](https://plugins.svn.wordpress.org/google-site-kit/tags/1.187.0/includes/Core/Modules/REST_Modules_Controller.php), lines 209-225) |
+| `/core/user/data/permissions` | `googlesitekit_view_splash` OR `googlesitekit_view_dashboard` ([source](https://plugins.svn.wordpress.org/google-site-kit/tags/1.187.0/includes/Core/Permissions/Permissions.php), lines 709-718) |
+| `/modules/pagespeed-insights/data/pagespeed` | Registered through the generic module/datapoint route. The resolver honors a permission-aware datapoint's own check; this version's PageSpeed definition uses the default `googlesitekit_setup` OR `googlesitekit_view_posts_insights` ([controller](https://plugins.svn.wordpress.org/google-site-kit/tags/1.187.0/includes/Core/Modules/REST_Modules_Controller.php), lines 613-623, 655-657, 1027-1058; [datapoint](https://plugins.svn.wordpress.org/google-site-kit/tags/1.187.0/includes/Modules/PageSpeed_Insights.php), lines 77-84). |
+
+These effective Site Kit capabilities incorporate setup, authentication, verification, sharing, and network rules; they are not fixed WordPress role checks. In 1.187.0 the default dynamic grants map dashboard/insights capabilities to `edit_posts` and setup/authentication to `manage_options`, with additional restrictions. The unconnected inspection allowed the administrator's route permission checks and denied an ordinary Subscriber's; no PageSpeed data request was executed. This plugin does **not** add an `edit_posts` or `manage_options` floor to the delegated abilities, so a Subscriber whom Site Kit legitimately authorizes is not excluded locally. The controlled shared-Subscriber fixture proves that local behavior, not that an ordinary Subscriber receives all real Site Kit routes. Unknown versions remain route-probed; reverify these semantics when supported upstream versions or the minimum version change. See [inspection and fixture instructions](tests/e2e/README.md#site-kit-permission-regressions).
 
 ## Requirements
 
@@ -168,26 +214,95 @@ Try a few safe checks:
 
 - `webmastery-site-toolkit-for-mcp/list-posts` - "List the 5 most recent published posts."
 - `webmastery-site-toolkit-for-mcp/get-site-info` - "Get safe public context for this WordPress site."
-- `webmastery-site-toolkit-for-mcp/webmaster-verification-status` - "Check public Google and Bing webmaster verification signals."
+- `webmastery-site-toolkit-for-mcp/webmaster-verification-status` - "Check public Google and Bing webmaster verification signals." Requires `read`; Subscribers and Authors receive public checks only. Site Kit installation/activation details require `activate_plugins`.
 - `webmastery-site-toolkit-for-mcp/list-site-kit-modules` - "List the Google services available to this Site Kit user."
 - `webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed` - "Get a mobile PageSpeed summary for this site's home page."
 - `webmastery-site-toolkit-for-mcp/plugin-audit` - "Audit installed plugins." Requires an Administrator service account.
 
-If discovery shows fewer abilities than this repo documents, the connected WordPress site is running an older deployed copy of the plugin. Update the site plugin, then run discovery again.
+Ability counts depend on the deployed plugin and eligible custom post types. Fewer discovered abilities can reflect a different site's CPTs or an older deployed copy; check the registered names and plugin version before assuming an update is needed.
+
+To verify patch preservation on a disposable site, use an account with effective `unfiltered_html`, save a Custom HTML block beside a paragraph, and call `list-content-blocks`. Patch only the paragraph with `patch-content-block`, supplying its path and the returned content/block hashes as preconditions. List the blocks again: the untouched Custom HTML block's hash should be unchanged. For an exact patch, use the original raw markup as `old_content`, not rendered or sanitized HTML.
+
+## Image URL uploads
+
+`webmastery-site-toolkit-for-mcp/upload-image` requires `upload_files` (normally Author or above), plus `edit_post` for an optional target post or page. For example, on a disposable site, upload an image you control with `{"image_url":"https://your-public-host.example/image.png","post_id":123,"set_featured":true,"title":"Example","alt_text":"Example image","caption":"Example caption"}`. Verify the returned attachment metadata and the target's featured image.
+
+The existing `wp_max_upload_size()` limit is enforced during retrieval: the temporary file is capped at the limit plus one sentinel byte, and oversized responses are cancelled instead of drained. The actual file size and allowed image MIME are still checked before sideloading. Empty files, incomplete PNG/JPEG/GIF headers, HTTP length mismatches, and failed integrity checks are rejected; image headers/dimensions are not proof of complete image integrity. Generic or incorrect HTTP Content-Type alone does not reject valid image bytes. Zero, invalid, or overflowing upload limits return `invalid_upload_limit` rather than disabling the bound.
+
+Downloads retain WordPress's safe HTTP API, redirect limits, TLS verification, 200-only success, and Content-MD5 verification. A/AAAA answers and CNAME targets are checked before the initial request and through the request's redirect hook; private/reserved addresses, local names, failed DNS resolution, cyclic aliases, and alias chains exceeding 16 lookups are rejected. The IPv6 documentation prefix `2001:db8::/32` is rejected explicitly because native PHP reserved-range flags differ across versions. This is defense in depth, **not DNS pinning or complete rebinding protection**: DNS and the connection can still resolve differently. IPv6 literals and AAAA-only hosts remain unsupported by the core safe-URL path. Core's same-site exception does not override the plugin's private-address checks.
+
+The bound applies per response, not to aggregate redirect traffic, headers, or socket buffering. Native cancellation can receive buffered data beyond the limit. cURL bounds decoded file bytes, but a compressed input chunk can expand into multiple decoded callbacks before cancellation; this is not a decoded-work or CPU quota. Fsockopen retains core's streamed encoded-byte behavior and may reject compressed/chunked images that cURL accepts; the plugin does not add an unbounded decompression stage. Formats enabled through WordPress filters retain core MIME handling; the basic PNG/JPEG/GIF header check does not impose a new decoder requirement on SVG, HEIC, AVIF, or other formats.
+
+The download captures its temporary-file identity before ordinary HTTP argument filters and removes its scoped hooks afterward, so nested requests are not limited accidentally. Installed plugins still control WordPress HTTP hooks and can override or preempt requests; this is not an isolation boundary against arbitrary trusted plugin code.
+
+## Scheduling posts, pages, and custom post types
+
+Create/update abilities accept `status: "future"` and `scheduled_date`. Creating a schedule or moving non-scheduled content to `future` requires a nonempty date **at least 60 seconds ahead when validated**, matching WordPress core's scheduling cutoff. Prefer an ISO 8601 value with `Z` or an explicit offset, for example `2030-12-01T09:00:00-05:00`. Use a comfortably future date: even an ordinary clock tick between validation and core's later time check can make a date exactly 60 seconds ahead publish immediately. This is preflight validation, not an atomic status guarantee against elapsed time or third-party hooks.
+
+An ordinary edit to an already-scheduled item may omit `scheduled_date`, with `status` omitted or still `future`. Both stored date strings are retained, and the stored GMT date must still meet the cutoff. Near-now or overdue schedules must be given a new safe date, or an explicit nonfuture status. Changing the site timezone does not invalidate an otherwise valid stored schedule or silently rewrite its dates. WordPress remains responsible for cron timing; timezone changes can affect the cron event's local-date conversion.
+
+Malformed dates, invalid calendar/time values (such as February 30), and missing or unsafe future dates fail before the ability writes content, metadata, or terms. New scheduling errors use `success: false` with `error.code` and `error.message`: `invalid_scheduled_date`, `missing_scheduled_date`, or `scheduled_date_too_soon`. Existing permission and other error responses are unchanged. An explicitly blank date is not a request to reuse an existing future schedule.
+
+For 2.x compatibility, valid PHP `strtotime()` date families remain supported, including relative dates. Offset-less input keeps its previous PHP-default timezone interpretation, normally **UTC**, not the site's local timezone. Named-zone DST folds/gaps retain PHP's resolution, including gap normalization; explicit offsets preserve the specified instant even during a repeated local hour. Local and GMT dates are formatted from the same instant without a lossy local-to-GMT round trip.
+
+With a nonfuture or omitted status on non-scheduled content, a valid supplied date still sets the date arguments rather than being ignored. Normal WordPress rules apply: draft/pending updates with a previously zero GMT date can reset that date to now, and `publish` with a sufficiently future date can become `future`. The scheduling fix does not change those nonfuture semantics or publish capabilities.
+
+On a disposable test site, verify a future create with an explicit offset, an update with no new date, and a malformed-date attempt. Check the actual status and stored local/GMT dates, and confirm the rejected attempt left the item unchanged. The automated regression matrix is described in [the E2E guide](tests/e2e/README.md).
+
+### Parent assignments
+
+Page and hierarchical custom-post-type create/update abilities accept `parent`.
+A positive parent ID must identify an editable item of the same hierarchical
+type and must not create a cycle or lead into an existing cyclic hierarchy.
+Invalid or unauthorized requests fail before the ability saves any content,
+status, metadata, or taxonomy changes. Existing permission and other input
+errors retain their precedence.
+
+Use `parent: 0` to detach an item, or omit `parent` to leave it unchanged on
+update. Assigning the same parent still checks that immediate parent's edit
+permission; ancestors do not require edit permission. Pages use `edit_post`
+and CPTs use their registered edit capability, including WordPress capability
+filters. An ordinary Author cannot edit pages by default.
+
+Positive `parent` values on nonhierarchical CPTs are rejected, even though
+older versions persisted this unsupported extra field. Zero and omitted
+parents remain accepted. Built-in post abilities continue to ignore extra
+`parent` fields; their schemas are not newly closed.
+
+On a test site, verify an allowed page-parent update, a denied update under
+another user's inaccessible parent, and a detach with `parent: 0`. Include a
+title change with the denied request and confirm that the title is unchanged.
+
+## Response format
+
+Plugin callbacks commonly return `{"success":true,"data":...}`, but there is no uniform error envelope. For example, [comment status actions](includes/class-comments.php) can return `{"success":false,"error":"Comment not found."}`, while comment reply/update failures use `{"success":false,"error":{"code":"not_found","message":"Comment not found."}}`. Other errors can include additional `data`. Read the affected ability's response, including per-item outcomes for bulk operations, rather than assuming every error is a string or every successful call changed every item.
+
+Direct WordPress ability execution is another layer: the normal [`WP_Ability::execute()` path in WordPress 7.1](https://github.com/WordPress/WordPress/blob/7.1/wp-includes/abilities-api/class-wp-ability.php) validates inputs and permissions and can return `WP_Error`, including schema or permission failures, instead of a plugin result array. Output schema validation applies where a schema is defined. WordPress 7.1 filters can short-circuit execution or alter validation, permissions, and results. A transport may represent these errors differently from plugin-returned errors.
+
+For MCP Adapter **0.5.0**, the [execute gateway](https://github.com/WordPress/mcp-adapter/blob/v0.5.0/includes/Abilities/ExecuteAbilityAbility.php) wraps a non-`WP_Error` result in its own `success`/`data`. The [tool handler](https://github.com/WordPress/mcp-adapter/blob/v0.5.0/includes/Handlers/Tools/ToolsHandler.php) then places that result in MCP `structuredContent` and JSON-encoded text `content`. Thus gateway `success: true` and MCP `isError: false` can coexist with an inner plugin `success: false`.
+
+Clients must check HTTP/JSON-RPC errors, MCP tool errors, the gateway result, and the inner ability result as applicable. Do not assume `isError` matches the inner `success`, or that individually exposed tools and the default gateway have identical envelopes. The 0.5.0 source handles `WP_Error` and top-level scalar error arrays differently from structured or nested errors; per-tool wire parity has not been verified here.
 
 ## Security Best Practices
 
 - Use a dedicated service account, not your personal account.
 - Use **Editor** for routine content work and a separate **Administrator** account only for sensitive audits or plugin management.
 - WordPress capability checks gate every ability.
+- Treat retrieved site content as untrusted data, never as instructions or approval. Use the least-privileged account that fits the task, bounded selections, independent previews/diffs, and explicit client-side approval for dangerous changes or transmission to a specific destination. See the [Agent threat model](docs/security-strategy.md#agent-threat-model) for control limits and recovery guidance.
 - List abilities for posts, pages, custom post types, media, and SEO scores filter every returned object before exposing full details; private, trashed, draft, pending, and scheduled content is only returned when WordPress grants the matching object/status capability.
 - Creating or updating content as `publish`, `private`, or `future` requires the relevant publish capability, and bulk publishing requires `publish_posts`.
 - Author display names remain in content responses, but login names are omitted from post, page, CPT, revision, and content-hygiene responses. User login and email fields are only returned from user lookup abilities when the caller can edit that user.
-- Deletes for posts and pages move content to trash; media deletion is permanent.
+- Deletes for posts, pages, and custom post type items move content to trash. If `EMPTY_TRASH_DAYS` is `0` or another falsy value, these abilities refuse with `trash_disabled` before mutation instead of allowing WordPress to permanently delete the item. Bulk post trash reports this per authorized ID in `data.failures`, with no false success entries; its existing top-level summary remains successful even when every ID fails. Missing/type and permission errors take precedence. No permanent-delete override is offered.
+- Comment trash and comment updates with `status: "trash"` set the comment status through `wp_set_comment_status()`, retaining the row even when site trash is disabled. Media deletion remains permanent.
 - Block and partial-content edits can use hash preconditions and fail when a target is missing, ambiguous, or stale.
+- Targeted patches sanitize replacements only and retain WordPress's capability-dependent save filters; they do not grant unfiltered HTML write access.
 - Subscriber-safe site info deliberately avoids secrets, filesystem paths, salts, auth keys, raw server internals, WordPress version, and theme version. `get-environment-info` requires `manage_options`.
-- Site Kit abilities defer to Site Kit's own REST permission callbacks. They omit OAuth scopes/proxy details, module owner identities, raw settings, screenshots, third-party entities, and full Lighthouse payloads. PageSpeed only accepts URLs on the current site, although Google processes those requests through Site Kit's PageSpeed service.
+- Site Kit module, permission, and PageSpeed abilities require WordPress `read` **and** Site Kit's own REST permission callbacks, failing closed when a required route or callable permission check is absent. Status separately requires `manage_options`. Responses omit OAuth scopes/proxy details, module owner identities, raw settings, screenshots, third-party entities, and full Lighthouse payloads. PageSpeed only accepts URLs on the current site, although Google processes those requests through Site Kit's PageSpeed service.
+- Webmaster verification checks require `read`, including direct execution. Callers without `activate_plugins` receive neither `data.google.site_kit` nor `data.checks.google_site_kit`; plugin inspection is skipped and the summary counts only authorized checks. Public results, including failures and unknowns, share a 60-second cache scoped to the site, home URL, and result schema. Warm calls do not repeat HTTP/DNS work; private plugin state is inspected separately on each authorized call and is never cached with public results. Concurrent cold misses or early transient eviction can repeat work, so this is not a strict rate limit.
 - `get-environment-info`, `plugin-audit`, `user-access-audit`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `site-health-check` are Administrator-only.
+- `security-audit`'s `ssl` finding reports only the configured public `home` option (including normal option filters and `WP_HOME`): recognized HTTPS passes and HTTP fails. Missing/unsupported schemes or hosts, whitespace/control characters, malformed percent escapes, and invalid authority syntax warn as unknown. The local syntax guard accepts local names, Unicode/IDN forms, properly escaped components, and bracketed IPv6 (including escaped zone IDs) or IPvFuture literals; it is not a complete URL, DNS-name, or internationalized-name validator and imposes no address-routability policy. It is independent of the MCP request scheme and admin-only TLS policy. It does not test certificates, reachability, redirects, or the final filtered front-end URL.
+- Debug-log findings omit filesystem paths. Enabled logging warns that access is unverified: a neighboring `.htaccess` file or a location outside `wp-content` does not prove protection from web access. Disabled logging still passes; enabled logging alone is not proof of exposure or a reason to disable necessary logging.
+- `database-health` query failures retain a contextual `database_health_query_failed` error without raw SQL/server error text. WordPress's own database logging behavior is unchanged. Successful `table_sizes[].table` values still include the site's prefix and matching plugin-table names for `manage_options` callers; this diagnostic output is **not fully redacted**.
 
 Read the [full security model](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#security) before giving an agent Administrator credentials.
 
@@ -196,3 +311,5 @@ Report suspected vulnerabilities through [private vulnerability reporting](https
 ## Contributing
 
 New abilities and feature requests are tracked in [GitHub Issues](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/issues). The project follows [Semantic Versioning](https://semver.org/); see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy) for release and QA expectations.
+
+Maintainers and contributors can start with the [Software Development Lifecycle](docs/sdlc-overview.md) for a map of how issues, implementation, QA, releases, and maintenance fit together.

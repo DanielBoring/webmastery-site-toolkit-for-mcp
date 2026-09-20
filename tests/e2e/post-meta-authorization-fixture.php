@@ -1,194 +1,112 @@
 <?php
+/**
+ * Disposable standalone metadata authorization fixtures, never a production plugin.
+ */
 
-function wstm110_meta_fixtures( $author_id, $editor_id ) {
-	$fixtures = array();
-	foreach ( array( 'post' => $author_id, 'page' => $editor_id ) as $type => $author ) {
-		$id = e2e_insert_post( $type, "WSTM110 {$type}", 'Original metadata authorization content.', $author, 'draft' );
-		foreach ( array( 'wstm110_restricted', 'wstm110_open', 'wstm110_edit_only', 'wstm110_global', '_yoast_wpseo_title', '_seopress_titles_title', '_wstm110_hidden' ) as $key ) {
-			update_post_meta( $id, $key, 'original' );
-		}
-		update_post_meta( $id, 'wstm110_gate', 'ready' );
-		$fixtures[ "wstm110_{$type}_id" ] = $id;
-	}
-	return $fixtures;
-}
+defined( 'ABSPATH' ) || exit;
 
-function wstm110_meta_auth( $allowed, $key, $object_id, $user_id, $cap ) {
-	$post = get_post( $object_id );
-	if ( ! $object_id || ! $post ) {
-		throw new RuntimeException( 'Metadata authorization must not evaluate a fabricated object.' );
+function wstm110_auth( $allowed, $key, $id, $user_id, $cap ) {
+	$post = get_post( $id );
+	if ( ! $id || ! $post ) {
+		throw new RuntimeException( 'Metadata authorization requires a persisted object.' );
 	}
-	return 'draft' === $post->post_status && 'ready' === get_post_meta( $object_id, 'wstm110_gate', true )
+	if ( 'wstm110_edit_only' === $key ) {
+		return 'edit_post_meta' === $cap;
+	}
+	return 'draft' === $post->post_status && 'ready' === get_post_meta( $id, 'wstm110_gate', true )
 		&& ( user_can( $user_id, 'manage_options' ) || user_can( $user_id, 'wstm110_manage_meta' ) );
 }
 
-function wstm110_meta_register( $type, $key, $args, &$registrations ) {
+function wstm110_setup( $config = array() ) {
 	global $wp_filter;
-	$hook            = $type ? "auth_post_meta_{$key}_for_{$type}" : "auth_post_meta_{$key}";
-	$registrations[] = array(
-		'type' => $type,
-		'key' => $key,
-		'hook' => $hook,
-		'args' => get_registered_meta_keys( 'post', $type )[ $key ] ?? null,
-		'filter' => isset( $wp_filter[ $hook ] ) ? clone $wp_filter[ $hook ] : null,
+	$saved = array();
+	$definitions = array(
+		array( '', 'wstm110_global', 'wstm110_auth' ),
+		array( 'page', 'wstm110_global', '__return_true' ),
 	);
-	// Isolate this fixture's key policy from the provider callback it temporarily replaces.
-	remove_all_filters( $hook );
-	if ( null === $args ) {
+	foreach ( array( 'post', 'page' ) as $type ) {
+		foreach ( array( 'wstm110_restricted', 'wstm110_absent', 'wstm110_edit_only', 'wstm110_open' ) as $key ) {
+			$definitions[] = array( $type, $key, 'wstm110_open' === $key ? '__return_true' : 'wstm110_auth' );
+		}
+	}
+	if ( ! empty( $config['provider_policy'] ) ) {
+		foreach ( array( '', 'post', 'page' ) as $type ) {
+			$definitions[] = array( $type, $config['key'], 'unregistered' === $config['provider_policy'] ? null : 'wstm110_auth' );
+		}
+	}
+	foreach ( $definitions as list( $type, $key, $callback ) ) {
+		$hooks = $type ? array( "auth_post_meta_{$key}_for_{$type}", "auth_post_{$type}_meta_{$key}" ) : array( "auth_post_meta_{$key}" );
+		$entry = array( 'type' => $type, 'key' => $key, 'args' => get_registered_meta_keys( 'post', $type )[ $key ] ?? null, 'hooks' => array() );
+		foreach ( $hooks as $hook ) {
+			$entry['hooks'][ $hook ] = isset( $wp_filter[ $hook ] ) ? clone $wp_filter[ $hook ] : null;
+			remove_all_filters( $hook );
+		}
+		$saved[] = $entry;
 		unset( $GLOBALS['wp_meta_keys']['post'][ $type ][ $key ] );
-	} else {
-		register_post_meta( $type, $key, $args );
+		if ( null !== $callback ) {
+			register_post_meta( $type, $key, array( 'type' => 'string', 'single' => true, 'show_in_rest' => true, 'auth_callback' => $callback ) );
+		}
+	}
+	return $saved;
+}
+
+function wstm110_restore( $saved ) {
+	global $wp_filter, $wp_meta_keys;
+	foreach ( array_reverse( $saved ) as $entry ) {
+		unset( $wp_meta_keys['post'][ $entry['type'] ][ $entry['key'] ] );
+		if ( null !== $entry['args'] ) {
+			$wp_meta_keys['post'][ $entry['type'] ][ $entry['key'] ] = $entry['args'];
+		}
+		foreach ( $entry['hooks'] as $hook => $filter ) {
+			remove_all_filters( $hook );
+			if ( null !== $filter ) {
+				$wp_filter[ $hook ] = $filter;
+			}
+		}
 	}
 }
 
-function wstm110_meta_setup( $case ) {
-	if ( empty( $case['setup']['wstm110_meta_auth'] ) && empty( $case['setup']['wstm110_state'] ) ) {
-		return null;
-	}
-
-	$registrations = array();
-	$yoast_grant   = false;
-	if ( ! empty( $case['setup']['wstm110_meta_auth'] ) ) {
-		foreach ( array( 'post', 'page' ) as $type ) {
-			foreach ( array( 'wstm110_restricted', 'wstm110_absent', '_yoast_wpseo_title', '_seopress_titles_title' ) as $key ) {
-				wstm110_meta_register( $type, $key, array( 'type' => 'string', 'single' => true, 'show_in_rest' => true, 'auth_callback' => 'wstm110_meta_auth' ), $registrations );
-			}
-			wstm110_meta_register( $type, 'wstm110_open', array( 'type' => 'string', 'single' => true, 'show_in_rest' => true ), $registrations );
-			wstm110_meta_register(
-				$type,
-				'wstm110_edit_only',
-				array(
-					'type' => 'string',
-					'single' => true,
-					'show_in_rest' => true,
-					'auth_callback' => static function ( $allowed, $key, $id, $user_id, $cap ) {
-						return 'edit_post_meta' === $cap;
-					},
-				),
-				$registrations
-			);
-		}
-		wstm110_meta_register( '', 'wstm110_global', array( 'type' => 'string', 'single' => true, 'show_in_rest' => true, 'auth_callback' => 'wstm110_meta_auth' ), $registrations );
-		wstm110_meta_register( 'page', 'wstm110_global', array( 'type' => 'string', 'single' => true, 'show_in_rest' => true, 'auth_callback' => '__return_true' ), $registrations );
-
-		if ( ! empty( $case['setup']['wstm110_registered_unrestricted_seo'] ) ) {
-			foreach ( array( 'post', 'page' ) as $type ) {
-				foreach ( array( '_yoast_wpseo_focuskw', '_seopress_analysis_target_kw' ) as $key ) {
-					wstm110_meta_register( $type, $key, array( 'type' => 'string', 'single' => true, 'show_in_rest' => true, 'auth_callback' => '__return_true' ), $registrations );
-				}
-			}
-		}
-		if ( ! empty( $case['setup']['wstm110_unregistered_seo'] ) ) {
-			foreach ( array( '_yoast_wpseo_focuskw', '_seopress_analysis_target_kw' ) as $key ) {
-				foreach ( array( '', 'post', 'page' ) as $type ) {
-					wstm110_meta_register( $type, $key, null, $registrations );
-				}
-			}
-		}
-		if ( ! empty( $case['setup']['wstm110_extra_auth'] ) ) {
-			add_filter( 'auth_post_meta_wstm110_open_for_post', '__return_false', 20 );
-		}
-		if ( ! empty( $case['setup']['wstm110_map_deny'] ) ) {
-			add_filter( 'map_meta_cap', 'wstm110_deny_meta_cap', 100, 4 );
-		}
-		// Yoast grants the primitive edit_post_meta cap, which core permits to override a false auth result.
-		$yoast_grant = has_filter( 'user_has_cap', 'allow_custom_field_edits' );
-		if ( false !== $yoast_grant && empty( $case['setup']['wstm110_keep_yoast_grant'] ) ) {
-			remove_filter( 'user_has_cap', 'allow_custom_field_edits', $yoast_grant );
-		} else {
-			$yoast_grant = false;
-		}
-	}
-
-	$user  = wp_get_current_user();
-	$grant = $case['setup']['wstm110_grant'] ?? '';
-	if ( $grant ) {
-		$user->add_cap( $grant );
-	}
-	$id = $case['input']['post_id'] ?? $case['input']['page_id'] ?? 0;
-	return array(
-		'registrations' => $registrations,
-		'yoast_grant' => $yoast_grant,
-		'map_deny' => ! empty( $case['setup']['wstm110_map_deny'] ),
-		'user' => $user,
-		'grant' => $grant,
-		'id' => $id,
-		'post' => $id ? get_post( $id, ARRAY_A ) : null,
-		'meta' => $id ? get_post_meta( $id ) : null,
-		'ids' => wstm110_post_ids(),
-	);
+function wstm110_rule_matches( $cap, $id, $key ) {
+	$config = get_option( 'wstm110_policy', array() );
+	return in_array( $cap, array( 'edit_post_meta', 'delete_post_meta', 'add_post_meta' ), true )
+		&& (int) ( $config['id'] ?? 0 ) === (int) $id && ( $config['key'] ?? '' ) === $key;
 }
 
-function wstm110_post_ids() {
-	return get_posts( array( 'post_type' => array( 'post', 'page' ), 'post_status' => array_keys( get_post_stati() ), 'fields' => 'ids', 'posts_per_page' => -1, 'orderby' => 'ID', 'order' => 'ASC' ) );
-}
-
-function wstm110_deny_meta_cap( $caps, $cap, $user_id, $args ) {
-	if ( in_array( $cap, array( 'edit_post_meta', 'delete_post_meta', 'add_post_meta' ), true ) && '_yoast_wpseo_focuskw' === ( $args[1] ?? '' ) ) {
+add_filter( 'map_meta_cap', static function ( $caps, $cap, $user_id, $args ) {
+	$config = get_option( 'wstm110_policy', array() );
+	if ( ! empty( $config['deny_map'] ) && wstm110_rule_matches( $cap, $args[0] ?? 0, $args[1] ?? '' ) ) {
 		return array( 'do_not_allow' );
 	}
 	return $caps;
+}, PHP_INT_MAX, 4 );
+
+add_filter( 'user_has_cap', static function ( $allcaps, $caps, $args ) {
+	$config = get_option( 'wstm110_policy', array() );
+	if ( wstm110_rule_matches( $args[0], $args[2] ?? 0, $args[3] ?? '' ) ) {
+		if ( ! empty( $config['throw'] ) ) {
+			throw new RuntimeException( 'wstm110 expected capability exception' );
+		}
+		if ( ! empty( $config['deny_user'] ) ) {
+			foreach ( $caps as $cap ) {
+				$allcaps[ $cap ] = false;
+			}
+		}
+	}
+	return $allcaps;
+}, PHP_INT_MAX, 3 );
+
+foreach ( array( 'add_post_metadata', 'update_post_metadata', 'delete_post_metadata' ) as $hook ) {
+	add_filter( $hook, static function ( $value, $id, $key ) use ( $hook ) {
+		$config = get_option( 'wstm110_policy', array() );
+		if ( (int) ( $config['id'] ?? 0 ) === (int) $id ) {
+			$events = get_option( 'wstm110_events', array() );
+			$events[] = array( $hook, $id, $key );
+			update_option( 'wstm110_events', $events, false );
+		}
+		return $value;
+	}, 1, 3 );
 }
 
-function wstm110_meta_finish( $state, $case, $result, &$fixtures ) {
-	global $wp_meta_keys, $wp_filter;
-
-	if ( null === $state ) {
-		return true;
-	}
-	$passed = true;
-	if ( 'failure' === $case['expect'] ) {
-		$id     = $state['id'];
-		$passed = $state['ids'] === wstm110_post_ids()
-			&& ( ! $id || ( $state['post'] === get_post( $id, ARRAY_A ) && $state['meta'] === get_post_meta( $id ) ) );
-		if ( ! $passed ) {
-			echo "FAIL metadata denial changed persisted post fields, metadata, or created an object\n";
-		}
-	}
-	if ( 'success' === $case['expect'] && is_array( $result ) && isset( $result['data']['meta']['written'] ) ) {
-		foreach ( $result['data']['meta']['written'] as $key => $value ) {
-			$passed = $passed && $value === get_post_meta( $result['data']['id'], $key, true );
-		}
-	}
-	if ( 'success' === $case['expect'] && in_array( $case['ability'], array( 'webmastery-site-toolkit-for-mcp/create-post', 'webmastery-site-toolkit-for-mcp/create-page' ), true ) ) {
-		$id      = is_array( $result ) ? ( $result['data']['id'] ?? 0 ) : 0;
-		$post    = $id ? get_post( $id ) : null;
-		$ids     = wstm110_post_ids();
-		$type    = 'webmastery-site-toolkit-for-mcp/create-page' === $case['ability'] ? 'page' : 'post';
-		$created = $post && array( $id ) === array_values( array_diff( $ids, $state['ids'] ) )
-			&& array() === array_diff( $state['ids'], $ids )
-			&& $type === $post->post_type
-			&& $case['input']['title'] === $post->post_title
-			&& $case['input']['content'] === $post->post_content
-			&& ( $case['input']['status'] ?? 'draft' ) === $post->post_status;
-		if ( ! $created ) {
-			echo "FAIL metadata create did not persist exactly one complete post/page\n";
-		}
-		$passed = $passed && $created;
-	}
-	if ( ! empty( $case['setup']['wstm110_capture_created'] ) && is_array( $result ) && ! empty( $result['success'] ) ) {
-		$fixtures[ $case['setup']['wstm110_capture_created'] ] = $result['data']['id'];
-	}
-	foreach ( $state['registrations'] as $registration ) {
-		$type = $registration['type'];
-		$key  = $registration['key'];
-		unset( $wp_meta_keys['post'][ $type ][ $key ] );
-		remove_all_filters( $registration['hook'] );
-		if ( null !== $registration['args'] ) {
-			$wp_meta_keys['post'][ $type ][ $key ] = $registration['args'];
-		}
-		if ( null !== $registration['filter'] ) {
-			$wp_filter[ $registration['hook'] ] = $registration['filter'];
-		}
-	}
-	if ( false !== $state['yoast_grant'] ) {
-		add_filter( 'user_has_cap', 'allow_custom_field_edits', $state['yoast_grant'], 3 );
-	}
-	if ( $state['map_deny'] ) {
-		remove_filter( 'map_meta_cap', 'wstm110_deny_meta_cap', 100 );
-	}
-	if ( $state['grant'] ) {
-		$state['user']->remove_cap( $state['grant'] );
-	}
-	return $passed;
-}
+add_action( 'init', static function () {
+	wstm110_setup( get_option( 'wstm110_policy', array() ) );
+}, PHP_INT_MAX );

@@ -196,7 +196,7 @@ class Webmastery_MCP_Posts {
 			return current_user_can( $cap, $post_id, $key );
 		}
 
-		// Unregistered SEO keys need a protected-key default, not a bypass of core capability filters.
+		// Supply only the unregistered SEO default; core's effective capability filters still decide.
 		$hook    = "auth_post_meta_{$key}_for_{$type}";
 		$user_id = get_current_user_id();
 		$allow   = static function ( $allowed, $meta_key, $object_id, $checked_user_id, $checked_cap ) use ( $key, $post_id, $user_id, $cap ) {
@@ -208,32 +208,6 @@ class Webmastery_MCP_Posts {
 		} finally {
 			remove_filter( $hook, $allow, 10 );
 		}
-	}
-
-	private static function post_meta_auth_requires_post( $key, $type ) {
-		global $wp_filter;
-
-		// Core needs a persisted ID. Only known-unrestricted key policies can be accepted before insertion.
-		$hook         = has_filter( "auth_post_meta_{$key}_for_{$type}" )
-			? "auth_post_meta_{$key}_for_{$type}"
-			: "auth_post_meta_{$key}";
-		$unrestricted = ! is_protected_meta( $key, 'post' ) || self::uses_post_meta_compatibility_auth( $key, $type );
-
-		foreach ( [ $hook, "auth_post_{$type}_meta_{$key}" ] as $auth_hook ) {
-			if ( ! has_filter( $auth_hook ) ) {
-				continue;
-			}
-			foreach ( $wp_filter[ $auth_hook ]->callbacks as $callbacks ) {
-				foreach ( $callbacks as $callback ) {
-					if ( '__return_true' !== $callback['function'] ) {
-						return true;
-					}
-				}
-			}
-			$unrestricted = true;
-		}
-
-		return ! $unrestricted;
 	}
 
 	private static function normalize_post_meta_value( $value, $depth = 0 ) {
@@ -320,7 +294,7 @@ class Webmastery_MCP_Posts {
 	private static function meta_schema() {
 		return [
 			'type'                 => 'object',
-			'description'          => 'Post meta to write. Supports REST-registered keys and allowlisted SEO keys, subject to key authorization. Create calls reject policies requiring a persisted ID: create without meta, then update. Rejected batches return meta_write_failed details before saving.',
+			'description'          => 'Post meta to write. REST-registered keys and supported Yoast SEO or SEOPress protected keys are persisted; unsupported protected keys fail with details instead of being silently ignored.',
 			'additionalProperties' => [
 				'type' => [ 'string', 'number', 'integer', 'boolean', 'null' ],
 			],
@@ -403,7 +377,7 @@ class Webmastery_MCP_Posts {
 	}
 
 	private static function registered_rest_meta_keys( $type ) {
-		$registered = array_merge( get_registered_meta_keys( 'post' ), get_registered_meta_keys( 'post', $type ) );
+		$registered = get_registered_meta_keys( 'post', $type );
 		$keys       = [];
 
 		foreach ( $registered as $key => $args ) {
@@ -415,7 +389,7 @@ class Webmastery_MCP_Posts {
 		return $keys;
 	}
 
-	private static function prepare_meta_writes( $input, $type, $post_id = 0 ) {
+	private static function prepare_meta_writes( $input, $type ) {
 		$requested = [];
 
 		if ( isset( $input['meta'] ) && is_array( $input['meta'] ) ) {
@@ -569,25 +543,6 @@ class Webmastery_MCP_Posts {
 			];
 		}
 
-		foreach ( $prepared['writes'] as $key => $value ) {
-			$reason = '';
-			if ( $post_id ) {
-				// Like core REST, an upsert uses edit_post_meta even when update_post_meta adds the first row.
-				if ( ! self::can_edit_post_meta_key( $post_id, $key ) ) {
-					$reason = 'forbidden';
-				}
-			} elseif ( self::post_meta_auth_requires_post( $key, $type ) ) {
-				$reason = 'authorization_requires_post';
-			}
-			if ( $reason ) {
-				unset( $prepared['writes'][ $key ] );
-				$prepared['not_written'][] = [
-					'key'    => $key,
-					'reason' => $reason,
-				];
-			}
-		}
-
 		return $prepared;
 	}
 
@@ -595,7 +550,7 @@ class Webmastery_MCP_Posts {
 		$written = [];
 
 		foreach ( $writes as $key => $value ) {
-			update_post_meta( $post_id, $key, $value );
+			update_post_meta( $post_id, $key, wp_slash( $value ) );
 			$written[ $key ] = get_post_meta( $post_id, $key, true );
 		}
 
@@ -771,7 +726,7 @@ class Webmastery_MCP_Posts {
 	private static function register_bulk_trash_posts() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/bulk-trash-posts', [
 			'label'               => 'Bulk Trash Posts',
-			'description'         => 'Move multiple WordPress posts to trash and return per-post successes and failures.',
+			'description'         => 'Move multiple WordPress posts to trash and return per-post successes and failures. Refuses to delete when site trash is disabled.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => self::bulk_post_ids_schema( 'Post IDs to move to trash.' ),
 			'execute_callback'    => function ( $input ) {
@@ -796,6 +751,15 @@ class Webmastery_MCP_Posts {
 							'id'      => $id,
 							'code'    => 'forbidden',
 							'message' => 'You do not have permission to delete this post.',
+						];
+						continue;
+					}
+
+					if ( defined( 'EMPTY_TRASH_DAYS' ) && ! EMPTY_TRASH_DAYS ) {
+						$failures[] = [
+							'id'      => $id,
+							'code'    => 'trash_disabled',
+							'message' => 'Trash is disabled on this site; the post was not deleted.',
 						];
 						continue;
 					}
@@ -1331,7 +1295,7 @@ class Webmastery_MCP_Posts {
 					wp_slash(
 						[
 							'ID'           => $post->ID,
-							'post_content' => wp_kses_post( serialize_blocks( $blocks ) ),
+							'post_content' => serialize_blocks( $blocks ),
 						]
 					),
 					true
@@ -1512,7 +1476,7 @@ class Webmastery_MCP_Posts {
 
 					$patch = self::patch_content_by_exact_match(
 						$current_content,
-						wp_kses_post( $input['old_content'] ),
+						$input['old_content'],
 						$replacement_content
 					);
 				} else {
@@ -1525,7 +1489,7 @@ class Webmastery_MCP_Posts {
 
 				$args = [
 					'ID'           => $id,
-					'post_content' => wp_kses_post( $patch['content'] ),
+					'post_content' => $patch['content'],
 				];
 
 				$result = wp_update_post( wp_slash( $args ), true );
@@ -2062,7 +2026,7 @@ class Webmastery_MCP_Posts {
 			'title'   => [ 'type' => 'string', 'description' => "{$label} title" ],
 			'content' => [ 'type' => 'string', 'description' => "{$label} content (HTML)" ],
 			'status'         => [ 'type' => 'string', 'enum' => [ 'draft', 'publish', 'pending', 'private', 'future' ], 'default' => 'draft' ],
-			'scheduled_date' => [ 'type' => 'string', 'description' => 'ISO 8601 datetime to publish (required when status is future, e.g. 2025-12-01T09:00:00)' ],
+			'scheduled_date' => [ 'type' => 'string', 'description' => 'Date to set post_date. New future schedules require a valid date at least 60 seconds ahead at validation. Prefer ISO 8601 with Z or an explicit offset; legacy relative and offset-less parsing is retained (normally UTC).' ],
 			'excerpt'        => [ 'type' => 'string' ],
 			'slug'           => [ 'type' => 'string' ],
 			'meta'           => self::meta_schema(),
@@ -2080,7 +2044,7 @@ class Webmastery_MCP_Posts {
 
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/create-{$type}", [
 			'label'               => "Create {$label}",
-			'description'         => "Create a new WordPress {$type}. Metadata and SEO aliases with custom authorization require a second update call using the created ID; including them here fails before insertion.",
+			'description'         => "Create a new WordPress {$type}.",
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
@@ -2104,14 +2068,10 @@ class Webmastery_MCP_Posts {
 					'post_title'   => sanitize_text_field( $input['title'] ),
 					'post_content' => wp_kses_post( $input['content'] ),
 					'post_status'  => in_array( $input['status'] ?? 'draft', [ 'draft', 'publish', 'pending', 'private', 'future' ], true )
-										? $input['status']
+										? ( $input['status'] ?? 'draft' )
 										: 'draft',
 				];
 
-				if ( ! empty( $input['scheduled_date'] ) ) {
-					$args['post_date']     = wp_date( 'Y-m-d H:i:s', strtotime( sanitize_text_field( $input['scheduled_date'] ) ) );
-					$args['post_date_gmt'] = get_gmt_from_date( $args['post_date'] );
-				}
 				if ( ! empty( $input['excerpt'] ) ) {
 					$args['post_excerpt'] = sanitize_text_field( $input['excerpt'] );
 				}
@@ -2120,6 +2080,19 @@ class Webmastery_MCP_Posts {
 				}
 				if ( 'page' === $type && isset( $input['parent'] ) ) {
 					$args['post_parent'] = absint( $input['parent'] );
+				}
+
+				$schedule = Webmastery_MCP_Post_Scheduling::prepare( $input );
+				if ( is_wp_error( $schedule ) ) {
+					return self::error_response( $schedule->get_error_code(), $schedule->get_error_message() );
+				}
+				$args = array_merge( $args, $schedule );
+
+				if ( isset( $args['post_parent'] ) ) {
+					$parent_valid = Webmastery_MCP_Post_Parent::validate( $type, $args['post_parent'] );
+					if ( is_wp_error( $parent_valid ) ) {
+						return self::error_response( $parent_valid->get_error_code(), $parent_valid->get_error_message() );
+					}
 				}
 
 				$id = wp_insert_post( wp_slash( $args ), true );
@@ -2160,7 +2133,7 @@ class Webmastery_MCP_Posts {
 			'title'      => [ 'type' => 'string' ],
 			'content'    => [ 'type' => 'string' ],
 			'status'         => [ 'type' => 'string', 'enum' => [ 'draft', 'publish', 'pending', 'private', 'future' ] ],
-			'scheduled_date' => [ 'type' => 'string', 'description' => 'ISO 8601 datetime to publish (required when status is future)' ],
+			'scheduled_date' => [ 'type' => 'string', 'description' => 'Date to set post_date. New future schedules require a valid date at least 60 seconds ahead at validation; omit to retain a valid existing future schedule. Prefer ISO 8601 with an explicit offset; legacy parsing is retained.' ],
 			'excerpt'        => [ 'type' => 'string' ],
 			'slug'           => [ 'type' => 'string' ],
 			'meta'           => self::meta_schema(),
@@ -2199,7 +2172,7 @@ class Webmastery_MCP_Posts {
 					return [ 'success' => false, 'error' => 'You do not have permission to publish this ' . $type . '.' ];
 				}
 
-				$meta_writes = self::prepare_meta_writes( $input, $type, $id );
+				$meta_writes = self::prepare_meta_writes( $input, $type );
 				if ( ! empty( $meta_writes['not_written'] ) ) {
 					return self::meta_write_error_response( $meta_writes );
 				}
@@ -2221,12 +2194,21 @@ class Webmastery_MCP_Posts {
 				if ( isset( $input['status'] ) && in_array( $input['status'], [ 'draft', 'publish', 'pending', 'private', 'future' ], true ) ) {
 					$args['post_status'] = $input['status'];
 				}
-				if ( ! empty( $input['scheduled_date'] ) ) {
-					$args['post_date']     = wp_date( 'Y-m-d H:i:s', strtotime( sanitize_text_field( $input['scheduled_date'] ) ) );
-					$args['post_date_gmt'] = get_gmt_from_date( $args['post_date'] );
-				}
 				if ( 'page' === $type && isset( $input['parent'] ) ) {
 					$args['post_parent'] = absint( $input['parent'] );
+				}
+
+				$schedule = Webmastery_MCP_Post_Scheduling::prepare( $input, $post );
+				if ( is_wp_error( $schedule ) ) {
+					return self::error_response( $schedule->get_error_code(), $schedule->get_error_message() );
+				}
+				$args = array_merge( $args, $schedule );
+
+				if ( isset( $args['post_parent'] ) ) {
+					$parent_valid = Webmastery_MCP_Post_Parent::validate( $type, $args['post_parent'], $id );
+					if ( is_wp_error( $parent_valid ) ) {
+						return self::error_response( $parent_valid->get_error_code(), $parent_valid->get_error_message() );
+					}
 				}
 
 				$result = wp_update_post( wp_slash( $args ), true );
@@ -2264,7 +2246,7 @@ class Webmastery_MCP_Posts {
 		// --- delete (trash) ---
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/delete-{$type}", [
 			'label'               => "Delete {$label}",
-			'description'         => "Move a WordPress {$type} to trash.",
+			'description'         => "Move a WordPress {$type} to trash. Refuses to delete when site trash is disabled.",
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
@@ -2282,6 +2264,10 @@ class Webmastery_MCP_Posts {
 				}
 				if ( ! current_user_can( 'delete_post', $id ) ) {
 					return [ 'success' => false, 'error' => 'You do not have permission to delete this ' . $type . '.' ];
+				}
+
+				if ( defined( 'EMPTY_TRASH_DAYS' ) && ! EMPTY_TRASH_DAYS ) {
+					return self::error_response( 'trash_disabled', 'Trash is disabled on this site; the ' . $type . ' was not deleted.' );
 				}
 
 				$result = wp_trash_post( $id );

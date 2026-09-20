@@ -136,22 +136,32 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/create-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/create-page',
+	'webmastery-site-toolkit-for-mcp/create-category',
+	'webmastery-site-toolkit-for-mcp/create-tag',
 	'webmastery-site-toolkit-for-mcp/create-post',
 	'webmastery-site-toolkit-for-mcp/deactivate-plugin',
-	'webmastery-site-toolkit-for-mcp/delete-post-meta',
+	'webmastery-site-toolkit-for-mcp/delete-category',
+	'webmastery-site-toolkit-for-mcp/delete-tag',
 	'webmastery-site-toolkit-for-mcp/get-environment-info',
-	'webmastery-site-toolkit-for-mcp/get-post-meta',
 	'webmastery-site-toolkit-for-mcp/get-user',
+	'webmastery-site-toolkit-for-mcp/list-site-kit-modules',
+	'webmastery-site-toolkit-for-mcp/get-site-kit-permissions',
+	'webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed',
 	'webmastery-site-toolkit-for-mcp/list-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/list-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/list-media',
 	'webmastery-site-toolkit-for-mcp/list-users',
+	'webmastery-site-toolkit-for-mcp/patch-content-block',
+	'webmastery-site-toolkit-for-mcp/patch-post-content',
 	'webmastery-site-toolkit-for-mcp/security-audit',
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/update-page',
+	'webmastery-site-toolkit-for-mcp/update-category',
+	'webmastery-site-toolkit-for-mcp/update-tag',
 	'webmastery-site-toolkit-for-mcp/update-post',
-	'webmastery-site-toolkit-for-mcp/update-post-meta',
+	'webmastery-site-toolkit-for-mcp/upload-image',
+	'webmastery-site-toolkit-for-mcp/webmaster-verification-status',
 );
 
 foreach ( $required_failure_cases as $ability ) {
@@ -160,47 +170,73 @@ foreach ( $required_failure_cases as $ability ) {
 	}
 }
 
-$required_meta_denials = array(
-	'wstm110 read restricted key denied' => 'forbidden',
-	'wstm110 update restricted key denied' => 'forbidden',
-	'wstm110 no-op restricted key denied' => 'forbidden',
-	'wstm110 delete restricted key denied' => 'forbidden',
-	'wstm110 update SEO callback denied' => 'forbidden',
-	'wstm110 update mixed metadata atomic denial' => 'meta_write_failed',
-	'wstm110 page mixed metadata atomic denial' => 'meta_write_failed',
-	'wstm110 Yoast alias atomic denial' => 'meta_write_failed',
-	'wstm110 SEOPress alias atomic denial' => 'meta_write_failed',
-	'wstm110 create custom callback requires real post' => 'meta_write_failed',
-	'wstm110 create page callback requires real post' => 'meta_write_failed',
-);
-$required_provider_meta_denials = array(
-	'create-post writes Yoast meta requires a persisted post' => 'meta_write_failed',
-	'create-post writes Yoast free metadata fields requires a persisted post' => 'meta_write_failed',
-	'create-post writes SEOPress free metadata fields requires a persisted post' => 'meta_write_failed',
-	'wstm110 real Yoast page create denied' => 'meta_write_failed',
-	'wstm110 real SEOPress page create denied' => 'meta_write_failed',
-);
-foreach ( array( 'wstm110_meta_auth' => $required_meta_denials, 'wstm110_state' => $required_provider_meta_denials ) as $setup_key => $required_cases ) {
-	foreach ( $required_cases as $label => $code ) {
+foreach ( array( 'patch-content-block', 'patch-post-content' ) as $ability_slug ) {
+	foreach ( array( 'editor' => 'success', 'subscriber' => 'failure' ) as $role => $expect ) {
+		$matches = array_filter(
+			$manifest,
+			static function ( $case ) use ( $ability_slug, $role, $expect ) {
+				return "webmastery-site-toolkit-for-mcp/{$ability_slug}" === ( $case['ability'] ?? '' )
+					&& $role === ( $case['role'] ?? '' )
+					&& $expect === ( $case['expect'] ?? '' );
+			}
+		);
+		if ( empty( $matches ) ) {
+			$errors[] = "{$ability_slug} must keep a {$role} {$expect} manifest case.";
+		}
+	}
+}
+
+foreach ( array( 'get-post-meta', 'update-post-meta', 'delete-post-meta' ) as $slug ) {
+	foreach ( array( 'author' => 'failure', 'admin' => 'success' ) as $role => $expect ) {
 		$found = false;
 		foreach ( $manifest as $case ) {
-			if ( 'wstm110_state' === $setup_key && ( ! empty( $case['setup']['wstm110_meta_auth'] )
-				|| 'authorization_requires_post' !== ( $case['assert_values']['data.meta.not_written.0.reason'] ?? '' ) ) ) {
-				continue;
-			}
-			if ( $label === ( $case['label'] ?? '' ) && 'failure' === ( $case['expect'] ?? '' )
-				&& $code === ( $case['expect_error_code'] ?? '' ) && ! empty( $case['setup'][ $setup_key ] ) ) {
+			if ( "webmastery-site-toolkit-for-mcp/{$slug}" === ( $case['ability'] ?? '' )
+				&& $role === ( $case['role'] ?? '' ) && $expect === ( $case['expect'] ?? '' )
+				&& 'wstm110_restricted' === ( $case['input']['meta_key'] ?? '' )
+				&& ( 'success' === $expect || 'forbidden' === ( $case['expect_error_code'] ?? '' ) ) ) {
 				$found = true;
 				break;
 			}
 		}
 		if ( ! $found ) {
-			$errors[] = "{$label} must keep its metadata authorization denial and {$setup_key} persisted-state fixture.";
+			$errors[] = "{$slug} must keep its restricted-key {$role} {$expect} manifest case.";
 		}
 	}
 }
-if ( ! webmastery_mcp_security_qa_has_missing_path_case( $manifest, 'webmastery-site-toolkit-for-mcp/get-post-meta', array( 'data.meta.wstm110_restricted', 'data.meta._yoast_wpseo_title', 'data.meta._seopress_titles_title' ) ) ) {
-	$errors[] = 'Post metadata listings must keep restricted-key absence assertions.';
+if ( ! webmastery_mcp_security_qa_has_missing_path_case( $manifest, 'webmastery-site-toolkit-for-mcp/get-post-meta', array( 'data.meta.wstm110_restricted' ) ) ) {
+	$errors[] = 'Standalone metadata listings must retain restricted-key absence assertions.';
+}
+
+foreach ( array( 'list-site-kit-modules', 'get-site-kit-permissions', 'get-site-kit-pagespeed' ) as $slug ) {
+	$ability = "webmastery-site-toolkit-for-mcp/{$slug}";
+	$required = array( 'local-denial' => false, 'read-allowed' => false, 'subscriber-allowed' => false, 'upstream-denial' => false );
+	foreach ( $manifest as $case ) {
+		if ( $ability !== ( $case['ability'] ?? '' ) ) {
+			continue;
+		}
+		$role = $case['role'] ?? '';
+		$expect = $case['expect'] ?? '';
+		$allow = 'allow' === ( $case['setup']['wstm125_site_kit_permission'] ?? '' );
+		if ( 'wstm125_no_read' === $role && 'failure' === $expect && $allow && 'ability_invalid_permissions' === ( $case['expect_error_code'] ?? '' ) ) {
+			$required['local-denial'] = true;
+		}
+		if ( 'wstm125_read' === $role && 'success' === $expect ) {
+			$required['read-allowed'] = true;
+		}
+		if ( 'subscriber' === $role ) {
+			if ( 'success' === $expect && $allow ) {
+				$required['subscriber-allowed'] = true;
+			}
+			if ( 'failure' === $expect && ! $allow ) {
+				$required['upstream-denial'] = true;
+			}
+		}
+	}
+	foreach ( $required as $scenario => $present ) {
+		if ( ! $present ) {
+			$errors[] = "{$ability} must keep its Site Kit {$scenario} manifest case.";
+		}
+	}
 }
 
 foreach ( array( 'list-posts', 'list-pages' ) as $ability_slug ) {
@@ -223,6 +259,49 @@ if ( ! webmastery_mcp_security_qa_has_missing_path_case( $manifest, 'webmastery-
 
 if ( ! webmastery_mcp_security_qa_has_missing_path_case( $manifest, 'webmastery-site-toolkit-for-mcp/get-site-info', array( 'data.wordpress_version', 'data.active_theme.version' ) ) ) {
 	$errors[] = 'webmastery-site-toolkit-for-mcp/get-site-info must keep version fingerprinting absence assertions for low-privilege cases.';
+}
+
+$media_requirements = [
+	'upload-image with featured image metadata' => [ 'author', 'success', null ],
+	'upload-image as subscriber' => [ 'subscriber', 'failure', null ],
+	'upload-image rejects private URL' => [ 'author', 'failure', 'invalid_url' ],
+	'upload-image rejects non-image MIME' => [ 'author', 'failure', 'unsupported_mime_type' ],
+	'upload-image rejects empty file' => [ 'author', 'failure', 'invalid_file' ],
+	'upload-image rejects incomplete PNG header' => [ 'author', 'failure', 'invalid_file' ],
+	'upload-image rejects IPv6 literal' => [ 'author', 'failure', 'invalid_url' ],
+	'upload-image requires featured image target' => [ 'author', 'failure', 'missing_post_id' ],
+];
+foreach ( $media_requirements as $label => [ $role, $expect, $code ] ) {
+	$found = false;
+	foreach ( $manifest as $case ) {
+		if ( 'webmastery-site-toolkit-for-mcp/upload-image' === ( $case['ability'] ?? '' )
+			&& $label === ( $case['label'] ?? '' ) && $role === ( $case['role'] ?? '' )
+			&& $expect === ( $case['expect'] ?? '' ) && ( null === $code || $code === ( $case['expect_error_code'] ?? '' ) ) ) {
+			$found = true;
+			break;
+		}
+	}
+	if ( ! $found ) {
+		$errors[] = "upload-image must retain its {$label} manifest scenario with the expected role and result.";
+	}
+}
+
+$verification = 'webmastery-site-toolkit-for-mcp/webmaster-verification-status';
+foreach ( array( 'subscriber', 'author' ) as $role ) {
+	$role_cases = array_filter(
+		$manifest,
+		static function ( $case ) use ( $role ) {
+			return $role === ( $case['role'] ?? '' ) && 'success' === ( $case['expect'] ?? '' );
+		}
+	);
+	if ( ! webmastery_mcp_security_qa_has_missing_path_case( $role_cases, $verification, array( 'data.google.site_kit', 'data.checks.google_site_kit' ) ) ) {
+		$errors[] = "{$verification} must keep successful {$role} cases omitting both private Site Kit projections.";
+	}
+}
+foreach ( $manifest as $case ) {
+	if ( $verification === ( $case['ability'] ?? '' ) && ( ! isset( $case['assert_wstm114_http_calls'] ) || ! is_int( $case['assert_wstm114_http_calls'] ) || $case['assert_wstm114_http_calls'] < 0 ) ) {
+		$errors[] = "{$verification} must assert actual HTTP counts for every fixture case.";
+	}
 }
 
 if ( $errors ) {

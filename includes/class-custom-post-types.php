@@ -360,7 +360,7 @@ class Webmastery_MCP_Custom_Post_Types {
 			'title'          => [ 'type' => 'string', 'description' => 'Custom post type item title.' ],
 			'content'        => [ 'type' => 'string', 'description' => 'Custom post type item content (HTML).' ],
 			'status'         => [ 'type' => 'string', 'enum' => [ 'draft', 'publish', 'pending', 'private', 'future' ], 'default' => 'draft' ],
-			'scheduled_date' => [ 'type' => 'string', 'description' => 'ISO 8601 datetime to publish when status is future.' ],
+			'scheduled_date' => [ 'type' => 'string', 'description' => 'Date to set post_date. New future schedules require a valid date at least 60 seconds ahead at validation; omit to retain a valid existing future schedule. Prefer ISO 8601 with an explicit offset; legacy parsing is retained.' ],
 			'excerpt'        => [ 'type' => 'string' ],
 			'slug'           => [ 'type' => 'string' ],
 			'taxonomy_terms' => self::taxonomy_terms_schema(),
@@ -390,10 +390,6 @@ class Webmastery_MCP_Custom_Post_Types {
 		}
 		if ( isset( $input['status'] ) && in_array( $input['status'], $allowed_statuses, true ) ) {
 			$args['post_status'] = $input['status'];
-		}
-		if ( ! empty( $input['scheduled_date'] ) ) {
-			$args['post_date']     = wp_date( 'Y-m-d H:i:s', strtotime( sanitize_text_field( $input['scheduled_date'] ) ) );
-			$args['post_date_gmt'] = get_gmt_from_date( $args['post_date'] );
 		}
 		if ( isset( $input['parent'] ) ) {
 			$args['post_parent'] = absint( $input['parent'] );
@@ -573,6 +569,19 @@ class Webmastery_MCP_Custom_Post_Types {
 					$args['post_type']   = $post_type_name;
 					$args['post_status'] = $args['post_status'] ?? 'draft';
 
+					$schedule = Webmastery_MCP_Post_Scheduling::prepare( $input );
+					if ( is_wp_error( $schedule ) ) {
+						return self::error_response( $schedule->get_error_code(), $schedule->get_error_message() );
+					}
+					$args = array_merge( $args, $schedule );
+
+					if ( isset( $args['post_parent'] ) ) {
+						$parent_valid = Webmastery_MCP_Post_Parent::validate( $post_type_name, $args['post_parent'], 0, self::cap( $post_type_object, 'edit_post' ) );
+						if ( is_wp_error( $parent_valid ) ) {
+							return self::error_response( $parent_valid->get_error_code(), $parent_valid->get_error_message() );
+						}
+					}
+
 					$id = wp_insert_post( wp_slash( $args ), true );
 
 					if ( is_wp_error( $id ) ) {
@@ -630,8 +639,26 @@ class Webmastery_MCP_Custom_Post_Types {
 						return self::error_response( 'forbidden', 'You do not have permission to publish this custom post type item.' );
 					}
 
+					$validated_terms = self::validate_taxonomy_terms( $post_type_name, $input['taxonomy_terms'] ?? [] );
+					if ( is_wp_error( $validated_terms ) ) {
+						return self::error_response( $validated_terms->get_error_code(), $validated_terms->get_error_message() );
+					}
+
 					$args       = self::sanitized_post_args( $input, [ 'draft', 'publish', 'pending', 'private', 'future' ] );
 					$args['ID'] = $id;
+
+					$schedule = Webmastery_MCP_Post_Scheduling::prepare( $input, $post );
+					if ( is_wp_error( $schedule ) ) {
+						return self::error_response( $schedule->get_error_code(), $schedule->get_error_message() );
+					}
+					$args = array_merge( $args, $schedule );
+
+					if ( isset( $args['post_parent'] ) ) {
+						$parent_valid = Webmastery_MCP_Post_Parent::validate( $post_type_name, $args['post_parent'], $id, self::cap( $post_type_object, 'edit_post' ) );
+						if ( is_wp_error( $parent_valid ) ) {
+							return self::error_response( $parent_valid->get_error_code(), $parent_valid->get_error_message() );
+						}
+					}
 
 					$result = wp_update_post( wp_slash( $args ), true );
 
@@ -664,7 +691,7 @@ class Webmastery_MCP_Custom_Post_Types {
 			self::ability_name( 'delete', $ability_base ),
 			[
 				'label'               => "Delete {$label}",
-				'description'         => "Move a {$label} custom post type item to trash.",
+				'description'         => "Move a {$label} custom post type item to trash. Refuses to delete when site trash is disabled.",
 				'category'            => self::NAMESPACE,
 				'input_schema'        => [
 					'type'       => 'object',
@@ -682,6 +709,10 @@ class Webmastery_MCP_Custom_Post_Types {
 					}
 					if ( ! current_user_can( self::cap( $post_type_object, 'delete_post' ), $id ) ) {
 						return self::error_response( 'forbidden', 'You do not have permission to delete this custom post type item.' );
+					}
+
+					if ( defined( 'EMPTY_TRASH_DAYS' ) && ! EMPTY_TRASH_DAYS ) {
+						return self::error_response( 'trash_disabled', 'Trash is disabled on this site; the custom post type item was not deleted.' );
 					}
 
 					$result = wp_trash_post( $id );

@@ -1,0 +1,38 @@
+services:
+  wordpress:
+    volumes:
+      # Compose replaces the checkout bind with this same-target package bind.
+      - type: bind
+        source: ${E2E_PACKAGE_ROOT:?Package runtime requires an extracted plugin root}
+        target: /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./tests
+        target: /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./scripts/compatibility-baselines.php
+        target: /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/scripts/compatibility-baselines.php
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./scripts/compatibility-download.sh
+        target: /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/scripts/compatibility-download.sh
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.github/compatibility-versions.json
+        target: /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/.github/compatibility-versions.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./e2e-artifacts
+        target: /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/e2e-artifacts
+        bind:
+          create_host_path: false

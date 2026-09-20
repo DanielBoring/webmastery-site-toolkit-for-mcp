@@ -4,6 +4,8 @@ This repository uses layered QA for a public WordPress.org plugin. The goal is t
 
 The plugin is now reviewed as a WordPress.org plugin, so QA must prove more than "the code runs." It must also prove ability permissions, object-level access, response privacy, WordPress compatibility, and package contents stay aligned with WordPress.org expectations.
 
+See the [Software Development Lifecycle](sdlc-overview.md) for where QA fits in the complete development process.
+
 Related strategy guides:
 
 - [`ci-cd-strategy.md`](ci-cd-strategy.md) explains GitHub Actions automation, branch protection, workflow permissions, schedules, artifacts, and failure handling.
@@ -56,6 +58,8 @@ These two checks both use Docker WordPress, but they prove different things.
 
 Ability Contract QA is the plugin contract layer. It asks: "Inside WordPress, did this plugin register the abilities we expect, and do the manifest cases pass with the right permissions and response shapes?" It is broad and ability-driven.
 
+Contract QA additionally runs `tests/e2e/trash-safety-runner.php` in two fresh PHP processes. Each defines and verifies `EMPTY_TRASH_DAYS` before loading actual WordPress core: `30` for normal trash/restore and `0` for refusal before mutation. These lanes exercise registered abilities, not stubs, and report separately from the ordinary manifest counts. See [`tests/e2e/README.md`](../tests/e2e/README.md#isolated-trash-safety-regressions) for assertions and coverage boundaries.
+
 Full MCP E2E QA is the real transport layer. It asks: "Can an MCP client actually talk to WordPress through the MCP Adapter and perform real work?" It is narrower but deeper, because it uses Application Passwords, MCP session initialization, `tools/list`, ability discovery, and real CRUD calls over HTTP JSON-RPC.
 
 Both layers matter. Contract QA catches broad ability drift and permission regressions. Full MCP E2E catches transport and integration problems that direct PHP execution cannot see.
@@ -76,15 +80,15 @@ Both layers matter. Contract QA catches broad ability drift and permission regre
 
 Runtime-impacting paths include plugin source, tests, scripts, Docker configuration, Composer files, workflow files, package metadata, assets, and `readme.txt`.
 
-## Branch protection recommendation
+## Required main CI checks
 
-Require these checks before merging any PR:
+The active `main-ci-gates` ruleset requires exactly these GitHub Actions checks before merging any PR into `main`:
 
 - `1 - Static QA`
 - `2 - Unit Tests`
 - `Docker QA gate`
 
-Require these checks before merging runtime-impacting, ability, or security-sensitive PRs:
+For runtime-impacting, ability, or security-sensitive PRs, `Docker QA gate` requires both runtime checks to pass; they are not separate required-check entries in the ruleset:
 
 - `3 - Ability Contract QA`
 - `4 - Full MCP E2E QA`
@@ -97,7 +101,7 @@ Use `6 - Compatibility QA` as a scheduled/manual maintainer gate at first. Promo
 
 The important GitHub concept is "required status checks." A workflow can run on many events, but branch protection decides which successful checks are required before a PR can merge.
 
-The staged `main-ci-gates` ruleset must be activated only after successful real PR runs of the new checks, including a bot PR. `workflow_dispatch` job results do not satisfy branch-ruleset requirements. The path-filtered Release Package QA workflow must not become a required PR check in its current form.
+Enforcement was activated and read back on September 17, 2026, after all five genuine PR-event workflows passed on bot PR #140. See the [dated setup evidence](../.github/SETUP-COMPLETE.md#rollout-evidence), which distinguishes the dispatched compatibility pipeline from the approved PR-event checks. `workflow_dispatch` job results do not satisfy branch-ruleset requirements. Future `GITHUB_TOKEN`-created PRs still need maintainer workflow approval; the initial rollout did not create an auto-approval bypass. The path-filtered Release Package QA workflow must not become a required PR check in its current form.
 
 ## Which command should I run?
 
@@ -140,6 +144,10 @@ composer qa:release
 ```
 
 `composer qa:release` runs the Docker contract and transport checks before Plugin Check. If Docker is unavailable locally, use GitHub Actions for the authoritative release validation and document the local blocker in the PR.
+
+Release QA builds once (or accepts `RELEASE_ZIP`) and validates exact source/ZIP allowlist hashes before extraction. Runtime QA mounts `build/release-runtime/webmastery-site-toolkit-for-mcp`, not the checkout, through `docker-compose.release.yml`. Only `tests/`, the two compatibility helpers, the baseline JSON, and `e2e-artifacts/` are additional binds; no checkout-wide or `vendor/` mount can supply an unpackaged dependency. Plugin Check copies a separate pristine `build/release-check` extraction, so nested runtime mount placeholders cannot affect its findings. After QA, the actual runtime production tree must still match the ZIP: only the exact empty host-side bind placeholders are permitted, not arbitrary extra files or directories. The original ZIP's SHA-256 must also remain unchanged.
+
+Use a uniquely named disposable project, for example `COMPOSE_PROJECT_NAME=wstm-release-mytest MYSQL_PORT=0 WORDPRESS_PORT=0 REQUIRE_CURRENT_PLUGIN_CHECK=1 COMPOSER_PROCESS_TIMEOUT=0 composer qa:release`. The timeout override lets the full local runtime/checker sequence exceed Composer's default 300 seconds; GitHub release jobs invoke Bash directly under workflow time limits. Ordinary `composer qa:contract`/`qa:e2e` retain the checkout bind. Package mode explicitly selects the base and release Compose files for runtime, checker, and cleanup, rather than inheriting a caller's `COMPOSE_FILE`. Do not reuse a shared Compose project. `composer test:release-safeguards` exercises the real release/E2E orchestration with safe Docker stubs, malformed/missing package guards, a checkout-mode negative control, checker failures, and archive-identity mutation without Docker or network access.
 
 PowerShell users can use the local wrapper:
 
@@ -191,6 +199,8 @@ All lanes pull fresh images, run both Ability Contract QA and Full MCP E2E QA, f
 Additional coverage separates PHP 8.4, MySQL 8.4, floating SEO dependencies, and current Plugin Check package validation. Package-check lanes run the applicable package command; they are not interchangeable with the contract/transport lanes. Ordinary QA uses the reviewed dependency pins and executable-download digests in `.github/compatibility-versions.json`.
 
 Only tested candidates may update baselines or `readme.txt` `Tested up to`. Missing images, failed discovery, stale source history, and unavailable dependencies are explicit failures that block promotion. Baseline updates preserve the full configuration and PHP image suffix. Approval of the bot PR's genuine PR-event workflows is required; a successful manual dispatch is not a substitute.
+
+At the September 17, 2026 verification, `main` at `3dae8aa` still pins MCP Adapter 0.5.0. The passing compatibility pipeline proposed 0.6.1 and its matching verified SHA-256 in PR #140, which remained open and unmerged. Passing candidate and PR checks do not adopt that baseline or change WordPress, `Tested up to`, other dependency pins, or PHP support.
 
 ### Runtime coverage limitation
 

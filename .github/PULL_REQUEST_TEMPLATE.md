@@ -13,6 +13,7 @@
 
 ## Checklist
 - [ ] Capability checks use the narrowest relevant WordPress capability and return/surface `WP_Error` on failure
+- [ ] Delegated permissions retain a local WordPress floor plus upstream authorization in both entry paths, fail closed on missing/non-callable upstream checks, and distinguish fixture evidence from version-specific real-provider inspection
 - [ ] List/query abilities filter returned objects with object/status-aware checks and do not leak unauthorized totals or sensitive identity fields
 - [ ] Security-sensitive abilities include allowed and denied E2E manifest cases, plus `assert_missing_paths` for fields hidden from lower-privilege callers
 - [ ] Inputs are sanitized or validated (`sanitize_text_field`, `sanitize_key`, `absint`, `wp_kses_post`, enum validation, or an equivalent WordPress API)

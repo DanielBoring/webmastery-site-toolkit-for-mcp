@@ -46,6 +46,7 @@ This plugin follows [WordPress Coding Standards](https://developer.wordpress.org
 - **Sanitize inputs** — use `sanitize_text_field()` for strings, `absint()` for IDs, `wp_kses_post()` for HTML content, and enum validation for fixed-value fields
 - **Capability checks** — every ability must have a `permission_callback` that returns a `WP_Error` on failure, not just `false`; prefer object-specific checks such as `edit_post` / `delete_post` when an object ID is available, and make list/query abilities filter each returned object plus totals before exposing full details
 - **Security-sensitive abilities** — include allowed and denied manifest cases for abilities that expose private data, user identity, environment/plugin details, destructive actions, uploads, or status transitions; use `assert_missing_paths` when lower-privilege responses must hide fields
+- **Delegated permissions** — require a local WordPress capability floor plus the exact upstream route permission in both permission and direct execution paths. Test missing/non-callable upstream checks, and distinguish controlled fixtures from version-specific real-provider inspection; see the Site Kit policy in `docs/security-strategy.md`.
 - **Prefer WordPress APIs** — use WordPress API functions (`get_posts()`, `wp_insert_post()`, etc.) for normal reads and writes. Direct `$wpdb` reads are limited to administrator-only diagnostics such as database health checks, must be prepared where variables are present, and must surface query errors.
 - **No output buffering** — abilities return arrays or `WP_Error` objects; the MCP Adapter handles serialization
 - **WordPress.org readiness** — avoid trademark-confusing names, spammy readme text, undisclosed external calls, bundled duplicate libraries, and non-GPL-compatible assets
@@ -65,6 +66,8 @@ Workflow and shell changes also need the dedicated workflow lint checks. These t
 
 The repo strategy docs explain how maintainers operate the project:
 
+- [`docs/sdlc-overview.md`](docs/sdlc-overview.md) maps the complete lifecycle from issue intake through design, implementation, QA, release, and maintenance.
+- [`docs/qa-strategy.md`](docs/qa-strategy.md) explains the validation layers, what each check proves, and when each check runs.
 - [`docs/ci-cd-strategy.md`](docs/ci-cd-strategy.md) covers GitHub Actions, branch protection, workflow permissions, scheduled checks, and artifact policy.
 - [`docs/security-strategy.md`](docs/security-strategy.md) covers ability permissions, sensitive data, dependency and secret handling, and vulnerability response.
 - [`docs/release-strategy.md`](docs/release-strategy.md) covers versioning, release readiness, GitHub releases, WordPress.org SVN publishing, hotfixes, and rollback policy.
@@ -145,12 +148,12 @@ Environment-specific notes for GitHub Actions, Windows PowerShell, and Windows G
 | `composer qa:static` | PHP lint, PHPCS, PHPStan, Composer audit, manifest structure validation, security QA validation, and `git diff --check` |
 | `composer qa:unit` | PHPUnit unit tests |
 | `composer lint:workflows` | Actionlint, ShellCheck, and offline zizmor using the required versions already on `PATH` |
-| `composer test:release-safeguards` | Package/metadata/artifact regression tests plus local Git tag/ancestry fixtures; requires PHP ZipArchive and Bash, not Docker |
+| `composer test:release-safeguards` | Package/metadata/artifact, package-runtime orchestration and checker regressions plus local Git tag/ancestry fixtures; requires PHP ZipArchive and Bash, not Docker |
 | `composer test:ci-safeguards` | All release safeguards plus verified-download and pinned/floating dependency tests; also runs in the PHP 8.0/8.4 CI unit jobs |
 | `composer validate:security-qa` | Static security QA policy checks for risky permission callbacks and required permission-hardening manifest cases |
 | `composer qa:contract` | Docker Ability Contract QA against an already-running Compose stack |
 | `composer qa:e2e` | Docker Full MCP E2E QA against an already-running Compose stack |
-| `composer qa:release` | Release Package QA, including Docker contract/transport QA, built package validation, and WordPress Plugin Check |
+| `composer qa:release` | Release Package QA: original-ZIP extraction as the Docker plugin root, contract/transport QA, exact package validation, and WordPress Plugin Check on a separate pristine extraction |
 | `E2E_MANAGE_COMPOSE=1 composer qa:contract` | Ability Contract QA with automatic Compose startup and cleanup |
 | `E2E_MANAGE_COMPOSE=1 composer qa:e2e` | Full MCP E2E QA with automatic Compose startup and cleanup |
 | `scripts/qa-local.sh --contract` | Unix/Git Bash wrapper for Composer QA plus managed Ability Contract QA |
