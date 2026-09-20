@@ -176,7 +176,7 @@ if ( 'home' === $mode_arg ) {
 			'success_shape' => true === $call['result']['success'] && 5 === count( $data ),
 			'logical_posts_present' => in_array( 'posts', $tables, true ),
 			'opaque_custom_table_present' => in_array( 'custom_table_1', $tables, true ),
-			'prefix_absent_entire_payload' => ! str_contains( wp_json_encode( $call['result'] ), $wpdb->prefix ),
+			'physical_posts_absent_entire_payload' => ! str_contains( wp_json_encode( $call['result'] ), $wpdb->posts ),
 			'plugin_fingerprint_absent_entire_payload' => ! str_contains( wp_json_encode( $call['result'] ), 'wstm111_plugin_data' ),
 			'revision_counter' => $expected_revisions === $data['post_revisions']['count'],
 			'orphan_counter' => $expected_orphans === $data['orphaned_post_meta']['count'],

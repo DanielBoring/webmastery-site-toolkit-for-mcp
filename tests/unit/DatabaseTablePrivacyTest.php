@@ -133,6 +133,29 @@ final class DatabaseTablePrivacyTest extends TestCase {
 		$this->assertSame( array(), Webmastery_MCP_Database_Health::execute()['data']['table_sizes'] );
 	}
 
+	public function test_public_labels_do_not_depend_on_coincidental_prefix_substrings(): void {
+		foreach ( array( 'wp_', 'p', 'custom_', 'posts' ) as $prefix ) {
+			$names = array( $prefix . 'posts', $prefix . 'private_plugin' );
+			$this->database( array( 'posts' => $names[0] ), $names, $prefix );
+			$result = Webmastery_MCP_Database_Health::execute();
+			$this->assertSame( array( 'posts', 'custom_table_1' ), array_column( $result['data']['table_sizes'], 'table' ) );
+			foreach ( $names as $name ) {
+				$this->assertStringNotContainsString( $name, json_encode( $result ) );
+			}
+		}
+	}
+
+	public function test_raw_manifest_control_uses_resolvable_physical_name_placeholders(): void {
+		$manifest = json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
+		$cases = array_values( array_filter( $manifest, static fn( $case ) => 'database-health admin raw table opt-in' === ( $case['label'] ?? null ) ) );
+		$this->assertCount( 1, $cases );
+		$this->assertSame(
+			array( '__wstm111_posts_table__', '__wstm111_plugin_table__', '__wstm111_core_lookalike__' ),
+			array_column( $cases[0]['assert_values']['data.table_sizes'], 'table' )
+		);
+		$this->assertTrue( $cases[0]['input']['include_table_names'] );
+	}
+
 	public function test_direct_denial_precedes_input_validation_and_all_database_queries(): void {
 		$database = $this->database( array(), array() );
 		$GLOBALS['wstm_test_user_caps'] = array( 'read' );

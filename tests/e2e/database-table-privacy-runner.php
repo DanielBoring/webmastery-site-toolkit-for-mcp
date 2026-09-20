@@ -19,7 +19,7 @@ function wstm111_privacy_check( string $id, array $predicates, $response ): void
 	);
 }
 
-function wstm111_privacy_pair( string $boundary, callable $execute, array $private_names ): void {
+function wstm111_privacy_pair( string $boundary, callable $execute, array $private_names ): array {
 	global $wpdb;
 	$default = $execute( array() );
 	$explicit = $execute( array( 'include_table_names' => false ) );
@@ -37,6 +37,7 @@ function wstm111_privacy_pair( string $boundary, callable $execute, array $priva
 	);
 	$normalized_raw = $raw;
 	$custom_index = 0;
+	$json = wp_json_encode( $default );
 	foreach ( $raw_rows as $index => $row ) {
 		$name = $row['table'];
 		$logical = array_search( $name, $mapping, true );
@@ -46,17 +47,20 @@ function wstm111_privacy_pair( string $boundary, callable $execute, array $priva
 			&& $is_core === ( $rows[ $index ]['is_core_table'] ?? null );
 		$predicates[ "row_{$index}_label" ] = $expected_label === ( $rows[ $index ]['table'] ?? null );
 		$predicates[ "row_{$index}_scope" ] = str_starts_with( $name, $wpdb->prefix );
+		$predicates[ "row_{$index}_physical_name_absent_entire_payload" ] = ! str_contains( $json, $name );
 		$normalized_raw['data']['table_sizes'][ $index ]['table'] = $expected_label;
 	}
 	$predicates['all_metrics_other_fields_and_order_identical'] = $default === $normalized_raw;
-	$json = wp_json_encode( $default );
-	$predicates['configured_prefix_absent_entire_payload'] = ! str_contains( $json, $wpdb->prefix );
+	if ( str_starts_with( $wpdb->prefix, 'wstm111_private_' ) ) {
+		$predicates['custom_sentinel_prefix_absent_entire_payload'] = ! str_contains( $json, $wpdb->prefix );
+	}
 	foreach ( $private_names as $index => $name ) {
 		$predicates[ "owned_table_{$index}_absent_entire_payload" ] = ! str_contains( $json, $name )
 			&& ! str_contains( $json, substr( $name, strlen( $wpdb->prefix ) ) );
 		$predicates[ "owned_table_{$index}_opt_in_present" ] = in_array( $name, array_column( $raw_rows, 'table' ), true );
 	}
 	wstm111_privacy_check( "{$boundary}/default-explicit-opt-in", $predicates, array( 'default' => $default, 'explicit_false' => $explicit, 'raw_opt_in' => $raw ) );
+	return array_column( $raw_rows, 'table' );
 }
 
 function wstm111_privacy_http( array $private_names ): void {
@@ -95,7 +99,7 @@ function wstm111_privacy_http( array $private_names ): void {
 					$wire_results[] = $wire;
 					if ( true !== ( $input['include_table_names'] ?? false ) ) {
 						$json = wp_json_encode( $wire );
-						$private_tokens = array_merge( $private_names, array( $wpdb->prefix, 'plugin_fingerprint' ) );
+						$private_tokens = array_merge( $private_names, array_values( $wpdb->tables( 'all', true ) ), array( 'plugin_fingerprint' ) );
 						foreach ( $private_tokens as $token ) {
 							if ( str_contains( $json, $token ) ) {
 								throw new RuntimeException( 'Raw MCP result disclosed a private table identifier without opt-in.' );
@@ -112,7 +116,14 @@ function wstm111_privacy_http( array $private_names ): void {
 					return $payload;
 				};
 				if ( 'admin' === $login ) {
-					wstm111_privacy_pair( "http/{$transport}/admin", $execute, $private_names );
+					$physical_names = wstm111_privacy_pair( "http/{$transport}/admin", $execute, $private_names );
+					foreach ( array_slice( $wire_results, 0, 2 ) as $index => $wire ) {
+						$predicates = array();
+						foreach ( $physical_names as $row_index => $name ) {
+							$predicates[ "row_{$row_index}_physical_name_absent" ] = ! str_contains( wp_json_encode( $wire ), $name );
+						}
+						wstm111_privacy_check( "http/{$transport}/admin/default-wire-{$index}", $predicates, $wire );
+					}
 					$result = $execute( array( 'include_table_names' => 'true' ) );
 					wstm111_privacy_check( "http/{$transport}/admin/invalid-flag", array(
 						'invalid_input' => 'invalid_input' === ( $result['error']['code'] ?? null ),
@@ -175,7 +186,8 @@ try {
 		$omitted = $execute();
 		wstm111_privacy_check( "{$boundary}/omitted-input", array(
 			'success' => true === ( $omitted['success'] ?? false ),
-			'configured_prefix_absent' => ! str_contains( wp_json_encode( $omitted ), $wpdb->prefix ),
+			'physical_posts_absent_entire_payload' => ! str_contains( wp_json_encode( $omitted ), $wpdb->posts ),
+			'owned_fingerprint_absent_entire_payload' => ! str_contains( wp_json_encode( $omitted ), 'plugin_fingerprint' ),
 		), $omitted );
 		wstm111_privacy_pair( $boundary, $execute, $fixture->names );
 		foreach ( array( null, 'true', 'false', 0, 1, array() ) as $index => $flag ) {
