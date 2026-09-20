@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/error-contract-assertions.php';
+
 
 /**
  * Run using wp eval-file in a disposable installation. The same predicates
@@ -145,10 +147,12 @@ if ( 'home' === $mode_arg ) {
 			$call = wstm111_invoke( 'database-health', $mode, array( 'db_failure' => $context ) );
 			$error = $call['result'];
 			$actual = is_wp_error( $error ) ? array( 'type' => get_class( $error ), 'code' => $error->get_error_code(), 'message' => $error->get_error_message(), 'data' => $error->get_error_data() ) : $error;
+			$reason = 'direct' === $mode && is_wp_error( $error ) ? $error->get_error_code() : wstm118_error_reason( $error );
+			$message = 'direct' === $mode && is_wp_error( $error ) ? $error->get_error_message() : $error['error']['message'];
 			wstm111_record( "database/{$mode}/{$context}", array(
-				'wp_error' => $error instanceof WP_Error,
-				'same_code' => is_wp_error( $error ) && 'database_health_query_failed' === $error->get_error_code(),
-				'sanitized_context' => is_wp_error( $error ) && "Database health query failed while reading {$context}." === $error->get_error_message(),
+				'boundary_shape' => 'direct' === $mode ? $error instanceof WP_Error : is_array( $error ) && 'upstream_failed' === $error['error']['code'],
+				'same_reason' => 'database_health_query_failed' === $reason,
+				'sanitized_context' => "Database health query failed while reading {$context}." === $message,
 				'no_raw_sentinel' => ! str_contains( wp_json_encode( $actual ), 'wstm111_RAW_SQL_PRIVATE_SENTINEL' ),
 				'real_query_failure' => 1 === $call['evidence']['injected'] && str_contains( $call['evidence']['raw_error'], 'wstm111_RAW_SQL_PRIVATE_SENTINEL' ),
 			) + $call['invariants'], $actual, $call['evidence'] );
@@ -188,7 +192,7 @@ if ( 'home' === $mode_arg ) {
 			$call = wstm111_invoke( $ability, 'wrapper', array() );
 			$result = $call['result'];
 			wstm111_record( "permission/{$login}/{$ability}", array(
-				'permission_unchanged' => 'admin' === $login ? ! is_wp_error( $result ) : is_wp_error( $result ) && 'ability_invalid_permissions' === $result->get_error_code(),
+				'permission_unchanged' => 'admin' === $login ? true === ( $result['success'] ?? null ) : 'ability_invalid_permissions' === wstm118_error_reason( $result ),
 				'callback_permission_unchanged' => 'admin' === $login ? true === $permission : is_wp_error( $permission ) && 'forbidden' === $permission->get_error_code(),
 				'readonly_annotation' => true === $registered->get_meta()['annotations']['readonly'],
 			) + $call['invariants'], is_wp_error( $result ) ? array( 'type' => get_class( $result ), 'code' => $result->get_error_code(), 'message' => $result->get_error_message() ) : $result );

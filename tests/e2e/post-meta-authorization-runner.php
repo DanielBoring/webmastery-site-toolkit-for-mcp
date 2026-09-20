@@ -9,6 +9,8 @@ if ( 'cli' !== PHP_SAPI ) {
 	http_response_code( 403 );
 	exit( 'CLI only.' );
 }
+require_once __DIR__ . '/error-contract-assertions.php';
+
 
 function wstm110_assert( bool $condition, string $message ): void {
 	if ( ! $condition ) {
@@ -80,6 +82,9 @@ function wstm110_http( string $method, array $params, array $credential, string 
 function wstm110_payload( array $response ): array {
 	wstm110_assert( ! isset( $response['error'] ), 'JSON-RPC failure: ' . wp_json_encode( $response['error'] ?? null ) );
 	$tool = $response['result'] ?? array();
+	if ( true === ( $tool['isError'] ?? false ) ) {
+		return wstm118_wire_error( $tool );
+	}
 	$result = $tool['structuredContent'] ?? null;
 	if ( null === $result ) {
 		foreach ( $tool['content'] ?? array() as $content ) {
@@ -242,7 +247,7 @@ try {
 				$record['result'] = $result;
 				wstm110_assert( ! is_wp_error( $result ) && $expected === ( $result['success'] ?? null ), 'Unexpected success/denial: ' . wp_json_encode( $result ) );
 				if ( ! $expected ) {
-					wstm110_assert( ( $options['code'] ?? 'forbidden' ) === ( $result['error']['code'] ?? '' ), 'Wrong denial code.' );
+					wstm110_assert( ( $options['code'] ?? 'forbidden' ) === wstm118_error_reason( $result ), 'Wrong denial reason.' );
 					$after = wstm110_snapshot( $id );
 					$record['before_sha256'] = hash( 'sha256', serialize( $before ) );
 					$record['after_sha256'] = hash( 'sha256', serialize( $after ) );

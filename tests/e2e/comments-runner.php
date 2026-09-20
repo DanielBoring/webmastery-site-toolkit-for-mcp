@@ -6,6 +6,8 @@ if ( PHP_SAPI !== 'cli' ) {
 	http_response_code( 403 );
 	exit( 'CLI only.' );
 }
+require_once __DIR__ . '/error-contract-assertions.php';
+
 
 $_SERVER['HTTP_HOST'] = 'localhost';
 require_once '/var/www/html/wp-load.php';
@@ -27,10 +29,6 @@ function wstm105_error_value( $value ) {
 	return is_wp_error( $value )
 		? array( 'wp_error' => array( 'code' => $value->get_error_code(), 'message' => $value->get_error_message(), 'data' => $value->get_error_data() ) )
 		: $value;
-}
-
-function wstm105_missing_result( string $action ): array {
-	return array( 'success' => false, 'error' => 'update' === $action ? array( 'code' => 'not_found', 'message' => 'Comment not found.' ) : 'Comment not found.' );
 }
 
 $mode = getenv( 'WSTM105_MODE' ) ?: 'fixed';
@@ -158,7 +156,7 @@ try {
 					if ( 'http' === $boundary ) {
 						$raw = $clients[ $role ]->call( 'tools/call', array( 'name' => 'mcp-adapter-execute-ability', 'arguments' => array( 'ability_name' => $name, 'parameters' => (object) $input ) ) );
 						$record['raw'] = $raw;
-						$result = true === ( $raw['isError'] ?? false ) ? array( 'mcp_error' => $raw ) : webmastery_mcp_e2e_extract_tool_payload( $raw, $label );
+						$result = true === ( $raw['isError'] ?? false ) ? wstm118_wire_error( $raw ) : webmastery_mcp_e2e_extract_tool_payload( $raw, $label );
 						$record['envelope'] = $result;
 						if ( true === ( $result['success'] ?? null ) && isset( $result['data']['success'] ) ) {
 							$result = $result['data'];
@@ -171,7 +169,7 @@ try {
 					$record['after_sha256'] = hash( 'sha256', serialize( $after ) );
 					$record['after'] = wstm105_comment_state( $id );
 					$schema_invalid = 'direct' !== $boundary && in_array( $invalid, array( 'missing_id', 'string_id', 'array_id', 'null_id' ), true );
-					$schema_message = sprintf( 'Ability "%s" has invalid input. Reason: %s', $name, 'missing_id' === $invalid ? 'comment_id is a required property of input.' : 'input[comment_id] is not of type integer.' );
+					$schema_message = 'Ability input does not match its schema.';
 					$legacy_target = in_array( $invalid, array( '', 'negative_existing', 'global_zero' ), true );
 					$allowed = 'baseline' === $mode ? $legacy_target && ( 'direct' === $boundary || $moderate ) : '' === $invalid && $moderate && $edit;
 					wstm105_assert( $allowed === ( is_array( $result ) && true === ( $result['success'] ?? false ) ), 'Unexpected success/failure.' );
@@ -183,31 +181,27 @@ try {
 						wstm105_assert( $response_id === $result['data']['id'] && $response_status === $result['data']['status'], 'Success response changed.' );
 					} else {
 						wstm105_assert( $before === $after, 'Denied/invalid call changed persisted comments or metadata.' );
-						$permission_denied = ! $schema_invalid && ( '' === $invalid ? ! $moderate || ! $edit : ! $moderate ) && 'direct' !== $boundary;
-						if ( ! $schema_invalid && ! $permission_denied && '' !== $invalid ) {
-							wstm105_assert( wstm105_missing_result( $action ) === $result, 'Missing/invalid direct result changed.' );
-							if ( 'http' === $boundary ) {
-								wstm105_assert( array( 'success' => true, 'data' => $result ) === $record['envelope'], 'Missing-object HTTP gateway envelope changed.' );
-								wstm105_assert( array(
-									'content' => array( array( 'type' => 'text', 'text' => wp_json_encode( $record['envelope'] ) ) ),
-									'structuredContent' => $record['envelope'], 'isError' => false,
-								) === $raw, 'Missing-object raw MCP tool result changed.' );
-							}
-						} elseif ( 'ability' === $boundary ) {
-							$code = $schema_invalid ? 'ability_invalid_input' : 'ability_invalid_permissions';
-							wstm105_assert( is_wp_error( $result ) && $code === $result->get_error_code(), 'Core wrapper error code changed.' );
-							if ( ! $schema_invalid ) {
-								wstm105_assert( sprintf( 'Ability "%s" does not have necessary permission.', $name ) === $result->get_error_message(), 'Core permission message changed.' );
-							} else {
-								wstm105_assert( $schema_message === $result->get_error_message(), 'Core input message changed.' );
-							}
-						} elseif ( 'direct' === $boundary ) {
-							$message = ! $moderate ? 'Requires moderate_comments capability.' : 'Requires edit_comment capability for this comment.';
-							$expected = array( 'success' => false, 'error' => 'update' === $action ? array( 'code' => 'forbidden', 'message' => $message ) : $message );
-							wstm105_assert( $expected === $result, 'Direct forbidden response changed.' );
+						$permission_denied = ( '' === $invalid ? ! $moderate || ! $edit : ! $moderate ) && 'direct' !== $boundary;
+						if ( 'http' === $boundary && ! $moderate ) {
+							$reason = 'forbidden';
+							$message = 'Requires moderate_comments capability.';
+						} elseif ( $schema_invalid ) {
+							$reason = 'ability_invalid_input';
+							$message = $schema_message;
+						} elseif ( $permission_denied && 'ability' === $boundary ) {
+							$reason = 'ability_invalid_permissions';
+							$message = 'You do not have permission to execute this ability.';
+						} elseif ( '' !== $invalid ) {
+							$reason = 'not_found';
+							$message = 'Comment not found.';
 						} else {
-							$message = ! $moderate ? 'Requires moderate_comments capability.' : ( $schema_invalid ? $schema_message : 'Requires edit_comment capability for this comment.' );
-							wstm105_assert( array( 'content' => array( array( 'type' => 'text', 'text' => $message ) ), 'isError' => true ) === $raw, 'HTTP denial envelope changed.' );
+							$reason = 'forbidden';
+							$message = ! $moderate ? 'Requires moderate_comments capability.' : 'Requires edit_comment capability for this comment.';
+						}
+						wstm105_assert( $reason === wstm118_error_reason( $result ), 'Wrong canonical failure reason.' );
+						wstm105_assert( $message === $result['error']['message'] && '{}' === wp_json_encode( $result['error']['details'] ), 'Error message or empty details changed.' );
+						if ( 'http' === $boundary ) {
+							wstm105_assert( wp_json_encode( $result ) === $raw['content'][0]['text'], 'Canonical raw MCP error text changed.' );
 						}
 					}
 					$record['compatibility'] = in_array( $invalid, array( 'missing', 'zero', 'negative_missing' ), true )

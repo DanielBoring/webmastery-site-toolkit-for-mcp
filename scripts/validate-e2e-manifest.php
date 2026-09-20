@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/tests/e2e/error-contract-assertions.php';
+
 $repo_root     = dirname(__DIR__);
 $manifest_path = $repo_root . '/tests/e2e/abilities-manifest.json';
 $allowed_roles = array(
@@ -89,6 +91,17 @@ foreach ( $manifest as $index => $case ) {
 	$expect = (string) ( $case['expect'] ?? '' );
 	if ( '' !== $expect && ! in_array( $expect, array( 'success', 'failure' ), true ) ) {
 		$errors[] = webmastery_mcp_manifest_path( $case_number, 'expect' ) . ' must be success or failure.';
+	}
+
+	if ( 'failure' === $expect ) {
+		try {
+			if ( 'canonical' !== ( $case['expect_error_shape'] ?? null )
+				|| wstm118_expected_code( $case['expect_error_reason'] ?? '' ) !== ( $case['expect_error_code'] ?? null ) ) {
+				$errors[] = "case {$case_number} requires canonical error shape, code, and precise reason.";
+			}
+		} catch ( RuntimeException $error ) {
+			$errors[] = "case {$case_number}: " . $error->getMessage();
+		}
 	}
 
 	if ( isset( $case['assert_diagnostic_findings'] ) ) {

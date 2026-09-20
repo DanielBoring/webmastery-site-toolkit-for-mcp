@@ -32,6 +32,7 @@ final class CoverageManifestTest extends TestCase {
 		$script = $tmp . '/scripts/' . $name;
 		$file = $tmp . '/tests/e2e/abilities-manifest.json';
 		copy( $root . '/scripts/' . $name, $script );
+		copy( $root . '/tests/e2e/error-contract-assertions.php', $tmp . '/tests/e2e/error-contract-assertions.php' );
 		$cases = json_decode( file_get_contents( $root . '/tests/e2e/abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
 		foreach ( $cases as &$case ) {
 			if ( 'webmastery-site-toolkit-for-mcp/delete-media' === $case['ability'] && 'failure' === $case['expect'] ) {
@@ -64,6 +65,7 @@ final class CoverageManifestTest extends TestCase {
 		} finally {
 			if ( is_file( $file ) ) { unlink( $file ); }
 			unlink( $script );
+			unlink( $tmp . '/tests/e2e/error-contract-assertions.php' );
 			rmdir( $tmp . '/tests/e2e' );
 			rmdir( $tmp . '/tests' );
 			rmdir( $tmp . '/scripts' );
