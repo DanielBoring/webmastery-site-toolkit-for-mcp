@@ -53,11 +53,20 @@ evidence, not a substitute for those PR checks.
 
 At this September 17 verification,
 [PR #140](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/pull/140)
-is **open and unmerged**, authored by `github-actions`. Its one-file diff changes
+was **open and unmerged**, authored by `github-actions`. Its original one-file diff changed
 only MCP Adapter 0.5.0 to 0.6.1 and the matching verified SHA-256 in
-[`compatibility-versions.json`](compatibility-versions.json). Main still uses
+[`compatibility-versions.json`](compatibility-versions.json). Main at `3dae8aa` used
 MCP Adapter **0.5.0**. WordPress, `readme.txt` `Tested up to`, other dependency
 pins, and PHP support are unchanged.
+
+### Current compatibility baseline
+
+The checked-in configuration pins WordPress 7.1 and MCP Adapter 0.6.1 with its
+verified download digest. The September 17 rollout record above describes the
+earlier 0.5.0 baseline, not the current configuration. This adapter update leaves
+WordPress, `Tested up to`, other dependency pins, and PHP support unchanged.
+Baseline promotion still requires current-source compatibility and genuine PR
+checks; it does not authorize a production release.
 
 ## Other GitHub controls last verified on September 16, 2026
 
