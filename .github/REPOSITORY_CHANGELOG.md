@@ -9,6 +9,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 ### Added
 
 - Added independent canonical-error assertions and strict manifest/validator mutation coverage; migrated existing error expectations without removing persistence, hook, scheduled CRUD, or success-payload checks. Documented the unreleased 3.0 migration and contributor response requirements.
+- Added disposable-only actual MCP gateway/individual error probes, advertised-tool discovery, core hook/no-replay checks, provider redaction and foreign-result isolation controls, bulk-state evidence, credential cleanup readback, and retained failed-run artifacts.
 
 - Added focused SEO keyword data/message regressions for both providers, found/missing diagnostics, Yoast precedence, SEOPress fallback, and no-keyword behavior. Shared inert fixtures exercise exact metrics, complete diagnostic arrays, and scores through units, the ability manifest, and the existing MCP HTTP client; all previous permission cases remain unchanged.
 

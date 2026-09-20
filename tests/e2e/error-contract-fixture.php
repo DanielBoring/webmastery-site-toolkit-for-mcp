@@ -65,11 +65,21 @@ add_action( 'wp_abilities_api_init', static function () {
 		'meta' => array( 'mcp' => array( 'public' => true, 'type' => 'tool' ), 'annotations' => array( 'readonly' => true, 'destructive' => false, 'idempotent' => true ) ),
 	);
 	wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-probe', $args );
-	wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-bad-execute', array_replace( $args, array( 'execute_callback' => 'wstm118_nonexistent_callback' ) ) );
-	wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-bad-permission', array_replace( $args, array( 'permission_callback' => 'wstm118_nonexistent_callback' ) ) );
-	wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-missing-schema', array_replace( $args, array( 'input_schema' => array() ) ) );
-	wp_register_ability( 'wstm118-foreign/probe', array_replace( $args, array( 'execute_callback' => 'wstm118_foreign_result', 'permission_callback' => '__return_true' ) ) );
+	wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-bad-execute', array_replace( $args, array( 'description' => 'Controlled invalid execute callback.', 'execute_callback' => 'wstm118_nonexistent_callback' ) ) );
+	wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-bad-permission', array_replace( $args, array( 'description' => 'Controlled invalid permission callback.', 'permission_callback' => 'wstm118_nonexistent_callback' ) ) );
+	wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-missing-schema', array_replace( $args, array( 'description' => 'Controlled missing schema.', 'input_schema' => array() ) ) );
+	wp_register_ability( 'wstm118-foreign/probe', array_replace( $args, array( 'description' => 'Controlled foreign namespace.', 'execute_callback' => 'wstm118_foreign_result', 'permission_callback' => '__return_true' ) ) );
 }, 100 );
+
+add_filter( 'mcp_adapter_tool_name', static function ( $name, $ability ) {
+	if ( 'webmastery-site-toolkit-for-mcp/wstm118-probe' === $ability->get_name() ) {
+		return 'fixture-owned-probe';
+	}
+	if ( 'wstm118-foreign/probe' === $ability->get_name() ) {
+		return 'webmastery-site-toolkit-for-mcp-foreign-control';
+	}
+	return $name;
+}, 10, 2 );
 
 foreach ( array( 'before', 'after' ) as $stage ) {
 	add_action( "wp_{$stage}_execute_ability", static function ( $name ) use ( $stage ) {

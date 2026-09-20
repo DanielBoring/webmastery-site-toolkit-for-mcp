@@ -6,6 +6,10 @@ if ( PHP_SAPI !== 'cli' ) {
 	http_response_code( 403 );
 	exit( 'CLI only.' );
 }
+if ( '1' !== getenv( 'WSTM118_DISPOSABLE' ) ) {
+	fwrite( STDERR, "Error-contract proof requires WSTM118_DISPOSABLE=1 on an owned disposable site.\n" );
+	exit( 1 );
+}
 
 $_SERVER['HTTP_HOST'] = 'localhost';
 require_once '/var/www/html/wp-load.php';
@@ -51,17 +55,27 @@ try {
 	}
 	$listing = $clients['individual']->call( 'tools/list' );
 	webmastery_mcp_e2e_assert( isset( $listing['tools'] ) && ! isset( $listing['nextCursor'] ), 'Individual fixture discovery is incomplete.' );
-	$individual_names = array_column( $listing['tools'], 'name' );
-	$summary['individual_tools'] = $individual_names;
-	$call = static function ( $boundary, $name, $input ) use ( &$clients, $individual_names ) {
-		$tool_name = str_replace( '/', '-', $name );
+	$summary['individual_catalog'] = $listing;
+	$summary['discovered_mapping'] = array();
+	$summary['error_wire_keys'] = array();
+	$call = static function ( $boundary, $name, $input ) use ( &$clients, $listing, &$summary ) {
+		$tool_name = 'mcp-adapter-execute-ability';
 		if ( 'individual' === $boundary ) {
-			webmastery_mcp_e2e_assert( in_array( $tool_name, $individual_names, true ), 'Individual ability tool was not discovered: ' . $name );
+			$description = trim( wp_get_ability( $name )->get_description() );
+			$matches = array_values( array_filter( $listing['tools'], static fn( $tool ) => $description === ( $tool['description'] ?? null ) ) );
+			webmastery_mcp_e2e_assert( 1 === count( $matches ) && is_string( $matches[0]['name'] ?? null ), 'Individual ability descriptor was missing or ambiguous: ' . $name );
+			webmastery_mcp_e2e_assert( 'object' === ( $matches[0]['inputSchema']['type'] ?? null ), 'Discovered tool lacks an object input schema.' );
+			$tool_name = $matches[0]['name'];
+			$summary['discovered_mapping'][ $name ] = $tool_name;
 		}
-		return $clients[ $boundary ]->call( 'tools/call', array(
-			'name' => 'gateway' === $boundary ? 'mcp-adapter-execute-ability' : $tool_name,
+		$result = $clients[ $boundary ]->call( 'tools/call', array(
+			'name' => $tool_name,
 			'arguments' => 'gateway' === $boundary ? array( 'ability_name' => $name, 'parameters' => (object) $input ) : (object) $input,
 		) );
+		if ( true === ( $result['isError'] ?? null ) ) {
+			$summary['error_wire_keys'][] = array( 'boundary' => $boundary, 'ability' => $name, 'keys' => array_keys( $result ), 'has_structured_content' => array_key_exists( 'structuredContent', $result ) );
+		}
+		return $result;
 	};
 	$name = 'webmastery-site-toolkit-for-mcp/wstm118-probe';
 	$ability = wp_get_ability( $name );
@@ -177,7 +191,9 @@ try {
 	}
 	if ( is_array( $password ) ) {
 		$deleted = WP_Application_Passwords::delete_application_password( $admin->ID, $password[1]['uuid'] );
-		if ( true !== $deleted ) {
+		$remaining = array_filter( WP_Application_Passwords::get_user_application_passwords( $admin->ID ), static fn( $item ) => $password[1]['uuid'] === $item['uuid'] );
+		$summary['application_password_absent_after_cleanup'] = array() === $remaining;
+		if ( true !== $deleted || array() !== $remaining ) {
 			$summary['failed']++;
 			$summary['cleanup_errors'][] = array( 'resource' => 'application password', 'message' => 'Revocation failed.' );
 		}
