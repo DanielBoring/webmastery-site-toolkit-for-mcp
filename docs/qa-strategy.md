@@ -16,7 +16,7 @@ Related strategy guides:
 
 | GitHub Actions check | Command | What it proves | When it should run |
 | --- | --- | --- | --- |
-| 1 - Static QA | `composer qa:static` | PHP files parse, WordPress Coding Standards pass, PHPStan can analyze the plugin at the configured level, Composer dependencies have no known locked advisories, the E2E manifest is structurally valid, security-sensitive QA policy checks pass, and the diff has no whitespace errors. | Every PR and every push to `main`. |
+| 1 - Static QA | `composer qa:static` | PHP files parse, WordPress Coding Standards pass, PHPStan level 5 passes against reviewed baseline debt with working regression/ratchet guards, Composer dependencies have no known locked advisories, the E2E manifest is structurally valid, security-sensitive QA policy checks pass, and the diff has no whitespace errors. | Every PR and every push to `main`. |
 | 2 - Unit Tests | `composer qa:unit` | Small pieces of PHP logic behave correctly without booting WordPress. These tests are the fast safety net for sanitization, response shape, permission helpers, SEO metadata normalization, taxonomy helpers, plugin safety logic, and failure paths. | Every PR and every push to `main`. |
 | 3 - Ability Contract QA | `composer qa:contract` or `bash scripts/e2e-test.sh contract` | WordPress boots in Docker, required plugins load, every registered ability is represented in `tests/e2e/abilities-manifest.json`, manifest cases execute through `wp_get_ability()->execute()`, permission-sensitive cases pass, and the debug log stays clean. | Runtime PRs, ability PRs, security-sensitive PRs, `main`, releases, and manual dispatch. |
 | 4 - Full MCP E2E QA | `composer qa:e2e` or `bash scripts/e2e-test.sh e2e` | A real MCP HTTP JSON-RPC session can discover and execute abilities through the MCP Adapter, including Application Password authentication, session setup, tool discovery, editor CRUD, and subscriber denial. | Runtime PRs, ability PRs, security-sensitive PRs, `main`, releases, and manual dispatch. |
@@ -24,6 +24,34 @@ Related strategy guides:
 | 6 - Compatibility QA | `.github/workflows/compatibility-qa.yml` | Scheduled/manual Docker QA discovers official upstream releases, isolates pinned and candidate WordPress/MCP Adapter combinations, and promotes passing versions through a maintainer-reviewed PR while exercising ability contracts, MCP transport, and debug-log cleanliness. | Weekly schedule, manual dispatch after an upstream release, release-candidate investigation, and upstream-breakage triage. |
 
 Static QA runs the full toolchain on PHP 8.0 and syntax checks on PHP 8.4; Unit Tests run on both versions. Each workflow has a stable aggregate result. `Docker QA gate` reports successful change detection and the required Docker results; failure-induced skips cannot pass it. A separate workflow lint check runs actionlint, ShellCheck, and zizmor without making local PHP QA depend on Docker.
+
+## PHPStan level 5 and baseline ratchet
+
+`composer phpstan` analyses the plugin entry point and all of `includes/` at level 5, explicitly targeting PHP 8.0 regardless of the local interpreter. `phpstan-baseline.neon` records pre-existing diagnostics, not permission to introduce new ones. Each generated ignore has an anchored message, identifier, positive count, and individual file path. There are no excluded production paths or identifier-only/global ignores. The existing `treatPhpDocTypesAsCertain: false` policy and WordPress stubs bootstrap are retained; no extra bootstrap constants or relaxed rules hide debt.
+
+The initial reviewed baseline contains 35 diagnostics in 21 entries across nine files:
+
+| Existing diagnostic group | Count | Review context |
+| --- | ---: | --- |
+| Missing WordPress constants | 9 | `ARRAY_A`, `WP_CONTENT_DIR`, `WP_PLUGIN_DIR`, `DAY_IN_SECONDS`, and `MINUTE_IN_SECONDS` are runtime/bootstrap knowledge absent from the current analysis setup. Kept as explicit debt, not globally suppressed. |
+| Argument types | 4 | Media sideload array typing and post-update array shapes after `wp_slash`; investigate with WordPress stub and runtime evidence before changing calls. |
+| Media callback control flow | 16 | Always-true/false comparisons, boolean expressions, and unreachable code around by-reference state in deferred download hooks. Do not delete runtime safeguards merely to satisfy inference. |
+| Private late-static method calls | 2 | Media DNS validation calls need separate inheritance/typing review. |
+| Database error-state comparisons | 2 | Defensive checks of mutable `$wpdb->last_error` after database calls. |
+| Revision error check and sitemap offset | 2 | One impossible-type diagnostic and one redundant null-coalescing diagnostic; assess separately before simplifying defensive code. |
+
+A green run means no diagnostics beyond that reviewed debt, not that these findings are fixed or that all mixed input/output types are sound. The baseline matches counts per message/identifier/file, not line or expression identity: replacing a removed error with the same error elsewhere in the same file can evade the count ratchet and still needs human diff review. This tooling change does not validate ability schemas, enums, output contracts, or runtime permissions.
+
+### Reducing debt
+
+1. Fix the underlying issue with focused behavior/typing evidence. Do not add casts, assertions, inline ignores, broader types, or remove defensive checks solely to silence analysis.
+2. Run **the complete** `composer phpstan`. `reportUnmatchedIgnoredErrors: true` rejects removed diagnostics and reduced counts until the corresponding baseline entry is removed or its count lowered. Passing individual filenames to PHPStan skips unmatched-entry checking and is not ratchet evidence.
+3. Remove only resolved entries or reduce their counts. If regeneration is necessary, run `composer phpstan -- --generate-baseline=phpstan-baseline.neon`, then review the entire baseline diff. Reject unrelated additions, increased counts, wildcard paths, widened messages, and removed identifiers. Do not regenerate the baseline just to make a new error pass.
+4. Run `composer phpstan` and `composer test:phpstan-baseline` again, followed by `composer qa`. Commit the fix and baseline reduction together. New baseline debt needs explicit separate review and rationale; normal changes must not grow it.
+
+`composer test:phpstan-baseline` checks the effective repository configuration and ignore scopes, then generates isolated synthetic PHP under a random `build/phpstan-tests-*` directory. It inherits the real rules and unmatched-ignore setting, proves existing fixture debt passes, and requires nonzero analysis with the expected diagnostics for new level-5 argument/return errors, identical errors in another path, different messages under the same identifier, excess counts, partially stale counts, and fully stale entries. Lowering a fixed count and removing a resolved entry must restore a clean run. Fixtures are analysed, never executed, and cleaned up on exit; they are not shipped in the plugin.
+
+The guard runs in `composer qa:static` and in `composer test:ci-safeguards`, so CI exercises it on PHP 8.0 and 8.4 without changing the runtime test suites. PHPStan dependency upgrades remain a separate review because inference or diagnostic wording changes can alter baseline matching.
 
 ## Security QA policy
 

@@ -67,13 +67,15 @@ final class GithubSafeguardsTest extends TestCase {
 		self::assertStringContainsString('zizmor --offline', $helper);
 	}
 
-	public function test_normal_pr_ci_executes_release_and_compatibility_regressions(): void {
+	public function test_normal_pr_ci_executes_static_release_and_compatibility_regressions(): void {
 		$root = dirname(__DIR__, 2);
 		$composer = json_decode(file_get_contents($root . '/composer.json'), true, 512, JSON_THROW_ON_ERROR);
 		self::assertSame(
-			array('@test:release-safeguards', 'bash tests/compatibility-download-test.sh', 'bash tests/compatibility-dependency-policy-test.sh'),
+			array('@test:phpstan-baseline', '@test:release-safeguards', 'bash tests/compatibility-download-test.sh', 'bash tests/compatibility-dependency-policy-test.sh'),
 			$composer['scripts']['test:ci-safeguards']
 		);
+		self::assertSame('php scripts/test-phpstan-baseline.php', $composer['scripts']['test:phpstan-baseline']);
+		self::assertContains('@test:phpstan-baseline', $composer['scripts']['qa:static']);
 		self::assertSame(
 			array('php scripts/test-release-safeguards.php', 'bash scripts/test-release-tag-check.sh', 'bash scripts/test-release-plugin-check.sh', 'bash scripts/test-release-runtime.sh'),
 			$composer['scripts']['test:release-safeguards']
