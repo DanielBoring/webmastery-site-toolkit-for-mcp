@@ -81,15 +81,24 @@ try {
 	$ability = wp_get_ability( $name );
 	webmastery_mcp_e2e_assert( $ability instanceof Webmastery_MCP_Ability, 'Owned ability class was not installed.' );
 	webmastery_mcp_e2e_assert( ! wp_get_ability( 'wstm118-foreign/probe' ) instanceof Webmastery_MCP_Ability, 'Foreign ability class was intercepted.' );
+	foreach ( array( 'execute', 'permission' ) as $kind ) {
+		$record( "registration/{$kind}-callback", static function () use ( $kind ) {
+			$evidence = $GLOBALS['wstm118_registration'][ $kind ];
+			$floor = 0 === strpos( get_bloginfo( 'version' ), '6.9' );
+			webmastery_mcp_e2e_assert( $floor === $evidence['rejected'], 'Unexpected core invalid-callback registration behavior.' );
+			webmastery_mcp_e2e_assert( ( $floor ? 1 : 0 ) === count( $evidence['notices'] ), 'Unexpected registry diagnostic count.' );
+			return array( 'registration' => $evidence, 'execution_fixture' => 'Non-callable callback injected after successful registration.' );
+		} );
+	}
 	$cases = array(
 		'forbidden' => 'missing_capability', 'not_found' => 'target_not_found', 'invalid_input' => 'invalid_meta_key',
 		'precondition_failed' => 'content_hash_mismatch', 'conflict' => 'ambiguous_target', 'unsupported' => 'unsupported_type', 'upstream_failed' => 'update_failed',
 		'provider-known' => 'external_error', 'provider-unknown' => 'external_error', 'exception' => 'ability_callback_exception', 'invalid-output' => 'ability_invalid_output',
-		'deny' => 'missing_capability', 'provider-deny' => 'external_error', 'false-permission' => 'forbidden',
+		'deny' => 'missing_capability', 'provider-deny' => 'external_error', 'false-permission' => 'forbidden', 'permission-exception' => 'ability_callback_exception',
 	);
 	foreach ( $cases as $mode => $reason ) {
 		$input = array( 'mode' => $mode );
-		$denied = in_array( $mode, array( 'deny', 'provider-deny', 'false-permission' ), true );
+		$denied = in_array( $mode, array( 'deny', 'provider-deny', 'false-permission', 'permission-exception' ), true );
 		$record( "ability/{$mode}", static function () use ( $ability, $input, $denied, $mode, $reason, $assert_reason ) {
 			$GLOBALS['wstm118_counts'] = array_fill_keys( array( 'permission', 'execute', 'before', 'after' ), 0 );
 			$result = $assert_reason( $ability->execute( $input ), $denied ? 'ability_invalid_permissions' : $reason );
@@ -101,7 +110,8 @@ try {
 		if ( $denied ) {
 			$record( "permission/{$mode}", static function () use ( $ability, $input, $reason, $assert_reason ) {
 				$native = $ability->check_permissions( $input );
-				webmastery_mcp_e2e_assert( $native instanceof WP_Error && 403 === $native->get_error_data()['status'], 'Native carrier or status changed.' );
+				$status = 'permission-exception' === $input['mode'] ? 502 : 403;
+				webmastery_mcp_e2e_assert( $native instanceof WP_Error && $status === $native->get_error_data()['status'], 'Native carrier or status changed.' );
 				return $assert_reason( $native, $reason );
 			} );
 		} elseif ( in_array( $mode, array( 'forbidden', 'not_found', 'invalid_input', 'precondition_failed', 'conflict', 'unsupported', 'upstream_failed' ), true ) ) {

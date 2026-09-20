@@ -41,6 +41,17 @@ presence. Cleanup verifies owned application-password absence after revocation
 and removes only owned posts. Contract, HTTP, and package workflows retain the
 report for seven days, including failed runs.
 
+The floor and pinned-core runs record actual invalid-callback registration
+behavior: WordPress 6.9 rejects it with a registry diagnostic, while 7.1 accepts
+registration and rejects invocation. Two synthetic probes therefore inject
+non-callable callbacks via test-only reflection after successful registration;
+they exercise real core execution guards on both versions, not nonexistent
+tool errors. Registry rejection remains a separate exact assertion and only
+those controlled diagnostic messages are suppressed from the debug log.
+Execution and permission exceptions are both covered, including native 403
+authorization denials and default 502 callback failures, no execution after
+permission failure, and unchanged action counts.
+
 ## Comment moderation regression coverage
 
 `comments-fixture.php` adds `wstm105_*` fixtures and comment-specific checks. Its `wstm105_moderator` actor has the actual `comment_moderator` role with only `read` and `moderate_comments`. Cases cover all four writes, optional update statuses, Author moderation-floor denials, mapped-CPT allowed/denied controls, own-draft moderation, Administrator access, orphan comments, and missing/nonpositive IDs. Existing Editor cases and every landed main manifest case remain unchanged; runtime registrations remain the coverage authority.
