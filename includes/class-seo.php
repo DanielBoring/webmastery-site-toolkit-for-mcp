@@ -48,6 +48,10 @@ class Webmastery_MCP_SEO {
 	}
 
 	public static function execute_analyze_post( $input = [] ) {
+		$permission = self::permission_analyze_post( $input );
+		if ( is_wp_error( $permission ) ) {
+			return Webmastery_MCP_Response::from_wp_error( $permission );
+		}
 		$id   = absint( $input['post_id'] );
 		$post = get_post( $id );
 
@@ -89,17 +93,26 @@ class Webmastery_MCP_SEO {
 			$good[] = [ 'check' => 'word_count', 'message' => "Content length is good ({$word_count} words)." ];
 		}
 
-		$yoast_meta_desc                   = get_post_meta( $id, '_yoast_wpseo_metadesc', true );
-		$seopress_meta_desc                = get_post_meta( $id, '_seopress_titles_desc', true );
-		$meta_desc                         = '' !== $yoast_meta_desc ? $yoast_meta_desc : $seopress_meta_desc;
-		$data['yoast_meta_description']    = $yoast_meta_desc;
-		$data['seopress_meta_description'] = $seopress_meta_desc;
-		$data['seo_provider_meta_source']  = '' !== $yoast_meta_desc ? 'yoast' : ( '' !== $seopress_meta_desc ? 'seopress' : null );
-		$data['seo_plugins']               = [
+		$descriptions       = self::read_metadata_fields( $id, [
+			'yoast_meta_description'    => '_yoast_wpseo_metadesc',
+			'seopress_meta_description' => '_seopress_titles_desc',
+		] );
+		$data               = array_merge( $data, $descriptions['values'] );
+		$yoast_meta_desc    = $descriptions['values']['yoast_meta_description'] ?? '';
+		$seopress_meta_desc = $descriptions['values']['seopress_meta_description'] ?? '';
+		$meta_desc          = '' !== $yoast_meta_desc ? $yoast_meta_desc : $seopress_meta_desc;
+		$description_known  = '' !== $meta_desc || [] === $descriptions['unavailable_fields'];
+		if ( $description_known ) {
+			$data['seo_provider_meta_source'] = '' !== $yoast_meta_desc ? 'yoast' : ( '' !== $seopress_meta_desc ? 'seopress' : null );
+		}
+		$data['seo_plugins'] = [
 			'yoast_active'    => self::is_yoast_active(),
 			'seopress_active' => self::is_seopress_active(),
 		];
-		if ( empty( $meta_desc ) ) {
+		$unavailable_checks  = [];
+		if ( ! $description_known ) {
+			$unavailable_checks[] = 'meta_description';
+		} elseif ( empty( $meta_desc ) ) {
 			$issues[] = [ 'check' => 'meta_description', 'severity' => 'warn', 'message' => 'No Yoast SEO or SEOPress meta description set.' ];
 		} else {
 			$desc_len = mb_strlen( $meta_desc );
@@ -110,13 +123,21 @@ class Webmastery_MCP_SEO {
 			}
 		}
 
-		$yoast_focus_kw                    = get_post_meta( $id, '_yoast_wpseo_focuskw', true );
-		$seopress_focus_kw                 = get_post_meta( $id, '_seopress_analysis_target_kw', true );
-		$focus_kw                          = '' !== $yoast_focus_kw ? $yoast_focus_kw : $seopress_focus_kw;
-		$data['yoast_focus_keyword']       = $yoast_focus_kw;
-		$data['seopress_focus_keywords']   = $seopress_focus_kw;
-		$data['seo_provider_focus_source'] = '' !== $yoast_focus_kw ? 'yoast' : ( '' !== $seopress_focus_kw ? 'seopress' : null );
-		if ( empty( $focus_kw ) ) {
+		$keywords          = self::read_metadata_fields( $id, [
+			'yoast_focus_keyword'     => '_yoast_wpseo_focuskw',
+			'seopress_focus_keywords' => '_seopress_analysis_target_kw',
+		] );
+		$data              = array_merge( $data, $keywords['values'] );
+		$yoast_focus_kw    = $keywords['values']['yoast_focus_keyword'] ?? '';
+		$seopress_focus_kw = $keywords['values']['seopress_focus_keywords'] ?? '';
+		$focus_kw          = '' !== $yoast_focus_kw ? $yoast_focus_kw : $seopress_focus_kw;
+		$keyword_known     = '' !== $focus_kw || [] === $keywords['unavailable_fields'];
+		if ( $keyword_known ) {
+			$data['seo_provider_focus_source'] = '' !== $yoast_focus_kw ? 'yoast' : ( '' !== $seopress_focus_kw ? 'seopress' : null );
+		}
+		if ( ! $keyword_known ) {
+			$unavailable_checks[] = 'focus_keyword';
+		} elseif ( empty( $focus_kw ) ) {
 			$issues[] = [ 'check' => 'focus_keyword', 'severity' => 'warn', 'message' => 'No Yoast SEO focus keyphrase or SEOPress target keyword set.' ];
 		} elseif ( false !== stripos( $title, $focus_kw ) ) {
 			$good[] = [ 'check' => 'keyword_in_title', 'message' => 'Focus keyword found in title.' ];
@@ -155,16 +176,36 @@ class Webmastery_MCP_SEO {
 			$good[] = [ 'check' => 'slug_length', 'message' => "Slug length is fine ({$slug_len} chars)." ];
 		}
 
-		return [
-			'success' => true,
-			'data'    => [
-				'post_id' => $id,
-				'metrics' => $data,
-				'issues'  => $issues,
-				'good'    => $good,
-				'score'   => count( $good ) . '/' . ( count( $good ) + count( $issues ) ) . ' checks passed',
-			],
+		$analysis           = [
+			'post_id' => $id,
+			'metrics' => $data,
+			'issues'  => $issues,
+			'good'    => $good,
+			'score'   => count( $good ) . '/' . ( count( $good ) + count( $issues ) ) . ' checks passed',
 		];
+		$unavailable_fields = array_merge( $descriptions['unavailable_fields'], $keywords['unavailable_fields'] );
+		if ( [] !== $unavailable_fields ) {
+			$analysis['unavailable_fields'] = $unavailable_fields;
+			$analysis['unevaluable_checks'] = $unavailable_checks;
+		}
+		return [ 'success' => true, 'data' => $analysis ];
+	}
+
+	private static function read_metadata_fields( int $post_id, array $keys ): array {
+		$result = [ 'values' => [], 'unavailable_fields' => [] ];
+		foreach ( $keys as $field => $key ) {
+			if ( ! Webmastery_MCP_Posts::can_read_post_meta_key( $post_id, $key ) ) {
+				$result['unavailable_fields'][ $field ] = Webmastery_MCP_Response::error(
+					'forbidden',
+					'This metadata field is unavailable under the effective key-level permission.',
+					[],
+					'metadata_not_readable'
+				)['error'];
+				continue;
+			}
+			$result['values'][ $field ] = get_post_meta( $post_id, $key, true );
+		}
+		return $result;
 	}
 
 	private static function count_images_without_alt( $content ) {
@@ -193,14 +234,11 @@ class Webmastery_MCP_SEO {
 	private static function register_site_overview() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/seo-site-overview', [
 			'label'               => 'SEO: Site Overview',
-			'description'         => 'Get a site-level SEO overview: sitemap, robots.txt, and posts missing Yoast optimization.',
+			'description'         => 'Inspect sitemap and robots.txt, plus authorized metadata observations from at most 100 published posts/pages in ID order. Missing-field counts describe only that sample, not the whole site.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'execute_callback'    => [ self::class, 'execute_site_overview' ],
 			'permission_callback' => function () {
-				if ( ! current_user_can( 'manage_options' ) ) {
-					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
-				}
-				return true;
+				return self::permission_site_overview();
 			},
 			'meta' => [
 				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => false ],
@@ -212,13 +250,13 @@ class Webmastery_MCP_SEO {
 	private static function register_yoast_metadata() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-yoast-metadata', [
 			'label'               => 'SEO: Yoast Metadata',
-			'description'         => 'Inspect Yoast SEO metadata and generated Yoast head data for a post, page, or URL.',
+			'description'         => 'Inspect Yoast SEO metadata for a post or page, omitting fields without effective key permission. Opaque generated head output and URL-only inspection are unsupported.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
 					'post_id' => [ 'type' => 'integer', 'description' => 'Optional post or page ID to inspect.' ],
-					'url'     => [ 'type' => 'string', 'description' => 'Optional absolute URL to inspect through Yoast head output.' ],
+					'url'     => [ 'type' => 'string', 'description' => 'Legacy URL target; URL-only requests return unsupported. Use post_id for authorized metadata inspection.' ],
 				],
 			],
 			'execute_callback'    => [ self::class, 'execute_yoast_metadata' ],
@@ -233,7 +271,7 @@ class Webmastery_MCP_SEO {
 	private static function register_seopress_metadata() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-seopress-metadata', [
 			'label'               => 'SEO: SEOPress Metadata',
-			'description'         => 'Inspect SEOPress metadata for a post or page.',
+			'description'         => 'Inspect SEOPress metadata for a post or page, omitting fields without effective key permission and reporting unavailable_fields.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
@@ -356,61 +394,20 @@ class Webmastery_MCP_SEO {
 		return $value;
 	}
 
-	private static function get_generated_yoast_head_for_post( $post ) {
-		$post_type_object = get_post_type_object( $post->post_type );
-		$rest_base        = $post_type_object->rest_base ?? $post->post_type;
-		$request          = new WP_REST_Request( 'GET', "/wp/v2/{$rest_base}/{$post->ID}" );
-		$request->set_param( 'context', 'edit' );
-		$response = rest_do_request( $request );
-
-		if ( $response->is_error() ) {
-			$error = $response->as_error();
-			return [
-				'available' => false,
-				'error'     => [
-					'code'    => $error->get_error_code(),
-					'message' => $error->get_error_message(),
-				],
-			];
-		}
-
-		$data = $response->get_data();
-
-		return [
-			'available'       => isset( $data['yoast_head_json'] ) || isset( $data['yoast_head'] ),
-			'yoast_head_json' => $data['yoast_head_json'] ?? null,
-			'yoast_head'      => $data['yoast_head'] ?? null,
-		];
-	}
-
-	private static function get_generated_yoast_head_for_url( $url ) {
-		$request = new WP_REST_Request( 'GET', '/yoast/v1/get_head' );
-		$request->set_param( 'url', $url );
-		$response = rest_do_request( $request );
-
-		if ( $response->is_error() ) {
-			$error = $response->as_error();
-			return [
-				'available' => false,
-				'error'     => [
-					'code'    => $error->get_error_code(),
-					'message' => $error->get_error_message(),
-				],
-			];
-		}
-
-		$data = $response->get_data();
-
-		return [
-			'available'       => isset( $data['json'] ) || isset( $data['html'] ),
-			'yoast_head_json' => $data['json'] ?? null,
-			'yoast_head'      => $data['html'] ?? null,
-		];
-	}
-
 	public static function execute_yoast_metadata( $input = [] ) {
-		$id  = absint( $input['post_id'] ?? 0 );
-		$url = esc_url_raw( (string) ( $input['url'] ?? '' ) );
+		$permission = self::permission_yoast_metadata( $input );
+		if ( is_wp_error( $permission ) ) {
+			return Webmastery_MCP_Response::from_wp_error( $permission );
+		}
+		$id = absint( $input['post_id'] ?? 0 );
+		if ( ! $id ) {
+			return Webmastery_MCP_Response::error(
+			'unsupported',
+			'URL-only generated head inspection cannot enforce per-key authorization. Use post_id to inspect authorized metadata fields.',
+			[],
+			'generated_head_key_authorization_unavailable'
+			);
+		}
 
 		if ( ! self::is_yoast_active() ) {
 			return [
@@ -422,51 +419,49 @@ class Webmastery_MCP_SEO {
 			];
 		}
 
-		if ( $id ) {
-			$post = get_post( $id );
-			if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
-				return Webmastery_MCP_Response::legacy_error( 'not_found', 'Post or page not found.' );
-			}
-			if ( ! current_user_can( 'edit_post', $id ) ) {
-				return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to inspect Yoast metadata for this post or page.' );
-			}
-
-			$meta     = [];
-			$raw_meta = [];
-			foreach ( self::yoast_post_meta_keys() as $field => $meta_key ) {
-				$value              = get_post_meta( $id, $meta_key, true );
-				$meta[ $field ]     = self::normalize_yoast_meta_value( $field, $value );
-				$raw_meta[ $field ] = [
-					'key'   => $meta_key,
-					'value' => $value,
-				];
-			}
-
-			return [
-				'success' => true,
-				'data'    => [
-					'yoast_active'   => true,
-					'post_id'        => $id,
-					'post_type'      => $post->post_type,
-					'title'          => $post->post_title,
-					'url'            => get_permalink( $id ),
-					'metadata'       => $meta,
-					'raw_meta'       => $raw_meta,
-					'generated_head' => self::get_generated_yoast_head_for_post( $post ),
-				],
-			];
+		$post = get_post( $id );
+		if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
+			return Webmastery_MCP_Response::legacy_error( 'not_found', 'Post or page not found.' );
+		}
+		if ( ! current_user_can( 'edit_post', $id ) ) {
+			return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to inspect Yoast metadata for this post or page.' );
 		}
 
-		if ( '' === $url ) {
-			return Webmastery_MCP_Response::legacy_error( 'missing_target', 'Provide post_id or url.' );
+		$meta     = [];
+		$raw_meta = [];
+		$read     = self::read_metadata_fields( $id, self::yoast_post_meta_keys() );
+		foreach ( self::yoast_post_meta_keys() as $field => $meta_key ) {
+			if ( ! array_key_exists( $field, $read['values'] ) ) {
+				continue;
+			}
+			$value              = $read['values'][ $field ];
+			$meta[ $field ]     = self::normalize_yoast_meta_value( $field, $value );
+			$raw_meta[ $field ] = [
+				'key'   => $meta_key,
+				'value' => $value,
+			];
 		}
 
 		return [
 			'success' => true,
 			'data'    => [
 				'yoast_active'   => true,
-				'url'            => $url,
-				'generated_head' => self::get_generated_yoast_head_for_url( $url ),
+				'post_id'        => $id,
+				'post_type'      => $post->post_type,
+				'title'          => $post->post_title,
+				'url'            => get_permalink( $id ),
+				'metadata'       => $meta,
+				'raw_meta'       => $raw_meta,
+				'unavailable_fields' => $read['unavailable_fields'],
+				'generated_head' => [
+					'available' => false,
+					'error' => Webmastery_MCP_Response::error(
+						'unsupported',
+						'Opaque generated head output cannot enforce per-key authorization.',
+						[],
+						'key_authorization_unavailable'
+					)['error'],
+				],
 			],
 		];
 	}
@@ -486,6 +481,10 @@ class Webmastery_MCP_SEO {
 	}
 
 	public static function execute_seopress_metadata( $input = [] ) {
+		$permission = self::permission_seopress_metadata( $input );
+		if ( is_wp_error( $permission ) ) {
+			return Webmastery_MCP_Response::from_wp_error( $permission );
+		}
 		$id = absint( $input['post_id'] ?? 0 );
 
 		if ( ! self::is_seopress_active() ) {
@@ -508,8 +507,12 @@ class Webmastery_MCP_SEO {
 
 		$meta     = [];
 		$raw_meta = [];
+		$read     = self::read_metadata_fields( $id, self::seopress_post_meta_keys() );
 		foreach ( self::seopress_post_meta_keys() as $field => $meta_key ) {
-			$value              = get_post_meta( $id, $meta_key, true );
+			if ( ! array_key_exists( $field, $read['values'] ) ) {
+				continue;
+			}
+			$value              = $read['values'][ $field ];
 			$meta[ $field ]     = self::normalize_seopress_meta_value( $field, $value );
 			$raw_meta[ $field ] = [
 				'key'   => $meta_key,
@@ -527,6 +530,7 @@ class Webmastery_MCP_SEO {
 				'url'             => get_permalink( $id ),
 				'metadata'        => $meta,
 				'raw_meta'        => $raw_meta,
+				'unavailable_fields' => $read['unavailable_fields'],
 			],
 		];
 	}
@@ -564,21 +568,13 @@ class Webmastery_MCP_SEO {
 	private static function register_score_ability( $slug, $label, $meta_key, $description ) {
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/{$slug}", [
 			'label'               => "SEO: {$label}",
-			'description'         => $description,
+			'description'         => $description . ' Only objects with effective permission for this score key are included in items and pagination totals.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => self::score_input_schema(),
 			'execute_callback'    => function ( $input ) use ( $meta_key ) {
 				return self::execute_score_list( $input, $meta_key );
 			},
-			'permission_callback' => function ( $input = [] ) {
-				if ( 'page' === ( $input['post_type'] ?? null ) && ! current_user_can( 'edit_pages' ) ) {
-					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_pages capability.' );
-				}
-				if ( ! current_user_can( 'edit_posts' ) ) {
-					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_posts capability.' );
-				}
-				return true;
-			},
+			'permission_callback' => [ self::class, 'permission_score_list' ],
 			'meta'                => [
 				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
@@ -586,7 +582,21 @@ class Webmastery_MCP_SEO {
 		] );
 	}
 
+	public static function permission_score_list( $input = [] ) {
+		if ( 'page' === ( $input['post_type'] ?? null ) && ! current_user_can( 'edit_pages' ) ) {
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_pages capability.' );
+		}
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_posts capability.' );
+		}
+		return true;
+	}
+
 	public static function execute_score_list( $input, $meta_key ) {
+		$permission = self::permission_score_list( $input );
+		if ( is_wp_error( $permission ) ) {
+			return Webmastery_MCP_Response::from_wp_error( $permission );
+		}
 		if ( ! self::is_yoast_active() ) {
 			return [
 				'success' => true,
@@ -654,7 +664,7 @@ class Webmastery_MCP_SEO {
 		$readable_ids = [];
 
 		foreach ( $query->posts as $post_id ) {
-			if ( current_user_can( 'edit_post', (int) $post_id ) ) {
+			if ( Webmastery_MCP_Posts::can_read_post_meta_key( (int) $post_id, $meta_key ) ) {
 				$readable_ids[] = (int) $post_id;
 			}
 		}
@@ -692,7 +702,17 @@ class Webmastery_MCP_SEO {
 		];
 	}
 
+	public static function permission_site_overview() {
+		return current_user_can( 'manage_options' )
+			? true
+			: Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
+	}
+
 	public static function execute_site_overview( $input = [] ) {
+		$permission = self::permission_site_overview();
+		if ( is_wp_error( $permission ) ) {
+			return Webmastery_MCP_Response::from_wp_error( $permission );
+		}
 		$data = [];
 
 		// Sitemap
@@ -718,100 +738,44 @@ class Webmastery_MCP_SEO {
 			'seopress_active' => self::is_seopress_active(),
 		];
 
-		// Published posts missing Yoast focus keyword.
-		$no_keyword                          = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying Yoast fields; only runs on explicit admin request.
+		$candidates                = new WP_Query( [
 			'post_type'      => [ 'post', 'page' ],
 			'post_status'    => 'publish',
-			'posts_per_page' => 50,
-			'meta_query'     => [
-				'relation' => 'OR',
-				[
-					'key'     => '_yoast_wpseo_focuskw',
-					'compare' => 'NOT EXISTS',
-				],
-				[
-					'key'     => '_yoast_wpseo_focuskw',
-					'value'   => '',
-					'compare' => '=',
-				],
-			],
-			'fields' => 'ids',
+			'posts_per_page' => 100,
+			'orderby'        => 'ID',
+			'order'          => 'ASC',
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
 		] );
-		$data['posts_missing_focus_keyword'] = [
-			'count' => $no_keyword->found_posts,
-			'ids'   => array_slice( $no_keyword->posts, 0, 20 ),
+		$data['observation_scope'] = [
+			'mode' => 'sample',
+			'post_limit' => 100,
+			'ordering' => 'ID ASC',
+			'counts_are_sitewide' => false,
 		];
-
-		// Posts with no Yoast meta description.
-		$no_desc                                = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying Yoast fields; only runs on explicit admin request.
-			'post_type'      => [ 'post', 'page' ],
-			'post_status'    => 'publish',
-			'posts_per_page' => 50,
-			'meta_query'     => [
-				'relation' => 'OR',
-				[
-					'key'     => '_yoast_wpseo_metadesc',
-					'compare' => 'NOT EXISTS',
-				],
-				[
-					'key'     => '_yoast_wpseo_metadesc',
-					'value'   => '',
-					'compare' => '=',
-				],
-			],
-			'fields' => 'ids',
-		] );
-		$data['posts_missing_meta_description'] = [
-			'count' => $no_desc->found_posts,
-			'ids'   => array_slice( $no_desc->posts, 0, 20 ),
+		$observations              = [
+			'posts_missing_focus_keyword' => '_yoast_wpseo_focuskw',
+			'posts_missing_meta_description' => '_yoast_wpseo_metadesc',
 		];
-
 		if ( self::is_seopress_active() ) {
-			$seopress_no_keyword                           = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying SEOPress fields; only runs on explicit admin request when SEOPress is active.
-				'post_type'      => [ 'post', 'page' ],
-				'post_status'    => 'publish',
-				'posts_per_page' => 50,
-				'meta_query'     => [
-					'relation' => 'OR',
-					[
-						'key'     => '_seopress_analysis_target_kw',
-						'compare' => 'NOT EXISTS',
-					],
-					[
-						'key'     => '_seopress_analysis_target_kw',
-						'value'   => '',
-						'compare' => '=',
-					],
-				],
-				'fields' => 'ids',
-			] );
-			$data['seopress_posts_missing_focus_keywords'] = [
-				'count' => $seopress_no_keyword->found_posts,
-				'ids'   => array_slice( $seopress_no_keyword->posts, 0, 20 ),
-			];
-
-			$seopress_no_desc                                = new WP_Query( [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Querying SEOPress fields; only runs on explicit admin request when SEOPress is active.
-				'post_type'      => [ 'post', 'page' ],
-				'post_status'    => 'publish',
-				'posts_per_page' => 50,
-				'meta_query'     => [
-					'relation' => 'OR',
-					[
-						'key'     => '_seopress_titles_desc',
-						'compare' => 'NOT EXISTS',
-					],
-					[
-						'key'     => '_seopress_titles_desc',
-						'value'   => '',
-						'compare' => '=',
-					],
-				],
-				'fields' => 'ids',
-			] );
-			$data['seopress_posts_missing_meta_description'] = [
-				'count' => $seopress_no_desc->found_posts,
-				'ids'   => array_slice( $seopress_no_desc->posts, 0, 20 ),
-			];
+			$observations['seopress_posts_missing_focus_keywords']   = '_seopress_analysis_target_kw';
+			$observations['seopress_posts_missing_meta_description'] = '_seopress_titles_desc';
+		}
+		foreach ( $observations as $field => $key ) {
+			$observation = [ 'count' => 0, 'ids' => [], 'observed_count' => 0 ];
+			foreach ( $candidates->posts as $post_id ) {
+				if ( ! Webmastery_MCP_Posts::can_read_post_meta_key( (int) $post_id, $key ) ) {
+					continue;
+				}
+				++$observation['observed_count'];
+				if ( '' === get_post_meta( (int) $post_id, $key, true ) ) {
+					++$observation['count'];
+					if ( count( $observation['ids'] ) < 20 ) {
+						$observation['ids'][] = (int) $post_id;
+					}
+				}
+			}
+			$data[ $field ] = $observation;
 		}
 
 		// Total published post/page count for context

@@ -8,7 +8,7 @@ use RuntimeException;
 // Execute unchanged production bodies with fail-fast WordPress boundary probes.
 foreach ( array( 'class-posts.php', 'class-custom-post-types.php', 'class-seo.php' ) as $file ) {
 	$source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/' . $file );
-	eval( 'namespace Wstm110Boundary; use \WP_Error; use \Webmastery_MCP_Post_Scheduling; use \Webmastery_MCP_Post_Parent; ' . substr( $source, 5 ) );
+	eval( 'namespace Wstm110Boundary; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Post_Scheduling; use \Webmastery_MCP_Post_Parent; ' . substr( $source, 5 ) );
 }
 
 final class MutationAttempt extends RuntimeException {}
@@ -29,12 +29,14 @@ final class Probe {
 	public static array $head_requests = array();
 	public static string $post_type = 'post';
 	public static bool $deny_base = false;
+	public static ?\Closure $metadata_writer = null;
 
 	public static function reset( string $type = 'post' ): void {
 		self::$abilities = self::$mutations = self::$capabilities = self::$reads = self::$denied_keys = array();
 		self::$denied_by_id = self::$denied_objects = self::$posts = self::$metadata = self::$queries = self::$head_requests = array();
 		self::$post_type = $type;
 		self::$deny_base = false;
+		self::$metadata_writer = null;
 		Webmastery_MCP_Posts::register();
 		$register = new \ReflectionMethod( Webmastery_MCP_Custom_Post_Types::class, 'register_custom_post_type' );
 		$register->setAccessible( true );
@@ -135,6 +137,9 @@ function wp_update_post( ...$args ) {
 }
 
 function update_post_meta( ...$args ) {
+	if ( null !== Probe::$metadata_writer ) {
+		return ( Probe::$metadata_writer )( ...$args );
+	}
 	Probe::mutation( __FUNCTION__, $args );
 }
 
