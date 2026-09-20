@@ -92,13 +92,32 @@ function wstm110_batch_snapshot(): array {
 
 function wstm110_batch_mutation_hooks(): array {
 	return array(
-		'wp_insert_post_data', 'pre_post_update', 'wp_insert_post', 'save_post', 'wp_after_insert_post',
+		'wp_insert_post_parent', 'wp_insert_post_data', 'pre_post_update', 'post_updated', 'wp_insert_post', 'save_post', 'wp_after_insert_post',
 		'transition_post_status', 'before_delete_post', 'delete_post', 'deleted_post',
 		'add_post_metadata', 'update_post_metadata', 'delete_post_metadata',
+		'added_post_meta', 'updated_post_meta', 'deleted_post_meta',
 		'pre_insert_term', 'create_term', 'created_term', 'edit_terms', 'edited_term',
 		'add_term_relationship', 'added_term_relationship', 'set_object_terms',
 		'delete_term_relationships', 'deleted_term_relationships',
+		'pre_schedule_event', 'pre_unschedule_event',
 	);
+}
+
+function wstm110_batch_observe( callable $record ): Closure {
+	$observer = static function ( $value = null ) use ( $record ) {
+		$record( current_filter() );
+		return $value;
+	};
+	foreach ( wstm110_batch_mutation_hooks() as $hook ) {
+		add_filter( $hook, $observer, PHP_INT_MIN, 1 );
+	}
+	return $observer;
+}
+
+function wstm110_batch_unobserve( Closure $observer ): void {
+	foreach ( wstm110_batch_mutation_hooks() as $hook ) {
+		remove_filter( $hook, $observer, PHP_INT_MIN );
+	}
 }
 
 function wstm110_batch_assert_unchanged( array $before, array $after, array $events ): void {
