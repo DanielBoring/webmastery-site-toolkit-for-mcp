@@ -33,6 +33,7 @@
 			"@lint:php",
 			"@phpcs",
 			"@phpstan",
+			"@test:phpstan-baseline",
 			"@audit:locked",
 			"@validate:e2e-manifest",
 			"@validate:security-qa",
@@ -43,10 +44,12 @@
 			"@qa:unit"
 		],
 		"test:ci-safeguards": [
+			"@test:phpstan-baseline",
 			"@test:release-safeguards",
 			"bash tests/compatibility-download-test.sh",
 			"bash tests/compatibility-dependency-policy-test.sh"
 		],
+		"test:phpstan-baseline": "php scripts/test-phpstan-baseline.php",
 		"test:release-safeguards": [
 			"php scripts/test-release-safeguards.php",
 			"bash scripts/test-release-tag-check.sh",

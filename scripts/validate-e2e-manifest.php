@@ -7,6 +7,7 @@ $manifest_path = $repo_root . '/tests/e2e/abilities-manifest.json';
 $allowed_roles = array(
 	'admin'        => true,
 	'author'       => true,
+	'contributor'  => true,
 	'book_manager' => true,
 	'case_manager' => true,
 	'editor'       => true,
@@ -113,6 +114,47 @@ foreach ( $manifest as $index => $case ) {
 
 	if ( array_key_exists( 'assert_values', $case ) && ! is_array( $case['assert_values'] ) ) {
 		$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_values' ) . ' must be an object.';
+	}
+
+	foreach ( array( 'assert_unchanged', 'assert_changed' ) as $field ) {
+		if ( array_key_exists( $field, $case ) && true !== $case[ $field ] ) {
+			$errors[] = webmastery_mcp_manifest_path( $case_number, $field ) . ' must be true when present.';
+		}
+	}
+	if ( isset( $case['assert_changed'] ) && ( isset( $case['assert_unchanged'] ) || 'success' !== $expect ) ) {
+		$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_changed' ) . ' requires success without assert_unchanged.';
+	}
+	if ( array_key_exists( 'assert_permission', $case ) && ! in_array( $case['assert_permission'], array( true, 'forbidden' ), true ) ) {
+		$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_permission' ) . ' must be true or forbidden.';
+	}
+	if ( array_key_exists( 'assert_capabilities', $case ) ) {
+		$assertions = $case['assert_capabilities'];
+		if ( ! is_array( $assertions ) || ! $assertions ) {
+			$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_capabilities' ) . ' must be a nonempty array.';
+		} else {
+			foreach ( $assertions as $assertion ) {
+				if ( ! is_array( $assertion ) || ! is_string( $assertion['capability'] ?? null )
+					|| '' === $assertion['capability'] || ! is_array( $assertion['args'] ?? null )
+					|| ! is_bool( $assertion['allowed'] ?? null ) ) {
+					$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_capabilities' ) . ' requires capability, args, and boolean allowed.';
+				}
+			}
+		}
+	}
+	if ( array_key_exists( 'assert_stored_post', $case ) ) {
+		$assertion = $case['assert_stored_post'];
+		if ( ! is_array( $assertion ) || ! is_array( $assertion['fields'] ?? null ) || ! $assertion['fields'] ) {
+			$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_stored_post' ) . ' requires a nonempty fields map.';
+		} else {
+			if ( ! isset( $assertion['post_id'] ) && 'success' !== $expect ) {
+				$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_stored_post' ) . ' requires post_id for a failed call.';
+			}
+			foreach ( $assertion['fields'] as $field => $value ) {
+				if ( ! in_array( $field, array( 'post_status', 'post_author', 'post_title', 'post_content' ), true ) || ! is_scalar( $value ) ) {
+					$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_stored_post' ) . ' contains an unsupported field or value.';
+				}
+			}
+		}
 	}
 
 	foreach ( array( 'assert_paths', 'assert_missing_paths', 'assert_contains', 'assert_not_contains' ) as $field ) {

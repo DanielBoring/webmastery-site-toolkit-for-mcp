@@ -33,6 +33,74 @@ Current coverage is 75 base registered abilities plus 5 generated abilities per 
 
 `update-cpt-mcp-book` regression coverage (issue #107) proves taxonomy assignment is pre-validated before `wp_update_post()` writes anything: each denial case (a nonexistent taxonomy, a registered taxonomy the actor lacks `assign_terms` capability for, and a mixed payload combining one allowed and one forbidden *registered* taxonomy alongside the existing allowed-plus-nonexistent case) submits a full `title`/`content`/`status`/`slug`/`taxonomy_terms` payload, and the paired read confirms the fixture's title, content, status, slug, and taxonomy terms are all unchanged. A second fixture taxonomy, `wstm107_restricted_shelf`, is registered only for `mcp_book` and granted to no role, so it is always forbidden and exercises the mixed allowed/forbidden registered-taxonomy path independently of the nonexistent-taxonomy case. The fixture post used for these cases (`wstm107_book_id`) is created with an explicit, deterministic slug so the unchanged-slug assertions are stable.
 
+## Ranked coverage follow-up (#120)
+
+This is a **partial, test-only** follow-up, not closure of the coverage umbrella.
+The manifest keeps every existing success and status/no-write assertion and adds
+the following requirement-to-test mapping:
+
+| Group | Permanent coverage |
+| --- | --- |
+| 1: permanent media deletion | `wstm120 delete-media` Subscriber and Author object denials; the Author has `upload_files` but cannot `delete_post` on the Editor-owned attachment. Original Author deletion success remains. The owner reads the retained attachment afterward. |
+| 6: Contributor boundaries | A real `contributor_test` user, role/ID placeholders and validator allowlist; own-draft create/update/trash with persisted-state assertions, all three publish/private/future create and transition denials, own published-delete denial, and unrelated draft read/update/delete denials. Dedicated fixtures do not reuse earlier write-positive targets. |
+| 7: private/trashed direct getters | `wstm120 get-post` / `get-page` cover owners and other users, allowed Editors and lower-capability owners, denied Subscribers/Contributors, and original draft versus published trash status. Effective object capabilities and `_wp_trash_meta_status` are asserted where relevant. |
+| 9: pure helper characterization | `PostsCharacterizationTest` covers numeric path grammar, by-reference nested replacement/no partial mutation, heading section boundaries/ambiguity, metadata recursive depth and encoded size/error limits. `SiteKitUrlTest` covers host case, effective ports, schemes, userinfo and fragments. Existing media URL and raw exact-match helper tests remain unchanged. |
+| 10: remaining negative paths | Explicit callback/wrapper permission errors for media reads, SEO analysis and four list abilities, with allowed counterparts and response/hidden-field assertions. |
+
+Direct post/page getters currently require **`edit_post`**, not the list helper's
+`read_post` (private) or `delete_post` (trash) checks. An Author or Contributor
+can edit their own private post through `edit_posts`; other-owned private posts
+add `edit_others_posts` and `edit_private_posts`. Owning a page does not grant
+`edit_pages`. A limited page editor can read their own private/trashed draft page,
+and a limited editor can read another user's trashed draft despite lacking delete
+permission. A Contributor's own formerly published trash still requires
+`edit_published_posts`. These are characterization assertions, not a new policy.
+
+| Fixture actor | Relevant coverage boundary |
+| --- | --- |
+| Contributor | Core `contributor` role: owns drafts, lacks publishing, editing/deleting published posts, other-object editing/deletion, and page editing. |
+| Author | Own private/trashed draft post reads; `upload_files` does not authorize another user's attachment. |
+| `wstm106_page_editor` | Existing page-limited role reused with dedicated owned private/trashed page fixtures; no private-other-page or deletion grant is added. |
+| Subscriber / `no_role` | Category/tag lists require `read`: Subscriber allowed, no-role denied. Post/page lists instead require `edit_posts`/`edit_pages`: both are denied. |
+| Editor / `limited_editor` | Allowed direct-get counterparts and the distinction between edit-capable direct reads and delete-filtered trash lists. |
+
+`assert_unchanged` compares raw persisted posts (including revisions), all
+postmeta, term relationships, the cron option, and every upload file's path and
+SHA-256 before permission checking and after execution. Media fixtures start
+with a real file, attachment metadata, alt text and a parent thumbnail link.
+Evidence is retained per case in `e2e-summary.json`; failed comparisons are not
+skipped just because the response was denied. `assert_stored_post` independently
+reads persisted fields; a successful Contributor write with `assert_changed`
+calibrates the snapshot observer. These checks prove persisted-state equality,
+not absence of transient/no-op write-hook calls.
+
+`assert_permission` distinguishes callback `forbidden` from WordPress's outer
+`ability_invalid_permissions`. Contributor status updates are an intentional
+legacy exception: object permission succeeds, then the execute callback returns
+the exact existing `success: false` / string `error` envelope. Required destructive
+permission cases cannot be replaced with not-found/invalid-input failures.
+Validator mutation tests protect this distinction and the no-write assertions.
+
+Heading units load the unchanged Posts class into a test namespace, supplying
+explicit block arrays and recording serialization input. They do **not** emulate
+a WordPress parser or prove core sanitization/authorization. Metadata units use
+the existing narrow sanitizer stubs and a native JSON encoder boundary (not
+WordPress's invalid-UTF8 repair); `INF`/`NAN` exercise encoding failure.
+Depth is zero-based: a scalar at depth 10 is accepted, at 11 rejected; null
+children bypass recursive normalization, so an array at depth 10 can contain
+null. Size cases encode to exactly 100000 and 100001 JSON bytes, not raw string
+length. Same-site URL characterization retains the existing effective-port
+comparison, including different HTTP(S) schemes with the same explicit port.
+The existing 45-check real-core patch HTML runner remains the integration
+counterpart; unit seams do not replace it.
+
+Groups 2/3/8 retain their separate trash-safety, taxonomy and patch-HTML evidence.
+Comment-object group 4 belongs to #105/#157; registered metadata group 5 belongs
+to #110/#159. **Batch metadata remains unresolved under #110**, and none of these
+case totals establishes full #120 completion. Runtime registration coverage must
+still prove all 85 fixture abilities against `wp_get_abilities()`; static manifest
+validation alone cannot make that claim.
+
 ## Diagnostic configuration and privacy regressions
 
 The manifest retains existing diagnostic success/role cases and adds both request/configuration scheme mismatches, admin-only TLS, all six database query error contexts, and explicit lower-privilege field absence. `setup.diagnostics` installs scoped option/request/query fixtures and restores them in `finally`. `assert_diagnostic_findings` matches a check's bucket and label without relying on its array index or unrelated findings. Intentionally failed queries suppress database errors only within the disposable fixture; production logging is unchanged.
