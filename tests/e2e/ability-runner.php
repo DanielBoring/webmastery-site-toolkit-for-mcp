@@ -770,6 +770,9 @@ $fixtures['reply_parent_comment_id'] = e2e_insert_comment( $fixtures['post_id'],
 $fixtures['update_comment_id']       = e2e_insert_comment( $fixtures['post_id'], 'update' );
 $fixtures['status_comment_id']       = e2e_insert_comment( $fixtures['post_id'], 'status-update' );
 $fixtures['missing_comment_id']      = 987654321;
+require_once __DIR__ . '/comments-fixture.php';
+$wstm105 = wstm105_comment_fixtures( $author_id, $fixtures['book_id'] );
+$fixtures = array_merge( $fixtures, $wstm105['fixtures'] );
 $fixtures['media_id']          = e2e_insert_media( $fixtures['post_id'], $author_id, 'read-update' );
 $fixtures['delete_media_id']   = e2e_insert_media( $fixtures['post_id'], $author_id, 'delete' );
 $fixtures['featured_image_id'] = e2e_insert_media( $fixtures['post_id'], $author_id, 'featured-image', 'image/png' );
@@ -914,6 +917,7 @@ $roles = array(
 	'user_lister'  => $user_lister_id,
 	'wstm106_page_editor' => $wstm106_page_editor_id,
 );
+$roles = array_merge( $roles, $wstm105['roles'] );
 
 require __DIR__ . '/site-kit-permissions-runner.php';
 
@@ -1129,6 +1133,11 @@ foreach ( $manifest as $case ) {
 		$passed = e2e_assert_post_meta_values( $case['assert_post_meta'], $fixtures );
 	}
 
+	if ( isset( $case['assert_comment_state'] ) ) {
+		$comment_state_passed = wstm105_assert_comment_state( $case['assert_comment_state'] );
+		$passed = $passed && $comment_state_passed;
+	}
+
 	if ( $passed ) {
 		$summary['passed']++;
 		echo 'PASS ' . $label . ( 'failure' === $expect ? ' denied as expected' : '' ) . "\n";
@@ -1147,6 +1156,8 @@ foreach ( $manifest as $case ) {
 		'coverage_evidence' => $coverage_evidence,
 	);
 }
+
+wstm105_check_direct_callbacks( $roles, $fixtures );
 
 echo "SUMMARY {$summary['passed']} passed, {$summary['failed']} failed\n";
 require_once __DIR__ . '/taxonomy-write-runner.php';

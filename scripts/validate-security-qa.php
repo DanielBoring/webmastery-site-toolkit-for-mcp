@@ -132,6 +132,7 @@ foreach ( $manifest as $case ) {
 
 $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/activate-plugin',
+	'webmastery-site-toolkit-for-mcp/approve-comment',
 	'webmastery-site-toolkit-for-mcp/bulk-publish-posts',
 	'webmastery-site-toolkit-for-mcp/bulk-trash-posts',
 	'webmastery-site-toolkit-for-mcp/create-cpt-mcp-book',
@@ -169,6 +170,9 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/patch-post-content',
 	'webmastery-site-toolkit-for-mcp/security-audit',
 	'webmastery-site-toolkit-for-mcp/seo-analyze-post',
+	'webmastery-site-toolkit-for-mcp/spam-comment',
+	'webmastery-site-toolkit-for-mcp/trash-comment',
+	'webmastery-site-toolkit-for-mcp/update-comment',
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/update-page',
@@ -273,6 +277,61 @@ foreach ( array( 'list-categories', 'list-tags' ) as $slug ) {
 		);
 		if ( ! $matches ) {
 			$errors[] = "{$slug} must retain {$role} {$expect} read-capability coverage.";
+		}
+	}
+}
+
+foreach ( array( 'update', 'approve', 'trash', 'spam' ) as $action ) {
+	$ability = "webmastery-site-toolkit-for-mcp/{$action}-comment";
+	$wstm105_covered = false;
+	foreach ( $manifest as $case ) {
+		if (
+			$ability === ( $case['ability'] ?? '' )
+			&& 'wstm105_moderator' === ( $case['role'] ?? '' )
+			&& 'failure' === ( $case['expect'] ?? '' )
+			&& 'ability_invalid_permissions' === ( $case['expect_error_code'] ?? '' )
+			&& isset( $case['input']['comment_id'], $case['assert_comment_state']['comment_id'], $case['assert_comment_state']['content'], $case['assert_comment_state']['status'] )
+			&& $case['input']['comment_id'] === $case['assert_comment_state']['comment_id']
+			&& ( 'update' !== $action || 'spam' === ( $case['input']['status'] ?? '' ) )
+		) {
+			$wstm105_covered = true;
+			break;
+		}
+	}
+	if ( ! $wstm105_covered ) {
+		$errors[] = "{$ability} must keep a moderate_comments-only denial with persisted content/status assertions (including a status input for update-comment).";
+	}
+	$wstm105_required = array(
+		"wstm105 {$action} own author lacks moderation floor" => array( 'author', 'failure', true ),
+		"wstm105 {$action} editor lacks CPT edit capability" => array( 'editor', 'failure', true ),
+		"wstm105 {$action} mapped CPT allowed" => array( 'wstm105_mapped_moderator', 'success', true ),
+		"wstm105 {$action} zero ID" => array( 'editor', 'failure', true ),
+		"wstm105 {$action} missing denied caller" => array( 'subscriber', 'failure', false ),
+		'update' === $action ? 'update-comment missing' : "wstm105 {$action} missing comment" => array( 'editor', 'failure', false ),
+	);
+	foreach ( $wstm105_required as $label => list( $role, $expect, $state ) ) {
+		$covered = false;
+		foreach ( $manifest as $case ) {
+			if ( $label !== ( $case['label'] ?? '' ) || $ability !== ( $case['ability'] ?? '' ) || $role !== ( $case['role'] ?? '' ) || $expect !== ( $case['expect'] ?? '' ) ) {
+				continue;
+			}
+			if ( $state && ! isset( $case['assert_comment_state']['comment_id'], $case['assert_comment_state']['content'], $case['assert_comment_state']['status'] ) ) {
+				continue;
+			}
+			$missing = 'editor' === $role && ( 0 === ( $case['input']['comment_id'] ?? null ) || '__missing_comment_id__' === ( $case['input']['comment_id'] ?? null ) );
+			if ( 'failure' === $expect ) {
+				if ( $missing && 'update' !== $action ) {
+					if ( 'Comment not found.' !== ( $case['assert_values']['error'] ?? null ) ) {
+						continue;
+					}
+				} elseif ( ( $missing ? 'not_found' : 'ability_invalid_permissions' ) !== ( $case['expect_error_code'] ?? null ) ) {
+					continue;
+				}
+			}
+			$covered = true;
+		}
+		if ( ! $covered ) {
+			$errors[] = "{$ability} must keep its exact {$label} role/result/state regression.";
 		}
 	}
 }
