@@ -4,6 +4,9 @@ if ( PHP_SAPI !== 'cli' ) {
 	http_response_code( 403 );
 	exit( 'CLI only.' );
 }
+if ( '1' !== getenv( 'WSTM111_DISPOSABLE_SITE' ) ) {
+	throw new RuntimeException( 'Database privacy fixtures require WSTM111_DISPOSABLE_SITE=1 on an owned disposable installation.' );
+}
 
 require_once __DIR__ . '/database-table-privacy-fixture.php';
 define( 'WEBMASTERY_MCP_E2E_CLIENT_ONLY', true );
