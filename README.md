@@ -52,10 +52,10 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | --- | --- | --- |
 | Posts and pages | Create, list, read, update, restore, trash, bulk publish, bulk trash, and patch targeted content with object/status-aware filtering for private, trash, draft, pending, and scheduled content | Author or Editor |
 | Blocks and revisions | Inspect Gutenberg block paths/hashes, replace one block, list revisions, restore a revision | Author or Editor |
-| Post meta | Read, update, and delete safe custom fields; write supported Yoast SEO and SEOPress metadata | Author or Editor |
+| Post meta | Read, update, and delete individual custom fields, including supported SEO keys, with object and key-level checks | Object edit access plus the key's effective capabilities |
 | Custom post types | Discover eligible public CPTs, generate list/get/create/update/delete abilities, and patch targeted content for editor-enabled types with CPT capability-map and object/status-aware filtering | CPT capability map |
 | Taxonomy | List/get categories and tags; create/update/delete with taxonomy-specific and per-term write checks | Subscriber for reads; Editor by default for writes |
-| Comments | List, reply, update, approve, trash, mark spam, or set hold through `update-comment` | Contributor/Author for replies on editable own posts; Editor for moderation |
+| Comments | List, reply, update, approve, trash, mark spam, or set hold through `update-comment` | Contributor/Author for replies on editable own posts; moderation needs `moderate_comments` plus `edit_comment` (normally Editor) |
 | Media | List, inspect, update, upload public image URLs, set featured images, and delete media | Author or Editor |
 | Content hygiene | Find orphaned media, posts/pages missing featured images, and stuck scheduled posts | Author or Editor |
 | Site info | Return safe site basics and current-user context; runtime, WordPress version, database, and theme-version details require Administrator access | Subscriber to Administrator |
@@ -66,13 +66,29 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 
 For the exact ability names, input behavior, and required capabilities, use the [full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities).
 
-Comment replies require `edit_posts` and `edit_post` on the post containing the parent comment. Listing, updating, and the approve/trash/spam abilities require `moderate_comments`. There is no separate `hold-comment` ability: use `update-comment` with `status: "hold"` and the required `content`.
+Comment replies require `edit_posts` and `edit_post` on the post containing the parent comment. Listing requires `moderate_comments`; updating and the approve/trash/spam abilities also require `edit_comment` on the resolved comment. There is no separate `hold-comment` ability: use `update-comment` with `status: "hold"` and the required `content`.
+
+### Standalone post metadata authorization
+
+`get-post-meta`, `update-post-meta`, and `delete-post-meta` require `edit_post` for the actual object and preserve the existing protected-key eligibility rules. Ordinary Authors can usually operate on their own posts; pages and other authors' posts generally require an Editor, and individual keys may impose additional requirements.
+
+| Standalone ability | Key-level policy |
+| --- | --- |
+| `get-post-meta` | Requires `edit_post_meta`. An explicit denied key returns `forbidden`; listings omit denied keys. This conservative read policy is specific to this plugin, not a general WordPress read-meta capability. |
+| `update-post-meta` | Requires `edit_post_meta` for existing, absent, and unchanged values. Successful response fields and structured-value support are unchanged. The capability choice matches core REST upserts, but denial of unauthorized no-ops is intentionally stricter than REST's same-value shortcut. |
+| `delete-post-meta` | Requires `delete_post_meta`, including when the key is absent. Authorized deletion retains the existing `deleted_count` response. |
+
+Registered global/subtype policies and WordPress's effective `map_meta_cap` / `user_has_cap` filters remain authoritative. Supported, genuinely unregistered SEO keys with no key authorization hooks receive only a temporary protected-key default, not an exception to capability filters. Other plugins may explicitly grant primitive metadata capabilities: Yoast's effective edit policy can permit a key whose registration callback returns false, while its delete policy can differ.
+
+**Scope and unresolved risk:** this hardening applies only to these three standalone abilities. Metadata and SEO aliases inside post/page create or update requests retain their existing behavior and do not receive these key-level checks. Separate SEO inspection/analysis/scoring abilities retain their existing read policies. Those paths can still bypass restrictive per-key policy; using the standalone tools is not a site-wide security boundary. This partial fix does not resolve the creation-policy decision or establish release readiness.
+
+For verification on a disposable site, register a nonprotected string key with an authorization callback requiring `manage_options`, seed a draft, and call the standalone abilities as its Author. An explicit read, an upsert (including the same value), and a deletion must return `forbidden`; the listing must omit the key and storage must remain unchanged. An Administrator with effective object/key permission can read, update, and delete it. Existing one-call provider create workflows are not migrated to two calls by this change.
 
 ### Backslashes in writes
 
 Post/page metadata and media titles, captions, and alt text preserve backslashes through WordPress storage, including repeated or trailing backslashes and escaped quotes. Send decoded values normally; do not add an extra WordPress slashing layer in your MCP client. JSON still requires its usual escaping: `"C:\\path\\"` represents `C:\path\`.
 
-Existing text/HTML sanitization and registered metadata or SEO-provider sanitizers still apply. Responses report sanitized stored values, not necessarily the original input. Post/page create/update metadata remains scalar; `update-post-meta` also supports JSON-compatible arrays and objects. Allowed metadata keys and capability requirements are unchanged: updates require access to the target object, and uploads require `upload_files` plus access to any parent post.
+Existing text/HTML sanitization and registered metadata or SEO-provider sanitizers still apply. Responses report sanitized stored values, not necessarily the original input. Post/page create/update metadata remains scalar; `update-post-meta` also supports JSON-compatible arrays and objects. Allowed metadata keys are unchanged. Standalone metadata operations also enforce the key-level policy above; uploads require `upload_files` plus access to any parent post.
 
 On a disposable draft, write `yoast_meta_description` with JSON value `"C:\\path\\"` using `update-post`, then read `_yoast_wpseo_metadesc` using `get-post-meta` with the same post ID and explicit `meta_key`. Compare the stored value with `data.meta.written` from the update response, allowing any provider sanitization.
 
@@ -267,11 +283,16 @@ For MCP Adapter **0.5.0**, the [execute gateway](https://github.com/WordPress/mc
 
 Clients must check HTTP/JSON-RPC errors, MCP tool errors, the gateway result, and the inner ability result as applicable. Do not assume `isError` matches the inner `success`, or that individually exposed tools and the default gateway have identical envelopes. The 0.5.0 source handles `WP_Error` and top-level scalar error arrays differently from structured or nested errors; per-tool wire parity has not been verified here.
 
+For comment permission checks, use a disposable site: a custom account with only `read` and `moderate_comments` must be denied when updating, approving, trashing, or marking a comment as spam on a post it cannot edit. Confirm both comment content and status remain unchanged, including when an update supplies a status. An Editor with access to that post should succeed.
+
+Missing-comment responses are unchanged: authorized updates return `not_found`, while approve/trash/spam return the existing `"Comment not found."` string error. Callers without `moderate_comments` still fail at the permission boundary. The MCP gateway can successfully deliver a failed inner ability response; inspect `data.success`, not just outer transport success. Invalid/nonpositive IDs are rejected without falling back to a global comment or coercing a negative ID into another target.
+
 ## Security Best Practices
 
 - Use a dedicated service account, not your personal account.
 - Use **Editor** for routine content work and a separate **Administrator** account only for sensitive audits or plugin management.
 - WordPress capability checks gate every ability.
+- Updating or moderating comments requires both `moderate_comments` and WordPress's object-specific `edit_comment` capability. Custom roles cannot moderate another author's post or a custom post type without its mapped edit capabilities. This does not change comment listing or reply permissions.
 - Treat retrieved site content as untrusted data, never as instructions or approval. Use the least-privileged account that fits the task, bounded selections, independent previews/diffs, and explicit client-side approval for dangerous changes or transmission to a specific destination. See the [Agent threat model](docs/security-strategy.md#agent-threat-model) for control limits and recovery guidance.
 - List abilities for posts, pages, custom post types, media, and SEO scores filter every returned object before exposing full details; private, trashed, draft, pending, and scheduled content is only returned when WordPress grants the matching object/status capability.
 - Creating or updating content as `publish`, `private`, or `future` requires the relevant publish capability, and bulk publishing requires `publish_posts`.

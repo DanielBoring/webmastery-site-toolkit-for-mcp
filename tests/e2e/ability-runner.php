@@ -1,6 +1,8 @@
 <?php
 
 require_once __DIR__ . '/diagnostics-fixture.php';
+require_once __DIR__ . '/post-meta-authorization-fixture.php';
+wstm110_setup();
 
 function e2e_ensure_user( $login, $email, $role ) {
 	$user = get_user_by( 'login', $login );
@@ -641,6 +643,10 @@ $fixtures['wstm106_book_id'] = e2e_insert_post( 'mcp_book', 'WSTM106 Original Bo
 $fixtures['wstm106_case_id'] = e2e_insert_post( 'mcp_case_study', 'WSTM106 Original Case', 'Original case.', $case_manager_id, 'draft', 'wstm106-original-case' );
 
 $fixtures['post_id']         = e2e_insert_post( 'post', 'MCP E2E Post', 'Content for MCP E2E post.', $author_id );
+$fixtures['wstm110_post_id'] = e2e_insert_post( 'post', 'Standalone metadata authorization', 'Metadata fixture.', $author_id, 'draft' );
+update_post_meta( $fixtures['wstm110_post_id'], 'wstm110_gate', 'ready' );
+update_post_meta( $fixtures['wstm110_post_id'], 'wstm110_restricted', 'original' );
+update_post_meta( $fixtures['wstm110_post_id'], 'wstm110_open', 'original' );
 $fixtures['partial_post_id'] = e2e_insert_post(
 	'post',
 	'MCP E2E Partial Post',
@@ -765,6 +771,9 @@ $fixtures['reply_parent_comment_id'] = e2e_insert_comment( $fixtures['post_id'],
 $fixtures['update_comment_id']       = e2e_insert_comment( $fixtures['post_id'], 'update' );
 $fixtures['status_comment_id']       = e2e_insert_comment( $fixtures['post_id'], 'status-update' );
 $fixtures['missing_comment_id']      = 987654321;
+require_once __DIR__ . '/comments-fixture.php';
+$wstm105 = wstm105_comment_fixtures( $author_id, $fixtures['book_id'] );
+$fixtures = array_merge( $fixtures, $wstm105['fixtures'] );
 $fixtures['media_id']          = e2e_insert_media( $fixtures['post_id'], $author_id, 'read-update' );
 $fixtures['delete_media_id']   = e2e_insert_media( $fixtures['post_id'], $author_id, 'delete' );
 $fixtures['featured_image_id'] = e2e_insert_media( $fixtures['post_id'], $author_id, 'featured-image', 'image/png' );
@@ -907,6 +916,7 @@ $roles = array(
 	'user_lister'  => $user_lister_id,
 	'wstm106_page_editor' => $wstm106_page_editor_id,
 );
+$roles = array_merge( $roles, $wstm105['roles'] );
 
 require __DIR__ . '/site-kit-permissions-runner.php';
 
@@ -1096,6 +1106,11 @@ foreach ( $manifest as $case ) {
 		$passed = e2e_assert_post_meta_values( $case['assert_post_meta'], $fixtures );
 	}
 
+	if ( isset( $case['assert_comment_state'] ) ) {
+		$comment_state_passed = wstm105_assert_comment_state( $case['assert_comment_state'] );
+		$passed = $passed && $comment_state_passed;
+	}
+
 	if ( $passed ) {
 		$summary['passed']++;
 		echo 'PASS ' . $label . ( 'failure' === $expect ? ' denied as expected' : '' ) . "\n";
@@ -1113,6 +1128,8 @@ foreach ( $manifest as $case ) {
 		'passed'  => $passed,
 	);
 }
+
+wstm105_check_direct_callbacks( $roles, $fixtures );
 
 echo "SUMMARY {$summary['passed']} passed, {$summary['failed']} failed\n";
 require_once __DIR__ . '/taxonomy-write-runner.php';
