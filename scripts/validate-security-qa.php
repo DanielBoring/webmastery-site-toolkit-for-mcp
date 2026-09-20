@@ -26,6 +26,20 @@ function webmastery_mcp_security_qa_read_json( string $path ): array {
 		webmastery_mcp_security_qa_fail( array( "Invalid JSON in {$path}: " . json_last_error_msg() ) );
 	}
 
+	require_once dirname(__DIR__) . '/tests/e2e/error-contract-assertions.php';
+	foreach ( $data as $case ) {
+		if ( 'failure' !== ( $case['expect'] ?? null ) ) {
+			continue;
+		}
+		try {
+			if ( 'canonical' !== ( $case['expect_error_shape'] ?? null )
+				|| wstm118_expected_code( $case['expect_error_reason'] ?? '' ) !== ( $case['expect_error_code'] ?? null ) ) {
+				webmastery_mcp_security_qa_fail( array( 'Negative cases require canonical code, precise reason, and envelope shape.' ) );
+			}
+		} catch ( RuntimeException $error ) {
+			webmastery_mcp_security_qa_fail( array( $error->getMessage() ) );
+		}
+	}
 	return $data;
 }
 
@@ -203,7 +217,7 @@ foreach ( $required_permission_cases as $slug ) {
 			return "webmastery-site-toolkit-for-mcp/{$slug}" === ( $case['ability'] ?? '' )
 				&& 'failure' === ( $case['expect'] ?? '' )
 				&& 'forbidden' === ( $case['assert_permission'] ?? '' )
-				&& 'ability_invalid_permissions' === ( $case['expect_error_code'] ?? '' );
+				&& 'ability_invalid_permissions' === ( $case['expect_error_reason'] ?? '' );
 		}
 	);
 	if ( ! $matches ) {
@@ -234,7 +248,7 @@ foreach ( array( 'subscriber', 'author' ) as $role ) {
 			return 'webmastery-site-toolkit-for-mcp/delete-media' === ( $case['ability'] ?? '' )
 				&& $role === ( $case['role'] ?? '' ) && 'failure' === ( $case['expect'] ?? '' )
 				&& 'forbidden' === ( $case['assert_permission'] ?? '' )
-				&& 'ability_invalid_permissions' === ( $case['expect_error_code'] ?? '' )
+				&& 'ability_invalid_permissions' === ( $case['expect_error_reason'] ?? '' )
 				&& true === ( $case['assert_unchanged'] ?? false );
 		}
 	);
@@ -250,9 +264,10 @@ foreach ( array( 'publish', 'private', 'future' ) as $status ) {
 			static function ( $case ) use ( $slug, $status ) {
 				$is_create = 'create-post' === $slug;
 				$permission_proof = $is_create
-					? 'forbidden' === ( $case['assert_permission'] ?? '' ) && 'ability_invalid_permissions' === ( $case['expect_error_code'] ?? '' )
+					? 'forbidden' === ( $case['assert_permission'] ?? '' ) && 'ability_invalid_permissions' === ( $case['expect_error_reason'] ?? '' )
 					: true === ( $case['assert_permission'] ?? false ) && false === ( $case['assert_values']['success'] ?? null )
-						&& 'You do not have permission to publish this post.' === ( $case['assert_values']['error'] ?? '' );
+						&& 'forbidden' === ( $case['expect_error_reason'] ?? '' )
+						&& 'You do not have permission to publish this post.' === ( $case['assert_values']['error.message'] ?? '' );
 				return "webmastery-site-toolkit-for-mcp/{$slug}" === ( $case['ability'] ?? '' )
 					&& 'contributor' === ( $case['role'] ?? '' ) && 'failure' === ( $case['expect'] ?? '' )
 					&& $status === ( $case['input']['status'] ?? '' )
@@ -272,7 +287,7 @@ foreach ( array( 'list-categories', 'list-tags' ) as $slug ) {
 			static function ( $case ) use ( $slug, $role, $expect ) {
 				return "webmastery-site-toolkit-for-mcp/{$slug}" === ( $case['ability'] ?? '' )
 					&& $role === ( $case['role'] ?? '' ) && $expect === ( $case['expect'] ?? '' )
-					&& ( 'success' === $expect ? true : 'ability_invalid_permissions' === ( $case['expect_error_code'] ?? '' ) );
+					&& ( 'success' === $expect ? true : 'ability_invalid_permissions' === ( $case['expect_error_reason'] ?? '' ) );
 			}
 		);
 		if ( ! $matches ) {
@@ -289,7 +304,7 @@ foreach ( array( 'update', 'approve', 'trash', 'spam' ) as $action ) {
 			$ability === ( $case['ability'] ?? '' )
 			&& 'wstm105_moderator' === ( $case['role'] ?? '' )
 			&& 'failure' === ( $case['expect'] ?? '' )
-			&& 'ability_invalid_permissions' === ( $case['expect_error_code'] ?? '' )
+			&& 'ability_invalid_permissions' === ( $case['expect_error_reason'] ?? '' )
 			&& isset( $case['input']['comment_id'], $case['assert_comment_state']['comment_id'], $case['assert_comment_state']['content'], $case['assert_comment_state']['status'] )
 			&& $case['input']['comment_id'] === $case['assert_comment_state']['comment_id']
 			&& ( 'update' !== $action || 'spam' === ( $case['input']['status'] ?? '' ) )
@@ -321,10 +336,11 @@ foreach ( array( 'update', 'approve', 'trash', 'spam' ) as $action ) {
 			$missing = 'editor' === $role && ( 0 === ( $case['input']['comment_id'] ?? null ) || '__missing_comment_id__' === ( $case['input']['comment_id'] ?? null ) );
 			if ( 'failure' === $expect ) {
 				if ( $missing && 'update' !== $action ) {
-					if ( 'Comment not found.' !== ( $case['assert_values']['error'] ?? null ) ) {
+					if ( 'not_found' !== ( $case['expect_error_reason'] ?? null )
+						|| 'Comment not found.' !== ( $case['assert_values']['error.message'] ?? null ) ) {
 						continue;
 					}
-				} elseif ( ( $missing ? 'not_found' : 'ability_invalid_permissions' ) !== ( $case['expect_error_code'] ?? null ) ) {
+				} elseif ( ( $missing ? 'not_found' : 'ability_invalid_permissions' ) !== ( $case['expect_error_reason'] ?? null ) ) {
 					continue;
 				}
 			}
@@ -359,7 +375,7 @@ foreach ( array( 'get-post-meta', 'update-post-meta', 'delete-post-meta' ) as $s
 			if ( "webmastery-site-toolkit-for-mcp/{$slug}" === ( $case['ability'] ?? '' )
 				&& $role === ( $case['role'] ?? '' ) && $expect === ( $case['expect'] ?? '' )
 				&& 'wstm110_restricted' === ( $case['input']['meta_key'] ?? '' )
-				&& ( 'success' === $expect || 'forbidden' === ( $case['expect_error_code'] ?? '' ) ) ) {
+				&& ( 'success' === $expect || 'forbidden' === ( $case['expect_error_reason'] ?? '' ) ) ) {
 				$found = true;
 				break;
 			}
@@ -383,7 +399,7 @@ foreach ( array( 'list-site-kit-modules', 'get-site-kit-permissions', 'get-site-
 		$role = $case['role'] ?? '';
 		$expect = $case['expect'] ?? '';
 		$allow = 'allow' === ( $case['setup']['wstm125_site_kit_permission'] ?? '' );
-		if ( 'wstm125_no_read' === $role && 'failure' === $expect && $allow && 'ability_invalid_permissions' === ( $case['expect_error_code'] ?? '' ) ) {
+		if ( 'wstm125_no_read' === $role && 'failure' === $expect && $allow && 'ability_invalid_permissions' === ( $case['expect_error_reason'] ?? '' ) ) {
 			$required['local-denial'] = true;
 		}
 		if ( 'wstm125_read' === $role && 'success' === $expect ) {
@@ -442,7 +458,7 @@ foreach ( $media_requirements as $label => [ $role, $expect, $code ] ) {
 	foreach ( $manifest as $case ) {
 		if ( 'webmastery-site-toolkit-for-mcp/upload-image' === ( $case['ability'] ?? '' )
 			&& $label === ( $case['label'] ?? '' ) && $role === ( $case['role'] ?? '' )
-			&& $expect === ( $case['expect'] ?? '' ) && ( null === $code || $code === ( $case['expect_error_code'] ?? '' ) ) ) {
+			&& $expect === ( $case['expect'] ?? '' ) && ( null === $code || $code === ( $case['expect_error_reason'] ?? '' ) ) ) {
 			$found = true;
 			break;
 		}

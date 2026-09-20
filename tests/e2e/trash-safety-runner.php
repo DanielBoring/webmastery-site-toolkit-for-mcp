@@ -3,6 +3,8 @@ if ( 'cli' !== PHP_SAPI ) {
 	http_response_code( 403 );
 	exit( 'This test runner is CLI-only.' );
 }
+require_once __DIR__ . '/error-contract-assertions.php';
+
 
 /**
  * Isolated real-core trash regressions. Run in a fresh PHP process, not wp eval-file.
@@ -131,7 +133,7 @@ function wstm109_execute( $name, $input, $user ) {
 }
 
 function wstm109_error( $result ) {
-	return is_wp_error( $result ) ? $result->get_error_code() : ( $result['error']['code'] ?? null );
+	return wstm118_error_reason( $result );
 }
 
 function wstm109_denied( $label, $name, $input, $user, $code ) {
@@ -266,7 +268,12 @@ wstm109_denied( 'bulk denied role', 'bulk-trash-posts', [ 'ids' => $ids ], $subs
 wstm109_unchanged( 'bulk denied role', $own, $before, $events );
 $result = wstm109_execute( 'bulk-trash-posts', [ 'ids' => $ids ], $author );
 $data   = $result['data'] ?? [];
-$codes  = array_column( $data['failures'] ?? [], 'code', 'id' );
+$codes  = array_column( $data['failures'] ?? [], 'reason', 'id' );
+foreach ( $data['failures'] ?? [] as $failure ) {
+	$error = $failure;
+	unset( $error['id'] );
+	wstm118_error_envelope( [ 'success' => false, 'error' => $error ] );
+}
 $expected = [
 	$foreign['id'] => 'forbidden',
 	$missing => 'not_found',

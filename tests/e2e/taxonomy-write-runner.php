@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/error-contract-assertions.php';
+
 
 // This fixture mutates disposable WordPress data; never expose it over HTTP.
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
@@ -39,7 +41,7 @@ function wstm117_run_taxonomy_tests() {
 		return is_array( $result ) && true === ( $result['success'] ?? null );
 	};
 	$error = static function ( $result ) {
-		return is_wp_error( $result ) ? $result->get_error_message() : ( $result['error'] ?? '' );
+		return wstm118_error_envelope( $result )['error']['message'];
 	};
 	$original_user = get_current_user_id();
 	$admin = get_user_by( 'login', 'admin' );

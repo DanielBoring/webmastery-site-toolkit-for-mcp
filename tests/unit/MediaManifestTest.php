@@ -14,13 +14,14 @@ final class MediaManifestTest extends TestCase {
 		$script = $tmp . '/scripts/validate-security-qa.php';
 		$file = $tmp . '/tests/e2e/abilities-manifest.json';
 		copy( $root . '/scripts/validate-security-qa.php', $script );
+		copy( $root . '/tests/e2e/error-contract-assertions.php', $tmp . '/tests/e2e/error-contract-assertions.php' );
 		$cases = json_decode( file_get_contents( $root . '/tests/e2e/abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
 		foreach ( $cases as $index => &$case ) {
 			if ( 'webmastery-site-toolkit-for-mcp/upload-image' !== $case['ability'] ) { continue; }
 			if ( 'remove' === $mutation ) { unset( $cases[ $index ] ); }
 			if ( 'role' === $mutation && 'upload-image as subscriber' === $case['label'] ) { $case['role'] = 'admin'; }
 			if ( 'allow' === $mutation && 'success' === $case['expect'] ) { $case['expect'] = 'failure'; }
-			if ( 'invalid-file' === $mutation && 'invalid_file' === ( $case['expect_error_code'] ?? '' ) ) { $case['expect_error_code'] = 'download_failed'; }
+			if ( 'invalid-file' === $mutation && 'invalid_file' === ( $case['expect_error_reason'] ?? '' ) ) { $case['expect_error_code'] = 'download_failed'; }
 			if ( 'scenario' === $mutation && 'upload-image rejects IPv6 literal' === $case['label'] ) { unset( $cases[ $index ] ); }
 		}
 		unset( $case );
@@ -37,6 +38,7 @@ final class MediaManifestTest extends TestCase {
 		} finally {
 			if ( is_file( $file ) ) { unlink( $file ); }
 			unlink( $script );
+			unlink( $tmp . '/tests/e2e/error-contract-assertions.php' );
 			rmdir( $tmp . '/tests/e2e' );
 			rmdir( $tmp . '/tests' );
 			rmdir( $tmp . '/scripts' );

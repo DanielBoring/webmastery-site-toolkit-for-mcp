@@ -6,6 +6,8 @@ if ( PHP_SAPI !== 'cli' ) {
 	http_response_code( 404 );
 	exit;
 }
+require_once __DIR__ . '/error-contract-assertions.php';
+
 if ( count( $argv ) > 2 || ( isset( $argv[1] ) && ! in_array( $argv[1], [ 'baseline', 'fixed' ], true ) ) ) {
 	fwrite( STDERR, "Usage: php media-download-runner.php [baseline|fixed]\n" );
 	exit( 1 );
@@ -244,8 +246,8 @@ try {
 				return false;
 			} );
 			$result = $ability->execute( $input );
-			if ( is_wp_error( $result ) && 'ability_callback_exception' === $result->get_error_code() ) {
-				throw new RuntimeException( $result->get_error_message() );
+			if ( 'ability_callback_exception' === wstm118_error_reason( $result ) ) {
+				throw new RuntimeException( $result['error']['message'] );
 			}
 			restore_error_handler();
 			remove_filter( 'doing_it_wrong_trigger_error', $expected_notice );
@@ -261,7 +263,7 @@ try {
 				$meta = stream_get_meta_data( $stream );
 				if ( str_starts_with( $meta['uri'] ?? '', $tmp . '/' ) ) { ++$open_output_streams; }
 			}
-			$code = is_wp_error( $result ) ? $result->get_error_code() : ( $result['error']['code'] ?? '' );
+			$code = wstm118_error_reason( $result ) ?? '';
 			$after = (int) $GLOBALS['wpdb']->get_var( "SELECT COUNT(*) FROM {$GLOBALS['wpdb']->posts} WHERE post_type='attachment'" );
 			$leftovers = glob( $tmp . '/*' );
 			$success = '' === $code && true === ( $result['success'] ?? false );

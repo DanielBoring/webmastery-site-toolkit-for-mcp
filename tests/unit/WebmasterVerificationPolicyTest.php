@@ -29,6 +29,7 @@ final class WebmasterVerificationPolicyTest extends TestCase {
 		mkdir( $temp . '/tests/e2e', 0777, true );
 		try {
 			copy( $root . '/scripts/validate-security-qa.php', $temp . '/scripts/validate-security-qa.php' );
+			copy( $root . '/tests/e2e/error-contract-assertions.php', $temp . '/tests/e2e/error-contract-assertions.php' );
 			file_put_contents( $temp . '/tests/e2e/abilities-manifest.json', json_encode( $manifest, JSON_THROW_ON_ERROR ) );
 			$output = array();
 			exec( escapeshellarg( PHP_BINARY ) . ' ' . escapeshellarg( $temp . '/scripts/validate-security-qa.php' ) . ' 2>&1', $output, $status );
@@ -36,6 +37,7 @@ final class WebmasterVerificationPolicyTest extends TestCase {
 			self::assertStringContainsString( "successful {$role} cases omitting both private Site Kit projections", implode( "\n", $output ) );
 		} finally {
 			unlink( $temp . '/scripts/validate-security-qa.php' );
+			unlink( $temp . '/tests/e2e/error-contract-assertions.php' );
 			unlink( $temp . '/tests/e2e/abilities-manifest.json' );
 			rmdir( $temp . '/tests/e2e' );
 			rmdir( $temp . '/tests' );
