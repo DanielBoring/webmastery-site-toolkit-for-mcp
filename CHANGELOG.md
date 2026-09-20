@@ -17,10 +17,15 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 - Clarified agent handling of untrusted site content, comment reply/moderation access, dynamic ability counts, and the distinction between plugin results and MCP gateway responses.
 - Expanded the plugin header description to include custom post types, blocks/revisions, webmaster verification, and optional Google Site Kit diagnostics.
-- Kept the 2.6.0 upgrade notice within WordPress.org's 300-character limit while retaining upload, taxonomy, and compatibility guidance.
+- Kept the 2.6.0 upgrade notice within WordPress.org's 300-character limit, highlighting narrower permissions, unresolved metadata/SEO authorization gaps, and unchanged upload limits and PHP minimum.
 - Updated WordPress tested compatibility to 7.1 after passing ability and MCP transport checks on PHP 8.2 and 8.4.
+- Required object-specific comment edit permission as well as moderation permission for comment updates, approval, trash, and spam actions, preventing custom moderator roles from changing comments on posts they cannot edit. Existing missing-comment responses and the moderation capability floor remain unchanged; invalid/nonpositive IDs cannot target a global comment or another ID through coercion.
 
 ### Fixed
+
+- SEO Analyze Post no longer quotes stored focus keywords in diagnostic messages. Exact stored keywords remain in the existing metric fields; provider selection, checks, severity, scores, and permissions are unchanged. This limited data/message separation is not prompt-injection prevention.
+
+- Enforce effective WordPress key-level capabilities in the standalone post-meta read, upsert, and delete tools, including absent and unchanged values. Metadata listings omit denied keys; successful response shapes and protected-key eligibility remain unchanged. Metadata inside post/page create/update requests and separate SEO read paths are not covered by this partial fix and retain unresolved authorization risks.
 
 - Security audit HTTPS findings now describe the configured public home URL rather than the MCP request or admin-only TLS policy. Missing/unsupported schemes or hosts, whitespace/control characters, malformed percent escapes, and invalid authority syntax are explicitly unknown; this is a local syntax guard, not full URL or DNS validation.
 - Debug-log findings no longer disclose filesystem paths and warn when access is unverified instead of treating a neighboring `.htaccess` file or a location outside `wp-content` as proof of protection.

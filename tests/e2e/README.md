@@ -7,13 +7,107 @@ The Docker QA suite has two layers:
 1. Ability Contract QA is ability-driven. Every registered `webmastery-site-toolkit-for-mcp/*` ability must be represented in `tests/e2e/abilities-manifest.json`.
 2. Full MCP E2E QA uses real MCP Adapter HTTP JSON-RPC requests against `/wp-json/mcp/mcp-adapter-default-server` to prove a remote MCP client can create, read, update, and delete content through the adapter transport.
 
+## Comment moderation regression coverage
+
+`comments-fixture.php` adds `wstm105_*` fixtures and comment-specific checks. Its `wstm105_moderator` actor has the actual `comment_moderator` role with only `read` and `moderate_comments`. Cases cover all four writes, optional update statuses, Author moderation-floor denials, mapped-CPT allowed/denied controls, own-draft moderation, Administrator access, orphan comments, and missing/nonpositive IDs. Existing Editor cases and every landed main manifest case remain unchanged; runtime registrations remain the coverage authority.
+
+`assert_comment_state` requires `comment_id`, `content`, and `status`. It reloads the comment after execution and checks both persisted fields, even when the expected result is failure or the response assertion already failed. Security QA requires this evidence for the four moderator-only denials.
+
+The contract runner also invokes both registered callbacks directly for authorization, malformed input, capability filters, and core orphan behavior. Missing objects retain their execute-callback errors rather than becoming permission failures. Expected core permission notices are not suppressed; only notification emails for deliberately orphaned fixtures are disabled.
+
+The CLI-only `comments-runner.php` adds 308 cases across direct execution (104), the actual WordPress ability wrapper (104), and authenticated MCP HTTP (100). It retains raw HTTP tool results, exact error messages/codes, effective capabilities, per-comment content/status, and before/after hashes of all comment and commentmeta rows. Failed calls must leave both tables unchanged. Global-comment controls cover both direct execution and the ability wrapper; the contract fixture also calls the permission callback with a populated global comment and a zero ID. Negative-existing-ID controls cover all three boundaries. HTTP fixture application passwords are revoked. The runner refuses web access before WordPress bootstrap; artifact write failures are fatal.
+
+Contract and HTTP lanes run their respective boundaries via `WSTM105_BOUNDARY` and retain `comments-direct.json`, `comments-ability.json`, and `comments-http.json` for seven days, including failed runs. For baseline comparison, use this identical runner with `WSTM105_MODE=baseline` against the old registered callbacks on a disposable site, and a separate `WSTM105_ARTIFACT` path. Baseline mode records the old authorization/global-comment bugs rather than asserting the fix; malformed direct calls without a stable historical contract are fixed-only. Compare the 152 cases marked `compatibility` without normalizing away raw envelopes or error codes. Never install old callbacks on a shared/live site, and preserve baseline/failed calibration artifacts outside `e2e-artifacts` before a fresh suite clears it.
+
+HTTP session-close and application-password revocation failures are recorded individually under `cleanup_errors`, increment the failed count, and do not prevent subsequent cleanup or evidence writing. Existing case failures remain intact and the runner exits nonzero. Unit regressions inject both transport-close and credential-revocation failures to verify this behavior.
+
+## Shared runtime and coverage
+
+### SEO keyword data/message separation (partial #108)
+
+`tests/fixtures/seo-analysis.php` supplies five inert-marker scenarios to the unit tests, ability manifest fixtures, and existing MCP HTTP CRUD runner: Yoast found/missing with a competing SEOPress value, SEOPress found/missing after empty-Yoast fallback, and no keyword. Contract cases compare the complete `good` and `issues` arrays (including check IDs, severity, and every diagnostic message), exact keyword/title metrics, provider source, and score through existing `assert_values` placeholders. All earlier cases, including permission negatives, remain intact.
+
+The HTTP runner creates a separate owned SEO post, seeds it through the existing update ability, confirms stored metadata, executes SEO analysis through the actual MCP gateway, and retains each response in `mcp-crud-summary.json` under `seo_analysis`. It also rejects inert markers in every diagnostic message. The original CRUD post remains scheduled for its existing future-post deletion scenario; an extra read verifies its state before deletion. Dedicated SEO cleanup runs even after a case failure, records its response, and fails the summary for unsuccessful cleanup, wrong IDs/statuses, or exceptions. Unit tests additionally cover exact markup, quote, and backslash retention for both providers and both branches, plus unchanged response keys. Run `composer qa:unit -- --filter SeoAnalysisTest`, then managed `scripts/e2e-test.sh all` for actual WordPress and transport evidence.
+
+This only covers separating focus-keyword data from diagnostics. It adds no field markers, does not verify all annotations or resolve #108, and is not a prompt-injection prevention test.
+
 The harness disables request-triggered WordPress cron before installation and fixture setup in its disposable QA installation. Otherwise, HTTP health checks can start background tasks such as enclosure cleanup while a regression compares whole-database snapshots. Scheduled events and explicit calls to core's future-publication guard remain enabled and asserted; no production plugin setting or no-write predicate is changed. Use a fresh owned runtime, since setting `DISABLE_WP_CRON` does not stop a cron process that is already running.
 
 Compatibility lane artifacts retain both runtime metadata and the detailed `e2e-artifacts/` reports for 30 days, including failed scheduling cases. A failed or unavailable lane still blocks promotion.
 
+Release QA opts into extracted-package execution with `E2E_PACKAGE_ROOT` and `E2E_PACKAGE_ZIP`. Both must be supplied together, with managed Compose and the standard `e2e-artifacts` output directory. Before touching Docker, the harness requires the root to match the original ZIP exactly and the ZIP to match the source allowlist. `scripts/release-qa.sh` creates this fresh runtime extraction automatically, selects `docker-compose.release.yml` in addition to the base file, and keeps Plugin Check's extraction separate. The override exposes only the extracted production root, read-only `tests/`, compatibility helper files and baseline JSON, plus writable report output. No `vendor/` or whole-checkout bind is present. Default source E2E does not opt in and is unchanged. Use a unique disposable Compose project; do not point package mode at an existing development stack.
+
 Current coverage is 75 base registered abilities plus 5 generated abilities per eligible custom post type. The E2E runner registers two fixture custom post types, so the manifest covers 85 abilities (see the manifest validation script's runtime summary for the current test case count), including custom post type discovery and CRUD permission coverage for two capability maps, object/status-aware post, page, CPT, media, and SEO score list filtering, private-status and bulk-publish denial cases, sensitive identity-field absence checks, taxonomy get/update permission coverage, post and page listing response-shape assertions, expanded Yoast and SEOPress metadata write coverage, controlled Google Site Kit status/module/permission/PageSpeed route fixtures with shared-dashboard, denial, privacy, and same-site URL coverage, the bulk post abilities `webmastery-site-toolkit-for-mcp/bulk-trash-posts` and `webmastery-site-toolkit-for-mcp/bulk-publish-posts`, the revision abilities `webmastery-site-toolkit-for-mcp/list-revisions` and `webmastery-site-toolkit-for-mcp/restore-revision`, the post meta abilities `webmastery-site-toolkit-for-mcp/get-post-meta`, `webmastery-site-toolkit-for-mcp/update-post-meta`, and `webmastery-site-toolkit-for-mcp/delete-post-meta`, the block editing abilities `webmastery-site-toolkit-for-mcp/list-content-blocks`, `webmastery-site-toolkit-for-mcp/patch-content-block`, and `webmastery-site-toolkit-for-mcp/patch-post-content` with targeted post, page, CPT, permission-denial, and unsupported-type coverage, the comment interaction abilities `webmastery-site-toolkit-for-mcp/reply-comment` and `webmastery-site-toolkit-for-mcp/update-comment`, the media sideload ability `webmastery-site-toolkit-for-mcp/upload-image`, the content hygiene abilities `webmastery-site-toolkit-for-mcp/list-orphaned-media`, `webmastery-site-toolkit-for-mcp/list-posts-no-featured-image`, and `webmastery-site-toolkit-for-mcp/list-stuck-scheduled`, the site introspection abilities `webmastery-site-toolkit-for-mcp/get-site-info`, `webmastery-site-toolkit-for-mcp/get-user-info`, and `webmastery-site-toolkit-for-mcp/get-environment-info`, the user access audit ability `webmastery-site-toolkit-for-mcp/user-access-audit`, the Yoast score and metadata abilities `webmastery-site-toolkit-for-mcp/get-seo-scores`, `webmastery-site-toolkit-for-mcp/get-readability-scores`, and `webmastery-site-toolkit-for-mcp/get-yoast-metadata`, the SEOPress metadata ability `webmastery-site-toolkit-for-mcp/get-seopress-metadata`, the webmaster verification ability `webmastery-site-toolkit-for-mcp/webmaster-verification-status`, the database health ability `webmastery-site-toolkit-for-mcp/database-health`, the performance status ability `webmastery-site-toolkit-for-mcp/performance-status`, the backup status ability `webmastery-site-toolkit-for-mcp/backup-status`, plus the plugin abilities `webmastery-site-toolkit-for-mcp/list-plugins`, `webmastery-site-toolkit-for-mcp/plugin-audit`, `webmastery-site-toolkit-for-mcp/activate-plugin`, and `webmastery-site-toolkit-for-mcp/deactivate-plugin`.
 
 `update-cpt-mcp-book` regression coverage (issue #107) proves taxonomy assignment is pre-validated before `wp_update_post()` writes anything: each denial case (a nonexistent taxonomy, a registered taxonomy the actor lacks `assign_terms` capability for, and a mixed payload combining one allowed and one forbidden *registered* taxonomy alongside the existing allowed-plus-nonexistent case) submits a full `title`/`content`/`status`/`slug`/`taxonomy_terms` payload, and the paired read confirms the fixture's title, content, status, slug, and taxonomy terms are all unchanged. A second fixture taxonomy, `wstm107_restricted_shelf`, is registered only for `mcp_book` and granted to no role, so it is always forbidden and exercises the mixed allowed/forbidden registered-taxonomy path independently of the nonexistent-taxonomy case. The fixture post used for these cases (`wstm107_book_id`) is created with an explicit, deterministic slug so the unchanged-slug assertions are stable.
+
+## Ranked coverage follow-up (#120)
+
+This is a **partial, test-only** follow-up, not closure of the coverage umbrella.
+The manifest keeps every existing success and status/no-write assertion and adds
+the following requirement-to-test mapping:
+
+| Group | Permanent coverage |
+| --- | --- |
+| 1: permanent media deletion | `wstm120 delete-media` Subscriber and Author object denials; the Author has `upload_files` but cannot `delete_post` on the Editor-owned attachment. Original Author deletion success remains. The owner reads the retained attachment afterward. |
+| 6: Contributor boundaries | A real `contributor_test` user, role/ID placeholders and validator allowlist; own-draft create/update/trash with persisted-state assertions, all three publish/private/future create and transition denials, own published-delete denial, and unrelated draft read/update/delete denials. Dedicated fixtures do not reuse earlier write-positive targets. |
+| 7: private/trashed direct getters | `wstm120 get-post` / `get-page` cover owners and other users, allowed Editors and lower-capability owners, denied Subscribers/Contributors, and original draft versus published trash status. Effective object capabilities and `_wp_trash_meta_status` are asserted where relevant. |
+| 9: pure helper characterization | `PostsCharacterizationTest` covers numeric path grammar, by-reference nested replacement/no partial mutation, heading section boundaries/ambiguity, metadata recursive depth and encoded size/error limits. `SiteKitUrlTest` covers host case, effective ports, schemes, userinfo and fragments. Existing media URL and raw exact-match helper tests remain unchanged. |
+| 10: remaining negative paths | Explicit callback/wrapper permission errors for media reads, SEO analysis and four list abilities, with allowed counterparts and response/hidden-field assertions. |
+
+Direct post/page getters currently require **`edit_post`**, not the list helper's
+`read_post` (private) or `delete_post` (trash) checks. An Author or Contributor
+can edit their own private post through `edit_posts`; other-owned private posts
+add `edit_others_posts` and `edit_private_posts`. Owning a page does not grant
+`edit_pages`. A limited page editor can read their own private/trashed draft page,
+and a limited editor can read another user's trashed draft despite lacking delete
+permission. A Contributor's own formerly published trash still requires
+`edit_published_posts`. These are characterization assertions, not a new policy.
+
+| Fixture actor | Relevant coverage boundary |
+| --- | --- |
+| Contributor | Core `contributor` role: owns drafts, lacks publishing, editing/deleting published posts, other-object editing/deletion, and page editing. |
+| Author | Own private/trashed draft post reads; `upload_files` does not authorize another user's attachment. |
+| `wstm106_page_editor` | Existing page-limited role reused with dedicated owned private/trashed page fixtures; no private-other-page or deletion grant is added. |
+| Subscriber / `no_role` | Category/tag lists require `read`: Subscriber allowed, no-role denied. Post/page lists instead require `edit_posts`/`edit_pages`: both are denied. |
+| Editor / `limited_editor` | Allowed direct-get counterparts and the distinction between edit-capable direct reads and delete-filtered trash lists. |
+
+`assert_unchanged` compares raw persisted posts (including revisions), all
+postmeta, term relationships, the cron option, and every upload file's path and
+SHA-256 before permission checking and after execution. Media fixtures start
+with a real file, attachment metadata, alt text and a parent thumbnail link.
+Evidence is retained per case in `e2e-summary.json`; failed comparisons are not
+skipped just because the response was denied. `assert_stored_post` independently
+reads persisted fields; a successful Contributor write with `assert_changed`
+calibrates the snapshot observer. These checks prove persisted-state equality,
+not absence of transient/no-op write-hook calls.
+
+`assert_permission` distinguishes callback `forbidden` from WordPress's outer
+`ability_invalid_permissions`. Contributor status updates are an intentional
+legacy exception: object permission succeeds, then the execute callback returns
+the exact existing `success: false` / string `error` envelope. Required destructive
+permission cases cannot be replaced with not-found/invalid-input failures.
+Validator mutation tests protect this distinction and the no-write assertions.
+
+Heading units load the unchanged Posts class into a test namespace, supplying
+explicit block arrays and recording serialization input. They do **not** emulate
+a WordPress parser or prove core sanitization/authorization. Metadata units use
+the existing narrow sanitizer stubs and a native JSON encoder boundary (not
+WordPress's invalid-UTF8 repair); `INF`/`NAN` exercise encoding failure.
+Depth is zero-based: a scalar at depth 10 is accepted, at 11 rejected; null
+children bypass recursive normalization, so an array at depth 10 can contain
+null. Size cases encode to exactly 100000 and 100001 JSON bytes, not raw string
+length. Same-site URL characterization retains the existing effective-port
+comparison, including different HTTP(S) schemes with the same explicit port.
+The existing 45-check real-core patch HTML runner remains the integration
+counterpart; unit seams do not replace it.
+
+Groups 2/3/8 retain their separate trash-safety, taxonomy and patch-HTML evidence.
+Comment-object group 4 belongs to #105/#157; registered metadata group 5 belongs
+to #110/#159. **Batch metadata remains unresolved under #110**, and none of these
+case totals establishes full #120 completion. Runtime registration coverage must
+still prove all 85 fixture abilities against `wp_get_abilities()`; static manifest
+validation alone cannot make that claim.
 
 ## Diagnostic configuration and privacy regressions
 
@@ -140,6 +234,16 @@ The `wstm114` manifest cases preserve public Subscriber/Author access, retain bo
 `tests/unit/WebmasterVerificationTest.php` loads the unmodified verification class body in the isolated `Wstm114` namespace. Test-only namespaced PHP/WordPress boundary functions count HTTP, DNS, plugin inspection, cache, and home access, with a controlled clock and transient store. These tests prove direct no-read denial does zero work on cold/warm caches, both caller orders never cache private state or summaries, authorized plugin state stays fresh, warm repeats do zero HTTP/DNS work through 59 seconds, expiry at 60 seconds refreshes, home/blog changes refresh, and HTTP/DNS failures stay visible and cached. This is fixture evidence, not live DNS or production WordPress testing.
 
 The 60-second cache is not a strict rate limit: concurrent cold misses or transient eviction can repeat work. Full MCP E2E separately calls webmaster verification as a Subscriber over real HTTP JSON-RPC and checks both private paths are missing and the summary matches public checks. Transport success does not turn mocked contract responses into live Google/Bing verification evidence.
+
+## Standalone metadata authorization
+
+`post-meta-authorization-fixture.php` supplies restricted-key manifest cases and is installed temporarily as an MU plugin for `post-meta-authorization-runner.php`. The dedicated runner covers post/page metadata through direct execute callbacks, `WP_Ability::execute`, and authenticated MCP HTTP. It checks allowed/denied reads, filtered listings, absent/existing/unchanged upserts, absent/existing deletes, capability-specific policies, global/subtype precedence, actual SEO providers, effective `map_meta_cap` / `user_has_cap` denials, primitive/custom grants, and unregistered SEO fallback cleanup including exceptions.
+
+Denied operations must retain the persisted object/metadata snapshot and never reach metadata mutation hooks. Success checks compare stored data and existing response fields. Provider cases compare effective core permission rather than assuming a false registration callback overrides a primitive grant; synthetic policy and real-provider evidence remain distinct.
+
+The shell runs direct/ability boundaries in contract mode and HTTP in E2E mode, with `post-meta-authorization-<boundary>.json` evidence. Contract, HTTP, and package workflows retain these reports on success or failure. Cleanup attempts every session/password/post independently; return failures or exceptions fail the run and are recorded without suppressing its summary. The runner rejects web access before bootstrapping. The temporary MU plugin and application passwords are removed after the proof. Existing provider-create manifest cases retain their success expectations and values.
+
+This coverage is deliberately limited to the three standalone post-meta tools. It does not validate key authorization in post/page create/update batches or separate SEO reads, does not claim atomic batch behavior, and does not close the creation-policy/release gate.
 
 ## Rule for new abilities
 

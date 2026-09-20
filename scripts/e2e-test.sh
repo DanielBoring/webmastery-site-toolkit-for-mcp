@@ -14,14 +14,8 @@ E2E_MANAGE_COMPOSE="${E2E_MANAGE_COMPOSE:-0}"
 E2E_KEEP_COMPOSE="${E2E_KEEP_COMPOSE:-0}"
 QA_MODE="${1:-all}"
 
-compose() {
-	local project_args=()
-	if [ -n "${COMPOSE_PROJECT_NAME:-}" ]; then
-		project_args=( --project-name "$COMPOSE_PROJECT_NAME" )
-	fi
-
-	docker compose "${project_args[@]}" "$@"
-}
+# shellcheck source=scripts/qa-compose.sh
+source "$(dirname "${BASH_SOURCE[0]}")/qa-compose.sh"
 
 wp() {
 	compose exec -T wordpress wp --allow-root "$@"
@@ -277,6 +271,31 @@ run_parent_assignment_qa() (
 	done
 )
 
+run_post_meta_authorization_qa() (
+	local fixture="/var/www/html/wp-content/mu-plugins/wstm-issue110-meta.php"
+	local boundaries=()
+	local boundary
+	local status
+	trap 'compose exec -T wordpress rm -f /var/www/html/wp-content/mu-plugins/wstm-issue110-meta.php' EXIT
+	compose exec -T wordpress cp "${CONTAINER_PLUGIN_ROOT}/tests/e2e/post-meta-authorization-fixture.php" "$fixture"
+	status="$(compose exec -T wordpress curl --silent --show-error --output /tmp/wstm110-cli-response --write-out '%{http_code}' "http://localhost/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/post-meta-authorization-runner.php")"
+	if [ "$status" != "403" ]; then
+		echo "Metadata runner must reject non-CLI requests (HTTP ${status})." >&2
+		exit 1
+	fi
+	compose exec -T wordpress grep -Fxq 'CLI only.' /tmp/wstm110-cli-response
+	if [ "$QA_MODE" = "contract" ] || [ "$QA_MODE" = "all" ]; then
+		boundaries+=( direct ability )
+	fi
+	if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then
+		boundaries+=( http )
+	fi
+	for boundary in "${boundaries[@]}"; do
+		compose exec -T -e WSTM110_BOUNDARY="$boundary" \
+			wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/post-meta-authorization-runner.php"
+	done
+)
+
 run_debug_log_check() {
 	echo "Checking WordPress debug log..."
 	if ! compose exec -T wordpress test -f /var/www/html/wp-content/debug.log; then
@@ -306,6 +325,17 @@ main() {
 			;;
 	esac
 
+	if [ -n "${E2E_PACKAGE_ROOT:-}${E2E_PACKAGE_ZIP:-}" ]; then
+		: "${E2E_PACKAGE_ROOT:?Package runtime requires E2E_PACKAGE_ROOT}"
+		: "${E2E_PACKAGE_ZIP:?Package runtime requires E2E_PACKAGE_ZIP}"
+		if [ "$E2E_MANAGE_COMPOSE" != "1" ] || [ "$E2E_ARTIFACTS_DIR" != "e2e-artifacts" ]; then
+			echo "Package runtime requires managed Compose and the e2e-artifacts output mount." >&2
+			exit 1
+		fi
+		host_php scripts/release-tools.php runtime-package "$E2E_PACKAGE_ROOT" "$E2E_PACKAGE_ZIP"
+		echo "Release runtime plugin root: ${E2E_PACKAGE_ROOT} (verified against ${E2E_PACKAGE_ZIP})"
+	fi
+
 	trap cleanup_compose EXIT
 
 	rm -rf "$E2E_ARTIFACTS_DIR"
@@ -328,14 +358,19 @@ main() {
 		echo "Running scheduling side-effect regressions..."
 		compose exec -T wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/scheduling-runner.php"
 		run_trash_safety
+		echo "Running comment authorization and compatibility regressions..."
+		compose exec -T -e WSTM105_BOUNDARY=direct wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/comments-runner.php"
+		compose exec -T -e WSTM105_BOUNDARY=ability wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/comments-runner.php"
 	fi
 
 	if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then
 		echo "Running Full MCP E2E QA..."
 		run_mcp_crud
+		compose exec -T -e WSTM105_BOUNDARY=http wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/comments-runner.php"
 	fi
 
 	run_parent_assignment_qa
+	run_post_meta_authorization_qa
 	run_debug_log_check
 
 	echo "Docker QA (${QA_MODE}) completed successfully"

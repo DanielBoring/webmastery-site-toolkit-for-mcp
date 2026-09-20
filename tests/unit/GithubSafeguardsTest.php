@@ -67,20 +67,26 @@ final class GithubSafeguardsTest extends TestCase {
 		self::assertStringContainsString('zizmor --offline', $helper);
 	}
 
-	public function test_normal_pr_ci_executes_release_and_compatibility_regressions(): void {
+	public function test_normal_pr_ci_executes_static_release_and_compatibility_regressions(): void {
 		$root = dirname(__DIR__, 2);
 		$composer = json_decode(file_get_contents($root . '/composer.json'), true, 512, JSON_THROW_ON_ERROR);
 		self::assertSame(
-			array('@test:release-safeguards', 'bash tests/compatibility-download-test.sh', 'bash tests/compatibility-dependency-policy-test.sh'),
+			array('@test:phpstan-baseline', '@test:release-safeguards', 'bash tests/compatibility-download-test.sh', 'bash tests/compatibility-dependency-policy-test.sh'),
 			$composer['scripts']['test:ci-safeguards']
 		);
+		self::assertSame('php scripts/test-phpstan-baseline.php', $composer['scripts']['test:phpstan-baseline']);
+		self::assertContains('@test:phpstan-baseline', $composer['scripts']['qa:static']);
 		self::assertSame(
-			array('php scripts/test-release-safeguards.php', 'bash scripts/test-release-tag-check.sh', 'bash scripts/test-release-plugin-check.sh'),
+			array('php scripts/test-release-safeguards.php', 'bash scripts/test-release-tag-check.sh', 'bash scripts/test-release-plugin-check.sh', 'bash scripts/test-release-runtime.sh'),
 			$composer['scripts']['test:release-safeguards']
 		);
 		$workflow = file_get_contents($root . '/.github/workflows/unit-tests.yml');
 		self::assertStringContainsString('run: composer test:ci-safeguards', $workflow);
 		self::assertStringContainsString('extensions: zip', $workflow);
+		foreach (array('release.yml', 'release-package-qa.yml') as $file) {
+			$release_workflow = file_get_contents($root . '/.github/workflows/' . $file);
+			self::assertStringContainsString('bash scripts/test-release-runtime.sh', $release_workflow);
+		}
 	}
 
 	public function test_compatibility_promotion_only_blocks_open_pull_requests(): void {
@@ -88,5 +94,34 @@ final class GithubSafeguardsTest extends TestCase {
 		self::assertIsString($workflow);
 		self::assertStringContainsString('gh pr list --state open', $workflow);
 		self::assertStringNotContainsString('gh pr list --state all', $workflow);
+	}
+
+	public function test_release_compose_only_adds_explicit_harness_mounts(): void {
+		$root = dirname(__DIR__, 2);
+		$compose = file_get_contents($root . '/docker-compose.release.yml');
+		preg_match_all('/^\s+source: ([^\r\n]+)\r?$/m', $compose, $sources);
+		self::assertSame(
+			array(
+				'${E2E_PACKAGE_ROOT:?Package runtime requires an extracted plugin root}',
+				'./tests',
+				'./scripts/compatibility-baselines.php',
+				'./scripts/compatibility-download.sh',
+				'./.github/compatibility-versions.json',
+				'./e2e-artifacts',
+			),
+			$sources[1]
+		);
+		$plugin = '/var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp';
+		preg_match_all('/^\s+target: ([^\r\n]+)\r?$/m', $compose, $targets);
+		self::assertSame(
+			array($plugin, $plugin . '/tests', $plugin . '/scripts/compatibility-baselines.php', $plugin . '/scripts/compatibility-download.sh', $plugin . '/.github/compatibility-versions.json', $plugin . '/e2e-artifacts'),
+			$targets[1]
+		);
+		self::assertSame(6, substr_count($compose, 'create_host_path: false'));
+		self::assertSame(4, substr_count($compose, 'read_only: true'));
+		self::assertStringContainsString('- ./:', file_get_contents($root . '/docker-compose.yml'));
+		$workflow = file_get_contents($root . '/.github/workflows/release-package-qa.yml');
+		self::assertStringContainsString("'docker-compose.release.yml'", $workflow);
+		self::assertStringContainsString("'scripts/qa-compose.sh'", $workflow);
 	}
 }

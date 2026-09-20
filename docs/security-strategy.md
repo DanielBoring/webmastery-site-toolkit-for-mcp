@@ -25,7 +25,9 @@ Primary risks for this plugin:
 
 ## Agent threat model
 
-Stored site content can contain prompt injection: text that asks an agent to disregard its task, change site data, or send information elsewhere. Treat post, page, custom post type, and revision bodies, titles, excerpts, and author display names as untrusted data. The same applies to comment bodies and author fields (including email and URL), media titles/captions/alt text, SEO keywords and raw provider head HTML/JSON, and user-chosen application-password `app_name` values. These fields can originate with another user or an attacker. SEO diagnostic messages can also contain stored keywords; a `message` field is not necessarily trusted instructions.
+Stored site content can contain prompt injection: text that asks an agent to disregard its task, change site data, or send information elsewhere. Treat post, page, custom post type, and revision bodies, titles, excerpts, and author display names as untrusted data. The same applies to comment bodies and author fields (including email and URL), media titles/captions/alt text, SEO keywords and raw provider head HTML/JSON, and user-chosen application-password `app_name` values. These fields can originate with another user or an attacker. A `message` field is not necessarily trusted instructions.
+
+SEO Analyze Post no longer quotes stored focus keywords in its found/not-found diagnostic messages. Their exact stored values remain in `data.metrics.yoast_focus_keyword` and `data.metrics.seopress_focus_keywords`, alongside the unchanged title and Yoast-first `seo_provider_focus_source`. This compatible partial #108 change only separates those values from human-readable diagnostics; it does not strip or escape stored content, add field markers, verify all annotations, change authorization, or resolve #108. It is not prompt-injection prevention.
 
 JSON serialization, authenticated retrieval, read-only annotations, and successful capability checks do not make that text authoritative. Capabilities determine what the connected account may access or change, not whether a human requested a particular action. A read-only call can deliver instructions that influence later writes or transmission through another tool. Retrieved content must never authorize those later actions.
 
@@ -61,6 +63,12 @@ Use these defaults:
 | Plugin, environment, database, backup, performance, security, or runtime details | Administrator-level capabilities such as `manage_options` or plugin-management capabilities. |
 | User identity data | Restrict login/email fields to callers with user-management capabilities; use `assert_missing_paths` for lower-privilege cases. |
 
+Comment updates, approval, trash, and spam require **both** `moderate_comments` and `edit_comment` on the resolved comment, in the permission callback and again before execution. WordPress maps `edit_comment` to the parent post's `edit_post` capabilities, or to `edit_posts` for an orphaned comment; the plugin delegates that mapping to core, including capability filters. Comment listing and replies retain their separate existing policies.
+
+This is the plugin's moderation policy, not a claim of REST permission parity: WordPress 7.1's REST comment controller accepts `moderate_comments` **or** `edit_comment`. Existing-object denials use `forbidden` in permission callbacks; `WP_Ability::execute()` wraps them as `ability_invalid_permissions`. Missing objects are deferred to guarded execution for globally authorized callers, retaining `not_found` for updates and the existing string error for status operations. Direct callbacks retain those missing-object responses even for denied callers, but always check both capabilities before exposing content or writing an existing object.
+
+The MCP Adapter 0.5.0 HTTP gateway checks permission before ability input validation. It returns an `isError: true` tool result with the static permission message for denied callers; authorized missing-object responses remain inside the successful gateway envelope with `data.success: false`. The WordPress ability wrapper instead validates schema before permission checks. These are distinct, preserved contracts. Invalid/nonpositive IDs never reach `get_comment(0)` or its global-comment fallback; negative IDs cannot silently resolve a different positive ID. Those unsafe mutations are intentionally not compatibility guarantees.
+
 The current [Site Kit implementation](../includes/class-site-kit.php) requires `manage_options` for status; module, permission, and PageSpeed access depends on Site Kit route permissions and sharing. It checks optional/internal route availability and calls the route permission callback during ability permission checks; data requests use WordPress REST dispatch. A WordPress role alone does not grant provider access, and inactive providers or unavailable/unsupported routes can prevent data retrieval even for an Administrator. See [Site Kit compatibility](../README.md#google-site-kit-compatibility-abilities) for the supported operations.
 
 ### Webmaster verification privacy and caching
@@ -92,6 +100,7 @@ Current static enforcement:
 Current runtime enforcement:
 
 - Ability Contract QA executes all manifest cases in WordPress.
+- Comment moderation cases verify persisted content and status on denied calls, including status-bearing updates. Direct callback checks also cover the moderation capability floor, custom post type maps, own-post access, orphan comments, malformed input, missing comments, and capability-filter denials.
 - Contract QA also boots fresh PHP processes with `EMPTY_TRASH_DAYS=30` and `0`, asserting the actual constant, registered-ability results, persisted rows, and zero permanent-deletion API filters/hooks. Enabled trash/restore and disabled comment-status behavior are checked independently. These configuration-specific checks are direct PHP ability calls, not HTTP MCP coverage.
 - Full MCP E2E verifies real MCP Adapter authentication, discovery, execution, and subscriber denial.
 - Docker QA fails when the WordPress debug log contains warnings, notices, deprecations, or errors.

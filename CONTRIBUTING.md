@@ -60,6 +60,8 @@ composer qa
 
 `composer qa` runs the normal fast pre-PR checks: Static QA plus Unit Tests. See [`docs/qa-strategy.md`](docs/qa-strategy.md) for the full QA posture, including when to run Ability Contract QA, Full MCP E2E QA, Release Package QA, and Compatibility QA.
 
+PHPStan runs at level 5 with a reviewed, file/message/identifier/count-scoped baseline and a PHP 8.0 analysis target. New diagnostics must be fixed rather than added to the baseline. When fixing existing debt, lower the matching count or remove the resolved entry in the same PR; unmatched entries fail full-project analysis. Run `composer phpstan` without individual-file arguments and `composer test:phpstan-baseline` to verify the ratchet. See the [baseline review and regeneration policy](docs/qa-strategy.md#phpstan-level-5-and-baseline-ratchet).
+
 Workflow and shell changes also need the dedicated workflow lint checks. These tools are separate from the PHP-only `composer qa` path. Docker validation must use a disposable, uniquely named Compose project; do not run cleanup commands against a shared development stack.
 
 `composer lint:workflows` requires actionlint 1.7.12, ShellCheck 0.11.0, and zizmor 1.30.1 on `PATH`. Install the pinned upstream releases and verify their checksums as shown in `.github/workflows/workflow-lint.yml`; the command rejects missing or mismatched versions.
@@ -145,15 +147,16 @@ Environment-specific notes for GitHub Actions, Windows PowerShell, and Windows G
 | Command | What it runs |
 | --- | --- |
 | `composer qa` | Fast local default: Static QA plus Unit Tests |
-| `composer qa:static` | PHP lint, PHPCS, PHPStan, Composer audit, manifest structure validation, security QA validation, and `git diff --check` |
+| `composer qa:static` | PHP lint, PHPCS, PHPStan level 5 plus baseline regression guards, Composer audit, manifest structure validation, security QA validation, and `git diff --check` |
 | `composer qa:unit` | PHPUnit unit tests |
 | `composer lint:workflows` | Actionlint, ShellCheck, and offline zizmor using the required versions already on `PATH` |
-| `composer test:release-safeguards` | Package/metadata/artifact regression tests plus local Git tag/ancestry fixtures; requires PHP ZipArchive and Bash, not Docker |
-| `composer test:ci-safeguards` | All release safeguards plus verified-download and pinned/floating dependency tests; also runs in the PHP 8.0/8.4 CI unit jobs |
+| `composer test:release-safeguards` | Package/metadata/artifact, package-runtime orchestration and checker regressions plus local Git tag/ancestry fixtures; requires PHP ZipArchive and Bash, not Docker |
+| `composer test:ci-safeguards` | PHPStan baseline guards, all release safeguards, and verified-download and pinned/floating dependency tests; also runs in the PHP 8.0/8.4 CI unit jobs |
+| `composer test:phpstan-baseline` | Isolated inherited-config proof that new type errors, excess counts, and stale baseline entries fail; resolved debt can be ratcheted down |
 | `composer validate:security-qa` | Static security QA policy checks for risky permission callbacks and required permission-hardening manifest cases |
 | `composer qa:contract` | Docker Ability Contract QA against an already-running Compose stack |
 | `composer qa:e2e` | Docker Full MCP E2E QA against an already-running Compose stack |
-| `composer qa:release` | Release Package QA, including Docker contract/transport QA, built package validation, and WordPress Plugin Check |
+| `composer qa:release` | Release Package QA: original-ZIP extraction as the Docker plugin root, contract/transport QA, exact package validation, and WordPress Plugin Check on a separate pristine extraction |
 | `E2E_MANAGE_COMPOSE=1 composer qa:contract` | Ability Contract QA with automatic Compose startup and cleanup |
 | `E2E_MANAGE_COMPOSE=1 composer qa:e2e` | Full MCP E2E QA with automatic Compose startup and cleanup |
 | `scripts/qa-local.sh --contract` | Unix/Git Bash wrapper for Composer QA plus managed Ability Contract QA |

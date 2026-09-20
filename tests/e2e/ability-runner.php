@@ -1,6 +1,10 @@
 <?php
 
 require_once __DIR__ . '/diagnostics-fixture.php';
+require_once __DIR__ . '/coverage-fixture.php';
+require_once dirname( __DIR__ ) . '/fixtures/seo-analysis.php';
+require_once __DIR__ . '/post-meta-authorization-fixture.php';
+wstm110_setup();
 
 function e2e_ensure_user( $login, $email, $role ) {
 	$user = get_user_by( 'login', $login );
@@ -498,6 +502,8 @@ e2e_require_active_plugin( getenv( 'SEOPRESS_PLUGIN_FILE' ) ?: 'wp-seopress/seop
 $admin         = get_user_by( 'login', 'admin' );
 $admin_id      = (int) $admin->ID;
 $author_id     = e2e_ensure_user( 'author_test', 'author@test.local', 'author' );
+$contributor_id = e2e_ensure_user( 'contributor_test', 'contributor@test.local', 'contributor' );
+( new WP_User( $contributor_id ) )->set_role( 'contributor' );
 $editor_id     = e2e_ensure_user( 'editor_test', 'editor@test.local', 'editor' );
 $subscriber_id = e2e_ensure_user( 'subscriber_test', 'subscriber@test.local', 'subscriber' );
 $no_role_id    = e2e_ensure_user( 'no_role_test', 'no-role@test.local', 'subscriber' );
@@ -613,6 +619,8 @@ e2e_delete_term_by_slug( 'mcp-e2e-updated-tag', 'post_tag' );
 $fixtures = array(
 	'admin_id'           => $admin_id,
 	'author_id'          => $author_id,
+	'contributor_id'     => $contributor_id,
+	'wstm120_page_editor_id' => $wstm106_page_editor_id,
 	'editor_id'          => $editor_id,
 	'subscriber_id'      => $subscriber_id,
 	'no_role_id'         => $no_role_id,
@@ -641,6 +649,10 @@ $fixtures['wstm106_book_id'] = e2e_insert_post( 'mcp_book', 'WSTM106 Original Bo
 $fixtures['wstm106_case_id'] = e2e_insert_post( 'mcp_case_study', 'WSTM106 Original Case', 'Original case.', $case_manager_id, 'draft', 'wstm106-original-case' );
 
 $fixtures['post_id']         = e2e_insert_post( 'post', 'MCP E2E Post', 'Content for MCP E2E post.', $author_id );
+$fixtures['wstm110_post_id'] = e2e_insert_post( 'post', 'Standalone metadata authorization', 'Metadata fixture.', $author_id, 'draft' );
+update_post_meta( $fixtures['wstm110_post_id'], 'wstm110_gate', 'ready' );
+update_post_meta( $fixtures['wstm110_post_id'], 'wstm110_restricted', 'original' );
+update_post_meta( $fixtures['wstm110_post_id'], 'wstm110_open', 'original' );
 $fixtures['partial_post_id'] = e2e_insert_post(
 	'post',
 	'MCP E2E Partial Post',
@@ -765,10 +777,27 @@ $fixtures['reply_parent_comment_id'] = e2e_insert_comment( $fixtures['post_id'],
 $fixtures['update_comment_id']       = e2e_insert_comment( $fixtures['post_id'], 'update' );
 $fixtures['status_comment_id']       = e2e_insert_comment( $fixtures['post_id'], 'status-update' );
 $fixtures['missing_comment_id']      = 987654321;
+require_once __DIR__ . '/comments-fixture.php';
+$wstm105 = wstm105_comment_fixtures( $author_id, $fixtures['book_id'] );
+$fixtures = array_merge( $fixtures, $wstm105['fixtures'] );
 $fixtures['media_id']          = e2e_insert_media( $fixtures['post_id'], $author_id, 'read-update' );
 $fixtures['delete_media_id']   = e2e_insert_media( $fixtures['post_id'], $author_id, 'delete' );
 $fixtures['featured_image_id'] = e2e_insert_media( $fixtures['post_id'], $author_id, 'featured-image', 'image/png' );
 $fixtures['orphaned_media_id'] = e2e_insert_media( 0, $author_id, 'orphaned' );
+wstm120_seed_fixtures( $fixtures );
+foreach ( wstm108_seo_cases() as $name => $seo_case ) {
+	$id = e2e_insert_post( 'post', $seo_case['title'], $seo_case['content'], $editor_id, 'draft', $seo_case['slug'] );
+	$fixtures[ "wstm108_{$name}_id" ] = $id;
+	foreach ( $seo_case['meta'] as $key => $value ) {
+		update_post_meta( $id, $key, wp_slash( $value ) );
+		if ( get_post_meta( $id, $key, true ) !== $value ) {
+			throw new RuntimeException( "Could not seed exact SEO metadata for {$name}." );
+		}
+	}
+	$fixtures[ "wstm108_{$name}_title" ] = $seo_case['title'];
+	$fixtures[ "wstm108_{$name}_good" ] = $seo_case['expected']['data.good'];
+	$fixtures[ "wstm108_{$name}_issues" ] = $seo_case['expected']['data.issues'];
+}
 $fixtures['yoast_score_post_id'] = e2e_insert_post( 'post', 'MCP E2E Yoast Score Post', 'Yoast score fixture.', $author_id );
 wp_update_post(
 	array(
@@ -895,6 +924,7 @@ $roles = array(
 	'wstm125_read' => $wstm125_read_id,
 	'admin'        => $admin_id,
 	'author'       => $author_id,
+	'contributor'  => $contributor_id,
 	'editor'       => $editor_id,
 	'filtered_editor' => $wstm115_filtered_editor_id,
 	'limited_editor' => $limited_editor_id,
@@ -907,6 +937,7 @@ $roles = array(
 	'user_lister'  => $user_lister_id,
 	'wstm106_page_editor' => $wstm106_page_editor_id,
 );
+$roles = array_merge( $roles, $wstm105['roles'] );
 
 require __DIR__ . '/site-kit-permissions-runner.php';
 
@@ -986,13 +1017,39 @@ foreach ( $manifest as $case ) {
 		? wstm114_verification_prepare( $case )
 		: null;
 	$restore = e2e_apply_case_setup( $case );
+	$before = ! empty( $case['assert_unchanged'] ) || ! empty( $case['assert_changed'] ) ? wstm120_snapshot() : null;
+	$coverage_evidence = array();
+	$capabilities = wstm120_assert_capabilities( $case );
+	$coverage_passed = ! in_array( false, array_column( $capabilities, 'passed' ), true );
+	if ( $capabilities ) {
+		$coverage_evidence['capabilities'] = $capabilities;
+	}
+	if ( isset( $case['assert_permission'] ) ) {
+		$permission = $ability->check_permissions( $input );
+		$actual = is_wp_error( $permission ) ? $permission->get_error_code() : $permission;
+		$coverage_evidence['permission'] = $actual;
+		$coverage_passed = $coverage_passed && $case['assert_permission'] === $actual;
+	}
 	try {
 		$result = $ability->execute( $input );
+		if ( null !== $before ) {
+			$after = wstm120_snapshot();
+			$coverage_evidence['before'] = $before;
+			$coverage_evidence['after'] = $after;
+			$coverage_evidence['unchanged'] = $before === $after;
+			$coverage_passed = $coverage_passed && ( ! empty( $case['assert_changed'] ) ? $before !== $after : $before === $after );
+		}
 	} finally {
 		e2e_restore_case_setup( $restore );
 	}
 	$ok      = ! is_wp_error( $result ) && e2e_result_is_success( $result );
 	$passed  = ( 'success' === $expect && $ok ) || ( 'failure' === $expect && ! $ok );
+	$passed = $passed && $coverage_passed;
+	if ( isset( $case['assert_stored_post'] ) ) {
+		$stored = wstm120_assert_stored_post( $case['assert_stored_post'], $result );
+		$coverage_evidence['stored_post'] = $stored;
+		$passed = $passed && $stored;
+	}
 	if ( null !== $wstm114 ) {
 		$passed = wstm114_verification_assert( $case, $result, $wstm114 ) && $passed;
 	}
@@ -1096,6 +1153,11 @@ foreach ( $manifest as $case ) {
 		$passed = e2e_assert_post_meta_values( $case['assert_post_meta'], $fixtures );
 	}
 
+	if ( isset( $case['assert_comment_state'] ) ) {
+		$comment_state_passed = wstm105_assert_comment_state( $case['assert_comment_state'] );
+		$passed = $passed && $comment_state_passed;
+	}
+
 	if ( $passed ) {
 		$summary['passed']++;
 		echo 'PASS ' . $label . ( 'failure' === $expect ? ' denied as expected' : '' ) . "\n";
@@ -1111,8 +1173,11 @@ foreach ( $manifest as $case ) {
 		'role'    => $role,
 		'expect'  => $expect,
 		'passed'  => $passed,
+		'coverage_evidence' => $coverage_evidence,
 	);
 }
+
+wstm105_check_direct_callbacks( $roles, $fixtures );
 
 echo "SUMMARY {$summary['passed']} passed, {$summary['failed']} failed\n";
 require_once __DIR__ . '/taxonomy-write-runner.php';

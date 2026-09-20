@@ -65,6 +65,10 @@ It requires a WordPress site where custom plugins can be installed. Self-hosted 
 
 Use a dedicated Editor account for normal content workflows: posts, pages, taxonomy, comments, media, revisions, content blocks, and content hygiene.
 
+Comment updates, approval, trash, and spam actions require both moderate_comments and edit_comment for the specific comment. A custom moderator role also needs the mapped edit permissions for the comment's post; owning a post alone does not remove the moderate_comments requirement.
+
+Missing-comment error shapes are preserved. Invalid or nonpositive IDs cannot fall back to a global comment or silently select another ID. Listing and reply permissions are unchanged.
+
 Use a separate dedicated Administrator account only when you need Administrator-only workflows such as runtime environment details, plugin management, user access audits, site health, database health, performance status, backup status, security audits, or site-wide SEO overview.
 
 = Why use a dedicated account? =
@@ -96,6 +100,16 @@ Public results, including failures and unknowns, are cached for 60 seconds per s
 Write operations go through WordPress APIs and capability checks. Posts, pages, and custom post type items move to trash rather than being permanently deleted. Media deletion is permanent. Block and partial-content patching can use hashes so stale or ambiguous edits fail safely.
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
+
+= How are standalone metadata permissions enforced? =
+
+The standalone get-post-meta and update-post-meta abilities require edit_post_meta for the actual object and key; delete-post-meta requires delete_post_meta. All three also require edit_post and preserve the existing protected-key eligibility rules. Upserts include absent and unchanged values, and deletions check authorization even when the key is absent. Explicit denied reads return forbidden; listings omit denied keys. Requiring edit permission for reads is a conservative plugin policy, not a general WordPress read-meta capability.
+
+Global/subtype registrations and effective WordPress capability filters are respected, including explicit primitive grants from providers. The compatibility default for genuinely unregistered supported SEO keys does not bypass those filters. Successful response shapes are unchanged.
+
+This is a partial authorization fix: post/page create and update metadata/SEO aliases and separate SEO inspection, analysis, and scoring paths retain their existing policies and can still bypass restrictive per-key checks. Standalone hardening does not resolve those risks or establish release readiness. Existing one-call SEO create workflows are unchanged.
+
+Clients using custom roles or registered per-key policies should handle new standalone denials and omitted listing keys. Clients relying on those policies to restrict metadata inside create/update requests, SEO aliases, or separate SEO reads remain affected by the unresolved gaps; do not treat standalone hardening as protection for those paths.
 
 = Can metadata and media text contain backslashes? =
 
@@ -155,6 +169,8 @@ Ability counts vary with eligible custom post types and the deployed plugin vers
 
 No. Retrieved content and metadata remain untrusted data even when the response is JSON, authenticated, read-only, or capability-checked. They cannot authorize later changes or sending data elsewhere. Use a dedicated account with the least privileges needed, bounded selections, independent previews/diffs, explicit client-side approval for dangerous actions and destinations, and trustworthy backups. Sanitization, annotation hints, or a model-supplied confirmation value cannot prove human approval or guarantee prompt-injection prevention.
 
+SEO Analyze Post keeps stored focus keywords in the existing Yoast/SEOPress metric fields rather than quoting them in diagnostic messages. Provider selection, checks, scores, permissions, and missing-keyword behavior are unchanged. This limited separation is not prompt-injection prevention; it adds no untrusted-field markers and does not verify all annotation hints or resolve the broader untrusted-content work.
+
 See the [Agent threat model](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/security-strategy.md#agent-threat-model) and [Response format](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/README.md#response-format). A successful MCP gateway response does not necessarily mean the inner ability succeeded.
 
 = Where is the full documentation? =
@@ -183,6 +199,10 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Add read-only Google Site Kit setup, module, current-user permission, and same-site PageSpeed abilities with Site Kit-native authorization and sensitive upstream fields removed.
 * Reject invalid or unauthorized page and custom post type parents before saving other changes; retain valid hierarchical parents, detach-to-zero, and omitted parents.
 * Validate custom post type update taxonomy registration and assign-terms permission before saving any requested changes, matching creation.
+* Keep stored SEO focus keywords in metric data rather than diagnostic messages, without changing provider selection, scores, permissions, or response fields.
+* Enforce key-level WordPress authorization for standalone post-meta reads, upserts, and deletes. Omit denied keys from listings; retain existing success shapes and protected-key eligibility.
+* This partial fix does not change metadata inside post/page create/update requests or separate SEO read paths; their authorization risks remain unresolved.
+* Comment updates, approval, trash, and spam now require permission to edit the specific comment as well as moderation permission. Missing-comment errors are unchanged; invalid IDs cannot select a global comment or a different target.
 * Report the configured public home URL scheme independently of the MCP request and admin-only TLS policy.
 * Warn on malformed percent escapes or authority syntax without rejecting valid local, internationalized, or IPv6 configurations.
 * Omit debug-log paths and warn when log access is unverified rather than claiming protection.
@@ -242,7 +262,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Upgrade Notice ==
 
 = 2.6.0 =
-Image downloads stop at the existing upload limit; invalid limits and DNS failures return errors. Remapped taxonomy and per-term write restrictions are enforced; refused deletions report failure. Upload limits, the PHP floor, and supported WordPress versions are unchanged.
+Standalone metadata, comment and taxonomy permissions are tighter. Create/update metadata, SEO aliases and separate SEO reads retain authorization gaps (see FAQ). Clients using custom role/key policies must review denials. Image upload limits and PHP 8.0 minimum are unchanged.
 
 = 2.5.0 =
 Targeted partial-content patches now support pages and eligible custom post types while preserving object-level edit permissions.

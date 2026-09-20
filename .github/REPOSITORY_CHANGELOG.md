@@ -8,6 +8,12 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added focused SEO keyword data/message regressions for both providers, found/missing diagnostics, Yoast precedence, SEOPress fallback, and no-keyword behavior. Shared inert fixtures exercise exact metrics, complete diagnostic arrays, and scores through units, the ability manifest, and the existing MCP HTTP client; all previous permission cases remain unchanged.
+
+- Added partial #120 test-only coverage for permanent media-delete denials with persisted row/metadata/file evidence, real Contributor draft/publishing boundaries, private/trashed direct getters, and remaining media/SEO/list permission negatives. Added pure-helper characterization and validator mutation tests; retained existing runtime policies, positive cases, and separate unresolved batch metadata work.
+- Add isolated actual-core standalone metadata authorization checks through direct callbacks, abilities, and authenticated MCP HTTP, including effective capability filters, persisted-state denial evidence, provider policies, and temporary-filter cleanup. Retain success/failure reports even when cleanup fails, upload them from contract/HTTP/package workflows, and verify the new runner in mocked package orchestration. Preserve the existing provider create-success contracts and keep the broader metadata release decision open.
+
+- Added comment moderation regression fixtures, mapped-CPT controls, persisted content/status assertions, and mandatory denial/error-compatibility cases in the security QA policy. Dedicated direct/ability/HTTP comment evidence is retained for seven days, including raw transport envelopes and comment/metadata state hashes. Cleanup failures are recorded without blocking later cleanup or failed-run evidence, with injected failure regression coverage.
 - Added a software development lifecycle overview that maps issue intake, design, implementation, QA, release, and maintenance to the repository's strategy documents and sources of truth.
 - Documented the agent threat model, client-side approval and recovery guidance, annotation scope, and delegated Site Kit access expectations without changing runtime permissions or response contracts.
 - Added focused diagnostic configuration/privacy regression coverage, scoped database-error fixtures, and permission cases while preserving the existing table-identifier contract.
@@ -49,6 +55,10 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Updated the verified MCP Adapter baseline to 0.6.1 and its matching SHA-256; distinguished current configuration from the historical 0.5.0 rollout evidence without changing WordPress or PHP support.
+- Raised PHPStan analysis from level 0 to level 5 with an explicitly PHP 8.0-targeted, generated/reviewed baseline of 35 existing diagnostics in 21 exact file/message/identifier/count entries. Enabled unmatched-ignore failures, documented incremental debt reduction, and added isolated regression guards for new errors, count growth, and stale-entry removal in static QA and both CI PHP safeguard lanes. Plugin behavior, schemas, dependencies, and runtime tests are unchanged.
+- Mock the metadata authorization stage in the isolated compatibility bootstrap test, assert cron isolation and exactly one invocation in every QA mode, and preserve the real runner's non-CLI rejection checks.
+- Run release/tag QA against an extraction of the original ZIP with explicit harness-only mounts instead of the checkout; retain source/archive hash checks, a pristine Plugin Check extraction, final runtime-tree validation, and an unchanged archive digest. Added real-orchestration stub/tamper regressions, cleanup failure propagation, and scoped Git Bash host-PHP path conversion without changing ordinary source E2E.
 - Disabled request-triggered cron before disposable QA bootstrap to isolate whole-database no-write assertions from background enclosure cleanup; retained explicit scheduling checks and detailed regression reports in compatibility lane artifacts.
 - Updated the development-only PHPStan engine to 2.2.14, retaining PHP 8.0 compatibility and the existing analysis level; stronger analysis and schema coverage remain separate work.
 - Updated development-only WordPress stubs to 7.1.0 for static analysis; the plugin's WordPress 6.9 and PHP 8.0 minimum requirements are unchanged.
