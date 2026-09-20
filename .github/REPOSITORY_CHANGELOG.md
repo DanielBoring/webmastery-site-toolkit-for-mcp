@@ -8,7 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
-- Add isolated actual-core standalone metadata authorization checks through direct callbacks, abilities, and authenticated MCP HTTP, including effective capability filters, persisted-state denial evidence, provider policies, and temporary-filter cleanup. Preserve the existing provider create-success contracts and keep the broader metadata release decision open.
+- Add isolated actual-core standalone metadata authorization checks through direct callbacks, abilities, and authenticated MCP HTTP, including effective capability filters, persisted-state denial evidence, provider policies, and temporary-filter cleanup. Retain success/failure reports even when cleanup fails, upload them from contract/HTTP/package workflows, and verify the new runner in mocked package orchestration. Preserve the existing provider create-success contracts and keep the broader metadata release decision open.
 
 - Added a software development lifecycle overview that maps issue intake, design, implementation, QA, release, and maintenance to the repository's strategy documents and sources of truth.
 - Documented the agent threat model, client-side approval and recovery guidance, annotation scope, and delegated Site Kit access expectations without changing runtime permissions or response contracts.

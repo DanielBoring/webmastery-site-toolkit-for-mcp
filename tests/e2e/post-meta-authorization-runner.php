@@ -10,14 +10,52 @@ if ( 'cli' !== PHP_SAPI ) {
 	exit( 'CLI only.' );
 }
 
-$_SERVER['HTTP_HOST'] = 'localhost';
-require_once '/var/www/html/wp-load.php';
-
 function wstm110_assert( bool $condition, string $message ): void {
 	if ( ! $condition ) {
 		throw new RuntimeException( $message );
 	}
 }
+
+function wstm110_cleanup_step( array &$summary, string $label, callable $action ): void {
+	try {
+		$action();
+	} catch ( Throwable $error ) {
+		$summary['failed']++;
+		$summary['cleanup_errors'][] = array( 'resource' => $label, 'message' => $error->getMessage() );
+		echo 'FAIL cleanup ' . $label . ': ' . $error->getMessage() . "\n";
+	}
+}
+
+function wstm110_write_summary( string $path, array $summary ): void {
+	$json = json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR ) . "\n";
+	wstm110_assert( strlen( $json ) === file_put_contents( $path, $json ), 'Cannot write complete metadata QA evidence.' );
+}
+
+if ( '--test-cleanup' === ( $argv[1] ?? '' ) ) {
+	$summary = array( 'failed' => 0 );
+	$continued = false;
+	wstm110_cleanup_step( $summary, 'throwing close', static function (): void {
+		throw new RuntimeException( 'Expected cleanup exception.' );
+	} );
+	wstm110_cleanup_step( $summary, 'failed revocation result', static function (): void {
+		$result = false;
+		wstm110_assert( true === $result, 'Expected failed revocation result.' );
+	} );
+	wstm110_cleanup_step( $summary, 'remaining resource', static function () use ( &$continued ): void {
+		$continued = true;
+	} );
+	wstm110_assert( $continued && 2 === $summary['failed'], 'Cleanup must continue and retain every error.' );
+	$path = $argv[2] ?? '';
+	wstm110_assert( '' !== $path, 'Cleanup proof requires an evidence path.' );
+	wstm110_write_summary( $path, $summary );
+	$stored = json_decode( file_get_contents( $path ), true, 512, JSON_THROW_ON_ERROR );
+	wstm110_assert( $summary === $stored && 2 === count( $stored['cleanup_errors'] ), 'Cleanup errors did not survive serialization.' );
+	echo "PASS cleanup exceptions and failed return values retain evidence and do not skip later resources\n";
+	exit( 0 );
+}
+
+$_SERVER['HTTP_HOST'] = 'localhost';
+require_once '/var/www/html/wp-load.php';
 
 function wstm110_http( string $method, array $params, array $credential, string &$session ): array {
 	$headers = array( 'Content-Type' => 'application/json', 'Authorization' => 'Basic ' . base64_encode( $credential['login'] . ':' . $credential['password'] ) );
@@ -112,6 +150,10 @@ function wstm110_cases(): array {
 $boundary = getenv( 'WSTM110_BOUNDARY' ) ?: 'ability';
 wstm110_assert( in_array( $boundary, array( 'direct', 'ability', 'http' ), true ), 'Unknown test boundary.' );
 $summary = array( 'boundary' => $boundary, 'wordpress' => get_bloginfo( 'version' ), 'php' => PHP_VERSION,
+	'runner_sha256' => hash_file( 'sha256', __FILE__ ),
+	'fixture_sha256' => hash_file( 'sha256', __DIR__ . '/post-meta-authorization-fixture.php' ),
+	'yoast' => defined( 'WPSEO_VERSION' ) ? WPSEO_VERSION : null,
+	'seopress' => defined( 'SEOPRESS_VERSION' ) ? SEOPRESS_VERSION : null,
 	'production_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-posts.php' ),
 	'passed' => 0, 'failed' => 0, 'cases' => array() );
 $credentials = array();
@@ -120,6 +162,7 @@ $posts = array();
 $actors = array();
 try {
 	wstm110_assert( function_exists( 'wstm110_setup' ), 'Standalone metadata MU fixture is missing.' );
+	wstm110_assert( null !== $summary['yoast'] && null !== $summary['seopress'], 'Real SEO providers must be active for this proof.' );
 	foreach ( array( 'author', 'editor', 'administrator' ) as $role ) {
 		$login = 'wstm110_' . $role;
 		$user = get_user_by( 'login', $login );
@@ -281,17 +324,37 @@ try {
 	$summary['failed']++;
 	$summary['fatal'] = $error->getMessage();
 } finally {
-	delete_option( 'wstm110_policy' );
-	delete_option( 'wstm110_events' );
+	wstm110_cleanup_step( $summary, 'fixture options', static function (): void {
+		delete_option( 'wstm110_policy' );
+		delete_option( 'wstm110_events' );
+	} );
 	foreach ( $credentials as $role => $credential ) {
-		WP_Application_Passwords::delete_application_password( $actors[ $role ]->ID, $credential['uuid'] );
+		if ( ! empty( $sessions[ $role ] ) ) {
+			wstm110_cleanup_step( $summary, "{$role} MCP session", static function () use ( $credential, $sessions, $role ): void {
+				$response = wp_remote_request( 'http://localhost/wp-json/mcp/mcp-adapter-default-server', array(
+					'method' => 'DELETE', 'timeout' => 30,
+					'headers' => array(
+						'Authorization' => 'Basic ' . base64_encode( $credential['login'] . ':' . $credential['password'] ),
+						'Mcp-Session-Id' => $sessions[ $role ],
+					),
+				) );
+				wstm110_assert( ! is_wp_error( $response ), 'Session close transport failed.' );
+				$status = wp_remote_retrieve_response_code( $response );
+				wstm110_assert( $status >= 200 && $status < 300, 'Session close returned HTTP ' . $status );
+			} );
+		}
+		wstm110_cleanup_step( $summary, "{$role} application password", static function () use ( $actors, $role, $credential ): void {
+			$result = WP_Application_Passwords::delete_application_password( $actors[ $role ]->ID, $credential['uuid'] );
+			wstm110_assert( true === $result, 'Application password revocation failed.' );
+		} );
 	}
 	foreach ( $posts as $id ) {
-		wp_delete_post( $id, true );
+		wstm110_cleanup_step( $summary, "post {$id}", static function () use ( $id ): void {
+			wstm110_assert( wp_delete_post( $id, true ) instanceof WP_Post, 'Fixture deletion failed.' );
+		} );
 	}
 	$path = __DIR__ . '/../../e2e-artifacts/post-meta-authorization-' . $boundary . '.json';
-	$json = wp_json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR ) . "\n";
-	wstm110_assert( strlen( $json ) === file_put_contents( $path, $json ), 'Cannot write complete metadata QA evidence.' );
+	wstm110_write_summary( $path, $summary );
 }
 echo "Standalone metadata {$boundary}: {$summary['passed']} passed, {$summary['failed']} failed.\n";
 exit( $summary['failed'] ? 1 : 0 );
