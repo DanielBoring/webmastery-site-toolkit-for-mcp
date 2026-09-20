@@ -266,7 +266,8 @@ foreach ( array( 'publish', 'private', 'future' ) as $status ) {
 				$permission_proof = $is_create
 					? 'forbidden' === ( $case['assert_permission'] ?? '' ) && 'ability_invalid_permissions' === ( $case['expect_error_reason'] ?? '' )
 					: true === ( $case['assert_permission'] ?? false ) && false === ( $case['assert_values']['success'] ?? null )
-						&& 'You do not have permission to publish this post.' === ( $case['assert_values']['error'] ?? '' );
+						&& 'forbidden' === ( $case['expect_error_reason'] ?? '' )
+						&& 'You do not have permission to publish this post.' === ( $case['assert_values']['error.message'] ?? '' );
 				return "webmastery-site-toolkit-for-mcp/{$slug}" === ( $case['ability'] ?? '' )
 					&& 'contributor' === ( $case['role'] ?? '' ) && 'failure' === ( $case['expect'] ?? '' )
 					&& $status === ( $case['input']['status'] ?? '' )
@@ -335,7 +336,8 @@ foreach ( array( 'update', 'approve', 'trash', 'spam' ) as $action ) {
 			$missing = 'editor' === $role && ( 0 === ( $case['input']['comment_id'] ?? null ) || '__missing_comment_id__' === ( $case['input']['comment_id'] ?? null ) );
 			if ( 'failure' === $expect ) {
 				if ( $missing && 'update' !== $action ) {
-					if ( 'Comment not found.' !== ( $case['assert_values']['error'] ?? null ) ) {
+					if ( 'not_found' !== ( $case['expect_error_reason'] ?? null )
+						|| 'Comment not found.' !== ( $case['assert_values']['error.message'] ?? null ) ) {
 						continue;
 					}
 				} elseif ( ( $missing ? 'not_found' : 'ability_invalid_permissions' ) !== ( $case['expect_error_reason'] ?? null ) ) {

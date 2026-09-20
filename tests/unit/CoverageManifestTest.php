@@ -44,7 +44,7 @@ final class CoverageManifestTest extends TestCase {
 			if ( 'contributor' === $case['role'] ) {
 				if ( 'unknown-role' === $mutation ) { $case['role'] = 'contributor_typo'; }
 				if ( 'contributor-private' === $mutation && 'private' === ( $case['input']['status'] ?? '' ) ) { unset( $case['assert_unchanged'] ); }
-				if ( 'contributor-future-message' === $mutation && 'future' === ( $case['input']['status'] ?? '' ) && isset( $case['assert_values']['error'] ) ) { $case['assert_values']['error'] = 'Invalid date.'; }
+				if ( 'contributor-future-message' === $mutation && 'future' === ( $case['input']['status'] ?? '' ) && isset( $case['assert_values']['error.message'] ) ) { $case['assert_values']['error.message'] = 'Invalid date.'; }
 				if ( 'invalid-capability' === $mutation ) { $case['assert_capabilities'] = array( array( 'capability' => 'edit_posts', 'args' => array(), 'allowed' => 'true' ) ); }
 				if ( 'invalid-stored-post' === $mutation ) { $case['assert_stored_post'] = array( 'fields' => array() ); }
 			}
