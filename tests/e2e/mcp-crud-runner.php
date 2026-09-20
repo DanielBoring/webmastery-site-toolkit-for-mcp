@@ -6,6 +6,8 @@ if ( PHP_SAPI !== 'cli' ) {
 	http_response_code( 403 );
 	exit( 'CLI only.' );
 }
+require_once __DIR__ . '/error-contract-assertions.php';
+
 
 final class Webmastery_MCP_E2E_Failure extends RuntimeException {}
 
@@ -255,11 +257,7 @@ function webmastery_mcp_e2e_call_tool( Webmastery_MCP_E2E_Client $client, string
 	);
 
 	if ( true === ( $result['isError'] ?? false ) ) {
-		return array(
-			'success' => false,
-			'error'   => 'MCP tool result isError=true',
-			'raw'     => $result,
-		);
+		return wstm118_wire_error( $result );
 	}
 
 	return webmastery_mcp_e2e_extract_tool_payload( $result, $label );
@@ -437,10 +435,9 @@ try {
 				'arguments' => array( 'ability_name' => 'webmastery-site-toolkit-for-mcp/' . $operation . '-post', 'parameters' => $parameters ),
 			) );
 			$summary['scheduling_envelopes'][] = array( 'operation' => $operation, 'code' => $code, 'tool_result' => $raw );
-			$payload = webmastery_mcp_e2e_extract_tool_payload( $raw, 'scheduling error' );
-			webmastery_mcp_e2e_assert( true !== ( $raw['isError'] ?? false ), 'Scheduling callback error unexpectedly became a tool-level error.' );
-			webmastery_mcp_e2e_assert( true === ( $payload['success'] ?? null ) && false === ( $payload['data']['success'] ?? null ), 'Expected successful gateway wrapping failed scheduling ability.' );
-			webmastery_mcp_e2e_assert( $code === ( $payload['data']['error']['code'] ?? null ), 'Scheduling error code was not preserved through HTTP.' );
+			$payload = wstm118_wire_error( $raw );
+			webmastery_mcp_e2e_assert( 'invalid_input' === $payload['error']['code'], 'Scheduling canonical code was not preserved through HTTP.' );
+			webmastery_mcp_e2e_assert( $code === $payload['error']['reason'], 'Scheduling precise reason was not preserved through HTTP.' );
 			webmastery_mcp_e2e_pass( $summary, "{$operation} scheduling {$code} HTTP envelope" );
 		}
 	}

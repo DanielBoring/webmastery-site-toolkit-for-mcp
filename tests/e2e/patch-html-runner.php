@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/error-contract-assertions.php';
+
 /**
  * Real-core patch preservation regressions, invoked by the contract runner.
  */
@@ -75,7 +77,7 @@ final class WSTM115_Patch_HTML_Tests {
 		$ok = ! is_wp_error( $result ) && true === ( $result['success'] ?? false );
 		$this->check( '' === $error ? $ok : ! $ok, 'Unexpected success/error result.', $errors );
 		if ( '' !== $error ) {
-			$this->check( e2e_result_error_code( $result ) === $error, 'Wrong error code: ' . e2e_result_error_code( $result ), $errors );
+			$this->check( wstm118_error_reason( $result ) === $error, 'Wrong error reason: ' . wstm118_error_reason( $result ), $errors );
 		}
 		$this->check( $after === $expected, 'Persisted raw content differs from expected bytes.', $errors );
 		if ( $ok && ! $is_full_update ) {
@@ -174,7 +176,7 @@ final class WSTM115_Patch_HTML_Tests {
 		foreach ( array( 'patch-content-block' => $block_input, 'patch-post-content' => $exact_input ) as $ability => $input ) {
 			$this->exercise( "{$ability} author retains core filtering", $content, $ability, $input, wp_kses_post( $expected ), 'author' );
 			$this->exercise( "{$ability} editor with denied unfiltered_html retains core filtering", $content, $ability, $input, wp_kses_post( $expected ), 'filtered_editor' );
-			$this->exercise( "{$ability} stale content hash does not mutate", $content, $ability, $input + array( 'expected_content_hash' => str_repeat( '0', 64 ) ), $content, 'editor', 'post', 'precondition_failed' );
+			$this->exercise( "{$ability} stale content hash does not mutate", $content, $ability, $input + array( 'expected_content_hash' => str_repeat( '0', 64 ) ), $content, 'editor', 'post', 'content_hash_mismatch' );
 			$this->exercise( "{$ability} subscriber cannot write", $content, $ability, $input, $content, 'subscriber', 'post', 'ability_invalid_permissions', 'editor' );
 			$this->exercise( "{$ability} author cannot write another editor's object", $content, $ability, $input, $content, 'author', 'post', 'ability_invalid_permissions', 'editor' );
 		}
@@ -185,7 +187,7 @@ final class WSTM115_Patch_HTML_Tests {
 		foreach ( array(
 			array( 'missing block path', 'patch-content-block', array_replace( $block_input, array( 'block_path' => '9' ) ), 'target_not_found' ),
 			array( 'missing block hash', 'patch-content-block', array( 'target_type' => 'block_hash', 'block_hash' => str_repeat( '0', 64 ), 'replacement_content' => $replacement ), 'target_not_found' ),
-			array( 'stale block hash', 'patch-content-block', array_replace( $block_input, array( 'expected_block_hash' => str_repeat( '0', 64 ) ) ), 'precondition_failed' ),
+			array( 'stale block hash', 'patch-content-block', array_replace( $block_input, array( 'expected_block_hash' => str_repeat( '0', 64 ) ) ), 'block_hash_mismatch' ),
 			array( 'missing heading', 'patch-post-content', array_replace( $heading_input, array( 'heading_text' => 'Missing' ) ), 'target_not_found' ),
 			array( 'missing exact', 'patch-post-content', array_replace( $exact_input, array( 'old_content' => 'Missing' ) ), 'target_not_found' ),
 			array( 'empty exact', 'patch-post-content', array_replace( $exact_input, array( 'old_content' => '' ) ), 'missing_target' ),

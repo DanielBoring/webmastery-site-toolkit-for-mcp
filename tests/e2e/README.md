@@ -7,6 +7,20 @@ The Docker QA suite has two layers:
 1. Ability Contract QA is ability-driven. Every registered `webmastery-site-toolkit-for-mcp/*` ability must be represented in `tests/e2e/abilities-manifest.json`.
 2. Full MCP E2E QA uses real MCP Adapter HTTP JSON-RPC requests against `/wp-json/mcp/mcp-adapter-default-server` to prove a remote MCP client can create, read, update, and delete content through the adapter transport.
 
+## Unreleased canonical error coverage
+
+All manifest failures require `expect_error_shape:"canonical"`, a seven-category
+`expect_error_code`, and an exact `expect_error_reason`. The independent
+`error-contract-assertions.php` rejects missing keys, scalar errors, non-object
+details, unknown reason mappings, and false wire success. Existing state,
+permission, hash, scheduled CRUD, and bulk-item assertions are retained.
+Canonical core schema/permission messages are intentionally fixed and do not
+echo input values. See the [3.0 migration guide](../../docs/3.0-migration.md).
+
+Historical baseline comparisons require the pre-migration runner from 2.6.0;
+the current strict canonical parser intentionally rejects those old envelopes.
+Do not weaken current assertions to make a historical baseline pass.
+
 ## Comment moderation regression coverage
 
 `comments-fixture.php` adds `wstm105_*` fixtures and comment-specific checks. Its `wstm105_moderator` actor has the actual `comment_moderator` role with only `read` and `moderate_comments`. Cases cover all four writes, optional update statuses, Author moderation-floor denials, mapped-CPT allowed/denied controls, own-draft moderation, Administrator access, orphan comments, and missing/nonpositive IDs. Existing Editor cases and every landed main manifest case remain unchanged; runtime registrations remain the coverage authority.

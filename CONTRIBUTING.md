@@ -84,7 +84,7 @@ Each group of abilities lives in its own file under `includes/`. Follow the exis
 2. **Register** the ability inside the class's `register()` method using `wp_register_ability()`
 3. **Use the `webmastery-site-toolkit-for-mcp/` prefix** for the ability name (e.g., `webmastery-site-toolkit-for-mcp/list-media`)
 4. **Require the narrowest relevant capability** in `permission_callback` — use object-specific checks when an input ID is available and never skip the check
-5. **Return a consistent shape** — match the affected ability group's existing success arrays and `WP_Error`/structured error responses
+5. **Return a consistent shape** — preserve successful payloads; use `Webmastery_MCP_Response::error()` for canonical failures and `local_error()` for safe native permission/helper diagnostics. Never trust provider messages/data based on a familiar code. Cover direct execution, native permission, gateway, individual-tool, and foreign-namespace isolation; see `docs/3.0-migration.md`.
 6. **Require the class file** in `webmastery-site-toolkit-for-mcp.php` inside the `wp_abilities_api_init` action and call `ClassName::register()`
 7. **Add E2E manifest coverage** in `tests/e2e/abilities-manifest.json`; include both allowed and denied roles when permissions differ by role or capability, plus missing-path assertions when sensitive fields should be absent
 8. **Update docs and changelogs** when behavior is user-facing: `README.md`, `readme.txt`, relevant markdown files, and `CHANGELOG.md` under `## Unreleased`. Changelog entries should use plugin-facing release-note wording rather than raw internal ability namespace strings unless the exact MCP tool name is necessary. Repository, CI, contributor, GitHub platform, template, or agent workflow changes belong in `.github/REPOSITORY_CHANGELOG.md`.
@@ -106,7 +106,7 @@ wp_register_ability( 'webmastery-site-toolkit-for-mcp/your-ability', [
     'execute_callback'    => [ self::class, 'execute_your_ability' ],
     'permission_callback' => function ( $input ) {
         if ( ! current_user_can( 'edit_post', absint( $input['example_id'] ?? 0 ) ) ) {
-            return new WP_Error( 'forbidden', 'Requires edit_post capability for this object.' );
+            return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_post capability for this object.' );
         }
         return true;
     },

@@ -10,6 +10,8 @@ if ( PHP_SAPI !== 'cli' ) {
 	http_response_code( 403 );
 	exit( 'CLI only.' );
 }
+require_once __DIR__ . '/error-contract-assertions.php';
+
 
 $_SERVER['HTTP_HOST'] = 'localhost';
 require_once '/var/www/html/wp-load.php';
@@ -112,7 +114,7 @@ function wstm106_http( string $method, array $params, string $username, string $
 
 function wstm106_result( $raw ): array {
 	if ( is_wp_error( $raw ) ) {
-		return array( 'success' => false, 'error' => array( 'code' => $raw->get_error_code(), 'message' => $raw->get_error_message() ) );
+		return wstm118_error_envelope( $raw );
 	}
 	if ( isset( $raw['body'] ) ) {
 		$body = $raw['body'];
@@ -120,6 +122,9 @@ function wstm106_result( $raw ): array {
 			return array( 'success' => false, 'error' => $body['error'] );
 		}
 		$tool = $body['result'] ?? array();
+		if ( true === ( $tool['isError'] ?? false ) ) {
+			return wstm118_wire_error( $tool );
+		}
 		if ( isset( $tool['structuredContent'] ) ) {
 			$raw = $tool['structuredContent'];
 		} else {
@@ -365,6 +370,7 @@ try {
 						$record['expected_fixed_denial'] = $denial;
 						if ( $denial && ( 'fixed' === $mode || $existing_denial ) ) {
 							wstm106_assert( false === $record['result']['success'], 'Unsafe assignment was not rejected.' );
+							wstm118_error_envelope( $record['result'] );
 							wstm106_assert( $record['unchanged'], 'Rejected payload changed stored rows/relationships/revisions/metadata/cron.' );
 							wstm106_assert( array() === $record['hooks'], 'Rejected payload reached pre-write/write hooks.' );
 						} elseif ( ! $denial ) {

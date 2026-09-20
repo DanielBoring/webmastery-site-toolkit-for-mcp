@@ -4,6 +4,8 @@ if ( PHP_SAPI !== 'cli' ) {
 	http_response_code( 403 );
 	exit( 'CLI only.' );
 }
+require_once __DIR__ . '/error-contract-assertions.php';
+
 
 require_once dirname( __DIR__, 5 ) . '/wp-load.php';
 
@@ -172,7 +174,7 @@ try {
 				$result_id = $result['data']['id'] ?? $id;
 				$post = $result_id ? get_post( $result_id ) : null;
 				$initial_cron = $post ? wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) : null;
-				$code = is_wp_error( $result ) ? $result->get_error_code() : ( is_array( $result['error'] ?? null ) ? $result['error']['code'] : null );
+				$code = wstm118_error_reason( $result );
 				$passed = $error ? $code === $error && $before === $after && [] === $observed : true === ( $result['success'] ?? false ) && ! empty( $observed['save_post'] );
 				$expected = [];
 				if ( ! $error && $post ) {
