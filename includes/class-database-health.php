@@ -13,6 +13,7 @@ class Webmastery_MCP_Database_Health {
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
+				'default'    => [],
 				'properties' => [
 					'include_table_names' => [
 						'type'        => 'boolean',

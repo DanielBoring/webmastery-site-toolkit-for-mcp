@@ -164,6 +164,7 @@ final class DatabaseTablePrivacyTest extends TestCase {
 		Webmastery_MCP_Database_Health::register();
 		$schema = $GLOBALS['wstm_test_abilities']['webmastery-site-toolkit-for-mcp/database-health']['input_schema'];
 		$this->assertSame( 'object', $schema['type'] );
+		$this->assertSame( array(), $schema['default'] );
 		$this->assertSame( 'boolean', $schema['properties']['include_table_names']['type'] );
 		$this->assertFalse( $schema['properties']['include_table_names']['default'] );
 		$this->assertStringContainsString( 'model provider', $schema['properties']['include_table_names']['description'] );
