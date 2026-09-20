@@ -40,7 +40,7 @@ final class TaxonomyWriteTest extends TestCase {
 	public function test_deletion_result_is_truthful( string $slug, $core_result, bool $success ): void {
 		$GLOBALS['wstm_test_delete_result'] = $core_result;
 		$callbacks = $GLOBALS['wstm_test_abilities'][ "webmastery-site-toolkit-for-mcp/delete-{$slug}" ];
-		$input = array( "{$slug}_id" => -42 );
+		$input = array( "{$slug}_id" => -42, 'confirm' => true );
 		$this->assertTrue( $callbacks['permission_callback']( $input ) );
 		$result = $callbacks['execute_callback']( $input );
 		if ( $success ) {
@@ -69,7 +69,7 @@ final class TaxonomyWriteTest extends TestCase {
 			'reason' => 'invalid_taxonomy',
 			'message' => 'Taxonomy is not registered.',
 			'details' => (object) array(),
-		) ), $callbacks['execute_callback']( array( 'tag_id' => 42 ) ) );
+		) ), $callbacks['execute_callback']( array( 'tag_id' => 42, 'confirm' => true ) ) );
 		$this->assertSame( array(), $GLOBALS['wstm_test_delete_calls'] );
 	}
 }

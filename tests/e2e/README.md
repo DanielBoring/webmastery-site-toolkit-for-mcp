@@ -21,6 +21,59 @@ Historical baseline comparisons require the pre-migration runner from 2.6.0;
 the current strict canonical parser intentionally rejects those old envelopes.
 Do not weaken current assertions to make a historical baseline pass.
 
+## Destructive-operation safety coverage (3.0)
+
+The five guarded abilities retain their original success and permission oracles,
+now with `confirm:true`. Added manifest cases reject missing/false/string/number/
+null confirmation, non-boolean optional flags, and 101 raw IDs (including
+duplicates); 100 duplicates, mixed/all-failed previews, and known featured-image
+refusal include persisted-state assertions. Unit tests separately pin callback
+reasons, exact schema bounds, canonical per-ID failures, query failure with force,
+and unchanged capability/trash behavior. Existing error-contract, taxonomy, and
+trash runners retain all earlier assertions.
+
+`destructive-safety-runner.php` is an **opt-in standalone proof**, not yet a
+replacement for the shared orchestration. Run it only after obtaining ownership
+of a disposable WordPress runtime. No Docker execution is implied by unit/static
+results. Before any fixture mutation or application-password creation it requires
+both `WSTM116_DISPOSABLE=1` in the CLI environment and
+`define('WSTM116_DISPOSABLE_RUNTIME', true);` in that runtime's configuration.
+An existing `wstm116_control` option is a collision, never something to overwrite.
+
+Install `destructive-safety-http-fixture.php` as an MU loader for HTTP evidence.
+For individual tools, install the existing disposable `error-contract-fixture.php`
+server fixture too; it exposes the real `/wp-json/wstm118/tools` catalog. The
+runner reuses `metadata-transport.php` to discover actual advertised tool names
+and parse the real Adapter 0.6.1 wire shape. Error results require `isError:true`
+and one canonical JSON text block; absent/null `structuredContent` means no
+payload, not a structured error object.
+
+Inside the already-owned disposable container, set `WSTM116_BOUNDARY` to each
+of `direct`, `ability`, `http`, and `individual`, set `WSTM116_SOURCE_SHA` to the
+exact tested commit, and set `WSTM116_ARTIFACT` to a **new** JSON filename in an
+existing writable artifact directory. Invoke:
+
+```bash
+php /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/destructive-safety-runner.php
+```
+
+Repeat in fresh enabled/disabled-trash PHP runtimes; a changed environment
+variable cannot override an already-defined `EMPTY_TRASH_DAYS`. Both the CLI
+and HTTP runtime must have the same trash configuration. Keep raw successful
+and failed artifacts; do not replace a failed invocation with a later pass.
+
+The runner distinguishes callback permission outcomes from execution denial;
+compares preview summaries to real writes; snapshots posts, postmeta, terms,
+termmeta, taxonomy relationships, cron, and owned upload bytes; and records
+mutation hooks. It probes featured-image, literal URL, GUID, unused media,
+forced known-reference deletion, forced scan failures, and final object denials.
+HTTP fault injection and observers are authenticated-actor/request scoped and
+return a unique nonce attestation through the owned control option.
+Cleanup verifies absence of owned posts/meta/scheduled events, terms/meta,
+uploads, users/application passwords, and the control option, retaining failure
+evidence even when cleanup fails. Remove the installed MU loaders and runtime
+opt-in configuration when the leased disposable runtime is retired.
+
 ## Metadata batch and SEO authorization coverage (3.0)
 
 `metadata-batch-fixture.php` independently lists 34 removed aliases and 147

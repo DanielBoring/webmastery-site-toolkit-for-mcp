@@ -285,16 +285,20 @@ class Webmastery_MCP_Taxonomy {
 
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/delete-{$ability}", [
 			'label'               => "Delete {$label}",
-			'description'         => "Permanently delete a WordPress {$label} by ID.",
+			'description'         => "Permanently delete a WordPress {$label} by ID with confirm:true.",
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
 					"{$ability}_id" => [ 'type' => 'integer', 'description' => "{$label} term ID to delete" ],
+					'confirm'       => [ 'type' => 'boolean', 'enum' => [ true ], 'description' => 'Must be exactly true to acknowledge permanent deletion.' ],
 				],
-				'required'   => [ "{$ability}_id" ],
+				'required'   => [ "{$ability}_id", 'confirm' ],
 			],
 			'execute_callback'    => function ( $input ) use ( $taxonomy, $label, $ability ) {
+				if ( true !== ( $input['confirm'] ?? null ) ) {
+					return Webmastery_MCP_Response::legacy_error( 'missing_confirmation', 'Set confirm to true to acknowledge permanent deletion.' );
+				}
 				$id   = absint( $input[ "{$ability}_id" ] );
 				$term = get_term( $id, $taxonomy );
 

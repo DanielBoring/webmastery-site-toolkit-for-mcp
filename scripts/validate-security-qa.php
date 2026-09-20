@@ -205,7 +205,7 @@ foreach ( $required_failure_cases as $ability ) {
 
 // A not-found, invalid-input, or default-category error is not permission proof.
 $required_permission_cases = array(
-	'bulk-trash-posts', 'delete-category', 'delete-tag', 'delete-media',
+	'bulk-trash-posts', 'bulk-publish-posts', 'delete-category', 'delete-tag', 'delete-media',
 	'delete-post', 'delete-page', 'delete-cpt-mcp-book', 'delete-cpt-mcp-case-study',
 	'delete-post-meta', 'get-post', 'get-page', 'get-media', 'seo-analyze-post',
 	'list-posts', 'list-pages', 'list-categories', 'list-tags',
@@ -222,6 +222,44 @@ foreach ( $required_permission_cases as $slug ) {
 	);
 	if ( ! $matches ) {
 		$errors[] = "{$slug} must retain an exact callback and wrapper permission-denial case.";
+	}
+}
+
+foreach ( array( 'bulk-trash-posts', 'bulk-publish-posts', 'delete-media', 'delete-category', 'delete-tag' ) as $slug ) {
+	$cases = array_filter( $manifest, static function ( $case ) use ( $slug ) {
+		return "webmastery-site-toolkit-for-mcp/{$slug}" === ( $case['ability'] ?? '' );
+	} );
+	foreach ( $cases as $case ) {
+		if ( ( 'success' === $case['expect'] || 'ability_invalid_permissions' === ( $case['expect_error_reason'] ?? '' ) )
+			&& true !== ( $case['input']['confirm'] ?? null ) ) {
+			$errors[] = "{$slug} success/permission proof must supply confirm:true.";
+		}
+	}
+	foreach ( array( 'missing', 'false', 'string', 'number' ) as $variant ) {
+		$matches = array_filter( $cases, static function ( $case ) use ( $variant ) {
+			$input = $case['input'] ?? array();
+			$value = $input['confirm'] ?? null;
+			$matches_input = 'missing' === $variant ? ! array_key_exists( 'confirm', $input )
+				: ( 'false' === $variant ? false === $value : ( 'string' === $variant ? is_string( $value ) : is_int( $value ) ) );
+			return $matches_input && 'failure' === $case['expect'] && 'ability_invalid_input' === ( $case['expect_error_reason'] ?? '' )
+				&& true === ( $case['assert_unchanged'] ?? false );
+		} );
+		if ( ! $matches ) {
+			$errors[] = "{$slug} must retain unchanged-state {$variant} confirmation rejection.";
+		}
+	}
+	if ( 0 === strpos( $slug, 'bulk-' ) ) {
+		foreach ( array( 0, 1 ) as $success_count ) {
+			$matches = array_filter( $cases, static function ( $case ) use ( $success_count ) {
+				return true === ( $case['input']['dry_run'] ?? false ) && 'success' === $case['expect']
+					&& true === ( $case['assert_unchanged'] ?? false ) && true === ( $case['assert_values']['data.dry_run'] ?? false )
+					&& $success_count === ( $case['assert_values']['data.success_count'] ?? null )
+					&& 1 === ( $case['assert_values']['data.failure_count'] ?? null );
+			} );
+			if ( ! $matches ) {
+				$errors[] = "{$slug} must retain mixed/all-failed dry-run persisted-state evidence.";
+			}
+		}
 	}
 }
 

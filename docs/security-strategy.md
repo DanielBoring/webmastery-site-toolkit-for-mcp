@@ -39,7 +39,7 @@ Client and operator controls should work together:
 - Use a dedicated account with only the capabilities needed for the task. Contributor or Author can be sufficient for work on editable own posts; use Editor only when broader editorial access is needed, and keep Administrator credentials out of routine content sessions.
 - Keep trustworthy backups and a tested recovery procedure outside the agent's control before destructive work. Do not assume trash, revisions, or a diagnostic backup-status response guarantees recovery.
 
-Input sanitization and stripped HTML address different risks; plain text can still contain instructions. Annotation hints and proposed field markers can help clients identify data, but cannot enforce approval or guarantee injection prevention. A model-supplied `confirm: true` would not prove human approval, and a `dry_run` would not authorize a later write. The plugin does not currently provide universal `confirm`/`dry_run` inputs, untrusted-field markers, or a `content_format` mode. These are not protections clients can assume exist.
+Input sanitization and stripped HTML address different risks; plain text can still contain instructions. Annotation hints and proposed field markers can help clients identify data, but cannot enforce approval or guarantee injection prevention. A model-supplied `confirm: true` does not prove human approval, and a `dry_run` does not authorize a later write. The unreleased 3.0 interlocks apply only to the five documented destructive/bulk abilities below, not universally to writes. Do not infer untrusted-field markers or a `content_format` mode from these interlocks.
 
 ### Annotation scope
 
@@ -80,6 +80,32 @@ Only public checks and homepage reachability are stored in a shared 60-second Wo
 Regression evidence separates deterministic namespaced HTTP/DNS/plugin-boundary fixtures from real WordPress capability/transient contract checks and real MCP HTTP transport QA. The security validator requires successful Subscriber and Author cases with both omission paths, denial coverage, and explicit contract HTTP counts.
 
 ## Trash safety
+
+### Destructive-operation interlocks
+
+The 3.0 development schemas require `confirm:true` on permanent media, category,
+and tag deletion and both bulk post operations. Callbacks independently require
+strict true, including previews; false/missing/non-boolean confirmation cannot
+write. Bulk `dry_run` and media `force` accept only booleans. Core schema
+validation may precede callback errors; permission denial must be proven with
+otherwise valid input rather than conflated with schema rejection.
+
+Bound raw bulk arrays to 100 before normalization/deduplication. Preview the same
+per-ID type, capability, status, and disabled-trash eligibility without calling
+mutation APIs. Report would-act successes, canonical item failures, and
+`data.dry_run:true`; an all-failed processed batch remains `success:true`. A
+preview cannot reserve state or predict subsequent third-party write hooks.
+
+Media deletion requires actual `delete_post` on the attachment before scanning
+the shared orphan-media helper's featured-image metadata and literal content
+URL/GUID references. Only a known positive hit may be overridden with
+`force:true`; query failures fail closed, even when forced, with safe canonical
+diagnostics. Preserve the orphan-list reference semantics. `in_use:false` is
+not a guarantee: custom/serialized storage, derivative URLs, external users,
+and concurrent references are outside this limited scan. These inputs are
+interlocks, not capability grants or guaranteed human authorization.
+
+### Disabled trash
 
 Post, page, generated CPT, and bulk post trash abilities must refuse before calling `wp_trash_post()` when `EMPTY_TRASH_DAYS` is falsy: core otherwise falls back to permanent deletion. Validate existence/type and object-delete permission first; retain existing errors and use `trash_disabled` only for authorized, existing items. Bulk operations keep per-ID failures and existing totals, not a new global-error contract. This safety fix adds no force/permanent-delete route.
 

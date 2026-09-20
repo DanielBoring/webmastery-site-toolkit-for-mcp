@@ -55,6 +55,8 @@ The stable tag remains 2.6.0. Development failures now use success:false and an 
 
 Migration matrix and examples: https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/3.0-migration.md
 
+Permanent media/category/tag deletion and both bulk post operations now require the exact JSON boolean confirm:true, including bulk previews. Bulk requests accept at most 100 raw IDs and process duplicates once; dry_run:true reports would-act successes without mutation. These explicitly documented changes add a preview marker and media in_use boolean to successful responses.
+
 = Which AI clients and MCP hosts work with this? =
 
 Any MCP client that can reach your site through the MCP Adapter works. This includes Claude (Desktop and Code), ChatGPT, GitHub Copilot, Gemini CLI, Windsurf, and Codex. Most local clients connect through the `@automattic/mcp-wordpress-remote` bridge.
@@ -104,6 +106,10 @@ Public results, including failures and unknowns, are cached for 60 seconds per s
 = Are write operations safe? =
 
 Write operations go through WordPress APIs and capability checks. Posts, pages, and custom post type items move to trash rather than being permanently deleted. Media deletion is permanent. Block and partial-content patching can use hashes so stale or ambiguous edits fail safely.
+
+On the unreleased 3.0 development branch, permanent media/term deletion and both bulk operations require confirm:true. Bulk dry_run:true performs the same eligibility checks without writes, including when trash is disabled, and adds data.dry_run:true. Strings and numbers cannot substitute for boolean safety flags. Batch success does not mean every item succeeded; inspect successes and failures.
+
+Media deletion checks known featured-image and literal content URL/GUID references; a hit requires force:true. Permission and reference-query failures still deny forced deletion. The successful in_use flag describes known references, not universal non-use: external sites, custom storage, transformed URLs, and concurrent edits can be missed. These interlocks neither grant capabilities nor prove human approval; clients still need independent authorization for the exact action and IDs.
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
 
@@ -204,6 +210,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 
+* Require exact confirmation for permanent media/term deletion and both bulk post operations; bound raw bulk requests to 100 IDs and add non-mutating eligibility previews.
+* Guard media deletion with shared known-reference checks; require explicit force for known usage, fail closed on scan errors, and report in_use on success without changing capabilities.
 * Reject combined metadata and SEO inputs in post/page/custom-post-type create and update before any mutation; migrate to draft creation, separate authorized key writes, then publication.
 * Authorize separate SEO reads per real object/key, omit denied fields, filter score pagination, remove opaque generated head output, and bound overview to authorized observations from a 100-post sample.
 * Prepare a breaking 3.0 error contract with canonical categories, precise reasons, safe messages, and object details.
