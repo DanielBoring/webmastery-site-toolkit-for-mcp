@@ -148,9 +148,13 @@ function wstm111_privacy_http( array $private_names ): void {
 				} catch ( Throwable $error ) {
 					wstm111_privacy_check( "cleanup/{$transport}/{$login}/session", array( 'closed' => false ), $error->getMessage() );
 				}
-				$deleted = WP_Application_Passwords::delete_application_password( $user->ID, $credential[1]['uuid'] );
-				$absent = null === WP_Application_Passwords::get_user_application_password( $user->ID, $credential[1]['uuid'] );
-				wstm111_privacy_check( "cleanup/{$transport}/{$login}/credential", array( 'deleted' => true === $deleted, 'absent' => $absent ), null );
+				try {
+					$deleted = WP_Application_Passwords::delete_application_password( $user->ID, $credential[1]['uuid'] );
+					$absent = null === WP_Application_Passwords::get_user_application_password( $user->ID, $credential[1]['uuid'] );
+					wstm111_privacy_check( "cleanup/{$transport}/{$login}/credential", array( 'deleted' => true === $deleted, 'absent' => $absent ), null );
+				} catch ( Throwable $error ) {
+					wstm111_privacy_check( "cleanup/{$transport}/{$login}/credential", array( 'deleted_and_verified' => false ), $error->getMessage() );
+				}
 			}
 		}
 	}

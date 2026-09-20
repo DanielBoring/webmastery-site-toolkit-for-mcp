@@ -40,9 +40,20 @@ final class Webmastery_MCP_Database_Table_Privacy_Fixture {
 	public function restore(): void {
 		global $wpdb;
 		foreach ( $this->names as $name ) {
-			$dropped = false !== $wpdb->query( $wpdb->prepare( 'DROP TABLE %i', $name ) );
-			$absent = null === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $name ) ) ) && '' === $wpdb->last_error;
-			$this->cleanup[] = array( 'table' => $name, 'dropped' => $dropped, 'absent' => $absent );
+			$dropped = false;
+			$absent = false;
+			$errors = array();
+			try {
+				$dropped = false !== $wpdb->query( $wpdb->prepare( 'DROP TABLE %i', $name ) );
+			} catch ( Throwable $error ) {
+				$errors[] = 'DROP failed: ' . $error->getMessage();
+			}
+			try {
+				$absent = null === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $name ) ) ) && '' === $wpdb->last_error;
+			} catch ( Throwable $error ) {
+				$errors[] = 'Absence check failed: ' . $error->getMessage();
+			}
+			$this->cleanup[] = array( 'table' => $name, 'dropped' => $dropped, 'absent' => $absent, 'errors' => $errors );
 		}
 	}
 }
