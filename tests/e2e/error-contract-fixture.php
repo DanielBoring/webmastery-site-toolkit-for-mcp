@@ -3,7 +3,7 @@
 // Installed only in the disposable suite, after the normal registration audit.
 defined( 'ABSPATH' ) || exit;
 
-function wstm118_probe( $input ) {
+function wstm118_probe( $input = null ) {
 	$GLOBALS['wstm118_counts']['execute']++;
 	$mode = $input['mode'] ?? 'success';
 	$reasons = array(
@@ -33,7 +33,7 @@ function wstm118_probe( $input ) {
 	) );
 }
 
-function wstm118_permission( $input ) {
+function wstm118_permission( $input = null ) {
 	$GLOBALS['wstm118_counts']['permission']++;
 	$mode = $input['mode'] ?? 'success';
 	if ( 'deny' === $mode ) {

@@ -49,9 +49,17 @@ try {
 		$clients[ $boundary ] = new Webmastery_MCP_E2E_Client( 'http://localhost/wp-json/' . $route, $admin->user_login, $password[0] );
 		$clients[ $boundary ]->initialize();
 	}
-	$call = static function ( $boundary, $name, $input ) use ( &$clients ) {
+	$listing = $clients['individual']->call( 'tools/list' );
+	webmastery_mcp_e2e_assert( isset( $listing['tools'] ) && ! isset( $listing['nextCursor'] ), 'Individual fixture discovery is incomplete.' );
+	$individual_names = array_column( $listing['tools'], 'name' );
+	$summary['individual_tools'] = $individual_names;
+	$call = static function ( $boundary, $name, $input ) use ( &$clients, $individual_names ) {
+		$tool_name = str_replace( '/', '-', $name );
+		if ( 'individual' === $boundary ) {
+			webmastery_mcp_e2e_assert( in_array( $tool_name, $individual_names, true ), 'Individual ability tool was not discovered: ' . $name );
+		}
 		return $clients[ $boundary ]->call( 'tools/call', array(
-			'name' => 'gateway' === $boundary ? 'mcp-adapter-execute-ability' : str_replace( '/', '-', $name ),
+			'name' => 'gateway' === $boundary ? 'mcp-adapter-execute-ability' : $tool_name,
 			'arguments' => 'gateway' === $boundary ? array( 'ability_name' => $name, 'parameters' => (object) $input ) : (object) $input,
 		) );
 	};
