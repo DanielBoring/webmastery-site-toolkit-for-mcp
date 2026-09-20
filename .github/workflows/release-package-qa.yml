@@ -9,6 +9,8 @@ on:
       - '.github/workflows/release.yml'
       - '.github/workflows/release-package-qa.yml'
       - 'docker-compose.yml'
+      - 'docker-compose.release.yml'
+      - 'scripts/qa-compose.sh'
       - 'scripts/e2e-test.sh'
       - 'scripts/build-release.sh'
       - 'scripts/release-qa.sh'
@@ -61,6 +63,7 @@ jobs:
           php scripts/test-release-safeguards.php
           bash scripts/test-release-tag-check.sh
           bash scripts/test-release-plugin-check.sh
+          bash scripts/test-release-runtime.sh
 
       - name: Run Release Package QA
         run: bash scripts/release-qa.sh
