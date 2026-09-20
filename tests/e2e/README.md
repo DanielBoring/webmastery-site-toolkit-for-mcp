@@ -159,6 +159,16 @@ The `wstm114` manifest cases preserve public Subscriber/Author access, retain bo
 
 The 60-second cache is not a strict rate limit: concurrent cold misses or transient eviction can repeat work. Full MCP E2E separately calls webmaster verification as a Subscriber over real HTTP JSON-RPC and checks both private paths are missing and the summary matches public checks. Transport success does not turn mocked contract responses into live Google/Bing verification evidence.
 
+## Standalone metadata authorization
+
+`post-meta-authorization-fixture.php` supplies restricted-key manifest cases and is installed temporarily as an MU plugin for `post-meta-authorization-runner.php`. The dedicated runner covers post/page metadata through direct execute callbacks, `WP_Ability::execute`, and authenticated MCP HTTP. It checks allowed/denied reads, filtered listings, absent/existing/unchanged upserts, absent/existing deletes, capability-specific policies, global/subtype precedence, actual SEO providers, effective `map_meta_cap` / `user_has_cap` denials, primitive/custom grants, and unregistered SEO fallback cleanup including exceptions.
+
+Denied operations must retain the persisted object/metadata snapshot and never reach metadata mutation hooks. Success checks compare stored data and existing response fields. Provider cases compare effective core permission rather than assuming a false registration callback overrides a primitive grant; synthetic policy and real-provider evidence remain distinct.
+
+The shell runs direct/ability boundaries in contract mode and HTTP in E2E mode, with `post-meta-authorization-<boundary>.json` evidence. Contract, HTTP, and package workflows retain these reports on success or failure. Cleanup attempts every session/password/post independently; return failures or exceptions fail the run and are recorded without suppressing its summary. The runner rejects web access before bootstrapping. The temporary MU plugin and application passwords are removed after the proof. Existing provider-create manifest cases retain their success expectations and values.
+
+This coverage is deliberately limited to the three standalone post-meta tools. It does not validate key authorization in post/page create/update batches or separate SEO reads, does not claim atomic batch behavior, and does not close the creation-policy/release gate.
+
 ## Rule for new abilities
 
 When a PR adds a new ability, it must also add at least one manifest test case for that ability. If the ability is registered but missing from the manifest, E2E QA fails.

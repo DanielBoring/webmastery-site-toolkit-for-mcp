@@ -101,6 +101,14 @@ Write operations go through WordPress APIs and capability checks. Posts, pages, 
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
 
+= How are standalone metadata permissions enforced? =
+
+The standalone get-post-meta and update-post-meta abilities require edit_post_meta for the actual object and key; delete-post-meta requires delete_post_meta. All three also require edit_post and preserve the existing protected-key eligibility rules. Upserts include absent and unchanged values, and deletions check authorization even when the key is absent. Explicit denied reads return forbidden; listings omit denied keys. Requiring edit permission for reads is a conservative plugin policy, not a general WordPress read-meta capability.
+
+Global/subtype registrations and effective WordPress capability filters are respected, including explicit primitive grants from providers. The compatibility default for genuinely unregistered supported SEO keys does not bypass those filters. Successful response shapes are unchanged.
+
+This is a partial authorization fix: post/page create and update metadata/SEO aliases and separate SEO inspection, analysis, and scoring paths retain their existing policies and can still bypass restrictive per-key checks. Standalone hardening does not resolve those risks or establish release readiness. Existing one-call SEO create workflows are unchanged.
+
 = Can metadata and media text contain backslashes? =
 
 Yes. Post/page metadata and media titles, captions, and alt text preserve backslashes through WordPress storage. Use normal JSON escaping, not an extra WordPress slashing layer. Existing text, HTML, and SEO-provider sanitization still applies; responses reflect sanitized stored values. Allowed metadata keys and object permissions are unchanged. Post/page create/update metadata accepts scalar values; the direct post-meta update ability also supports JSON-compatible arrays and objects.
@@ -184,6 +192,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 
+* Enforce key-level WordPress authorization for standalone post-meta reads, upserts, and deletes. Omit denied keys from listings; retain existing success shapes and protected-key eligibility.
+* This partial fix does not change metadata inside post/page create/update requests or separate SEO read paths; their authorization risks remain unresolved.
 * Comment updates, approval, trash, and spam now require permission to edit the specific comment as well as moderation permission. Missing-comment errors are unchanged; invalid IDs cannot select a global comment or a different target.
 
 * Report the configured public home URL scheme independently of the MCP request and admin-only TLS policy.
@@ -243,7 +253,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Upgrade Notice ==
 
 = Unreleased =
-Image downloads stop at the existing upload limit; invalid limits and DNS failures return errors. Remapped taxonomy and per-term write restrictions are enforced; refused deletions report failure. Upload limits, the PHP floor, and supported WordPress versions are unchanged.
+Standalone post-meta tools now respect effective key-level capabilities, including unchanged or absent values; listings hide denied keys. Metadata inside post/page create/update requests and separate SEO reads are not covered by this partial fix. Image downloads stop at the existing upload limit; invalid limits and DNS failures return errors. Remapped taxonomy and per-term write restrictions are enforced; refused deletions report failure. Upload limits, the PHP floor, and supported WordPress versions are unchanged.
 
 = 2.5.0 =
 Targeted partial-content patches now support pages and eligible custom post types while preserving object-level edit permissions.

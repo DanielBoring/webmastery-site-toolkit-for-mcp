@@ -1,6 +1,8 @@
 <?php
 
 require_once __DIR__ . '/diagnostics-fixture.php';
+require_once __DIR__ . '/post-meta-authorization-fixture.php';
+wstm110_setup();
 
 function e2e_ensure_user( $login, $email, $role ) {
 	$user = get_user_by( 'login', $login );
@@ -641,6 +643,10 @@ $fixtures['wstm106_book_id'] = e2e_insert_post( 'mcp_book', 'WSTM106 Original Bo
 $fixtures['wstm106_case_id'] = e2e_insert_post( 'mcp_case_study', 'WSTM106 Original Case', 'Original case.', $case_manager_id, 'draft', 'wstm106-original-case' );
 
 $fixtures['post_id']         = e2e_insert_post( 'post', 'MCP E2E Post', 'Content for MCP E2E post.', $author_id );
+$fixtures['wstm110_post_id'] = e2e_insert_post( 'post', 'Standalone metadata authorization', 'Metadata fixture.', $author_id, 'draft' );
+update_post_meta( $fixtures['wstm110_post_id'], 'wstm110_gate', 'ready' );
+update_post_meta( $fixtures['wstm110_post_id'], 'wstm110_restricted', 'original' );
+update_post_meta( $fixtures['wstm110_post_id'], 'wstm110_open', 'original' );
 $fixtures['partial_post_id'] = e2e_insert_post(
 	'post',
 	'MCP E2E Partial Post',
