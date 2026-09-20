@@ -68,6 +68,20 @@ function wstm105_assert( $condition, $message ) {
 	}
 }
 
+function wstm105_finalize_proof( array $cleanup, array &$summary, string $artifact ): void {
+	foreach ( $cleanup as $label => $callback ) {
+		try {
+			$callback();
+		} catch ( Throwable $error ) {
+			$summary['cleanup_errors'][] = array( 'label' => $label, 'error' => $error->getMessage() );
+			$summary['failed']++;
+			echo "FAIL comment cleanup {$label}: {$error->getMessage()}\n";
+		}
+	}
+	$json = json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR ) . "\n";
+	wstm105_assert( strlen( $json ) === file_put_contents( $artifact, $json ), 'Cannot write complete comment evidence.' );
+}
+
 function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 	$checks = 0;
 	foreach ( array( 'update', 'approve', 'trash', 'spam' ) as $action ) {

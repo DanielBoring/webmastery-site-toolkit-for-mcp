@@ -232,14 +232,18 @@ try {
 	$summary['setup_error'] = $error->getMessage();
 	echo "FAIL comment proof: {$error->getMessage()}\n";
 } finally {
-	foreach ( $clients as $client ) {
-		$client->close();
+	$cleanup = array();
+	foreach ( $clients as $role => $client ) {
+		$cleanup[ "close:{$role}" ] = static function () use ( $client ) {
+			$client->close();
+		};
 	}
 	foreach ( $passwords as $role => $uuid ) {
-		wstm105_assert( true === WP_Application_Passwords::delete_application_password( $actors[ $role ], $uuid ), 'Cannot revoke fixture credential.' );
+		$cleanup[ "revoke:{$role}" ] = static function () use ( $actors, $role, $uuid ) {
+			wstm105_assert( true === WP_Application_Passwords::delete_application_password( $actors[ $role ], $uuid ), 'Cannot revoke fixture credential.' );
+		};
 	}
-	$json = json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR ) . "\n";
-	wstm105_assert( strlen( $json ) === file_put_contents( $artifact, $json ), 'Cannot write complete comment evidence.' );
+	wstm105_finalize_proof( $cleanup, $summary, $artifact );
 }
 echo "SUMMARY WSTM105 {$boundary_filter}: {$summary['passed']} passed, {$summary['failed']} failed\n";
 exit( $summary['failed'] ? 1 : 0 );
