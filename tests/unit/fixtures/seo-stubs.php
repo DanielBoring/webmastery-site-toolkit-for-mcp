@@ -4,7 +4,7 @@ namespace Wstm108;
 
 // Isolate WordPress boundaries using the repository's helper-test pattern.
 $source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-seo.php' );
-eval( 'namespace Wstm108; use \WP_Error; use \Webmastery_MCP_Response; ' . substr( $source, 5 ) );
+eval( 'namespace Wstm108; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Untrusted; ' . substr( $source, 5 ) );
 
 // These output-characterization tests supply allowed metadata; authorization is tested separately.
 class Webmastery_MCP_Posts {

@@ -8,10 +8,11 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Changed
 
+- 3.0 development: add record-local `untrusted_fields` arrays to affected content, revision, block, standalone metadata, comment, media, user/audit, and SEO results. Mark only present fields, preserve existing values/types/markup and privacy omissions, and leave canonical errors and diagnostic error subrecords unchanged. Markers are defense-in-depth, not prompt-injection prevention or authorization.
 - Breaking development change for 3.0: reject metadata containers and SEO aliases in post, page, and custom post type create/update requests before any mutation, including empty or null inputs. Migrate to draft creation, separate authorized metadata writes, then publication; these steps are not atomic.
 - Enforce effective real-object metadata permissions in SEO inspection, analysis, and scores. Omit unavailable fields rather than exposing raw values or derived diagnostics; filter score totals and pagination after authorization.
 - Remove opaque generated Yoast head inspection and reject URL-only head requests. Limit site overview metadata observations to the first 100 published post/page IDs, reporting authorized sample counts rather than sitewide missing-metadata totals.
-- Breaking development change for 3.0: standardize ability failures on seven error categories with precise reasons, safe messages, and object-shaped details; keep successful payloads and capability policies unchanged.
+- Breaking development change for 3.0: standardize ability failures on seven error categories with precise reasons, safe messages, and object-shaped details; error normalization itself keeps successful payloads and capability policies unchanged.
 - Signal owned MCP gateway and individual-tool failures as tool errors with canonical JSON text, including early permission refusals. Preserve foreign tool behavior and document the Adapter's missing structured error support.
 - Keep non-atomic bulk summaries while standardizing every per-item failure. Redact external diagnostics even when providers reuse familiar error codes.
 

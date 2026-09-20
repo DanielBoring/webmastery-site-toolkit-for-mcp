@@ -178,7 +178,7 @@ class Webmastery_MCP_SEO {
 
 		$analysis           = [
 			'post_id' => $id,
-			'metrics' => $data,
+			'metrics' => Webmastery_MCP_Untrusted::mark( $data, [ 'title', 'url', 'slug', 'yoast_meta_description', 'seopress_meta_description', 'yoast_focus_keyword', 'seopress_focus_keywords' ] ),
 			'issues'  => $issues,
 			'good'    => $good,
 			'score'   => count( $good ) . '/' . ( count( $good ) + count( $issues ) ) . ' checks passed',
@@ -444,7 +444,7 @@ class Webmastery_MCP_SEO {
 
 		return [
 			'success' => true,
-			'data'    => [
+			'data'    => Webmastery_MCP_Untrusted::mark( [
 				'yoast_active'   => true,
 				'post_id'        => $id,
 				'post_type'      => $post->post_type,
@@ -462,7 +462,7 @@ class Webmastery_MCP_SEO {
 						'key_authorization_unavailable'
 					)['error'],
 				],
-			],
+			], [ 'title', 'url', 'metadata', 'raw_meta' ] ),
 		];
 	}
 
@@ -522,7 +522,7 @@ class Webmastery_MCP_SEO {
 
 		return [
 			'success' => true,
-			'data'    => [
+			'data'    => Webmastery_MCP_Untrusted::mark( [
 				'seopress_active' => true,
 				'post_id'         => $id,
 				'post_type'       => $post->post_type,
@@ -531,7 +531,7 @@ class Webmastery_MCP_SEO {
 				'metadata'        => $meta,
 				'raw_meta'        => $raw_meta,
 				'unavailable_fields' => $read['unavailable_fields'],
-			],
+			], [ 'title', 'url', 'metadata', 'raw_meta' ] ),
 		];
 	}
 
@@ -680,14 +680,14 @@ class Webmastery_MCP_SEO {
 			}
 
 			$raw_score = get_post_meta( $post->ID, $meta_key, true );
-			$items[]   = [
+			$items[]   = Webmastery_MCP_Untrusted::mark( [
 				'post_id'      => (int) $post->ID,
 				'title'        => $post->post_title,
 				'url'          => get_permalink( $post->ID ),
 				'post_type'    => $post->post_type,
 				'modified_gmt' => $post->post_modified_gmt,
 				'score'        => '' === $raw_score ? null : (int) $raw_score,
-			];
+			], [ 'title', 'url', 'score' ] );
 		}
 
 		return [
@@ -732,6 +732,8 @@ class Webmastery_MCP_SEO {
 		$robots_response    = wp_remote_head( $robots_url, [ 'timeout' => 5 ] );
 		$robots_ok          = ! is_wp_error( $robots_response ) && wp_remote_retrieve_response_code( $robots_response ) === 200;
 		$data['robots_txt'] = [ 'url' => $robots_url, 'accessible' => $robots_ok ];
+		$data['sitemap']    = Webmastery_MCP_Untrusted::mark( $data['sitemap'], [ 'url', 'entries' ] );
+		$data['robots_txt'] = Webmastery_MCP_Untrusted::mark( $data['robots_txt'], [ 'url' ] );
 
 		$data['providers'] = [
 			'yoast_active'    => self::is_yoast_active(),

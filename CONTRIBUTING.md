@@ -47,6 +47,7 @@ This plugin follows [WordPress Coding Standards](https://developer.wordpress.org
 - **Capability checks** — every ability must have a `permission_callback` that returns a `WP_Error` on failure, not just `false`; prefer object-specific checks such as `edit_post` / `delete_post` when an object ID is available, and make list/query abilities filter each returned object plus totals before exposing full details
 - **Security-sensitive abilities** — include allowed and denied manifest cases for abilities that expose private data, user identity, environment/plugin details, destructive actions, uploads, or status transitions; use `assert_missing_paths` when lower-privilege responses must hide fields
 - **Metadata boundaries** — reject metadata containers and reserved SEO aliases in general create/update before mutation, including empty/null values. Use real-object effective key capabilities for separate writes and SEO reads; prove denied calls have no writes/hooks or forbidden reads across direct, ability, gateway, and individual-tool execution. Preserve plain-content and draft/write/publish migration controls; see `docs/3.0-migration.md`.
+- **Untrusted result fields (3.0 Unreleased)** — add unique record-local `untrusted_fields` names only for present fields, including null/empty values. Preserve original values/types/HTML/block markup and container maps; never restore redacted values or put markers in canonical errors or diagnostic error subrecords. Keep SEO head output unavailable and all #110/#118 authorization/error evidence intact. See the field table in `README.md` and disposable-runtime requirements in `tests/e2e/README.md`.
 - **Delegated permissions** — require a local WordPress capability floor plus the exact upstream route permission in both permission and direct execution paths. Test missing/non-callable upstream checks, and distinguish controlled fixtures from version-specific real-provider inspection; see the Site Kit policy in `docs/security-strategy.md`.
 - **Prefer WordPress APIs** — use WordPress API functions (`get_posts()`, `wp_insert_post()`, etc.) for normal reads and writes. Direct `$wpdb` reads are limited to administrator-only diagnostics such as database health checks, must be prepared where variables are present, and must surface query errors.
 - **No output buffering** — abilities return arrays or `WP_Error` objects; the MCP Adapter handles serialization
@@ -85,7 +86,7 @@ Each group of abilities lives in its own file under `includes/`. Follow the exis
 2. **Register** the ability inside the class's `register()` method using `wp_register_ability()`
 3. **Use the `webmastery-site-toolkit-for-mcp/` prefix** for the ability name (e.g., `webmastery-site-toolkit-for-mcp/list-media`)
 4. **Require the narrowest relevant capability** in `permission_callback` — use object-specific checks when an input ID is available and never skip the check
-5. **Return a consistent shape** — preserve successful payloads; use `Webmastery_MCP_Response::error()` for canonical failures and `local_error()` for safe native permission/helper diagnostics. Never trust provider messages/data based on a familiar code. Cover direct execution, native permission, gateway, individual-tool, and foreign-namespace isolation; see `docs/3.0-migration.md`.
+5. **Return a consistent shape** — preserve successful values/types, allowing only documented contract changes such as additive record-local markers; use `Webmastery_MCP_Response::error()` for canonical failures and `local_error()` for safe native permission/helper diagnostics. Never trust provider messages/data based on a familiar code. Cover direct execution, native permission, gateway, individual-tool, and foreign-namespace isolation; see `docs/3.0-migration.md`.
 6. **Require the class file** in `webmastery-site-toolkit-for-mcp.php` inside the `wp_abilities_api_init` action and call `ClassName::register()`
 7. **Add E2E manifest coverage** in `tests/e2e/abilities-manifest.json`; include both allowed and denied roles when permissions differ by role or capability, plus missing-path assertions when sensitive fields should be absent
 8. **Update docs and changelogs** when behavior is user-facing: `README.md`, `readme.txt`, relevant markdown files, and `CHANGELOG.md` under `## Unreleased`. Changelog entries should use plugin-facing release-note wording rather than raw internal ability namespace strings unless the exact MCP tool name is necessary. Repository, CI, contributor, GitHub platform, template, or agent workflow changes belong in `.github/REPOSITORY_CHANGELOG.md`.
@@ -120,6 +121,16 @@ wp_register_ability( 'webmastery-site-toolkit-for-mcp/your-ability', [
 
 Set `annotations` accurately — `readonly: true` for read-only abilities, `destructive: true` for deletes, `idempotent: true` if calling it twice produces the same result.
 
+Compare registrations with actual MCP Adapter 0.6.1 `tools/list` output on
+individually exposed tools: `readOnlyHint`, `destructiveHint`, and
+`idempotentHint`. The default server advertises three gateway tools, not
+per-ability hints; obtain ability metadata through get-info. Source/unit
+checks alone do not prove emitted hints; runtime annotation proof for #108 is
+pending. Both gateway and individual result data must retain field markers.
+Markers, hints, and the #116 confirmation interlocks still in development
+are defense-in-depth, not capability checks, content filters, a security
+boundary, or prompt-injection prevention. Text-only output is not implemented.
+
 ---
 
 ## Submitting a pull request
@@ -132,6 +143,23 @@ Set `annotations` accurately — `readonly: true` for read-only abilities, `dest
 6. Update user-facing docs and add a `CHANGELOG.md` entry under `## Unreleased`; use `.github/REPOSITORY_CHANGELOG.md` for repo/platform-only changes
 7. Review the WordPress.org Detailed Plugin Guidelines when the change affects naming, readme text, privacy/external calls, licensing/assets, or release packaging
 8. Open a PR with a clear description of what changed and why
+
+The [PR template](.github/PULL_REQUEST_TEMPLATE.md) and these acceptance
+requirements apply together:
+
+- [ ] Use narrow capability checks, object/status filtering and sensitive-field omissions; preserve effective delegated and metadata authorization.
+- [ ] Sanitize/validate inputs without rewriting existing response values merely to add markers.
+- [ ] Preserve documented successful payloads; canonical failures retain code/reason/message/object-details, native permissions retain `WP_Error`, and real MCP errors have one JSON text block with `isError:true` and omitted wire `structuredContent` (internally null).
+- [ ] Untrusted-field changes preserve exact values/types/markup, use unique present-only record-local names, retain privacy omissions and unavailable SEO fields, and never mark canonical errors or diagnostic error subrecords.
+- [ ] Annotation changes compare registered hints with actual Adapter 0.6.1 individual `tools/list` output; distinguish gateway/get-info metadata, unit/source checks, and pending runtime evidence.
+- [ ] Audit all registered abilities against the E2E manifest, adding allowed/denied cases and missing-path assertions where relevant.
+- [ ] Update user-facing docs, migration/QA guidance, and `CHANGELOG.md` under `## Unreleased`; put repository/CI/contributor changes in `.github/REPOSITORY_CHANGELOG.md`.
+- [ ] Run `composer phpcs`, E2E manifest validation, relevant E2E QA, and `git diff --check`; document missing tools or runtime blockers rather than claiming unrun checks passed.
+- [ ] Review WordPress.org guideline impacts, including privacy, external communication, licensing, packaging and unsupported security claims.
+
+For the #108 runtime probes, require `WSTM108_ALLOW_DISPOSABLE=1` and an owned
+isolated test installation. The opt-in is not a Docker lease; never run
+mutating fixtures on shared/live sites.
 
 Before merge, require successful `1 - Static QA`, `2 - Unit Tests`, and `Docker QA gate` checks from real PR runs. The Docker gate accepts skipped runtime jobs only after successful change detection identifies a non-runtime change. Fork and read-only bot PRs retain job summaries without requiring a writable comment token.
 

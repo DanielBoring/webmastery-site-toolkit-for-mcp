@@ -27,10 +27,11 @@ Use it to let an agent draft or update content, manage media and comments, inspe
 
 For release history, see [CHANGELOG.md](CHANGELOG.md).
 
-**Unreleased 3.0 development:** this branch changes the error contract, not the
-2.6.0 stable tag. Clients must follow the [3.0 migration guide](docs/3.0-migration.md)
-before deploying it. Ability names, roles, inputs, defaults, and successful
-payloads are unchanged by error normalization.
+**Unreleased 3.0 development:** this branch changes error and metadata contracts
+and adds untrusted-result field markers, not the 2.6.0 stable tag. Clients must
+follow the [3.0 migration guide](docs/3.0-migration.md) before deploying it.
+Error normalization itself preserves successful payloads; the separate metadata
+and additive marker changes are documented below.
 
 ## Who This Is For
 
@@ -64,7 +65,7 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | Media | List, inspect, update, upload public image URLs, set featured images, and delete media | Author or Editor |
 | Content hygiene | Find orphaned media, posts/pages missing featured images, and stuck scheduled posts | Author or Editor |
 | Site info | Return safe site basics and current-user context; runtime, WordPress version, database, and theme-version details require Administrator access | Subscriber to Administrator |
-| SEO and webmaster signals | Analyze content, inspect and write supported Yoast/SEOPress metadata, read Yoast scores, inspect generated Yoast head data, and check sitemap/webmaster signals | Author to Administrator |
+| SEO and webmaster signals | Analyze content, inspect and write supported Yoast/SEOPress metadata, read Yoast scores, and check sitemap/webmaster signals; generated Yoast head inspection is unavailable in 3.0 development | Author to Administrator |
 | Public webmaster verification | Check public Google/Bing meta tags, Bing XML, DNS TXT, robots.txt, and sitemap reachability; WordPress-only Site Kit state requires `activate_plugins` | Subscriber (`read`); privileged plugin-state addition |
 | Google Site Kit | Inspect setup/authentication status, modules, effective permissions, and same-site PageSpeed summaries through Site Kit's permission-aware REST routes | Shared dashboard user to Administrator |
 | Plugins, users, health, security, performance, backups, database | Audit or manage sensitive site areas with explicit admin capabilities | Administrator |
@@ -286,11 +287,11 @@ title change with the denied request and confirm that the title is unchanged.
 
 ## Response format
 
-Registered Webmastery ability failures use `{"success":false,"error":{"code":"not_found","reason":"not_found","message":"Comment not found.","details":{}}}`. The fixed categories are `forbidden`, `not_found`, `invalid_input`, `precondition_failed`, `conflict`, `unsupported`, and `upstream_failed`. Parse `code` and the specific `reason`, never message substrings. Empty `details` is an object. Existing successful `success:true,data` payloads are unchanged.
+In **unreleased 3.0**, registered Webmastery ability failures use `{"success":false,"error":{"code":"not_found","reason":"not_found","message":"Comment not found.","details":{}}}`. The fixed categories are `forbidden`, `not_found`, `invalid_input`, `precondition_failed`, `conflict`, `unsupported`, and `upstream_failed`. Parse `code` and the specific `reason`, never message substrings. Empty `details` is an object. Error normalization preserves successful `success:true,data` payloads; separate metadata projections and additive markers are documented here and in the migration guide.
 
 The owned ability subclass retains core input/output validation, permission redaction, and execution hooks. Native permission checks still return `true` or `WP_Error`, never error arrays. Unknown provider diagnostics, including familiar-code collisions, are redacted; core schema errors cannot echo secret input values. This does not change WordPress's own logging.
 
-For MCP Adapter **0.6.1**, owned gateway and individual-tool failures set `isError:true` with the canonical JSON envelope in one text block. Native code/data and structured error content are not retained by the Adapter, so clients must decode that text; `structuredContent` is absent/null. Success through the gateway retains its extra `success/data` wrapper. Foreign plugin results are not intercepted. Check HTTP/JSON-RPC failures separately.
+For MCP Adapter **0.6.1**, owned gateway and individual-tool failures set `isError:true` with the canonical JSON envelope in one text block. Native code/data and structured error content are not retained by the Adapter, so clients must decode that text; `structuredContent` is omitted on the HTTP wire (internally null). Success through the gateway retains its extra `success/data` wrapper. Foreign plugin results are not intercepted. Check HTTP/JSON-RPC failures separately.
 
 Bulk operations remain non-atomic: top-level `success:true` means the batch was processed, including an all-failed batch. Inspect counts and every `{id,code,reason,message,details}` failure. See the [migration matrix, mappings, examples, and Adapter limitation](docs/3.0-migration.md).
 
@@ -298,9 +299,91 @@ For comment permission checks, use a disposable site: a custom account with only
 
 Missing-comment failures now uniformly use code/reason `not_found`; callers without `moderate_comments` still fail at the permission boundary. Invalid/nonpositive IDs are rejected without falling back to a global comment or coercing a negative ID into another target. On a disposable site, also try an authorized future create with `scheduled_date:"bad date"`: the wire error must be `invalid_input/invalid_scheduled_date`, with no created post.
 
+### Untrusted result fields (3.0 Unreleased)
+
+Affected successful records add `untrusted_fields`: a unique array of the names
+of potentially user-controlled fields **present in that same record**. Names
+are relative keys, not paths or a global list. Null and empty values still
+count as present. Marking does not change existing values, types, HTML, or block
+markup; normal write sanitization and existing response normalization still
+apply. Markers never restore omitted/redacted fields.
+
+| Successful record | Fields marked when present |
+| --- | --- |
+| Post, page, or CPT record (including responses reusing these normalizers) | `title`, `content`, `excerpt`, `slug`, `url`, `author_name` |
+| Revision | `author_name`, `title`, `content`, `excerpt` |
+| Block | `block_name`, `text`, `html`, `attrs` |
+| `patch-content-block` data record | `content` |
+| `patch-post-content` `data.target` record | `heading_text` when present; `untrusted_fields:[]` for an exact-match target |
+| Standalone `get-post-meta` containing data record | `meta` |
+| Standalone `update-post-meta` data record | `meta_key`, `previous_value`, `current_value` |
+| Standalone `delete-post-meta` data record | `meta_key` |
+| Comment | `author`, `author_email`, `author_url`, `content` |
+| Media | `title`, `caption`, `alt_text`, `url`, `filename` |
+| User lookup | `display_name`, `nicename`, `url`, authorized `login` and `email` |
+| Administrator account audit | `login`, `email`, `last_login` |
+| Application-password audit | `user_login`, `app_name` |
+| SEO analysis `metrics` | `title`, `url`, `slug`, authorized `yoast_meta_description`, `seopress_meta_description`, `yoast_focus_keyword`, `seopress_focus_keywords` |
+| SEO provider containing record | `title`, `url`, `metadata`, `raw_meta` |
+| SEO/readability score record | `title`, `url`, `score` |
+| Sitemap containing record / robots record | Sitemap: `url`, `entries`; robots: `url` |
+
+Container values such as `attrs`, `meta`, `metadata`, `raw_meta`, and `entries`
+are marked on their containing record; their nested maps are untouched.
+Standalone metadata updates likewise leave nested stored maps in
+`previous_value` and `current_value` unchanged. Content patch results retain
+markers on their nested normalized post as well as the patch-specific records
+above. In SEO/site overview, sitemap markers belong on the `sitemap` record
+and the robots URL marker belongs on `robots_txt`. Canonical
+errors and diagnostic error subrecords have no markers. This is scoped
+coverage, not a declaration that all unmarked values are trusted.
+
+For example, this illustrative successful block record preserves both the
+markup and the attribute types (the marker order is not a parsing contract):
+
+```json
+{"block_name":"core/paragraph","text":"Review this draft.","html":"<p>Review this draft.</p>","attrs":{"className":"review","example":null},"untrusted_fields":["block_name","text","html","attrs"]}
+```
+
+Existing capability/privacy requirements are unchanged:
+
+| Surface | Access and privacy requirement |
+| --- | --- |
+| Content, revisions, blocks | Existing object/status and mapped post-type capabilities; direct content getters and edits require `edit_post` on the target. |
+| Comments | Listing requires `moderate_comments`; replies require `edit_posts` plus parent `edit_post`; moderation requires `moderate_comments` plus `edit_comment`. The existing comment normalizer emits author email/URL under these permissions; markers introduce no additional privacy gate or redaction. |
+| Standalone post metadata | Existing `edit_post`, effective `edit_post_meta` for reads/updates, `delete_post_meta` for deletes, and protected-key eligibility remain unchanged; markers grant no key access. |
+| Media | Existing upload/object capabilities and list filtering; a marker does not grant attachment access. |
+| User lookup and audits | Lookup requires `list_users`; login/email additionally require `edit_user` on that user or `edit_users`. User access audit requires `edit_users`; role labels are guidance, not a replacement for capabilities. |
+| SEO | Existing object and exact-key authorization remains authoritative. Denied fields stay absent, with `unavailable_fields` / `unevaluable_checks` preserved. Overview requires `manage_options`. |
+
+Generated Yoast head data remains unavailable (`generated_head.available:false`);
+URL-only inspection remains `unsupported`, and no provider head calls are made.
+Field markers do not add head passthrough or a text-only `content_format` option.
+
+The default Adapter `tools/list` lists three gateway tools, not per-ability
+hints. Use `mcp-adapter-get-ability-info` to retrieve an ability's metadata.
+On individual tools, compare registered `readonly`, `destructive`, and
+`idempotent` with Adapter 0.6.1's actual emitted `readOnlyHint`,
+`destructiveHint`, and `idempotentHint`; runtime annotation proof for this work
+is pending. Markers travel with result data in both exposure modes.
+
+To verify on an owned disposable site, read a seeded draft as its authorized
+Author and compare marked values with the existing normalized response,
+including HTML and backslashes. Check each marked key exists exactly once,
+then repeat as a denied Subscriber: no content or markers may be added to its
+canonical error. Check lower-privilege user lookup omissions and denied SEO
+keys without reintroducing values or marker names. The
+[dedicated QA guidance](tests/e2e/README.md#untrusted-content-coverage-30-unreleased-108)
+requires explicit disposable-runtime opt-in; examples are not runtime proof.
+
 ## Security Best Practices
 
-SEO Analyze Post uses static focus-keyword diagnostics: `Focus keyword found in title.` or `Focus keyword not found in title.` Stored values remain unchanged in `data.metrics.yoast_focus_keyword` and `data.metrics.seopress_focus_keywords`; `seo_provider_focus_source` retains Yoast-first selection with SEOPress fallback when the Yoast value is empty. Object `edit_post` access, response fields, checks, severity, scores, and missing-keyword behavior are unchanged. These metrics and the title remain untrusted data, not instructions. This partial #108 change adds no field markers, does not verify all annotations or resolve the broader issue, and is not prompt-injection prevention.
+SEO Analyze Post uses static focus-keyword diagnostics: `Focus keyword found in title.` or `Focus keyword not found in title.` Authorized stored values remain unchanged in `data.metrics.yoast_focus_keyword` and `data.metrics.seopress_focus_keywords`; `seo_provider_focus_source` retains authorized Yoast-first selection with SEOPress fallback. Metadata denials retain the separate 3.0 authorization behavior described above. The data/message separation and additive field markers do not make these values instructions.
+
+Unreleased 3.0 markers, annotation hints, and the confirmation interlocks still
+under development in #116 are defense-in-depth only: not a security boundary,
+capability check, content filter, or prompt-injection guarantee. Model-supplied
+confirmation is not independent human approval.
 
 - Use a dedicated service account, not your personal account.
 - Use **Editor** for routine content work and a separate **Administrator** account only for sensitive audits or plugin management.

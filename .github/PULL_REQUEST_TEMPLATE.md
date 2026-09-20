@@ -18,13 +18,16 @@
 - [ ] Security-sensitive abilities include allowed and denied E2E manifest cases, plus `assert_missing_paths` for fields hidden from lower-privilege callers
 - [ ] Metadata changes preserve pre-mutation combined-input rejection, real-object effective key authorization, and direct/ability/gateway/individual-tool no-write/no-forbidden-read proof, with plain-content and draft/write/publish migration controls
 - [ ] Inputs are sanitized or validated (`sanitize_text_field`, `sanitize_key`, `absint`, `wp_kses_post`, enum validation, or an equivalent WordPress API)
-- [ ] Successful payloads are preserved; failures use canonical code/reason/message/object-details, native permissions retain `WP_Error`, and MCP gateway/individual-tool errors plus foreign-namespace isolation are covered
+- [ ] Successful values/types are preserved except for documented contract changes; failures use canonical code/reason/message/object-details, native permissions retain `WP_Error`, and MCP gateway/individual-tool errors plus foreign-namespace isolation are covered (real HTTP errors have `isError:true`, one JSON text block, and omitted wire `structuredContent`, internally null)
+- [ ] Untrusted-field changes preserve exact values/types/markup, use unique present-only record-local names, retain privacy omissions and unavailable SEO fields, and never mark canonical errors or diagnostic error subrecords
+- [ ] Annotation changes compare registered hints with actual Adapter 0.6.1 individual `tools/list` output; distinguish gateway/get-info metadata, unit/source checks, and pending runtime evidence
 - [ ] New ability names use the `webmastery-site-toolkit-for-mcp/` prefix and set accurate `annotations` (`readonly`, `destructive`, `idempotent`)
 - [ ] If this PR adds or changes `webmastery-site-toolkit-for-mcp/*` abilities, `tests/e2e/abilities-manifest.json` includes matching positive and negative cases where permissions apply
 - [ ] User-facing changes update relevant docs (`README.md`, `readme.txt`, `tests/e2e/README.md`, or other affected markdown)
 - [ ] Plugin-facing changes update `CHANGELOG.md` under `## Unreleased`
 - [ ] Repository, CI, contributor, GitHub platform, template, or agent workflow changes update `.github/REPOSITORY_CHANGELOG.md` under `## Unreleased`
 - [ ] Local QA checked with `composer qa` and the relevant Docker/release QA wrapper from `docs/qa-strategy.md`, or the missing tool/blocker is documented above
+- [ ] `composer phpcs`, E2E manifest validation, relevant E2E QA, and `git diff --check` ran, or missing tools/runtime blockers are documented; #108 runtime fixtures require `WSTM108_ALLOW_DISPOSABLE=1` on an owned isolated installation, not a shared/live site or an assumed Docker lease
 - [ ] PHPStan level 5 passes without new baseline debt; resolved entries/counts are removed or lowered, and baseline changes follow the ratchet policy in `docs/qa-strategy.md`
 - [ ] Compatibility QA was considered for release candidates, dependency-sensitive changes, or WordPress/PHP support changes
 - [ ] Workflow/shell changes pass the dedicated workflow linters; required PR checks do not rely on manually dispatched runs or failure-induced skips

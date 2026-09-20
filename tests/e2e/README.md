@@ -21,6 +21,65 @@ Historical baseline comparisons require the pre-migration runner from 2.6.0;
 the current strict canonical parser intentionally rejects those old envelopes.
 Do not weaken current assertions to make a historical baseline pass.
 
+## Untrusted-content coverage (3.0 Unreleased, #108)
+
+The dedicated runtime entrypoints are `untrusted-content-runner.php` and
+`untrusted-content-fixture.php`. They require explicit
+`WSTM108_ALLOW_DISPOSABLE=1` opt-in on an **owned disposable** WordPress
+installation. Do not run them on a shared or live site. The flag is not a
+Docker lease or permission to modify another session's stack; obtain an
+isolated runtime before invoking them. Runtime/HTTP annotation evidence for
+this work is pending; a fixture or unit pass is not actual `tools/list` proof.
+
+The CLI-only runner requires the environment variable before it loads
+WordPress from `/var/www/html/wp-load.php` in the existing disposable
+installation. Setting a WordPress constant alone does not satisfy that
+pre-bootstrap CLI check. Install `untrusted-content-fixture.php` as an MU
+plugin **only in that disposable site**. For separate HTTP processes, opt in
+with `define( 'WSTM108_ALLOW_DISPOSABLE', true );` in its `wp-config.php`,
+or the environment variable set to exactly `1`. Reuse the existing shared
+`error-contract-fixture.php`, also installed as an MU plugin in the disposable
+site, for the individual-tool endpoint
+`/wp-json/wstm118/tools`; this is test configuration, not a production endpoint.
+
+`WSTM108_ARTIFACT` selects the report path, defaulting to
+`e2e-artifacts/untrusted-content-wstm108-<nonce>.json` in the repository,
+with a unique nonce to retain separate runs. The companion
+`.http.jsonl` evidence retains incremental, credential-redacted raw HTTP
+observations. Preserve both artifacts, including on failure. Fixtures use
+unique owned records and cleanup rather than global role/option mutations.
+The runner requires actual MCP Adapter 0.6.1. Install and activate real Yoast
+SEO and SEOPress externally in the disposable runtime before full validation;
+inactive providers produce an incomplete, nonzero result, not a passing
+substitute for provider evidence. Runner self-tests, where available, remain
+unit evidence and do not replace these runtime requirements.
+No Docker runtime or lease is currently available for this proof; actual
+Adapter 0.6.1 runtime evidence remains pending.
+
+Retain the following evidence independently of static registration/manifest
+coverage:
+
+| Contract | Required verification |
+| --- | --- |
+| Record-local markers | Each affected successful record has unique relative names for only present fields; null/empty values count, absent keys do not. Compare against the [field table](../../README.md#untrusted-result-fields-30-unreleased), not a global list or dotted paths. |
+| Value/type preservation | Remove only the newly added record marker for comparison with the original normalized response; retain exact HTML, Gutenberg delimiters, attributes, quotes, backslashes, arrays/objects, empty values and null. Do not strip content or coerce types to make a test pass. |
+| Container values | Provider `metadata`/`raw_meta`, block `attrs`, and sitemap `entries` retain their original maps/values; markers belong on containing records. |
+| Standalone metadata | `get-post-meta` marks `meta` on the containing data record; `update-post-meta` marks `meta_key`, `previous_value`, `current_value`; `delete-post-meta` marks `meta_key`. Nested stored maps and existing object/key authorization remain unchanged. |
+| Content patch results | `patch-content-block` marks data `content`. `patch-post-content` marks present `heading_text` on `data.target`, or an empty array for an exact-match target. Retain the nested post markers and exact original patch result values. |
+| SEO/site overview records | Check present `url`/`entries` on `sitemap`, and `url` on `robots_txt`; no paths or global marker replacement. |
+| Permissions and omissions | Keep allowed and denied role/object cases. Lower-privilege user lookup must omit both restricted values and their marker names. SEO-denied keys stay absent; preserve `unavailable_fields` and `unevaluable_checks`. Markers add no comment privacy policy. |
+| Diagnostics | Require exactly `Focus keyword found in title.` / `Focus keyword not found in title.` for those branches; exact authorized keyword values remain in metric fields. No markers in canonical errors or diagnostic error subrecords. |
+| Removed head output | Assert `generated_head.available:false`, unsupported URL-only inspection and no provider head calls. Do not restore opaque HTML/JSON as an injection fixture. |
+| Gateway result data | Actual HTTP success retains Adapter's existing wrapper and record markers; errors remain `isError:true` with one canonical JSON text block and no wire `structuredContent` (internally null). |
+| Discovery and individual tools | Default `tools/list` exposes the three gateways; use get-info for each ability's metadata. Capture actual individually exposed Adapter 0.6.1 `readOnlyHint`/`destructiveHint`/`idempotentHint` and compare with registered `readonly`/`destructive`/`idempotent`. |
+
+Retain raw responses, exact WordPress/Adapter versions, role/capability context,
+and failed as well as successful observations. Marker/annotation checks do
+not prove model resistance to prompt injection. The #116 confirmation
+interlocks remain separate development work, and optional text-only output
+is not implemented. Existing #110/#118 no-write, key-authorization, and error
+transport assertions must not be relaxed for marker addition.
+
 ## Metadata batch and SEO authorization coverage (3.0)
 
 `metadata-batch-fixture.php` independently lists 34 removed aliases and 147
@@ -82,13 +141,16 @@ HTTP session-close and application-password revocation failures are recorded ind
 
 ## Shared runtime and coverage
 
-### SEO keyword data/message separation (partial #108)
+### SEO keyword data/message separation (existing partial #108 coverage)
 
 `tests/fixtures/seo-analysis.php` supplies five inert-marker scenarios to the unit tests, ability manifest fixtures, and existing MCP HTTP CRUD runner: Yoast found/missing with a competing SEOPress value, SEOPress found/missing after empty-Yoast fallback, and no keyword. Contract cases compare the complete `good` and `issues` arrays (including check IDs, severity, and every diagnostic message), exact keyword/title metrics, provider source, and score through existing `assert_values` placeholders. All earlier cases, including permission negatives, remain intact.
 
-The HTTP runner creates a separate owned SEO post, updates plain content and each authorized metadata key in separate calls, confirms stored metadata, executes SEO analysis through the actual MCP gateway, and retains each response in `mcp-crud-summary.json` under `seo_analysis`. It also rejects inert markers in every diagnostic message. The original CRUD post remains scheduled for its existing future-post deletion scenario; an extra read verifies its state before deletion. Dedicated SEO cleanup runs even after a case failure, records its response, and fails the summary for unsuccessful cleanup, wrong IDs/statuses, or exceptions. Unit tests additionally cover exact markup, quote, and backslash retention for both providers and both branches, plus unchanged response keys for fully authorized analysis. Run `composer qa:unit -- --filter SeoAnalysisTest`, then managed `scripts/e2e-test.sh all` for actual WordPress and transport evidence.
+The HTTP runner creates a separate owned SEO post, updates plain content and each authorized metadata key in separate calls, confirms stored metadata, executes SEO analysis through the actual MCP gateway, and retains each response in `mcp-crud-summary.json` under `seo_analysis`. It also rejects inert markers in every diagnostic message. The original CRUD post remains scheduled for its existing future-post deletion scenario; an extra read verifies its state before deletion. Dedicated SEO cleanup runs even after a case failure, records its response, and fails the summary for unsuccessful cleanup, wrong IDs/statuses, or exceptions. Unit tests additionally cover exact markup, quote, and backslash retention for both providers and both branches. Preserve those assertions while accepting the 3.0 additive metrics marker; all original authorized metric keys remain. Run `composer qa:unit -- --filter SeoAnalysisTest`, then managed `scripts/e2e-test.sh all` for actual WordPress and transport evidence.
 
-This only covers separating focus-keyword data from diagnostics. It adds no field markers, does not verify all annotations or resolve #108, and is not a prompt-injection prevention test.
+This existing suite covers separating focus-keyword data from diagnostics,
+not the complete field-marker or emitted-annotation contract. Use the separate
+unreleased 3.0 coverage above for #108; neither is a prompt-injection prevention
+test. Inert fixture text is distinct from the `untrusted_fields` metadata key.
 
 The harness disables request-triggered WordPress cron before installation and fixture setup in its disposable QA installation. Otherwise, HTTP health checks can start background tasks such as enclosure cleanup while a regression compares whole-database snapshots. Scheduled events and explicit calls to core's future-publication guard remain enabled and asserted; no production plugin setting or no-write predicate is changed. Use a fresh owned runtime, since setting `DISABLE_WP_CRON` does not stop a cron process that is already running.
 
@@ -142,9 +204,10 @@ calibrates the snapshot observer. These checks prove persisted-state equality,
 not absence of transient/no-op write-hook calls.
 
 `assert_permission` distinguishes callback `forbidden` from WordPress's outer
-`ability_invalid_permissions`. Contributor status updates are an intentional
-legacy exception: object permission succeeds, then the execute callback returns
-the exact existing `success: false` / string `error` envelope. Required destructive
+`ability_invalid_permissions`. Contributor status updates retain their
+execution-stage denial: object permission succeeds, then execution refuses
+the status change. The historical string error is canonicalized in unreleased
+3.0; it is not an exception to the current error contract. Required destructive
 permission cases cannot be replaced with not-found/invalid-input failures.
 Validator mutation tests protect this distinction and the no-write assertions.
 
