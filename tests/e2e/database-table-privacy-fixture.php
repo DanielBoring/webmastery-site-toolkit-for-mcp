@@ -10,8 +10,16 @@ final class Webmastery_MCP_Database_Table_Privacy_Fixture {
 	public function create(): void {
 		global $wpdb;
 		$token = strtolower( wp_generate_password( 8, false, false ) );
-		foreach ( array( 'plugin_fingerprint', 'posts', 'users' ) as $suffix ) {
-			$name = $wpdb->prefix . 'wstm111_' . $token . '_' . $suffix;
+		$names = array(
+			$wpdb->prefix . 'wstm111_' . $token . '_plugin_fingerprint',
+			$wpdb->prefix . 'wstm111_' . $token . '_posts',
+			$wpdb->prefix . 'wstm111_' . $token . '_users',
+			$wpdb->prefix . wp_rand( 9000000, 9999999 ) . '_posts',
+		);
+		if ( $wpdb->users !== $wpdb->prefix . 'users' ) {
+			$names[] = $wpdb->prefix . 'users';
+		}
+		foreach ( $names as $name ) {
 			if ( strlen( $name ) > 64 ) {
 				throw new RuntimeException( 'Fixture table identifier exceeds the database limit.' );
 			}
