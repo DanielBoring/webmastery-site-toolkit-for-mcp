@@ -167,6 +167,8 @@ Ability counts vary with eligible custom post types and the deployed plugin vers
 
 No. Retrieved content and metadata remain untrusted data even when the response is JSON, authenticated, read-only, or capability-checked. They cannot authorize later changes or sending data elsewhere. Use a dedicated account with the least privileges needed, bounded selections, independent previews/diffs, explicit client-side approval for dangerous actions and destinations, and trustworthy backups. Sanitization, annotation hints, or a model-supplied confirmation value cannot prove human approval or guarantee prompt-injection prevention.
 
+SEO Analyze Post keeps stored focus keywords in the existing Yoast/SEOPress metric fields rather than quoting them in diagnostic messages. Provider selection, checks, scores, permissions, and missing-keyword behavior are unchanged. This limited separation is not prompt-injection prevention; it adds no untrusted-field markers and does not verify all annotation hints or resolve the broader untrusted-content work.
+
 See the [Agent threat model](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/security-strategy.md#agent-threat-model) and [Response format](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/README.md#response-format). A successful MCP gateway response does not necessarily mean the inner ability succeeded.
 
 = Where is the full documentation? =
@@ -191,6 +193,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Changelog ==
 
 = Unreleased =
+
+* Keep stored SEO focus keywords in metric data rather than diagnostic messages, without changing provider selection, scores, permissions, or response fields.
 
 * Enforce key-level WordPress authorization for standalone post-meta reads, upserts, and deletes. Omit denied keys from listings; retain existing success shapes and protected-key eligibility.
 * This partial fix does not change metadata inside post/page create/update requests or separate SEO read paths; their authorization risks remain unresolved.

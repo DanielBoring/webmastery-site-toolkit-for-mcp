@@ -289,6 +289,8 @@ Missing-comment responses are unchanged: authorized updates return `not_found`, 
 
 ## Security Best Practices
 
+SEO Analyze Post uses static focus-keyword diagnostics: `Focus keyword found in title.` or `Focus keyword not found in title.` Stored values remain unchanged in `data.metrics.yoast_focus_keyword` and `data.metrics.seopress_focus_keywords`; `seo_provider_focus_source` retains Yoast-first selection with SEOPress fallback when the Yoast value is empty. Object `edit_post` access, response fields, checks, severity, scores, and missing-keyword behavior are unchanged. These metrics and the title remain untrusted data, not instructions. This partial #108 change adds no field markers, does not verify all annotations or resolve the broader issue, and is not prompt-injection prevention.
+
 - Use a dedicated service account, not your personal account.
 - Use **Editor** for routine content work and a separate **Administrator** account only for sensitive audits or plugin management.
 - WordPress capability checks gate every ability.

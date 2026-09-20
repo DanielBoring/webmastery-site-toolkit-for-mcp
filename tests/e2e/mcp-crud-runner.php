@@ -339,6 +339,7 @@ $summary = array(
 $editor_client     = new Webmastery_MCP_E2E_Client( $endpoint, webmastery_mcp_e2e_env( 'MCP_CRUD_EDITOR_USER' ), webmastery_mcp_e2e_env( 'MCP_CRUD_EDITOR_PASSWORD' ) );
 $subscriber_client = new Webmastery_MCP_E2E_Client( $endpoint, webmastery_mcp_e2e_env( 'MCP_CRUD_SUBSCRIBER_USER' ), webmastery_mcp_e2e_env( 'MCP_CRUD_SUBSCRIBER_PASSWORD' ) );
 $created_post_id   = null;
+$seo_post_id       = null;
 $deleted_post      = false;
 $title_marker      = 'MCP HTTP CRUD E2E ' . gmdate( 'YmdHis' );
 
@@ -451,6 +452,53 @@ try {
 	webmastery_mcp_e2e_assert( true === ( $retained['success'] ?? false ) && 'future' === ( $retained['data']['status'] ?? null ), 'HTTP ordinary scheduled edit did not retain future status.' );
 	webmastery_mcp_e2e_pass( $summary, 'HTTP scheduling rejection preserves draft and valid scheduling survives ordinary edit' );
 
+	require_once dirname( __DIR__ ) . '/fixtures/seo-analysis.php';
+	$seo_create = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/create-post', array(
+		'title' => 'WSTM108 owned SEO HTTP fixture',
+		'content' => 'Separate from the scheduled CRUD post.',
+		'status' => 'draft',
+	), 'wstm108 create dedicated SEO post' );
+	webmastery_mcp_e2e_assert( true === ( $seo_create['success'] ?? false ), 'wstm108 dedicated SEO post creation failed.' );
+	$seo_post_id = (int) ( $seo_create['data']['id'] ?? 0 );
+	$summary['seo_post_id'] = $seo_post_id;
+	webmastery_mcp_e2e_assert( $seo_post_id > 0 && $seo_post_id !== $created_post_id, 'wstm108 did not create a separate SEO post.' );
+	foreach ( wstm108_seo_cases() as $name => $seo_case ) {
+		$seed = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/update-post', array(
+			'post_id' => $seo_post_id,
+			'status' => 'draft',
+			'title' => $seo_case['title'],
+			'content' => $seo_case['content'],
+			'slug' => $seo_case['slug'],
+			'meta' => $seo_case['meta'],
+		), "wstm108 seed {$name}" );
+		webmastery_mcp_e2e_assert( true === ( $seed['success'] ?? false ), "wstm108 {$name} HTTP fixture update failed." );
+		foreach ( $seo_case['meta'] as $key => $value ) {
+			webmastery_mcp_e2e_assert( $value === ( $seed['data']['meta']['written'][ $key ] ?? null ), "wstm108 {$name} stored metadata differs for {$key}." );
+		}
+		$analysis = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/seo-analyze-post', array( 'post_id' => $seo_post_id ), "wstm108 analyze {$name}" );
+		$summary['seo_analysis'][ $name ] = $analysis;
+		webmastery_mcp_e2e_assert( true === ( $analysis['success'] ?? false ), "wstm108 {$name} analysis failed." );
+		foreach ( $seo_case['expected'] as $path => $expected ) {
+			$actual = $analysis;
+			foreach ( explode( '.', $path ) as $key ) {
+				webmastery_mcp_e2e_assert( is_array( $actual ) && array_key_exists( $key, $actual ), "wstm108 {$name} missing {$path}." );
+				$actual = $actual[ $key ];
+			}
+			webmastery_mcp_e2e_assert( $expected === $actual, "wstm108 {$name} mismatch at {$path}." );
+		}
+		foreach ( array_merge( $analysis['data']['issues'], $analysis['data']['good'] ) as $diagnostic ) {
+			webmastery_mcp_e2e_assert( false === strpos( $diagnostic['message'], 'WSTM108_' ), "wstm108 {$name} stored marker leaked into a diagnostic." );
+		}
+		webmastery_mcp_e2e_pass( $summary, "wstm108 {$name} keyword data separated from diagnostics through MCP HTTP" );
+	}
+
+	$before_delete = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/get-post', array( 'post_id' => $created_post_id ), 'verify scheduled CRUD post before deletion' );
+	webmastery_mcp_e2e_assert( true === ( $before_delete['success'] ?? false ), 'Could not read the scheduled CRUD post before deletion.' );
+	foreach ( array( 'id', 'status', 'title', 'content', 'date_created', 'date_modified' ) as $field ) {
+		webmastery_mcp_e2e_assert( array_key_exists( $field, $retained['data'] ) && $retained['data'][ $field ] === ( $before_delete['data'][ $field ] ?? null ), "SEO HTTP checks changed scheduled CRUD post {$field}." );
+	}
+	webmastery_mcp_e2e_assert( 'future' === $before_delete['data']['status'], 'Original HTTP deletion must still exercise a future post.' );
+
 	$delete = webmastery_mcp_e2e_execute_ability(
 		$editor_client,
 		'webmastery-site-toolkit-for-mcp/delete-post',
@@ -499,6 +547,21 @@ try {
 } catch ( Throwable $throwable ) {
 	webmastery_mcp_e2e_fail( $summary, 'MCP HTTP CRUD workflow', $throwable );
 } finally {
+	if ( $seo_post_id ) {
+		try {
+			$seo_cleanup = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/delete-post', array( 'post_id' => $seo_post_id ), 'cleanup dedicated SEO post' );
+			$summary['seo_cleanup'] = $seo_cleanup;
+			webmastery_mcp_e2e_assert(
+				true === ( $seo_cleanup['success'] ?? false )
+				&& $seo_post_id === ( $seo_cleanup['data']['id'] ?? null )
+				&& 'trash' === ( $seo_cleanup['data']['status'] ?? null ),
+				'Dedicated SEO post cleanup did not report success, matching ID, and trash status.'
+			);
+			webmastery_mcp_e2e_pass( $summary, 'cleanup dedicated SEO post through MCP' );
+		} catch ( Throwable $seo_cleanup_error ) {
+			webmastery_mcp_e2e_fail( $summary, 'cleanup dedicated SEO post through MCP', $seo_cleanup_error );
+		}
+	}
 	if ( $created_post_id && ! $deleted_post ) {
 		try {
 			webmastery_mcp_e2e_execute_ability(

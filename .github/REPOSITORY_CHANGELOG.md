@@ -8,6 +8,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added focused SEO keyword data/message regressions for both providers, found/missing diagnostics, Yoast precedence, SEOPress fallback, and no-keyword behavior. Shared inert fixtures exercise exact metrics, complete diagnostic arrays, and scores through units, the ability manifest, and the existing MCP HTTP client; all previous permission cases remain unchanged.
+
 - Added partial #120 test-only coverage for permanent media-delete denials with persisted row/metadata/file evidence, real Contributor draft/publishing boundaries, private/trashed direct getters, and remaining media/SEO/list permission negatives. Added pure-helper characterization and validator mutation tests; retained existing runtime policies, positive cases, and separate unresolved batch metadata work.
 - Add isolated actual-core standalone metadata authorization checks through direct callbacks, abilities, and authenticated MCP HTTP, including effective capability filters, persisted-state denial evidence, provider policies, and temporary-filter cleanup. Retain success/failure reports even when cleanup fails, upload them from contract/HTTP/package workflows, and verify the new runner in mocked package orchestration. Preserve the existing provider create-success contracts and keep the broader metadata release decision open.
 
