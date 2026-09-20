@@ -197,8 +197,10 @@ function wstm117_run_taxonomy_tests() {
 							$input = array( "{$slug}_id" => $id, 'name' => 'Must not write' );
 							$before = wstm117_term_snapshot();
 							$result = 'wrapped' === $path ? $ability->execute( $input ) : $execute( $input );
-							$expected = array( 'success' => false, 'error' => ( 'category' === $taxonomy ? 'Category' : 'Tag' ) . ' not found.' );
-							$record( "{$action}-{$slug}: {$scenario} {$path}", $expected === $result && $before === wstm117_term_snapshot(), $result );
+							$expected = ( 'category' === $taxonomy ? 'Category' : 'Tag' ) . ' not found.';
+							$record( "{$action}-{$slug}: {$scenario} {$path}", 'not_found' === wstm118_error_reason( $result )
+								&& $expected === $result['error']['message'] && '{}' === wp_json_encode( $result['error']['details'] )
+								&& $before === wstm117_term_snapshot(), $result );
 						}
 					}
 				}
