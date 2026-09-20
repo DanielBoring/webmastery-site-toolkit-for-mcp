@@ -27,11 +27,28 @@ Do not weaken current assertions to make a historical baseline pass.
 presence variants (values, null, empty arrays/strings, containers, raw keys,
 unknown reserved prefixes). `metadata-batch-runner.php` exercises all eight
 built-in/fixture-CPT create/update entrypoints. It requires explicit
-`WSTM110_BATCH_DISPOSABLE=1` in an owned disposable runtime and selects direct
-or registered execution with `WSTM110_BATCH_BOUNDARY`. Never enable it on a
+`WSTM110_BATCH_DISPOSABLE=1` in an owned disposable runtime and selects
+`direct`, `ability`, `http` (gateway), or `individual` execution with
+`WSTM110_BATCH_BOUNDARY`. Never enable it on a
 shared or live site. Whole posts/postmeta/terms/taxonomy/relationship/cron
 snapshots and pre-write/save/status/metadata/term hook counters detect even
 insert-then-delete fake rollbacks. Artifacts retain every input and observation.
+Each boundary expects 1,176 rejections plus four positive draft/plain-update/
+individual-metadata/publish workflows. HTTP observation requires a request-scoped
+token and an explicit response header from `metadata-batch-http-fixture.php`;
+a missing header is a failure, not evidence of zero hooks.
+
+`seo-metadata-runner.php` uses the same opt-in and boundaries with the temporary
+`seo-metadata-fixture.php` forbidden-read observer and existing standalone
+authorization fixture. With both real SEO providers active, it expects 252 cases:
+40 keys on posts/pages under map denial, final-user-cap denial, and explicit
+primitive-grant controls; eight analysis cases; two score-filter cases; bounded
+overview observations; and URL-only head refusal. Individual HTTP requires the
+temporary `wstm118-individual` server after the normal registration audit.
+These runners retain raw responses and observer evidence, revoke their own
+application passwords, and remove owned objects/options. Unit transport seams
+prove strict error handling, discovery ambiguity, required observer evidence,
+and session-cleanup failures; they do not establish actual HTTP/provider results.
 
 The manifest replaces ten obsolete combined successes with original-payload
 no-op rejections, plain creation/update, and 54 exact-key standalone writes.
@@ -146,8 +163,9 @@ counterpart; unit seams do not replace it.
 
 Groups 2/3/8 retain their separate trash-safety, taxonomy and patch-HTML evidence.
 Comment-object group 4 belongs to #105/#157; registered metadata group 5 belongs
-to #110/#159. **Batch metadata remains unresolved under #110**, and none of these
-case totals establishes full #120 completion. Runtime registration coverage must
+to #110/#159. The separate 3.0 batch/SEO suite above covers the remaining #110
+contract; none of these unit case totals establishes full #120 completion.
+Runtime registration coverage must
 still prove all 85 fixture abilities against `wp_get_abilities()`; static manifest
 validation alone cannot make that claim.
 
@@ -167,7 +185,7 @@ HTTPS request variables in these tests are simulations, not actual TLS, certific
 
 ## Backslash persistence regressions
 
-The `wstm122` manifest cases cover post/page create/update SEO metadata, media upload/update title/caption/alt text, and the already-correct direct structured metadata path. Assertions include repeated/trailing backslashes, escaped quotes, regex-style JSON text, sanitized HTML/text, and denied updates with unchanged stored metadata. Uploads use the existing in-process HTTP image fixture; they do not download a live image or relax production URL checks. The HTTP CRUD runner also asserts metadata backslashes on both post creation and update. Existing ordinary content/backslash and allowed/denied cases remain in place.
+The `wstm122` manifest cases cover plain post/page creation and updates followed by separate SEO metadata calls, media upload/update title/caption/alt text, and the already-correct direct structured metadata path. Assertions include repeated/trailing backslashes, escaped quotes, regex-style JSON text, sanitized HTML/text, and denied updates with unchanged stored metadata. Uploads use the existing in-process HTTP image fixture; they do not download a live image or relax production URL checks. The HTTP CRUD runner also asserts metadata backslashes through separate calls after both post creation and update. Existing ordinary content/backslash and allowed/denied cases remain in place.
 
 ## Parent-assignment regression proof (#106)
 
