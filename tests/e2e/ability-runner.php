@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/diagnostics-fixture.php';
 require_once __DIR__ . '/coverage-fixture.php';
+require_once dirname( __DIR__ ) . '/fixtures/seo-analysis.php';
 require_once __DIR__ . '/post-meta-authorization-fixture.php';
 wstm110_setup();
 
@@ -784,6 +785,19 @@ $fixtures['delete_media_id']   = e2e_insert_media( $fixtures['post_id'], $author
 $fixtures['featured_image_id'] = e2e_insert_media( $fixtures['post_id'], $author_id, 'featured-image', 'image/png' );
 $fixtures['orphaned_media_id'] = e2e_insert_media( 0, $author_id, 'orphaned' );
 wstm120_seed_fixtures( $fixtures );
+foreach ( wstm108_seo_cases() as $name => $seo_case ) {
+	$id = e2e_insert_post( 'post', $seo_case['title'], $seo_case['content'], $editor_id, 'draft', $seo_case['slug'] );
+	$fixtures[ "wstm108_{$name}_id" ] = $id;
+	foreach ( $seo_case['meta'] as $key => $value ) {
+		update_post_meta( $id, $key, wp_slash( $value ) );
+		if ( get_post_meta( $id, $key, true ) !== $value ) {
+			throw new RuntimeException( "Could not seed exact SEO metadata for {$name}." );
+		}
+	}
+	$fixtures[ "wstm108_{$name}_title" ] = $seo_case['title'];
+	$fixtures[ "wstm108_{$name}_good" ] = $seo_case['expected']['data.good'];
+	$fixtures[ "wstm108_{$name}_issues" ] = $seo_case['expected']['data.issues'];
+}
 $fixtures['yoast_score_post_id'] = e2e_insert_post( 'post', 'MCP E2E Yoast Score Post', 'Yoast score fixture.', $author_id );
 wp_update_post(
 	array(

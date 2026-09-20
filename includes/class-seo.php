@@ -119,9 +119,9 @@ class Webmastery_MCP_SEO {
 		if ( empty( $focus_kw ) ) {
 			$issues[] = [ 'check' => 'focus_keyword', 'severity' => 'warn', 'message' => 'No Yoast SEO focus keyphrase or SEOPress target keyword set.' ];
 		} elseif ( false !== stripos( $title, $focus_kw ) ) {
-			$good[] = [ 'check' => 'keyword_in_title', 'message' => "Focus keyword \"{$focus_kw}\" found in title." ];
+			$good[] = [ 'check' => 'keyword_in_title', 'message' => 'Focus keyword found in title.' ];
 		} else {
-			$issues[] = [ 'check' => 'keyword_in_title', 'severity' => 'warn', 'message' => "Focus keyword \"{$focus_kw}\" not found in title." ];
+			$issues[] = [ 'check' => 'keyword_in_title', 'severity' => 'warn', 'message' => 'Focus keyword not found in title.' ];
 		}
 
 		// Images without alt text

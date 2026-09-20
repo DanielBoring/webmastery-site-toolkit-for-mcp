@@ -451,6 +451,37 @@ try {
 	webmastery_mcp_e2e_assert( true === ( $retained['success'] ?? false ) && 'future' === ( $retained['data']['status'] ?? null ), 'HTTP ordinary scheduled edit did not retain future status.' );
 	webmastery_mcp_e2e_pass( $summary, 'HTTP scheduling rejection preserves draft and valid scheduling survives ordinary edit' );
 
+	require_once dirname( __DIR__ ) . '/fixtures/seo-analysis.php';
+	foreach ( wstm108_seo_cases() as $name => $seo_case ) {
+		$seed = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/update-post', array(
+			'post_id' => $created_post_id,
+			'status' => 'draft',
+			'title' => $seo_case['title'],
+			'content' => $seo_case['content'],
+			'slug' => $seo_case['slug'],
+			'meta' => $seo_case['meta'],
+		), "wstm108 seed {$name}" );
+		webmastery_mcp_e2e_assert( true === ( $seed['success'] ?? false ), "wstm108 {$name} HTTP fixture update failed." );
+		foreach ( $seo_case['meta'] as $key => $value ) {
+			webmastery_mcp_e2e_assert( $value === ( $seed['data']['meta']['written'][ $key ] ?? null ), "wstm108 {$name} stored metadata differs for {$key}." );
+		}
+		$analysis = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/seo-analyze-post', array( 'post_id' => $created_post_id ), "wstm108 analyze {$name}" );
+		$summary['seo_analysis'][ $name ] = $analysis;
+		webmastery_mcp_e2e_assert( true === ( $analysis['success'] ?? false ), "wstm108 {$name} analysis failed." );
+		foreach ( $seo_case['expected'] as $path => $expected ) {
+			$actual = $analysis;
+			foreach ( explode( '.', $path ) as $key ) {
+				webmastery_mcp_e2e_assert( is_array( $actual ) && array_key_exists( $key, $actual ), "wstm108 {$name} missing {$path}." );
+				$actual = $actual[ $key ];
+			}
+			webmastery_mcp_e2e_assert( $expected === $actual, "wstm108 {$name} mismatch at {$path}." );
+		}
+		foreach ( array_merge( $analysis['data']['issues'], $analysis['data']['good'] ) as $diagnostic ) {
+			webmastery_mcp_e2e_assert( false === strpos( $diagnostic['message'], 'WSTM108_' ), "wstm108 {$name} stored marker leaked into a diagnostic." );
+		}
+		webmastery_mcp_e2e_pass( $summary, "wstm108 {$name} keyword data separated from diagnostics through MCP HTTP" );
+	}
+
 	$delete = webmastery_mcp_e2e_execute_ability(
 		$editor_client,
 		'webmastery-site-toolkit-for-mcp/delete-post',
