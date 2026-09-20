@@ -295,3 +295,5 @@ Report suspected vulnerabilities through [private vulnerability reporting](https
 ## Contributing
 
 New abilities and feature requests are tracked in [GitHub Issues](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/issues). The project follows [Semantic Versioning](https://semver.org/); see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy) for release and QA expectations.
+
+Maintainers and contributors can start with the [Software Development Lifecycle](docs/sdlc-overview.md) for a map of how issues, implementation, QA, releases, and maintenance fit together.

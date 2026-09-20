@@ -14,14 +14,8 @@ E2E_MANAGE_COMPOSE="${E2E_MANAGE_COMPOSE:-0}"
 E2E_KEEP_COMPOSE="${E2E_KEEP_COMPOSE:-0}"
 QA_MODE="${1:-all}"
 
-compose() {
-	local project_args=()
-	if [ -n "${COMPOSE_PROJECT_NAME:-}" ]; then
-		project_args=( --project-name "$COMPOSE_PROJECT_NAME" )
-	fi
-
-	docker compose "${project_args[@]}" "$@"
-}
+# shellcheck source=scripts/qa-compose.sh
+source "$(dirname "${BASH_SOURCE[0]}")/qa-compose.sh"
 
 wp() {
 	compose exec -T wordpress wp --allow-root "$@"
@@ -145,6 +139,11 @@ RewriteRule . /index.php [L]
 HTACCESS'
 }
 
+configure_test_cron() {
+	echo "Disabling request-triggered cron in the isolated QA installation..."
+	wp config set DISABLE_WP_CRON true --raw
+}
+
 configure_application_passwords() {
 	echo "Configuring E2E Application Password availability..."
 	wp config set WP_ENVIRONMENT_TYPE local --type=constant
@@ -254,7 +253,6 @@ run_parent_assignment_qa() (
 	local status
 	trap 'compose exec -T wordpress rm -f /var/www/html/wp-content/mu-plugins/wstm-issue106-parent.php' EXIT
 	compose exec -T wordpress cp "${CONTAINER_PLUGIN_ROOT}/tests/e2e/parent-assignment-fixture.php" "$fixture"
-	compose exec -T wordpress wp --allow-root config set DISABLE_WP_CRON true --raw
 	status="$(compose exec -T wordpress curl --silent --show-error --output /tmp/wstm106-cli-response --write-out '%{http_code}' "http://localhost/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/parent-assignment-runner.php")"
 	if [ "$status" != "403" ]; then
 		echo "Parent runner must reject non-CLI requests before bootstrap (HTTP ${status})." >&2
@@ -302,6 +300,17 @@ main() {
 			;;
 	esac
 
+	if [ -n "${E2E_PACKAGE_ROOT:-}${E2E_PACKAGE_ZIP:-}" ]; then
+		: "${E2E_PACKAGE_ROOT:?Package runtime requires E2E_PACKAGE_ROOT}"
+		: "${E2E_PACKAGE_ZIP:?Package runtime requires E2E_PACKAGE_ZIP}"
+		if [ "$E2E_MANAGE_COMPOSE" != "1" ] || [ "$E2E_ARTIFACTS_DIR" != "e2e-artifacts" ]; then
+			echo "Package runtime requires managed Compose and the e2e-artifacts output mount." >&2
+			exit 1
+		fi
+		host_php scripts/release-tools.php runtime-package "$E2E_PACKAGE_ROOT" "$E2E_PACKAGE_ZIP"
+		echo "Release runtime plugin root: ${E2E_PACKAGE_ROOT} (verified against ${E2E_PACKAGE_ZIP})"
+	fi
+
 	trap cleanup_compose EXIT
 
 	rm -rf "$E2E_ARTIFACTS_DIR"
@@ -310,6 +319,7 @@ main() {
 	wait_for_wordpress_files
 	load_dependencies
 	install_wp_cli
+	configure_test_cron
 	install_wordpress
 	configure_http_auth_forwarding
 	configure_application_passwords

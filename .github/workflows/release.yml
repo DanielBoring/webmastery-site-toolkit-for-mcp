@@ -49,6 +49,7 @@ jobs:
           php scripts/test-release-safeguards.php
           bash scripts/test-release-tag-check.sh
           bash scripts/test-release-plugin-check.sh
+          bash scripts/test-release-runtime.sh
 
       - name: Validate source metadata
         id: metadata

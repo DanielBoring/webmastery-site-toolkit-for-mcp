@@ -9,6 +9,7 @@ source "$REPO_ROOT/scripts/release-plugin-check.sh"
 PLUGIN_SLUG="webmastery-site-toolkit-for-mcp"
 PACKAGE_ROOT="original-extracted-zip"
 TRACE="$WORK/commands"
+export MSYS_NO_PATHCONV=1
 
 # Record arguments without invoking Docker, Compose, WP-CLI, or any network.
 docker() {
@@ -61,4 +62,14 @@ for failure in error malformed truncated unknown empty misleading; do
 		exit 1
 	fi
 done
+# Keep host-only path conversion scoped and propagate native PHP failures exactly.
+php() {
+	[[ -z "${MSYS_NO_PATHCONV:-}" ]] || return 94
+	return 23
+}
+status=0
+check_package latest || status=$?
+[[ "$status" == 23 ]]
+[[ "$MSYS_NO_PATHCONV" == 1 ]]
+unset -f php
 echo "PASS pinned/latest arguments, evidence, retained warnings and fail-closed ERROR/malformed reports"

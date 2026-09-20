@@ -50,7 +50,8 @@
 		"test:release-safeguards": [
 			"php scripts/test-release-safeguards.php",
 			"bash scripts/test-release-tag-check.sh",
-			"bash scripts/test-release-plugin-check.sh"
+			"bash scripts/test-release-plugin-check.sh",
+			"bash scripts/test-release-runtime.sh"
 		],
 		"validate:e2e-manifest": "php scripts/validate-e2e-manifest.php",
 		"validate:security-qa": "php scripts/validate-security-qa.php"

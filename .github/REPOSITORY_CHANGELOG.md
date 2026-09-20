@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added a software development lifecycle overview that maps issue intake, design, implementation, QA, release, and maintenance to the repository's strategy documents and sources of truth.
 - Documented the agent threat model, client-side approval and recovery guidance, annotation scope, and delegated Site Kit access expectations without changing runtime permissions or response contracts.
 - Added focused diagnostic configuration/privacy regression coverage, scoped database-error fixtures, and permission cases while preserving the existing table-identifier contract.
 - Added paired diagnostic authority-syntax cases covering malformed escapes and valid local, internationalized, escaped, and IP-literal configurations without modifying the original diagnostic proof runner.
@@ -49,6 +50,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 ### Changed
 
 - Updated the verified MCP Adapter baseline to 0.6.1 and its matching SHA-256; distinguished current configuration from the historical 0.5.0 rollout evidence without changing WordPress or PHP support.
+- Run release/tag QA against an extraction of the original ZIP with explicit harness-only mounts instead of the checkout; retain source/archive hash checks, a pristine Plugin Check extraction, final runtime-tree validation, and an unchanged archive digest. Added real-orchestration stub/tamper regressions, cleanup failure propagation, and scoped Git Bash host-PHP path conversion without changing ordinary source E2E.
+- Disabled request-triggered cron before disposable QA bootstrap to isolate whole-database no-write assertions from background enclosure cleanup; retained explicit scheduling checks and detailed regression reports in compatibility lane artifacts.
 - Updated the development-only PHPStan engine to 2.2.14, retaining PHP 8.0 compatibility and the existing analysis level; stronger analysis and schema coverage remain separate work.
 - Updated development-only WordPress stubs to 7.1.0 for static analysis; the plugin's WordPress 6.9 and PHP 8.0 minimum requirements are unchanged.
 - Updated the verified `actions/cache` pin to v6.1.0 on GitHub-hosted QA runners, retaining Composer cache paths, keys, and restore-key behavior.

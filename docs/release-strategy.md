@@ -2,6 +2,8 @@
 
 Release strategy explains how reviewed repository changes become a GitHub release and a WordPress.org plugin update. CI/CD strategy explains the automation mechanics; QA strategy explains the validation layers.
 
+See the [Software Development Lifecycle](sdlc-overview.md) for where release fits in the complete development process.
+
 ## Release goals
 
 1. Ship only reviewed, tested, package-ready plugin files.
@@ -59,7 +61,7 @@ The tag workflow owns release validation, WordPress.org SVN deployment, and GitH
 1. Maintainer pushes `vX.Y.Z`.
 2. `.github/workflows/release.yml` requires an exact `vX.Y.Z` tag in fetched `main` history and runs Static QA plus Unit Tests.
 3. Release validation checks source/archive metadata, requirements, the tested WordPress baseline, and nonempty version entries in the changelog and upgrade-notice sections.
-4. `scripts/release-qa.sh` builds the release ZIP once, runs contract/transport QA, validates package contents, and runs WordPress Plugin Check. The release path also checks the current Plugin Check version rather than relying only on an older pin.
+4. `scripts/release-qa.sh` builds the release ZIP once, validates exact source/archive hashes, and mounts an extraction of that original ZIP as the production plugin root for contract/transport QA. Explicit harness-only binds do not expose the checkout or its development dependencies. WordPress Plugin Check receives a separate pristine extraction of the same ZIP; both the runtime production bytes and original archive digest must remain unchanged after QA. Only the exact empty host-side nested-bind placeholders are allowed in the runtime tree. The release path also checks the current Plugin Check version rather than relying only on an older pin.
 5. The validated ZIP, notes, listing assets, source SHA, and integrity manifest are retained as a run-scoped artifact.
 6. The workflow waits for approval in the protected `wordpress-org` environment. Approve the source SHA and artifact identity shown by the validation job.
 7. The publish job verifies the artifact, serializes production updates across all release tags, and rejects a version that would regress the published release.
@@ -71,7 +73,7 @@ Do not manually upload an unvalidated zip to GitHub releases.
 
 WordPress.org uses SVN as the release repository. GitHub remains the development repository.
 
-Release build and validation scripts require PHP with ZipArchive. The release workflow uses PHP 8.2 for tooling; this does not change the plugin's PHP 8.0 support floor. Run `composer test:release-safeguards` for package metadata, artifact integrity, recovery decisions, and tag ancestry regression tests without Docker. `composer qa:release` also requires Docker and runs the package through Plugin Check.
+Release build and validation scripts require PHP with ZipArchive. The release workflow uses PHP 8.2 for tooling; this does not change the plugin's PHP 8.0 support floor. Run `composer test:release-safeguards` for package metadata, artifact integrity, recovery decisions, tag ancestry, and package-runtime orchestration regression tests without Docker. `composer qa:release` also requires Docker and runs the package through Plugin Check.
 
 Plugin Check reports are parsed independently of the command exit status. Any ERROR, malformed report, or unknown finding type blocks release; existing warnings stay visible without being treated as errors. `REQUIRE_CURRENT_PLUGIN_CHECK=1` checks the same ZIP with both the pinned and current checker versions. The release workflow requires both; local `PLUGIN_CHECK_VERSION=latest` selects only the current checker.
 

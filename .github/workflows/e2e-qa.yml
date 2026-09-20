@@ -60,7 +60,7 @@ jobs:
           printf '%s\n' "$CHANGED_FILES"
 
           # Conservatively test Git-quoted paths (e.g. names containing newlines or non-ASCII).
-          if grep -E '^("|\.github/compatibility-versions\.json|\.github/workflows/|docker-compose\.yml|scripts/|tests/|includes/|webmastery-site-toolkit-for-mcp\.php|readme\.txt|composer\.(json|lock)|phpcs\.xml\.dist|phpstan\.neon\.dist|phpunit\.xml\.dist|assets/)' <<< "$CHANGED_FILES" > /dev/null; then
+          if grep -E '^("|\.github/compatibility-versions\.json|\.github/workflows/|docker-compose(\.release)?\.yml|scripts/|tests/|includes/|webmastery-site-toolkit-for-mcp\.php|readme\.txt|composer\.(json|lock)|phpcs\.xml\.dist|phpstan\.neon\.dist|phpunit\.xml\.dist|assets/)' <<< "$CHANGED_FILES" > /dev/null; then
             echo "should-run=true" >> "$GITHUB_OUTPUT"
           else
             status=$?
