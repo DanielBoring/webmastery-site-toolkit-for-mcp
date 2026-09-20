@@ -1,9 +1,13 @@
+includes:
+	- phpstan-baseline.neon
+
 parameters:
-	level: 0
+	level: 5
+	phpVersion: 80000
 	paths:
 		- webmastery-site-toolkit-for-mcp.php
 		- includes
 	bootstrapFiles:
 		- vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
 	treatPhpDocTypesAsCertain: false
-	reportUnmatchedIgnoredErrors: false
+	reportUnmatchedIgnoredErrors: true

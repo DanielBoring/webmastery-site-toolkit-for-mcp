@@ -1,0 +1,127 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Strict comparison using \!\=\= between '''' and '''' will always evaluate to false\.$#'
+			identifier: notIdentical.alwaysFalse
+			count: 1
+			path: includes/class-content-hygiene.php
+
+		-
+			message: '#^Constant ARRAY_A not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: includes/class-database-health.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between '''' and '''' will always evaluate to false\.$#'
+			identifier: notIdentical.alwaysFalse
+			count: 1
+			path: includes/class-database-health.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: includes/class-media.php
+
+		-
+			message: '#^Parameter \#1 \$file_array of function media_handle_sideload expects array\<string\>, array\<string, array\<string, string\>\|int\<1, max\>\|string\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: includes/class-media.php
+
+		-
+			message: '#^Parameter \#1 \$postarr of function wp_update_post expects array\{ID\?\: int, post_author\?\: int, post_date\?\: string, post_date_gmt\?\: string, post_content\?\: string, post_content_filtered\?\: string, post_title\?\: string, post_excerpt\?\: string, \.\.\.\}, array\<int\|string\> given\.$#'
+			identifier: argument.type
+			count: 2
+			path: includes/class-media.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 5
+			path: includes/class-media.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: includes/class-media.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between null and null will always evaluate to false\.$#'
+			identifier: notIdentical.alwaysFalse
+			count: 4
+			path: includes/class-media.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between mixed and \*NEVER\* will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 3
+			path: includes/class-media.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between null and null will always evaluate to true\.$#'
+			identifier: identical.alwaysTrue
+			count: 1
+			path: includes/class-media.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: includes/class-media.php
+
+		-
+			message: '#^Unsafe call to private method Webmastery_MCP_Media\:\:validate_image_dns\(\) through static\:\:\.$#'
+			identifier: staticClassAccess.privateMethod
+			count: 2
+			path: includes/class-media.php
+
+		-
+			message: '#^Constant WP_CONTENT_DIR not found\.$#'
+			identifier: constant.notFound
+			count: 2
+			path: includes/class-performance-status.php
+
+		-
+			message: '#^Constant DAY_IN_SECONDS not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: includes/class-plugins.php
+
+		-
+			message: '#^Constant WP_PLUGIN_DIR not found\.$#'
+			identifier: constant.notFound
+			count: 2
+			path: includes/class-plugins.php
+
+		-
+			message: '#^Constant MINUTE_IN_SECONDS not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: includes/class-post-scheduling.php
+
+		-
+			message: '#^Call to function is_wp_error\(\) with 0\|0\.0\|''''\|''0''\|array\{\}\|false\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: includes/class-posts.php
+
+		-
+			message: '#^Parameter \#1 \$postarr of function wp_update_post expects array\{ID\?\: int, post_author\?\: int, post_date\?\: string, post_date_gmt\?\: string, post_content\?\: string, post_content_filtered\?\: string, post_title\?\: string, post_excerpt\?\: string, \.\.\.\}, array\<int\<min, \-1\>\|int\<1, max\>\|string\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: includes/class-posts.php
+
+		-
+			message: '#^Constant WP_CONTENT_DIR not found\.$#'
+			identifier: constant.notFound
+			count: 2
+			path: includes/class-security.php
+
+		-
+			message: '#^Offset 1 on array\{list\<string\>, list\<string\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: includes/class-seo.php
