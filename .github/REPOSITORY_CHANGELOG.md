@@ -55,6 +55,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Updated the verified MCP Adapter baseline to 0.6.1 and its matching SHA-256; distinguished current configuration from the historical 0.5.0 rollout evidence without changing WordPress or PHP support.
 - Raised PHPStan analysis from level 0 to level 5 with an explicitly PHP 8.0-targeted, generated/reviewed baseline of 35 existing diagnostics in 21 exact file/message/identifier/count entries. Enabled unmatched-ignore failures, documented incremental debt reduction, and added isolated regression guards for new errors, count growth, and stale-entry removal in static QA and both CI PHP safeguard lanes. Plugin behavior, schemas, dependencies, and runtime tests are unchanged.
 - Mock the metadata authorization stage in the isolated compatibility bootstrap test, assert cron isolation and exactly one invocation in every QA mode, and preserve the real runner's non-CLI rejection checks.
 - Run release/tag QA against an extraction of the original ZIP with explicit harness-only mounts instead of the checkout; retain source/archive hash checks, a pristine Plugin Check extraction, final runtime-tree validation, and an unchanged archive digest. Added real-orchestration stub/tamper regressions, cleanup failure propagation, and scoped Git Bash host-PHP path conversion without changing ordinary source E2E.
