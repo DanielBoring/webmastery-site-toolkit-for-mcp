@@ -22,7 +22,7 @@ class Webmastery_MCP_Database_Health {
 
 	public static function permission() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			return new WP_Error( 'forbidden', 'Requires manage_options capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
 		}
 
 		return true;
@@ -246,7 +246,7 @@ class Webmastery_MCP_Database_Health {
 	}
 
 	private static function database_error( $context ) {
-		return new WP_Error(
+		return Webmastery_MCP_Response::local_error(
 			'database_health_query_failed',
 			sprintf(
 				'Database health query failed while reading %s.',

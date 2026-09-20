@@ -69,24 +69,20 @@ final class PostsHelpersTest extends TestCase {
 	}
 
 	public function test_error_response_shape_is_stable(): void {
-		$response = self::call_private(
-			'error_response',
-			array(
-				'forbidden',
-				'Nope.',
-				array( 'capability' => 'edit_post' ),
-			)
+		$response = Webmastery_MCP_Response::error(
+			'forbidden',
+			'Nope.',
+			array( 'capability' => 'edit_post' )
 		);
 
-		$this->assertSame(
+		$this->assertEquals(
 			array(
 				'success' => false,
 				'error'   => array(
 					'code'    => 'forbidden',
+					'reason'  => 'forbidden',
 					'message' => 'Nope.',
-				),
-				'data'    => array(
-					'capability' => 'edit_post',
+					'details' => (object) array( 'capability' => 'edit_post' ),
 				),
 			),
 			$response

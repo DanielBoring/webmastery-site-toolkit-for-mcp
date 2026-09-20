@@ -32,7 +32,7 @@ class Webmastery_MCP_Backup_Status {
 
 	public static function permission() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			return new WP_Error( 'forbidden', 'Requires manage_options capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
 		}
 
 		return true;

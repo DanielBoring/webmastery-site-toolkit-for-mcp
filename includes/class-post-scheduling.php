@@ -58,7 +58,7 @@ class Webmastery_MCP_Post_Scheduling {
 
 		// Core publishes future posts at <60 seconds, not merely at <=0.
 		if ( $future && $timestamp - $now < MINUTE_IN_SECONDS ) {
-			return new WP_Error( 'scheduled_date_too_soon', 'The scheduled date must be at least 60 seconds in the future when validated.' );
+			return Webmastery_MCP_Response::local_error( 'scheduled_date_too_soon', 'The scheduled date must be at least 60 seconds in the future when validated.' );
 		}
 
 		return $args;
@@ -77,10 +77,10 @@ class Webmastery_MCP_Post_Scheduling {
 	}
 
 	private static function invalid_date() {
-		return new WP_Error( 'invalid_scheduled_date', 'Provide a valid scheduled date without invalid calendar or time values.' );
+		return Webmastery_MCP_Response::local_error( 'invalid_scheduled_date', 'Provide a valid scheduled date without invalid calendar or time values.' );
 	}
 
 	private static function missing_date() {
-		return new WP_Error( 'missing_scheduled_date', 'Provide a nonempty scheduled date when newly scheduling content; omit it only to retain an existing valid future schedule.' );
+		return Webmastery_MCP_Response::local_error( 'missing_scheduled_date', 'Provide a nonempty scheduled date when newly scheduling content; omit it only to retain an existing valid future schedule.' );
 	}
 }

@@ -219,28 +219,13 @@ class Webmastery_MCP_Custom_Post_Types {
 		];
 	}
 
-	private static function error_response( $code, $message, $data = [] ) {
-		$response = [
-			'success' => false,
-			'error'   => [
-				'code'    => $code,
-				'message' => $message,
-			],
-		];
-
-		if ( ! empty( $data ) ) {
-			$response['data'] = $data;
-		}
-
-		return $response;
-	}
 
 	private static function permission( $post_type_object, $capability ) {
 		$cap = self::cap( $post_type_object, $capability );
 
 		return function () use ( $cap ) {
 			if ( ! current_user_can( $cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability." );
 			}
 
 			return true;
@@ -256,10 +241,10 @@ class Webmastery_MCP_Custom_Post_Types {
 			$post = get_post( $id );
 
 			if ( ! $post || $post->post_type !== $type ) {
-				return new WP_Error( 'not_found', 'Custom post type item not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', 'Custom post type item not found.' );
 			}
 			if ( ! current_user_can( $cap, $id ) ) {
-				return new WP_Error( 'forbidden', "Requires {$cap} capability for this custom post type item." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability for this custom post type item." );
 			}
 
 			return true;
@@ -276,13 +261,13 @@ class Webmastery_MCP_Custom_Post_Types {
 			$status = $input['status'] ?? 'draft';
 
 			if ( ! current_user_can( $create_cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$create_cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$create_cap} capability." );
 			}
 			if ( in_array( $status, [ 'publish', 'private', 'future' ], true ) && ! current_user_can( $publish_cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$publish_cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$publish_cap} capability." );
 			}
 			if ( ! empty( $input['parent'] ) && ! current_user_can( $edit_cap, absint( $input['parent'] ) ) ) {
-				return new WP_Error( 'forbidden', "Requires {$edit_cap} capability for the parent {$type} item." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$edit_cap} capability for the parent {$type} item." );
 			}
 
 			return true;
@@ -308,7 +293,7 @@ class Webmastery_MCP_Custom_Post_Types {
 		}
 
 		if ( ! is_array( $taxonomy_terms ) ) {
-			return new WP_Error( 'invalid_taxonomy_terms', 'taxonomy_terms must be an object keyed by taxonomy name.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_taxonomy_terms', 'taxonomy_terms must be an object keyed by taxonomy name.' );
 		}
 
 		foreach ( $taxonomy_terms as $taxonomy => $terms ) {
@@ -316,12 +301,12 @@ class Webmastery_MCP_Custom_Post_Types {
 			$taxonomy_object = get_taxonomy( $taxonomy );
 
 			if ( ! $taxonomy_object || ! is_object_in_taxonomy( $post_type, $taxonomy ) ) {
-				return new WP_Error( 'invalid_taxonomy', "Taxonomy {$taxonomy} is not registered for this custom post type." );
+				return Webmastery_MCP_Response::local_error( 'invalid_taxonomy', "Taxonomy {$taxonomy} is not registered for this custom post type." );
 			}
 
 			$assign_cap = $taxonomy_object->cap->assign_terms ?? 'assign_terms';
 			if ( ! current_user_can( $assign_cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$assign_cap} capability to assign {$taxonomy} terms." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$assign_cap} capability to assign {$taxonomy} terms." );
 			}
 		}
 
@@ -431,7 +416,7 @@ class Webmastery_MCP_Custom_Post_Types {
 				},
 				'permission_callback' => function () {
 					if ( ! current_user_can( 'read' ) ) {
-						return new WP_Error( 'forbidden', 'Requires read capability.' );
+						return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
 					}
 
 					return true;
@@ -525,10 +510,10 @@ class Webmastery_MCP_Custom_Post_Types {
 					$post = get_post( $id );
 
 					if ( ! $post || $post->post_type !== $post_type_name ) {
-						return self::error_response( 'not_found', 'Custom post type item not found.' );
+						return Webmastery_MCP_Response::legacy_error( 'not_found', 'Custom post type item not found.' );
 					}
 					if ( ! current_user_can( self::cap( $post_type_object, 'read_post' ), $id ) ) {
-						return self::error_response( 'forbidden', 'You do not have permission to view this custom post type item.' );
+						return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to view this custom post type item.' );
 					}
 
 					return [ 'success' => true, 'data' => self::normalize_post( $post ) ];
@@ -557,12 +542,12 @@ class Webmastery_MCP_Custom_Post_Types {
 					$allowed    = $permission( $input );
 
 					if ( is_wp_error( $allowed ) ) {
-						return self::error_response( $allowed->get_error_code(), $allowed->get_error_message() );
+						return Webmastery_MCP_Response::from_wp_error( $allowed );
 					}
 
 					$validated_terms = self::validate_taxonomy_terms( $post_type_name, $input['taxonomy_terms'] ?? [] );
 					if ( is_wp_error( $validated_terms ) ) {
-						return self::error_response( $validated_terms->get_error_code(), $validated_terms->get_error_message() );
+						return Webmastery_MCP_Response::from_wp_error( $validated_terms );
 					}
 
 					$args                = self::sanitized_post_args( $input, [ 'draft', 'publish', 'pending', 'private', 'future' ] );
@@ -571,26 +556,26 @@ class Webmastery_MCP_Custom_Post_Types {
 
 					$schedule = Webmastery_MCP_Post_Scheduling::prepare( $input );
 					if ( is_wp_error( $schedule ) ) {
-						return self::error_response( $schedule->get_error_code(), $schedule->get_error_message() );
+						return Webmastery_MCP_Response::from_wp_error( $schedule );
 					}
 					$args = array_merge( $args, $schedule );
 
 					if ( isset( $args['post_parent'] ) ) {
 						$parent_valid = Webmastery_MCP_Post_Parent::validate( $post_type_name, $args['post_parent'], 0, self::cap( $post_type_object, 'edit_post' ) );
 						if ( is_wp_error( $parent_valid ) ) {
-							return self::error_response( $parent_valid->get_error_code(), $parent_valid->get_error_message() );
+							return Webmastery_MCP_Response::from_wp_error( $parent_valid );
 						}
 					}
 
 					$id = wp_insert_post( wp_slash( $args ), true );
 
 					if ( is_wp_error( $id ) ) {
-						return self::error_response( 'create_failed', $id->get_error_message() );
+						return Webmastery_MCP_Response::legacy_error( 'create_failed', 'Failed to create custom post type item.' );
 					}
 
 					$assigned_terms = self::assign_taxonomy_terms( $id, $post_type_name, $input['taxonomy_terms'] ?? [] );
 					if ( is_wp_error( $assigned_terms ) ) {
-						return self::error_response( $assigned_terms->get_error_code(), $assigned_terms->get_error_message() );
+						return Webmastery_MCP_Response::from_wp_error( $assigned_terms );
 					}
 
 					$data = self::normalize_post( $id );
@@ -630,18 +615,18 @@ class Webmastery_MCP_Custom_Post_Types {
 					$post = get_post( $id );
 
 					if ( ! $post || $post->post_type !== $post_type_name ) {
-						return self::error_response( 'not_found', 'Custom post type item not found.' );
+						return Webmastery_MCP_Response::legacy_error( 'not_found', 'Custom post type item not found.' );
 					}
 					if ( ! current_user_can( self::cap( $post_type_object, 'edit_post' ), $id ) ) {
-						return self::error_response( 'forbidden', 'You do not have permission to update this custom post type item.' );
+						return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to update this custom post type item.' );
 					}
 					if ( isset( $input['status'] ) && in_array( $input['status'], [ 'publish', 'private', 'future' ], true ) && ! current_user_can( self::cap( $post_type_object, 'publish_posts' ) ) ) {
-						return self::error_response( 'forbidden', 'You do not have permission to publish this custom post type item.' );
+						return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to publish this custom post type item.' );
 					}
 
 					$validated_terms = self::validate_taxonomy_terms( $post_type_name, $input['taxonomy_terms'] ?? [] );
 					if ( is_wp_error( $validated_terms ) ) {
-						return self::error_response( $validated_terms->get_error_code(), $validated_terms->get_error_message() );
+						return Webmastery_MCP_Response::from_wp_error( $validated_terms );
 					}
 
 					$args       = self::sanitized_post_args( $input, [ 'draft', 'publish', 'pending', 'private', 'future' ] );
@@ -649,26 +634,26 @@ class Webmastery_MCP_Custom_Post_Types {
 
 					$schedule = Webmastery_MCP_Post_Scheduling::prepare( $input, $post );
 					if ( is_wp_error( $schedule ) ) {
-						return self::error_response( $schedule->get_error_code(), $schedule->get_error_message() );
+						return Webmastery_MCP_Response::from_wp_error( $schedule );
 					}
 					$args = array_merge( $args, $schedule );
 
 					if ( isset( $args['post_parent'] ) ) {
 						$parent_valid = Webmastery_MCP_Post_Parent::validate( $post_type_name, $args['post_parent'], $id, self::cap( $post_type_object, 'edit_post' ) );
 						if ( is_wp_error( $parent_valid ) ) {
-							return self::error_response( $parent_valid->get_error_code(), $parent_valid->get_error_message() );
+							return Webmastery_MCP_Response::from_wp_error( $parent_valid );
 						}
 					}
 
 					$result = wp_update_post( wp_slash( $args ), true );
 
 					if ( is_wp_error( $result ) ) {
-						return self::error_response( 'update_failed', $result->get_error_message() );
+						return Webmastery_MCP_Response::legacy_error( 'update_failed', 'Failed to update custom post type item.' );
 					}
 
 					$assigned_terms = self::assign_taxonomy_terms( $id, $post_type_name, $input['taxonomy_terms'] ?? [] );
 					if ( is_wp_error( $assigned_terms ) ) {
-						return self::error_response( $assigned_terms->get_error_code(), $assigned_terms->get_error_message() );
+						return Webmastery_MCP_Response::from_wp_error( $assigned_terms );
 					}
 
 					$data = self::normalize_post( $id );
@@ -705,20 +690,20 @@ class Webmastery_MCP_Custom_Post_Types {
 					$post = get_post( $id );
 
 					if ( ! $post || $post->post_type !== $post_type_name ) {
-						return self::error_response( 'not_found', 'Custom post type item not found.' );
+						return Webmastery_MCP_Response::legacy_error( 'not_found', 'Custom post type item not found.' );
 					}
 					if ( ! current_user_can( self::cap( $post_type_object, 'delete_post' ), $id ) ) {
-						return self::error_response( 'forbidden', 'You do not have permission to delete this custom post type item.' );
+						return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to delete this custom post type item.' );
 					}
 
 					if ( defined( 'EMPTY_TRASH_DAYS' ) && ! EMPTY_TRASH_DAYS ) {
-						return self::error_response( 'trash_disabled', 'Trash is disabled on this site; the custom post type item was not deleted.' );
+						return Webmastery_MCP_Response::legacy_error( 'trash_disabled', 'Trash is disabled on this site; the custom post type item was not deleted.' );
 					}
 
 					$result = wp_trash_post( $id );
 
 					if ( ! $result ) {
-						return self::error_response( 'delete_failed', 'Failed to trash custom post type item.' );
+						return Webmastery_MCP_Response::legacy_error( 'delete_failed', 'Failed to trash custom post type item.' );
 					}
 
 					return [ 'success' => true, 'data' => [ 'id' => $id, 'status' => 'trash' ] ];

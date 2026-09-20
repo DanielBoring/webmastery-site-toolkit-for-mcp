@@ -15,6 +15,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
+require_once __DIR__ . '/includes/class-response.php';
+add_filter( 'wp_register_ability_args', [ Webmastery_MCP_Response::class, 'register_args' ], 10, 2 );
+add_filter( 'mcp_adapter_tool_call_result', [ Webmastery_MCP_Response::class, 'mcp_result' ], 10, 4 );
+
 add_action( 'admin_notices', function () {
 	if ( ! function_exists( 'wp_register_ability' ) ) {
 		echo '<div class="notice notice-error"><p>' . wp_kses(
@@ -38,6 +42,7 @@ add_action( 'wp_abilities_api_categories_init', function () {
 
 // Register abilities — wp_register_ability() only works inside wp_abilities_api_init.
 add_action( 'wp_abilities_api_init', function () {
+	require_once __DIR__ . '/includes/class-ability.php';
 	require_once __DIR__ . '/includes/class-post-parent.php';
 	require_once __DIR__ . '/includes/class-post-scheduling.php';
 	require_once __DIR__ . '/includes/class-posts.php';
