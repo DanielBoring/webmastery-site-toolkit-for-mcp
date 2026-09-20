@@ -23,7 +23,7 @@ class Webmastery_MCP_Webmaster_Verification {
 
 	public static function permission() {
 		if ( ! current_user_can( 'read' ) ) {
-			return new WP_Error( 'forbidden', 'Requires read capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
 		}
 
 		return true;

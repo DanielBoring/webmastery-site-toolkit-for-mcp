@@ -161,13 +161,13 @@ class Webmastery_MCP_Posts {
 		$key = (string) $key;
 
 		if ( '' === $key ) {
-			return new WP_Error( 'invalid_meta_key', 'meta_key is required.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_meta_key', 'meta_key is required.' );
 		}
 		if ( strlen( $key ) > self::POST_META_KEY_MAX_LENGTH ) {
-			return new WP_Error( 'invalid_meta_key', 'meta_key must be 255 bytes or fewer.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_meta_key', 'meta_key must be 255 bytes or fewer.' );
 		}
 		if ( ! preg_match( '/^[A-Za-z0-9_\-:.]+$/', $key ) ) {
-			return new WP_Error( 'invalid_meta_key', 'meta_key may only contain letters, numbers, underscores, hyphens, colons, and periods.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_meta_key', 'meta_key may only contain letters, numbers, underscores, hyphens, colons, and periods.' );
 		}
 
 		return $key;
@@ -212,11 +212,11 @@ class Webmastery_MCP_Posts {
 
 	private static function normalize_post_meta_value( $value, $depth = 0 ) {
 		if ( $depth > self::POST_META_VALUE_MAX_DEPTH ) {
-			return new WP_Error( 'invalid_meta_value', 'meta_value nesting is too deep.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_meta_value', 'meta_value nesting is too deep.' );
 		}
 
 		if ( null === $value ) {
-			return new WP_Error( 'invalid_meta_value', 'meta_value must be a scalar, object, or array.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_meta_value', 'meta_value must be a scalar, object, or array.' );
 		}
 
 		if ( is_string( $value ) ) {
@@ -246,7 +246,7 @@ class Webmastery_MCP_Posts {
 			return $normalized;
 		}
 
-		return new WP_Error( 'invalid_meta_value', 'meta_value must be a scalar, object, or array.' );
+		return Webmastery_MCP_Response::local_error( 'invalid_meta_value', 'meta_value must be a scalar, object, or array.' );
 	}
 
 	private static function validate_post_meta_value( $value ) {
@@ -257,10 +257,10 @@ class Webmastery_MCP_Posts {
 
 		$encoded = wp_json_encode( $normalized );
 		if ( false === $encoded ) {
-			return new WP_Error( 'invalid_meta_value', 'meta_value could not be encoded safely.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_meta_value', 'meta_value could not be encoded safely.' );
 		}
 		if ( strlen( $encoded ) > self::POST_META_VALUE_MAX_BYTES ) {
-			return new WP_Error( 'invalid_meta_value', 'meta_value must encode to 100000 bytes or fewer.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_meta_value', 'meta_value must encode to 100000 bytes or fewer.' );
 		}
 
 		return $normalized;
@@ -272,7 +272,7 @@ class Webmastery_MCP_Posts {
 		if ( isset( $protected_keys[ $key ] ) ) {
 			$normalized = self::normalize_meta_value( $value, $protected_keys[ $key ] );
 			if ( null === $normalized ) {
-				return new WP_Error( 'invalid_meta_value', 'meta_value is not valid for this protected meta key.' );
+				return Webmastery_MCP_Response::local_error( 'invalid_meta_value', 'meta_value is not valid for this protected meta key.' );
 			}
 
 			return $normalized;
@@ -558,25 +558,23 @@ class Webmastery_MCP_Posts {
 	}
 
 	private static function meta_write_error_response( $prepared ) {
-		return [
-			'success' => false,
-			'error'   => [
-				'code'    => 'meta_write_failed',
-				'message' => 'One or more meta keys are not writable by this ability.',
-			],
-			'data'    => [
+		return Webmastery_MCP_Response::error(
+			'forbidden',
+			'One or more meta keys are not writable by this ability.',
+			[
 				'meta' => [
 					'written'     => [],
 					'not_written' => $prepared['not_written'],
 				],
 			],
-		];
+			'metadata_not_writable'
+		);
 	}
 
 	private static function permission( $cap ) {
 		return function () use ( $cap ) {
 			if ( ! current_user_can( $cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability." );
 			}
 			return true;
 		};
@@ -588,10 +586,10 @@ class Webmastery_MCP_Posts {
 			$post = get_post( $id );
 
 			if ( ! $post || $post->post_type !== $type ) {
-				return new WP_Error( 'not_found', ucfirst( $type ) . ' not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', ucfirst( $type ) . ' not found.' );
 			}
 			if ( ! current_user_can( $cap, $id ) ) {
-				return new WP_Error( 'forbidden', "Requires {$cap} capability for this {$type}." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability for this {$type}." );
 			}
 			return true;
 		};
@@ -604,13 +602,13 @@ class Webmastery_MCP_Posts {
 			$status      = $input['status'] ?? 'draft';
 
 			if ( ! current_user_can( $edit_cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$edit_cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$edit_cap} capability." );
 			}
 			if ( in_array( $status, [ 'publish', 'private', 'future' ], true ) && ! current_user_can( $publish_cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$publish_cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$publish_cap} capability." );
 			}
 			if ( 'page' === $type && ! empty( $input['parent'] ) && ! current_user_can( 'edit_post', absint( $input['parent'] ) ) ) {
-				return new WP_Error( 'forbidden', 'Requires edit_post capability for the parent page.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_post capability for the parent page.' );
 			}
 			return true;
 		};
@@ -622,10 +620,10 @@ class Webmastery_MCP_Posts {
 			$post = get_post( $id );
 
 			if ( ! $post || $post->post_type !== $type ) {
-				return new WP_Error( 'not_found', ucfirst( $type ) . ' not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', ucfirst( $type ) . ' not found.' );
 			}
 			if ( ! current_user_can( 'delete_post', $id ) ) {
-				return new WP_Error( 'forbidden', "Requires delete_post capability for this {$type}." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires delete_post capability for this {$type}." );
 			}
 
 			return true;
@@ -638,15 +636,15 @@ class Webmastery_MCP_Posts {
 			$post = get_post( $id );
 
 			if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
-				return new WP_Error( 'not_found', 'Post or page not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', 'Post or page not found.' );
 			}
 
 			$cap = 'post' === $post->post_type ? 'edit_posts' : 'edit_pages';
 			if ( ! current_user_can( $cap ) ) {
-				return new WP_Error( 'forbidden', "Requires {$cap} capability." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability." );
 			}
 			if ( ! current_user_can( 'edit_post', $id ) ) {
-				return new WP_Error( 'forbidden', 'Requires edit_post capability for this post or page.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_post capability for this post or page.' );
 			}
 
 			return true;
@@ -659,10 +657,10 @@ class Webmastery_MCP_Posts {
 			$post = get_post( $id );
 
 			if ( ! $post ) {
-				return new WP_Error( 'not_found', 'Post not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', 'Post not found.' );
 			}
 			if ( ! current_user_can( 'edit_post', $id ) ) {
-				return new WP_Error( 'forbidden', 'Requires edit_post capability for this post.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_post capability for this post.' );
 			}
 
 			return true;
@@ -675,20 +673,20 @@ class Webmastery_MCP_Posts {
 			$post = get_post( $id );
 
 			if ( ! $post ) {
-				return new WP_Error( 'not_found', 'Post or revision not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', 'Post or revision not found.' );
 			}
 
 			$parent_id = 'revision' === $post->post_type ? (int) $post->post_parent : (int) $post->ID;
 			$parent    = get_post( $parent_id );
 
 			if ( ! $parent || ! in_array( $parent->post_type, [ 'post', 'page' ], true ) ) {
-				return new WP_Error( 'not_found', 'Post or page not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', 'Post or page not found.' );
 			}
 			if ( ! current_user_can( 'edit_posts' ) ) {
-				return new WP_Error( 'forbidden', 'Requires edit_posts capability.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_posts capability.' );
 			}
 			if ( ! current_user_can( 'edit_post', $parent_id ) ) {
-				return new WP_Error( 'forbidden', 'Requires edit_post capability for this post or page.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_post capability for this post or page.' );
 			}
 
 			return true;
@@ -738,39 +736,23 @@ class Webmastery_MCP_Posts {
 					$post = get_post( $id );
 
 					if ( ! $id || ! $post || 'post' !== $post->post_type ) {
-						$failures[] = [
-							'id'      => $id,
-							'code'    => 'not_found',
-							'message' => 'Post not found.',
-						];
+						$failures[] = Webmastery_MCP_Response::item_error( $id, 'not_found', 'Post not found.' );
 						continue;
 					}
 
 					if ( ! current_user_can( 'delete_post', $id ) ) {
-						$failures[] = [
-							'id'      => $id,
-							'code'    => 'forbidden',
-							'message' => 'You do not have permission to delete this post.',
-						];
+						$failures[] = Webmastery_MCP_Response::item_error( $id, 'forbidden', 'You do not have permission to delete this post.' );
 						continue;
 					}
 
 					if ( defined( 'EMPTY_TRASH_DAYS' ) && ! EMPTY_TRASH_DAYS ) {
-						$failures[] = [
-							'id'      => $id,
-							'code'    => 'trash_disabled',
-							'message' => 'Trash is disabled on this site; the post was not deleted.',
-						];
+						$failures[] = Webmastery_MCP_Response::item_error( $id, 'trash_disabled', 'Trash is disabled on this site; the post was not deleted.' );
 						continue;
 					}
 
 					$result = wp_trash_post( $id );
 					if ( ! $result ) {
-						$failures[] = [
-							'id'      => $id,
-							'code'    => 'trash_failed',
-							'message' => 'Failed to trash post.',
-						];
+						$failures[] = Webmastery_MCP_Response::item_error( $id, 'trash_failed', 'Failed to trash post.' );
 						continue;
 					}
 
@@ -805,37 +787,21 @@ class Webmastery_MCP_Posts {
 					$post = get_post( $id );
 
 					if ( ! $id || ! $post || 'post' !== $post->post_type ) {
-						$failures[] = [
-							'id'      => $id,
-							'code'    => 'not_found',
-							'message' => 'Post not found.',
-						];
+						$failures[] = Webmastery_MCP_Response::item_error( $id, 'not_found', 'Post not found.' );
 						continue;
 					}
 
 					if ( ! current_user_can( 'edit_post', $id ) ) {
-						$failures[] = [
-							'id'      => $id,
-							'code'    => 'forbidden',
-							'message' => 'You do not have permission to edit this post.',
-						];
+						$failures[] = Webmastery_MCP_Response::item_error( $id, 'forbidden', 'You do not have permission to edit this post.' );
 						continue;
 					}
 					if ( ! current_user_can( 'publish_posts' ) ) {
-						$failures[] = [
-							'id'      => $id,
-							'code'    => 'forbidden',
-							'message' => 'You do not have permission to publish posts.',
-						];
+						$failures[] = Webmastery_MCP_Response::item_error( $id, 'forbidden', 'You do not have permission to publish posts.' );
 						continue;
 					}
 
 					if ( 'draft' !== $post->post_status ) {
-						$failures[] = [
-							'id'      => $id,
-							'code'    => 'invalid_status',
-							'message' => 'Only draft posts can be bulk published.',
-						];
+						$failures[] = Webmastery_MCP_Response::item_error( $id, 'invalid_status', 'Only draft posts can be bulk published.' );
 						continue;
 					}
 
@@ -850,11 +816,7 @@ class Webmastery_MCP_Posts {
 					);
 
 					if ( is_wp_error( $result ) ) {
-						$failures[] = [
-							'id'      => $id,
-							'code'    => $result->get_error_code(),
-							'message' => $result->get_error_message(),
-						];
+						$failures[] = Webmastery_MCP_Response::item_error( $id, 'update_failed', 'Failed to publish post.' );
 						continue;
 					}
 
@@ -879,30 +841,15 @@ class Webmastery_MCP_Posts {
 		$post = get_post( $id );
 
 		if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
-			return new WP_Error( 'not_found', 'Post or page not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', 'Post or page not found.' );
 		}
 		if ( ! current_user_can( 'edit_post', $id ) ) {
-			return new WP_Error( 'forbidden', 'You do not have permission to update this post or page.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'You do not have permission to update this post or page.' );
 		}
 
 		return $post;
 	}
 
-	private static function error_response( $code, $message, $data = [] ) {
-		$response = [
-			'success' => false,
-			'error'   => [
-				'code'    => $code,
-				'message' => $message,
-			],
-		];
-
-		if ( ! empty( $data ) ) {
-			$response['data'] = $data;
-		}
-
-		return $response;
-	}
 
 	private static function content_hash( $content ) {
 		return hash( 'sha256', (string) $content );
@@ -975,13 +922,13 @@ class Webmastery_MCP_Posts {
 		$post         = get_post( $id );
 
 		if ( ! in_array( $content_type, [ 'post', 'page' ], true ) ) {
-			return new WP_Error( 'invalid_content_type', 'content_type must be post or page.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_content_type', 'content_type must be post or page.' );
 		}
 		if ( ! $post || $post->post_type !== $content_type ) {
-			return new WP_Error( 'not_found', ucfirst( $content_type ) . ' not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', ucfirst( $content_type ) . ' not found.' );
 		}
 		if ( ! current_user_can( 'edit_post', $id ) ) {
-			return new WP_Error( 'forbidden', 'You do not have permission to edit this ' . $content_type . '.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'You do not have permission to edit this ' . $content_type . '.' );
 		}
 
 		return $post;
@@ -1004,12 +951,12 @@ class Webmastery_MCP_Posts {
 		$post = get_post( $id );
 
 		if ( ! $post ) {
-			return new WP_Error( 'not_found', 'Content not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', 'Content not found.' );
 		}
 
 		$content_type = sanitize_key( $content_type );
 		if ( '' !== $content_type && $post->post_type !== $content_type ) {
-			return new WP_Error( 'content_type_mismatch', 'content_type does not match the requested content ID.' );
+			return Webmastery_MCP_Response::local_error( 'content_type_mismatch', 'content_type does not match the requested content ID.' );
 		}
 
 		$post_type_object = get_post_type_object( $post->post_type );
@@ -1020,10 +967,10 @@ class Webmastery_MCP_Posts {
 			&& ! empty( $post_type_object->show_ui );
 
 		if ( ( ! $is_builtin && ! $is_eligible_cpt ) || ! post_type_supports( $post->post_type, 'editor' ) ) {
-			return new WP_Error( 'unsupported_type', 'patch-post-content supports posts, pages, and public editor-enabled custom post types.' );
+			return Webmastery_MCP_Response::local_error( 'unsupported_type', 'patch-post-content supports posts, pages, and public editor-enabled custom post types.' );
 		}
 		if ( ! current_user_can( 'edit_post', $id ) ) {
-			return new WP_Error( 'forbidden', 'You do not have permission to patch this content.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'You do not have permission to patch this content.' );
 		}
 
 		return $post;
@@ -1035,10 +982,10 @@ class Webmastery_MCP_Posts {
 			$post = get_post( $id );
 
 			if ( ! $post ) {
-				return new WP_Error( 'not_found', 'Content not found.' );
+				return Webmastery_MCP_Response::local_error( 'not_found', 'Content not found.' );
 			}
 			if ( ! current_user_can( 'edit_post', $id ) ) {
-				return new WP_Error( 'forbidden', 'You do not have permission to patch this content.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'You do not have permission to patch this content.' );
 			}
 
 			return true;
@@ -1076,7 +1023,7 @@ class Webmastery_MCP_Posts {
 		$path = trim( (string) $path );
 
 		if ( '' === $path || ! preg_match( '/^\d+(?:\.\d+)*$/', $path ) ) {
-			return new WP_Error( 'invalid_block_path', 'block_path must be a dotted numeric path like 0 or 2.1.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_block_path', 'block_path must be a dotted numeric path like 0 or 2.1.' );
 		}
 
 		return array_map( 'absint', explode( '.', $path ) );
@@ -1088,7 +1035,7 @@ class Webmastery_MCP_Posts {
 
 		foreach ( $segments as $segment ) {
 			if ( ! is_array( $current_blocks ) || ! array_key_exists( $segment, $current_blocks ) ) {
-				return new WP_Error( 'target_not_found', 'Block path not found.' );
+				return Webmastery_MCP_Response::local_error( 'target_not_found', 'Block path not found.' );
 			}
 
 			$current_block  = $current_blocks[ $segment ];
@@ -1102,7 +1049,7 @@ class Webmastery_MCP_Posts {
 		$segment = array_shift( $segments );
 
 		if ( ! array_key_exists( $segment, $blocks ) ) {
-			return new WP_Error( 'target_not_found', 'Block path not found.' );
+			return Webmastery_MCP_Response::local_error( 'target_not_found', 'Block path not found.' );
 		}
 
 		if ( empty( $segments ) ) {
@@ -1111,7 +1058,7 @@ class Webmastery_MCP_Posts {
 		}
 
 		if ( empty( $blocks[ $segment ]['innerBlocks'] ) || ! is_array( $blocks[ $segment ]['innerBlocks'] ) ) {
-			return new WP_Error( 'target_not_found', 'Block path not found.' );
+			return Webmastery_MCP_Response::local_error( 'target_not_found', 'Block path not found.' );
 		}
 
 		return self::replace_block_by_segments( $blocks[ $segment ]['innerBlocks'], $segments, $replacement_block );
@@ -1159,7 +1106,7 @@ class Webmastery_MCP_Posts {
 				$post = self::get_content_target( $input['content_id'], $input['content_type'] );
 
 				if ( is_wp_error( $post ) ) {
-					return self::error_response( $post->get_error_code(), $post->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $post );
 				}
 
 				$blocks = self::parse_editable_blocks( $post->post_content );
@@ -1231,7 +1178,7 @@ class Webmastery_MCP_Posts {
 				$post = self::get_content_target( $input['content_id'], $input['content_type'] );
 
 				if ( is_wp_error( $post ) ) {
-					return self::error_response( $post->get_error_code(), $post->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $post );
 				}
 
 				$current_content = $post->post_content;
@@ -1239,7 +1186,7 @@ class Webmastery_MCP_Posts {
 				$expected_hash   = sanitize_text_field( $input['expected_content_hash'] ?? '' );
 
 				if ( '' !== $expected_hash && ! hash_equals( $before_hash, $expected_hash ) ) {
-					return self::error_response( 'precondition_failed', 'Content hash did not match; reload before patching.' );
+					return Webmastery_MCP_Response::legacy_error( 'content_hash_mismatch', 'Content hash did not match; reload before patching.' );
 				}
 
 				$blocks      = self::parse_editable_blocks( $current_content );
@@ -1250,45 +1197,45 @@ class Webmastery_MCP_Posts {
 				} elseif ( 'block_hash' === $target_type ) {
 					$hash = sanitize_text_field( $input['block_hash'] ?? '' );
 					if ( '' === $hash ) {
-						return self::error_response( 'missing_target', 'block_hash is required when target_type is block_hash.' );
+						return Webmastery_MCP_Response::legacy_error( 'missing_target', 'block_hash is required when target_type is block_hash.' );
 					}
 
 					$matches = self::find_block_paths_by_hash( $blocks, $hash );
 					if ( 0 === count( $matches ) ) {
-						return self::error_response( 'target_not_found', 'Block hash target not found.' );
+						return Webmastery_MCP_Response::legacy_error( 'target_not_found', 'Block hash target not found.' );
 					}
 					if ( count( $matches ) > 1 ) {
-						return self::error_response( 'ambiguous_target', 'Block hash target matched more than once.' );
+						return Webmastery_MCP_Response::legacy_error( 'ambiguous_target', 'Block hash target matched more than once.' );
 					}
 
 					$segments = self::parse_block_path( $matches[0] );
 				} else {
-					return self::error_response( 'invalid_target_type', 'target_type must be block_path or block_hash.' );
+					return Webmastery_MCP_Response::legacy_error( 'invalid_target_type', 'target_type must be block_path or block_hash.' );
 				}
 
 				if ( is_wp_error( $segments ) ) {
-					return self::error_response( $segments->get_error_code(), $segments->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $segments );
 				}
 
 				$target_block = self::get_block_by_segments( $blocks, $segments );
 				if ( is_wp_error( $target_block ) ) {
-					return self::error_response( $target_block->get_error_code(), $target_block->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $target_block );
 				}
 
 				$before_block_hash = self::block_hash( $target_block );
 				$expected_block    = sanitize_text_field( $input['expected_block_hash'] ?? '' );
 				if ( '' !== $expected_block && ! hash_equals( $before_block_hash, $expected_block ) ) {
-					return self::error_response( 'precondition_failed', 'Block hash did not match; reload before patching.' );
+					return Webmastery_MCP_Response::legacy_error( 'block_hash_mismatch', 'Block hash did not match; reload before patching.' );
 				}
 
 				$replacement_blocks = self::parse_editable_blocks( wp_kses_post( $input['replacement_content'] ) );
 				if ( 1 !== count( $replacement_blocks ) ) {
-					return self::error_response( 'invalid_replacement', 'replacement_content must parse to exactly one block.' );
+					return Webmastery_MCP_Response::legacy_error( 'invalid_replacement', 'replacement_content must parse to exactly one block.' );
 				}
 
 				$replacement_result = self::replace_block_by_segments( $blocks, $segments, $replacement_blocks[0] );
 				if ( is_wp_error( $replacement_result ) ) {
-					return self::error_response( $replacement_result->get_error_code(), $replacement_result->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $replacement_result );
 				}
 
 				$result = wp_update_post(
@@ -1302,7 +1249,7 @@ class Webmastery_MCP_Posts {
 				);
 
 				if ( is_wp_error( $result ) ) {
-					return self::error_response( 'update_failed', $result->get_error_message() );
+					return Webmastery_MCP_Response::legacy_error( 'update_failed', 'Failed to update content.' );
 				}
 
 				$updated_post = get_post( $post->ID );
@@ -1345,10 +1292,10 @@ class Webmastery_MCP_Posts {
 		}
 
 		if ( 0 === count( $matches ) ) {
-			return new WP_Error( 'target_not_found', 'Heading target not found.' );
+			return Webmastery_MCP_Response::local_error( 'target_not_found', 'Heading target not found.' );
 		}
 		if ( count( $matches ) > 1 ) {
-			return new WP_Error( 'ambiguous_target', 'Heading target matched more than once.' );
+			return Webmastery_MCP_Response::local_error( 'ambiguous_target', 'Heading target matched more than once.' );
 		}
 
 		$heading_index      = $matches[0];
@@ -1384,10 +1331,10 @@ class Webmastery_MCP_Posts {
 		$count = substr_count( $content, $old_content );
 
 		if ( 0 === $count ) {
-			return new WP_Error( 'target_not_found', 'Exact content target not found.' );
+			return Webmastery_MCP_Response::local_error( 'target_not_found', 'Exact content target not found.' );
 		}
 		if ( $count > 1 ) {
-			return new WP_Error( 'ambiguous_target', 'Exact content target matched more than once.' );
+			return Webmastery_MCP_Response::local_error( 'ambiguous_target', 'Exact content target matched more than once.' );
 		}
 
 		return [
@@ -1443,7 +1390,7 @@ class Webmastery_MCP_Posts {
 				$post = self::get_patch_content_target( $input['post_id'], $input['content_type'] ?? '' );
 
 				if ( is_wp_error( $post ) ) {
-					return self::error_response( $post->get_error_code(), $post->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $post );
 				}
 
 				$id              = $post->ID;
@@ -1453,7 +1400,7 @@ class Webmastery_MCP_Posts {
 				$expected_hash = sanitize_text_field( $input['expected_content_hash'] ?? '' );
 
 				if ( '' !== $expected_hash && ! hash_equals( $before_hash, $expected_hash ) ) {
-					return self::error_response( 'precondition_failed', 'Post content hash did not match; reload the post before patching.' );
+					return Webmastery_MCP_Response::legacy_error( 'content_hash_mismatch', 'Post content hash did not match; reload the post before patching.' );
 				}
 
 				$target_type         = sanitize_key( $input['target_type'] );
@@ -1461,7 +1408,7 @@ class Webmastery_MCP_Posts {
 
 				if ( 'heading' === $target_type ) {
 					if ( empty( $input['heading_text'] ) ) {
-						return self::error_response( 'missing_target', 'heading_text is required when target_type is heading.' );
+						return Webmastery_MCP_Response::legacy_error( 'missing_target', 'heading_text is required when target_type is heading.' );
 					}
 
 					$patch = self::patch_content_by_heading(
@@ -1471,7 +1418,7 @@ class Webmastery_MCP_Posts {
 					);
 				} elseif ( 'exact' === $target_type ) {
 					if ( ! isset( $input['old_content'] ) || '' === $input['old_content'] ) {
-						return self::error_response( 'missing_target', 'old_content is required when target_type is exact.' );
+						return Webmastery_MCP_Response::legacy_error( 'missing_target', 'old_content is required when target_type is exact.' );
 					}
 
 					$patch = self::patch_content_by_exact_match(
@@ -1480,11 +1427,11 @@ class Webmastery_MCP_Posts {
 						$replacement_content
 					);
 				} else {
-					return self::error_response( 'invalid_target_type', 'target_type must be heading or exact.' );
+					return Webmastery_MCP_Response::legacy_error( 'invalid_target_type', 'target_type must be heading or exact.' );
 				}
 
 				if ( is_wp_error( $patch ) ) {
-					return self::error_response( $patch->get_error_code(), $patch->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $patch );
 				}
 
 				$args = [
@@ -1495,7 +1442,7 @@ class Webmastery_MCP_Posts {
 				$result = wp_update_post( wp_slash( $args ), true );
 
 				if ( is_wp_error( $result ) ) {
-					return self::error_response( 'update_failed', $result->get_error_message() );
+					return Webmastery_MCP_Response::legacy_error( 'update_failed', 'Failed to update content.' );
 				}
 
 				$updated_post = get_post( $id );
@@ -1539,23 +1486,23 @@ class Webmastery_MCP_Posts {
 				$post = self::get_featured_image_target( $input );
 
 				if ( is_wp_error( $post ) ) {
-					return [ 'success' => false, 'error' => $post->get_error_message() ];
+					return Webmastery_MCP_Response::from_wp_error( $post );
 				}
 
 				$attachment_id = absint( $input['attachment_id'] );
 				$attachment    = get_post( $attachment_id );
 
 				if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
-					return [ 'success' => false, 'error' => 'Attachment not found.' ];
+					return Webmastery_MCP_Response::legacy_error( 'not_found', 'Attachment not found.' );
 				}
 				if ( ! wp_attachment_is_image( $attachment_id ) ) {
-					return [ 'success' => false, 'error' => 'Attachment must be an image.' ];
+					return Webmastery_MCP_Response::legacy_error( 'unsupported_mime_type', 'Attachment must be an image.' );
 				}
 
 				$result = set_post_thumbnail( $post->ID, $attachment_id );
 
 				if ( ! $result ) {
-					return [ 'success' => false, 'error' => 'Failed to set featured image.' ];
+					return Webmastery_MCP_Response::legacy_error( 'featured_image_failed', 'Failed to set featured image.' );
 				}
 
 				return [ 'success' => true, 'data' => self::normalize( $post->ID ) ];
@@ -1584,7 +1531,7 @@ class Webmastery_MCP_Posts {
 				$post = self::get_featured_image_target( $input );
 
 				if ( is_wp_error( $post ) ) {
-					return [ 'success' => false, 'error' => $post->get_error_message() ];
+					return Webmastery_MCP_Response::from_wp_error( $post );
 				}
 
 				delete_post_thumbnail( $post->ID );
@@ -1636,13 +1583,13 @@ class Webmastery_MCP_Posts {
 				$post    = get_post( $post_id );
 
 				if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
-					return self::error_response( 'not_found', 'Post or page not found.' );
+					return Webmastery_MCP_Response::legacy_error( 'not_found', 'Post or page not found.' );
 				}
 				if ( ! current_user_can( 'edit_posts' ) ) {
-					return self::error_response( 'forbidden', 'Requires edit_posts capability.' );
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'Requires edit_posts capability.' );
 				}
 				if ( ! current_user_can( 'edit_post', $post_id ) ) {
-					return self::error_response( 'forbidden', 'You do not have permission to list revisions for this post or page.' );
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to list revisions for this post or page.' );
 				}
 
 				$per_page  = min( max( 1, absint( $input['per_page'] ?? 20 ) ), 100 );
@@ -1689,27 +1636,26 @@ class Webmastery_MCP_Posts {
 				$revision    = get_post( $revision_id );
 
 				if ( ! $revision || 'revision' !== $revision->post_type ) {
-					return self::error_response( 'not_found', 'Revision not found.' );
+					return Webmastery_MCP_Response::legacy_error( 'not_found', 'Revision not found.' );
 				}
 
 				$post_id = (int) $revision->post_parent;
 				$post    = get_post( $post_id );
 
 				if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
-					return self::error_response( 'not_found', 'Post or page not found.' );
+					return Webmastery_MCP_Response::legacy_error( 'not_found', 'Post or page not found.' );
 				}
 				if ( ! current_user_can( 'edit_posts' ) ) {
-					return self::error_response( 'forbidden', 'Requires edit_posts capability.' );
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'Requires edit_posts capability.' );
 				}
 				if ( ! current_user_can( 'edit_post', $post_id ) ) {
-					return self::error_response( 'forbidden', 'You do not have permission to restore revisions for this post or page.' );
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to restore revisions for this post or page.' );
 				}
 
 				$result = wp_restore_post_revision( $revision_id );
 
 				if ( ! $result || is_wp_error( $result ) ) {
-					$message = is_wp_error( $result ) ? $result->get_error_message() : 'Failed to restore revision.';
-					return self::error_response( 'restore_revision_failed', $message );
+					return Webmastery_MCP_Response::legacy_error( 'restore_revision_failed', 'Failed to restore revision.' );
 				}
 
 				return [
@@ -1747,10 +1693,10 @@ class Webmastery_MCP_Posts {
 				$post    = get_post( $post_id );
 
 				if ( ! $post ) {
-					return self::error_response( 'not_found', 'Post not found.' );
+					return Webmastery_MCP_Response::legacy_error( 'not_found', 'Post not found.' );
 				}
 				if ( ! current_user_can( 'edit_post', $post_id ) ) {
-					return self::error_response( 'forbidden', 'You do not have permission to read meta for this post.' );
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to read meta for this post.' );
 				}
 
 				$meta = [];
@@ -1758,13 +1704,13 @@ class Webmastery_MCP_Posts {
 				if ( isset( $input['meta_key'] ) && '' !== (string) $input['meta_key'] ) {
 					$key = self::validate_post_meta_key( $input['meta_key'] );
 					if ( is_wp_error( $key ) ) {
-						return self::error_response( $key->get_error_code(), $key->get_error_message() );
+						return Webmastery_MCP_Response::from_wp_error( $key );
 					}
 					if ( ! self::can_access_post_meta_key( $key ) ) {
-						return self::error_response( 'protected_meta_key', 'Protected meta keys are denied unless explicitly allowlisted.' );
+						return Webmastery_MCP_Response::legacy_error( 'protected_meta_key', 'Protected meta keys are denied unless explicitly allowlisted.' );
 					}
 					if ( ! self::can_edit_post_meta_key( $post_id, $key ) ) {
-						return self::error_response( 'forbidden', 'You do not have permission to read this meta key.' );
+						return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to read this meta key.' );
 					}
 
 					$meta[ $key ] = array_map( [ self::class, 'normalize_post_meta_response_value' ], get_post_meta( $post_id, $key, false ) );
@@ -1819,26 +1765,26 @@ class Webmastery_MCP_Posts {
 				$post    = get_post( $post_id );
 
 				if ( ! $post ) {
-					return self::error_response( 'not_found', 'Post not found.' );
+					return Webmastery_MCP_Response::legacy_error( 'not_found', 'Post not found.' );
 				}
 				if ( ! current_user_can( 'edit_post', $post_id ) ) {
-					return self::error_response( 'forbidden', 'You do not have permission to update meta for this post.' );
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to update meta for this post.' );
 				}
 
 				$key = self::validate_post_meta_key( $input['meta_key'] ?? '' );
 				if ( is_wp_error( $key ) ) {
-					return self::error_response( $key->get_error_code(), $key->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $key );
 				}
 				if ( ! self::can_access_post_meta_key( $key ) ) {
-					return self::error_response( 'protected_meta_key', 'Protected meta keys are denied unless explicitly allowlisted.' );
+					return Webmastery_MCP_Response::legacy_error( 'protected_meta_key', 'Protected meta keys are denied unless explicitly allowlisted.' );
 				}
 				if ( ! self::can_edit_post_meta_key( $post_id, $key ) ) {
-					return self::error_response( 'forbidden', 'You do not have permission to update this meta key.' );
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to update this meta key.' );
 				}
 
 				$value = self::prepare_post_meta_update_value( $key, $input['meta_value'] ?? null );
 				if ( is_wp_error( $value ) ) {
-					return self::error_response( $value->get_error_code(), $value->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $value );
 				}
 
 				$previous_value = self::normalize_post_meta_response_value( get_post_meta( $post_id, $key, true ) );
@@ -1884,21 +1830,21 @@ class Webmastery_MCP_Posts {
 				$post    = get_post( $post_id );
 
 				if ( ! $post ) {
-					return self::error_response( 'not_found', 'Post not found.' );
+					return Webmastery_MCP_Response::legacy_error( 'not_found', 'Post not found.' );
 				}
 				if ( ! current_user_can( 'edit_post', $post_id ) ) {
-					return self::error_response( 'forbidden', 'You do not have permission to delete meta for this post.' );
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to delete meta for this post.' );
 				}
 
 				$key = self::validate_post_meta_key( $input['meta_key'] ?? '' );
 				if ( is_wp_error( $key ) ) {
-					return self::error_response( $key->get_error_code(), $key->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $key );
 				}
 				if ( ! self::can_access_post_meta_key( $key ) ) {
-					return self::error_response( 'protected_meta_key', 'Protected meta keys are denied unless explicitly allowlisted.' );
+					return Webmastery_MCP_Response::legacy_error( 'protected_meta_key', 'Protected meta keys are denied unless explicitly allowlisted.' );
 				}
 				if ( ! self::can_edit_post_meta_key( $post_id, $key, 'delete_post_meta' ) ) {
-					return self::error_response( 'forbidden', 'You do not have permission to delete this meta key.' );
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to delete this meta key.' );
 				}
 
 				$before_count  = count( get_post_meta( $post_id, $key, false ) );
@@ -2006,10 +1952,10 @@ class Webmastery_MCP_Posts {
 				$post = get_post( $id );
 
 				if ( ! $post || $post->post_type !== $type ) {
-					return [ 'success' => false, 'error' => ucfirst( $type ) . ' not found.' ];
+					return Webmastery_MCP_Response::legacy_error( 'not_found', ucfirst( $type ) . ' not found.' );
 				}
 				if ( ! current_user_can( 'edit_post', $id ) ) {
-					return [ 'success' => false, 'error' => 'You do not have permission to view this ' . $type . '.' ];
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to view this ' . $type . '.' );
 				}
 
 				return [ 'success' => true, 'data' => self::normalize( $post ) ];
@@ -2055,7 +2001,7 @@ class Webmastery_MCP_Posts {
 				$permission = self::create_permission( $type );
 				$allowed    = $permission( $input );
 				if ( is_wp_error( $allowed ) ) {
-					return [ 'success' => false, 'error' => $allowed->get_error_message() ];
+					return Webmastery_MCP_Response::from_wp_error( $allowed );
 				}
 
 				$meta_writes = self::prepare_meta_writes( $input, $type );
@@ -2084,21 +2030,21 @@ class Webmastery_MCP_Posts {
 
 				$schedule = Webmastery_MCP_Post_Scheduling::prepare( $input );
 				if ( is_wp_error( $schedule ) ) {
-					return self::error_response( $schedule->get_error_code(), $schedule->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $schedule );
 				}
 				$args = array_merge( $args, $schedule );
 
 				if ( isset( $args['post_parent'] ) ) {
 					$parent_valid = Webmastery_MCP_Post_Parent::validate( $type, $args['post_parent'] );
 					if ( is_wp_error( $parent_valid ) ) {
-						return self::error_response( $parent_valid->get_error_code(), $parent_valid->get_error_message() );
+						return Webmastery_MCP_Response::from_wp_error( $parent_valid );
 					}
 				}
 
 				$id = wp_insert_post( wp_slash( $args ), true );
 
 				if ( is_wp_error( $id ) ) {
-					return [ 'success' => false, 'error' => $id->get_error_message() ];
+					return Webmastery_MCP_Response::from_wp_error( $id );
 				}
 
 				if ( 'post' === $type ) {
@@ -2163,13 +2109,13 @@ class Webmastery_MCP_Posts {
 				$post = get_post( $id );
 
 				if ( ! $post || $post->post_type !== $type ) {
-					return [ 'success' => false, 'error' => ucfirst( $type ) . ' not found.' ];
+					return Webmastery_MCP_Response::legacy_error( 'not_found', ucfirst( $type ) . ' not found.' );
 				}
 				if ( ! current_user_can( 'edit_post', $id ) ) {
-					return [ 'success' => false, 'error' => 'You do not have permission to update this ' . $type . '.' ];
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to update this ' . $type . '.' );
 				}
 				if ( isset( $input['status'] ) && in_array( $input['status'], [ 'publish', 'private', 'future' ], true ) && ! current_user_can( 'publish_' . $slug ) ) {
-					return [ 'success' => false, 'error' => 'You do not have permission to publish this ' . $type . '.' ];
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to publish this ' . $type . '.' );
 				}
 
 				$meta_writes = self::prepare_meta_writes( $input, $type );
@@ -2200,21 +2146,21 @@ class Webmastery_MCP_Posts {
 
 				$schedule = Webmastery_MCP_Post_Scheduling::prepare( $input, $post );
 				if ( is_wp_error( $schedule ) ) {
-					return self::error_response( $schedule->get_error_code(), $schedule->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $schedule );
 				}
 				$args = array_merge( $args, $schedule );
 
 				if ( isset( $args['post_parent'] ) ) {
 					$parent_valid = Webmastery_MCP_Post_Parent::validate( $type, $args['post_parent'], $id );
 					if ( is_wp_error( $parent_valid ) ) {
-						return self::error_response( $parent_valid->get_error_code(), $parent_valid->get_error_message() );
+						return Webmastery_MCP_Response::from_wp_error( $parent_valid );
 					}
 				}
 
 				$result = wp_update_post( wp_slash( $args ), true );
 
 				if ( is_wp_error( $result ) ) {
-					return [ 'success' => false, 'error' => $result->get_error_message() ];
+					return Webmastery_MCP_Response::from_wp_error( $result );
 				}
 
 				if ( 'post' === $type ) {
@@ -2260,20 +2206,20 @@ class Webmastery_MCP_Posts {
 				$post = get_post( $id );
 
 				if ( ! $post || $post->post_type !== $type ) {
-					return [ 'success' => false, 'error' => ucfirst( $type ) . ' not found.' ];
+					return Webmastery_MCP_Response::legacy_error( 'not_found', ucfirst( $type ) . ' not found.' );
 				}
 				if ( ! current_user_can( 'delete_post', $id ) ) {
-					return [ 'success' => false, 'error' => 'You do not have permission to delete this ' . $type . '.' ];
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to delete this ' . $type . '.' );
 				}
 
 				if ( defined( 'EMPTY_TRASH_DAYS' ) && ! EMPTY_TRASH_DAYS ) {
-					return self::error_response( 'trash_disabled', 'Trash is disabled on this site; the ' . $type . ' was not deleted.' );
+					return Webmastery_MCP_Response::legacy_error( 'trash_disabled', 'Trash is disabled on this site; the ' . $type . ' was not deleted.' );
 				}
 
 				$result = wp_trash_post( $id );
 
 				if ( ! $result ) {
-					return [ 'success' => false, 'error' => 'Failed to trash ' . $type . '.' ];
+					return Webmastery_MCP_Response::legacy_error( 'trash_failed', 'Failed to trash ' . $type . '.' );
 				}
 
 				return [ 'success' => true, 'data' => [ 'id' => $id, 'status' => 'trash' ] ];
@@ -2302,16 +2248,16 @@ class Webmastery_MCP_Posts {
 				$post = get_post( $id );
 
 				if ( ! $post || $post->post_type !== $type ) {
-					return [ 'success' => false, 'error' => ucfirst( $type ) . ' not found.' ];
+					return Webmastery_MCP_Response::legacy_error( 'not_found', ucfirst( $type ) . ' not found.' );
 				}
 				if ( ! current_user_can( 'delete_post', $id ) ) {
-					return [ 'success' => false, 'error' => "You do not have permission to restore this {$type}." ];
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', "You do not have permission to restore this {$type}." );
 				}
 
 				$result = wp_untrash_post( $id );
 
 				if ( ! $result ) {
-					return [ 'success' => false, 'error' => 'Failed to restore ' . $type . ' from trash.' ];
+					return Webmastery_MCP_Response::legacy_error( 'restore_failed', 'Failed to restore ' . $type . ' from trash.' );
 				}
 
 				return [ 'success' => true, 'data' => self::normalize( $id ) ];

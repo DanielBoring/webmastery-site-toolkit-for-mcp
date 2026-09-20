@@ -14,7 +14,7 @@ class Webmastery_MCP_Plugins {
 
 	public static function permission( $input = [] ) {
 		if ( ! current_user_can( 'activate_plugins' ) ) {
-			return self::error(
+			return Webmastery_MCP_Response::legacy_wp_error(
 				'missing_capability',
 				'Requires activate_plugins capability.',
 				[ 'capability' => 'activate_plugins' ],
@@ -24,7 +24,7 @@ class Webmastery_MCP_Plugins {
 
 		if ( ! empty( $input['network_wide'] ) ) {
 			if ( ! is_multisite() ) {
-				return self::error(
+				return Webmastery_MCP_Response::legacy_wp_error(
 					'invalid_context',
 					'Network-wide plugin management is only available on multisite installations.',
 					[ 'network_wide' => true ],
@@ -33,7 +33,7 @@ class Webmastery_MCP_Plugins {
 			}
 
 			if ( ! current_user_can( 'manage_network_plugins' ) ) {
-				return self::error(
+				return Webmastery_MCP_Response::legacy_wp_error(
 					'network_admin_required',
 					'Network-wide plugin management requires manage_network_plugins capability.',
 					[ 'capability' => 'manage_network_plugins' ],
@@ -149,13 +149,12 @@ class Webmastery_MCP_Plugins {
 		$result = activate_plugin( $plugin, '', $network_wide, false );
 
 		if ( is_wp_error( $result ) ) {
-			return self::error(
+			return Webmastery_MCP_Response::legacy_wp_error(
 				'dependency_failure',
-				$result->get_error_message(),
+				'The plugin could not be activated because a dependency or activation check failed.',
 				[
 					'plugin'              => $plugin,
 					'network_wide'        => $network_wide,
-					'original_error_code' => $result->get_error_code(),
 				],
 				409
 			);
@@ -179,7 +178,7 @@ class Webmastery_MCP_Plugins {
 		}
 
 		if ( self::is_protected_plugin( $plugin ) && empty( $input['force'] ) ) {
-			return self::error(
+			return Webmastery_MCP_Response::legacy_wp_error(
 				'precondition_failed',
 				'Deactivation is blocked for this protected plugin unless force is true.',
 				[
@@ -194,7 +193,7 @@ class Webmastery_MCP_Plugins {
 		$network_wide = ! empty( $input['network_wide'] );
 
 		if ( is_multisite() && ! $network_wide && is_plugin_active_for_network( $plugin ) ) {
-			return self::error(
+			return Webmastery_MCP_Response::legacy_wp_error(
 				'network_context_required',
 				'This plugin is network active. Deactivate it with network_wide=true from a network admin context.',
 				[ 'plugin' => $plugin ],
@@ -214,7 +213,7 @@ class Webmastery_MCP_Plugins {
 		deactivate_plugins( $plugin, false, $network_wide );
 
 		if ( $network_wide ? is_plugin_active_for_network( $plugin ) : is_plugin_active( $plugin ) ) {
-			return self::error(
+			return Webmastery_MCP_Response::legacy_wp_error(
 				'precondition_failed',
 				'Plugin could not be deactivated.',
 				[
@@ -330,7 +329,7 @@ class Webmastery_MCP_Plugins {
 				return $plugin;
 			}
 
-			return self::error(
+			return Webmastery_MCP_Response::legacy_wp_error(
 				'plugin_not_found',
 				'No installed plugin matches the provided plugin basename.',
 				[ 'plugin' => $identifier ],
@@ -353,7 +352,7 @@ class Webmastery_MCP_Plugins {
 			}
 
 			if ( $matches ) {
-				return self::error(
+				return Webmastery_MCP_Response::legacy_wp_error(
 					'invalid_identifier',
 					'Plugin slug is ambiguous. Use the canonical plugin basename instead.',
 					[
@@ -364,7 +363,7 @@ class Webmastery_MCP_Plugins {
 				);
 			}
 
-			return self::error(
+			return Webmastery_MCP_Response::legacy_wp_error(
 				'plugin_not_found',
 				'No installed plugin matches the provided plugin slug.',
 				[ 'slug' => $slug ],
@@ -372,7 +371,7 @@ class Webmastery_MCP_Plugins {
 			);
 		}
 
-		return self::error(
+		return Webmastery_MCP_Response::legacy_wp_error(
 			'invalid_identifier',
 			'Provide a plugin basename in plugin or an unambiguous slug in slug.',
 			[ 'accepted_fields' => [ 'plugin', 'slug' ] ],
@@ -557,16 +556,5 @@ class Webmastery_MCP_Plugins {
 			plugin_basename( dirname( __DIR__ ) . '/webmastery-site-toolkit-for-mcp.php' ),
 			'mcp-adapter/mcp-adapter.php',
 		];
-	}
-
-	private static function error( $code, $message, $details = [], $status = 400 ) {
-		return new WP_Error(
-			$code,
-			$message,
-			[
-				'status'  => $status,
-				'details' => $details,
-			]
-		);
 	}
 }

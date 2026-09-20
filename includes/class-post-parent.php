@@ -11,17 +11,17 @@ class Webmastery_MCP_Post_Parent {
 
 		$parent = get_post( $parent_id );
 		if ( ! is_post_type_hierarchical( $post_type ) || ! $parent || $parent->post_type !== $post_type ) {
-			return new WP_Error( 'invalid_parent', 'Parent must be an existing item of the same hierarchical post type.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_parent', 'Parent must be an existing item of the same hierarchical post type.' );
 		}
 		if ( ! current_user_can( $edit_cap, $parent_id ) ) {
-			return new WP_Error( 'forbidden', 'You do not have permission to edit the requested parent.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'You do not have permission to edit the requested parent.' );
 		}
 
 		$seen = [];
 		while ( $parent ) {
 			$ancestor_id = (int) $parent->ID;
 			if ( $ancestor_id === $post_id || isset( $seen[ $ancestor_id ] ) ) {
-				return new WP_Error( 'invalid_parent', 'Parent must not create a cycle or belong to an existing cyclic hierarchy.' );
+				return Webmastery_MCP_Response::local_error( 'invalid_parent', 'Parent must not create a cycle or belong to an existing cyclic hierarchy.' );
 			}
 			$seen[ $ancestor_id ] = true;
 			if ( ! $parent->post_parent ) {

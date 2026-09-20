@@ -35,7 +35,7 @@ class Webmastery_MCP_Users {
 
 	public static function permission() {
 		if ( ! current_user_can( 'list_users' ) ) {
-			return new WP_Error( 'forbidden', 'Requires list_users capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires list_users capability.' );
 		}
 
 		return true;
@@ -43,7 +43,7 @@ class Webmastery_MCP_Users {
 
 	public static function audit_permission() {
 		if ( ! current_user_can( 'edit_users' ) ) {
-			return new WP_Error( 'forbidden', 'Requires edit_users capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_users capability.' );
 		}
 
 		return true;
@@ -173,7 +173,7 @@ class Webmastery_MCP_Users {
 				$user = get_user_by( 'id', absint( $input['user_id'] ) );
 
 				if ( ! $user ) {
-					return [ 'success' => false, 'error' => 'User not found.' ];
+					return Webmastery_MCP_Response::legacy_error( 'not_found', 'User not found.' );
 				}
 
 				return [ 'success' => true, 'data' => self::normalize( $user ) ];

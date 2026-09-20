@@ -89,7 +89,7 @@ class Webmastery_MCP_Site_Kit {
 
 	public static function permission_status() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			return new WP_Error( 'forbidden', 'Requires manage_options capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
 		}
 
 		$plugin = self::plugin_status();
@@ -102,7 +102,7 @@ class Webmastery_MCP_Site_Kit {
 
 	public static function permission_modules() {
 		if ( ! current_user_can( 'read' ) ) {
-			return new WP_Error( 'forbidden', 'Requires read capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
 		}
 
 		return self::check_route_permission( self::REST_ROOT . '/core/modules/data/list' );
@@ -110,7 +110,7 @@ class Webmastery_MCP_Site_Kit {
 
 	public static function permission_permissions() {
 		if ( ! current_user_can( 'read' ) ) {
-			return new WP_Error( 'forbidden', 'Requires read capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
 		}
 
 		return self::check_route_permission(
@@ -122,7 +122,7 @@ class Webmastery_MCP_Site_Kit {
 
 	public static function permission_pagespeed( $input = [] ) {
 		if ( ! current_user_can( 'read' ) ) {
-			return new WP_Error( 'forbidden', 'Requires read capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
 		}
 
 		return self::check_route_permission(
@@ -183,7 +183,7 @@ class Webmastery_MCP_Site_Kit {
 
 	public static function execute_modules() {
 		if ( ! current_user_can( 'read' ) ) {
-			return new WP_Error( 'forbidden', 'Requires read capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
 		}
 
 		$modules = self::dispatch_route( self::REST_ROOT . '/core/modules/data/list', [], '', true );
@@ -204,7 +204,7 @@ class Webmastery_MCP_Site_Kit {
 
 	public static function execute_permissions() {
 		if ( ! current_user_can( 'read' ) ) {
-			return new WP_Error( 'forbidden', 'Requires read capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
 		}
 
 		$permissions = self::dispatch_route(
@@ -225,7 +225,7 @@ class Webmastery_MCP_Site_Kit {
 
 	public static function execute_pagespeed( $input = [] ) {
 		if ( ! current_user_can( 'read' ) ) {
-			return new WP_Error( 'forbidden', 'Requires read capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
 		}
 
 		$validated = self::validate_pagespeed_input( $input );
@@ -247,13 +247,13 @@ class Webmastery_MCP_Site_Kit {
 		}
 
 		if ( null === $pagespeed_module ) {
-			return new WP_Error( 'site_kit_module_unavailable', 'The Site Kit PageSpeed Insights module is unavailable.' );
+			return Webmastery_MCP_Response::local_error( 'site_kit_module_unavailable', 'The Site Kit PageSpeed Insights module is unavailable.' );
 		}
 		if ( ! $pagespeed_module['active'] ) {
-			return new WP_Error( 'site_kit_module_inactive', 'The Site Kit PageSpeed Insights module is not active.' );
+			return Webmastery_MCP_Response::local_error( 'site_kit_module_inactive', 'The Site Kit PageSpeed Insights module is not active.' );
 		}
 		if ( ! $pagespeed_module['connected'] ) {
-			return new WP_Error( 'site_kit_module_not_connected', 'The Site Kit PageSpeed Insights module is not connected.' );
+			return Webmastery_MCP_Response::local_error( 'site_kit_module_not_connected', 'The Site Kit PageSpeed Insights module is not connected.' );
 		}
 
 		$result = self::dispatch_route(
@@ -299,12 +299,12 @@ class Webmastery_MCP_Site_Kit {
 	private static function validate_pagespeed_input( $input ) {
 		$strategy = sanitize_key( $input['strategy'] ?? '' );
 		if ( ! in_array( $strategy, [ 'mobile', 'desktop' ], true ) ) {
-			return new WP_Error( 'invalid_strategy', 'Strategy must be mobile or desktop.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_strategy', 'Strategy must be mobile or desktop.' );
 		}
 
 		$url = empty( $input['url'] ) ? home_url( '/' ) : esc_url_raw( $input['url'] );
 		if ( '' === $url || ! self::is_same_site_url( $url ) ) {
-			return new WP_Error( 'invalid_url', 'PageSpeed URL must be an HTTP or HTTPS URL on the current site.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_url', 'PageSpeed URL must be an HTTP or HTTPS URL on the current site.' );
 		}
 
 		return [
@@ -350,12 +350,12 @@ class Webmastery_MCP_Site_Kit {
 		$request  = self::build_request( $path, $params, $route['url_params'] );
 		$callback = $route['endpoint']['permission_callback'] ?? null;
 		if ( ! is_callable( $callback ) ) {
-			return new WP_Error( 'site_kit_unsupported', 'The required Site Kit route has no usable permission check.' );
+			return Webmastery_MCP_Response::local_error( 'site_kit_unsupported', 'The required Site Kit route has no usable permission check.' );
 		}
 
 		$allowed = call_user_func( $callback, $request );
 		if ( is_wp_error( $allowed ) || false === $allowed || null === $allowed ) {
-			return new WP_Error( 'forbidden', 'Google Site Kit does not permit the current user to access this data.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Google Site Kit does not permit the current user to access this data.' );
 		}
 
 		return true;
@@ -369,13 +369,13 @@ class Webmastery_MCP_Site_Kit {
 
 		// REST dispatch skips absent permission callbacks; delegated reads must fail closed.
 		if ( $require_permission_callback && ! is_callable( $route['endpoint']['permission_callback'] ?? null ) ) {
-			return new WP_Error( 'site_kit_unsupported', 'The required Site Kit route has no usable permission check.' );
+			return Webmastery_MCP_Response::local_error( 'site_kit_unsupported', 'The required Site Kit route has no usable permission check.' );
 		}
 
 		$request  = self::build_request( $path, $params, $route['url_params'] );
 		$response = rest_do_request( $request );
 		if ( is_wp_error( $response ) ) {
-			return new WP_Error( 'site_kit_request_failed', 'Google Site Kit could not complete the request.' );
+			return Webmastery_MCP_Response::local_error( 'site_kit_request_failed', 'Google Site Kit could not complete the request.' );
 		}
 		if ( $response->is_error() ) {
 			$error  = $response->as_error();
@@ -386,7 +386,7 @@ class Webmastery_MCP_Site_Kit {
 				$data['upstream_code'] = sanitize_key( $error->get_error_code() );
 			}
 
-			return new WP_Error( $code, 'Google Site Kit could not complete the request.', $data );
+			return Webmastery_MCP_Response::local_error( $code, 'Google Site Kit could not complete the request.', $data );
 		}
 
 		$data = $response->get_data();
@@ -395,7 +395,7 @@ class Webmastery_MCP_Site_Kit {
 			$data    = false !== $encoded ? json_decode( $encoded, true ) : null;
 		}
 		if ( ! is_array( $data ) ) {
-			return new WP_Error( 'site_kit_invalid_response', 'Google Site Kit returned an unexpected response.' );
+			return Webmastery_MCP_Response::local_error( 'site_kit_invalid_response', 'Google Site Kit returned an unexpected response.' );
 		}
 
 		return $data;
@@ -411,10 +411,10 @@ class Webmastery_MCP_Site_Kit {
 	private static function find_route( $path, $method, $minimum_version = '' ) {
 		$plugin = self::plugin_status();
 		if ( ! $plugin['active'] ) {
-			return new WP_Error( 'site_kit_unavailable', 'Google Site Kit is not active.' );
+			return Webmastery_MCP_Response::local_error( 'site_kit_unavailable', 'Google Site Kit is not active.' );
 		}
 		if ( ! function_exists( 'rest_get_server' ) ) {
-			return new WP_Error( 'site_kit_unavailable', 'The WordPress REST server is unavailable.' );
+			return Webmastery_MCP_Response::local_error( 'site_kit_unavailable', 'The WordPress REST server is unavailable.' );
 		}
 
 		foreach ( rest_get_server()->get_routes() as $route_pattern => $endpoints ) {
@@ -442,14 +442,14 @@ class Webmastery_MCP_Site_Kit {
 
 		$version = $plugin['version'];
 		if ( $minimum_version && $version && version_compare( $version, $minimum_version, '<' ) ) {
-			return new WP_Error(
+			return Webmastery_MCP_Response::local_error(
 				'site_kit_unsupported',
 				"Google Site Kit {$minimum_version} or later is required.",
 				[ 'detected_version' => $version, 'minimum_version' => $minimum_version ]
 			);
 		}
 
-		return new WP_Error(
+		return Webmastery_MCP_Response::local_error(
 			'site_kit_unsupported',
 			'The active Google Site Kit version does not expose a required compatibility route.',
 			[ 'detected_version' => $version ]

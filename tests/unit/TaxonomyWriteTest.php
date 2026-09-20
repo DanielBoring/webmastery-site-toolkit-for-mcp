@@ -46,9 +46,14 @@ final class TaxonomyWriteTest extends TestCase {
 		if ( $success ) {
 			$this->assertSame( array( 'success' => true, 'data' => array( 'id' => 42, 'deleted' => true ) ), $result );
 		} else {
-			$this->assertSame( array(
+			$this->assertEquals( array(
 				'success' => false,
-				'error' => is_wp_error( $core_result ) ? 'Original storage error.' : ucfirst( $slug ) . ' was not deleted.',
+				'error' => array(
+					'code' => 'upstream_failed',
+					'reason' => is_wp_error( $core_result ) ? 'external_error' : 'delete_failed',
+					'message' => is_wp_error( $core_result ) ? 'An external operation failed.' : ucfirst( $slug ) . ' was not deleted.',
+					'details' => (object) array(),
+				),
 			), $result );
 		}
 		$this->assertSame( array( array( 42, 'category' === $slug ? 'category' : 'post_tag' ) ), $GLOBALS['wstm_test_delete_calls'] );
@@ -59,7 +64,12 @@ final class TaxonomyWriteTest extends TestCase {
 		$GLOBALS['wstm_test_taxonomies']['post_tag'] = false;
 		$callbacks = $GLOBALS['wstm_test_abilities']['webmastery-site-toolkit-for-mcp/delete-tag'];
 		$this->assertSame( 'invalid_taxonomy', $callbacks['permission_callback']( array( 'tag_id' => 42 ) )->get_error_code() );
-		$this->assertSame( array( 'success' => false, 'error' => 'Taxonomy is not registered.' ), $callbacks['execute_callback']( array( 'tag_id' => 42 ) ) );
+		$this->assertEquals( array( 'success' => false, 'error' => array(
+			'code' => 'invalid_input',
+			'reason' => 'invalid_taxonomy',
+			'message' => 'Taxonomy is not registered.',
+			'details' => (object) array(),
+		) ), $callbacks['execute_callback']( array( 'tag_id' => 42 ) ) );
 		$this->assertSame( array(), $GLOBALS['wstm_test_delete_calls'] );
 	}
 }

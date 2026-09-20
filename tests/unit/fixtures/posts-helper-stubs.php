@@ -4,7 +4,7 @@ namespace Wstm120;
 
 // Isolate controlled parser/encoder boundaries without changing the class body.
 $source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-posts.php' );
-eval( 'namespace Wstm120; use \WP_Error; ' . substr( $source, 5 ) );
+eval( 'namespace Wstm120; use \WP_Error; use \Webmastery_MCP_Response; ' . substr( $source, 5 ) );
 
 function parse_blocks( $content ) {
 	if ( ! array_key_exists( $content, $GLOBALS['wstm120_blocks'] ) ) {
