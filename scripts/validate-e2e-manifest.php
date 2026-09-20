@@ -15,6 +15,9 @@ $allowed_roles = array(
 	'no_role'      => true,
 	'subscriber'   => true,
 	'user_lister'  => true,
+	'wstm105_moderator' => true,
+	'wstm105_own_editor' => true,
+	'wstm105_mapped_moderator' => true,
 	'wstm107_book_editor_no_assign' => true,
 	'wstm106_page_editor' => true,
 	'wstm125_no_read' => true,
@@ -133,6 +136,19 @@ foreach ( $manifest as $index => $case ) {
 					if ( ! array_key_exists( $assertion_field, $assertion ) ) {
 						$errors[] = webmastery_mcp_manifest_path( $case_number, "assert_post_meta {$assertion_number}.{$assertion_field}" ) . ' is required.';
 					}
+				}
+			}
+		}
+	}
+
+	if ( array_key_exists( 'assert_comment_state', $case ) ) {
+		$assertion = $case['assert_comment_state'];
+		if ( ! is_array( $assertion ) ) {
+			$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_comment_state' ) . ' must be an object.';
+		} else {
+			foreach ( array( 'comment_id', 'content', 'status' ) as $field ) {
+				if ( ! array_key_exists( $field, $assertion ) ) {
+					$errors[] = webmastery_mcp_manifest_path( $case_number, "assert_comment_state.{$field}" ) . ' is required.';
 				}
 			}
 		}

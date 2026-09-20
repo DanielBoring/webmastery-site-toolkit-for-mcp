@@ -11,6 +11,7 @@ cp .github/compatibility-versions.json "$WORK/source with spaces/.github/"
 cd "$WORK/source with spaces"
 # shellcheck source=scripts/qa-compose.sh
 source scripts/qa-compose.sh
+host_php tests/e2e/post-meta-authorization-runner.php --test-cleanup "$WORK/metadata-cleanup.json"
 export RELEASE_ZIP
 RELEASE_ZIP="$(bash scripts/build-release.sh)"
 export TRACE="$WORK/commands"
@@ -77,7 +78,7 @@ docker() {
 		*"test -f /var/www/html/wp-content/debug.log") return 1 ;;
 		*"wp --allow-root core is-installed") return 1 ;;
 		*"application-password create"*) printf 'fixture-password\n' ;;
-		*"--write-out"*"/tests/e2e/parent-assignment-runner.php") printf '403' ;;
+		*"--write-out"*"/tests/e2e/parent-assignment-runner.php"|*"--write-out"*"/tests/e2e/post-meta-authorization-runner.php") printf '403' ;;
 	esac
 }
 export -f docker
@@ -97,9 +98,13 @@ expect_failure() {
 
 bash scripts/release-qa.sh > "$WORK/success.log" 2>&1
 [[ "$(sha256sum "$RELEASE_ZIP")" == "$IDENTITY" ]]
-for runner in ability-runner media-download-runner scheduling-runner trash-safety-runner mcp-crud-runner site-kit-mcp-runner parent-assignment-runner; do
+for runner in ability-runner media-download-runner scheduling-runner trash-safety-runner mcp-crud-runner site-kit-mcp-runner parent-assignment-runner post-meta-authorization-runner; do
 	grep -F "/tests/e2e/${runner}.php" "$TRACE" > /dev/null
 done
+for boundary in direct ability http; do
+	grep -F "WSTM110_BOUNDARY=${boundary}" "$TRACE" > /dev/null
+done
+grep -F 'rm -f /var/www/html/wp-content/mu-plugins/wstm-issue110-meta.php' "$TRACE" > /dev/null
 grep -F 'plugin install plugin-check --version=2.1.0' "$TRACE"
 grep -F 'plugin install plugin-check --activate --force' "$TRACE"
 grep -F 'Unchanged release archive:' "$WORK/success.log"
