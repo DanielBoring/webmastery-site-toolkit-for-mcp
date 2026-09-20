@@ -149,8 +149,8 @@ function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 			wstm105_assert( true === $permission( $input ), "{$action} zero ID must defer to the missing-comment execution error." );
 			wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Zero-ID permission callback changed the global comment.' );
 			$result = $execute( $input );
-			$expected = array( 'success' => false, 'error' => 'update' === $action ? array( 'code' => 'not_found', 'message' => 'Comment not found.' ) : 'Comment not found.' );
-			wstm105_assert( $expected === $result, "{$action} zero ID resolved the global comment." );
+			wstm105_assert( 'not_found' === wstm118_error_reason( $result ) && 'Comment not found.' === $result['error']['message']
+				&& '{}' === wp_json_encode( $result['error']['details'] ), "{$action} zero ID resolved the global comment." );
 			wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Zero-ID execution changed the global comment.' );
 			$checks++;
 		} finally {
