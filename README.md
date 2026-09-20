@@ -52,7 +52,7 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | --- | --- | --- |
 | Posts and pages | Create, list, read, update, restore, trash, bulk publish, bulk trash, and patch targeted content with object/status-aware filtering for private, trash, draft, pending, and scheduled content | Author or Editor |
 | Blocks and revisions | Inspect Gutenberg block paths/hashes, replace one block, list revisions, restore a revision | Author or Editor |
-| Post meta | Read, update, and delete safe custom fields; write supported Yoast SEO and SEOPress metadata | Author or Editor |
+| Post meta | Read, update, and delete individual custom fields, including supported SEO keys, with object and key-level checks | Object edit access plus the key's effective capabilities |
 | Custom post types | Discover eligible public CPTs, generate list/get/create/update/delete abilities, and patch targeted content for editor-enabled types with CPT capability-map and object/status-aware filtering | CPT capability map |
 | Taxonomy | List/get categories and tags; create/update/delete with taxonomy-specific and per-term write checks | Subscriber for reads; Editor by default for writes |
 | Comments | List, reply, update, approve, trash, mark spam, or set hold through `update-comment` | Contributor/Author for replies on editable own posts; moderation needs `moderate_comments` plus `edit_comment` (normally Editor) |
@@ -68,11 +68,27 @@ For the exact ability names, input behavior, and required capabilities, use the 
 
 Comment replies require `edit_posts` and `edit_post` on the post containing the parent comment. Listing requires `moderate_comments`; updating and the approve/trash/spam abilities also require `edit_comment` on the resolved comment. There is no separate `hold-comment` ability: use `update-comment` with `status: "hold"` and the required `content`.
 
+### Standalone post metadata authorization
+
+`get-post-meta`, `update-post-meta`, and `delete-post-meta` require `edit_post` for the actual object and preserve the existing protected-key eligibility rules. Ordinary Authors can usually operate on their own posts; pages and other authors' posts generally require an Editor, and individual keys may impose additional requirements.
+
+| Standalone ability | Key-level policy |
+| --- | --- |
+| `get-post-meta` | Requires `edit_post_meta`. An explicit denied key returns `forbidden`; listings omit denied keys. This conservative read policy is specific to this plugin, not a general WordPress read-meta capability. |
+| `update-post-meta` | Requires `edit_post_meta` for existing, absent, and unchanged values. Successful response fields and structured-value support are unchanged. The capability choice matches core REST upserts, but denial of unauthorized no-ops is intentionally stricter than REST's same-value shortcut. |
+| `delete-post-meta` | Requires `delete_post_meta`, including when the key is absent. Authorized deletion retains the existing `deleted_count` response. |
+
+Registered global/subtype policies and WordPress's effective `map_meta_cap` / `user_has_cap` filters remain authoritative. Supported, genuinely unregistered SEO keys with no key authorization hooks receive only a temporary protected-key default, not an exception to capability filters. Other plugins may explicitly grant primitive metadata capabilities: Yoast's effective edit policy can permit a key whose registration callback returns false, while its delete policy can differ.
+
+**Scope and unresolved risk:** this hardening applies only to these three standalone abilities. Metadata and SEO aliases inside post/page create or update requests retain their existing behavior and do not receive these key-level checks. Separate SEO inspection/analysis/scoring abilities retain their existing read policies. Those paths can still bypass restrictive per-key policy; using the standalone tools is not a site-wide security boundary. This partial fix does not resolve the creation-policy decision or establish release readiness.
+
+For verification on a disposable site, register a nonprotected string key with an authorization callback requiring `manage_options`, seed a draft, and call the standalone abilities as its Author. An explicit read, an upsert (including the same value), and a deletion must return `forbidden`; the listing must omit the key and storage must remain unchanged. An Administrator with effective object/key permission can read, update, and delete it. Existing one-call provider create workflows are not migrated to two calls by this change.
+
 ### Backslashes in writes
 
 Post/page metadata and media titles, captions, and alt text preserve backslashes through WordPress storage, including repeated or trailing backslashes and escaped quotes. Send decoded values normally; do not add an extra WordPress slashing layer in your MCP client. JSON still requires its usual escaping: `"C:\\path\\"` represents `C:\path\`.
 
-Existing text/HTML sanitization and registered metadata or SEO-provider sanitizers still apply. Responses report sanitized stored values, not necessarily the original input. Post/page create/update metadata remains scalar; `update-post-meta` also supports JSON-compatible arrays and objects. Allowed metadata keys and capability requirements are unchanged: updates require access to the target object, and uploads require `upload_files` plus access to any parent post.
+Existing text/HTML sanitization and registered metadata or SEO-provider sanitizers still apply. Responses report sanitized stored values, not necessarily the original input. Post/page create/update metadata remains scalar; `update-post-meta` also supports JSON-compatible arrays and objects. Allowed metadata keys are unchanged. Standalone metadata operations also enforce the key-level policy above; uploads require `upload_files` plus access to any parent post.
 
 On a disposable draft, write `yoast_meta_description` with JSON value `"C:\\path\\"` using `update-post`, then read `_yoast_wpseo_metadesc` using `get-post-meta` with the same post ID and explicit `meta_key`. Compare the stored value with `data.meta.written` from the update response, allowing any provider sanitization.
 

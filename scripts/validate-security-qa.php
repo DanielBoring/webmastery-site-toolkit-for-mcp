@@ -352,6 +352,27 @@ foreach ( array( 'patch-content-block', 'patch-post-content' ) as $ability_slug 
 	}
 }
 
+foreach ( array( 'get-post-meta', 'update-post-meta', 'delete-post-meta' ) as $slug ) {
+	foreach ( array( 'author' => 'failure', 'admin' => 'success' ) as $role => $expect ) {
+		$found = false;
+		foreach ( $manifest as $case ) {
+			if ( "webmastery-site-toolkit-for-mcp/{$slug}" === ( $case['ability'] ?? '' )
+				&& $role === ( $case['role'] ?? '' ) && $expect === ( $case['expect'] ?? '' )
+				&& 'wstm110_restricted' === ( $case['input']['meta_key'] ?? '' )
+				&& ( 'success' === $expect || 'forbidden' === ( $case['expect_error_code'] ?? '' ) ) ) {
+				$found = true;
+				break;
+			}
+		}
+		if ( ! $found ) {
+			$errors[] = "{$slug} must keep its restricted-key {$role} {$expect} manifest case.";
+		}
+	}
+}
+if ( ! webmastery_mcp_security_qa_has_missing_path_case( $manifest, 'webmastery-site-toolkit-for-mcp/get-post-meta', array( 'data.meta.wstm110_restricted' ) ) ) {
+	$errors[] = 'Standalone metadata listings must retain restricted-key absence assertions.';
+}
+
 foreach ( array( 'list-site-kit-modules', 'get-site-kit-permissions', 'get-site-kit-pagespeed' ) as $slug ) {
 	$ability = "webmastery-site-toolkit-for-mcp/{$slug}";
 	$required = array( 'local-denial' => false, 'read-allowed' => false, 'subscriber-allowed' => false, 'upstream-denial' => false );

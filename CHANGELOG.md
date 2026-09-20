@@ -21,6 +21,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Enforce effective WordPress key-level capabilities in the standalone post-meta read, upsert, and delete tools, including absent and unchanged values. Metadata listings omit denied keys; successful response shapes and protected-key eligibility remain unchanged. Metadata inside post/page create/update requests and separate SEO read paths are not covered by this partial fix and retain unresolved authorization risks.
+
 - Security audit HTTPS findings now describe the configured public home URL rather than the MCP request or admin-only TLS policy. Missing/unsupported schemes or hosts, whitespace/control characters, malformed percent escapes, and invalid authority syntax are explicitly unknown; this is a local syntax guard, not full URL or DNS validation.
 - Debug-log findings no longer disclose filesystem paths and warn when access is unverified instead of treating a neighboring `.htaccess` file or a location outside `wp-content` as proof of protection.
 - Database health query errors retain their error code and context without raw database error details. Successful reports still return prefixed table identifiers, including matching plugin tables; identifier redaction is deferred.

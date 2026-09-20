@@ -271,6 +271,31 @@ run_parent_assignment_qa() (
 	done
 )
 
+run_post_meta_authorization_qa() (
+	local fixture="/var/www/html/wp-content/mu-plugins/wstm-issue110-meta.php"
+	local boundaries=()
+	local boundary
+	local status
+	trap 'compose exec -T wordpress rm -f /var/www/html/wp-content/mu-plugins/wstm-issue110-meta.php' EXIT
+	compose exec -T wordpress cp "${CONTAINER_PLUGIN_ROOT}/tests/e2e/post-meta-authorization-fixture.php" "$fixture"
+	status="$(compose exec -T wordpress curl --silent --show-error --output /tmp/wstm110-cli-response --write-out '%{http_code}' "http://localhost/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/post-meta-authorization-runner.php")"
+	if [ "$status" != "403" ]; then
+		echo "Metadata runner must reject non-CLI requests (HTTP ${status})." >&2
+		exit 1
+	fi
+	compose exec -T wordpress grep -Fxq 'CLI only.' /tmp/wstm110-cli-response
+	if [ "$QA_MODE" = "contract" ] || [ "$QA_MODE" = "all" ]; then
+		boundaries+=( direct ability )
+	fi
+	if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then
+		boundaries+=( http )
+	fi
+	for boundary in "${boundaries[@]}"; do
+		compose exec -T -e WSTM110_BOUNDARY="$boundary" \
+			wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/post-meta-authorization-runner.php"
+	done
+)
+
 run_debug_log_check() {
 	echo "Checking WordPress debug log..."
 	if ! compose exec -T wordpress test -f /var/www/html/wp-content/debug.log; then
@@ -345,6 +370,7 @@ main() {
 	fi
 
 	run_parent_assignment_qa
+	run_post_meta_authorization_qa
 	run_debug_log_check
 
 	echo "Docker QA (${QA_MODE}) completed successfully"
