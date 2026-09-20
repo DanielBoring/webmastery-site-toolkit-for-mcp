@@ -58,10 +58,19 @@ run_ability_manifest() { assert_cron_isolated; }
 run_trash_safety() { assert_cron_isolated; }
 run_mcp_crud() { assert_cron_isolated; }
 run_parent_assignment_qa() { assert_cron_isolated; }
+run_post_meta_authorization_qa() {
+	assert_cron_isolated
+	metadata_stage_calls=$(( metadata_stage_calls + 1 ))
+}
 run_debug_log_check() { assert_cron_isolated; }
 for QA_MODE in contract e2e all; do
 	cron_configured=0
+	metadata_stage_calls=0
 	main >/dev/null
 	assert_cron_isolated
+	if [ "$metadata_stage_calls" != 1 ]; then
+		echo "Metadata authorization QA must run exactly once in ${QA_MODE} mode." >&2
+		exit 1
+	fi
 done
 echo 'Compatibility dependency policy and QA bootstrap tests passed without Docker or network.'
