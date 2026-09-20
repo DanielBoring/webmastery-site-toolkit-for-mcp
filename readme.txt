@@ -65,6 +65,10 @@ It requires a WordPress site where custom plugins can be installed. Self-hosted 
 
 Use a dedicated Editor account for normal content workflows: posts, pages, taxonomy, comments, media, revisions, content blocks, and content hygiene.
 
+Comment updates, approval, trash, and spam actions require both moderate_comments and edit_comment for the specific comment. A custom moderator role also needs the mapped edit permissions for the comment's post; owning a post alone does not remove the moderate_comments requirement.
+
+Missing-comment error shapes are preserved. Invalid or nonpositive IDs cannot fall back to a global comment or silently select another ID. Listing and reply permissions are unchanged.
+
 Use a separate dedicated Administrator account only when you need Administrator-only workflows such as runtime environment details, plugin management, user access audits, site health, database health, performance status, backup status, security audits, or site-wide SEO overview.
 
 = Why use a dedicated account? =
@@ -179,6 +183,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Changelog ==
 
 = Unreleased =
+
+* Comment updates, approval, trash, and spam now require permission to edit the specific comment as well as moderation permission. Missing-comment errors are unchanged; invalid IDs cannot select a global comment or a different target.
 
 * Report the configured public home URL scheme independently of the MCP request and admin-only TLS policy.
 * Warn on malformed percent escapes or authority syntax without rejecting valid local, internationalized, or IPv6 configurations.
