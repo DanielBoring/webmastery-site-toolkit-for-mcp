@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/diagnostics-fixture.php';
+require_once __DIR__ . '/coverage-fixture.php';
 
 function e2e_ensure_user( $login, $email, $role ) {
 	$user = get_user_by( 'login', $login );
@@ -498,6 +499,8 @@ e2e_require_active_plugin( getenv( 'SEOPRESS_PLUGIN_FILE' ) ?: 'wp-seopress/seop
 $admin         = get_user_by( 'login', 'admin' );
 $admin_id      = (int) $admin->ID;
 $author_id     = e2e_ensure_user( 'author_test', 'author@test.local', 'author' );
+$contributor_id = e2e_ensure_user( 'contributor_test', 'contributor@test.local', 'contributor' );
+( new WP_User( $contributor_id ) )->set_role( 'contributor' );
 $editor_id     = e2e_ensure_user( 'editor_test', 'editor@test.local', 'editor' );
 $subscriber_id = e2e_ensure_user( 'subscriber_test', 'subscriber@test.local', 'subscriber' );
 $no_role_id    = e2e_ensure_user( 'no_role_test', 'no-role@test.local', 'subscriber' );
@@ -613,6 +616,8 @@ e2e_delete_term_by_slug( 'mcp-e2e-updated-tag', 'post_tag' );
 $fixtures = array(
 	'admin_id'           => $admin_id,
 	'author_id'          => $author_id,
+	'contributor_id'     => $contributor_id,
+	'wstm120_page_editor_id' => $wstm106_page_editor_id,
 	'editor_id'          => $editor_id,
 	'subscriber_id'      => $subscriber_id,
 	'no_role_id'         => $no_role_id,
@@ -769,6 +774,7 @@ $fixtures['media_id']          = e2e_insert_media( $fixtures['post_id'], $author
 $fixtures['delete_media_id']   = e2e_insert_media( $fixtures['post_id'], $author_id, 'delete' );
 $fixtures['featured_image_id'] = e2e_insert_media( $fixtures['post_id'], $author_id, 'featured-image', 'image/png' );
 $fixtures['orphaned_media_id'] = e2e_insert_media( 0, $author_id, 'orphaned' );
+wstm120_seed_fixtures( $fixtures );
 $fixtures['yoast_score_post_id'] = e2e_insert_post( 'post', 'MCP E2E Yoast Score Post', 'Yoast score fixture.', $author_id );
 wp_update_post(
 	array(
@@ -895,6 +901,7 @@ $roles = array(
 	'wstm125_read' => $wstm125_read_id,
 	'admin'        => $admin_id,
 	'author'       => $author_id,
+	'contributor'  => $contributor_id,
 	'editor'       => $editor_id,
 	'filtered_editor' => $wstm115_filtered_editor_id,
 	'limited_editor' => $limited_editor_id,
@@ -986,13 +993,39 @@ foreach ( $manifest as $case ) {
 		? wstm114_verification_prepare( $case )
 		: null;
 	$restore = e2e_apply_case_setup( $case );
+	$before = ! empty( $case['assert_unchanged'] ) || ! empty( $case['assert_changed'] ) ? wstm120_snapshot() : null;
+	$coverage_evidence = array();
+	$capabilities = wstm120_assert_capabilities( $case );
+	$coverage_passed = ! in_array( false, array_column( $capabilities, 'passed' ), true );
+	if ( $capabilities ) {
+		$coverage_evidence['capabilities'] = $capabilities;
+	}
+	if ( isset( $case['assert_permission'] ) ) {
+		$permission = $ability->check_permissions( $input );
+		$actual = is_wp_error( $permission ) ? $permission->get_error_code() : $permission;
+		$coverage_evidence['permission'] = $actual;
+		$coverage_passed = $coverage_passed && $case['assert_permission'] === $actual;
+	}
 	try {
 		$result = $ability->execute( $input );
+		if ( null !== $before ) {
+			$after = wstm120_snapshot();
+			$coverage_evidence['before'] = $before;
+			$coverage_evidence['after'] = $after;
+			$coverage_evidence['unchanged'] = $before === $after;
+			$coverage_passed = $coverage_passed && ( ! empty( $case['assert_changed'] ) ? $before !== $after : $before === $after );
+		}
 	} finally {
 		e2e_restore_case_setup( $restore );
 	}
 	$ok      = ! is_wp_error( $result ) && e2e_result_is_success( $result );
 	$passed  = ( 'success' === $expect && $ok ) || ( 'failure' === $expect && ! $ok );
+	$passed = $passed && $coverage_passed;
+	if ( isset( $case['assert_stored_post'] ) ) {
+		$stored = wstm120_assert_stored_post( $case['assert_stored_post'], $result );
+		$coverage_evidence['stored_post'] = $stored;
+		$passed = $passed && $stored;
+	}
 	if ( null !== $wstm114 ) {
 		$passed = wstm114_verification_assert( $case, $result, $wstm114 ) && $passed;
 	}
@@ -1111,6 +1144,7 @@ foreach ( $manifest as $case ) {
 		'role'    => $role,
 		'expect'  => $expect,
 		'passed'  => $passed,
+		'coverage_evidence' => $coverage_evidence,
 	);
 }
 

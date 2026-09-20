@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added partial #120 test-only coverage for permanent media-delete denials with persisted row/metadata/file evidence, real Contributor draft/publishing boundaries, private/trashed direct getters, and remaining media/SEO/list permission negatives. Added pure-helper characterization and validator mutation tests; retained existing runtime policies, positive cases, and separate unresolved batch metadata work.
 - Added a software development lifecycle overview that maps issue intake, design, implementation, QA, release, and maintenance to the repository's strategy documents and sources of truth.
 - Documented the agent threat model, client-side approval and recovery guidance, annotation scope, and delegated Site Kit access expectations without changing runtime permissions or response contracts.
 - Added focused diagnostic configuration/privacy regression coverage, scoped database-error fixtures, and permission cases while preserving the existing table-identifier contract.
