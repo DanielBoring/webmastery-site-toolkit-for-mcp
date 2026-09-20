@@ -182,14 +182,11 @@ class Webmastery_MCP_Content_Hygiene {
 	}
 
 	private static function database_error( $context ) {
-		global $wpdb;
-
 		return new WP_Error(
 			'content_hygiene_query_failed',
 			sprintf(
-				'Content hygiene query failed while reading %1$s: %2$s',
-				$context,
-				$wpdb->last_error
+				'Content hygiene query failed while reading %s.',
+				$context
 			)
 		);
 	}
@@ -218,7 +215,7 @@ class Webmastery_MCP_Content_Hygiene {
 	public static function execute_list_posts_no_featured_image( $input = [] ) {
 		$post_type = sanitize_key( $input['post_type'] ?? 'post' );
 		if ( ! in_array( $post_type, [ 'post', 'page' ], true ) ) {
-			return [ 'success' => false, 'error' => 'post_type must be post or page.' ];
+			return Webmastery_MCP_Response::legacy_error( 'invalid_content_type', 'post_type must be post or page.' );
 		}
 
 		$permission = self::posts_no_featured_image_permission( [ 'post_type' => $post_type ] );

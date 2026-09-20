@@ -64,7 +64,7 @@ final class CommentsHelpersTest extends TestCase {
 			$execute = $GLOBALS['wstm_test_abilities'][ "webmastery-site-toolkit-for-mcp/{$action}-comment" ]['execute_callback'];
 			$result = $execute( array() );
 			$this->assertSame( false, $result['success'] );
-			$this->assertSame( 'update' === $action ? array( 'code' => 'not_found', 'message' => 'Comment not found.' ) : 'Comment not found.', $result['error'] );
+			$this->assertEquals( array( 'code' => 'not_found', 'reason' => 'not_found', 'message' => 'Comment not found.', 'details' => (object) array() ), $result['error'] );
 		}
 		$this->assertSame( array(), $GLOBALS['wstm105_comment_reads'] );
 	}

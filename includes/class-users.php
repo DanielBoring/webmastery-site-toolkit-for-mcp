@@ -173,7 +173,7 @@ class Webmastery_MCP_Users {
 				$user = get_user_by( 'id', absint( $input['user_id'] ) );
 
 				if ( ! $user ) {
-					return [ 'success' => false, 'error' => 'User not found.' ];
+					return Webmastery_MCP_Response::legacy_error( 'not_found', 'User not found.' );
 				}
 
 				return [ 'success' => true, 'data' => self::normalize( $user ) ];

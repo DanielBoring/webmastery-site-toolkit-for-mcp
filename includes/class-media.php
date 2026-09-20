@@ -90,21 +90,6 @@ class Webmastery_MCP_Media {
 		];
 	}
 
-	private static function error_response( $code, $message, $data = [] ) {
-		$response = [
-			'success' => false,
-			'error'   => [
-				'code'    => $code,
-				'message' => $message,
-			],
-		];
-
-		if ( ! empty( $data ) ) {
-			$response['data'] = $data;
-		}
-
-		return $response;
-	}
 
 	private static function is_private_ip( $ip ) {
 		if ( false === filter_var( $ip, FILTER_VALIDATE_IP ) ) {
@@ -457,10 +442,10 @@ class Webmastery_MCP_Media {
 				$attachment = get_post( $id );
 
 				if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
-					return [ 'success' => false, 'error' => 'Media item not found.' ];
+					return Webmastery_MCP_Response::legacy_error( 'not_found', 'Media item not found.' );
 				}
 				if ( ! current_user_can( 'edit_post', $id ) ) {
-					return [ 'success' => false, 'error' => 'You do not have permission to view this media item.' ];
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to view this media item.' );
 				}
 
 				return [ 'success' => true, 'data' => self::normalize( $attachment ) ];
@@ -493,18 +478,18 @@ class Webmastery_MCP_Media {
 			'execute_callback'    => function ( $input ) {
 				$permission = self::upload_image_permission( $input );
 				if ( is_wp_error( $permission ) ) {
-					return self::error_response( $permission->get_error_code(), $permission->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $permission );
 				}
 
 				$post_id      = absint( $input['post_id'] ?? 0 );
 				$set_featured = ! empty( $input['set_featured'] );
 				if ( $set_featured && ! $post_id ) {
-					return self::error_response( 'missing_post_id', 'post_id is required when set_featured is true.' );
+					return Webmastery_MCP_Response::legacy_error( 'missing_post_id', 'post_id is required when set_featured is true.' );
 				}
 
 				$image_url = self::validate_public_image_url( $input['image_url'] ?? '' );
 				if ( is_wp_error( $image_url ) ) {
-					return self::error_response( $image_url->get_error_code(), $image_url->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $image_url );
 				}
 
 				$configured_size = wp_max_upload_size();
@@ -514,7 +499,7 @@ class Webmastery_MCP_Media {
 					] )
 					: false;
 				if ( false === $max_size ) {
-					return self::error_response( 'invalid_upload_limit', 'The maximum upload size must be a positive integer below PHP_INT_MAX.' );
+					return Webmastery_MCP_Response::legacy_error( 'invalid_upload_limit', 'The maximum upload size must be a positive integer below PHP_INT_MAX.' );
 				}
 
 				require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -524,20 +509,20 @@ class Webmastery_MCP_Media {
 				$tmp = self::download_bounded_image( $image_url, $max_size );
 				if ( is_wp_error( $tmp ) ) {
 					if ( 'file_too_large' === $tmp->get_error_code() ) {
-						return self::error_response( 'file_too_large', $tmp->get_error_message(), [ 'max_bytes' => $max_size ] );
+						return Webmastery_MCP_Response::legacy_error( 'file_too_large', $tmp->get_error_message(), [ 'max_bytes' => $max_size ] );
 					}
-					return self::error_response( 'download_failed', $tmp->get_error_message() );
+					return Webmastery_MCP_Response::legacy_error( 'download_failed', 'Failed to download image.' );
 				}
 
 				clearstatcache( true, $tmp );
 				$file_size = filesize( $tmp );
 				if ( false === $file_size || $file_size <= 0 ) {
 					wp_delete_file( $tmp );
-					return self::error_response( 'invalid_file', 'Downloaded image file is empty.' );
+					return Webmastery_MCP_Response::legacy_error( 'invalid_file', 'Downloaded image file is empty.' );
 				}
 				if ( $file_size > $max_size ) {
 					wp_delete_file( $tmp );
-					return self::error_response(
+					return Webmastery_MCP_Response::legacy_error(
 						'file_too_large',
 						'Downloaded image exceeds the maximum allowed upload size.',
 						[ 'max_bytes' => (int) $max_size ]
@@ -555,11 +540,11 @@ class Webmastery_MCP_Media {
 				$mime     = (string) ( $filetype['type'] ?? '' );
 				if ( '' === $mime || ! str_starts_with( $mime, 'image/' ) ) {
 					wp_delete_file( $tmp );
-					return self::error_response( 'unsupported_mime_type', 'Downloaded file must be an allowed image MIME type.' );
+					return Webmastery_MCP_Response::legacy_error( 'unsupported_mime_type', 'Downloaded file must be an allowed image MIME type.' );
 				}
 				if ( in_array( $mime, [ 'image/png', 'image/jpeg', 'image/gif' ], true ) && false === wp_getimagesize( $tmp ) ) {
 					wp_delete_file( $tmp );
-					return self::error_response( 'invalid_file', 'Downloaded image dimensions could not be read.' );
+					return Webmastery_MCP_Response::legacy_error( 'invalid_file', 'Downloaded image dimensions could not be read.' );
 				}
 				if ( ! empty( $filetype['proper_filename'] ) ) {
 					$filename = sanitize_file_name( $filetype['proper_filename'] );
@@ -579,7 +564,7 @@ class Webmastery_MCP_Media {
 				$attachment_id = media_handle_sideload( $file_array, $post_id );
 				if ( is_wp_error( $attachment_id ) ) {
 					wp_delete_file( $tmp );
-					return self::error_response( 'upload_failed', $attachment_id->get_error_message() );
+					return Webmastery_MCP_Response::legacy_error( 'upload_failed', 'Failed to create image attachment.' );
 				}
 
 				$post_update = [ 'ID' => $attachment_id ];
@@ -593,7 +578,7 @@ class Webmastery_MCP_Media {
 				if ( count( $post_update ) > 1 ) {
 					$updated = wp_update_post( wp_slash( $post_update ), true );
 					if ( is_wp_error( $updated ) ) {
-						return self::error_response( 'metadata_update_failed', $updated->get_error_message() );
+						return Webmastery_MCP_Response::legacy_error( 'metadata_update_failed', 'Failed to update image attachment metadata.' );
 					}
 				}
 
@@ -602,7 +587,7 @@ class Webmastery_MCP_Media {
 				}
 
 				if ( $set_featured && ! set_post_thumbnail( $post_id, $attachment_id ) ) {
-					return self::error_response( 'featured_image_failed', 'Failed to set uploaded image as the featured image.' );
+					return Webmastery_MCP_Response::legacy_error( 'featured_image_failed', 'Failed to set uploaded image as the featured image.' );
 				}
 
 				return [ 'success' => true, 'data' => self::normalize( $attachment_id ) ];
@@ -635,10 +620,10 @@ class Webmastery_MCP_Media {
 				$attachment = get_post( $id );
 
 				if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
-					return [ 'success' => false, 'error' => 'Media item not found.' ];
+					return Webmastery_MCP_Response::legacy_error( 'not_found', 'Media item not found.' );
 				}
 				if ( ! current_user_can( 'edit_post', $id ) ) {
-					return [ 'success' => false, 'error' => 'You do not have permission to update this media item.' ];
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to update this media item.' );
 				}
 
 				$args = [ 'ID' => $id ];
@@ -654,7 +639,7 @@ class Webmastery_MCP_Media {
 					$result = wp_update_post( wp_slash( $args ), true );
 
 					if ( is_wp_error( $result ) ) {
-						return [ 'success' => false, 'error' => $result->get_error_message() ];
+						return Webmastery_MCP_Response::from_wp_error( $result );
 					}
 				}
 
@@ -689,16 +674,16 @@ class Webmastery_MCP_Media {
 				$attachment = get_post( $id );
 
 				if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
-					return [ 'success' => false, 'error' => 'Media item not found.' ];
+					return Webmastery_MCP_Response::legacy_error( 'not_found', 'Media item not found.' );
 				}
 				if ( ! current_user_can( 'delete_post', $id ) ) {
-					return [ 'success' => false, 'error' => 'You do not have permission to delete this media item.' ];
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to delete this media item.' );
 				}
 
 				$result = wp_delete_attachment( $id, true );
 
 				if ( ! $result ) {
-					return [ 'success' => false, 'error' => 'Failed to delete media item.' ];
+					return Webmastery_MCP_Response::legacy_error( 'delete_failed', 'Failed to delete media item.' );
 				}
 
 				return [ 'success' => true, 'data' => [ 'id' => $id, 'deleted' => true ] ];
