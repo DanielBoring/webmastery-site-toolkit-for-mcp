@@ -16,6 +16,8 @@ if ( '1' !== getenv( 'WSTM110_BATCH_DISPOSABLE' ) ) {
 $_SERVER['HTTP_HOST'] = 'localhost';
 require_once '/var/www/html/wp-load.php';
 require_once __DIR__ . '/metadata-batch-fixture.php';
+require_once __DIR__ . '/error-contract-assertions.php';
+require_once __DIR__ . '/metadata-transport.php';
 
 function wstm110_batch_require( bool $condition, string $message ): void {
 	if ( ! $condition ) {
@@ -42,7 +44,7 @@ function wstm110_batch_cleanup( array &$summary, string $label, callable $action
 }
 
 $boundary = getenv( 'WSTM110_BATCH_BOUNDARY' ) ?: 'ability';
-wstm110_batch_require( in_array( $boundary, array( 'direct', 'ability' ), true ), 'This runner currently supports only direct and ability boundaries; HTTP requires the transport fixture.' );
+wstm110_batch_require( in_array( $boundary, array( 'direct', 'ability', 'http', 'individual' ), true ), 'Unknown metadata-batch boundary.' );
 $summary = array(
 	'boundary' => $boundary, 'wordpress' => get_bloginfo( 'version' ), 'php' => PHP_VERSION,
 	'runner_sha256' => hash_file( 'sha256', __FILE__ ),
@@ -53,6 +55,9 @@ $summary = array(
 );
 $user_id = 0;
 $observer = null;
+$transport = null;
+$password = null;
+$token = '';
 $term_ids = array();
 $old_user_id = get_current_user_id();
 $run = 'wstm110-batch-' . wp_generate_uuid4();
@@ -71,6 +76,27 @@ try {
 	}
 	$user->add_cap( 'assign_mcp_genres' );
 	wp_set_current_user( $user_id );
+	if ( in_array( $boundary, array( 'http', 'individual' ), true ) ) {
+		$password = WP_Application_Passwords::create_new_application_password( $user_id, array( 'name' => $run ) );
+		wstm110_batch_require( ! is_wp_error( $password ), 'Cannot create metadata HTTP fixture credential.' );
+		$token = bin2hex( random_bytes( 32 ) );
+		update_option( 'wstm110_batch_http', array( 'token' => $token, 'user_id' => $user_id ), false );
+		$transport = new Wstm110_Metadata_Transport( 'individual' === $boundary, array( 'login' => $run, 'password' => $password[0] ) );
+		$transport->initialize();
+	}
+	$execute = static function ( string $name, array $input ) use ( $boundary, $transport, $token ): array {
+		if ( null !== $transport ) {
+			return $transport->execute( $name, $input, $token );
+		}
+		$ability = wp_get_ability( $name );
+		wstm110_batch_require( null !== $ability, "Missing {$name}." );
+		if ( 'direct' === $boundary ) {
+			$property = new ReflectionProperty( WP_Ability::class, 'execute_callback' );
+			$property->setAccessible( true );
+			return wstm110_batch_result( ( $property->getValue( $ability ) )( $input ) );
+		}
+		return wstm110_batch_result( $ability->execute( $input ) );
+	};
 	foreach ( array( 'category', 'post_tag', 'mcp_genre' ) as $taxonomy ) {
 		$term = wp_insert_term( $run, $taxonomy );
 		wstm110_batch_require( ! is_wp_error( $term ), "Cannot seed {$taxonomy}." );
@@ -91,9 +117,6 @@ try {
 			$name = 'webmastery-site-toolkit-for-mcp/' . $operation . '-' . $suffix;
 			$ability = wp_get_ability( $name );
 			wstm110_batch_require( null !== $ability, "Missing {$name}." );
-			$property = new ReflectionProperty( WP_Ability::class, 'execute_callback' );
-			$property->setAccessible( true );
-			$callback = $property->getValue( $ability );
 			foreach ( wstm110_batch_payloads() as $label => $payload ) {
 				$input = array_merge( array(
 					'title' => $run . ' changed', 'content' => 'Must not persist',
@@ -112,11 +135,20 @@ try {
 				$events = array();
 				try {
 					$before = wstm110_batch_snapshot();
-					$observer = wstm110_batch_observe( static function ( $hook ) use ( &$events ): void { $events[] = $hook; } );
+					if ( null === $transport ) {
+						$observer = wstm110_batch_observe( static function ( $hook ) use ( &$events ): void { $events[] = $hook; } );
+					}
 					try {
-						$raw = 'direct' === $boundary ? $callback( $input ) : $ability->execute( $input );
+						$raw = $execute( $name, $input );
+						if ( null !== $transport ) {
+							$events = $transport->last_events;
+							$record['wire'] = $transport->last_response;
+							$record['tool_name'] = $transport->tool_name( $name );
+						}
 					} finally {
-						wstm110_batch_unobserve( $observer );
+						if ( $observer instanceof Closure ) {
+							wstm110_batch_unobserve( $observer );
+						}
 						$observer = null;
 					}
 					$after = wstm110_batch_snapshot();
@@ -124,6 +156,7 @@ try {
 					$record['after'] = $after;
 					$record['mutation_hooks'] = $events;
 					$result = wstm110_batch_result( $raw );
+					wstm118_error_envelope( $result );
 					$record['result'] = $result;
 					wstm110_batch_assert_unchanged( $before, $after, $events );
 					wstm110_batch_require( false === ( $result['success'] ?? null ), 'Combined request did not fail.' );
@@ -142,6 +175,59 @@ try {
 				$summary['cases'][] = $record;
 			}
 		}
+		// Calibrate each boundary with actual allowed writes and a non-atomic draft workflow.
+		$record = array( 'type' => $type, 'steps' => array() );
+		try {
+			$migration_id = 0;
+			$steps = array(
+				array( 'create-' . $suffix, array( 'title' => $run . ' migration', 'content' => 'Plain migration draft', 'status' => 'draft' ) ),
+				array( 'update-' . $suffix, array( $id_key => null, 'title' => $run . ' plain update' ) ),
+				array( 'update-post-meta', array( 'post_id' => null, 'meta_key' => '_yoast_wpseo_metadesc', 'meta_value' => 'C:\\migration\\' ) ),
+				array( 'update-' . $suffix, array( $id_key => null, 'status' => 'publish' ) ),
+			);
+			foreach ( $steps as $step => [ $slug, $input ] ) {
+				foreach ( $input as &$value ) {
+					if ( null === $value ) {
+						$value = $migration_id;
+					}
+				}
+				unset( $value );
+				$events = array();
+				if ( null === $transport ) {
+					$observer = wstm110_batch_observe( static function ( $hook ) use ( &$events ): void { $events[] = $hook; } );
+				}
+				try {
+					$result = $execute( 'webmastery-site-toolkit-for-mcp/' . $slug, $input );
+				} finally {
+					if ( $observer instanceof Closure ) {
+						wstm110_batch_unobserve( $observer );
+						$observer = null;
+					}
+				}
+				if ( null !== $transport ) {
+					$events = $transport->last_events;
+				}
+				wstm110_batch_require( true === ( $result['success'] ?? null ), "Allowed migration step {$slug} failed." );
+				wstm110_batch_require( array() !== $events, "Mutation observer did not detect allowed {$slug}." );
+				if ( 0 === $step ) {
+					$migration_id = $result['data']['id'];
+				}
+				clean_post_cache( $migration_id );
+				$stored = get_post( $migration_id );
+				wstm110_batch_require( ( 3 === $step ? 'publish' : 'draft' ) === $stored->post_status, 'Migration published before authorized metadata completed.' );
+				if ( $step >= 2 ) {
+					wstm110_batch_require( 'C:\\migration\\' === get_post_meta( $migration_id, '_yoast_wpseo_metadesc', true ), 'Migration lost metadata or backslashes.' );
+				}
+				$record['steps'][] = array( 'ability' => $slug, 'result' => $result, 'hooks' => $events, 'status' => $stored->post_status );
+			}
+			$record['passed'] = true;
+			$summary['passed']++;
+		} catch ( Throwable $error ) {
+			$record['passed'] = false;
+			$record['failure'] = $error->getMessage();
+			$summary['failed']++;
+		}
+		$summary['migrations'][] = $record;
 	}
 	wstm110_batch_require( 8 * count( wstm110_batch_payloads() ) === count( $summary['cases'] ), 'Coverage loop did not execute every variant/entrypoint.' );
 } catch ( Throwable $error ) {
@@ -151,6 +237,17 @@ try {
 } finally {
 	if ( $observer instanceof Closure ) {
 		wstm110_batch_unobserve( $observer );
+	}
+	if ( $transport instanceof Wstm110_Metadata_Transport ) {
+		wstm110_batch_cleanup( $summary, 'HTTP session', static function () use ( $transport ): void { $transport->close(); } );
+	}
+	if ( is_array( $password ) ) {
+		wstm110_batch_cleanup( $summary, 'application password', static function () use ( $user_id, $password ): void {
+			wstm110_batch_require( true === WP_Application_Passwords::delete_application_password( $user_id, $password[1]['uuid'] ), 'Cannot revoke metadata HTTP fixture credential.' );
+		} );
+	}
+	if ( '' !== $token ) {
+		delete_option( 'wstm110_batch_http' );
 	}
 	if ( is_int( $user_id ) && $user_id > 0 ) {
 		wstm110_batch_cleanup( $summary, 'owned posts', static function () use ( $user_id, &$summary ): void {

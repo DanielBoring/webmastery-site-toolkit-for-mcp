@@ -85,17 +85,23 @@ Comment replies require `edit_posts` and `edit_post` on the post containing the 
 
 Registered global/subtype policies and WordPress's effective `map_meta_cap` / `user_has_cap` filters remain authoritative. Supported, genuinely unregistered SEO keys with no key authorization hooks receive only a temporary protected-key default, not an exception to capability filters. Other plugins may explicitly grant primitive metadata capabilities: Yoast's effective edit policy can permit a key whose registration callback returns false, while its delete policy can differ.
 
-**Scope and unresolved risk:** this hardening applies only to these three standalone abilities. Metadata and SEO aliases inside post/page create or update requests retain their existing behavior and do not receive these key-level checks. Separate SEO inspection/analysis/scoring abilities retain their existing read policies. Those paths can still bypass restrictive per-key policy; using the standalone tools is not a site-wide security boundary. This partial fix does not resolve the creation-policy decision or establish release readiness.
+**Breaking 3.0 development contract:** post, page, and dynamic CPT create/update requests reject the presence of `meta`, `meta_input`, every `yoast_`/`seopress_` alias, and raw `_yoast_wpseo_`/`_seopress_` fields before post, metadata, taxonomy, scheduling, or save-hook side effects. Empty/null values and unchanged metadata are also rejected; Administrator access does not bypass this rule. Plain content, status, parent, and taxonomy requests retain their existing behavior.
 
-For verification on a disposable site, register a nonprotected string key with an authorization callback requiring `manage_options`, seed a draft, and call the standalone abilities as its Author. An explicit read, an upsert (including the same value), and a deletion must return `forbidden`; the listing must omit the key and storage must remain unchanged. An Administrator with effective object/key permission can read, update, and delete it. Existing one-call provider create workflows are not migrated to two calls by this change.
+Create a draft without metadata, call `update-post-meta` separately for each exact key, verify every result, then publish with a plain update. These operations are **not atomic**: an earlier authorized write remains if a later key is denied. Keep the draft unpublished on failure; do not retry a combined request. See the [complete alias migration table](docs/3.0-migration.md#metadata-and-seo-authorization).
+
+Separate SEO inspection, analysis, and score abilities also require effective `edit_post` plus `edit_post_meta` for each real object/key before reading it. Denied fields are omitted from raw and normalized metadata and reported in `unavailable_fields`, not advertised as visible plain text. Analysis skips checks that cannot be evaluated; scores filter permission before totals and pagination. Opaque generated Yoast head output is unavailable because extensible generated output cannot be authorized by a fixed key list. URL-only head requests return `unsupported`.
+
+SEO overview samples at most 100 published post/page IDs in ascending ID order. Each missing-field `count` and maximum-20 `ids` list includes only authorized observations; `observed_count` is the authorized sample denominator. `observation_scope.counts_are_sitewide` is false. Zero observations mean no evidence, not a healthy site. Independent native published post/page totals remain available to Administrators.
+
+For verification on a disposable site, register a nonprotected string key with an authorization callback requiring `manage_options`, seed a draft, and call the standalone abilities as its Author without primitive metadata grants. An explicit read, an upsert (including the same value), and a deletion must return `forbidden`; the listing must omit the key and storage must remain unchanged. An Administrator with effective object/key permission can use it. A combined create/update containing that key must instead return `invalid_input` with reason `metadata_requires_separate_call`, leaving posts, metadata, terms, and save hooks untouched.
 
 ### Backslashes in writes
 
 Post/page metadata and media titles, captions, and alt text preserve backslashes through WordPress storage, including repeated or trailing backslashes and escaped quotes. Send decoded values normally; do not add an extra WordPress slashing layer in your MCP client. JSON still requires its usual escaping: `"C:\\path\\"` represents `C:\path\`.
 
-Existing text/HTML sanitization and registered metadata or SEO-provider sanitizers still apply. Responses report sanitized stored values, not necessarily the original input. Post/page create/update metadata remains scalar; `update-post-meta` also supports JSON-compatible arrays and objects. Allowed metadata keys are unchanged. Standalone metadata operations also enforce the key-level policy above; uploads require `upload_files` plus access to any parent post.
+Existing text/HTML sanitization and registered metadata or SEO-provider sanitizers still apply. Responses report sanitized stored values, not necessarily the original input. Use `update-post-meta`: public keys support JSON-compatible arrays and objects; supported protected SEO keys retain their scalar normalization. Allowed standalone metadata keys are unchanged. Uploads require `upload_files` plus access to any parent post.
 
-On a disposable draft, write `yoast_meta_description` with JSON value `"C:\\path\\"` using `update-post`, then read `_yoast_wpseo_metadesc` using `get-post-meta` with the same post ID and explicit `meta_key`. Compare the stored value with `data.meta.written` from the update response, allowing any provider sanitization.
+On a disposable draft, call `update-post-meta` with `{"post_id":123,"meta_key":"_yoast_wpseo_metadesc","meta_value":"C:\\path\\"}`, then read the same explicit key using `get-post-meta`. Compare storage with `data.current_value` from the update response, allowing provider sanitization.
 
 ### Category and tag write permissions
 
@@ -156,7 +162,7 @@ These effective Site Kit capabilities incorporate setup, authentication, verific
 | WordPress | 6.9+; tested through 7.1 |
 | PHP | 8.0+ |
 | [MCP Adapter](https://github.com/WordPress/mcp-adapter) | Latest |
-| [Yoast SEO](https://wordpress.org/plugins/wordpress-seo/) | Optional; enables Yoast metadata, score, generated head, and sitemap diagnostics |
+| [Yoast SEO](https://wordpress.org/plugins/wordpress-seo/) | Optional; enables authorized Yoast metadata, score, and sitemap diagnostics; generated head output is unavailable in 3.0 |
 | [SEOPress](https://wordpress.org/plugins/wp-seopress/) | Optional; enables SEOPress metadata inspection/writes and site overview diagnostics |
 | [Google Site Kit](https://wordpress.org/plugins/google-site-kit/) | Optional; enables Site Kit status, module, permission, and PageSpeed compatibility abilities |
 

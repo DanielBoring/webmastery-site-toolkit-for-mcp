@@ -21,6 +21,34 @@ Historical baseline comparisons require the pre-migration runner from 2.6.0;
 the current strict canonical parser intentionally rejects those old envelopes.
 Do not weaken current assertions to make a historical baseline pass.
 
+## Metadata batch and SEO authorization coverage (3.0)
+
+`metadata-batch-fixture.php` independently lists 34 removed aliases and 147
+presence variants (values, null, empty arrays/strings, containers, raw keys,
+unknown reserved prefixes). `metadata-batch-runner.php` exercises all eight
+built-in/fixture-CPT create/update entrypoints. It requires explicit
+`WSTM110_BATCH_DISPOSABLE=1` in an owned disposable runtime and selects direct
+or registered execution with `WSTM110_BATCH_BOUNDARY`. Never enable it on a
+shared or live site. Whole posts/postmeta/terms/taxonomy/relationship/cron
+snapshots and pre-write/save/status/metadata/term hook counters detect even
+insert-then-delete fake rollbacks. Artifacts retain every input and observation.
+
+The manifest replaces ten obsolete combined successes with original-payload
+no-op rejections, plain creation/update, and 54 exact-key standalone writes.
+Every original normalization/backslash and unrelated-key assertion is retained.
+`capture_post_id` captures only a successful created object for subsequent
+calls. `assert_metadata_boundary` adds full state and zero-hook proof to
+combined-input denials. Contributor publication and parent-assignment checks
+keep their original permission purpose using plain payloads; scheduling keeps
+metadata sentinels instead of injecting aliases into every request.
+
+SEO unit probes reject reads of each of 40 denied keys before they occur,
+check authorized score pagination and total counts, prohibit opaque head
+requests, and enforce the overview's single 100-ID query / at most 400 reads.
+Unit observations are not substitutes for actual WordPress/provider/HTTP QA.
+The [migration guide](../../docs/3.0-migration.md#metadata-and-seo-authorization)
+documents all changed user-facing contracts.
+
 ## Comment moderation regression coverage
 
 `comments-fixture.php` adds `wstm105_*` fixtures and comment-specific checks. Its `wstm105_moderator` actor has the actual `comment_moderator` role with only `read` and `moderate_comments`. Cases cover all four writes, optional update statuses, Author moderation-floor denials, mapped-CPT allowed/denied controls, own-draft moderation, Administrator access, orphan comments, and missing/nonpositive IDs. Existing Editor cases and every landed main manifest case remain unchanged; runtime registrations remain the coverage authority.
@@ -41,7 +69,7 @@ HTTP session-close and application-password revocation failures are recorded ind
 
 `tests/fixtures/seo-analysis.php` supplies five inert-marker scenarios to the unit tests, ability manifest fixtures, and existing MCP HTTP CRUD runner: Yoast found/missing with a competing SEOPress value, SEOPress found/missing after empty-Yoast fallback, and no keyword. Contract cases compare the complete `good` and `issues` arrays (including check IDs, severity, and every diagnostic message), exact keyword/title metrics, provider source, and score through existing `assert_values` placeholders. All earlier cases, including permission negatives, remain intact.
 
-The HTTP runner creates a separate owned SEO post, seeds it through the existing update ability, confirms stored metadata, executes SEO analysis through the actual MCP gateway, and retains each response in `mcp-crud-summary.json` under `seo_analysis`. It also rejects inert markers in every diagnostic message. The original CRUD post remains scheduled for its existing future-post deletion scenario; an extra read verifies its state before deletion. Dedicated SEO cleanup runs even after a case failure, records its response, and fails the summary for unsuccessful cleanup, wrong IDs/statuses, or exceptions. Unit tests additionally cover exact markup, quote, and backslash retention for both providers and both branches, plus unchanged response keys. Run `composer qa:unit -- --filter SeoAnalysisTest`, then managed `scripts/e2e-test.sh all` for actual WordPress and transport evidence.
+The HTTP runner creates a separate owned SEO post, updates plain content and each authorized metadata key in separate calls, confirms stored metadata, executes SEO analysis through the actual MCP gateway, and retains each response in `mcp-crud-summary.json` under `seo_analysis`. It also rejects inert markers in every diagnostic message. The original CRUD post remains scheduled for its existing future-post deletion scenario; an extra read verifies its state before deletion. Dedicated SEO cleanup runs even after a case failure, records its response, and fails the summary for unsuccessful cleanup, wrong IDs/statuses, or exceptions. Unit tests additionally cover exact markup, quote, and backslash retention for both providers and both branches, plus unchanged response keys for fully authorized analysis. Run `composer qa:unit -- --filter SeoAnalysisTest`, then managed `scripts/e2e-test.sh all` for actual WordPress and transport evidence.
 
 This only covers separating focus-keyword data from diagnostics. It adds no field markers, does not verify all annotations or resolve #108, and is not a prompt-injection prevention test.
 

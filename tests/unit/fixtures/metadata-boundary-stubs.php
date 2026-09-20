@@ -30,6 +30,7 @@ final class Probe {
 	public static string $post_type = 'post';
 	public static bool $deny_base = false;
 	public static ?\Closure $metadata_writer = null;
+	public static bool $providers_active = true;
 
 	public static function reset( string $type = 'post' ): void {
 		self::$abilities = self::$mutations = self::$capabilities = self::$reads = self::$denied_keys = array();
@@ -37,6 +38,7 @@ final class Probe {
 		self::$post_type = $type;
 		self::$deny_base = false;
 		self::$metadata_writer = null;
+		self::$providers_active = true;
 		Webmastery_MCP_Posts::register();
 		$register = new \ReflectionMethod( Webmastery_MCP_Custom_Post_Types::class, 'register_custom_post_type' );
 		$register->setAccessible( true );
@@ -183,11 +185,11 @@ function get_option( $key, $default = false ) {
 	if ( 'active_plugins' !== $key ) {
 		throw new LogicException( "Unexpected option read: {$key}" );
 	}
-	return array( 'wp-seopress/seopress.php' );
+	return Probe::$providers_active ? array( 'wp-seopress/seopress.php' ) : array();
 }
 
 function defined( $name ) {
-	return in_array( $name, array( 'WPSEO_VERSION', 'SEOPRESS_VERSION' ), true ) || \defined( $name );
+	return in_array( $name, array( 'WPSEO_VERSION', 'SEOPRESS_VERSION' ), true ) ? Probe::$providers_active : \defined( $name );
 }
 
 class WP_Query {

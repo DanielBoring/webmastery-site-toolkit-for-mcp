@@ -216,10 +216,61 @@ final class SeoMetadataBoundaryTest extends TestCase {
 	public function test_provider_inspection_omits_denied_key_before_reading( string $slug, string $key ): void {
 		Probe::reset();
 		Probe::$denied_keys = array( $key );
+		Probe::$metadata[42][ $key ] = 'WSTM110_FORBIDDEN_INERT_MARKER';
 		$result = $this->execute( $slug, array( 'post_id' => 42 ) );
 		self::assertTrue( $result['success'] );
 		self::assertNotContains( array( 42, $key ), Probe::$reads );
 		self::assertContains( array( 'edit_post_meta', array( 42, $key ) ), Probe::$capabilities );
 		self::assertNotEmpty( $result['data']['unavailable_fields'] );
+		self::assertStringNotContainsString( 'WSTM110_FORBIDDEN_INERT_MARKER', json_encode( $result ) );
+		foreach ( $result['data']['raw_meta'] as $field ) {
+			self::assertNotSame( $key, $field['key'] );
+		}
+	}
+
+	public function test_analysis_uses_authorized_fallback_without_reading_or_leaking_denied_primary(): void {
+		Probe::reset();
+		Probe::$denied_keys = array( '_yoast_wpseo_focuskw', '_yoast_wpseo_metadesc' );
+		Probe::$metadata[42] = array(
+			'_yoast_wpseo_focuskw' => 'WSTM110_HIDDEN_PRIMARY',
+			'_yoast_wpseo_metadesc' => 'WSTM110_HIDDEN_DESCRIPTION',
+			'_seopress_analysis_target_kw' => 'Original',
+			'_seopress_titles_desc' => str_repeat( 'x', 130 ),
+		);
+		$result = $this->execute( 'seo-analyze-post', array( 'post_id' => 42 ) );
+		self::assertSame( 'seopress', $result['data']['metrics']['seo_provider_focus_source'] );
+		self::assertSame( 'seopress', $result['data']['metrics']['seo_provider_meta_source'] );
+		self::assertSame( array(), $result['data']['unevaluable_checks'] );
+		self::assertContains( 'keyword_in_title', array_column( $result['data']['good'], 'check' ) );
+		self::assertContains( 'meta_description', array_column( $result['data']['good'], 'check' ) );
+		self::assertStringNotContainsString( 'WSTM110_HIDDEN', json_encode( $result ) );
+		self::assertArrayNotHasKey( 'yoast_focus_keyword', $result['data']['metrics'] );
+	}
+
+	public function test_analysis_does_not_confuse_denied_data_with_missing_or_evaluate_its_score(): void {
+		Probe::reset();
+		Probe::$denied_keys = array_values( self::OBSERVATIONS );
+		Probe::$metadata[42] = array_fill_keys( Probe::$denied_keys, 'WSTM110_HIDDEN' );
+		$result = $this->execute( 'seo-analyze-post', array( 'post_id' => 42 ) );
+		self::assertSame( array(), Probe::$reads );
+		self::assertSame( array( 'meta_description', 'focus_keyword' ), $result['data']['unevaluable_checks'] );
+		self::assertArrayNotHasKey( 'seo_provider_focus_source', $result['data']['metrics'] );
+		self::assertArrayNotHasKey( 'seo_provider_meta_source', $result['data']['metrics'] );
+		foreach ( array_merge( $result['data']['issues'], $result['data']['good'] ) as $check ) {
+			self::assertNotContains( $check['check'], array( 'meta_description', 'focus_keyword', 'keyword_in_title' ) );
+		}
+		self::assertStringNotContainsString( 'WSTM110_HIDDEN', json_encode( $result ) );
+		self::assertSame( count( $result['data']['good'] ) . '/' . ( count( $result['data']['good'] ) + count( $result['data']['issues'] ) ) . ' checks passed', $result['data']['score'] );
+	}
+
+	public function test_inactive_provider_inspection_and_scores_do_not_read_metadata(): void {
+		foreach ( array( 'get-yoast-metadata', 'get-seopress-metadata', 'get-seo-scores', 'get-readability-scores' ) as $slug ) {
+			Probe::reset();
+			Probe::$providers_active = false;
+			$result = $this->execute( $slug, array( 'post_id' => 42 ) );
+			self::assertTrue( $result['success'] );
+			self::assertSame( array(), Probe::$reads );
+			self::assertSame( array(), Probe::$queries );
+		}
 	}
 }
