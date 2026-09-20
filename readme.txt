@@ -184,6 +184,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 
+* Comment updates, approval, trash, and spam now require permission to edit the specific comment as well as moderation permission. Missing-comment errors are unchanged; invalid IDs cannot select a global comment or a different target.
+
 * Report the configured public home URL scheme independently of the MCP request and admin-only TLS policy.
 * Warn on malformed percent escapes or authority syntax without rejecting valid local, internationalized, or IPv6 configurations.
 * Omit debug-log paths and warn when log access is unverified rather than claiming protection.

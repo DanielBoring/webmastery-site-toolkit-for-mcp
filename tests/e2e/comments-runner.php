@@ -113,7 +113,7 @@ try {
 					$scenarios[ "{$role}_{$invalid}" ] = array( $role, 'other', 'editor' === $role, 'editor' === $role, $invalid );
 				}
 			}
-			if ( 'direct' === $boundary ) {
+			if ( 'http' !== $boundary ) {
 				$scenarios['global_zero'] = array( 'editor', 'other', true, true, 'global_zero' );
 			}
 			foreach ( $scenarios as $scenario => list( $role, $scope, $moderate, $edit ) ) {

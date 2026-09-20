@@ -127,6 +127,19 @@ function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 
 		$comment_id = $fixtures[ "wstm105_{$action}_other" ];
 		$before = wstm105_comment_state( $comment_id );
+		$GLOBALS['comment'] = get_comment( $comment_id );
+		try {
+			$input = array( 'comment_id' => 0, 'content' => 'Must not target the global comment.', 'status' => 'spam' );
+			wstm105_assert( true === $permission( $input ), "{$action} zero ID must defer to the missing-comment execution error." );
+			wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Zero-ID permission callback changed the global comment.' );
+			$result = $execute( $input );
+			$expected = array( 'success' => false, 'error' => 'update' === $action ? array( 'code' => 'not_found', 'message' => 'Comment not found.' ) : 'Comment not found.' );
+			wstm105_assert( $expected === $result, "{$action} zero ID resolved the global comment." );
+			wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Zero-ID execution changed the global comment.' );
+			$checks++;
+		} finally {
+			unset( $GLOBALS['comment'] );
+		}
 		$invalid_inputs = array( null, false, 7, 'invalid', new stdClass(), array(), array( 'comment_id' => array( $comment_id ) ), array( 'comment_id' => new stdClass() ), array( 'comment_id' => true ), array( 'comment_id' => -$comment_id ), array( 'comment_id' => 1.5 ) );
 		foreach ( $invalid_inputs as $input ) {
 			wstm105_assert( true === $permission( $input ), "{$action} malformed input must be deferred to guarded execution." );
