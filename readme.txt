@@ -49,6 +49,12 @@ https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
 
 == Frequently Asked Questions ==
 
+= What changes for clients on the unreleased 3.0 development branch? =
+
+The stable tag remains 2.6.0. Development failures now use success:false and an error object with code, reason, message, and object-shaped details. Seven categories replace mixed codes; precise legacy reasons move to reason. MCP Adapter 0.6.1 tool errors carry this JSON in text with isError:true, not structuredContent. Successful payloads and gateway success wrapping remain unchanged. Bulk summaries are non-atomic; inspect every item even when the batch succeeds. Provider diagnostics are redacted without bypassing capability checks.
+
+Migration matrix and examples: https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/3.0-migration.md
+
 = Which AI clients and MCP hosts work with this? =
 
 Any MCP client that can reach your site through the MCP Adapter works. This includes Claude (Desktop and Code), ChatGPT, GitHub Copilot, Gemini CLI, Windsurf, and Codex. Most local clients connect through the `@automattic/mcp-wordpress-remote` bridge.
@@ -67,7 +73,7 @@ Use a dedicated Editor account for normal content workflows: posts, pages, taxon
 
 Comment updates, approval, trash, and spam actions require both moderate_comments and edit_comment for the specific comment. A custom moderator role also needs the mapped edit permissions for the comment's post; owning a post alone does not remove the moderate_comments requirement.
 
-Missing-comment error shapes are preserved. Invalid or nonpositive IDs cannot fall back to a global comment or silently select another ID. Listing and reply permissions are unchanged.
+Missing-comment failures on this development branch uniformly use not_found code and reason. Invalid or nonpositive IDs cannot fall back to a global comment or silently select another ID. Listing and reply permissions are unchanged.
 
 Use a separate dedicated Administrator account only when you need Administrator-only workflows such as runtime environment details, plugin management, user access audits, site health, database health, performance status, backup status, security audits, or site-wide SEO overview.
 
@@ -133,7 +139,7 @@ The byte limit is per response, not a total network or CPU budget: socket buffer
 
 = How are scheduled dates validated? =
 
-Posts, pages, and custom post types require a nonempty scheduled_date when creating or newly requesting future status. The date must be valid and at least 60 seconds ahead when validated. Malformed calendar/time values, missing dates, and dates too close to now fail before content, metadata, or terms are written. Errors use success:false and error.code/error.message, with invalid_scheduled_date, missing_scheduled_date, or scheduled_date_too_soon.
+Posts, pages, and custom post types require a nonempty scheduled_date when creating or newly requesting future status. The date must be valid and at least 60 seconds ahead when validated. Malformed calendar/time values, missing dates, and dates too close to now fail before content, metadata, or terms are written. Errors use success:false, code invalid_input, and reason invalid_scheduled_date, missing_scheduled_date, or scheduled_date_too_soon.
 
 An edit to an already-scheduled item may omit the date to retain its valid stored local/GMT dates; its GMT date must still meet the cutoff. Near-now/overdue schedules require a new safe date or an explicit nonfuture status. Changing the site timezone does not cause stored dates to be rewritten or rejected solely because they no longer match the current timezone.
 
@@ -193,6 +199,12 @@ Report suspected vulnerabilities privately at https://github.com/DanielBoring/we
 Security fixes target the latest stable release. Reports receive a best-effort response without a guaranteed deadline. See https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/policy for the full policy.
 
 == Changelog ==
+
+= Unreleased =
+
+* Prepare a breaking 3.0 error contract with canonical categories, precise reasons, safe messages, and object details.
+* Signal owned MCP failures consistently, preserve successful payloads and non-atomic bulk summaries, and leave foreign tools unchanged.
+* Keep the 2.6.0 stable tag and release notes intact while development migration work continues.
 
 = 2.6.0 =
 
