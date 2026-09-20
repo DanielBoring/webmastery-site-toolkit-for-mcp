@@ -44,15 +44,15 @@ function wstm111_record( string $id, array $predicates, $actual, array $extra = 
 	);
 }
 
-function wstm111_invoke( string $ability, string $mode, array $scenario ): array {
+function wstm111_invoke( string $ability, string $mode, array $scenario, ?array $input = null ): array {
 	global $wpdb;
 	$before = wstm111_snapshot();
 	$suppressed_before = $wpdb->suppress_errors;
 	$fixture = new Webmastery_MCP_Diagnostics_Fixture( $scenario );
 	try {
 		$result = 'wrapper' === $mode
-			? wp_get_ability( 'webmastery-site-toolkit-for-mcp/' . $ability )->execute()
-			: ( 'security-audit' === $ability ? Webmastery_MCP_Security::execute() : Webmastery_MCP_Database_Health::execute() );
+			? wp_get_ability( 'webmastery-site-toolkit-for-mcp/' . $ability )->execute( $input )
+			: ( 'security-audit' === $ability ? Webmastery_MCP_Security::execute() : Webmastery_MCP_Database_Health::execute( $input ?? array() ) );
 		$request_ssl = is_ssl();
 		$raw_error = $wpdb->last_error;
 		$core_home_scheme = is_string( get_option( 'home' ) ) ? wp_parse_url( home_url(), PHP_URL_SCHEME ) : 'not called: non-string fixture';
@@ -167,15 +167,17 @@ if ( 'home' === $mode_arg ) {
 		$expected_autoload = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(LENGTH(option_name) + LENGTH(option_value)), 0) FROM {$wpdb->options} WHERE autoload IN (" . implode( ',', array_fill( 0, count( $autoload_values ), '%s' ) ) . ')', ...$autoload_values ) );
 		$table_shape = true;
 		foreach ( $data['table_sizes'] as $row ) {
-			$table_shape = $table_shape && array( 'table', 'rows', 'data_bytes', 'index_bytes', 'total_bytes' ) === array_keys( $row )
-				&& is_string( $row['table'] ) && is_int( $row['rows'] ) && is_int( $row['data_bytes'] )
+			$table_shape = $table_shape && array( 'table', 'is_core_table', 'rows', 'data_bytes', 'index_bytes', 'total_bytes' ) === array_keys( $row )
+				&& is_string( $row['table'] ) && is_bool( $row['is_core_table'] ) && is_int( $row['rows'] ) && is_int( $row['data_bytes'] )
 				&& is_int( $row['index_bytes'] ) && is_int( $row['total_bytes'] )
 				&& $row['data_bytes'] + $row['index_bytes'] === $row['total_bytes'];
 		}
 		wstm111_record( "database/{$mode}/success", array(
 			'success_shape' => true === $call['result']['success'] && 5 === count( $data ),
-			'prefixed_posts_present' => in_array( $wpdb->posts, $tables, true ),
-			'prefixed_plugin_table_present' => in_array( $wpdb->prefix . 'wstm111_plugin_data', $tables, true ),
+			'logical_posts_present' => in_array( 'posts', $tables, true ),
+			'opaque_custom_table_present' => in_array( 'custom_table_1', $tables, true ),
+			'prefix_absent_entire_payload' => ! str_contains( wp_json_encode( $call['result'] ), $wpdb->prefix ),
+			'plugin_fingerprint_absent_entire_payload' => ! str_contains( wp_json_encode( $call['result'] ), 'wstm111_plugin_data' ),
 			'revision_counter' => $expected_revisions === $data['post_revisions']['count'],
 			'orphan_counter' => $expected_orphans === $data['orphaned_post_meta']['count'],
 			'expired_counter' => $expected_expired === $data['expired_transients']['count'],
@@ -183,6 +185,18 @@ if ( 'home' === $mode_arg ) {
 			'table_keys_types_arithmetic' => $table_shape,
 			'threshold_unchanged' => 921600 === $data['autoloaded_options']['threshold_bytes'],
 		) + $call['invariants'], $call['result'], $call['evidence'] );
+		$raw_call = wstm111_invoke( 'database-health', $mode, array(), array( 'include_table_names' => true ) );
+		$raw_tables = array_column( $raw_call['result']['data']['table_sizes'], 'table' );
+		$normalized = $raw_call['result'];
+		foreach ( $normalized['data']['table_sizes'] as $index => &$row ) {
+			$row['table'] = $data['table_sizes'][ $index ]['table'];
+		}
+		unset( $row );
+		wstm111_record( "database/{$mode}/explicit-raw-opt-in", array(
+			'prefixed_posts_present' => in_array( $wpdb->posts, $raw_tables, true ),
+			'prefixed_plugin_table_present' => in_array( $wpdb->prefix . 'wstm111_plugin_data', $raw_tables, true ),
+			'metrics_order_other_fields_identical' => $call['result'] === $normalized,
+		) + $raw_call['invariants'], $raw_call['result'], $raw_call['evidence'] );
 	}
 	foreach ( array( 'admin', 'editor_test', 'subscriber_test' ) as $login ) {
 		wp_set_current_user( (int) get_user_by( 'login', $login )->ID );

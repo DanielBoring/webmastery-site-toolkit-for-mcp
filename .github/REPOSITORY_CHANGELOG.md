@@ -8,6 +8,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Add database diagnostic privacy regressions for strict boolean opt-in, query-free direct denials, custom-prefix/multisite physical mappings and suffix collisions, and complete metric/order parity. Keep prior SQL-error and security-audit coverage; add synthetic manifest controls and owned real-table/HTTP evidence with checked table and credential cleanup.
+
 - Added independent canonical-error assertions and strict manifest/validator mutation coverage; migrated existing error expectations without removing persistence, hook, scheduled CRUD, or success-payload checks. Documented the unreleased 3.0 migration and contributor response requirements.
 
 - Added focused SEO keyword data/message regressions for both providers, found/missing diagnostics, Yoast precedence, SEOPress fallback, and no-keyword behavior. Shared inert fixtures exercise exact metrics, complete diagnostic arrays, and scores through units, the ability manifest, and the existing MCP HTTP client; all previous permission cases remain unchanged.

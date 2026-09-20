@@ -624,6 +624,10 @@ $fixtures = array(
 	'delete_tag_id'      => e2e_ensure_term_id( 'mcp-e2e-delete-tag', 'post_tag' ),
 );
 $fixtures['category_id_string'] = (string) $fixtures['category_id'];
+global $wpdb;
+$fixtures['wstm111_posts_table'] = $wpdb->posts;
+$fixtures['wstm111_plugin_table'] = $wpdb->prefix . 'wstm111_plugin_fingerprint';
+$fixtures['wstm111_core_lookalike'] = $wpdb->prefix . 'wstm111_posts';
 
 $fixtures['wstm106_page_id'] = e2e_insert_post( 'page', 'WSTM106 Original', 'WSTM106 original content.', $wstm106_page_editor_id, 'draft', 'wstm106-original' );
 $fixtures['wstm106_parent_id'] = e2e_insert_post( 'page', 'WSTM106 Allowed Parent', 'Allowed parent.', $wstm106_page_editor_id, 'draft' );
