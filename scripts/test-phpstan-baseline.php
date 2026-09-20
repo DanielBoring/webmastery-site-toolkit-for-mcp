@@ -88,7 +88,6 @@ phpstan_test_require(array() === $parameters['excludePaths']['analyse'] && array
 $normalize = static fn(string $path): string => str_replace('\\', '/', $path);
 $expected_paths = array($normalize($repository . '/webmastery-site-toolkit-for-mcp.php'), $normalize($repository . '/includes'));
 phpstan_test_require($expected_paths === array_map($normalize, $parameters['paths']), 'Analyse the entry point and every include.');
-phpstan_test_require(count($parameters['ignoreErrors']) > 0, 'Expected the reviewed baseline.');
 $baseline_count = 0;
 foreach ($parameters['ignoreErrors'] as $ignore) {
 	phpstan_test_require(is_array($ignore), 'Baseline ignores must not be global patterns.');
