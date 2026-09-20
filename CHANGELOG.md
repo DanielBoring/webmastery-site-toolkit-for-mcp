@@ -6,6 +6,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+## 2.6.0
+
 ### Added
 
 - Added private vulnerability reporting guidance and the supported-release security policy to the plugin FAQ.
@@ -15,7 +17,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 - Clarified agent handling of untrusted site content, comment reply/moderation access, dynamic ability counts, and the distinction between plugin results and MCP gateway responses.
 - Expanded the plugin header description to include custom post types, blocks/revisions, webmaster verification, and optional Google Site Kit diagnostics.
-- Shortened the Unreleased upgrade notice to fit WordPress.org's 300-character limit while retaining upload, taxonomy, and compatibility guidance.
+- Kept the 2.6.0 upgrade notice within WordPress.org's 300-character limit, highlighting narrower permissions, unresolved metadata/SEO authorization gaps, and unchanged upload limits and PHP minimum.
 - Updated WordPress tested compatibility to 7.1 after passing ability and MCP transport checks on PHP 8.2 and 8.4.
 - Required object-specific comment edit permission as well as moderation permission for comment updates, approval, trash, and spam actions, preventing custom moderator roles from changing comments on posts they cannot edit. Existing missing-comment responses and the moderation capability floor remain unchanged; invalid/nonpositive IDs cannot target a global comment or another ID through coercion.
 

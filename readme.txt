@@ -4,7 +4,7 @@ Tags: mcp, ai, automation, content-management, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 2.5.0
+Stable tag: 2.6.0
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
@@ -109,6 +109,8 @@ Global/subtype registrations and effective WordPress capability filters are resp
 
 This is a partial authorization fix: post/page create and update metadata/SEO aliases and separate SEO inspection, analysis, and scoring paths retain their existing policies and can still bypass restrictive per-key checks. Standalone hardening does not resolve those risks or establish release readiness. Existing one-call SEO create workflows are unchanged.
 
+Clients using custom roles or registered per-key policies should handle new standalone denials and omitted listing keys. Clients relying on those policies to restrict metadata inside create/update requests, SEO aliases, or separate SEO reads remain affected by the unresolved gaps; do not treat standalone hardening as protection for those paths.
+
 = Can metadata and media text contain backslashes? =
 
 Yes. Post/page metadata and media titles, captions, and alt text preserve backslashes through WordPress storage. Use normal JSON escaping, not an extra WordPress slashing layer. Existing text, HTML, and SEO-provider sanitization still applies; responses reflect sanitized stored values. Allowed metadata keys and object permissions are unchanged. Post/page create/update metadata accepts scalar values; the direct post-meta update ability also supports JSON-compatible arrays and objects.
@@ -192,14 +194,15 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 == Changelog ==
 
-= Unreleased =
+= 2.6.0 =
 
+* Add read-only Google Site Kit setup, module, current-user permission, and same-site PageSpeed abilities with Site Kit-native authorization and sensitive upstream fields removed.
+* Reject invalid or unauthorized page and custom post type parents before saving other changes; retain valid hierarchical parents, detach-to-zero, and omitted parents.
+* Validate custom post type update taxonomy registration and assign-terms permission before saving any requested changes, matching creation.
 * Keep stored SEO focus keywords in metric data rather than diagnostic messages, without changing provider selection, scores, permissions, or response fields.
-
 * Enforce key-level WordPress authorization for standalone post-meta reads, upserts, and deletes. Omit denied keys from listings; retain existing success shapes and protected-key eligibility.
 * This partial fix does not change metadata inside post/page create/update requests or separate SEO read paths; their authorization risks remain unresolved.
 * Comment updates, approval, trash, and spam now require permission to edit the specific comment as well as moderation permission. Missing-comment errors are unchanged; invalid IDs cannot select a global comment or a different target.
-
 * Report the configured public home URL scheme independently of the MCP request and admin-only TLS policy.
 * Warn on malformed percent escapes or authority syntax without rejecting valid local, internationalized, or IPv6 configurations.
 * Omit debug-log paths and warn when log access is unverified rather than claiming protection.
@@ -216,6 +219,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Prevent permanent deletion by post, page, custom post type, and bulk post trash abilities when WordPress trash is disabled. Return an explicit refusal without changing existing enabled-trash behavior.
 * Restrict webmaster verification's WordPress-only Site Kit state to callers with plugin activation permission; retain public checks for Subscribers and Authors.
 * Cache public webmaster verification results for 60 seconds without sharing private plugin state or caller-specific summaries.
+* Update tested WordPress compatibility to 7.1; retain WordPress 6.9 and PHP 8.0 minimum requirements.
+* Document private vulnerability reporting, untrusted-content handling, and the distinction between ability results and MCP gateway responses.
 
 = 2.5.0 =
 * Expand targeted content patching to pages and public editor-enabled custom post types with object-level permissions and explicit unsupported-type errors.
@@ -256,8 +261,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 == Upgrade Notice ==
 
-= Unreleased =
-Standalone post-meta tools now respect effective key-level capabilities, including unchanged or absent values; listings hide denied keys. Metadata inside post/page create/update requests and separate SEO reads are not covered by this partial fix. Image downloads stop at the existing upload limit; invalid limits and DNS failures return errors. Remapped taxonomy and per-term write restrictions are enforced; refused deletions report failure. Upload limits, the PHP floor, and supported WordPress versions are unchanged.
+= 2.6.0 =
+Standalone metadata, comment and taxonomy permissions are tighter. Create/update metadata, SEO aliases and separate SEO reads retain authorization gaps (see FAQ). Clients using custom role/key policies must review denials. Image upload limits and PHP 8.0 minimum are unchanged.
 
 = 2.5.0 =
 Targeted partial-content patches now support pages and eligible custom post types while preserving object-level edit permissions.
