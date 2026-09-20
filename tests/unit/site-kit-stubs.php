@@ -15,7 +15,7 @@ function rest_get_server() {
 }
 
 function home_url( $path = '/' ) {
-	return 'http://localhost' . $path;
+	return ( $GLOBALS['wstm120_home'] ?? 'http://localhost' ) . $path;
 }
 
 final class WP_REST_Request {

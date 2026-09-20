@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added partial #120 test-only coverage for permanent media-delete denials with persisted row/metadata/file evidence, real Contributor draft/publishing boundaries, private/trashed direct getters, and remaining media/SEO/list permission negatives. Added pure-helper characterization and validator mutation tests; retained existing runtime policies, positive cases, and separate unresolved batch metadata work.
 - Add isolated actual-core standalone metadata authorization checks through direct callbacks, abilities, and authenticated MCP HTTP, including effective capability filters, persisted-state denial evidence, provider policies, and temporary-filter cleanup. Retain success/failure reports even when cleanup fails, upload them from contract/HTTP/package workflows, and verify the new runner in mocked package orchestration. Preserve the existing provider create-success contracts and keep the broader metadata release decision open.
 
 - Added comment moderation regression fixtures, mapped-CPT controls, persisted content/status assertions, and mandatory denial/error-compatibility cases in the security QA policy. Dedicated direct/ability/HTTP comment evidence is retained for seven days, including raw transport envelopes and comment/metadata state hashes. Cleanup failures are recorded without blocking later cleanup or failed-run evidence, with injected failure regression coverage.

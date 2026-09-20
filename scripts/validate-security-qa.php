@@ -134,6 +134,7 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/activate-plugin',
 	'webmastery-site-toolkit-for-mcp/approve-comment',
 	'webmastery-site-toolkit-for-mcp/bulk-publish-posts',
+	'webmastery-site-toolkit-for-mcp/bulk-trash-posts',
 	'webmastery-site-toolkit-for-mcp/create-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/create-page',
@@ -142,8 +143,17 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/create-post',
 	'webmastery-site-toolkit-for-mcp/deactivate-plugin',
 	'webmastery-site-toolkit-for-mcp/delete-category',
+	'webmastery-site-toolkit-for-mcp/delete-cpt-mcp-book',
+	'webmastery-site-toolkit-for-mcp/delete-cpt-mcp-case-study',
+	'webmastery-site-toolkit-for-mcp/delete-media',
+	'webmastery-site-toolkit-for-mcp/delete-page',
+	'webmastery-site-toolkit-for-mcp/delete-post',
+	'webmastery-site-toolkit-for-mcp/delete-post-meta',
 	'webmastery-site-toolkit-for-mcp/delete-tag',
 	'webmastery-site-toolkit-for-mcp/get-environment-info',
+	'webmastery-site-toolkit-for-mcp/get-media',
+	'webmastery-site-toolkit-for-mcp/get-page',
+	'webmastery-site-toolkit-for-mcp/get-post',
 	'webmastery-site-toolkit-for-mcp/get-user',
 	'webmastery-site-toolkit-for-mcp/list-site-kit-modules',
 	'webmastery-site-toolkit-for-mcp/get-site-kit-permissions',
@@ -151,10 +161,15 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/list-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/list-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/list-media',
+	'webmastery-site-toolkit-for-mcp/list-posts',
+	'webmastery-site-toolkit-for-mcp/list-pages',
+	'webmastery-site-toolkit-for-mcp/list-categories',
+	'webmastery-site-toolkit-for-mcp/list-tags',
 	'webmastery-site-toolkit-for-mcp/list-users',
 	'webmastery-site-toolkit-for-mcp/patch-content-block',
 	'webmastery-site-toolkit-for-mcp/patch-post-content',
 	'webmastery-site-toolkit-for-mcp/security-audit',
+	'webmastery-site-toolkit-for-mcp/seo-analyze-post',
 	'webmastery-site-toolkit-for-mcp/spam-comment',
 	'webmastery-site-toolkit-for-mcp/trash-comment',
 	'webmastery-site-toolkit-for-mcp/update-comment',
@@ -171,6 +186,98 @@ $required_failure_cases = array(
 foreach ( $required_failure_cases as $ability ) {
 	if ( empty( $summary[ $ability ]['failure'] ) ) {
 		$errors[] = "{$ability} must keep at least one negative permission/security manifest case.";
+	}
+}
+
+// A not-found, invalid-input, or default-category error is not permission proof.
+$required_permission_cases = array(
+	'bulk-trash-posts', 'delete-category', 'delete-tag', 'delete-media',
+	'delete-post', 'delete-page', 'delete-cpt-mcp-book', 'delete-cpt-mcp-case-study',
+	'delete-post-meta', 'get-post', 'get-page', 'get-media', 'seo-analyze-post',
+	'list-posts', 'list-pages', 'list-categories', 'list-tags',
+);
+foreach ( $required_permission_cases as $slug ) {
+	$matches = array_filter(
+		$manifest,
+		static function ( $case ) use ( $slug ) {
+			return "webmastery-site-toolkit-for-mcp/{$slug}" === ( $case['ability'] ?? '' )
+				&& 'failure' === ( $case['expect'] ?? '' )
+				&& 'forbidden' === ( $case['assert_permission'] ?? '' )
+				&& 'ability_invalid_permissions' === ( $case['expect_error_code'] ?? '' );
+		}
+	);
+	if ( ! $matches ) {
+		$errors[] = "{$slug} must retain an exact callback and wrapper permission-denial case.";
+	}
+}
+
+foreach ( array( 'create-post', 'update-post', 'delete-post' ) as $slug ) {
+	foreach ( array( 'success', 'failure' ) as $expect ) {
+		$matches = array_filter(
+			$manifest,
+			static function ( $case ) use ( $slug, $expect ) {
+				return "webmastery-site-toolkit-for-mcp/{$slug}" === ( $case['ability'] ?? '' )
+					&& 'contributor' === ( $case['role'] ?? '' ) && $expect === ( $case['expect'] ?? '' )
+					&& ( 'success' === $expect ? isset( $case['assert_stored_post'] ) : true === ( $case['assert_unchanged'] ?? false ) );
+			}
+		);
+		if ( ! $matches ) {
+			$errors[] = "{$slug} must retain Contributor {$expect} coverage with persisted-state evidence.";
+		}
+	}
+}
+
+foreach ( array( 'subscriber', 'author' ) as $role ) {
+	$matches = array_filter(
+		$manifest,
+		static function ( $case ) use ( $role ) {
+			return 'webmastery-site-toolkit-for-mcp/delete-media' === ( $case['ability'] ?? '' )
+				&& $role === ( $case['role'] ?? '' ) && 'failure' === ( $case['expect'] ?? '' )
+				&& 'forbidden' === ( $case['assert_permission'] ?? '' )
+				&& 'ability_invalid_permissions' === ( $case['expect_error_code'] ?? '' )
+				&& true === ( $case['assert_unchanged'] ?? false );
+		}
+	);
+	if ( ! $matches ) {
+		$errors[] = "delete-media must retain {$role} permission denial with unchanged persisted rows, metadata, and files.";
+	}
+}
+
+foreach ( array( 'publish', 'private', 'future' ) as $status ) {
+	foreach ( array( 'create-post', 'update-post' ) as $slug ) {
+		$matches = array_filter(
+			$manifest,
+			static function ( $case ) use ( $slug, $status ) {
+				$is_create = 'create-post' === $slug;
+				$permission_proof = $is_create
+					? 'forbidden' === ( $case['assert_permission'] ?? '' ) && 'ability_invalid_permissions' === ( $case['expect_error_code'] ?? '' )
+					: true === ( $case['assert_permission'] ?? false ) && false === ( $case['assert_values']['success'] ?? null )
+						&& 'You do not have permission to publish this post.' === ( $case['assert_values']['error'] ?? '' );
+				return "webmastery-site-toolkit-for-mcp/{$slug}" === ( $case['ability'] ?? '' )
+					&& 'contributor' === ( $case['role'] ?? '' ) && 'failure' === ( $case['expect'] ?? '' )
+					&& $status === ( $case['input']['status'] ?? '' )
+					&& true === ( $case['assert_unchanged'] ?? false ) && $permission_proof;
+			}
+		);
+		if ( ! $matches ) {
+			$errors[] = "{$slug} must retain Contributor {$status} permission rejection with no persisted changes.";
+		}
+	}
+}
+
+foreach ( array( 'list-categories', 'list-tags' ) as $slug ) {
+	foreach ( array( 'subscriber' => 'success', 'no_role' => 'failure' ) as $role => $expect ) {
+		$matches = array_filter(
+			$manifest,
+			static function ( $case ) use ( $slug, $role, $expect ) {
+				return "webmastery-site-toolkit-for-mcp/{$slug}" === ( $case['ability'] ?? '' )
+					&& $role === ( $case['role'] ?? '' ) && $expect === ( $case['expect'] ?? '' )
+					&& ( 'success' === $expect ? true : 'ability_invalid_permissions' === ( $case['expect_error_code'] ?? '' ) );
+			}
+		);
+		if ( ! $matches ) {
+			$errors[] = "{$slug} must retain {$role} {$expect} read-capability coverage.";
+		}
 	}
 }
 
