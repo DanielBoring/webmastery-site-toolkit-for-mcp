@@ -307,7 +307,7 @@ run_error_contract_qa() (
 		exit 1
 	fi
 	compose exec -T wordpress grep -Fxq 'CLI only.' /tmp/wstm118-cli-response
-	compose exec -T wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/error-contract-runner.php"
+	compose exec -T -e WSTM118_DISPOSABLE=1 wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/error-contract-runner.php"
 )
 
 run_debug_log_check() {
