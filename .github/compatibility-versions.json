@@ -1,5 +1,5 @@
 {
-    "wordpress": "7.1",
+    "wordpress": "7.1.1",
     "mcp_adapter": "0.6.1",
     "mcp_adapter_sha256": "1c3cd47c32e99b4e7d8690a44a7890256e92a8b96f61776cbe1894e5483cf676",
     "wp_cli": "2.12.0",
