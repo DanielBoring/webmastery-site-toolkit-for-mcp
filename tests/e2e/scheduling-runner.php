@@ -140,8 +140,8 @@ try {
 					$input[ $id_key ] = $id;
 				}
 				$input = array_merge( [ 'title' => 'WSTM113 ' . $label, 'content' => '<p>Changed content</p>', 'slug' => 'wstm113-' . $label ], $input );
-				if ( in_array( $type, [ 'post', 'page' ], true ) ) {
-					$input['yoast_meta_description'] = 'Scheduling regression metadata';
+				if ( $id ) {
+					update_post_meta( $id, '_yoast_wpseo_metadesc', 'Scheduling metadata sentinel' );
 				}
 				if ( 'page' === $type ) {
 					$input['parent'] = $parent_id;
@@ -176,6 +176,9 @@ try {
 				$initial_cron = $post ? wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) : null;
 				$code = wstm118_error_reason( $result );
 				$passed = $error ? $code === $error && $before === $after && [] === $observed : true === ( $result['success'] ?? false ) && ! empty( $observed['save_post'] );
+				if ( $id ) {
+					$passed = $passed && 'Scheduling metadata sentinel' === get_post_meta( $id, '_yoast_wpseo_metadesc', true );
+				}
 				$expected = [];
 				if ( ! $error && $post ) {
 					$effective = $input['status'] ?? ( $before_post['post_status'] ?? 'draft' );

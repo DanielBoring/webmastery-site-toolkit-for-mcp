@@ -89,6 +89,15 @@ foreach ( $manifest as $index => $case ) {
 	}
 
 	$expect = (string) ( $case['expect'] ?? '' );
+	if ( isset( $case['capture_post_id'] ) && ( ! is_string( $case['capture_post_id'] )
+		|| ! preg_match( '/^wstm110_created_[a-z0-9_]+$/', $case['capture_post_id'] )
+		|| 'success' !== $expect || ! preg_match( '#/create-(post|page)$#', $ability ) ) ) {
+		$errors[] = "case {$case_number} capture_post_id requires a successful post/page creation and unique wstm110_created_ fixture name.";
+	}
+	if ( isset( $case['assert_metadata_boundary'] ) && ( true !== $case['assert_metadata_boundary']
+		|| 'failure' !== $expect || 'metadata_requires_separate_call' !== ( $case['expect_error_reason'] ?? null ) ) ) {
+		$errors[] = "case {$case_number} assert_metadata_boundary requires combined-input rejection.";
+	}
 	if ( '' !== $expect && ! in_array( $expect, array( 'success', 'failure' ), true ) ) {
 		$errors[] = webmastery_mcp_manifest_path( $case_number, 'expect' ) . ' must be success or failure.';
 	}
