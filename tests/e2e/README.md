@@ -165,51 +165,6 @@ interlocks remain separate development work, and optional text-only output
 is not implemented. Existing #110/#118 no-write, key-authorization, and error
 transport assertions must not be relaxed for marker addition.
 
-## Metadata batch and SEO authorization coverage (3.0)
-
-`metadata-batch-fixture.php` independently lists 34 removed aliases and 147
-presence variants (values, null, empty arrays/strings, containers, raw keys,
-unknown reserved prefixes). `metadata-batch-runner.php` exercises all eight
-built-in/fixture-CPT create/update entrypoints. It requires explicit
-`WSTM110_BATCH_DISPOSABLE=1` in an owned disposable runtime and selects
-`direct`, `ability`, `http` (gateway), or `individual` execution with
-`WSTM110_BATCH_BOUNDARY`. Never enable it on a
-shared or live site. Whole posts/postmeta/terms/taxonomy/relationship/cron
-snapshots and pre-write/save/status/metadata/term hook counters detect even
-insert-then-delete fake rollbacks. Artifacts retain every input and observation.
-Each boundary expects 1,176 rejections plus four positive draft/plain-update/
-individual-metadata/publish workflows. HTTP observation requires a request-scoped
-token and an explicit response header from `metadata-batch-http-fixture.php`;
-a missing header is a failure, not evidence of zero hooks.
-
-`seo-metadata-runner.php` uses the same opt-in and boundaries with the temporary
-`seo-metadata-fixture.php` forbidden-read observer and existing standalone
-authorization fixture. With both real SEO providers active, it expects 252 cases:
-40 keys on posts/pages under map denial, final-user-cap denial, and explicit
-primitive-grant controls; eight analysis cases; two score-filter cases; bounded
-overview observations; and URL-only head refusal. Individual HTTP requires the
-temporary `wstm118-individual` server after the normal registration audit.
-These runners retain raw responses and observer evidence, revoke their own
-application passwords, and remove owned objects/options. Unit transport seams
-prove strict error handling, discovery ambiguity, required observer evidence,
-and session-cleanup failures; they do not establish actual HTTP/provider results.
-
-The manifest replaces ten obsolete combined successes with original-payload
-no-op rejections, plain creation/update, and 54 exact-key standalone writes.
-Every original normalization/backslash and unrelated-key assertion is retained.
-`capture_post_id` captures only a successful created object for subsequent
-calls. `assert_metadata_boundary` adds full state and zero-hook proof to
-combined-input denials. Contributor publication and parent-assignment checks
-keep their original permission purpose using plain payloads; scheduling keeps
-metadata sentinels instead of injecting aliases into every request.
-
-SEO unit probes reject reads of each of 40 denied keys before they occur,
-check authorized score pagination and total counts, prohibit opaque head
-requests, and enforce the overview's single 100-ID query / at most 400 reads.
-Unit observations are not substitutes for actual WordPress/provider/HTTP QA.
-The [migration guide](../../docs/3.0-migration.md#metadata-and-seo-authorization)
-documents all changed user-facing contracts.
-
 ## Comment moderation regression coverage
 
 `comments-fixture.php` adds `wstm105_*` fixtures and comment-specific checks. Its `wstm105_moderator` actor has the actual `comment_moderator` role with only `read` and `moderate_comments`. Cases cover all four writes, optional update statuses, Author moderation-floor denials, mapped-CPT allowed/denied controls, own-draft moderation, Administrator access, orphan comments, and missing/nonpositive IDs. Existing Editor cases and every landed main manifest case remain unchanged; runtime registrations remain the coverage authority.
