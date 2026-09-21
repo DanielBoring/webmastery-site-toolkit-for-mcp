@@ -4,6 +4,22 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Plugins {
 
+	public static function active_basenames() {
+		$active_plugins = get_option( 'active_plugins', array() );
+		if ( ! is_array( $active_plugins ) ) {
+			$active_plugins = array();
+		}
+
+		if ( is_multisite() ) {
+			$network_plugins = get_site_option( 'active_sitewide_plugins', array() );
+			if ( is_array( $network_plugins ) ) {
+				$active_plugins = array_merge( $active_plugins, array_keys( $network_plugins ) );
+			}
+		}
+
+		return array_values( array_unique( array_map( 'strval', $active_plugins ) ) );
+	}
+
 	public static function register() {
 		self::load_plugin_api();
 		self::register_list();
