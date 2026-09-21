@@ -9,6 +9,11 @@ if ( '1' !== getenv( 'WSTM111_DISPOSABLE_SITE' ) ) {
 }
 
 $_SERVER['HTTP_HOST'] = 'localhost';
+$site_path = getenv( 'WSTM111_PRIVACY_SITE_PATH' ) ?: '/';
+if ( ! preg_match( '#^/(?:[a-z0-9-]+/)*$#D', $site_path ) ) {
+	throw new RuntimeException( 'Privacy site path must be an absolute local WordPress path.' );
+}
+$_SERVER['REQUEST_URI'] = $site_path;
 require_once '/var/www/html/wp-load.php';
 require_once __DIR__ . '/database-table-privacy-fixture.php';
 define( 'WEBMASTERY_MCP_E2E_CLIENT_ONLY', true );
@@ -75,7 +80,7 @@ function wstm111_privacy_http( array $private_names, array $actors ): void {
 				throw new RuntimeException( 'Could not create owned transport credential.' );
 			}
 			$endpoint = 'gateway' === $transport ? '/wp-json/mcp/mcp-adapter-default-server' : '/wp-json/wstm118/tools';
-			$client = new Webmastery_MCP_E2E_Client( 'http://localhost' . $endpoint, $login, $credential[0] );
+			$client = new Webmastery_MCP_E2E_Client( home_url( $endpoint ), $login, $credential[0] );
 			$wire_results = array();
 			try {
 				$client->initialize();
@@ -190,6 +195,9 @@ try {
 		throw new RuntimeException( 'Registered database-health ability is unavailable.' );
 	}
 	require_once ABSPATH . 'wp-admin/includes/user.php';
+	if ( is_multisite() ) {
+		require_once ABSPATH . 'wp-admin/includes/ms.php';
+	}
 	foreach ( array( 'admin' => 'administrator', 'subscriber' => 'subscriber' ) as $label => $role ) {
 		$login = $run . '-' . $label;
 		$id = wp_create_user( $login, wp_generate_password( 40 ), $login . '@example.test' );
@@ -233,18 +241,32 @@ try {
 		wp_set_current_user( $subscriber->ID );
 		foreach ( array( array(), array( 'include_table_names' => true ) ) as $index => $input ) {
 			$queries = array();
+			$notices = array();
+			$expected_notice = esc_html( Webmastery_MCP_Response::permission_error(
+				Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' )
+			)->get_error_message() );
+			$observe_denial = static function ( $trigger, $function, $message ) use ( $expected_notice, &$notices ) {
+				if ( 'WP_Ability::execute' === $function && $expected_notice === $message ) {
+					$notices[] = array( 'function' => $function, 'message' => $message );
+					return false;
+				}
+				return $trigger;
+			};
 			add_filter( 'query', $observe, PHP_INT_MAX );
+			add_filter( 'doing_it_wrong_trigger_error', $observe_denial, PHP_INT_MAX, 3 );
 			try {
 				$result = $execute( $input );
 			} finally {
 				remove_filter( 'query', $observe, PHP_INT_MAX );
+				remove_filter( 'doing_it_wrong_trigger_error', $observe_denial, PHP_INT_MAX );
 			}
 			$error = is_wp_error( $result ) ? Webmastery_MCP_Response::from_wp_error( $result ) : $result;
 			wstm111_privacy_check( "{$boundary}/subscriber-{$index}", array(
 				'forbidden' => false === ( $error['success'] ?? null ) && 'forbidden' === ( $error['error']['code'] ?? null ),
 				'no_diagnostic_queries' => ! array_filter( $queries, static fn( $query ) => str_contains( $query, 'information_schema' ) || str_contains( $query, 'COUNT(' ) || str_contains( $query, 'SUM(' ) ),
 				'no_table_data' => ! isset( $error['data'] ),
-			), array( 'result' => $error, 'queries' => $queries ) );
+				'exact_native_denial_diagnostic' => ( 'registered' === $boundary ? 1 : 0 ) === count( $notices ),
+			), array( 'result' => $error, 'queries' => $queries, 'native_diagnostics' => $notices ) );
 		}
 		wp_set_current_user( $admin->ID );
 	}
@@ -273,6 +295,8 @@ try {
 	}
 }
 $report = $GLOBALS['wstm111_privacy_report'];
+$report['passed'] = count( array_filter( array_column( $report['cases'], 'passed' ) ) );
+$report['failed'] = count( $report['cases'] ) - $report['passed'];
 webmastery_mcp_e2e_write_summary(
 	getenv( 'WSTM111_PRIVACY_ARTIFACT' ) ?: dirname( __DIR__, 2 ) . '/e2e-artifacts/database-table-privacy.json',
 	$report

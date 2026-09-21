@@ -228,6 +228,8 @@ For actual MCP checks, install the test-only `error-contract-fixture.php` MU fix
 
 The contract lane runs native proof after the normal manifest audit; the HTTP lane runs transport proof while the shared individual-tool MU fixture is installed. Original-ZIP QA runs both. Each stage checks non-CLI HTTP 403 before execution. Separate `database-table-privacy-native.json` and `database-table-privacy-http.json` reports are retained for seven days, including failed runs; mocked package/bootstrap tests require the disposable opt-in and preserve all metadata/error stages.
 
+For a real subdirectory multisite, set `WSTM111_PRIVACY_SITE_PATH=/privacy/` to the owned subsite path before bootstrap. Native and HTTP calls then address that same blog. The registered Subscriber negatives capture and assert the exact core permission diagnostic; only that deliberate diagnostic is suppressed from the debug log, and all unrelated diagnostics remain enabled.
+
 ## Backslash persistence regressions
 
 The `wstm122` manifest cases cover plain post/page creation and updates followed by separate SEO metadata calls, media upload/update title/caption/alt text, and the already-correct direct structured metadata path. Assertions include repeated/trailing backslashes, escaped quotes, regex-style JSON text, sanitized HTML/text, and denied updates with unchanged stored metadata. Uploads use the existing in-process HTTP image fixture; they do not download a live image or relax production URL checks. The HTTP CRUD runner also asserts metadata backslashes through separate calls after both post creation and update. Existing ordinary content/backslash and allowed/denied cases remain in place.
