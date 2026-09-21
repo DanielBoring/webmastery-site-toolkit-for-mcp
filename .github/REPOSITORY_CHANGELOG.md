@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Reconciled all ten ranked coverage groups for #120 against named tests, effective capability controls, persisted-state/write observers and source-bound runtime evidence, with metadata acceptance kept explicit. Added focused manifest unit guards and isolated mutations protecting existing destructive no-write denials and media-update denial/readback controls; corrected stale Contributor error-envelope guidance without changing production behavior or manifest inputs.
 - Added independent canonical-error assertions and strict manifest/validator mutation coverage; migrated existing error expectations without removing persistence, hook, scheduled CRUD, or success-payload checks. Documented the unreleased 3.0 migration and contributor response requirements.
 - Added disposable-only actual MCP gateway/individual error probes, advertised-tool discovery, core hook/no-replay checks, provider redaction and foreign-result isolation controls, bulk-state evidence, credential cleanup readback, and retained failed-run artifacts.
 
