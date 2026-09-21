@@ -108,6 +108,14 @@ with the **same environment variables and namespace**:
 php tests\e2e\bounded-list-benchmark.php cleanup
 ```
 
+Cleanup can resume after the journaled actor was already deleted, including
+when control-option deletion failed or the process stopped between those
+steps. It still requires the matching live control token and journaled IDs and
+markers. A different existing actor at the original ID or using the namespace,
+a foreign post marker, or a lookup error remains a refusal, not permission for
+broader deletion. Isolated crash-phase tests cover partial cleanup and retry;
+real-runtime recovery evidence remains lease-gated.
+
 The PHP 8.1-compatible memory bound is the final global allocated peak minus
 current allocated memory immediately before the operation, in a fresh process.
 It is an upper bound, not an exact incremental peak: a bootstrap peak can cause

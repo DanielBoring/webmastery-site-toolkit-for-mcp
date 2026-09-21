@@ -6,7 +6,212 @@ use PHPUnit\Framework\TestCase;
 
 require_once dirname( __DIR__ ) . '/e2e/bounded-list-assertions.php';
 
+// Isolate WordPress function doubles from the shared unit bootstrap. Execute the
+// actual fixture functions, not a second implementation of cleanup.
+$cleanup_source = file_get_contents( dirname( __DIR__ ) . '/e2e/bounded-list-benchmark.php' );
+$cleanup_source = str_replace(
+	array( 'declare(strict_types=1);', "require_once __DIR__ . '/bounded-list-assertions.php';" ),
+	'',
+	substr( $cleanup_source, 5 )
+);
+eval( 'namespace Wstm121CleanupOracle; use \RuntimeException; use \Throwable; use \ReflectionClass;
+function username_exists( $name ) { return $GLOBALS["wpdb"]->find_actor( $name ); }
+function delete_option( $name ) { return $GLOBALS["wpdb"]->remove_control( $name ); }
+' . $cleanup_source );
+unset( $cleanup_source );
+
+final class BoundedBenchmarkCleanupDatabase {
+	public string $last_error = '';
+	public string $posts = 'fixture_posts';
+	public string $postmeta = 'fixture_postmeta';
+	public string $users = 'fixture_users';
+	public string $usermeta = 'fixture_usermeta';
+	public string $options = 'fixture_options';
+	public ?string $control = 'owned-token';
+	public array $actors = array( 42 => 'w121_0123456789ab', 99 => 'unrelated' );
+	public array $post_rows = array( 7 => array( 42, 'owned-token' ), 8 => array( 99, 'unrelated-token' ) );
+	public array $post_meta = array( 7 => 'owned', 8 => 'unrelated' );
+	public array $user_meta = array( 42 => 'owned', 99 => 'unrelated' );
+	public array $mutations = array();
+	public string $failure_phase = '';
+	public bool $fail_actor_lookup = false;
+	private array $prepared = array();
+
+	public function prepare( string $sql, ...$args ): string {
+		$key = 'prepared-' . count( $this->prepared );
+		$this->prepared[ $key ] = array( $sql, $args );
+		return $key;
+	}
+
+	public function find_actor( string $name ) {
+		return array_search( $name, $this->actors, true );
+	}
+
+	public function get_var( string $prepared ) {
+		list( $sql, $args ) = $this->prepared[ $prepared ];
+		$this->last_error = '';
+		if ( 'SELECT option_value FROM fixture_options WHERE option_name=%s' === $sql ) {
+			if ( 'w121_0123456789ab_control' !== $args[0] ) {
+				throw new LogicException( 'Wrong control option.' );
+			}
+			return $this->control;
+		}
+		if ( 'SELECT user_login FROM fixture_users WHERE ID=%d' === $sql ) {
+			if ( $this->fail_actor_lookup ) {
+				$this->last_error = 'Injected actor lookup failure';
+				return null;
+			}
+			return $this->actors[ $args[0] ] ?? null;
+		}
+		if ( 'SELECT COUNT(*) FROM fixture_users WHERE user_login=%s AND ID<>%d' === $sql ) {
+			return count( array_filter( $this->actors, static fn( $login, $id ) => $login === $args[0] && $id !== $args[1], ARRAY_FILTER_USE_BOTH ) );
+		}
+		if ( 'SELECT COUNT(*) FROM fixture_posts WHERE post_author=%d AND post_content_filtered<>%s' === $sql ) {
+			return count( array_filter( $this->post_rows, static fn( $post ) => $post[0] === $args[0] && $post[1] !== $args[1] ) );
+		}
+		throw new LogicException( 'Unexpected cleanup read: ' . $sql );
+	}
+
+	private function crash_after( string $phase ): void {
+		if ( $this->failure_phase === $phase ) {
+			$this->failure_phase = '';
+			throw new RuntimeException( 'Injected interruption after ' . $phase );
+		}
+	}
+
+	public function query( string $prepared ): int {
+		list( $sql, $args ) = $this->prepared[ $prepared ];
+		$is_meta = 'DELETE m FROM fixture_postmeta m INNER JOIN fixture_posts p ON p.ID=m.post_id WHERE p.post_author=%d AND p.post_content_filtered=%s' === $sql;
+		if ( ! $is_meta && 'DELETE FROM fixture_posts WHERE post_author=%d AND post_content_filtered=%s' !== $sql ) {
+			throw new LogicException( 'Unexpected or unscoped cleanup delete: ' . $sql );
+		}
+		$this->mutations[] = $sql;
+		foreach ( $this->post_rows as $id => $post ) {
+			if ( $post[0] === $args[0] && $post[1] === $args[1] ) {
+				if ( $is_meta ) {
+					unset( $this->post_meta[ $id ] );
+				} else {
+					unset( $this->post_rows[ $id ] );
+				}
+			}
+		}
+		$this->crash_after( $is_meta ? 'postmeta' : 'posts' );
+		return 1;
+	}
+
+	public function delete( string $table, array $where ): int {
+		$this->mutations[] = array( $table, $where );
+		if ( 'fixture_usermeta' === $table && array( 'user_id' => 42 ) === $where ) {
+			unset( $this->user_meta[42] );
+			$this->crash_after( 'usermeta' );
+		} elseif ( 'fixture_users' === $table && array( 'ID' => 42 ) === $where ) {
+			unset( $this->actors[42] );
+			$this->crash_after( 'actor' );
+		} else {
+			throw new LogicException( 'Unexpected or unscoped actor cleanup.' );
+		}
+		return 1;
+	}
+
+	public function remove_control( string $name ): bool {
+		if ( 'w121_0123456789ab_control' !== $name ) {
+			throw new LogicException( 'Wrong cleanup option.' );
+		}
+		$this->mutations[] = 'delete-control';
+		if ( 'control-delete' === $this->failure_phase ) {
+			$this->failure_phase = '';
+			return false;
+		}
+		$this->control = null;
+		return true;
+	}
+}
+
 final class BoundedBenchmarkFixtureTest extends TestCase {
+	private function cleanup_state(): array {
+		return array( 'owns_control' => true, 'namespace' => 'w121_0123456789ab', 'token' => 'owned-token', 'user' => 42 );
+	}
+
+	private function with_cleanup_database( callable $test ): void {
+		$existed = array_key_exists( 'wpdb', $GLOBALS );
+		$previous = $GLOBALS['wpdb'] ?? null;
+		$GLOBALS['wpdb'] = new BoundedBenchmarkCleanupDatabase();
+		try {
+			$test( $GLOBALS['wpdb'] );
+		} finally {
+			if ( $existed ) {
+				$GLOBALS['wpdb'] = $previous;
+			} else {
+				unset( $GLOBALS['wpdb'] );
+			}
+		}
+	}
+
+	public function test_cleanup_retries_each_partial_deletion_phase_without_broadening_ownership(): void {
+		foreach ( array( 'postmeta', 'posts', 'usermeta', 'actor', 'control-delete' ) as $phase ) {
+			$this->with_cleanup_database( function ( BoundedBenchmarkCleanupDatabase $db ) use ( $phase ): void {
+				$db->failure_phase = $phase;
+				$state = $this->cleanup_state();
+				try {
+					\Wstm121CleanupOracle\wstm121_cleanup( $state );
+					self::fail( 'Expected injected cleanup interruption: ' . $phase );
+				} catch ( RuntimeException $error ) {
+					self::assertStringContainsString( 'control-delete' === $phase ? 'Cannot remove fixture control marker' : 'Injected interruption', $error->getMessage() );
+				}
+				self::assertSame( 'owned-token', $db->control );
+				if ( in_array( $phase, array( 'actor', 'control-delete' ), true ) ) {
+					self::assertArrayNotHasKey( 42, $db->actors, 'Retry must actually exercise the absent original actor.' );
+				}
+				\Wstm121CleanupOracle\wstm121_cleanup( $state );
+				self::assertNull( $db->control );
+				self::assertSame( array( 99 => 'unrelated' ), $db->actors );
+				self::assertSame( array( 8 => array( 99, 'unrelated-token' ) ), $db->post_rows );
+				self::assertSame( array( 8 => 'unrelated' ), $db->post_meta );
+				self::assertSame( array( 99 => 'unrelated' ), $db->user_meta );
+			} );
+		}
+	}
+
+	public function test_cleanup_retry_refuses_mismatched_token_actor_id_namespace_or_post_marker(): void {
+		foreach ( array( 'token', 'missing-token', 'actor-id', 'namespace-id', 'post-marker', 'actor-read-error' ) as $case ) {
+			$this->with_cleanup_database( function ( BoundedBenchmarkCleanupDatabase $db ) use ( $case ): void {
+				unset( $db->actors[42] );
+				if ( 'token' === $case ) {
+					$db->control = 'different-token';
+				} elseif ( 'missing-token' === $case ) {
+					$db->control = null;
+				} elseif ( 'actor-id' === $case ) {
+					$db->actors[42] = 'different-actor';
+				} elseif ( 'namespace-id' === $case ) {
+					$db->actors[43] = 'w121_0123456789ab';
+				} elseif ( 'post-marker' === $case ) {
+					$db->post_rows[7][1] = 'different-marker';
+				} else {
+					$db->fail_actor_lookup = true;
+				}
+				$before = array( $db->control, $db->actors, $db->post_rows, $db->post_meta, $db->user_meta );
+				try {
+					\Wstm121CleanupOracle\wstm121_cleanup( $this->cleanup_state() );
+					self::fail( 'Unsafe cleanup accepted: ' . $case );
+				} catch ( RuntimeException $error ) {
+					self::assertNotSame( '', $error->getMessage() );
+				}
+				self::assertSame( array(), $db->mutations, $case );
+				self::assertSame( $before, array( $db->control, $db->actors, $db->post_rows, $db->post_meta, $db->user_meta ), $case );
+			} );
+		}
+	}
+
+	public function test_cleanup_still_recovers_actor_inserted_before_id_was_journaled(): void {
+		$this->with_cleanup_database( function ( BoundedBenchmarkCleanupDatabase $db ): void {
+			$state = $this->cleanup_state();
+			unset( $state['user'] );
+			\Wstm121CleanupOracle\wstm121_cleanup( $state );
+			self::assertNull( $db->control );
+			self::assertSame( array( 99 => 'unrelated' ), $db->actors );
+		} );
+	}
+
 	private function record(): array {
 		return array(
 			'per_page' => 20, 'page' => 2, 'orphan' => false, 'candidate_count' => 21,

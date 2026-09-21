@@ -51,6 +51,8 @@
  * After a killed run, with the SAME opt-ins and namespace, use:
  *   php tests\e2e\bounded-list-benchmark.php cleanup
  * Cleanup validates the random control token and every ownership marker.
+ * A retry permits the journaled actor to be absent after partial cleanup, but
+ * refuses a different actor at that ID or another actor using its namespace.
  * No global cache flush, plugin activation, files under uploads, application
  * password, scheduled event, persistent role definition, or persistent hook is created.
  */
@@ -243,7 +245,12 @@ function wstm121_cleanup( array $state ): void {
 	if ( $user ) {
 		$login = $wpdb->get_var( $wpdb->prepare( "SELECT user_login FROM {$wpdb->users} WHERE ID=%d", $user ) );
 		wstm121_db_ok();
-		wstm121_require( $login === $state['namespace'], 'Actor ownership mismatch; refusing cleanup.' );
+		// Actor deletion precedes control deletion. An absent journaled actor is
+		// therefore a valid retry state, not permission to adopt a replacement.
+		wstm121_require( null === $login || $login === $state['namespace'], 'Actor ownership mismatch; refusing cleanup.' );
+		$replacement = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->users} WHERE user_login=%s AND ID<>%d", $state['namespace'], $user ) );
+		wstm121_db_ok();
+		wstm121_require( 0 === $replacement, 'Actor namespace belongs to a different ID; refusing cleanup.' );
 		$foreign = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_author=%d AND post_content_filtered<>%s", $user, $state['token'] ) );
 		wstm121_db_ok();
 		wstm121_require( 0 === $foreign, 'Fixture actor owns unmarked posts; refusing cleanup.' );
