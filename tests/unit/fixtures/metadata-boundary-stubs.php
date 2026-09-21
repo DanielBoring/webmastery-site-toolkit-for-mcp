@@ -6,7 +6,7 @@ use LogicException;
 use RuntimeException;
 
 // Execute unchanged production bodies with fail-fast WordPress boundary probes.
-foreach ( array( 'class-posts.php', 'class-custom-post-types.php', 'class-seo.php' ) as $file ) {
+foreach ( array( 'class-list-query.php', 'class-posts.php', 'class-custom-post-types.php', 'class-seo.php' ) as $file ) {
 	$source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/' . $file );
 	eval( 'namespace Wstm110Boundary; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Post_Scheduling; use \Webmastery_MCP_Post_Parent; ' . substr( $source, 5 ) );
 }
@@ -208,9 +208,16 @@ class WP_Query {
 		ksort( $posts, SORT_NUMERIC );
 		$this->found_posts = count( $posts );
 		if ( ( $args['posts_per_page'] ?? -1 ) > 0 ) {
-			$posts = array_slice( $posts, 0, $args['posts_per_page'], true );
+			$posts = array_slice( $posts, $args['offset'] ?? 0, $args['posts_per_page'], true );
 		}
+
 		$this->posts = 'ids' === ( $args['fields'] ?? '' ) ? array_keys( $posts ) : array_values( $posts );
+	}
+}
+
+function _prime_post_caches( $ids, $terms, $meta ) {
+	if ( $meta ) {
+		throw new UnauthorizedRead( 'Primed metadata before key authorization.' );
 	}
 }
 

@@ -15,6 +15,7 @@
 - [ ] Capability checks use the narrowest relevant WordPress capability and return/surface `WP_Error` on failure
 - [ ] Delegated permissions retain a local WordPress floor plus upstream authorization in both entry paths, fail closed on missing/non-callable upstream checks, and distinguish fixture evidence from version-specific real-provider inspection
 - [ ] List/query abilities filter returned objects with object/status-aware checks and do not leak unauthorized totals or sensitive identity fields
+- [ ] Bounded list changes retain candidate/query/capability budgets, empty-window continuation, stable ID ties, summary omission versus exact full values, and effective object/key authorization; document pagination/projection migrations, preserve prior oracles in a ledger, and distinguish leased runtime/package evidence from unit/static checks
 - [ ] Security-sensitive abilities include allowed and denied E2E manifest cases, plus `assert_missing_paths` for fields hidden from lower-privilege callers
 - [ ] Metadata changes preserve pre-mutation combined-input rejection, real-object effective key authorization, and direct/ability/gateway/individual-tool no-write/no-forbidden-read proof, with plain-content and draft/write/publish migration controls
 - [ ] Destructive changes retain exact confirmation, raw bulk bounds, strict optional flags, unchanged-state/hook/cron preview and denial proof, distinct callback/per-item permission evidence, and fail-closed media reference scans even with force; migrated callers retain their original assertions

@@ -7,6 +7,54 @@ The Docker QA suite has two layers:
 1. Ability Contract QA is ability-driven. Every registered `webmastery-site-toolkit-for-mcp/*` ability must be represented in `tests/e2e/abilities-manifest.json`.
 2. Full MCP E2E QA uses real MCP Adapter HTTP JSON-RPC requests against `/wp-json/mcp/mcp-adapter-default-server` to prove a remote MCP client can create, read, update, and delete content through the adapter transport.
 
+## Bounded-list coverage and oracle migration (3.0)
+
+The windowed content/media/score/orphan lists return `items`, `page`, `per_page`,
+and `next_page`; they no longer compute exact filtered totals. Empty candidate
+windows can continue. Post/page/CPT/revision lists default to summary and require
+`fields:"full"` for content. See the [typed migration
+contract](../../docs/3.0-migration.md#bounded-list-windows-and-summary-projection).
+
+`BoundedListTest` proves the old 20,000-candidate path exceeds the 100-object
+authorization bound, then covers every changed list surface, sparse/empty
+continuation, EOF, same-direction ID ties, full stored bytes, revision shape,
+and batched reference hit/failure mapping. These are isolated unit probes, not
+WordPress database or runtime performance measurements.
+
+`tests/fixtures/bounded-list-manifest-migration.json` records the approved
+`ad26b21` baseline (563 exact case hashes) and all 18 before/after cases. The
+unit guard preserves every original label/role/outcome and unchanged assertion;
+future intentional migrations must explicitly update the relevant ledger.
+
+| Changed oracle | Replacement and retained purpose |
+| --- | --- |
+| Six post/page/CPT private/trash zero-total cases | Empty `items`, explicit EOF, absent totals; same actors/filters and object denial |
+| Two Contributor/Editor positive post/page total/page cases | Same exact ID, capabilities and author-login absence; `page`, `per_page`, EOF and absent second item/totals |
+| Two existing revision full-content cases | Explicit `fields:"full"` preserves the original content/id/parent/type oracles; additional default-summary cases prove content omission and excerpt presence |
+| Eight other successful list cases | Add window field types/values and absent totals without removing membership, author, score, MIME, URL or taxonomy assertions |
+| SEO key authorization unit and standalone runner | Same authorized IDs/scores, no denied-key reads; traverse candidate windows or compare the same window minus the denied object, with unchanged continuation |
+| Destructive known-reference unit checker | Same featured/URL/GUID truth, force/permission/no-write/fail-closed assertions; URL/GUID pattern columns now share one query rather than requiring separate COUNT queries |
+| Security manifest policy | Require private empty-window/EOF/no-total proof; mutation tests reject deleting any part of the new oracle |
+
+No baseline case is deleted. Other manifest totals (for example Site Kit) are
+unchanged. Existing stored-content getter/writer, metadata unknown/unevaluable,
+and destructive state/hook/cron assertions remain mandatory.
+
+The opt-in `bounded-list-benchmark.php` and `bounded-list-assertions.php` prepare
+large-library evidence independently of shared orchestration. Do not run this
+fixture, Docker, or local WordPress without an explicit disposable-runtime lease.
+The fixture targets at least 20,000 posts and 10,000 attachments, only 100 large
+55-KB bodies, and operation-local counters excluding seed/catalog setup.
+Acceptance budgets are: candidate IDs at most `P+1`, distinct authorized
+candidates at most `P`, capability calls at most `5P+10`, ordinary SQL at most
+`3P+12`, orphan SQL at most `3P+12+ceil(2P/50)`, controlled default-20 summary
+logical payload at most 64 KiB, and incremental peak at most 64 MiB for `P=100`.
+Retain raw measurement methods/counters and failed artifacts; do not weaken
+budgets to obtain a pass. PHP 8.1 has no peak reset, so the runner must use a
+fresh process and an explicitly conservative memory bound, not claim the
+previous global peak is an incremental operation peak. Runtime/package and
+shared-validator/source-marker integration evidence remain separate gates.
+
 ## Unreleased canonical error coverage
 
 All manifest failures require `expect_error_shape:"canonical"`, a seven-category
@@ -113,7 +161,7 @@ keep their original permission purpose using plain payloads; scheduling keeps
 metadata sentinels instead of injecting aliases into every request.
 
 SEO unit probes reject reads of each of 40 denied keys before they occur,
-check authorized score pagination and total counts, prohibit opaque head
+check authorized score membership across bounded windows without totals, prohibit opaque head
 requests, and enforce the overview's single 100-ID query / at most 400 reads.
 Unit observations are not substitutes for actual WordPress/provider/HTTP QA.
 The [migration guide](../../docs/3.0-migration.md#metadata-and-seo-authorization)

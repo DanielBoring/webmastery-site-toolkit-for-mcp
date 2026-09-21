@@ -61,33 +61,17 @@ class Webmastery_MCP_Media {
 	}
 
 	private static function query_readable_attachments( $args, $page, $per_page ) {
-		$count_args = array_merge(
-			$args,
-			[
-				'fields'         => 'ids',
-				'posts_per_page' => -1,
-				'paged'          => 1,
-				'no_found_rows'  => true,
-			]
-		);
-
-		$query        = new WP_Query( $count_args );
-		$readable_ids = [];
-
-		foreach ( $query->posts as $id ) {
+		$window = Webmastery_MCP_List_Query::window( $args, $page, $per_page );
+		$items  = [];
+		foreach ( $window['ids'] as $id ) {
 			if ( self::can_read_attachment( (int) $id ) ) {
-				$readable_ids[] = (int) $id;
+				$item = self::normalize( $id );
+				if ( null !== $item ) {
+					$items[] = $item;
+				}
 			}
 		}
-
-		$total    = count( $readable_ids );
-		$page_ids = array_slice( $readable_ids, ( max( 1, (int) $page ) - 1 ) * $per_page, $per_page );
-
-		return [
-			'items'       => array_values( array_filter( array_map( [ self::class, 'normalize' ], array_map( 'get_post', $page_ids ) ) ) ),
-			'total'       => $total,
-			'total_pages' => $per_page > 0 ? (int) ceil( $total / $per_page ) : 1,
-		];
+		return Webmastery_MCP_List_Query::result( $window, $items );
 	}
 
 
@@ -377,7 +361,7 @@ class Webmastery_MCP_Media {
 	private static function register_list() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-media', [
 			'label'               => 'List Media',
-			'description'         => 'List WordPress media items with optional filters.',
+			'description'         => 'List WordPress media in bounded candidate windows. Follow next_page even for empty items; no exact totals.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',

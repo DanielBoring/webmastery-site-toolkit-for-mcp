@@ -145,6 +145,9 @@ function current_user_can( $capability, ...$args ) {
 }
 
 function get_post( $id ) {
+	if ( is_object( $id ) ) {
+		return $id;
+	}
 	return $GLOBALS['wstm_test_posts'][ $id ] ?? null;
 }
 
@@ -169,6 +172,7 @@ function wp_delete_term( $id, $taxonomy ) {
 }
 
 require_once dirname(__DIR__, 2) . '/includes/class-post-scheduling.php';
+require_once dirname(__DIR__, 2) . '/includes/class-list-query.php';
 require_once dirname(__DIR__, 2) . '/includes/class-posts.php';
 require_once dirname(__DIR__, 2) . '/includes/class-custom-post-types.php';
 require_once dirname(__DIR__, 2) . '/includes/class-taxonomy.php';

@@ -8,11 +8,14 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Changed
 
+- Breaking development change for 3.0: bound content, media, orphan-media, and score lists to candidate windows of at most 100 plus one lookahead ID. Replace exact filtered totals with explicit next-page continuation; empty authorized windows can still continue.
+- Default post/page/custom-post-type and revision lists to summary projection, omitting content without changing excerpts or other stored values. Explicit full projection and existing get/write responses retain content.
+- Batch candidate-specific featured-image and literal URL/GUID reference checks, preserving per-attachment known-use results and fail-closed media deletion even when forced.
 - Breaking development change for 3.0: require explicit boolean confirmation for permanent media/category/tag deletion and both bulk post operations, including previews. Bound bulk inputs to 100 raw entries and process normalized duplicate IDs once.
 - Add non-mutating bulk eligibility previews with would-act successes, unchanged authorization/status/trash safeguards, and an explicit preview marker; retain non-atomic per-item failure summaries.
 - Refuse media deletion with known featured-image or literal content URL/GUID references unless explicitly forced. Reuse orphan-media reference checks, fail closed on scan errors even with force, and report known usage on successful deletion. Confirmation and force do not grant capabilities or prove human approval.
 - Breaking development change for 3.0: reject metadata containers and SEO aliases in post, page, and custom post type create/update requests before any mutation, including empty or null inputs. Migrate to draft creation, separate authorized metadata writes, then publication; these steps are not atomic.
-- Enforce effective real-object metadata permissions in SEO inspection, analysis, and scores. Omit unavailable fields rather than exposing raw values or derived diagnostics; filter score totals and pagination after authorization.
+- Enforce effective real-object metadata permissions in SEO inspection, analysis, and scores. Omit unavailable fields rather than exposing raw values or derived diagnostics; authorize score keys within bounded candidate windows without exact totals.
 - Remove opaque generated Yoast head inspection and reject URL-only head requests. Limit site overview metadata observations to the first 100 published post/page IDs, reporting authorized sample counts rather than sitewide missing-metadata totals.
 - Breaking development change for 3.0: standardize ability failures on seven error categories with precise reasons, safe messages, and object-shaped details; keep successful payloads and capability policies unchanged.
 - Signal owned MCP gateway and individual-tool failures as tool errors with canonical JSON text, including early permission refusals. Preserve foreign tool behavior and document the Adapter's missing structured error support.

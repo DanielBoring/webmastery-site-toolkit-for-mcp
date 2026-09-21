@@ -50,7 +50,7 @@ class Webmastery_MCP_Content_Hygiene {
 	private static function register_list_orphaned_media() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-orphaned-media', [
 			'label'               => 'List Orphaned Media',
-			'description'         => 'List unattached media items that are not used as featured images or referenced in post content.',
+			'description'         => 'List unattached media without known featured-image or literal URL/GUID references in a bounded candidate window. Follow next_page even for empty items; no exact totals.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
@@ -70,7 +70,6 @@ class Webmastery_MCP_Content_Hygiene {
 			'post_type'      => 'attachment',
 			'post_status'    => 'inherit',
 			'post_parent'    => 0,
-			'posts_per_page' => -1,
 			'orderby'        => [
 				'date' => 'DESC',
 				'ID'   => 'DESC',
@@ -82,36 +81,28 @@ class Webmastery_MCP_Content_Hygiene {
 			$args['author'] = get_current_user_id();
 		}
 
-		$query = new WP_Query( $args );
-		$items = [];
-
-		foreach ( $query->posts as $attachment ) {
-			if ( ! current_user_can( 'edit_post', $attachment->ID ) ) {
-				continue;
+		$window      = Webmastery_MCP_List_Query::window( $args, self::page( $input ), self::per_page( $input ) );
+		$attachments = [];
+		foreach ( $window['ids'] as $id ) {
+			$attachment = get_post( $id );
+			if ( $attachment && current_user_can( 'edit_post', $id ) ) {
+				$attachments[] = $attachment;
 			}
-			$referenced = self::is_attachment_referenced( $attachment );
-			if ( is_wp_error( $referenced ) ) {
-				return $referenced;
-			}
-			if ( $referenced ) {
-				continue;
-			}
-
-			$items[] = self::normalize_orphaned_media( $attachment );
 		}
-
-		$per_page = self::per_page( $input );
-		$page     = self::page( $input );
-		$total    = count( $items );
-		$offset   = ( $page - 1 ) * $per_page;
+		$referenced = self::attachments_referenced( $attachments );
+		if ( is_wp_error( $referenced ) ) {
+			return $referenced;
+		}
+		$items = [];
+		foreach ( $attachments as $attachment ) {
+			if ( ! $referenced[ $attachment->ID ] ) {
+				$items[] = self::normalize_orphaned_media( $attachment );
+			}
+		}
 
 		return [
 			'success' => true,
-			'data'    => [
-				'items'       => array_slice( $items, $offset, $per_page ),
-				'total'       => $total,
-				'total_pages' => (int) ceil( $total / $per_page ),
-			],
+			'data'    => Webmastery_MCP_List_Query::result( $window, $items ),
 		];
 	}
 
@@ -129,56 +120,81 @@ class Webmastery_MCP_Content_Hygiene {
 	}
 
 	public static function is_attachment_referenced( $attachment ) {
-		global $wpdb;
-
 		$attachment = get_post( $attachment );
 		if ( ! $attachment ) {
 			return false;
 		}
+		$result = self::attachments_referenced( [ $attachment ] );
+		return is_wp_error( $result ) ? $result : $result[ $attachment->ID ];
+	}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Explicit audit query for attachment thumbnail references.
-		$thumbnail_count = $wpdb->get_var(
+	public static function attachments_referenced( array $attachments ) {
+		global $wpdb;
+
+		if ( [] === $attachments ) {
+			return [];
+		}
+		if ( count( $attachments ) > 100 ) {
+			return Webmastery_MCP_Response::local_error( 'invalid_input', 'At most 100 attachment candidates may be checked.' );
+		}
+		$by_id = [];
+		foreach ( $attachments as $attachment ) {
+			$attachment = get_post( $attachment );
+			if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
+				return Webmastery_MCP_Response::local_error( 'invalid_input', 'Reference checks require existing attachments.' );
+			}
+			$by_id[ (int) $attachment->ID ] = $attachment;
+		}
+		$hits         = array_fill_keys( array_keys( $by_id ), false );
+		$placeholders = implode( ', ', array_fill( 0, count( $by_id ), '%s' ) );
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Bounded candidate IDs and literal patterns are prepared; no sitewide metadata materialization.
+		$thumbnail_ids = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT COUNT(1) FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s",
-				'_thumbnail_id',
-				(string) $attachment->ID
+				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value IN ($placeholders)",
+				array_merge( [ '_thumbnail_id' ], array_map( 'strval', array_keys( $by_id ) ) )
 			)
 		);
-		if ( null === $thumbnail_count || '' !== $wpdb->last_error ) {
+		if ( null === $thumbnail_ids || '' !== $wpdb->last_error ) {
 			return self::database_error( 'attachment thumbnail references' );
 		}
-
-		if ( absint( $thumbnail_count ) > 0 ) {
-			return true;
+		foreach ( $thumbnail_ids as $id ) {
+			if ( array_key_exists( (int) $id, $hits ) ) {
+				$hits[ (int) $id ] = true;
+			}
 		}
 
-		$references = array_filter(
-			array_unique(
-				[
-					wp_get_attachment_url( $attachment->ID ),
-					$attachment->guid,
-				]
-			)
-		);
-
-		foreach ( $references as $reference ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Explicit audit query for attachment URL usage in post content.
-			$content_count = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT COUNT(1) FROM {$wpdb->posts} WHERE post_content LIKE %s",
-					'%' . $wpdb->esc_like( $reference ) . '%'
-				)
-			);
-			if ( null === $content_count || '' !== $wpdb->last_error ) {
+		$patterns = [];
+		foreach ( $by_id as $id => $attachment ) {
+			if ( $hits[ $id ] ) {
+				continue;
+			}
+			$references = array_filter( array_unique( [ wp_get_attachment_url( $id ), $attachment->guid ] ) );
+			foreach ( $references as $reference ) {
+				$patterns[] = [ 'id' => $id, 'like' => '%' . $wpdb->esc_like( $reference ) . '%' ];
+			}
+		}
+		foreach ( array_chunk( $patterns, 50 ) as $chunk ) {
+			$columns = [];
+			foreach ( array_keys( $chunk ) as $index ) {
+				$columns[] = "COALESCE(MAX(post_content LIKE %s), 0) AS ref_{$index}";
+			}
+			$sql = 'SELECT ' . implode( ', ', $columns ) . " FROM {$wpdb->posts}";
+			$row = $wpdb->get_row( $wpdb->prepare( $sql, array_column( $chunk, 'like' ) ), 'ARRAY_A' );
+			if ( null === $row || '' !== $wpdb->last_error ) {
 				return self::database_error( 'attachment content references' );
 			}
-
-			if ( absint( $content_count ) > 0 ) {
-				return true;
+			foreach ( $chunk as $index => $pattern ) {
+				if ( ! isset( $row[ "ref_{$index}" ] ) ) {
+					return self::database_error( 'attachment content references' );
+				}
+				if ( (int) $row[ "ref_{$index}" ] > 0 ) {
+					$hits[ $pattern['id'] ] = true;
+				}
 			}
 		}
-
-		return false;
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+		return $hits;
 	}
 
 	private static function database_error( $context ) {

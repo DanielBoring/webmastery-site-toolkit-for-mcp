@@ -57,6 +57,10 @@ Migration matrix and examples: https://github.com/DanielBoring/webmastery-site-t
 
 Permanent media/category/tag deletion and both bulk post operations now require the exact JSON boolean confirm:true, including bulk previews. Bulk requests accept at most 100 raw IDs and process duplicates once; dry_run:true reports would-act successes without mutation. These explicitly documented changes add a preview marker and media in_use boolean to successful responses.
 
+Post/page/custom-post-type, media, orphan-media, and score lists now return candidate windows with items, page, per_page, and next_page instead of exact total/total_pages. Continue until next_page is null, including after empty or short windows. Existing roles and object/key permissions still apply; per_page caps candidates at 100, not visible results.
+
+Post/page/custom-post-type and revision lists default to fields:"summary", which omits content only. Request fields:"full" for unchanged stored content. Excerpts and other values are unchanged; get/write responses stay full. These are not transactional snapshots or constant-time database queries, and summary payloads have no universal byte limit. Orphan-reference queries are batched over bounded candidates; scan errors still block forced media deletion.
+
 = Which AI clients and MCP hosts work with this? =
 
 Any MCP client that can reach your site through the MCP Adapter works. This includes Claude (Desktop and Code), ChatGPT, GitHub Copilot, Gemini CLI, Windsurf, and Codex. Most local clients connect through the `@automattic/mcp-wordpress-remote` bridge.
@@ -210,6 +214,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 
+* Replace unbounded list materialization with candidate windows and next_page continuation, including empty windows; remove exact filtered totals for content, media, orphan-media, and score lists.
+* Default content and revision lists to summary projection; explicit fields:"full" preserves stored content. Batch known media references without relaxing permission or database-failure safeguards.
 * Require exact confirmation for permanent media/term deletion and both bulk post operations; bound raw bulk requests to 100 IDs and add non-mutating eligibility previews.
 * Guard media deletion with shared known-reference checks; require explicit force for known usage, fail closed on scan errors, and report in_use on success without changing capabilities.
 * Reject combined metadata and SEO inputs in post/page/custom-post-type create and update before any mutation; migrate to draft creation, separate authorized key writes, then publication.
@@ -286,7 +292,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Upgrade Notice ==
 
 = Unreleased =
-3.0 development requires separate metadata calls. Create a draft, write authorized keys, then publish; this is not atomic. SEO reads omit denied keys, generated Yoast head output is unavailable, and overview counts describe an authorized sample.
+3.0 development: lists use next_page, not exact totals; continue after empty windows. Content/revision lists default to summary; request fields:"full" for content. Metadata writes are separate/non-atomic. Errors and destructive confirmation also change; read the migration guide.
 
 = 2.6.0 =
 Standalone metadata, comment and taxonomy permissions are tighter. Create/update metadata, SEO aliases and separate SEO reads retain authorization gaps (see FAQ). Clients using custom role/key policies must review denials. Image upload limits and PHP 8.0 minimum are unchanged.

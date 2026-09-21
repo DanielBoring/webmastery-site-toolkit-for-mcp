@@ -89,27 +89,16 @@ class Webmastery_MCP_Posts {
 		return $readable;
 	}
 
-	private static function query_readable_posts( $args, $page, $per_page ) {
-		$count_args = array_merge(
-			$args,
-			[
-				'fields'         => 'ids',
-				'posts_per_page' => -1,
-				'paged'          => 1,
-				'no_found_rows'  => true,
-			]
-		);
-
-		$query        = new WP_Query( $count_args );
-		$readable_ids = self::filter_readable_post_ids( $query->posts );
-		$total        = count( $readable_ids );
-		$page_ids     = array_slice( $readable_ids, ( max( 1, (int) $page ) - 1 ) * $per_page, $per_page );
-
-		return [
-			'items'       => array_values( array_filter( array_map( [ self::class, 'normalize' ], array_map( 'get_post', $page_ids ) ) ) ),
-			'total'       => $total,
-			'total_pages' => $per_page > 0 ? (int) ceil( $total / $per_page ) : 1,
-		];
+	private static function query_readable_posts( $args, $page, $per_page, $fields = 'summary' ) {
+		$window = Webmastery_MCP_List_Query::window( $args, $page, $per_page );
+		$items  = [];
+		foreach ( self::filter_readable_post_ids( $window['ids'] ) as $id ) {
+			$item = self::normalize( $id );
+			if ( null !== $item ) {
+				$items[] = Webmastery_MCP_List_Query::project( $item, $fields );
+			}
+		}
+		return Webmastery_MCP_List_Query::result( $window, $items );
 	}
 
 	private static function writable_protected_meta_keys() {
@@ -1382,13 +1371,14 @@ class Webmastery_MCP_Posts {
 	private static function register_list_revisions() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-revisions', [
 			'label'               => 'List Revisions',
-			'description'         => 'List saved revisions for a WordPress post or page.',
+			'description'         => 'List saved revisions for a WordPress post or page. Summary omits content; use fields full for stored revision content.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
 					'post_id'  => [ 'type' => 'integer', 'description' => 'Post or page ID whose revisions should be listed.' ],
 					'per_page' => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 20 ],
+					'fields'   => Webmastery_MCP_List_Query::fields_schema(),
 				],
 				'required'   => [ 'post_id' ],
 			],
@@ -1411,7 +1401,7 @@ class Webmastery_MCP_Posts {
 					$post_id,
 					[
 						'posts_per_page' => $per_page,
-						'orderby'        => 'date',
+						'orderby'        => [ 'date' => 'DESC', 'ID' => 'DESC' ],
 						'order'          => 'DESC',
 					]
 				);
@@ -1421,7 +1411,10 @@ class Webmastery_MCP_Posts {
 					'data'    => [
 						'post_id'   => $post_id,
 						'type'      => $post->post_type,
-						'revisions' => array_values( array_filter( array_map( [ self::class, 'normalize_revision' ], $revisions ) ) ),
+						'revisions' => array_values( array_map(
+							static fn( $revision ) => Webmastery_MCP_List_Query::project( $revision, $input['fields'] ?? 'summary' ),
+							array_filter( array_map( [ self::class, 'normalize_revision' ], $revisions ) )
+						) ),
 					],
 				];
 			},
@@ -1698,6 +1691,7 @@ class Webmastery_MCP_Posts {
 				'author'   => [ 'type' => 'integer' ],
 				'orderby'  => [ 'type' => 'string', 'enum' => [ 'date', 'title', 'modified', 'id' ], 'default' => 'date' ],
 				'order'    => [ 'type' => 'string', 'enum' => [ 'ASC', 'DESC' ], 'default' => 'DESC' ],
+				'fields'   => Webmastery_MCP_List_Query::fields_schema(),
 			],
 		];
 
@@ -1707,7 +1701,7 @@ class Webmastery_MCP_Posts {
 
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/list-{$slug}", [
 			'label'               => "List {$label}s",
-			'description'         => "List WordPress {$slug} with optional filters.",
+			'description'         => "List WordPress {$slug} in bounded candidate windows. Follow next_page even for empty items; no exact totals. Summary omits content; fields full includes it.",
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => $list_input,
 			'execute_callback'    => function ( $input ) use ( $type, $slug ) {
@@ -1735,7 +1729,7 @@ class Webmastery_MCP_Posts {
 
 				$per_page = min( max( 1, (int) ( $input['per_page'] ?? 20 ) ), 100 );
 				$page     = max( 1, (int) ( $input['page'] ?? 1 ) );
-				$data     = self::query_readable_posts( $args, $page, $per_page );
+				$data     = self::query_readable_posts( $args, $page, $per_page, $input['fields'] ?? 'summary' );
 
 				return [
 					'success' => true,

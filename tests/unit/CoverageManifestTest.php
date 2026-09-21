@@ -15,6 +15,9 @@ final class CoverageManifestTest extends TestCase {
 			array( 'contributor-private', 'security', 1 ),
 			array( 'contributor-future-message', 'security', 1 ),
 			array( 'taxonomy-allowed', 'security', 1 ),
+			array( 'window-items', 'security', 1 ),
+			array( 'window-continuation', 'security', 1 ),
+			array( 'window-no-totals', 'security', 1 ),
 			array( 'unknown-role', 'e2e', 1 ),
 			array( 'disabled-state', 'e2e', 1 ),
 			array( 'invalid-capability', 'e2e', 1 ),
@@ -35,6 +38,11 @@ final class CoverageManifestTest extends TestCase {
 		copy( $root . '/tests/e2e/error-contract-assertions.php', $tmp . '/tests/e2e/error-contract-assertions.php' );
 		$cases = json_decode( file_get_contents( $root . '/tests/e2e/abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
 		foreach ( $cases as &$case ) {
+			if ( in_array( $case['ability'], array( 'webmastery-site-toolkit-for-mcp/list-posts', 'webmastery-site-toolkit-for-mcp/list-pages' ), true ) && 'private' === ( $case['input']['status'] ?? '' ) ) {
+				if ( 'window-items' === $mutation ) { unset( $case['assert_values']['data.items'] ); }
+				if ( 'window-continuation' === $mutation ) { unset( $case['assert_values']['data.next_page'] ); }
+				if ( 'window-no-totals' === $mutation ) { $case['assert_missing_paths'] = array(); }
+			}
 			if ( 'webmastery-site-toolkit-for-mcp/delete-media' === $case['ability'] && 'failure' === $case['expect'] ) {
 				if ( 'denial-code' === $mutation ) { $case['expect_error_code'] = 'not_found'; }
 				if ( 'callback-code' === $mutation ) { $case['assert_permission'] = 'not_found'; }

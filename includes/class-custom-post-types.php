@@ -196,27 +196,16 @@ class Webmastery_MCP_Custom_Post_Types {
 		return $readable;
 	}
 
-	private static function query_readable_posts( $post_type_object, $args, $page, $per_page ) {
-		$count_args = array_merge(
-			$args,
-			[
-				'fields'         => 'ids',
-				'posts_per_page' => -1,
-				'paged'          => 1,
-				'no_found_rows'  => true,
-			]
-		);
-
-		$query        = new WP_Query( $count_args );
-		$readable_ids = self::filter_readable_post_ids( $post_type_object, $query->posts );
-		$total        = count( $readable_ids );
-		$page_ids     = array_slice( $readable_ids, ( max( 1, (int) $page ) - 1 ) * $per_page, $per_page );
-
-		return [
-			'items'       => array_values( array_filter( array_map( [ self::class, 'normalize_post' ], array_map( 'get_post', $page_ids ) ) ) ),
-			'total'       => $total,
-			'total_pages' => $per_page > 0 ? (int) ceil( $total / $per_page ) : 1,
-		];
+	private static function query_readable_posts( $post_type_object, $args, $page, $per_page, $fields = 'summary' ) {
+		$window = Webmastery_MCP_List_Query::window( $args, $page, $per_page );
+		$items  = [];
+		foreach ( self::filter_readable_post_ids( $post_type_object, $window['ids'] ) as $id ) {
+			$item = self::normalize_post( $id );
+			if ( null !== $item ) {
+				$items[] = Webmastery_MCP_List_Query::project( $item, $fields );
+			}
+		}
+		return Webmastery_MCP_List_Query::result( $window, $items );
 	}
 
 
@@ -441,7 +430,7 @@ class Webmastery_MCP_Custom_Post_Types {
 			self::ability_name( 'list', $ability_base ),
 			[
 				'label'               => "List {$post_type_object->label}",
-				'description'         => "List {$post_type_object->label} custom post type items with optional filters.",
+				'description'         => "List {$post_type_object->label} in bounded candidate windows. Follow next_page even for empty items; no exact totals. Summary omits content; fields full includes it.",
 				'category'            => self::NAMESPACE,
 				'input_schema'        => [
 					'type'       => 'object',
@@ -453,6 +442,7 @@ class Webmastery_MCP_Custom_Post_Types {
 						'author'   => [ 'type' => 'integer' ],
 						'orderby'  => [ 'type' => 'string', 'enum' => [ 'date', 'title', 'modified', 'id' ], 'default' => 'date' ],
 						'order'    => [ 'type' => 'string', 'enum' => [ 'ASC', 'DESC' ], 'default' => 'DESC' ],
+						'fields'   => Webmastery_MCP_List_Query::fields_schema(),
 					],
 				],
 				'execute_callback'    => function ( $input ) use ( $post_type_object, $post_type_name ) {
@@ -477,7 +467,7 @@ class Webmastery_MCP_Custom_Post_Types {
 
 					$per_page = min( max( 1, (int) ( $input['per_page'] ?? 20 ) ), 100 );
 					$page     = max( 1, (int) ( $input['page'] ?? 1 ) );
-					$data     = self::query_readable_posts( $post_type_object, $args, $page, $per_page );
+					$data     = self::query_readable_posts( $post_type_object, $args, $page, $per_page, $input['fields'] ?? 'summary' );
 
 					return [
 						'success' => true,
