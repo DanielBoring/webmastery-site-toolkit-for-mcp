@@ -57,6 +57,9 @@ final class Webmastery_MCP_List_Query {
 	public static function project( array $item, string $fields ): array {
 		if ( 'summary' === $fields ) {
 			unset( $item['content'] );
+			if ( isset( $item['untrusted_fields'] ) ) {
+				$item['untrusted_fields'] = array_values( array_diff( $item['untrusted_fields'], [ 'content' ] ) );
+			}
 		}
 		return $item;
 	}

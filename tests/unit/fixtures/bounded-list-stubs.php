@@ -2,6 +2,8 @@
 
 namespace Wstm121;
 
+require_once dirname( __DIR__, 3 ) . '/includes/class-input.php';
+
 foreach ( array( 'class-list-query.php', 'class-posts.php', 'class-custom-post-types.php', 'class-media.php', 'class-content-hygiene.php', 'class-seo.php' ) as $file ) {
 	$path = dirname( __DIR__, 3 ) . '/includes/' . $file;
 	if ( is_file( $path ) ) {
@@ -17,12 +19,14 @@ final class Probe {
 	public static array $denied = array();
 	public static array $abilities = array();
 	public static array $sticky = array();
+	public static bool $validate_input = false;
 	public static string $type = 'post';
 	public static string $content = '<!-- wp:paragraph --><p>"quoted" C:\\path\\</p><!-- /wp:paragraph -->';
 	public static function reset(): void {
 		self::$size = 20000;
 		self::$queries = self::$caps = self::$primed = self::$denied = self::$abilities = self::$sticky = array();
 		self::$type = 'post';
+		self::$validate_input = false;
 	}
 }
 
@@ -63,7 +67,9 @@ function current_user_can( $cap, ...$args ) {
 	Probe::$caps[] = array( $cap, $args );
 	return ! in_array( $args[0] ?? 0, Probe::$denied, true );
 }
-function wp_register_ability( $name, $args ) { Probe::$abilities[ $name ] = $args; }
+function wp_register_ability( $name, $args ) {
+	Probe::$abilities[ $name ] = Probe::$validate_input ? \Webmastery_MCP_Input::register_args( $args, $name ) : $args;
+}
 function get_permalink( $id ) { return 'https://example.test/?p=' . $id; }
 function get_the_author_meta( $key, $id ) { return 'Stored author'; }
 function get_post_thumbnail_id( $id ) { return 0; }

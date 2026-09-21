@@ -8,6 +8,9 @@ use Webmastery_MCP_Input;
 require_once dirname( __DIR__, 3 ) . '/includes/class-input.php';
 require_once dirname( __DIR__, 3 ) . '/includes/class-media.php';
 
+$list_query_source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-list-query.php' );
+eval( 'namespace Wstm126Boundary; ' . substr( $list_query_source, 5 ) );
+
 final class BoundaryReached extends RuntimeException {}
 
 final class Probe {

@@ -107,16 +107,7 @@ final class BoundedListTest extends TestCase {
 	public function test_all_list_surfaces_bound_large_denied_libraries( string $slug, string $type ): void {
 		Probe::$type = $type;
 		Probe::$denied = range( 1, 20000 );
-		Posts::register();
-		\Wstm121\Webmastery_MCP_Media::register();
-		\Wstm121\Webmastery_MCP_Content_Hygiene::register();
-		\Wstm121\Webmastery_MCP_SEO::register();
-		$method = new ReflectionMethod( \Wstm121\Webmastery_MCP_Custom_Post_Types::class, 'register_custom_post_type' );
-		$method->setAccessible( true );
-		$method->invoke( null, (object) array(
-			'name' => 'test', 'label' => 'Test', 'labels' => (object) array( 'singular_name' => 'Test' ),
-			'hierarchical' => false, 'cap' => (object) array( 'read_post' => 'read_test', 'edit_posts' => 'edit_tests', 'edit_others_posts' => 'edit_others_tests' ),
-		), 'test' );
+		$this->register_lists();
 		$execute = Probe::$abilities[ 'webmastery-site-toolkit-for-mcp/' . $slug ]['execute_callback'];
 		$result = $execute( array( 'page' => 2, 'per_page' => 100 ) );
 		self::assertTrue( $result['success'] );
@@ -133,6 +124,52 @@ final class BoundedListTest extends TestCase {
 		self::assertLessThanOrEqual( 510, count( Probe::$caps ) );
 		self::assertArrayNotHasKey( 'total', $result['data'] );
 		self::assertArrayNotHasKey( 'total_pages', $result['data'] );
+	}
+
+	private function register_lists(): void {
+		Posts::register();
+		\Wstm121\Webmastery_MCP_Media::register();
+		\Wstm121\Webmastery_MCP_Content_Hygiene::register();
+		\Wstm121\Webmastery_MCP_SEO::register();
+		$method = new ReflectionMethod( \Wstm121\Webmastery_MCP_Custom_Post_Types::class, 'register_custom_post_type' );
+		$method->setAccessible( true );
+		$method->invoke( null, (object) array(
+			'name' => 'test', 'label' => 'Test', 'labels' => (object) array( 'singular_name' => 'Test' ),
+			'hierarchical' => false, 'cap' => (object) array( 'read_post' => 'read_test', 'edit_posts' => 'edit_tests', 'edit_others_posts' => 'edit_others_tests' ),
+		), 'test' );
+	}
+
+	public function test_registered_raw_callbacks_validate_fields_before_queries_or_capabilities(): void {
+		Probe::$validate_input = true;
+		$this->register_lists();
+		foreach ( array( 'list-posts', 'list-pages', 'list-cpt-test', 'list-revisions' ) as $slug ) {
+			$args = Probe::$abilities[ 'webmastery-site-toolkit-for-mcp/' . $slug ];
+			self::assertSame( array( 'summary', 'full' ), $args['input_schema']['properties']['fields']['enum'] );
+			self::assertSame( 'summary', $args['input_schema']['properties']['fields']['default'] );
+			foreach ( array( null, false, 0, 1, 1.0, array(), (object) array(), '', 'FULL', ' full', 'summary!', 'everything' ) as $fields ) {
+				$input = array( 'fields' => $fields );
+				if ( 'list-revisions' === $slug ) { $input['post_id'] = 1; }
+				foreach ( array( 'execute_callback', 'permission_callback' ) as $callback ) {
+					$result = $args[ $callback ]( $input );
+					if ( 'permission_callback' === $callback ) {
+						self::assertInstanceOf( WP_Error::class, $result );
+						$result = Webmastery_MCP_Response::from_wp_error( $result );
+					}
+					self::assertFalse( $result['success'] );
+					self::assertSame( 'invalid_input', $result['error']['code'] );
+					self::assertSame( 'ability_invalid_input', $result['error']['reason'] );
+					self::assertSame( array(), Probe::$queries );
+					self::assertSame( array(), Probe::$caps );
+					self::assertSame( array(), Probe::$primed );
+				}
+			}
+		}
+		$callback = Probe::$abilities['webmastery-site-toolkit-for-mcp/list-posts']['execute_callback'];
+		$summary = $callback( array( 'per_page' => 1 ) );
+		$full = $callback( array( 'per_page' => 1, 'fields' => 'full' ) );
+		self::assertArrayNotHasKey( 'content', $summary['data']['items'][0] );
+		self::assertSame( Probe::$content, $full['data']['items'][0]['content'] );
+		self::assertCount( 2, Probe::$queries );
 	}
 
 	public function test_revision_summary_and_full_preserve_original_shape_and_values(): void {
@@ -176,6 +213,20 @@ final class BoundedListTest extends TestCase {
 		} finally {
 			Probe::$content = $original;
 		}
+	}
+
+	public function test_projection_preserves_pending_source_markers_except_omitted_content(): void {
+		$marked = array(
+			'title' => 'Stored title', 'content' => Probe::$content, 'excerpt' => 'Stored excerpt',
+			'untrusted_fields' => array( 'title', 'content', 'excerpt' ),
+		);
+		$summary = \Wstm121\Webmastery_MCP_List_Query::project( $marked, 'summary' );
+		self::assertArrayNotHasKey( 'content', $summary );
+		self::assertSame( array( 'title', 'excerpt' ), $summary['untrusted_fields'] );
+		self::assertSame( $marked, \Wstm121\Webmastery_MCP_List_Query::project( $marked, 'full' ) );
+		$plain = $marked;
+		unset( $plain['untrusted_fields'] );
+		self::assertArrayNotHasKey( 'untrusted_fields', \Wstm121\Webmastery_MCP_List_Query::project( $plain, 'summary' ) );
 	}
 
 	public function test_batched_references_preserve_per_attachment_hits_and_prepared_literal_escaping(): void {
