@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Made the opt-in untrusted-content proof reserve its summary and raw HTTP journal exclusively before WordPress bootstrap or credentials. Existing evidence and concurrent creators fail closed without overwrites; regression cases preserve preexisting bytes and partial reservations while retaining failed-response and cleanup evidence.
 - Documented the #108 unreleased 3.0 record-local marker contract, coverage and privacy table, agent threat model, and migration examples without changing 2.6.0 release notes. Aligned contributor/PR requirements for value-preservation, omission/error checks, and actual Adapter 0.6.1 annotation evidence. Documented the explicitly opted-in disposable runtime probes separately from pending HTTP/annotation proof.
 - Added metadata presence and per-key SEO regression probes, full state snapshots and mutation-hook counters. Migrated combined-write manifest successes to explicit rejections plus separate authorized writes while retaining every original stored-value assertion, Contributor/parent/scheduling permission checks, and the dedicated future-post HTTP deletion scenario.
 - Added isolated metadata HTTP transport checks for canonical errors, advertised-tool discovery, required mutation-observer evidence, and retryable session cleanup. Aligned contributor and PR metadata-boundary requirements and documented the four-boundary runtime suites separately from unit evidence.

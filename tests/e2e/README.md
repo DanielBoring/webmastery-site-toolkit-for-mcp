@@ -46,7 +46,14 @@ site, for the individual-tool endpoint
 `e2e-artifacts/untrusted-content-wstm108-<nonce>.json` in the repository,
 with a unique nonce to retain separate runs. The companion
 `.http.jsonl` evidence retains incremental, credential-redacted raw HTTP
-observations. Preserve both artifacts, including on failure. Fixtures use
+observations. Before WordPress bootstrap or credential creation, the runner
+refuses an existing summary **or** journal, including an explicitly selected
+path. `untrusted-content-evidence.php` reserves both files with exclusive
+creation and writes through the retained handles rather than reopening paths.
+If a concurrent creator prevents the second reservation, any empty first
+reservation is retained instead of risking deletion of a replaced path.
+Choose a new artifact path for another invocation. Preserve both artifacts,
+including on failure. Fixtures use
 unique owned records and cleanup rather than global role/option mutations.
 The runner requires actual MCP Adapter 0.6.1. Install and activate real Yoast
 SEO and SEOPress externally in the disposable runtime before full validation;

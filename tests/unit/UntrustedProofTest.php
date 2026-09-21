@@ -7,14 +7,16 @@ namespace Wstm108Proof;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Throwable;
+use Wstm108_Evidence;
 
 require_once dirname( __DIR__ ) . '/e2e/error-contract-assertions.php';
+require_once dirname( __DIR__ ) . '/e2e/untrusted-content-evidence.php';
 
 $wstm108_old_optin = getenv( 'WSTM108_ALLOW_DISPOSABLE' );
 putenv( 'WSTM108_ALLOW_DISPOSABLE=1' );
 try {
 	$wstm108_source = file_get_contents( dirname( __DIR__ ) . '/e2e/untrusted-content-fixture.php' );
-	eval( 'namespace Wstm108Proof; use \RuntimeException; use \Throwable; ' . substr( $wstm108_source, 5 ) );
+	eval( 'namespace Wstm108Proof; use \RuntimeException; use \Throwable; use \Wstm108_Evidence; ' . substr( $wstm108_source, 5 ) );
 } finally {
 	putenv( false === $wstm108_old_optin ? 'WSTM108_ALLOW_DISPOSABLE' : 'WSTM108_ALLOW_DISPOSABLE=' . $wstm108_old_optin );
 }
@@ -67,11 +69,13 @@ final class UntrustedProofTest extends TestCase {
 			}
 		}
 		unset( $GLOBALS['wstm108_requests'], $GLOBALS['wstm108_responses'] );
+		unset( $GLOBALS['wstm108_before_exclusive_open'] );
 	}
 
 	private function path(): string {
 		$path = __DIR__ . '/.wstm108-proof-' . bin2hex( random_bytes( 8 ) ) . '.json';
 		$this->files[] = $path;
+		$this->files[] = $path . '.http.jsonl';
 		return $path;
 	}
 
@@ -161,6 +165,90 @@ final class UntrustedProofTest extends TestCase {
 		self::assertSame( 'inert', $out );
 	}
 
+	public static function collisions(): array {
+		return array( 'summary' => array( true, false ), 'journal' => array( false, true ), 'both' => array( true, true ) );
+	}
+
+	/** @dataProvider collisions */
+	public function test_existing_artifacts_are_untouched_before_wordpress_or_credentials( bool $summary_exists, bool $journal_exists ): void {
+		$path = $this->path();
+		$summary_bytes = "Preexisting summary \0 \"do not replace\"\n";
+		$journal_bytes = "Preexisting raw failed HTTP \0 \\bytes\n";
+		if ( $summary_exists ) {
+			file_put_contents( $path, $summary_bytes );
+		}
+		if ( $journal_exists ) {
+			file_put_contents( $path . '.http.jsonl', $journal_bytes );
+		}
+		$runner = dirname( __DIR__ ) . '/e2e/untrusted-content-runner.php';
+		$code = 'putenv("WSTM108_ALLOW_DISPOSABLE=1"); putenv(' . var_export( 'WSTM108_ARTIFACT=' . $path, true ) . '); require ' . var_export( $runner, true ) . ';';
+		list( $exit, $out, $err ) = $this->subprocess( $code );
+		self::assertSame( 2, $exit, $err );
+		self::assertSame( '', $out );
+		self::assertStringContainsString( 'Evidence path already exists; refusing to overwrite', $err );
+		self::assertStringNotContainsString( 'wp-load', $err );
+		if ( $summary_exists ) {
+			self::assertSame( $summary_bytes, file_get_contents( $path ) );
+		} else {
+			self::assertFileDoesNotExist( $path );
+		}
+		if ( $journal_exists ) {
+			self::assertSame( $journal_bytes, file_get_contents( $path . '.http.jsonl' ) );
+		} else {
+			self::assertFileDoesNotExist( $path . '.http.jsonl' );
+		}
+	}
+
+	public function test_reservation_prevents_a_second_owner_and_retains_both_evidence_files(): void {
+		$path = $this->path();
+		$evidence = new Wstm108_Evidence( $path );
+		self::assertFileExists( $path );
+		self::assertFileExists( $path . '.http.jsonl' );
+		$evidence->save( array( 'failed' => 1 ) );
+		$evidence->append( array( 'body' => 'original failed HTTP response' ) );
+		unset( $evidence );
+		$before = array( file_get_contents( $path ), file_get_contents( $path . '.http.jsonl' ) );
+		try {
+			new Wstm108_Evidence( $path );
+			self::fail( 'A subsequent invocation must not acquire existing evidence.' );
+		} catch ( RuntimeException $error ) {
+			self::assertStringContainsString( 'Evidence path already exists', $error->getMessage() );
+		}
+		self::assertSame( $before, array( file_get_contents( $path ), file_get_contents( $path . '.http.jsonl' ) ) );
+	}
+
+	public static function racing_paths(): array {
+		return array( 'summary' => array( '' ), 'journal' => array( '.http.jsonl' ) );
+	}
+
+	/** @dataProvider racing_paths */
+	public function test_creation_between_preflight_and_open_never_overwrites_foreign_bytes( string $suffix ): void {
+		$path = $this->path();
+		$collision = $path . $suffix;
+		$bytes = "Concurrent owner's evidence \0 keep unchanged\n";
+		$called = false;
+		$GLOBALS['wstm108_before_exclusive_open'] = static function ( string $opening, string $mode ) use ( $collision, $bytes, &$called ): void {
+			self::assertSame( 'x+b', $mode );
+			if ( $opening === $collision ) {
+				$called = true;
+				file_put_contents( $collision, $bytes );
+			}
+		};
+		try {
+			new \Wstm108EvidenceRace\Wstm108_Evidence( $path );
+			self::fail( 'Exclusive reservation must reject a concurrent creator.' );
+		} catch ( RuntimeException $error ) {
+			self::assertStringContainsString( 'Cannot exclusively reserve evidence path', $error->getMessage() );
+		}
+		self::assertTrue( $called, 'The collision must occur after the initial existence checks.' );
+		self::assertSame( $bytes, file_get_contents( $collision ) );
+		if ( '' === $suffix ) {
+			self::assertFileDoesNotExist( $path . '.http.jsonl' );
+		} else {
+			self::assertSame( '', file_get_contents( $path ), 'Retain the partial reservation; never unlink a potentially replaced path.' );
+		}
+	}
+
 	public function test_subprocess_drains_large_stdout_and_stderr_without_pipe_deadlock(): void {
 		list( $exit, $out, $err ) = $this->subprocess( 'fwrite(STDERR, str_repeat("e", 1048576)); fwrite(STDOUT, str_repeat("o", 1048576));' );
 		self::assertSame( 0, $exit );
@@ -215,7 +303,7 @@ final class UntrustedProofTest extends TestCase {
 		self::assertSame( $success, $client->execute( 'fixture/read', array() ) );
 		$request = json_decode( $GLOBALS['wstm108_requests'][3][1]['body'], true );
 		self::assertSame( $individual ? 'not-a-guessed-sanitized-name' : 'arbitrary-gateway-executor', $request['params']['name'] );
-		$text = file_get_contents( $path );
+		$text = file_get_contents( $path . '.http.jsonl' );
 		self::assertStringNotContainsString( 'private-session', $text );
 		self::assertStringNotContainsString( 'secret-password', $text );
 		self::assertStringNotContainsString( base64_encode( 'actor:secret-password' ), $text );
@@ -239,7 +327,7 @@ final class UntrustedProofTest extends TestCase {
 			$client->rpc( 'tools/call', array() );
 			self::fail( 'Expected failure.' );
 		} catch ( Throwable $error ) {
-			$lines = file( $path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
+			$lines = file( $path . '.http.jsonl', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
 			$event = json_decode( end( $lines ), true, 512, JSON_THROW_ON_ERROR );
 			self::assertSame( $status, $event['status'] );
 			self::assertSame( str_replace( 'secret-password', '[REDACTED]', $body ), $event['body'] );
@@ -258,7 +346,7 @@ final class UntrustedProofTest extends TestCase {
 
 	public function test_cleanup_keeps_original_failure_and_attempts_every_action(): void {
 		$path = $this->path();
-		$summary_path = $this->path();
+		$summary_path = $path;
 		$evidence = new Wstm108_Evidence( $path );
 		$client = $this->initialize( $evidence );
 		$GLOBALS['wstm108_responses'][] = $this->response( '<html>failed cleanup secret-password</html>', 500 );
@@ -274,15 +362,25 @@ final class UntrustedProofTest extends TestCase {
 			'owned-user' => static function () use ( &$attempted ): void { $attempted[] = 'user'; },
 		);
 		wstm108_cleanup( $actions, $summary );
-		$evidence->save( $summary_path, $summary );
+		$evidence->save( $summary );
 		self::assertSame( array( 'credential', 'post', 'user' ), $attempted );
 		self::assertSame( 3, $summary['failed'] );
 		self::assertSame( 'Original malformed HTTP failure.', $summary['cases'][0]['error'] );
 		self::assertSame( $summary, json_decode( file_get_contents( $summary_path ), true ) );
-		$lines = file( $path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
+		$lines = file( $path . '.http.jsonl', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
 		$event = json_decode( end( $lines ), true );
 		self::assertSame( 'DELETE', $event['method'] );
 		self::assertSame( 500, $event['status'] );
 		self::assertSame( '<html>failed cleanup [REDACTED]</html>', $event['body'] );
 	}
+}
+
+namespace Wstm108EvidenceRace;
+
+$source = file_get_contents( dirname( __DIR__ ) . '/e2e/untrusted-content-evidence.php' );
+eval( 'namespace Wstm108EvidenceRace; use \RuntimeException; use \Throwable; ' . substr( $source, 5 ) );
+
+function fopen( string $path, string $mode ) {
+	( $GLOBALS['wstm108_before_exclusive_open'] )( $path, $mode );
+	return \fopen( $path, $mode );
 }

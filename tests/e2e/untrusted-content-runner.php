@@ -24,6 +24,16 @@ if ( '1' !== getenv( 'WSTM108_ALLOW_DISPOSABLE' ) ) {
 	exit( 2 );
 }
 
+require_once __DIR__ . '/untrusted-content-evidence.php';
+$run = 'wstm108-' . bin2hex( random_bytes( 8 ) );
+$artifact = getenv( 'WSTM108_ARTIFACT' ) ?: __DIR__ . '/../../e2e-artifacts/untrusted-content-' . $run . '.json';
+try {
+	$evidence = new Wstm108_Evidence( $artifact );
+} catch ( Throwable $error ) {
+	fwrite( STDERR, 'Refusing: ' . $error->getMessage() . "\n" );
+	exit( 2 );
+}
+
 $_SERVER['HTTP_HOST'] = 'localhost';
 require_once '/var/www/html/wp-load.php';
 require_once __DIR__ . '/error-contract-assertions.php';
@@ -46,7 +56,7 @@ function wstm108_case( string $label, callable $action, array &$summary, Wstm108
 		++$summary['failed'];
 	}
 	$summary['cases'][] = $case;
-	$evidence->save( $artifact, $summary );
+	$evidence->save( $summary );
 	echo ( $case['passed'] ? 'PASS ' : 'FAIL ' ) . $label . "\n";
 	return $result;
 }
@@ -213,13 +223,10 @@ function wstm108_expected_metrics( int $id, array $readable, array $providers ):
 	return $data;
 }
 
-$run = 'wstm108-' . bin2hex( random_bytes( 8 ) );
-$artifact = getenv( 'WSTM108_ARTIFACT' ) ?: __DIR__ . '/../../e2e-artifacts/untrusted-content-' . $run . '.json';
-wstm108_assert( is_dir( dirname( $artifact ) ) || wp_mkdir_p( dirname( $artifact ) ), 'Cannot create evidence directory.' );
-$evidence = new Wstm108_Evidence( $artifact . '.http.jsonl' );
 $summary = array(
 	'run' => $run, 'wordpress' => get_bloginfo( 'version' ), 'php' => PHP_VERSION,
 	'runner_sha256' => hash_file( 'sha256', __FILE__ ), 'fixture_sha256' => hash_file( 'sha256', __DIR__ . '/untrusted-content-fixture.php' ),
+	'evidence_sha256' => hash_file( 'sha256', __DIR__ . '/untrusted-content-evidence.php' ),
 	'status' => 'in_progress', 'passed' => 0, 'failed' => 0, 'cases' => array(), 'cleanup' => array(), 'blocked' => array(),
 	'raw_http' => basename( $artifact ) . '.http.jsonl',
 );
@@ -230,7 +237,7 @@ $owned_posts = array();
 $owned_comments = array();
 $owned_files = array();
 $old_user = get_current_user_id();
-$evidence->save( $artifact, $summary );
+$evidence->save( $summary );
 
 try {
 	wstm108_assert( post_type_exists( 'wstm108_record' ), 'Install the opted-in companion MU fixture before running.' );
@@ -789,7 +796,7 @@ try {
 	wstm108_cleanup( $actions, $summary );
 	wp_set_current_user( $old_user );
 	$summary['status'] = $summary['failed'] ? 'failed' : ( $summary['blocked'] ? 'incomplete' : 'passed' );
-	$evidence->save( $artifact, $summary );
+	$evidence->save( $summary );
 }
 
 echo "WSTM108 {$summary['status']}: {$summary['passed']} passed; {$summary['failed']} failed. Evidence: {$artifact}\n";

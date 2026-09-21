@@ -81,42 +81,6 @@ function wstm108_canonical( $value ) {
 	return $value;
 }
 
-/**
- * Append-only wire evidence is flushed BEFORE status/JSON/envelope assertions.
- * Never record request headers, session IDs, application passwords, or WP hashes.
- */
-final class Wstm108_Evidence {
-	private string $path;
-	private array $secrets = array();
-
-	public function __construct( string $path ) {
-		$this->path = $path;
-		wstm108_assert( false !== file_put_contents( $path, '', LOCK_EX ), 'Cannot create raw HTTP evidence.' );
-	}
-
-	public function secret( string $secret ): void {
-		if ( '' !== $secret ) {
-			$this->secrets[] = $secret;
-			$this->secrets[] = trim( json_encode( $secret, JSON_THROW_ON_ERROR ), '"' );
-			$this->secrets[] = rawurlencode( $secret );
-		}
-	}
-
-	public function redact( string $text ): string {
-		return str_replace( $this->secrets, '[REDACTED]', $text );
-	}
-
-	public function append( array $event ): void {
-		$text = $this->redact( json_encode( $event, JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR ) );
-		wstm108_assert( false !== file_put_contents( $this->path, $text . "\n", FILE_APPEND | LOCK_EX ), 'Cannot persist raw HTTP evidence.' );
-	}
-
-	public function save( string $path, array $summary ): void {
-		$text = $this->redact( json_encode( $summary, JSON_PRETTY_PRINT | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR ) );
-		wstm108_assert( false !== file_put_contents( $path, $text . "\n", LOCK_EX ), 'Cannot persist proof summary.' );
-	}
-}
-
 function wstm108_cleanup( array $actions, array &$summary ): void {
 	foreach ( $actions as $label => $action ) {
 		try {
