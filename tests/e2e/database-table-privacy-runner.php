@@ -62,8 +62,9 @@ function wstm111_privacy_pair( string $boundary, callable $execute, array $priva
 		$predicates['custom_sentinel_prefix_absent_entire_payload'] = ! str_contains( $json, $wpdb->prefix );
 	}
 	foreach ( $private_names as $index => $name ) {
-		$predicates[ "owned_table_{$index}_absent_entire_payload" ] = ! str_contains( $json, $name )
-			&& ! str_contains( $json, substr( $name, strlen( $wpdb->prefix ) ) );
+		foreach ( Webmastery_MCP_Database_Table_Privacy_Fixture::private_tokens( $name, $wpdb->prefix ) as $token_index => $token ) {
+			$predicates[ "owned_table_{$index}_private_token_{$token_index}_absent_entire_payload" ] = ! str_contains( $json, $token );
+		}
 		$predicates[ "owned_table_{$index}_opt_in_present" ] = in_array( $name, array_column( $raw_rows, 'table' ), true );
 	}
 	wstm111_privacy_check( "{$boundary}/default-explicit-opt-in", $predicates, array( 'default' => $default, 'explicit_false' => $explicit, 'raw_opt_in' => $raw ) );

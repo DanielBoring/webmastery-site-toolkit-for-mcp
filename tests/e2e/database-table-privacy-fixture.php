@@ -7,6 +7,15 @@ final class Webmastery_MCP_Database_Table_Privacy_Fixture {
 	public array $names = array();
 	public array $cleanup = array();
 
+	public static function private_tokens( string $name, string $prefix ): array {
+		$tokens = array( $name );
+		$suffix = substr( $name, strlen( $prefix ) );
+		if ( str_starts_with( $suffix, 'wstm111_' ) ) {
+			$tokens[] = $suffix;
+		}
+		return $tokens;
+	}
+
 	public function create(): void {
 		global $wpdb;
 		$token = strtolower( wp_generate_password( 8, false, false ) );

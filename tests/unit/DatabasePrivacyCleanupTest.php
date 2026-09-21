@@ -7,6 +7,18 @@ use PHPUnit\Framework\TestCase;
 require_once dirname( __DIR__ ) . '/e2e/database-table-privacy-fixture.php';
 
 final class DatabasePrivacyCleanupTest extends TestCase {
+	public function test_private_tokens_preserve_complete_names_without_forbidding_public_core_labels(): void {
+		$this->assertSame(
+			array( 'private_users' ),
+			Webmastery_MCP_Database_Table_Privacy_Fixture::private_tokens( 'private_users', 'private_' )
+		);
+		$this->assertSame(
+			array( 'private_wstm111_owned_plugin_fingerprint', 'wstm111_owned_plugin_fingerprint' ),
+			Webmastery_MCP_Database_Table_Privacy_Fixture::private_tokens( 'private_wstm111_owned_plugin_fingerprint', 'private_' )
+		);
+		$this->assertStringNotContainsString( 'private_users', '{"table":"users","is_core_table":true}' );
+	}
+
 	protected function tearDown(): void {
 		unset( $GLOBALS['wpdb'] );
 		parent::tearDown();
