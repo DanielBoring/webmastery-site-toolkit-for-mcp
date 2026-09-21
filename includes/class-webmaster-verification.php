@@ -22,11 +22,7 @@ class Webmastery_MCP_Webmaster_Verification {
 	}
 
 	public static function permission() {
-		if ( ! current_user_can( 'read' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
-		}
-
-		return true;
+		return Webmastery_MCP_Permissions::check( 'read' );
 	}
 
 	public static function execute( $input = array() ) {

@@ -58,6 +58,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Extracted partial #119 row 2 simple capability checks into `Webmastery_MCP_Permissions` for Health, Security, Site Info, and Webmaster Verification only. Retained public facades, deferred current-user evaluation, trusted local denial diagnostics, direct verification authorization, and unchanged registration/execution contracts. Added pre/post-extraction callback characterization, helper mutation controls, bootstrap/package-map guards, and contributor guidance. Remaining permission closures and object helpers are still outstanding.
+
 - Updated the verified MCP Adapter baseline to 0.6.1 and its matching SHA-256; distinguished current configuration from the historical 0.5.0 rollout evidence without changing WordPress or PHP support.
 - Raised PHPStan analysis from level 0 to level 5 with an explicitly PHP 8.0-targeted, generated/reviewed baseline of 35 existing diagnostics in 21 exact file/message/identifier/count entries. Enabled unmatched-ignore failures, documented incremental debt reduction, and added isolated regression guards for new errors, count growth, and stale-entry removal in static QA and both CI PHP safeguard lanes. Plugin behavior, schemas, dependencies, and runtime tests are unchanged.
 - Mock the metadata authorization stage in the isolated compatibility bootstrap test, assert cron isolation and exactly one invocation in every QA mode, and preserve the real runner's non-CLI rejection checks.
