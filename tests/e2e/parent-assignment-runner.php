@@ -290,7 +290,6 @@ try {
 							unset( $input['parent'] );
 						}
 						if ( in_array( $type, array( 'page', 'post' ), true ) ) {
-							$input['yoast_meta_description'] = 'Changed metadata.';
 							if ( 'meta_precedence' === $case ) {
 								$input['meta'] = array( '_wstm106_unregistered' => 'Not writable' );
 								$input['parent'] = $target;
@@ -371,6 +370,9 @@ try {
 						if ( $denial && ( 'fixed' === $mode || $existing_denial ) ) {
 							wstm106_assert( false === $record['result']['success'], 'Unsafe assignment was not rejected.' );
 							wstm118_error_envelope( $record['result'] );
+							if ( 'meta_precedence' === $case ) {
+								wstm106_assert( 'metadata_requires_separate_call' === $record['result']['error']['reason'], 'Combined metadata must be rejected before parent validation.' );
+							}
 							wstm106_assert( $record['unchanged'], 'Rejected payload changed stored rows/relationships/revisions/metadata/cron.' );
 							wstm106_assert( array() === $record['hooks'], 'Rejected payload reached pre-write/write hooks.' );
 						} elseif ( ! $denial ) {
@@ -381,9 +383,7 @@ try {
 							wstm106_assert( (int) $written->post_parent === $expected_parent, 'Positive parent was not preserved/assigned.' );
 							wstm106_assert( 'Changed title' === $written->post_title && '<p>Changed content.</p>' === $written->post_content && 'Changed excerpt.' === $written->post_excerpt && $input['slug'] === $written->post_name && 'future' === $written->post_status, 'Positive mixed fields did not persist.' );
 							wstm106_assert( ! empty( $record['hooks'] ) && ! $record['unchanged'], 'Positive control did not exercise observation.' );
-							if ( isset( $input['yoast_meta_description'] ) ) {
-								wstm106_assert( 'Changed metadata.' === get_post_meta( $written_id, '_yoast_wpseo_metadesc', true ), 'Positive metadata did not persist.' );
-							}
+							wstm106_assert( ( 'update' === $operation ? 'Original metadata.' : '' ) === get_post_meta( $written_id, '_yoast_wpseo_metadesc', true ), 'Plain parent request changed unrelated metadata.' );
 							foreach ( $input['taxonomy_terms'] ?? array() as $taxonomy => $ids ) {
 								$actual = wp_get_object_terms( $written_id, $taxonomy, array( 'fields' => 'ids' ) );
 								wstm106_assert( $ids === $actual, 'Positive terms did not persist.' );

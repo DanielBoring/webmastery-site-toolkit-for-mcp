@@ -4,6 +4,7 @@ require_once __DIR__ . '/diagnostics-fixture.php';
 require_once __DIR__ . '/coverage-fixture.php';
 require_once dirname( __DIR__ ) . '/fixtures/seo-analysis.php';
 require_once __DIR__ . '/post-meta-authorization-fixture.php';
+require_once __DIR__ . '/metadata-batch-fixture.php';
 wstm110_setup();
 
 function e2e_ensure_user( $login, $email, $role ) {
@@ -1002,6 +1003,9 @@ foreach ( $manifest as $case ) {
 		: null;
 	$restore = e2e_apply_case_setup( $case );
 	$before = ! empty( $case['assert_unchanged'] ) || ! empty( $case['assert_changed'] ) ? wstm120_snapshot() : null;
+	$metadata_before = ! empty( $case['assert_metadata_boundary'] ) ? wstm110_batch_snapshot() : null;
+	$metadata_events = array();
+	$metadata_observer = null;
 	$coverage_evidence = array();
 	$capabilities = wstm120_assert_capabilities( $case );
 	$coverage_passed = ! in_array( false, array_column( $capabilities, 'passed' ), true );
@@ -1015,7 +1019,21 @@ foreach ( $manifest as $case ) {
 		$coverage_passed = $coverage_passed && $case['assert_permission'] === $actual;
 	}
 	try {
-		$result = $ability->execute( $input );
+		if ( null !== $metadata_before ) {
+			$metadata_observer = wstm110_batch_observe( static function ( $hook ) use ( &$metadata_events ): void { $metadata_events[] = $hook; } );
+		}
+		try {
+			$result = $ability->execute( $input );
+		} finally {
+			if ( $metadata_observer instanceof Closure ) {
+				wstm110_batch_unobserve( $metadata_observer );
+			}
+		}
+		if ( null !== $metadata_before ) {
+			$metadata_after = wstm110_batch_snapshot();
+			$coverage_evidence['metadata_boundary'] = array( 'before' => $metadata_before, 'after' => $metadata_after, 'hooks' => $metadata_events );
+			wstm110_batch_assert_unchanged( $metadata_before, $metadata_after, $metadata_events );
+		}
 		if ( null !== $before ) {
 			$after = wstm120_snapshot();
 			$coverage_evidence['before'] = $before;
@@ -1150,6 +1168,13 @@ foreach ( $manifest as $case ) {
 	}
 
 	if ( $passed ) {
+		if ( isset( $case['capture_post_id'] ) ) {
+			$captured_id = $result['data']['id'] ?? null;
+			if ( ! is_int( $captured_id ) || $captured_id < 1 || isset( $fixtures[ $case['capture_post_id'] ] ) ) {
+				throw new RuntimeException( "Cannot capture unique created post fixture for {$label}." );
+			}
+			$fixtures[ $case['capture_post_id'] ] = $captured_id;
+		}
 		$summary['passed']++;
 		echo 'PASS ' . $label . ( 'failure' === $expect ? ' denied as expected' : '' ) . "\n";
 	} else {

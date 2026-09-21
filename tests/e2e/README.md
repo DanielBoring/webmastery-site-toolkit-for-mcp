@@ -21,6 +21,53 @@ Historical baseline comparisons require the pre-migration runner from 2.6.0;
 the current strict canonical parser intentionally rejects those old envelopes.
 Do not weaken current assertions to make a historical baseline pass.
 
+## Metadata batch and SEO authorization coverage (3.0)
+
+`metadata-batch-fixture.php` independently lists 34 removed aliases and 147
+presence variants (values, null, empty arrays/strings, containers, raw keys,
+unknown reserved prefixes). `metadata-batch-runner.php` exercises all eight
+built-in/fixture-CPT create/update entrypoints. It requires explicit
+`WSTM110_BATCH_DISPOSABLE=1` in an owned disposable runtime and selects
+`direct`, `ability`, `http` (gateway), or `individual` execution with
+`WSTM110_BATCH_BOUNDARY`. Never enable it on a
+shared or live site. Whole posts/postmeta/terms/taxonomy/relationship/cron
+snapshots and pre-write/save/status/metadata/term hook counters detect even
+insert-then-delete fake rollbacks. Artifacts retain every input and observation.
+Each boundary expects 1,176 rejections plus four positive draft/plain-update/
+individual-metadata/publish workflows. HTTP observation requires a request-scoped
+token and an explicit response header from `metadata-batch-http-fixture.php`;
+a missing header is a failure, not evidence of zero hooks.
+
+`seo-metadata-runner.php` uses the same opt-in and boundaries with the temporary
+`seo-metadata-fixture.php` forbidden-read observer and existing standalone
+authorization fixture. With both real SEO providers active, it expects 252 cases:
+40 keys on posts/pages under map denial, final-user-cap denial, and explicit
+primitive-grant controls; eight analysis cases; two score-filter cases; bounded
+overview observations; and URL-only head refusal. Individual HTTP requires the
+temporary `wstm118-individual` server after the normal registration audit.
+These runners retain raw responses and observer evidence, revoke their own
+application passwords, and remove owned objects/options. Unit transport seams
+prove strict error handling, discovery ambiguity, required observer evidence,
+and session-cleanup failures; they do not establish actual HTTP/provider results.
+
+The manifest replaces ten obsolete combined successes with original-payload
+no-op rejections, plain creation/update, and 54 exact-key standalone writes.
+Every original normalization/backslash and unrelated-key assertion is retained.
+`capture_post_id` captures only a successful created object for subsequent
+calls. `assert_metadata_boundary` adds full state and zero-hook proof to
+combined-input denials. Contributor publication and parent-assignment checks
+keep their original permission purpose using plain payloads; scheduling keeps
+metadata sentinels instead of injecting aliases into every request.
+
+SEO unit probes reject reads of each of 40 denied keys before they occur,
+check authorized score pagination and total counts, prohibit opaque head
+requests, and enforce the overview's single 100-ID query / at most 400 reads.
+Unit observations are not substitutes for actual WordPress/provider/HTTP QA.
+The [migration guide](../../docs/3.0-migration.md#metadata-and-seo-authorization)
+documents all changed user-facing contracts.
+
+## Actual canonical error transport proof
+
 `error-contract-runner.php` requires `WSTM118_DISPOSABLE=1` before loading
 WordPress or creating credentials/fixtures. The managed harness grants it only
 inside the disposable stack. A test-only MU fixture, installed after the normal
@@ -72,7 +119,7 @@ HTTP session-close and application-password revocation failures are recorded ind
 
 `tests/fixtures/seo-analysis.php` supplies five inert-marker scenarios to the unit tests, ability manifest fixtures, and existing MCP HTTP CRUD runner: Yoast found/missing with a competing SEOPress value, SEOPress found/missing after empty-Yoast fallback, and no keyword. Contract cases compare the complete `good` and `issues` arrays (including check IDs, severity, and every diagnostic message), exact keyword/title metrics, provider source, and score through existing `assert_values` placeholders. All earlier cases, including permission negatives, remain intact.
 
-The HTTP runner creates a separate owned SEO post, seeds it through the existing update ability, confirms stored metadata, executes SEO analysis through the actual MCP gateway, and retains each response in `mcp-crud-summary.json` under `seo_analysis`. It also rejects inert markers in every diagnostic message. The original CRUD post remains scheduled for its existing future-post deletion scenario; an extra read verifies its state before deletion. Dedicated SEO cleanup runs even after a case failure, records its response, and fails the summary for unsuccessful cleanup, wrong IDs/statuses, or exceptions. Unit tests additionally cover exact markup, quote, and backslash retention for both providers and both branches, plus unchanged response keys. Run `composer qa:unit -- --filter SeoAnalysisTest`, then managed `scripts/e2e-test.sh all` for actual WordPress and transport evidence.
+The HTTP runner creates a separate owned SEO post, updates plain content and each authorized metadata key in separate calls, confirms stored metadata, executes SEO analysis through the actual MCP gateway, and retains each response in `mcp-crud-summary.json` under `seo_analysis`. It also rejects inert markers in every diagnostic message. The original CRUD post remains scheduled for its existing future-post deletion scenario; an extra read verifies its state before deletion. Dedicated SEO cleanup runs even after a case failure, records its response, and fails the summary for unsuccessful cleanup, wrong IDs/statuses, or exceptions. Unit tests additionally cover exact markup, quote, and backslash retention for both providers and both branches, plus unchanged response keys for fully authorized analysis. Run `composer qa:unit -- --filter SeoAnalysisTest`, then managed `scripts/e2e-test.sh all` for actual WordPress and transport evidence.
 
 This only covers separating focus-keyword data from diagnostics. It adds no field markers, does not verify all annotations or resolve #108, and is not a prompt-injection prevention test.
 
@@ -248,7 +295,7 @@ HTTPS request variables in these tests are simulations, not actual TLS, certific
 
 ## Backslash persistence regressions
 
-The `wstm122` manifest cases cover post/page create/update SEO metadata, media upload/update title/caption/alt text, and the already-correct direct structured metadata path. Assertions include repeated/trailing backslashes, escaped quotes, regex-style JSON text, sanitized HTML/text, and denied updates with unchanged stored metadata. Uploads use the existing in-process HTTP image fixture; they do not download a live image or relax production URL checks. The HTTP CRUD runner also asserts metadata backslashes on both post creation and update. Existing ordinary content/backslash and allowed/denied cases remain in place.
+The `wstm122` manifest cases cover plain post/page creation and updates followed by separate SEO metadata calls, media upload/update title/caption/alt text, and the already-correct direct structured metadata path. Assertions include repeated/trailing backslashes, escaped quotes, regex-style JSON text, sanitized HTML/text, and denied updates with unchanged stored metadata. Uploads use the existing in-process HTTP image fixture; they do not download a live image or relax production URL checks. The HTTP CRUD runner also asserts metadata backslashes through separate calls after both post creation and update. Existing ordinary content/backslash and allowed/denied cases remain in place.
 
 ## Parent-assignment regression proof (#106)
 
