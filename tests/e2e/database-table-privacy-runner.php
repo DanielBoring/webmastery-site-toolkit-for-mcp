@@ -185,6 +185,10 @@ $observe = static function ( $query ) use ( &$queries ) {
 	return $query;
 };
 try {
+	$ability = wp_get_ability( 'webmastery-site-toolkit-for-mcp/database-health' );
+	if ( ! $ability instanceof Webmastery_MCP_Ability ) {
+		throw new RuntimeException( 'Registered database-health ability is unavailable.' );
+	}
 	require_once ABSPATH . 'wp-admin/includes/user.php';
 	foreach ( array( 'admin' => 'administrator', 'subscriber' => 'subscriber' ) as $label => $role ) {
 		$login = $run . '-' . $label;
@@ -203,7 +207,7 @@ try {
 	foreach ( $native_boundaries as $boundary ) {
 		$execute = 'direct' === $boundary
 			? array( Webmastery_MCP_Database_Health::class, 'execute' )
-			: array( wp_get_ability( 'webmastery-site-toolkit-for-mcp/database-health' ), 'execute' );
+			: array( $ability, 'execute' );
 		$omitted = $execute();
 		wstm111_privacy_check( "{$boundary}/omitted-input", array(
 			'success' => true === ( $omitted['success'] ?? false ),
