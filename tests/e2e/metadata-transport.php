@@ -13,6 +13,10 @@ final class Wstm110_Metadata_Transport {
 	public array $last_response = array();
 	public array $last_events = array();
 
+	public function catalog(): array {
+		return $this->tools;
+	}
+
 	public function __construct( bool $individual, array $credential ) {
 		$this->individual = $individual;
 		$this->credential = $credential;
@@ -41,7 +45,7 @@ final class Wstm110_Metadata_Transport {
 				throw new RuntimeException( 'Missing ability for tools/list calibration: ' . $ability_name );
 			}
 			// Discover the unique advertised descriptor, not an assumed name-sanitization rule.
-			$matches = array_filter( $this->tools, static fn( $tool ) => $ability->get_description() === ( $tool['description'] ?? null ) );
+			$matches = array_filter( $this->tools, static fn( $tool ) => trim( $ability->get_description() ) === ( $tool['description'] ?? null ) );
 		}
 		if ( 1 !== count( $matches ) ) {
 			throw new RuntimeException( 'Cannot identify exactly one advertised HTTP tool for ' . $ability_name );
@@ -50,6 +54,8 @@ final class Wstm110_Metadata_Transport {
 	}
 
 	public function execute( string $ability, array $input, string $observation_token = '' ): array {
+		$this->last_response = array();
+		$this->last_events = array();
 		$arguments = $this->individual ? $input : array( 'ability_name' => $ability, 'parameters' => $input );
 		$response = $this->rpc( 'tools/call', array( 'name' => $this->tool_name( $ability ), 'arguments' => $arguments ), $observation_token );
 		$this->last_response = $response;

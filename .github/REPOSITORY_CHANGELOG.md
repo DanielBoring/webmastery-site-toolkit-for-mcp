@@ -8,6 +8,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Wire metadata batch and SEO authorization proofs through direct, registered, gateway, and individual-tool execution in source and original-package QA; retain per-call state, mutation hooks, advertised catalogs, raw wire results, and failed-run artifacts. Package and bootstrap safeguards require the disposable opt-in and non-CLI refusal.
+
 - Added metadata presence and per-key SEO regression probes, full state snapshots and mutation-hook counters. Migrated combined-write manifest successes to explicit rejections plus separate authorized writes while retaining every original stored-value assertion, Contributor/parent/scheduling permission checks, and the dedicated future-post HTTP deletion scenario.
 - Added isolated metadata HTTP transport checks for canonical errors, advertised-tool discovery, required mutation-observer evidence, and retryable session cleanup. Aligned contributor and PR metadata-boundary requirements and documented the four-boundary runtime suites separately from unit evidence.
 - Added independent canonical-error assertions and strict manifest/validator mutation coverage; migrated existing error expectations without removing persistence, hook, scheduled CRUD, or success-payload checks. Documented the unreleased 3.0 migration and contributor response requirements.

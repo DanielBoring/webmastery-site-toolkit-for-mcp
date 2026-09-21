@@ -83,6 +83,7 @@ try {
 		update_option( 'wstm110_batch_http', array( 'token' => $token, 'user_id' => $user_id ), false );
 		$transport = new Wstm110_Metadata_Transport( 'individual' === $boundary, array( 'login' => $run, 'password' => $password[0] ) );
 		$transport->initialize();
+		$summary['tools'] = $transport->catalog();
 	}
 	$execute = static function ( string $name, array $input ) use ( $boundary, $transport, $token ): array {
 		if ( null !== $transport ) {
@@ -161,7 +162,7 @@ try {
 					wstm110_batch_assert_unchanged( $before, $after, $events );
 					wstm110_batch_require( false === ( $result['success'] ?? null ), 'Combined request did not fail.' );
 					wstm110_batch_require( 'invalid_input' === ( $result['error']['code'] ?? null ), 'Combined request did not have canonical invalid_input code.' );
-					$reasons = 'ability' === $boundary ? array( 'metadata_requires_separate_call', 'ability_invalid_input' ) : array( 'metadata_requires_separate_call' );
+					$reasons = 'direct' !== $boundary ? array( 'metadata_requires_separate_call', 'ability_invalid_input' ) : array( 'metadata_requires_separate_call' );
 					wstm110_batch_require( in_array( $result['error']['reason'] ?? null, $reasons, true ), 'Wrong combined-request reason.' );
 					$record['passed'] = true;
 					$summary['passed']++;
@@ -219,6 +220,9 @@ try {
 					wstm110_batch_require( 'C:\\migration\\' === get_post_meta( $migration_id, '_yoast_wpseo_metadesc', true ), 'Migration lost metadata or backslashes.' );
 				}
 				$record['steps'][] = array( 'ability' => $slug, 'result' => $result, 'hooks' => $events, 'status' => $stored->post_status );
+				if ( null !== $transport ) {
+					$record['steps'][ $step ]['wire'] = $transport->last_response;
+				}
 			}
 			$record['passed'] = true;
 			$summary['passed']++;

@@ -78,6 +78,7 @@ try {
 		update_option( 'wstm110_batch_http', array( 'token' => $token, 'user_id' => $user_id ), false );
 		$transport = new Wstm110_Metadata_Transport( 'individual' === $boundary, array( 'login' => $run, 'password' => $password[0] ) );
 		$transport->initialize();
+		$summary['tools'] = $transport->catalog();
 	}
 	$execute = static function ( string $slug, array $input ) use ( $boundary, $transport, $token, &$calls ): array {
 		$name = 'webmastery-site-toolkit-for-mcp/' . $slug;
