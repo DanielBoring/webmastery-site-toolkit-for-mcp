@@ -17,8 +17,9 @@ final class SeoAnalysisTest extends TestCase {
 	}
 
 	private function analyze( array $case ): array {
-		$GLOBALS['wstm_test_user_caps'] = array( 'edit_post' );
+		$GLOBALS['wstm_test_user_caps'] = array( 'edit_post', 'edit_post_meta' );
 		$GLOBALS['wstm_test_posts'] = array( 42 => (object) array(
+			'ID' => 42, 'post_type' => 'post',
 			'post_title' => $case['title'], 'post_content' => $case['content'], 'post_name' => $case['slug'],
 		) );
 		$GLOBALS['wstm_test_stored_meta'] = array( 42 => $case['meta'] );

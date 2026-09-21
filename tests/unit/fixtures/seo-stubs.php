@@ -6,6 +6,13 @@ namespace Wstm108;
 $source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-seo.php' );
 eval( 'namespace Wstm108; use \WP_Error; use \Webmastery_MCP_Response; ' . substr( $source, 5 ) );
 
+// These output-characterization tests supply allowed metadata; authorization is tested separately.
+class Webmastery_MCP_Posts {
+	public static function can_read_post_meta_key( int $post_id, string $key ): bool {
+		return \current_user_can( 'edit_post_meta', $post_id, $key );
+	}
+}
+
 function wp_strip_all_tags( $content ) {
 	return strip_tags( $content );
 }

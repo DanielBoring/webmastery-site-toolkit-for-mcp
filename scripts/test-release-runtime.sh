@@ -78,7 +78,7 @@ docker() {
 		*"test -f /var/www/html/wp-content/debug.log") return 1 ;;
 		*"wp --allow-root core is-installed") return 1 ;;
 		*"application-password create"*) printf 'fixture-password\n' ;;
-		*"--write-out"*"/tests/e2e/parent-assignment-runner.php"|*"--write-out"*"/tests/e2e/post-meta-authorization-runner.php"|*"--write-out"*"/tests/e2e/error-contract-runner.php") printf '403' ;;
+		*"--write-out"*"/tests/e2e/parent-assignment-runner.php"|*"--write-out"*"/tests/e2e/post-meta-authorization-runner.php"|*"--write-out"*"/tests/e2e/error-contract-runner.php"|*"--write-out"*"/tests/e2e/metadata-batch-runner.php"|*"--write-out"*"/tests/e2e/seo-metadata-runner.php") printf '403' ;;
 	esac
 }
 export -f docker
@@ -98,9 +98,15 @@ expect_failure() {
 
 bash scripts/release-qa.sh > "$WORK/success.log" 2>&1
 [[ "$(sha256sum "$RELEASE_ZIP")" == "$IDENTITY" ]]
-for runner in ability-runner media-download-runner scheduling-runner trash-safety-runner mcp-crud-runner site-kit-mcp-runner parent-assignment-runner post-meta-authorization-runner error-contract-runner; do
+for runner in ability-runner media-download-runner scheduling-runner trash-safety-runner mcp-crud-runner site-kit-mcp-runner parent-assignment-runner post-meta-authorization-runner error-contract-runner metadata-batch-runner seo-metadata-runner; do
 	grep -F "/tests/e2e/${runner}.php" "$TRACE" > /dev/null
 done
+for boundary in direct ability http individual; do
+	for runner in metadata-batch seo-metadata; do
+		grep -F "WSTM110_BATCH_DISPOSABLE=1 -e WSTM110_BATCH_BOUNDARY=${boundary} wordpress php -d memory_limit=1G /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/${runner}-runner.php" "$TRACE" > /dev/null
+	done
+done
+grep -F 'rm -f /var/www/html/wp-content/mu-plugins/wstm-issue110-meta.php /var/www/html/wp-content/mu-plugins/wstm-issue110-http.php /var/www/html/wp-content/mu-plugins/wstm-issue110-seo.php /var/www/html/wp-content/mu-plugins/wstm-issue118-errors.php' "$TRACE" > /dev/null
 for boundary in direct ability http; do
 	grep -F "WSTM110_BOUNDARY=${boundary}" "$TRACE" > /dev/null
 done

@@ -255,6 +255,19 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Upload metadata boundary contract evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: metadata-boundary-contract-evidence
+          path: |
+            e2e-artifacts/metadata-batch-direct.json
+            e2e-artifacts/metadata-batch-ability.json
+            e2e-artifacts/seo-metadata-direct.json
+            e2e-artifacts/seo-metadata-ability.json
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Upload comment contract evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -339,6 +352,19 @@ jobs:
         with:
           name: post-meta-authorization-http-evidence
           path: e2e-artifacts/post-meta-authorization-http.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload metadata boundary HTTP evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: metadata-boundary-http-evidence
+          path: |
+            e2e-artifacts/metadata-batch-http.json
+            e2e-artifacts/metadata-batch-individual.json
+            e2e-artifacts/seo-metadata-http.json
+            e2e-artifacts/seo-metadata-individual.json
           if-no-files-found: error
           retention-days: 7
 
