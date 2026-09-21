@@ -6,6 +6,15 @@ defined( 'ABSPATH' ) || exit;
  * Preserve the core lifecycle while normalizing only this plugin's boundaries.
  */
 final class Webmastery_MCP_Ability extends WP_Ability {
+	protected function invoke_callback( callable $callback, $input = null ) {
+		try {
+			return parent::invoke_callback( $callback, $input );
+		} catch ( Throwable ) {
+			// WordPress 6.9 does not yet turn callback exceptions into native errors.
+			return Webmastery_MCP_Response::local_error( 'ability_callback_exception', 'The ability could not complete the operation.' );
+		}
+	}
+
 	public function execute( $input = null ) {
 		$result = parent::execute( $input );
 		return is_wp_error( $result ) ? Webmastery_MCP_Response::from_wp_error( $result ) : $result;
