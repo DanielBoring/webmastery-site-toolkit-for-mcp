@@ -8,6 +8,9 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added guarded recovery of an original successful release-QA artifact through a separately authorized, annotated recovery-control tag, while preserving the original release tag/source/ZIP and the existing protected publish job. Read-only run/attempt/artifact provenance and authorization checks fail closed; control-tag pushes never build or publish a plugin release. Added recovery entrypoint, immutable-artifact and missing-prerequisite regression coverage and a normal/recovery runbook.
+- Explicitly install and verify publish-host Subversion before release preflight and retain it for post-publication verification. Clarified the publish job and preapproval summaries as GitHub production approval, not WordPress.org staff review, without renaming or weakening the `wordpress-org` environment.
+
 - Reconciled all ten ranked coverage groups for #120 against named tests, effective capability controls, persisted-state/write observers and source-bound runtime evidence, with metadata acceptance kept explicit. Added focused manifest unit guards and isolated mutations protecting existing destructive no-write denials and media-update denial/readback controls; corrected stale Contributor error-envelope guidance without changing production behavior or manifest inputs.
 - Wire metadata batch and SEO authorization proofs through direct, registered, gateway, and individual-tool execution in source and original-package QA; retain per-call state, mutation hooks, advertised catalogs, raw wire results, and failed-run artifacts. Package and bootstrap safeguards require the disposable opt-in and non-CLI refusal.
 

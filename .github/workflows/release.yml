@@ -4,12 +4,24 @@ on:
   push:
     tags:
       - 'v*'
+      - '!v-release-recovery-*'
+  workflow_dispatch:
+    inputs:
+      original-run-id:
+        description: 'Original tag-push release run ID with successful Validate Release'
+        required: true
+        type: string
+      original-artifact-id:
+        description: 'Immutable release bundle artifact ID from that successful QA attempt'
+        required: true
+        type: string
 
 permissions: {}
 
 jobs:
   release-qa:
     name: 5 - Validate Release
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 65
     permissions:
@@ -18,6 +30,9 @@ jobs:
       version: ${{ steps.metadata.outputs.version }}
       source-sha: ${{ steps.metadata.outputs.source-sha }}
       artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      tag-object: ${{ steps.metadata.outputs.tag-object }}
+      run-id: ${{ github.run_id }}
+      run-attempt: ${{ github.run_attempt }}
     steps:
       - name: Checkout complete tag history without persistent credentials
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -50,6 +65,9 @@ jobs:
           bash scripts/test-release-tag-check.sh
           bash scripts/test-release-plugin-check.sh
           bash scripts/test-release-runtime.sh
+          php scripts/test-release-recovery.php
+          bash scripts/test-release-control-check.sh
+          bash scripts/test-release-publish-prerequisites.sh
 
       - name: Validate source metadata
         id: metadata
@@ -59,8 +77,11 @@ jobs:
           set -euo pipefail
           VERSION="$(php scripts/release-tools.php version)"
           test "$RELEASE_TAG" = "v$VERSION"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "source-sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          {
+            echo "version=$VERSION"
+            echo "source-sha=$(git rev-parse HEAD)"
+            echo "tag-object=$(git rev-parse "refs/tags/$RELEASE_TAG")"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build once and test the package with pinned and current Plugin Check
         env:
@@ -87,9 +108,85 @@ jobs:
           retention-days: 30
           compression-level: 0
 
+      - name: Ready for GitHub production approval
+        env:
+          RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
+          SOURCE_SHA: ${{ steps.metadata.outputs.source-sha }}
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+        run: |
+          {
+            echo "## Ready for GitHub production approval"
+            echo "Approve **Publish release (GitHub approval required)** in **Review deployments**."
+            echo "The environment is still named **wordpress-org**. This is DanielBoring's GitHub deployment approval, NOT WordPress.org staff review."
+            echo "Destinations: WordPress.org SVN and GitHub Releases. No new package will be built after approval."
+            echo "Release: v${RELEASE_VERSION}; source: ${SOURCE_SHA}; original QA run: ${GITHUB_RUN_ID}, attempt: ${GITHUB_RUN_ATTEMPT}; artifact: ${ARTIFACT_ID}."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  recover:
+    name: Resolve original validated release (read-only)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      source-sha: ${{ steps.resolve.outputs.source-sha }}
+      tag-object: ${{ steps.resolve.outputs.tag-object }}
+      run-id: ${{ steps.resolve.outputs.run-id }}
+      run-attempt: ${{ steps.resolve.outputs.run-attempt }}
+      artifact-id: ${{ steps.resolve.outputs.artifact-id }}
+    steps:
+      - name: Checkout reviewed recovery control ref without persistent credentials
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require an annotated recovery control tag already in main
+        run: bash scripts/release-control-check.sh
+
+      - name: Set up read-only recovery tooling
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Resolve original successful QA and immutable artifact
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ORIGINAL_RUN_ID: ${{ inputs.original-run-id }}
+          ORIGINAL_ARTIFACT_ID: ${{ inputs.original-artifact-id }}
+        run: php scripts/release-recovery.php
+
+      - name: Recheck original source ancestry and report ready for GitHub approval
+        env:
+          RELEASE_VERSION: ${{ steps.resolve.outputs.version }}
+          SOURCE_SHA: ${{ steps.resolve.outputs.source-sha }}
+          ORIGINAL_RUN_ID: ${{ steps.resolve.outputs.run-id }}
+          ORIGINAL_RUN_ATTEMPT: ${{ steps.resolve.outputs.run-attempt }}
+          ARTIFACT_ID: ${{ steps.resolve.outputs.artifact-id }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$SOURCE_SHA" refs/remotes/origin/main
+          {
+            echo "## Ready for GitHub production approval - original artifact recovery"
+            echo "Approve **Publish release (GitHub approval required)** in **Review deployments**."
+            echo "The environment is still named **wordpress-org**. This is DanielBoring's GitHub deployment approval, NOT WordPress.org staff review."
+            echo "Control tag ${GITHUB_REF_NAME} selects reviewed workflow logic only; it is NOT a plugin release."
+            echo "Release: v${RELEASE_VERSION}; source: ${SOURCE_SHA}; original QA run: ${ORIGINAL_RUN_ID}, attempt: ${ORIGINAL_RUN_ATTEMPT}; artifact: ${ARTIFACT_ID}."
+            echo "Destinations: WordPress.org SVN and GitHub Releases. Reuse the original QA ZIP; no build, QA rerun or retag occurs."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   publish:
-    name: 5 - Publish Release
-    needs: release-qa
+    name: Publish release (GitHub approval required)
+    needs: [release-qa, recover]
+    if: >-
+      ${{ !cancelled() &&
+          ((github.event_name == 'push' && needs.release-qa.result == 'success' && needs.recover.result == 'skipped') ||
+           (github.event_name == 'workflow_dispatch' && needs.recover.result == 'success' && needs.release-qa.result == 'skipped')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # Shared across every tag. GitHub retains only one pending run; this is NOT FIFO.
@@ -101,17 +198,32 @@ jobs:
       contents: write
       id-token: write
       attestations: write
+      actions: read
     environment:
       name: wordpress-org
       url: https://wordpress.org/plugins/webmastery-site-toolkit-for-mcp/
     env:
-      RELEASE_VERSION: ${{ needs.release-qa.outputs.version }}
-      SOURCE_SHA: ${{ needs.release-qa.outputs.source-sha }}
+      RELEASE_VERSION: ${{ needs.release-qa.outputs.version || needs.recover.outputs.version }}
+      SOURCE_SHA: ${{ needs.release-qa.outputs.source-sha || needs.recover.outputs.source-sha }}
+      RELEASE_TAG_OBJECT: ${{ needs.release-qa.outputs.tag-object || needs.recover.outputs.tag-object }}
+      ORIGINAL_RUN_ID: ${{ needs.release-qa.outputs.run-id || needs.recover.outputs.run-id }}
+      ARTIFACT_ID: ${{ needs.release-qa.outputs.artifact-id || needs.recover.outputs.artifact-id }}
     steps:
+      - name: Checkout recovery control ref again after approval
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Recheck recovery control ref after approval
+        if: github.event_name == 'workflow_dispatch'
+        run: bash scripts/release-control-check.sh
+
       - name: Checkout validated source without persistent credentials
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          ref: ${{ needs.release-qa.outputs.source-sha }}
+          ref: ${{ env.SOURCE_SHA }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -122,10 +234,20 @@ jobs:
           extensions: zip
           coverage: none
 
-      - name: Download only this QA job's immutable artifact
+      - name: Install and verify publish-host Subversion before first use
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends subversion
+          command -v svn
+          svn --version --quiet
+
+      - name: Download only the original QA job's immutable artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          artifact-ids: ${{ needs.release-qa.outputs.artifact-id }}
+          artifact-ids: ${{ env.ARTIFACT_ID }}
+          run-id: ${{ env.ORIGINAL_RUN_ID }}
+          github-token: ${{ github.token }}
           path: build/release-bundle
           merge-multiple: true
 
@@ -134,7 +256,10 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           bash scripts/release-tag-check.sh "v$RELEASE_VERSION"
-          php scripts/release-tools.php verify build/release-bundle "$SOURCE_SHA" "$GITHUB_RUN_ID" "$RELEASE_VERSION"
+          test "$(git rev-parse "refs/tags/v$RELEASE_VERSION")" = "$RELEASE_TAG_OBJECT"
+          REMOTE_TAG_OBJECT="$(git ls-remote --exit-code --tags origin "refs/tags/v$RELEASE_VERSION" | cut -f1)"
+          test "$REMOTE_TAG_OBJECT" = "$RELEASE_TAG_OBJECT"
+          php scripts/release-tools.php verify build/release-bundle "$SOURCE_SHA" "$ORIGINAL_RUN_ID" "$RELEASE_VERSION"
           php scripts/release-tools.php extract build/release-bundle/package.zip build/publish
           cp build/release-bundle/package.zip "build/webmastery-site-toolkit-for-mcp-${RELEASE_VERSION}.zip"
 
@@ -142,13 +267,15 @@ jobs:
         id: state
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash scripts/release-publish-check.sh preflight "$RELEASE_VERSION" build/release-bundle
+        run: |
+          svn --version --quiet
+          bash scripts/release-publish-check.sh preflight "$RELEASE_VERSION" build/release-bundle
 
       - name: Attest the exact ZIP before public exposure
         if: steps.state.outputs.decision != 'complete'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: build/webmastery-site-toolkit-for-mcp-${{ needs.release-qa.outputs.version }}.zip
+          subject-path: build/webmastery-site-toolkit-for-mcp-${{ env.RELEASE_VERSION }}.zip
 
       - name: Deploy only a previously unpublished, validated SVN tag
         id: deploy
@@ -160,14 +287,16 @@ jobs:
           SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
           SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
           SLUG: webmastery-site-toolkit-for-mcp
-          VERSION: ${{ needs.release-qa.outputs.version }}
+          VERSION: ${{ env.RELEASE_VERSION }}
           BUILD_DIR: build/publish/webmastery-site-toolkit-for-mcp
           ASSETS_DIR: build/release-bundle/assets
 
       - name: Verify SVN and bounded public listing propagation
         id: verify-public
         if: ${{ !cancelled() && steps.state.outcome == 'success' && (steps.deploy.outcome == 'success' || steps.deploy.outcome == 'failure' || steps.state.outputs.decision != 'deploy') }}
-        run: bash scripts/release-publish-check.sh verify "$RELEASE_VERSION" build/release-bundle
+        run: |
+          svn --version --quiet
+          bash scripts/release-publish-check.sh verify "$RELEASE_VERSION" build/release-bundle
 
       - name: Create missing GitHub Release using the original QA ZIP
         if: ${{ success() && steps.verify-public.outcome == 'success' && steps.state.outputs.decision != 'complete' }}

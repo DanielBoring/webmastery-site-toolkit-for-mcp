@@ -20,7 +20,7 @@ See the [Software Development Lifecycle](sdlc-overview.md) for where CI/CD conne
 | `2 - Unit Tests` | `pull_request`, `push`, `workflow_dispatch` | Fast PHPUnit helper tests. |
 | `3-4 - Docker QA` | `pull_request`, `push`, `workflow_dispatch` | Runtime-impact detection, Ability Contract QA, Full MCP E2E QA, failure artifacts, and PR comment summaries. |
 | `5 - Release Package QA` | release-impacting `pull_request`, `workflow_dispatch` | Contract + transport Docker QA, package validation, and WordPress Plugin Check without publishing. |
-| `5 - Release` | tag push `v*` | Requires main ancestry and Static/Unit QA, validates and transfers one artifact, waits for protected approval, serializes SVN publication, and publishes/verifies the release. |
+| `5 - Release` | release-tag push; guarded recovery `workflow_dispatch` | Normal tags require main ancestry and Static/Unit/package QA. Recovery requires an annotated `v-release-recovery-*` control tag and reuses original successful QA evidence. Both use one protected, serialized publish job; control-tag pushes do not release. |
 | `6 - Compatibility QA` | weekly `schedule`, `workflow_dispatch` | Discovers official upstream releases, tests baseline and candidate WordPress/MCP Adapter combinations, and opens a reviewed baseline-update PR after successful scheduled tests. |
 | `7 - Issue Backlog Import` | `workflow_dispatch` | Previews or imports issue backlog files; uses a serialized, dry-run-first workflow. |
 | Workflow lint | `pull_request`, `push` to `main`, `workflow_dispatch` | Checks Actions syntax, shell scripts, and workflow security with pinned lint tools. |
@@ -73,13 +73,14 @@ Use least privilege per job:
 - Read-only jobs use `contents: read`.
 - PR comment jobs use `pull-requests: write` and avoid checking out PR-controlled code.
 - Release publishing uses `contents: write` only in the protected publish job of the tag release workflow.
+- Recovery resolution is read-only (`contents: read`, `actions: read`). The protected publisher also has `actions: read` for an explicit-token cross-run artifact download; only the original validated run/artifact IDs may be used.
 - Secrets should not be needed for PR validation from forks. Read-only fork/bot contexts use job summaries instead of requiring a writable PR comment token.
 - Actions tokens default to read-only; jobs request only their necessary scopes. The isolated compatibility failure reporter has issue-write access, not access to checkout or release credentials.
 - WordPress.org SVN credentials are named `SVN_USERNAME` and `SVN_PASSWORD` and stored only in the protected `wordpress-org` environment. They become available after approval.
 
 ## Environment gates
 
-The `wordpress-org` GitHub Environment protects the production SVN publish step. Release QA runs before the workflow reaches that environment, so normal validation does not need SVN credentials.
+The `wordpress-org` GitHub Environment protects **Publish release (GitHub approval required)**. A ready-for-approval summary from normal Release QA or the recovery resolver identifies the exact release/source/run/attempt/artifact before the protected job starts. This is GitHub production approval by DanielBoring, not WordPress.org staff review. The environment ID remains `wordpress-org` and can still appear in **Review deployments**; its established secrets, reviewer and tag policy are unchanged.
 
 Recommended `wordpress-org` environment settings:
 
@@ -88,7 +89,9 @@ Recommended `wordpress-org` environment settings:
 3. Store the WordPress.org SVN-specific password, not the normal account password.
 4. Treat approval as confirmation that the validated tag should publish to WordPress.org production SVN.
 
-As last verified on September 16, 2026, the configured reviewer is DanielBoring, with self-review allowed for solo maintenance and administrator environment bypass disabled. Only tags matching `v*` may deploy. The tag ruleset separately restricts creation/update/deletion to repository administrators; it does not grant permission to bypass environment approval.
+As read back again on September 21, 2026, the configured reviewer is DanielBoring, with self-review allowed for solo maintenance and administrator environment bypass disabled. Only tags matching `v*` may deploy. The tag ruleset separately restricts creation/update/deletion to repository administrators; it does not grant permission to bypass environment approval.
+
+Recovery cannot dispatch from `main`: checkout of an original tag does not change the workflow's deployment ref. It requires a separately authorized annotated `v-release-recovery-*` control tag on reviewed main history, excludes that namespace from normal tag-push releases, and rejects branch or ordinary-release-tag dispatch. The control tag selects only reviewed CI logic; publication uses the original successful QA source/run/artifact. The publish host explicitly installs and verifies Subversion before any SVN preflight. See the [normal/recovery runbook](release-strategy.md#recovery-when-the-frozen-workflow-itself-needs-a-fix).
 
 There is no separate WordPress.org test SVN. Use pull request checks, `5 - Release Package QA`, manual compatibility checks, and staging WordPress installs for pre-production confidence.
 
