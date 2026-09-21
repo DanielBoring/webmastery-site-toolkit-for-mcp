@@ -55,6 +55,49 @@ fresh process and an explicitly conservative memory bound, not claim the
 previous global peak is an incremental operation peak. Runtime/package and
 shared-validator/source-marker integration evidence remain separate gates.
 
+### Running the owned benchmark after lease approval
+
+Preparation and unit checks do not constitute numeric acceptance. Run only in a
+leased, isolated single-site WordPress 6.9-or-newer installation with empty
+posts/postmeta tables, the toolkit and real Yoast active, and no external object
+cache. Add `define( 'WSTM_BOUNDED_BENCHMARK', true );` to that disposable
+installation's `wp-config.php`. With the intended PHP executable on PATH, run
+from this checkout (replace the example WordPress path with the leased path):
+
+```powershell
+$env:WSTM_BOUNDED_BENCHMARK = '1'
+$env:WSTM_BOUNDED_WP_LOAD = 'C:\disposable-wordpress\wp-load.php'
+$env:WSTM_BOUNDED_NAMESPACE = 'w121_' + [guid]::NewGuid().ToString('N').Substring(0,12)
+$env:WSTM_BOUNDED_SOURCE_SHA = (git rev-parse HEAD).Trim()
+php tests\e2e\bounded-list-benchmark.php run
+$benchmarkExitCode = $LASTEXITCODE
+$artifacts = Join-Path $PWD ('e2e-artifacts\' + $env:WSTM_BOUNDED_NAMESPACE)
+Get-Content "$artifacts\outcome.json"
+Get-Content "$artifacts\provenance.json"
+Get-ChildItem $artifacts
+```
+
+Retain the exit code and the complete artifact directory, including failures.
+Artifacts record source/file hashes, available Git diff, per-operation
+SQL/capability/query observations, memory markers, responses, assertions,
+traversals, immutable-state snapshots, and cleanup outcomes. The full traversal
+uses thousands of fresh subprocesses. Interrupted runs can retry owned cleanup
+with the **same environment variables and namespace**:
+
+```powershell
+php tests\e2e\bounded-list-benchmark.php cleanup
+```
+
+The PHP 8.1-compatible memory bound is the final global allocated peak minus
+current allocated memory immediately before the operation, in a fresh process.
+It is an upper bound, not an exact incremental peak: a bootstrap peak can cause
+a conservative failure. No historical-peak subtraction or peak-reset API is
+used. This measures PHP allocation, not RSS or database memory. Cold/warm refers
+to request-local object caches, not database buffer caches; the payload budget
+applies only to the controlled default-20 summary fixture. Actual WordPress/PHP
+floor execution and numeric acceptance remain pending until leased runs supply
+the raw evidence.
+
 ## Unreleased canonical error coverage
 
 All manifest failures require `expect_error_shape:"canonical"`, a seven-category
