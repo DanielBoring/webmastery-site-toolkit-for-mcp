@@ -97,7 +97,7 @@ try {
 					$property->setAccessible( true );
 					$result = ( $property->getValue( $ability ) )( $input );
 				} else {
-					$result = $ability->execute( $input );
+					$result = $ability->execute( array() === $input && ! $ability->get_input_schema() ? null : $input );
 				}
 			}
 			$result = is_wp_error( $result ) ? wstm118_error_envelope( $result ) : $result;

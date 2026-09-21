@@ -56,7 +56,7 @@ final class Wstm110_Metadata_Transport {
 	public function execute( string $ability, array $input, string $observation_token = '' ): array {
 		$this->last_response = array();
 		$this->last_events = array();
-		$arguments = $this->individual ? $input : array( 'ability_name' => $ability, 'parameters' => $input );
+		$arguments = $this->individual ? (object) $input : array( 'ability_name' => $ability, 'parameters' => (object) $input );
 		$response = $this->rpc( 'tools/call', array( 'name' => $this->tool_name( $ability ), 'arguments' => $arguments ), $observation_token );
 		$this->last_response = $response;
 		$tool = $response['result'] ?? null;
