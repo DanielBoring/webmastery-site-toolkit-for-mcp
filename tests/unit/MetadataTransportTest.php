@@ -137,6 +137,16 @@ final class MetadataTransportTest extends TestCase {
 		$success = array( 'success' => true, 'data' => array( 'value' => 'fixture' ) );
 		$GLOBALS['wstm110_transport_responses'][] = $this->response( array( 'result' => array( 'content' => array( array( 'type' => 'text', 'text' => json_encode( $success ) ) ) ) ) );
 		self::assertSame( $success, $transport->execute( 'fixture/read', array() ) );
+		$body = json_decode( $GLOBALS['wstm110_transport_requests'][3][1]['body'], false, 512, JSON_THROW_ON_ERROR );
+		self::assertInstanceOf( \stdClass::class, $body->params->arguments );
+	}
+
+	public function test_gateway_empty_parameters_remain_a_json_object(): void {
+		$transport = $this->initialize();
+		$GLOBALS['wstm110_transport_responses'][] = $this->response( array( 'result' => array( 'structuredContent' => array( 'success' => true ) ) ) );
+		$transport->execute( 'fixture/read', array() );
+		$body = json_decode( $GLOBALS['wstm110_transport_requests'][3][1]['body'], false, 512, JSON_THROW_ON_ERROR );
+		self::assertInstanceOf( \stdClass::class, $body->params->arguments->parameters );
 	}
 
 	public function test_duplicate_descriptions_fail_discovery_instead_of_guessing(): void {

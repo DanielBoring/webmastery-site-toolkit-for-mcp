@@ -21,6 +21,53 @@ Historical baseline comparisons require the pre-migration runner from 2.6.0;
 the current strict canonical parser intentionally rejects those old envelopes.
 Do not weaken current assertions to make a historical baseline pass.
 
+## Metadata batch and SEO authorization coverage (3.0)
+
+`metadata-batch-fixture.php` independently lists 34 removed aliases and 147
+presence variants (values, null, empty arrays/strings, containers, raw keys,
+unknown reserved prefixes). `metadata-batch-runner.php` exercises all eight
+built-in/fixture-CPT create/update entrypoints. It requires explicit
+`WSTM110_BATCH_DISPOSABLE=1` in an owned disposable runtime and selects
+`direct`, `ability`, `http` (gateway), or `individual` execution with
+`WSTM110_BATCH_BOUNDARY`. Never enable it on a
+shared or live site. Whole posts/postmeta/terms/taxonomy/relationship/cron
+snapshots and pre-write/save/status/metadata/term hook counters detect even
+insert-then-delete fake rollbacks. Artifacts retain every input and observation.
+Each boundary expects 1,176 rejections plus four positive draft/plain-update/
+individual-metadata/publish workflows. HTTP observation requires a request-scoped
+token and an explicit response header from `metadata-batch-http-fixture.php`;
+a missing header is a failure, not evidence of zero hooks.
+
+`seo-metadata-runner.php` uses the same opt-in and boundaries with the temporary
+`seo-metadata-fixture.php` forbidden-read observer and existing standalone
+authorization fixture. With both real SEO providers active, it expects 252 cases:
+40 keys on posts/pages under map denial, final-user-cap denial, and explicit
+primitive-grant controls; eight analysis cases; two score-filter cases; bounded
+overview observations; and URL-only head refusal. Individual HTTP requires the
+temporary `wstm118-individual` server after the normal registration audit.
+These runners retain raw responses and observer evidence, revoke their own
+application passwords, and remove owned objects/options. Unit transport seams
+prove strict error handling, discovery ambiguity, required observer evidence,
+and session-cleanup failures; they do not establish actual HTTP/provider results.
+
+The manifest replaces ten obsolete combined successes with original-payload
+no-op rejections, plain creation/update, and 54 exact-key standalone writes.
+Every original normalization/backslash and unrelated-key assertion is retained.
+`capture_post_id` captures only a successful created object for subsequent
+calls. `assert_metadata_boundary` adds full state and zero-hook proof to
+combined-input denials. Contributor publication and parent-assignment checks
+keep their original permission purpose using plain payloads; scheduling keeps
+metadata sentinels instead of injecting aliases into every request.
+
+SEO unit probes reject reads of each of 40 denied keys before they occur,
+check authorized score pagination and total counts, prohibit opaque head
+requests, and enforce the overview's single 100-ID query / at most 400 reads.
+Unit observations are not substitutes for actual WordPress/provider/HTTP QA.
+The [migration guide](../../docs/3.0-migration.md#metadata-and-seo-authorization)
+documents all changed user-facing contracts.
+
+## Actual canonical error transport proof
+
 `error-contract-runner.php` requires `WSTM118_DISPOSABLE=1` before loading
 WordPress or creating credentials/fixtures. The managed harness grants it only
 inside the disposable stack. A test-only MU fixture, installed after the normal
@@ -200,19 +247,35 @@ Current coverage is 75 base registered abilities plus 5 generated abilities per 
 
 `update-cpt-mcp-book` regression coverage (issue #107) proves taxonomy assignment is pre-validated before `wp_update_post()` writes anything: each denial case (a nonexistent taxonomy, a registered taxonomy the actor lacks `assign_terms` capability for, and a mixed payload combining one allowed and one forbidden *registered* taxonomy alongside the existing allowed-plus-nonexistent case) submits a full `title`/`content`/`status`/`slug`/`taxonomy_terms` payload, and the paired read confirms the fixture's title, content, status, slug, and taxonomy terms are all unchanged. A second fixture taxonomy, `wstm107_restricted_shelf`, is registered only for `mcp_book` and granted to no role, so it is always forbidden and exercises the mixed allowed/forbidden registered-taxonomy path independently of the nonexistent-taxonomy case. The fixture post used for these cases (`wstm107_book_id`) is created with an explicit, deterministic slug so the unchanged-slug assertions are stable.
 
-## Ranked coverage follow-up (#120)
+## Ranked coverage reconciliation (#120)
 
-This is a **partial, test-only** follow-up, not closure of the coverage umbrella.
-The manifest keeps every existing success and status/no-write assertion and adds
-the following requirement-to-test mapping:
+This ledger reconciles all ten groups in
+[`ISSUES/19-close-test-coverage-gaps-ranked-by-blast-radius.md`](../../ISSUES/19-close-test-coverage-gaps-ranked-by-blast-radius.md).
+It is a requirement/evidence map, not a test-count-based closure claim. Groups
+1/6/7/9/10 originated in the partial #160 follow-up; groups 2/3/8 have dedicated
+real-core suites, group 4 is supplied by #105/#157, and group 5 combines #159
+with the breaking metadata contract in #164. **The accepted #164 baseline is
+integrated at `822f056cfaf2c61acfa1beddd0ddd7f2becabbee`.** The historical issue's
+combined metadata success behavior is intentionally not restored.
 
-| Group | Permanent coverage |
-| --- | --- |
-| 1: permanent media deletion | `wstm120 delete-media` Subscriber and Author object denials; the Author has `upload_files` but cannot `delete_post` on the Editor-owned attachment. Original Author deletion success remains. The owner reads the retained attachment afterward. |
-| 6: Contributor boundaries | A real `contributor_test` user, role/ID placeholders and validator allowlist; own-draft create/update/trash with persisted-state assertions, all three publish/private/future create and transition denials, own published-delete denial, and unrelated draft read/update/delete denials. Dedicated fixtures do not reuse earlier write-positive targets. |
-| 7: private/trashed direct getters | `wstm120 get-post` / `get-page` cover owners and other users, allowed Editors and lower-capability owners, denied Subscribers/Contributors, and original draft versus published trash status. Effective object capabilities and `_wp_trash_meta_status` are asserted where relevant. |
-| 9: pure helper characterization | `PostsCharacterizationTest` covers numeric path grammar, by-reference nested replacement/no partial mutation, heading section boundaries/ambiguity, metadata recursive depth and encoded size/error limits. `SiteKitUrlTest` covers host case, effective ports, schemes, userinfo and fragments. Existing media URL and raw exact-match helper tests remain unchanged. |
-| 10: remaining negative paths | Explicit callback/wrapper permission errors for media reads, SEO analysis and four list abilities, with allowed counterparts and response/hidden-field assertions. |
+Here, **manifest** means `abilities-manifest.json` executed by `ability-runner.php`
+against actual WordPress; **direct** means a registered execute callback invoked
+without the outer ability wrapper; **HTTP** means authenticated MCP Adapter
+requests, not a mocked transport. PHPUnit helper/observer seams are identified
+separately and do not establish WordPress authorization or persistence.
+
+| Group / disposition | Permanent tests and execution boundary | Allowed/denied controls and state purpose | Retained runtime evidence |
+| --- | --- | --- | --- |
+| 1: permanent media deletion - covered | Manifest `wstm120 delete-media`, `get-media`; `coverage-fixture.php`. | Subscriber denial plus an Author who has `upload_files` but lacks `delete_post` on an Editor-owned attachment; original Author delete success retained. Snapshot denial checks include attachment/postmeta rows, parent thumbnail link and actual upload hashes; the owner subsequently reads the retained attachment. These snapshots do not observe transient hooks. | Manifest `coverage_evidence`: effective capabilities, callback denial, nonempty identical before/after state; owner read success. |
+| 2: disabled trash - covered | `trash-safety-runner.php`, **fresh PHP processes** with `EMPTY_TRASH_DAYS=0` and `30`; real ability execution for posts, pages, both fixture CPTs and bulk trash. A per-case setup cannot redefine a boot constant. | Author-owned posts, Editor pages and a mapped-CPT actor have enabled-trash/restore controls. Subscriber, missing-ID and wrong-type failures retain their precedence. Disabled trash rejects authorized requests with `trash_disabled`; stored posts, revisions/descendants, postmeta, terms, comments/commentmeta remain. Permanent-deletion API/filter/action observations stay empty; mixed bulk results retain exact per-ID outcomes. | `trash-safety-disabled.json`, `trash-safety-enabled.json`: boot constant/version, row counts/hashes, deletion observations and restore checks. |
+| 3: category/tag deletion - covered | Manifest Subscriber denials/default-category case; `taxonomy-write-runner.php` direct and wrapped execution; `TaxonomyWriteTest` for forced core return values. | Administrator/Editor and remapped delete-only successes contrast with Subscriber, manage-only, wrong remapped capability, per-term mapping and final `user_has_cap` denials. Raw terms/taxonomy/meta/relationship snapshots and write hooks remain unchanged on denial. Real default-category deletion returns zero; even a final meta-cap override must not turn it into success. Units separately force zero/false/`WP_Error` and true; they are not real storage failures. | `taxonomy-write-summary.json`: permission scenarios, unchanged hashes/empty hooks, successful persisted fields/deletion, default-category core result. |
+| 4: comment moderation - covered by #105/#157 | `comments-fixture.php`, manifest `wstm105` cases, `comments-runner.php` direct/ability/HTTP; `CommentsProofTest` covers failed cleanup retention. | `comment_moderator` has only `read` and `moderate_comments`, not object edit rights. All four writes require both the moderation floor and effective `edit_comment`; Author, other-object and unmapped-CPT denials contrast with own-draft, Editor/Administrator and mapped-CPT successes. Content/status readback and all comment/commentmeta hashes survive denials, including malformed/global-comment controls. | `comments-direct.json`, `comments-ability.json`, `comments-http.json`: effective capabilities, canonical results/raw HTTP, stored content/status and table hashes. |
+| 5: registered and combined metadata - covered with accepted #164 | `post-meta-authorization-fixture.php` / `post-meta-authorization-runner.php` direct/ability/HTTP plus manifest `wstm110`; #164 `metadata-batch-runner.php` and `seo-metadata-runner.php` add direct/ability/gateway/individual-tool proof. | Restricted registered keys on posts/pages deny reads, upserts/no-ops and deletes; Administrator/custom/primitive grants and distinct edit/delete-cap controls remain. Global/subtype policy and effective map/user-cap denials are exercised with real providers. Combined `meta`/raw keys/34 SEO aliases are **rejected**, including empty/null presence, before writes. Allowed draft, plain update, separately authorized exact-key metadata, then publish calls calibrate observers; this workflow is **non-atomic**. Standalone denials preserve post/meta state and mutation hooks; combined denials preserve posts/revisions, metadata, term tables/relationships and cron with no write hooks. SEO denied-key read observers contrast with allowed reads. | `post-meta-authorization-{direct,ability,http}.json`, `metadata-batch-{direct,ability,http,individual}.json`, `seo-metadata-{direct,ability,http,individual}.json`; raw wire, effective permissions, source hashes, snapshots and calibrated hook/read observers. |
+| 6: Contributor boundaries - covered | Manifest `wstm120 contributor`, real core `contributor_test` role, dedicated objects in `coverage-fixture.php`. | Own-draft create/update/trash successes assert stored fields; publish/private/future creation and transitions, own-published deletion and unrelated read/update/delete fail with unchanged state. The successful observer-calibration write must change the snapshot. Under #164 the original combined transition inputs remain separate metadata-rejection cases; plain transition cases still test publishing permission rather than failing early for metadata. | Manifest role/capability evidence, stored-post assertions, before/after snapshots and independent follow-up reads; `MetadataMigrationTest` protects the distinct permission purpose. |
+| 7: private/trashed getters - covered | Manifest `wstm120 get-post` / `get-page` with real `edit_post` mapping. | Allowed owners/Editors, denied Subscribers/other-object Contributors, page ownership without `edit_pages`, and limited page/other-object editors distinguish editing from reading/deleting. `_wp_trash_meta_status` differentiates former draft versus published trash. Success checks assert ID/status/content/author; denials omit `data`, and lower-privilege responses omit `author_login` where specified. | Manifest `coverage_evidence.capabilities` and callback result, persisted trash-origin metadata and response assertions. This is the direct-getter policy, not list filtering. |
+| 8: patch HTML - covered | `patch-html-runner.php` invokes actual WordPress abilities for block-path/hash, heading/exact and nested block patches; manifest `wstm115`. | Effective `unfiltered_html` Editor controls retain untouched iframe/script/etc. bytes while sanitizing supplied replacements. Author and explicitly filtered Editor controls retain core save filtering; Subscriber/foreign-object and stale/missing/ambiguous target failures leave raw content unchanged. Full-content update and mapped-CPT controls preserve their separate contracts. | `patch-html-summary.json`: actual capability/save-filter state, raw persisted before/after/expected content, response hashes and untouched-block hashes. It is content-state proof, not whole-database/zero-hook proof. |
+| 9: pure helper boundaries - covered by units | `MediaUrlTest`: `validate_public_image_url` through overridden DNS resolver methods; `PostsCharacterizationTest`: `parse_block_path`, `replace_block_by_segments`, `patch_content_by_heading`, metadata normalization/validation; `PostsHelpersTest`: raw `patch_content_by_exact_match`; `SiteKitUrlTest`: `is_same_site_url`. | Allowed/denied DNS/literal/alias cases, resolver failures/bounded cycles; valid/invalid paths, nested replacement/no partial mutation, heading boundaries/ambiguity, exact raw needles/duplicates; metadata depth 10/11 and encoded JSON 100000/100001-byte boundaries plus encoding failures; host/port/scheme/userinfo/fragment cases. These are deterministic helper seams, not WordPress parsing, DNS/network integration or capability evidence. | PHPUnit results; real-core patch evidence above and `media-download-fixed.json` are complementary integration evidence, not replacements for threshold units. |
+| 10: formerly success-only paths - covered | Manifest `wstm120` media-read/SEO/list cases; `wstm122` media-update denial/readback; original category/tag create cases plus the taxonomy suite. | `get-media` object/floor denials retain owner success. Author media-update success seeds alt/title/caption; Subscriber denial retains alt metadata and a subsequent Author getter verifies title/caption/alt. SEO Contributor own-draft success contrasts with Subscriber/other-object failure. Post/page lists require editing capabilities; category/tag lists allow Subscriber `read` but deny `no_role`. Original allowed controls, response shapes, filtered totals and hidden identity fields remain. Editor category/tag creation contrasts with Subscriber and remapped taxonomy denials. | Manifest case outcomes/capability assertions and selected state snapshots/readbacks; taxonomy direct/wrapped state evidence. Not every readonly manifest case claims a full snapshot or HTTP execution. |
 
 Direct post/page getters currently require **`edit_post`**, not the list helper's
 `read_post` (private) or `delete_post` (trash) checks. An Author or Contributor
@@ -242,12 +305,11 @@ calibrates the snapshot observer. These checks prove persisted-state equality,
 not absence of transient/no-op write-hook calls.
 
 `assert_permission` distinguishes callback `forbidden` from WordPress's outer
-`ability_invalid_permissions`. Contributor status updates retain their
-execution-stage denial: object permission succeeds, then execution refuses
-the status change. The historical string error is canonicalized in unreleased
-3.0; it is not an exception to the current error contract. Required destructive
-permission cases cannot be replaced with not-found/invalid-input failures.
-Validator mutation tests protect this distinction and the no-write assertions.
+`ability_invalid_permissions`. On Contributor status updates, object permission
+succeeds, then execution returns canonical `forbidden` with the exact publication
+denial message; it is **not** a legacy string-error exception. Required capability
+denials cannot be replaced with not-found, invalid-input or missing-confirmation
+failures.
 
 Heading units load the unchanged Posts class into a test namespace, supplying
 explicit block arrays and recording serialization input. They do **not** emulate
@@ -262,13 +324,101 @@ comparison, including different HTTP(S) schemes with the same explicit port.
 The existing 45-check real-core patch HTML runner remains the integration
 counterpart; unit seams do not replace it.
 
-Groups 2/3/8 retain their separate trash-safety, taxonomy and patch-HTML evidence.
-Comment-object group 4 belongs to #105/#157; registered metadata group 5 belongs
-to #110/#159. The separate 3.0 batch/SEO suite above covers the remaining #110
-contract; none of these unit case totals establishes full #120 completion.
-Runtime registration coverage must
-still prove all 85 fixture abilities against `wp_get_abilities()`; static manifest
-validation alone cannot make that claim.
+Registered metadata assertions follow WordPress's **effective key capability**:
+object editing plus `edit_post_meta` (reads/upserts) or `delete_post_meta`
+(deletions), including global/subtype registrations and final capability filters.
+A false `auth_callback` is not asserted to be an unconditional veto over an
+explicit primitive grant. The unregistered allowlisted SEO compatibility default
+does not bypass object editing or effective site policy, and temporary filters
+must be restored on denial and exceptions.
+
+### Permanent regression guards
+
+`scripts/validate-security-qa.php` requires the destructive negative abilities,
+exact callback/wrapper permission cases, Contributor success/failure and all
+publication statuses, media-delete state evidence, moderator-only comment state,
+restricted metadata allow/deny cases, and list/privacy controls. The separate
+manifest validator checks actor names and assertion shapes. Neither static
+validator proves actual runtime registration, effective permissions or no writes.
+
+`CoverageManifestTest` retains its validator mutations and additionally guards
+the existing Subscriber `assert_unchanged` cases for bulk trash, post/page/both-CPT
+deletion and standalone metadata deletion, with their actual Editor or mapped-CPT
+positive-write counterparts: bulk trash needs a positive success count and a
+trash success tied to a submitted ID; metadata deletion needs a positive deleted
+count; individual deletion needs the submitted ID and trash status. Dry-run
+previews and zero-write results cannot substitute. It also requires media-update denial/alt-state evidence
+between the Author's successful write and unchanged title/caption/alt readback.
+Mutations of isolated decoded copies remove each denial, state assertion or
+allowed control, substitute non-permission failures or preview/zero-write results,
+break success target/state evidence, and corrupt media readback;
+the same assertions used on the real manifest must reject them. No manifest
+inputs, object/array shapes or scenario counts are rewritten or pinned by these
+guards.
+
+The metadata suite's `MetadataMigrationTest`, `MetadataBatchFixtureTest` and
+`MetadataTransportTest` separately protect the migration's permission purpose,
+snapshot/hook observation, read failures, required HTTP observer evidence and
+error/cleanup handling. Their stubs validate test machinery, not real WordPress.
+
+### Reviewed runtime provenance and accepted baseline
+
+The reconciliation reviewed genuine [contract/HTTP CI run 35563863522](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/actions/runs/35563863522)
+and [original-ZIP package CI run 35563863520](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/actions/runs/35563863520)
+at metadata head `7fb2c04b0123ca9070b396b68828c49bdd7a2f38`,
+on WordPress **7.1.1 / PHP 8.2.33**. The contract summary reports actual
+`wp_get_abilities()` coverage of 85 registered and 85 manifest abilities,
+518 passing cases (242 expected failures), not a static namespace count.
+Detailed retained reports include enabled/disabled trash, taxonomy, patch HTML,
+comments, standalone metadata, combined metadata and SEO observations.
+
+Per-case manifest capabilities/snapshots were also reviewed in the retained
+`primary-e57b9dc-accepted/e2e-summary.json` from the earlier local primary proof,
+at `e57b9dc791d1e5891fe6d28e81c9d957c0362ff6`. This is **not** relabelled as
+the later CI report: the only source difference to `7fb2c04` is the batch
+runner's stricter exact-reason assertion; the manifest, ability runner, fixtures
+and production files are identical. Its missing/unknown ability lists are empty,
+effective capability assertions match, denial snapshots are nonempty and equal,
+and the positive Contributor calibration changes state. The later CI logs
+independently retain the manifest's named pass/fail outcomes.
+
+For the accepted metadata head, all four combined-metadata boundaries retain the exact
+`invalid_input` / `metadata_requires_separate_call` rejection, unchanged
+nonempty snapshots and zero mutation hooks; successful migration steps exercise
+the same observers. SEO evidence retains effective denials, zero denied-key
+reads and allowed-read controls. Original-package evidence is separate from
+checkout execution. These are reviewed observations, not permanent fixed-count
+test thresholds or proof for an untested future SHA.
+
+Final-head raw reports were subsequently reviewed from the metadata worker's
+`floor-7fb2c04-accepted` (WordPress **6.9.4 / PHP 8.2.31**) and
+`package-7fb2c04-accepted` (WordPress **7.1.1 / PHP 8.2.33**) evidence directories.
+Each contains 28 green runtime reports, including the raw manifest summary:
+85 registered/covered abilities, 518 passing cases, matching effective capability
+observations, nonempty unchanged denial snapshots and a positive state calibration.
+Each combined-metadata boundary passes 1180 checks; across four boundaries the
+raw records retain 4704 distinct strict rejections and 16 successful migration
+sequences. SEO retains 252 cases per boundary, 1016 observed calls overall and
+zero denied-key reads. These are historical results, not minimum test counts.
+
+The source audit matches Posts/CPT/SEO production bytes to the accepted head.
+Three runner/fixture files have Windows CRLF bytes; normalizing only line endings
+matches Git exactly, rather than treating unequal raw hashes as identical.
+The local original ZIP has SHA-256
+`9effb8a08167e2f31e13171028e49c9b8d9b71d67c7f3e318f16d694f5ee9123`;
+its complete runtime reports, pinned/latest Plugin Check (both actually 2.1.0,
+zero errors/warnings), and unchanged original-package production-tree check
+were independently accepted. This is not proof for PHP 8.0 or exact WordPress
+6.9.0, nor a release/publication claim.
+
+#164 was accepted on `main` as `822f056cfaf2c61acfa1beddd0ddd7f2becabbee`,
+whose tree `263654ade4e2f1863f91d99ff71e682ad6841250` matches the frozen metadata
+head. This reconciliation integrates that baseline without importing unmerged
+production branches. No local WordPress/Docker execution is claimed by this
+reconciliation worker: the source-bound runtime artifacts above are separate
+from its local unit/static QA. Retain final reconciliation QA and exact PR-head
+CI results in the handoff; this ledger does not close #120 or supersede
+independent coordinator review.
 
 ## Diagnostic configuration and privacy regressions
 
