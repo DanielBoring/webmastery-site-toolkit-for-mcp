@@ -293,14 +293,46 @@ permission; ancestors do not require edit permission. Pages use `edit_post`
 and CPTs use their registered edit capability, including WordPress capability
 filters. An ordinary Author cannot edit pages by default.
 
-Positive `parent` values on nonhierarchical CPTs are rejected, even though
-older versions persisted this unsupported extra field. Zero and omitted
-parents remain accepted. Built-in post abilities continue to ignore extra
-`parent` fields; their schemas are not newly closed.
+**3.0 development:** built-in post and nonhierarchical CPT create/update
+schemas reject any supplied `parent`, including `0` and `null`. Omit it on
+these types. Detach-to-zero remains supported for pages and hierarchical CPTs;
+their existing permission, type, existence, and cycle safeguards are unchanged.
 
 On a test site, verify an allowed page-parent update, a denied update under
 another user's inaccessible parent, and a detach with `parent: 0`. Include a
 title change with the denied request and confirm that the title is unchanged.
+
+### Strict input boundaries (3.0 development)
+
+Registered fixed-property object schemas are closed: misspelled or unadvertised
+properties fail rather than being ignored. The same schema supplies strict
+type, enum, required-field, numeric-range, and array-item/bound checks before
+registered execute callbacks and raw permission callbacks. Adapter 0.6.1 calls
+permissions before normal core input validation, so these checks must not rely
+on `WP_Ability::execute()` having run. Invalid requests cannot enter the
+operation's capability, query, or write branches.
+
+Use exact enum values (`"DESC"`, not `"desc"` or `"DESC!"`), JSON integers for
+IDs, and JSON booleans for flags. Optional fields retain existing defaults when
+omitted; explicit `null` is invalid unless advertised. Input-free abilities
+accept an empty object or omitted input (native null normalizes to the empty
+default), not arbitrary properties. No text sanitization can turn an invalid
+enum into a valid one.
+
+Standalone `meta_value` remains a polymorphic JSON value, and CPT
+`taxonomy_terms` remains an extensible map of taxonomy names to integer arrays;
+registration and assign-term authorization still apply. Unstructured objects
+and explicitly open extension maps are not recursively closed. Block attributes
+are not constrained by this input guard. WordPress remains responsible for
+other schema keywords such as `format`; this helper is not a full JSON Schema
+engine. Optional output schemas are deferred rather than misvalidating
+polymorphic provider/error responses or the separately changing list shapes.
+
+Verify on a disposable site that `list-posts` with `{"order":"DESC!"}` fails,
+`update-post` with an extra `parent:0` cannot change its title, and omitted
+filters still work for an Editor but do not grant Subscriber access. Exact
+error-layer differences and pending runtime evidence are in the
+[migration guide](docs/3.0-migration.md#strict-input-schemas-and-raw-permissions).
 
 ## Response format
 

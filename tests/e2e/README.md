@@ -119,6 +119,76 @@ Unit observations are not substitutes for actual WordPress/provider/HTTP QA.
 The [migration guide](../../docs/3.0-migration.md#metadata-and-seo-authorization)
 documents all changed user-facing contracts.
 
+## Strict input-schema coverage and acceptance ledger (3.0)
+
+`InputBoundaryTest` registers the production abilities in an isolated namespace,
+compares all 85 registered names against the manifest, and tests raw permission
+and execute callbacks with malformed types/enums/nulls/unknown properties.
+Capability/query/write sentinels require rejection before operation work.
+Controls preserve omitted defaults, valid/denied authorization, arbitrary
+metadata maps, dynamic taxonomy maps, and hierarchical parent semantics.
+`InputProofTest` disables the actual type, enum, and closed-key checks in three
+source mutants and requires them to reach the sentinel callback. State,
+mutation-hook, query/capability, and missing-evidence negative controls validate
+the no-work oracle separately.
+
+This schema checkpoint retains all 563 preexisting manifest labels and inputs:
+
+| Acceptance change | Cases | Exact new expectation |
+| --- | ---: | --- |
+| Combined metadata cases | 23 | Native `invalid_input` / `ability_invalid_input`; all existing state/metadata assertions retained |
+| Nonhierarchical CPT parent presence | 8 | Native `invalid_input` / `ability_invalid_input`, including zero and Administrator cases; no persisted change |
+| New enum/type/unknown-key and denied-role controls | 16 | Exact canonical errors, never sanitizer-coerced success |
+| Total at this checkpoint | 579 | 85 abilities; 300 negatives; every registered ability represented |
+
+Historical labels mentioning allowed zero-parent behavior intentionally remain
+unchanged for provenance; their assertions now reject that closed property.
+The existing 151-case parent matrix is retained. Metadata runtime coverage
+retains 1,176 rejects and four positive workflows per boundary; native reason
+is now exactly `ability_invalid_input`, while direct/gateway/individual
+presence rejection stays exactly `metadata_requires_separate_call`.
+The manifest validator and its mutation test enforce that distinction.
+
+`input-schema-runner.php` and `input-schema-fixture.php` are **unexecuted,
+opt-in runtime scaffolding**, not completed WordPress or wire acceptance.
+Do not start Docker or local WordPress without the coordinator's explicit
+exclusive runtime lease. Shared orchestration and the error-contract runner
+are intentionally untouched. Final integration must preserve the newer error
+floor, metadata authorization, destructive guards, and performance projections.
+The synthetic missing-schema error fixture needs post-registration fault
+injection because legitimate input-free abilities now receive an empty schema.
+
+Inside that later owned disposable runtime, install an MU **loader requiring
+the repository's** `input-schema-fixture.php` (do not copy it away from its
+relative includes), enable `WSTM126_DISPOSABLE_RUNTIME` with literal `true`
+in both CLI/HTTP configuration, and load the normal CPT fixture plus the
+existing individual-tool server fixture. Before bootstrap the runner requires
+exact `WSTM126_DISPOSABLE=1`, `WSTM126_BOUNDARY` set to each of `direct`,
+`permission`, `ability`, `http`, and `individual`, and `WSTM126_ARTIFACT`
+pointing to a new file in an existing writable artifact directory. Set
+`WSTM126_SOURCE_SHA` to the exact tested commit. Invoke the standalone runner:
+
+```bash
+php /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/input-schema-runner.php
+```
+
+The fixture counts only SQL and capability hooks inside registered callbacks,
+not bootstrap/HTTP authentication work. Malformed cases also require unchanged
+posts/meta/terms/relationships/cron snapshots, zero mutation hooks, and the
+exact callback observation count for that boundary; missing evidence fails.
+Valid denied-role and hierarchical detach/omission controls calibrate real
+authorization and writes. The runner uses unique owned actors/posts, refuses
+an existing observation option, retains raw inputs/results/wire/state/counters,
+records cleanup failures, and removes its own actors, credentials, objects,
+and option. Keep failed artifacts as well as later passes. Remove the MU
+loader and runtime opt-in when retiring the leased runtime.
+
+Local unit/static results do not establish the source-derived HTTP expectations.
+Actual direct/native/raw-permission/gateway/individual proof, runtime coverage
+audit, and integration with concurrent changes remain pending. Optional output
+schemas are explicitly deferred; the [migration guide](../../docs/3.0-migration.md#strict-input-schemas-and-raw-permissions)
+documents open maps, validation scope, and exact failure-layer differences.
+
 ## Comment moderation regression coverage
 
 `comments-fixture.php` adds `wstm105_*` fixtures and comment-specific checks. Its `wstm105_moderator` actor has the actual `comment_moderator` role with only `read` and `moderate_comments`. Cases cover all four writes, optional update statuses, Author moderation-floor denials, mapped-CPT allowed/denied controls, own-draft moderation, Administrator access, orphan comments, and missing/nonpositive IDs. Existing Editor cases and every landed main manifest case remain unchanged; runtime registrations remain the coverage authority.
@@ -245,7 +315,8 @@ The `wstm122` manifest cases cover plain post/page creation and updates followed
 Normal manifest QA retains its 85 registered abilities and all existing cases.
 Parent cases add a page-limited actor, allowed and denied assignments, ordinary
 draft create/update controls without scheduling, and nonhierarchical CPT
-positive-parent rejection and zero-parent compatibility.
+parent-presence rejection, including zero. Hierarchical types retain zero-parent
+detach and omitted-parent compatibility.
 
 After normal manifest/transport QA, `scripts/e2e-test.sh` temporarily installs
 `parent-assignment-fixture.php` and invokes the CLI-only

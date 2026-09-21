@@ -362,8 +362,9 @@ try {
 						$record['raw'] = is_wp_error( $raw ) ? $record['result'] : $raw;
 						$record['after'] = wstm106_snapshot( array_keys( $scope ), $input['slug'] );
 						$record['unchanged'] = $record['before'] === $record['after'];
+						$closed_parent = ! $hierarchical && array_key_exists( 'parent', $input );
 						$denial = in_array( $case, array( 'inaccessible', 'missing', 'wrong_type', 'self', 'descendant', 'corrupt', 'filter_deny', 'author_denied', 'meta_precedence', 'publish_precedence', 'taxonomy_precedence' ), true )
-							|| ( 'positive_extra' === $case && 'post' !== $type );
+							|| $closed_parent;
 						$existing_denial = in_array( $case, array( 'author_denied', 'meta_precedence', 'publish_precedence', 'taxonomy_precedence' ), true )
 							|| ( 'create' === $operation && ( in_array( $case, array( 'inaccessible', 'filter_deny' ), true ) || ( 'missing' === $case && 'wstm106_primitive' !== $type ) ) );
 						$record['expected_fixed_denial'] = $denial;
@@ -371,7 +372,11 @@ try {
 							wstm106_assert( false === $record['result']['success'], 'Unsafe assignment was not rejected.' );
 							wstm118_error_envelope( $record['result'] );
 							if ( 'meta_precedence' === $case ) {
-								wstm106_assert( 'metadata_requires_separate_call' === $record['result']['error']['reason'], 'Combined metadata must be rejected before parent validation.' );
+								$reason = 'ability' === $boundary ? 'ability_invalid_input' : 'metadata_requires_separate_call';
+								wstm106_assert( $reason === $record['result']['error']['reason'], 'Combined metadata must be rejected at the expected boundary before parent validation.' );
+							}
+							if ( $closed_parent ) {
+								wstm106_assert( 'ability_invalid_input' === $record['result']['error']['reason'], 'Unadvertised parent must fail closed before parent or taxonomy validation.' );
 							}
 							wstm106_assert( $record['unchanged'], 'Rejected payload changed stored rows/relationships/revisions/metadata/cron.' );
 							wstm106_assert( array() === $record['hooks'], 'Rejected payload reached pre-write/write hooks.' );

@@ -56,7 +56,7 @@ function wp_register_ability( $name, $args ) {
 
 function get_post_types( $args = array(), $output = '' ) {
 	$types = array();
-	foreach ( array( 'mcp_book' => false, 'mcp_case_study' => true ) as $name => $hierarchical ) {
+	foreach ( array( 'mcp_book' => false, 'mcp_case_study' => false ) as $name => $hierarchical ) {
 		$types[ $name ] = (object) array(
 			'name' => $name, 'label' => $name, 'hierarchical' => $hierarchical, 'show_ui' => true,
 			'labels' => (object) array( 'singular_name' => $name ),

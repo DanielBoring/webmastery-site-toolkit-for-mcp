@@ -8,6 +8,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Added all-registered-ability strict input probes, type/enum/unknown-key mutation controls, and opt-in direct/native/raw-permission/gateway/individual runtime proof with callback-scoped query/capability counters and persisted-state/mutation-hook evidence. Runtime execution and shared orchestration integration remain separately gated.
+- Migrated native metadata manifest errors to the exact closed-schema reason and nonhierarchical parent cases to rejection, preserving original labels, inputs, and remaining assertions. Retained the parent and metadata runtime matrices with exact boundary-specific oracles; aligned contributor/PR schema guidance without expanding PHPStan baseline debt.
 - Added destructive-operation red/green unit coverage and strict manifest policy for confirmation, raw bulk bounds, previews, canonical per-item failures, unchanged state, and preserved permission denials. Migrated existing bulk/error/trash/taxonomy callers without dropping their assertions.
 - Added opt-in disposable direct/registered/gateway/individual-tool proof runners with collision checks, persisted post/meta/term/file/cron snapshots, mutation observers, request-scoped database/capability faults, retained wire evidence, and owned-resource cleanup verification. Runtime execution and shared orchestration remain separately gated.
 - Added metadata presence and per-key SEO regression probes, full state snapshots and mutation-hook counters. Migrated combined-write manifest successes to explicit rejections plus separate authorized writes while retaining every original stored-value assertion, Contributor/parent/scheduling permission checks, and the dedicated future-post HTTP deletion scenario.
