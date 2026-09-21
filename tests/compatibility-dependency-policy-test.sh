@@ -5,7 +5,20 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/e2e-test.sh
 source "$root/scripts/e2e-test.sh"
 
-compose() { :; }
+compose() {
+	case "$*" in
+		*curl*"/tests/e2e/error-contract-runner.php")
+			printf '%s' "${WSTM118_MOCK_HTTP_STATUS:-403}"
+			;;
+		*"/tests/e2e/error-contract-runner.php")
+			assert_cron_isolated
+			if [[ "$*" != "exec -T -e WSTM118_DISPOSABLE=1 wordpress php "* ]]; then
+				echo 'Error-contract QA must explicitly opt in to disposable-site execution.' >&2
+				exit 1
+			fi
+			;;
+	esac
+}
 wp() { printf '%s\n' "$*"; }
 MCP_ADAPTER_ZIP=https://example.invalid/adapter.zip
 MCP_ADAPTER_SHA256=unused-by-mocked-transport
@@ -73,4 +86,9 @@ for QA_MODE in contract e2e all; do
 		exit 1
 	fi
 done
+if output="$(WSTM118_MOCK_HTTP_STATUS=200 run_error_contract_qa 2>&1)"; then
+	echo 'Error-contract QA must reject an HTTP-accessible runner.' >&2
+	exit 1
+fi
+grep -Fx 'Error-contract runner must reject non-CLI requests (HTTP 200).' <<< "$output"
 echo 'Compatibility dependency policy and QA bootstrap tests passed without Docker or network.'

@@ -82,5 +82,46 @@ final class InputProofTest extends TestCase {
 				self::assertNotSame( '', $error->getMessage() );
 			}
 		}
+
+	}
+
+	public function test_missing_schema_fault_restores_only_the_probes_original_permission_callback(): void {
+		require_once __DIR__ . '/fixtures/error-fixture-input-stubs.php';
+		$source = file_get_contents( dirname( __DIR__ ) . '/e2e/error-contract-fixture.php' );
+		$start = strpos( $source, "\t\$probe = wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-missing-schema'" );
+		$end = strpos( $source, "\twp_register_ability( 'wstm118-foreign/probe'" );
+		self::assertNotFalse( $start );
+		self::assertNotFalse( $end );
+		$permissions = $executions = 0;
+		$args = array(
+			'permission_callback' => static function () use ( &$permissions ) { $permissions++; return true; },
+			'execute_callback' => static function () use ( &$executions ) { $executions++; return array( 'success' => true ); },
+		);
+		eval( 'namespace Wstm126Probe; use \ReflectionProperty; use \RuntimeException; ' . substr( $source, $start, $end - $start ) );
+		$schema = new ReflectionProperty( Wstm126Probe\WP_Ability::class, 'input_schema' );
+		$permission = new ReflectionProperty( Wstm126Probe\WP_Ability::class, 'permission_callback' );
+		$execute = new ReflectionProperty( Wstm126Probe\WP_Ability::class, 'execute_callback' );
+		foreach ( array( $schema, $permission, $execute ) as $property ) { $property->setAccessible( true ); }
+		self::assertFalse( $probe->registered['input_schema']['additionalProperties'] );
+		self::assertSame( array(), $schema->getValue( $probe ) );
+		self::assertSame( $args['permission_callback'], $permission->getValue( $probe ) );
+		self::assertSame( $probe->registered['execute_callback'], $execute->getValue( $probe ), 'Do not alter core invocation or the wrapped execute callback.' );
+		self::assertTrue( ( $permission->getValue( $probe ) )( array( 'probe' => 1 ) ) );
+		self::assertSame( 1, $permissions );
+		self::assertSame( 0, $executions );
+
+		// Clearing only the stored schema leaves the captured raw-permission schema active.
+		$permission->setValue( $probe, $probe->registered['permission_callback'] );
+		$error = ( $permission->getValue( $probe ) )( array( 'probe' => 1 ) );
+		self::assertInstanceOf( WP_Error::class, $error );
+		self::assertSame( 'ability_invalid_input', Webmastery_MCP_Response::from_wp_error( $error )['error']['reason'] );
+		self::assertSame( 1, $permissions, 'The schema-only mutant must not reach the original callback.' );
+		self::assertSame( 0, $executions );
+
+		$ordinary = Webmastery_MCP_Input::register_args( $args, 'webmastery-site-toolkit-for-mcp/ordinary-empty-input' );
+		self::assertInstanceOf( WP_Error::class, $ordinary['permission_callback']( array( 'probe' => 1 ) ) );
+		self::assertFalse( $ordinary['execute_callback']( array( 'probe' => 1 ) )['success'] );
+		self::assertSame( 1, $permissions );
+		self::assertSame( 0, $executions );
 	}
 }

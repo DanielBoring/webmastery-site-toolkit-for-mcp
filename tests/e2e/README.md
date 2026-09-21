@@ -21,6 +21,37 @@ Historical baseline comparisons require the pre-migration runner from 2.6.0;
 the current strict canonical parser intentionally rejects those old envelopes.
 Do not weaken current assertions to make a historical baseline pass.
 
+`error-contract-runner.php` requires `WSTM118_DISPOSABLE=1` before loading
+WordPress or creating credentials/fixtures. The managed harness grants it only
+inside the disposable stack. A test-only MU fixture, installed after the normal
+85-ability audit, exposes individual tools at `/wp-json/wstm118/tools`.
+The proof discovers tools by unique advertised descriptions, retains the full
+catalog and schemas, and uses the returned names (including deliberately renamed
+owned/foreign probes), not guessed namespace spelling.
+
+`error-contract.json` retains native, registered, gateway, and individual
+responses; all seven categories; schema/callback and early permission failures;
+known-code provider redaction; exact core hook/callback counts; foreign and
+nested-success controls; mixed/all-failed bulk outcomes and stored state.
+Adapter version and installed handler hash/order accompany the evidence.
+Adapter 0.6.1 uses internal null structured content but **omits** that key on
+the actual error wire. The parser separately accepts omitted and explicit-null
+forms and rejects nonnull structured payloads; evidence records actual key
+presence. Cleanup verifies owned application-password absence after revocation
+and removes only owned posts. Contract, HTTP, and package workflows retain the
+report for seven days, including failed runs.
+
+The floor and pinned-core runs record actual invalid-callback registration
+behavior: WordPress 6.9 rejects it with a registry diagnostic, while 7.1 accepts
+registration and rejects invocation. Two synthetic probes therefore inject
+non-callable callbacks via test-only reflection after successful registration;
+they exercise real core execution guards on both versions, not nonexistent
+tool errors. Registry rejection remains a separate exact assertion and only
+those controlled diagnostic messages are suppressed from the debug log.
+Execution and permission exceptions are both covered, including native 403
+authorization denials and default 502 callback failures, no execution after
+permission failure, and unchanged action counts.
+
 ## Destructive-operation safety coverage (3.0)
 
 The five guarded abilities retain their original success and permission oracles,
@@ -155,8 +186,13 @@ Do not start Docker or local WordPress without the coordinator's explicit
 exclusive runtime lease. Shared orchestration and the error-contract runner
 are intentionally untouched. Final integration must preserve the newer error
 floor, metadata authorization, destructive guards, and performance projections.
-The synthetic missing-schema error fixture needs post-registration fault
-injection because legitimate input-free abilities now receive an empty schema.
+The synthetic missing-schema error fixture clears its schema after registration
+and restores only that probe's original permission callback: clearing the
+property alone leaves the raw wrapper's captured empty schema active.
+An isolated reflection/registration regression verifies both changes, the
+schema-only negative control, untouched execute wrapping, and continued
+rejection by ordinary input-free abilities. The error runner's 78 oracles are
+unchanged; their integrated real-runtime rerun remains pending.
 
 Inside that later owned disposable runtime, install an MU **loader requiring
 the repository's** `input-schema-fixture.php` (do not copy it away from its
