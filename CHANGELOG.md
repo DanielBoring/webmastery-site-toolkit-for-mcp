@@ -20,6 +20,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 - Breaking development change for 3.0: standardize ability failures on seven error categories with precise reasons, safe messages, and object-shaped details; keep successful payloads and capability policies unchanged.
 - Signal owned MCP gateway and individual-tool failures as tool errors with canonical JSON text, including early permission refusals. Preserve foreign tool behavior and document the Adapter's missing structured error support.
 - Keep non-atomic bulk summaries while standardizing every per-item failure. Redact external diagnostics even when providers reuse familiar error codes.
+- Normalize thrown execution and permission callback failures safely on WordPress 6.9 as well as newer core versions, without replaying callbacks or changing core lifecycle ordering.
 
 ## 2.6.0
 
