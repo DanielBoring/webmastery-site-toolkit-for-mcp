@@ -310,6 +310,36 @@ run_error_contract_qa() (
 	compose exec -T -e WSTM118_DISPOSABLE=1 wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/error-contract-runner.php"
 )
 
+run_metadata_boundary_qa() (
+	local boundaries=()
+	local boundary runner status
+	trap 'compose exec -T wordpress rm -f /var/www/html/wp-content/mu-plugins/wstm-issue110-meta.php /var/www/html/wp-content/mu-plugins/wstm-issue110-http.php /var/www/html/wp-content/mu-plugins/wstm-issue110-seo.php /var/www/html/wp-content/mu-plugins/wstm-issue118-errors.php' EXIT
+	compose exec -T wordpress cp "${CONTAINER_PLUGIN_ROOT}/tests/e2e/post-meta-authorization-fixture.php" /var/www/html/wp-content/mu-plugins/wstm-issue110-meta.php
+	compose exec -T wordpress cp "${CONTAINER_PLUGIN_ROOT}/tests/e2e/metadata-batch-http-fixture.php" /var/www/html/wp-content/mu-plugins/wstm-issue110-http.php
+	compose exec -T wordpress cp "${CONTAINER_PLUGIN_ROOT}/tests/e2e/seo-metadata-fixture.php" /var/www/html/wp-content/mu-plugins/wstm-issue110-seo.php
+	compose exec -T wordpress cp "${CONTAINER_PLUGIN_ROOT}/tests/e2e/error-contract-fixture.php" /var/www/html/wp-content/mu-plugins/wstm-issue118-errors.php
+	for runner in metadata-batch seo-metadata; do
+		status="$(compose exec -T wordpress curl --silent --show-error --output /tmp/wstm110-boundary-cli-response --write-out '%{http_code}' "http://localhost/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/${runner}-runner.php")"
+		if [ "$status" != "403" ]; then
+			echo "Metadata boundary runner must reject non-CLI requests (HTTP ${status})." >&2
+			exit 1
+		fi
+		compose exec -T wordpress grep -Fxq 'CLI only.' /tmp/wstm110-boundary-cli-response
+	done
+	if [ "$QA_MODE" = "contract" ] || [ "$QA_MODE" = "all" ]; then
+		boundaries+=( direct ability )
+	fi
+	if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then
+		boundaries+=( http individual )
+	fi
+	for boundary in "${boundaries[@]}"; do
+		for runner in metadata-batch seo-metadata; do
+			compose exec -T -e WSTM110_BATCH_DISPOSABLE=1 -e WSTM110_BATCH_BOUNDARY="$boundary" \
+				wordpress php -d memory_limit=1G "${CONTAINER_PLUGIN_ROOT}/tests/e2e/${runner}-runner.php"
+		done
+	done
+)
+
 run_debug_log_check() {
 	echo "Checking WordPress debug log..."
 	if ! compose exec -T wordpress test -f /var/www/html/wp-content/debug.log; then
@@ -386,6 +416,7 @@ main() {
 	run_parent_assignment_qa
 	run_post_meta_authorization_qa
 	run_error_contract_qa
+	run_metadata_boundary_qa
 	run_debug_log_check
 
 	echo "Docker QA (${QA_MODE}) completed successfully"

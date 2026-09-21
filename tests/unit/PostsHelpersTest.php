@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
+use Wstm110Boundary\Probe;
+
+require_once dirname( __DIR__ ) . '/e2e/metadata-batch-fixture.php';
+require_once __DIR__ . '/fixtures/metadata-boundary-stubs.php';
 
 final class PostsHelpersTest extends TestCase {
 
@@ -41,19 +45,25 @@ final class PostsHelpersTest extends TestCase {
 	/**
 	 * @dataProvider metadata_write_values
 	 */
-	public function test_apply_meta_writes_slashes_at_persistence_and_reads_stored_value( string $value ): void {
-		$GLOBALS['wstm_test_meta_writes'] = array();
-		$GLOBALS['wstm_test_stored_meta'] = array( 42 => array( 'example' => 'provider-sanitized value' ) );
-
+	public function test_standalone_meta_write_slashes_at_persistence_and_reads_stored_value( string $value ): void {
+		Probe::reset();
+		$writes = array();
+		Probe::$metadata_writer = static function ( $id, $key, $written ) use ( &$writes ) {
+			$writes[] = array( $id, $key, $written );
+			Probe::$metadata[ $id ][ $key ] = 'provider-sanitized value';
+			return true;
+		};
 		try {
 			$normalized = self::call_private( 'normalize_meta_value', array( $value ) );
 			$this->assertSame( $value, $normalized );
-			$result = self::call_private( 'apply_meta_writes', array( 42, array( 'example' => $normalized ) ) );
+			$result = Probe::execute( 'update-post-meta', array( 'post_id' => 42, 'meta_key' => 'example', 'meta_value' => $normalized ) );
 
-			$this->assertSame( array( array( 42, 'example', addslashes( $value ) ) ), $GLOBALS['wstm_test_meta_writes'] );
-			$this->assertSame( array( 'example' => 'provider-sanitized value' ), $result );
+			$this->assertTrue( $result['success'] );
+			$this->assertSame( array( array( 42, 'example', addslashes( $value ) ) ), $writes );
+			$this->assertSame( 'provider-sanitized value', $result['data']['current_value'] );
+			$this->assertContains( array( 'edit_post_meta', array( 42, 'example' ) ), Probe::$capabilities );
 		} finally {
-			unset( $GLOBALS['wstm_test_meta_writes'], $GLOBALS['wstm_test_stored_meta'] );
+			Probe::reset();
 		}
 	}
 
