@@ -274,9 +274,11 @@ Release checklist:
 7. Review the latest scheduled/manual `6 - Compatibility QA` result for upstream WordPress/PHP/plugin dependency drift.
 8. Confirm the protected `wordpress-org` GitHub Environment and `SVN_USERNAME` / `SVN_PASSWORD` GitHub Actions secrets are configured.
 9. Tag and push `vX.Y.Z` to trigger the release workflow.
-10. Approve the protected WordPress.org deployment after release QA passes.
+10. Review the ready-for-approval summary and approve **Publish release (GitHub approval required)** after release QA passes. The `wordpress-org` environment is a GitHub production gate, not WordPress.org staff review.
 
 Release tags must point into reviewed `main` history. Release QA must run static/unit checks as well as package validation. Approve the source SHA and validated artifact, not a rebuilt replacement. Publishing is serialized across all release tags; if SVN succeeds but a later step fails, follow the partial-failure procedure rather than moving a tag or starting a different build.
+
+If recovery needs workflow fixes, follow the [guarded recovery runbook](docs/release-strategy.md#recovery-when-the-frozen-workflow-itself-needs-a-fix). A separately authorized annotated `v-release-recovery-*` control tag on the reviewed merged fix satisfies the existing tag-only environment policy; it is not a plugin release and its push never triggers release QA/publication. Only dispatch on that control tag may resume the original successful QA run/artifact, without rebuilding or modifying the original release tag. Keep the `wordpress-org` environment ID, protections and scoped secrets unchanged. `composer test:release-safeguards` covers resolver provenance/authorization, control-ref entrypoints and host-SVN prerequisite failures with mocks/local Git fixtures, without Docker or production writes.
 
 ---
 
