@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Reconciled all ten ranked coverage groups for #120 against named tests, effective capability controls, persisted-state/write observers and source-bound runtime evidence, with metadata acceptance kept explicit. Added focused manifest unit guards and isolated mutations protecting existing destructive no-write denials and media-update denial/readback controls; corrected stale Contributor error-envelope guidance without changing production behavior or manifest inputs.
 - Wire metadata batch and SEO authorization proofs through direct, registered, gateway, and individual-tool execution in source and original-package QA; retain per-call state, mutation hooks, advertised catalogs, raw wire results, and failed-run artifacts. Package and bootstrap safeguards require the disposable opt-in and non-CLI refusal.
 
 - Added metadata presence and per-key SEO regression probes, full state snapshots and mutation-hook counters. Migrated combined-write manifest successes to explicit rejections plus separate authorized writes while retaining every original stored-value assertion, Contributor/parent/scheduling permission checks, and the dedicated future-post HTTP deletion scenario.
@@ -62,7 +63,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
-- Updated all 15 workflow checkout pins to the verified `actions/checkout` v7.0.1 commit. Existing workflow events are compatible with its fork-PR checkout restriction; checkout inputs, disabled credential persistence, permissions, and release approval controls are unchanged.
+- Partially addressed #119 by sharing the unchanged active-plugin-basename inventory between backup and performance diagnostics through `Webmastery_MCP_Plugins::active_basenames()`. Added isolated characterization of ordering, casts, malformed options, fresh reads, diagnostic responses, and permissions. SEO and Site Kit provider-readiness policies remain separate; other helper rows are not included.
 - Updated the verified MCP Adapter baseline to 0.6.1 and its matching SHA-256; distinguished current configuration from the historical 0.5.0 rollout evidence without changing WordPress or PHP support.
 - Raised PHPStan analysis from level 0 to level 5 with an explicitly PHP 8.0-targeted, generated/reviewed baseline of 35 existing diagnostics in 21 exact file/message/identifier/count entries. Enabled unmatched-ignore failures, documented incremental debt reduction, and added isolated regression guards for new errors, count growth, and stale-entry removal in static QA and both CI PHP safeguard lanes. Plugin behavior, schemas, dependencies, and runtime tests are unchanged.
 - Mock the metadata authorization stage in the isolated compatibility bootstrap test, assert cron isolation and exactly one invocation in every QA mode, and preserve the real runner's non-CLI rejection checks.
@@ -98,6 +99,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 - Updated E2E ability manifest coverage counts and cases for bulk post operation abilities.
 - Updated release, E2E, PHPCS, Composer, and documentation automation references for the Webmastery Site Toolkit for MCP package rename.
 - Fixed the README top-navigation Security link to point to the renamed `## Security Best Practices` heading anchor (`#security-best-practices`).
+- Updated all 15 workflow checkout pins to the verified `actions/checkout` v7.0.1 commit. Existing workflow events are compatible with its fork-PR checkout restriction; checkout inputs, disabled credential persistence, permissions, and release approval controls are unchanged.
 
 ## 1.6.0
 

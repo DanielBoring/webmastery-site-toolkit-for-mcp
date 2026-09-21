@@ -122,19 +122,7 @@ class Webmastery_MCP_Performance_Status {
 	}
 
 	private static function get_active_plugin_basenames() {
-		$active_plugins = get_option( 'active_plugins', array() );
-		if ( ! is_array( $active_plugins ) ) {
-			$active_plugins = array();
-		}
-
-		if ( is_multisite() ) {
-			$network_plugins = get_site_option( 'active_sitewide_plugins', array() );
-			if ( is_array( $network_plugins ) ) {
-				$active_plugins = array_merge( $active_plugins, array_keys( $network_plugins ) );
-			}
-		}
-
-		return array_values( array_unique( array_map( 'strval', $active_plugins ) ) );
+		return Webmastery_MCP_Plugins::active_basenames();
 	}
 
 	private static function get_constant_value( $constant ) {
