@@ -95,7 +95,7 @@ function wstm116_http_observer( $result, $server, $request ) {
 			$undo();
 			wstm116_unobserve( $observer );
 			remove_filter( 'rest_post_dispatch', $finish, PHP_INT_MAX );
-			update_option( 'wstm116_control', array_merge( $config, array( 'active' => false, 'observed' => $config['nonce'], 'events' => $events ) ), false );
+			update_option( 'wstm116_control', array_merge( $config, array( 'active' => false, 'observed' => $config['nonce'], 'events' => $events, 'trash_days' => EMPTY_TRASH_DAYS, 'stage_owner' => WSTM116_STAGE_TOKEN ) ), false );
 		}
 		return $response;
 	};

@@ -32,35 +32,52 @@ reasons, exact schema bounds, canonical per-ID failures, query failure with forc
 and unchanged capability/trash behavior. Existing error-contract, taxonomy, and
 trash runners retain all earlier assertions.
 
-`destructive-safety-runner.php` is an **opt-in standalone proof**, not yet a
-replacement for the shared orchestration. Run it only after obtaining ownership
-of a disposable WordPress runtime. No Docker execution is implied by unit/static
-results. Before any fixture mutation or application-password creation it requires
-both `WSTM116_DISPOSABLE=1` in the CLI environment and
-`define('WSTM116_DISPOSABLE_RUNTIME', true);` in that runtime's configuration.
-An existing `wstm116_control` option is a collision, never something to overwrite.
+`run_destructive_safety_qa` in the shared harness runs serially in a subshell:
+`contract` selects direct callbacks and registered abilities, `e2e` selects
+gateway and individual HTTP, and `all` runs all four. Each selection repeats
+with actual `EMPTY_TRASH_DAYS` values 30 and 0: eight invocations in full QA.
+Use only an explicitly owned disposable `COMPOSE_PROJECT_NAME`, never a live
+site or another worker's project. Unit and mocked stages do not constitute
+real WordPress, HTTP, floor, or original-package evidence.
 
-Install `destructive-safety-http-fixture.php` as an MU loader for HTTP evidence.
-For individual tools, install the existing disposable `error-contract-fixture.php`
-server fixture too; it exposes the real `/wp-json/wstm118/tools` catalog. The
-runner reuses `metadata-transport.php` to discover actual advertised tool names
-and parse the real Adapter 0.6.1 wire shape. Error results require `isError:true`
-and one canonical JSON text block; absent/null `structuredContent` means no
-payload, not a structured error object.
+Before test-only MU capabilities are installed, `destructive-safety-preflight.php`
+audits actual `wp_get_abilities()` against all 85 manifest abilities and records
+missing-opt-in CLI failure plus HTTP 403/`CLI only.` refusal. Whole core-table
+snapshots (including users, credentials, options and cron) and upload hashes
+must remain unchanged across those bootstrap denials.
 
-Inside the already-owned disposable container, set `WSTM116_BOUNDARY` to each
-of `direct`, `ability`, `http`, and `individual`, set `WSTM116_SOURCE_SHA` to the
-exact tested commit, and set `WSTM116_ARTIFACT` to a **new** JSON filename in an
-existing writable artifact directory. Invoke:
+`destructive-safety-lifecycle.php` acquires an exclusive token-owned lock outside
+the document root, keeps a private exact config backup, refuses existing MU
+destinations, and configures both actual CLI and HTTP boots. It supports absent
+or conventional literal trash definitions and refuses ambiguous configuration.
+The runner requires `WSTM116_DISPOSABLE=1`, the runtime opt-in constant, matching
+stage token and expected trash days, and an authenticated-by-token read-only
+HTTP boot attestation **before creating actors or credentials**. Every observed
+HTTP mutation probe also attests the same configuration. An environment flag
+alone is never evidence of the server's trash behavior.
 
-```bash
-php /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/destructive-safety-runner.php
-```
+An exclusive `destructive-<token>` artifact directory contains `stage.log`,
+`preflight.json`, and uniquely named `<enabled|disabled>-<boundary>.json` reports
+with append-only `.jsonl` journals. The runner exclusively reserves both files
+before WordPress bootstrap, records each successful/failed case, and retains a
+partial summary on fatal shutdown. Do not overwrite or relabel failed attempts.
+The stage restores exact prior config bytes/permissions and removes only
+token-marked owned MU files on EXIT, without replacing the parent's cleanup
+trap. A foreign edit fails closed, retains the private backup, and reports the
+restoration error; an earlier probe failure remains the exit status.
 
-Repeat in fresh enabled/disabled-trash PHP runtimes; a changed environment
-variable cannot override an already-defined `EMPTY_TRASH_DAYS`. Both the CLI
-and HTTP runtime must have the same trash configuration. Keep raw successful
-and failed artifacts; do not replace a failed invocation with a later pass.
+The temporary individual fixture exposes the real `/wp-json/wstm118/tools`
+catalog. The runner reuses `metadata-transport.php` for actual advertised names,
+retains actor catalogs, and parses Adapter 0.6.1 errors as `isError:true` with
+one canonical JSON text block and absent/null `structuredContent`, not a
+structured error object.
+
+The same stage uses the mounted plugin root in source, floor, and original
+development-ZIP QA. Tests are harness-only mounts for package QA; production
+does not fall back to the checkout and ZIP bytes remain immutable. Contract,
+HTTP and package workflows upload the complete stage directory even on failure;
+compatibility lanes already retain the complete artifact tree. Archive reports
+before starting a new suite, whose existing top-level wrapper clears artifacts.
 
 The runner distinguishes callback permission outcomes from execution denial;
 compares preview summaries to real writes; snapshots posts, postmeta, terms,
@@ -71,8 +88,9 @@ HTTP fault injection and observers are authenticated-actor/request scoped and
 return a unique nonce attestation through the owned control option.
 Cleanup verifies absence of owned posts/meta/scheduled events, terms/meta,
 uploads, users/application passwords, and the control option, retaining failure
-evidence even when cleanup fails. Remove the installed MU loaders and runtime
-opt-in configuration when the leased disposable runtime is retired.
+evidence even when cleanup fails. The stage, not a manual config edit, manages
+the MU loaders and runtime opt-in. Actual eight-invocation/floor/package
+acceptance must still be established on the exact source under review.
 
 ## Metadata batch and SEO authorization coverage (3.0)
 

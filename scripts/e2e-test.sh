@@ -340,6 +340,66 @@ run_metadata_boundary_qa() (
 	done
 )
 
+run_destructive_safety_qa() (
+	: "${COMPOSE_PROJECT_NAME:?Destructive QA requires an explicitly owned disposable Compose project}"
+	[[ "$E2E_ARTIFACTS_DIR" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "Unsafe destructive artifact directory." >&2; exit 1; }
+	local token source_sha directory container_directory acquired=0 first_failure=0
+	local mode days boundary status
+	local boundaries=()
+	token="$(host_php -r 'echo bin2hex(random_bytes(16));')"
+	source_sha="$(git rev-parse HEAD)"
+	[[ "$token" =~ ^[a-f0-9]{32}$ && "$source_sha" =~ ^[a-f0-9]{40}$ ]] || exit 1
+	directory="${E2E_ARTIFACTS_DIR}/destructive-${token}"
+	container_directory="${CONTAINER_PLUGIN_ROOT}/${directory}"
+	mkdir "$directory" || exit $?
+	( set -o noclobber; : > "$directory/stage.log" ) || exit $?
+	stage_command() {
+		compose exec -T -e WSTM116_STAGE_DISPOSABLE=1 wordpress php \
+			"${CONTAINER_PLUGIN_ROOT}/tests/e2e/destructive-safety-stage.php" "$1" "$token"
+	}
+	# shellcheck disable=SC2329 # Invoked by this subshell's EXIT trap.
+	stage_finish() {
+		local original=$? restoration=0
+		trap - EXIT
+		if [[ "$acquired" == 1 ]]; then
+			stage_command restore 2>&1 | tee -a "$directory/stage.log" || restoration=$?
+		fi
+		printf 'source=%s original_status=%s restoration_status=%s\n' "$source_sha" "$original" "$restoration" | tee -a "$directory/stage.log"
+		if [[ "$original" != 0 ]]; then exit "$original"; fi
+		exit "$restoration"
+	}
+	trap stage_finish EXIT
+	stage_command acquire 2>&1 | tee -a "$directory/stage.log" || exit $?
+	acquired=1
+	# Audit native registration and denial persistence before any test-only MU ability.
+	compose exec -T -e WSTM116_STAGE_DISPOSABLE=1 -e WSTM116_SOURCE_SHA="$source_sha" wordpress php \
+		"${CONTAINER_PLUGIN_ROOT}/tests/e2e/destructive-safety-preflight.php" "$container_directory/preflight.json" \
+		2>&1 | tee -a "$directory/stage.log" || exit $?
+	if [[ "$QA_MODE" == contract || "$QA_MODE" == all ]]; then boundaries+=( direct ability ); fi
+	if [[ "$QA_MODE" == e2e || "$QA_MODE" == all ]]; then boundaries+=( http individual ); fi
+	[[ "${#boundaries[@]}" != 0 ]] || exit 1
+	for mode in enabled disabled; do
+		days=30
+		[[ "$mode" != disabled ]] || days=0
+		status=0
+		stage_command "$mode" 2>&1 | tee -a "$directory/stage.log" || status=$?
+		if [[ "$status" != 0 ]]; then
+			if [[ "$first_failure" != 0 ]]; then exit "$first_failure"; fi
+			exit "$status"
+		fi
+		for boundary in "${boundaries[@]}"; do
+			status=0
+			compose exec -T -e WSTM116_DISPOSABLE=1 -e WSTM116_BOUNDARY="$boundary" \
+				-e WSTM116_EXPECT_TRASH_DAYS="$days" -e WSTM116_STAGE_TOKEN="$token" \
+				-e WSTM116_SOURCE_SHA="$source_sha" -e WSTM116_ARTIFACT="$container_directory/$mode-$boundary.json" \
+				wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/destructive-safety-runner.php" \
+				2>&1 | tee -a "$directory/stage.log" || status=$?
+			if [[ "$first_failure" == 0 && "$status" != 0 ]]; then first_failure="$status"; fi
+		done
+	done
+	exit "$first_failure"
+)
+
 run_debug_log_check() {
 	echo "Checking WordPress debug log..."
 	if ! compose exec -T wordpress test -f /var/www/html/wp-content/debug.log; then
@@ -413,6 +473,7 @@ main() {
 		compose exec -T -e WSTM105_BOUNDARY=http wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/comments-runner.php"
 	fi
 
+	run_destructive_safety_qa
 	run_parent_assignment_qa
 	run_post_meta_authorization_qa
 	run_error_contract_qa

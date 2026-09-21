@@ -20,6 +20,17 @@ $artifact = getenv( 'WSTM116_ARTIFACT' );
 if ( ! is_string( $artifact ) || '' === $artifact || file_exists( $artifact ) || ! is_writable( dirname( $artifact ) ) ) {
 	throw new RuntimeException( 'WSTM116_ARTIFACT must name a new file in an existing writable artifact directory.' );
 }
+require_once __DIR__ . '/destructive-safety-evidence.php';
+$evidence = new Wstm116_Evidence( $artifact );
+$completed = false;
+$summary = array( 'boundary' => $boundary, 'source_sha' => getenv( 'WSTM116_SOURCE_SHA' ), 'failed' => 1, 'phase' => 'bootstrap' );
+register_shutdown_function( static function () use ( $evidence, &$summary, &$completed ): void {
+	if ( ! $completed ) {
+		$summary['completed'] = false;
+		$summary['fatal_shutdown'] = error_get_last();
+		$evidence->save( $summary );
+	}
+} );
 $_SERVER['HTTP_HOST'] = 'localhost';
 require_once '/var/www/html/wp-load.php';
 require_once __DIR__ . '/destructive-safety-fixture.php';
@@ -27,6 +38,14 @@ require_once __DIR__ . '/error-contract-assertions.php';
 require_once __DIR__ . '/metadata-transport.php';
 
 wstm116_require( defined( 'WSTM116_DISPOSABLE_RUNTIME' ) && true === WSTM116_DISPOSABLE_RUNTIME, 'Runtime must explicitly define WSTM116_DISPOSABLE_RUNTIME=true before fixture writes or credentials.' );
+$expected_days = getenv( 'WSTM116_EXPECT_TRASH_DAYS' );
+$stage_token = getenv( 'WSTM116_STAGE_TOKEN' );
+wstm116_require( in_array( $expected_days, array( '0', '30' ), true ) && (int) $expected_days === EMPTY_TRASH_DAYS, 'Actual CLI trash configuration mismatch.' );
+wstm116_require( defined( 'WSTM116_STAGE_TOKEN' ) && is_string( $stage_token ) && hash_equals( WSTM116_STAGE_TOKEN, $stage_token ), 'CLI stage ownership mismatch.' );
+$boot = wp_remote_get( 'http://localhost/wp-json/wstm116/runtime', array( 'headers' => array( 'X-WSTM116-Stage' => $stage_token ) ) );
+wstm116_require( ! is_wp_error( $boot ) && 200 === wp_remote_retrieve_response_code( $boot ), 'Cannot attest actual HTTP boot before credentials.' );
+$http_boot = json_decode( wp_remote_retrieve_body( $boot ), true, 512, JSON_THROW_ON_ERROR );
+wstm116_require( array( 'owner' => $stage_token, 'trash_days' => EMPTY_TRASH_DAYS, 'disposable' => true ) === $http_boot, 'Actual HTTP and CLI safety configuration differ.' );
 wstm116_require( false === get_option( 'wstm116_control', false ), 'Refusing an existing destructive-safety control option.' );
 foreach ( array_merge( range( 10000001, 10000101 ), array( 2147483647 ) ) as $missing_id ) {
 	wstm116_require( null === get_post( $missing_id ), 'Missing-ID fixture collides with an existing post.' );
@@ -34,9 +53,13 @@ foreach ( array_merge( range( 10000001, 10000101 ), array( 2147483647 ) ) as $mi
 $summary = array(
 	'boundary' => $boundary, 'wordpress' => get_bloginfo( 'version' ), 'php' => PHP_VERSION,
 	'source_sha' => getenv( 'WSTM116_SOURCE_SHA' ) ?: 'not supplied',
+	'trash_days' => EMPTY_TRASH_DAYS, 'http_boot' => $http_boot,
 	'passed' => 0, 'failed' => 0, 'cases' => array(), 'cleanup' => array(),
 );
 foreach ( array( __FILE__, __DIR__ . '/destructive-safety-fixture.php', __DIR__ . '/destructive-safety-http-fixture.php',
+	__DIR__ . '/destructive-safety-evidence.php', __DIR__ . '/destructive-safety-lifecycle.php', __DIR__ . '/destructive-safety-stage.php',
+	__DIR__ . '/destructive-safety-preflight.php', __DIR__ . '/metadata-transport.php', __DIR__ . '/metadata-batch-fixture.php',
+	__DIR__ . '/error-contract-assertions.php', __DIR__ . '/error-contract-fixture.php', __DIR__ . '/abilities-manifest.json',
 	__DIR__ . '/../../includes/class-posts.php', __DIR__ . '/../../includes/class-media.php',
 	__DIR__ . '/../../includes/class-taxonomy.php', __DIR__ . '/../../includes/class-content-hygiene.php' ) as $source ) {
 	$summary['hashes'][ basename( $source ) ] = hash_file( 'sha256', $source );
@@ -45,7 +68,7 @@ $run = 'wstm116-' . wp_generate_uuid4();
 $users = $posts = $terms = $files = $transports = array();
 $old_user = get_current_user_id();
 $owns_control = false;
-$record = static function ( string $label, callable $test ) use ( &$summary ): void {
+$record = static function ( string $label, callable $test ) use ( &$summary, $evidence ): void {
 	$entry = array( 'label' => $label );
 	try {
 		$test( $entry );
@@ -59,6 +82,8 @@ $record = static function ( string $label, callable $test ) use ( &$summary ): v
 		echo "FAIL {$label}: {$error->getMessage()}\n";
 	}
 	$summary['cases'][] = $entry;
+	$evidence->append( $entry );
+	$evidence->save( $summary );
 };
 try {
 	require_once ABSPATH . 'wp-admin/includes/user.php';
@@ -76,6 +101,7 @@ try {
 			wstm116_require( ! is_wp_error( $password ), 'Cannot create owned HTTP credential.' );
 			$transports[ $role ] = new Wstm110_Metadata_Transport( 'individual' === $boundary, array( 'login' => $login, 'password' => $password[0] ) );
 			$transports[ $role ]->initialize();
+			$summary['catalogs'][ $role ] = $transports[ $role ]->catalog();
 			unset( $password );
 		}
 	}
@@ -117,7 +143,7 @@ try {
 		wp_set_object_terms( $draft, array( $term['term_id'] ), $taxonomy );
 		add_term_meta( $term['term_id'], 'wstm116_sentinel', $run );
 	}
-	$invoke = static function ( string $slug, array $input, string $role, array $fault, array &$entry, bool $unchanged ) use ( $boundary, $run, $users, &$files, $transports ): array {
+	$invoke = static function ( string $slug, array $input, string $role, array $fault, array &$entry, bool $unchanged ) use ( $boundary, $run, $users, &$files, $transports, $evidence ): array {
 		wp_set_current_user( $users[ $role ] );
 		$ability = wp_get_ability( 'webmastery-site-toolkit-for-mcp/' . $slug );
 		wstm116_require( null !== $ability, 'Missing owned ability.' );
@@ -143,6 +169,7 @@ try {
 				$result = $transports[ $role ]->execute( $ability->get_name(), $input );
 			} finally {
 				$entry['wire'] = $transports[ $role ]->last_response;
+				$evidence->append( array( 'phase' => 'wire', 'ability' => $slug, 'role' => $role, 'input' => $input, 'wire' => $entry['wire'] ) );
 				wp_cache_flush();
 			}
 			if ( true === ( $result['success'] ?? false ) && isset( $result['data']['failures'] ) ) {
@@ -163,6 +190,7 @@ try {
 			wp_cache_delete( 'wstm116_control', 'options' );
 			$control = get_option( 'wstm116_control' );
 			wstm116_require( $nonce === ( $control['observed'] ?? null ), 'HTTP mutation observer did not attest this invocation.' );
+			wstm116_require( EMPTY_TRASH_DAYS === ( $control['trash_days'] ?? null ) && WSTM116_STAGE_TOKEN === ( $control['stage_owner'] ?? null ), 'HTTP boot changed during safety proof.' );
 			$events = $control['events'];
 		} else {
 			$observer = wstm116_observe( static function ( $hook ) use ( &$events ): void { $events[] = $hook; } );
@@ -187,6 +215,7 @@ try {
 		$entry['before'] = $before;
 		$entry['after'] = wstm116_snapshot( $files );
 		$entry['hooks'] = $events;
+		$evidence->append( array( 'phase' => 'invocation', 'ability' => $slug, 'evidence' => $entry ) );
 		if ( $unchanged ) {
 			wstm116_require( $entry['before'] === $entry['after'], 'Guard/preview changed persisted state or owned files.' );
 			wstm116_require( array() === $events, 'Guard/preview reached a mutation hook.' );
@@ -363,14 +392,9 @@ try {
 		} );
 	}
 	wp_set_current_user( $old_user );
-	$encoded = wp_json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-	$handle = fopen( $artifact, 'x' );
-	wstm116_require( false !== $handle, 'Refusing artifact collision.' );
-	try {
-		wstm116_require( false !== $encoded && strlen( $encoded ) === fwrite( $handle, $encoded ), 'Failed to retain runtime evidence.' );
-	} finally {
-		fclose( $handle );
-	}
+	$summary['completed'] = true;
+	$evidence->save( $summary );
+	$completed = true;
 }
 echo 'SUMMARY ' . $summary['passed'] . ' passed, ' . $summary['failed'] . " failed\n";
 exit( $summary['failed'] ? 1 : 0 );

@@ -98,9 +98,16 @@ expect_failure() {
 
 bash scripts/release-qa.sh > "$WORK/success.log" 2>&1
 [[ "$(sha256sum "$RELEASE_ZIP")" == "$IDENTITY" ]]
-for runner in ability-runner media-download-runner scheduling-runner trash-safety-runner mcp-crud-runner site-kit-mcp-runner parent-assignment-runner post-meta-authorization-runner error-contract-runner metadata-batch-runner seo-metadata-runner; do
+for runner in ability-runner media-download-runner scheduling-runner trash-safety-runner mcp-crud-runner site-kit-mcp-runner parent-assignment-runner post-meta-authorization-runner error-contract-runner metadata-batch-runner seo-metadata-runner destructive-safety-runner; do
 	grep -F "/tests/e2e/${runner}.php" "$TRACE" > /dev/null
 done
+[[ "$(grep -c 'destructive-safety-runner.php$' "$TRACE")" == 8 ]]
+for days in 30 0; do
+	for boundary in direct ability http individual; do
+		grep -E "WSTM116_DISPOSABLE=1 -e WSTM116_BOUNDARY=${boundary} -e WSTM116_EXPECT_TRASH_DAYS=${days} .*WSTM116_ARTIFACT=.* wordpress php /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/destructive-safety-runner.php$" "$TRACE" > /dev/null
+	done
+done
+grep -F 'destructive-safety-stage.php restore ' "$TRACE" > /dev/null
 for boundary in direct ability http individual; do
 	for runner in metadata-batch seo-metadata; do
 		grep -F "WSTM110_BATCH_DISPOSABLE=1 -e WSTM110_BATCH_BOUNDARY=${boundary} wordpress php -d memory_limit=1G /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/${runner}-runner.php" "$TRACE" > /dev/null
