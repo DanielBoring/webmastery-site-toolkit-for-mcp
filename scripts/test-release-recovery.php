@@ -37,8 +37,8 @@ function recovery_fixture_api(array $fixture, string $path): array {
 		$base . '/actions/runs/456/artifacts?per_page=100&page=1' => $fixture['artifacts-page'] ?? array('total_count' => 1, 'artifacts' => array($fixture['artifact'])),
 		$base . '/actions/runs/456/attempts/1' => $fixture['attempt'],
 		$base . '/actions/runs/456/attempts/1/jobs?per_page=100&page=1' => $fixture['jobs-page'] ?? array('total_count' => 1, 'jobs' => array($fixture['job'])),
-		$base . '/git/ref/tags/v2.6.0' => $fixture['tag'],
-		$base . '/git/tags/' . str_repeat('c', 40) => $fixture['annotation'],
+		$base . '/git/ref/tags/' . $fixture['run']['head_branch'] => $fixture['tag'],
+		$base . '/git/tags/' . $fixture['tag']['object']['sha'] => $fixture['annotation'],
 	);
 	release_require(isset($routes[$path]), 'Unexpected API request: ' . $path);
 	return $routes[$path];
@@ -66,7 +66,7 @@ $reject = static function (string $name, callable $mutate, string $expected) use
 };
 $test('failed publication run with successful original QA reuses exact identity', static function () use ($resolve): void {
 	$output = $resolve(recovery_fixture());
-	release_require($output === array('version' => '2.6.0', 'source-sha' => str_repeat('a', 40), 'tag-object' => str_repeat('c', 40), 'run-id' => '456', 'run-attempt' => '1', 'artifact-id' => '100'), 'Resolved identity differs.');
+	release_require($output === array('version' => '2.6.0', 'source-sha' => str_repeat('a', 40), 'tag-object' => str_repeat('c', 40), 'run-id' => '456', 'run-attempt' => '1', 'artifact-id' => '100', 'artifact-digest' => 'sha256:' . str_repeat('b', 64)), 'Resolved identity differs.');
 });
 $test('earlier successful QA attempt remains explicitly bound after a later failed attempt', static function () use ($resolve): void {
 	$fixture = recovery_fixture();
@@ -202,6 +202,80 @@ $test('distinct triggering actor is independently authorized', static function (
 	}
 	throw new RuntimeException('Read-only rerun actor accepted.');
 });
+$test('postapproval reruns resolver and retains complete approved identity', static function () use ($resolve): void {
+	$f = recovery_fixture();
+	$approved = $resolve($f);
+	$requests = array();
+	recovery_revalidate($approved, $f['input'], static function ($path) use ($f, &$requests): array {
+		$requests[] = $path;
+		return recovery_fixture_api($f, $path);
+	}, strtotime('2026-09-21T15:00:00Z'));
+	foreach (array('/permission', '/actions/runs/456', '/actions/artifacts/100', '/attempts/1/jobs?per_page=100&page=1') as $required) {
+		release_require(count(array_filter($requests, static fn($path) => str_ends_with($path, $required))) === 1, 'Missing postapproval evidence fetch: ' . $required);
+	}
+});
+foreach (array('version', 'source-sha', 'tag-object', 'run-id', 'run-attempt', 'artifact-id', 'artifact-digest') as $field) {
+	foreach (array('missing', 'mismatch') as $mode) {
+		$test('postapproval approved ' . $field . ' ' . $mode . ' rejected', static function () use ($resolve, $field, $mode): void {
+			$f = recovery_fixture();
+			$approved = $resolve($f);
+			if ('missing' === $mode) {
+				unset($approved[$field]);
+			} else {
+				$approved[$field] .= '-different';
+			}
+			try {
+				recovery_revalidate($approved, $f['input'], static fn($path) => recovery_fixture_api($f, $path), strtotime('2026-09-21T15:00:00Z'));
+			} catch (RuntimeException $error) {
+				release_require(str_contains($error->getMessage(), 'approved recovery identity') || str_contains($error->getMessage(), 'changed after approval: ' . $field), 'Wrong approved identity rejection.');
+				return;
+			}
+			throw new RuntimeException('Approved identity drift accepted: ' . $field);
+		});
+	}
+}
+$postapproval_mutations = array(
+	'artifact expires during approval' => static function (&$f): void { $f['artifact']['expires_at'] = '2026-09-21T14:30:00Z'; },
+	'artifact is deleted or expired' => static function (&$f): void { $f['artifact']['expired'] = true; },
+	'original QA no longer successful' => static function (&$f): void { $f['job']['conclusion'] = 'failure'; },
+	'original run provenance changes' => static function (&$f): void { $f['run']['workflow_id'] = 790; },
+	'artifact ownership changes' => static function (&$f): void { $f['artifact']['workflow_run']['repository_id'] = 124; },
+	'actor authorization revoked' => static function (&$f): void { $f['permission']['permission'] = 'read'; },
+	'immutable archive digest changes' => static function (&$f): void { $f['artifact']['digest'] = 'sha256:' . str_repeat('d', 64); },
+	'release tag annotation changes on same source' => static function (&$f): void {
+		$f['tag']['object']['sha'] = str_repeat('d', 40);
+		$f['annotation']['sha'] = str_repeat('d', 40);
+	},
+	'all API source fields change consistently' => static function (&$f): void {
+		foreach (array('run', 'attempt', 'job') as $key) {
+			$f[$key]['head_sha'] = str_repeat('d', 40);
+		}
+		$f['artifact']['workflow_run']['head_sha'] = str_repeat('d', 40);
+		$f['annotation']['object']['sha'] = str_repeat('d', 40);
+	},
+	'all API version fields change consistently' => static function (&$f): void {
+		foreach (array('run', 'attempt', 'job') as $key) {
+			$f[$key]['head_branch'] = 'v2.7.0';
+		}
+		$f['artifact']['workflow_run']['head_branch'] = 'v2.7.0';
+		$f['tag']['ref'] = 'refs/tags/v2.7.0';
+		$f['annotation']['tag'] = 'v2.7.0';
+	},
+);
+foreach ($postapproval_mutations as $name => $mutate) {
+	$test('postapproval ' . $name . ' rejected', static function () use ($resolve, $mutate): void {
+		$f = recovery_fixture();
+		$approved = $resolve($f);
+		$mutate($f);
+		try {
+			recovery_revalidate($approved, $f['input'], static fn($path) => recovery_fixture_api($f, $path), strtotime('2026-09-21T15:00:00Z'));
+		} catch (RuntimeException $error) {
+			release_require(!str_contains($error->getMessage(), 'Unexpected API request'), 'Fixture did not exercise postapproval validation.');
+			return;
+		}
+		throw new RuntimeException('Postapproval evidence drift accepted.');
+	});
+}
 $test('workflow lanes preserve protected original-artifact publication', static function (): void {
 	$workflow = release_read(dirname(__DIR__) . '/.github/workflows/release.yml');
 	foreach (array(
@@ -233,5 +307,22 @@ $test('workflow lanes preserve protected original-artifact publication', static 
 	release_require(!str_contains($recovery, 'release-qa.sh') && !str_contains($recovery, 'composer qa') && !str_contains($recovery, 'build-release'), 'Recovery rebuilds or reruns original QA.');
 	release_require(!preg_match('/run:.*\$\{\{\s*inputs\./', $workflow), 'Dispatch input interpolated into shell.');
 	release_require(2 === substr_count($workflow, 'NOT WordPress.org staff review'), 'Both lanes need preapproval explanation.');
+});
+$test('postapproval control and resolver gates precede frozen checkout, download and secrets', static function (): void {
+	$workflow = release_read(dirname(__DIR__) . '/.github/workflows/release.yml');
+	$publish = explode("\n  publish:", $workflow)[1];
+	$prior = -1;
+	foreach (array('name: Checkout recovery control ref again after approval', 'bash scripts/release-control-check.sh verify', 'name: Set up PHP', 'php scripts/release-recovery.php verify-approved', 'name: Checkout validated source without persistent credentials', 'name: Download only the original QA job', 'SVN_USERNAME: ${{ secrets.SVN_USERNAME }}') as $required) {
+		$position = strpos($publish, $required);
+		release_require(false !== $position && $position > $prior, 'Unsafe postapproval ordering: ' . $required);
+		$prior = $position;
+	}
+	release_require(str_contains($workflow, 'control-tag-object: ${{ steps.control.outputs.control-tag-object }}'), 'Control object is not exported before approval.');
+	release_require(str_contains($publish, 'APPROVED_CONTROL_TAG_OBJECT: ${{ needs.recover.outputs.control-tag-object }}'), 'Control object is not bound after approval.');
+	release_require(str_contains($workflow, 'artifact-digest: ${{ steps.resolve.outputs.artifact-digest }}'), 'Archive digest is not exported before approval.');
+	foreach (array('version', 'source-sha', 'tag-object', 'run-id', 'run-attempt', 'artifact-id', 'artifact-digest') as $field) {
+		$binding = 'APPROVED_' . strtoupper(str_replace('-', '_', $field)) . ': ${{ needs.recover.outputs.' . $field . ' }}';
+		release_require(str_contains($publish, $binding), 'Missing postapproval binding: ' . $field);
+	}
 });
 echo "PASS {$count} release recovery tests\n";

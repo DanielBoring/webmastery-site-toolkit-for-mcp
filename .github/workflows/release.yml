@@ -137,6 +137,8 @@ jobs:
       run-id: ${{ steps.resolve.outputs.run-id }}
       run-attempt: ${{ steps.resolve.outputs.run-attempt }}
       artifact-id: ${{ steps.resolve.outputs.artifact-id }}
+      artifact-digest: ${{ steps.resolve.outputs.artifact-digest }}
+      control-tag-object: ${{ steps.control.outputs.control-tag-object }}
     steps:
       - name: Checkout reviewed recovery control ref without persistent credentials
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -145,7 +147,8 @@ jobs:
           persist-credentials: false
 
       - name: Require an annotated recovery control tag already in main
-        run: bash scripts/release-control-check.sh
+        id: control
+        run: bash scripts/release-control-check.sh resolve
 
       - name: Set up read-only recovery tooling
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
@@ -159,7 +162,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ORIGINAL_RUN_ID: ${{ inputs.original-run-id }}
           ORIGINAL_ARTIFACT_ID: ${{ inputs.original-artifact-id }}
-        run: php scripts/release-recovery.php
+        run: php scripts/release-recovery.php resolve
 
       - name: Recheck original source ancestry and report ready for GitHub approval
         env:
@@ -168,6 +171,8 @@ jobs:
           ORIGINAL_RUN_ID: ${{ steps.resolve.outputs.run-id }}
           ORIGINAL_RUN_ATTEMPT: ${{ steps.resolve.outputs.run-attempt }}
           ARTIFACT_ID: ${{ steps.resolve.outputs.artifact-id }}
+          ARTIFACT_DIGEST: ${{ steps.resolve.outputs.artifact-digest }}
+          CONTROL_TAG_OBJECT: ${{ steps.control.outputs.control-tag-object }}
         run: |
           set -euo pipefail
           git merge-base --is-ancestor "$SOURCE_SHA" refs/remotes/origin/main
@@ -176,6 +181,7 @@ jobs:
             echo "Approve **Publish release (GitHub approval required)** in **Review deployments**."
             echo "The environment is still named **wordpress-org**. This is DanielBoring's GitHub deployment approval, NOT WordPress.org staff review."
             echo "Control tag ${GITHUB_REF_NAME} selects reviewed workflow logic only; it is NOT a plugin release."
+            echo "Approved control tag object: ${CONTROL_TAG_OBJECT}; original artifact archive digest: ${ARTIFACT_DIGEST}."
             echo "Release: v${RELEASE_VERSION}; source: ${SOURCE_SHA}; original QA run: ${ORIGINAL_RUN_ID}, attempt: ${ORIGINAL_RUN_ATTEMPT}; artifact: ${ARTIFACT_ID}."
             echo "Destinations: WordPress.org SVN and GitHub Releases. Reuse the original QA ZIP; no build, QA rerun or retag occurs."
           } >> "$GITHUB_STEP_SUMMARY"
@@ -218,14 +224,9 @@ jobs:
 
       - name: Recheck recovery control ref after approval
         if: github.event_name == 'workflow_dispatch'
-        run: bash scripts/release-control-check.sh
-
-      - name: Checkout validated source without persistent credentials
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          ref: ${{ env.SOURCE_SHA }}
-          fetch-depth: 0
-          persist-credentials: false
+        env:
+          APPROVED_CONTROL_TAG_OBJECT: ${{ needs.recover.outputs.control-tag-object }}
+        run: bash scripts/release-control-check.sh verify
 
       - name: Set up PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
@@ -233,6 +234,27 @@ jobs:
           php-version: '8.2'
           extensions: zip
           coverage: none
+
+      - name: Revalidate original QA artifact and authorization against approved identity
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ORIGINAL_ARTIFACT_ID: ${{ needs.recover.outputs.artifact-id }}
+          APPROVED_VERSION: ${{ needs.recover.outputs.version }}
+          APPROVED_SOURCE_SHA: ${{ needs.recover.outputs.source-sha }}
+          APPROVED_TAG_OBJECT: ${{ needs.recover.outputs.tag-object }}
+          APPROVED_RUN_ID: ${{ needs.recover.outputs.run-id }}
+          APPROVED_RUN_ATTEMPT: ${{ needs.recover.outputs.run-attempt }}
+          APPROVED_ARTIFACT_ID: ${{ needs.recover.outputs.artifact-id }}
+          APPROVED_ARTIFACT_DIGEST: ${{ needs.recover.outputs.artifact-digest }}
+        run: php scripts/release-recovery.php verify-approved
+
+      - name: Checkout validated source without persistent credentials
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Install and verify publish-host Subversion before first use
         run: |

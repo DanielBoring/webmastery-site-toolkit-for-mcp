@@ -153,12 +153,22 @@ function recovery_resolve(array $input, callable $api, int $now): array {
 		'run-id' => $run_id,
 		'run-attempt' => $attempt,
 		'artifact-id' => $artifact_id,
+		'artifact-digest' => $artifact['digest'],
 	);
+}
+
+function recovery_revalidate(array $approved, array $input, callable $api, int $now): void {
+	$current = recovery_resolve($input, $api, $now);
+	release_require(count($approved) === count($current), 'Incomplete approved recovery identity.');
+	foreach ($current as $field => $value) {
+		release_require(($approved[$field] ?? null) === $value, 'Recovery identity changed after approval: ' . $field);
+	}
 }
 
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
 	try {
-		$output = recovery_resolve(array(
+		release_require(2 === count($argv) && in_array($argv[1], array('resolve', 'verify-approved'), true), 'Specify resolve or verify-approved.');
+		$input = array(
 			'run-id' => getenv('ORIGINAL_RUN_ID'),
 			'artifact-id' => getenv('ORIGINAL_ARTIFACT_ID'),
 			'repository' => getenv('GITHUB_REPOSITORY'),
@@ -166,14 +176,24 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
 			'ref' => getenv('GITHUB_REF'),
 			'actor' => getenv('GITHUB_ACTOR'),
 			'triggering-actor' => getenv('GITHUB_TRIGGERING_ACTOR'),
-		), 'recovery_api', time());
-		$lines = '';
-		foreach ($output as $key => $value) {
-			$lines .= $key . '=' . $value . "\n";
+		);
+		if ('verify-approved' === $argv[1]) {
+			$approved = array();
+			foreach (array('version', 'source-sha', 'tag-object', 'run-id', 'run-attempt', 'artifact-id', 'artifact-digest') as $field) {
+				$approved[$field] = getenv('APPROVED_' . strtoupper(str_replace('-', '_', $field)));
+			}
+			recovery_revalidate($approved, $input, 'recovery_api', time());
+			echo "Revalidated original QA, artifact expiry/provenance, actor authorization and complete approved recovery identity.\n";
+		} else {
+			$output = recovery_resolve($input, 'recovery_api', time());
+			$lines = '';
+			foreach ($output as $key => $value) {
+				$lines .= $key . '=' . $value . "\n";
+			}
+			$file = getenv('GITHUB_OUTPUT');
+			release_require(is_string($file) && '' !== $file && false !== file_put_contents($file, $lines, FILE_APPEND), 'Cannot write resolved recovery outputs.');
+			echo "Verified original successful release QA and immutable artifact; publication still requires GitHub environment approval.\n";
 		}
-		$file = getenv('GITHUB_OUTPUT');
-		release_require(is_string($file) && '' !== $file && false !== file_put_contents($file, $lines, FILE_APPEND), 'Cannot write resolved recovery outputs.');
-		echo "Verified original successful release QA and immutable artifact; publication still requires GitHub environment approval.\n";
 	} catch (RuntimeException | JsonException $error) {
 		fwrite(STDERR, 'Recovery denied: ' . $error->getMessage() . "\n");
 		exit(1);
