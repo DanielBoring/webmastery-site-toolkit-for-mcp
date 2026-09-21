@@ -61,6 +61,8 @@ Post/page/custom-post-type, media, orphan-media, and score lists now return cand
 
 Post/page/custom-post-type and revision lists default to fields:"summary", which omits content only. Request fields:"full" for unchanged stored content. Excerpts and other values are unchanged; get/write responses stay full. These are not transactional snapshots or constant-time database queries, and summary payloads have no universal byte limit. Orphan-reference queries are batched over bounded candidates; scan errors still block forced media deletion.
 
+Pagination whose offset or successor cannot fit a PHP integer is rejected before querying. Candidate/priming SQL failures return an error, not an empty end-of-list. Fresh SQL failures invalidate the current site's post-query cache generation to prevent cached false empty results; normal successful-query caching is unchanged.
+
 = Which AI clients and MCP hosts work with this? =
 
 Any MCP client that can reach your site through the MCP Adapter works. This includes Claude (Desktop and Code), ChatGPT, GitHub Copilot, Gemini CLI, Windsurf, and Codex. Most local clients connect through the `@automattic/mcp-wordpress-remote` bridge.

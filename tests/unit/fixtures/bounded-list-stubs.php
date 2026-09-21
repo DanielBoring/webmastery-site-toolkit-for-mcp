@@ -20,6 +20,12 @@ final class Probe {
 	public static array $abilities = array();
 	public static array $sticky = array();
 	public static bool $validate_input = false;
+	public static bool $query_failure = false;
+	public static bool $prime_failure = false;
+	public static bool $use_query_cache = false;
+	public static array $query_cache = array();
+	public static ?array $override_ids = null;
+	public static int $cache_invalidations = 0;
 	public static string $type = 'post';
 	public static string $content = '<!-- wp:paragraph --><p>"quoted" C:\\path\\</p><!-- /wp:paragraph -->';
 	public static function reset(): void {
@@ -27,6 +33,12 @@ final class Probe {
 		self::$queries = self::$caps = self::$primed = self::$denied = self::$abilities = self::$sticky = array();
 		self::$type = 'post';
 		self::$validate_input = false;
+		self::$query_failure = self::$use_query_cache = false;
+		self::$prime_failure = false;
+		self::$query_cache = array();
+		self::$override_ids = null;
+		self::$cache_invalidations = 0;
+		$GLOBALS['wpdb'] = new ReferenceDatabase();
 	}
 }
 
@@ -34,6 +46,13 @@ class WP_Query {
 	public array $posts;
 	public function __construct( array $args ) {
 		Probe::$queries[] = $args;
+		$key = json_encode( $args, JSON_THROW_ON_ERROR );
+		if ( Probe::$use_query_cache && array_key_exists( $key, Probe::$query_cache ) ) {
+			$this->posts = Probe::$query_cache[ $key ];
+			return;
+		}
+		++$GLOBALS['wpdb']->num_queries;
+		$GLOBALS['wpdb']->last_error = Probe::$query_failure ? 'PRIVATE DATABASE ERROR' : '';
 		$ids = range( 1, Probe::$size );
 		$order = is_array( $args['orderby'] ?? null ) ? $args['orderby']['ID'] : ( $args['order'] ?? 'ASC' );
 		if ( 'DESC' === $order ) {
@@ -44,10 +63,28 @@ class WP_Query {
 		if ( empty( $args['ignore_sticky_posts'] ) && 0 === ( $args['offset'] ?? 0 ) ) {
 			$this->posts = array_values( array_unique( array_merge( Probe::$sticky, $this->posts ) ) );
 		}
+		$this->posts = Probe::$override_ids ?? $this->posts;
+		if ( Probe::$query_failure ) {
+			$this->posts = array();
+		}
+		if ( Probe::$use_query_cache ) {
+			Probe::$query_cache[ $key ] = $this->posts;
+		}
 	}
 }
 
-function _prime_post_caches( $ids, $terms = true, $meta = true ) { Probe::$primed[] = $ids; }
+function wp_cache_set_posts_last_changed() {
+	++Probe::$cache_invalidations;
+	Probe::$query_cache = array();
+}
+
+function _prime_post_caches( $ids, $terms = true, $meta = true ) {
+	Probe::$primed[] = $ids;
+	if ( Probe::$prime_failure ) {
+		++$GLOBALS['wpdb']->num_queries;
+		$GLOBALS['wpdb']->last_error = 'PRIVATE PRIMING ERROR';
+	}
+}
 function get_post( $id ) {
 	if ( is_object( $id ) ) {
 		return $id;
@@ -60,6 +97,7 @@ function get_post( $id ) {
 		'post_title' => 'Tied title', 'post_content' => Probe::$content, 'post_excerpt' => 'Stored \\excerpt "value"',
 		'post_name' => 'item-' . $id, 'post_author' => '7', 'post_parent' => '0',
 		'post_date' => '2026-01-01 00:00:00', 'post_modified' => '2026-01-01 00:00:00',
+		'post_modified_gmt' => '2026-01-01 00:00:00',
 		'post_mime_type' => 'image/png', 'guid' => 'https://example.test/old/' . $id . '.png',
 	);
 }
@@ -95,6 +133,7 @@ final class ReferenceDatabase {
 	public string $posts = 'wp_posts';
 	public string $postmeta = 'wp_postmeta';
 	public string $last_error = '';
+	public int $num_queries = 0;
 	public array $queries = array();
 	public array $featured = array();
 	public array $matched_patterns = array();
@@ -103,6 +142,7 @@ final class ReferenceDatabase {
 	public function esc_like( $value ) { return addcslashes( $value, '_%\\' ); }
 	private function failed( $query ): bool {
 		$this->queries[] = $query;
+		++$this->num_queries;
 		$failed = count( $this->queries ) === $this->fail_query;
 		$this->last_error = $failed ? 'PRIVATE DATABASE ERROR' : '';
 		return $failed;

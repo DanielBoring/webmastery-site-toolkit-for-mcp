@@ -21,6 +21,13 @@ continuation, EOF, same-direction ID ties, full stored bytes, revision shape,
 and batched reference hit/failure mapping. These are isolated unit probes, not
 WordPress database or runtime performance measurements.
 
+Reliability regressions exercise the exact integer offset/successor thresholds,
+all seven windowed surfaces' error paths, fresh SQL failures during lookup and
+priming, and stale database errors on SQL-free warm caches. A failed cached-ID
+query must invalidate its post-query generation and execute SQL again on retry,
+not masquerade as an empty EOF. These fault probes do not replace leased
+WordPress database-failure evidence.
+
 `tests/fixtures/bounded-list-manifest-migration.json` records the approved
 `ad26b21` baseline (563 exact case hashes) and all 18 before/after cases. The
 unit guard preserves every original label/role/outcome and unchanged assertion;

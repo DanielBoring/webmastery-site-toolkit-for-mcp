@@ -9,7 +9,7 @@ require_once dirname( __DIR__, 3 ) . '/includes/class-input.php';
 require_once dirname( __DIR__, 3 ) . '/includes/class-media.php';
 
 $list_query_source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-list-query.php' );
-eval( 'namespace Wstm126Boundary; ' . substr( $list_query_source, 5 ) );
+eval( 'namespace Wstm126Boundary; use \WP_Error; use \Webmastery_MCP_Response; ' . substr( $list_query_source, 5 ) );
 
 final class BoundaryReached extends RuntimeException {}
 
@@ -21,6 +21,7 @@ final class Probe {
 	public static array $classes = array();
 
 	public static function reset(): void {
+		$GLOBALS['wpdb'] = (object) array( 'num_queries' => 0, 'last_error' => '' );
 		self::$abilities = self::$originals = self::$events = array();
 		self::$allowed = true;
 		foreach ( self::$classes as $class ) {

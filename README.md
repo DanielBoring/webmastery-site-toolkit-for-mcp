@@ -98,6 +98,11 @@ scores. Orphan detection batches only the bounded candidates' featured-image and
 literal URL/GUID checks, and still fails closed on database errors, even during
 forced deletion.
 
+Unrepresentable integer offsets/continuations return `invalid_input` before a
+query. Candidate or priming SQL failures return `upstream_failed`, not an empty
+end-of-list. Only fresh SQL failures advance the current blog's post-query cache
+generation to prevent cached false EOFs; ordinary warm caches remain supported.
+
 For example, start `list-posts` with `{"per_page":20,"page":1}`. Process the
 returned items, then request `{"per_page":20,"page":2}` only if `next_page` is 2.
 Use `fields:"full"` explicitly when content is needed. Summary does not return

@@ -34,6 +34,104 @@ final class BoundedListTest extends TestCase {
 		self::assertSame( 2, $result['next_page'] );
 	}
 
+	public function test_exact_integer_pagination_thresholds(): void {
+		foreach ( array( 1, 2, 3, 100 ) as $per_page ) {
+			Probe::reset();
+			$last_page = 1 === $per_page ? PHP_INT_MAX - 1 : intdiv( PHP_INT_MAX, $per_page ) + 1;
+			Probe::$override_ids = range( 1, $per_page + 1 );
+			$window = \Wstm121\Webmastery_MCP_List_Query::window( array(), $last_page, $per_page );
+			self::assertIsArray( $window );
+			self::assertSame( ( $last_page - 1 ) * $per_page, Probe::$queries[0]['offset'] );
+			self::assertIsInt( Probe::$queries[0]['offset'] );
+			self::assertSame( $last_page + 1, $window['next_page'] );
+			self::assertIsInt( $window['next_page'] );
+			Probe::reset();
+			$error = \Wstm121\Webmastery_MCP_List_Query::window( array(), $last_page + 1, $per_page );
+			self::assertInstanceOf( WP_Error::class, $error );
+			self::assertSame( 'invalid_input', $error->get_error_code() );
+			self::assertSame( array(), Probe::$queries );
+			self::assertSame( array(), Probe::$primed );
+		}
+	}
+
+	/** @dataProvider list_surfaces */
+	public function test_all_list_surfaces_propagate_overflow_and_sql_failure( string $slug, string $type ): void {
+		foreach ( array( 'overflow', 'sql' ) as $fault ) {
+			Probe::reset();
+			Probe::$type = $type;
+			Probe::$validate_input = true;
+			$this->register_lists();
+			Probe::$query_failure = 'sql' === $fault;
+			$execute = Probe::$abilities[ 'webmastery-site-toolkit-for-mcp/' . $slug ]['execute_callback'];
+			$result = $execute( array( 'page' => 'overflow' === $fault ? PHP_INT_MAX : 1, 'per_page' => 100 ) );
+			if ( is_wp_error( $result ) ) {
+				$result = Webmastery_MCP_Response::from_wp_error( $result );
+			}
+			self::assertFalse( $result['success'] );
+			self::assertSame( 'overflow' === $fault ? 'invalid_input' : 'upstream_failed', $result['error']['code'] );
+			self::assertArrayNotHasKey( 'data', $result );
+			self::assertEquals( (object) array(), $result['error']['details'] );
+			self::assertStringNotContainsString( 'PRIVATE', json_encode( $result, JSON_THROW_ON_ERROR ) );
+			self::assertCount( 'overflow' === $fault ? 0 : 1, Probe::$queries );
+			self::assertSame( array(), Probe::$primed );
+			foreach ( Probe::$caps as [ $cap, $args ] ) {
+				self::assertSame( array(), $args, 'Do not inspect an object after a window failure.' );
+			}
+			self::assertSame( array(), $GLOBALS['wpdb']->queries, 'No orphan-reference work after a window failure.' );
+		}
+	}
+
+	public function test_stale_database_error_does_not_reject_a_warm_query(): void {
+		Probe::$use_query_cache = true;
+		$first = $this->posts( 1, 2 );
+		$count = $GLOBALS['wpdb']->num_queries;
+		$GLOBALS['wpdb']->last_error = 'PRIVATE DATABASE ERROR';
+		self::assertSame( $first, $this->posts( 1, 2 ) );
+		self::assertSame( $count, $GLOBALS['wpdb']->num_queries );
+		self::assertSame( 'PRIVATE DATABASE ERROR', $GLOBALS['wpdb']->last_error );
+		self::assertSame( 0, Probe::$cache_invalidations );
+	}
+
+	public function test_failed_id_query_cannot_poison_a_later_cached_eof(): void {
+		Probe::$use_query_cache = Probe::$query_failure = true;
+		$GLOBALS['wpdb']->last_error = 'PRIVATE DATABASE ERROR';
+		$error = \Wstm121\Webmastery_MCP_List_Query::window( array(), 1, 2 );
+		self::assertInstanceOf( WP_Error::class, $error );
+		self::assertSame( 1, Probe::$cache_invalidations );
+		self::assertSame( array(), Probe::$primed );
+		Probe::$query_failure = false;
+		$window = \Wstm121\Webmastery_MCP_List_Query::window( array(), 1, 2 );
+		self::assertSame( 2, $GLOBALS['wpdb']->num_queries );
+		self::assertCount( 2, $window['ids'] );
+		self::assertSame( 2, $window['next_page'] );
+	}
+
+	/** @dataProvider list_surfaces */
+	public function test_warm_candidate_query_with_new_priming_failure_stops_before_authorization( string $slug, string $type ): void {
+		Probe::$type = $type;
+		Probe::$use_query_cache = true;
+		$this->register_lists();
+		$execute = Probe::$abilities[ 'webmastery-site-toolkit-for-mcp/' . $slug ]['execute_callback'];
+		self::assertTrue( $execute( array( 'per_page' => 2 ) )['success'] );
+		$queries = $GLOBALS['wpdb']->num_queries;
+		$references = $GLOBALS['wpdb']->queries;
+		Probe::$caps = array();
+		Probe::$prime_failure = true;
+		$result = $execute( array( 'per_page' => 2 ) );
+		if ( is_wp_error( $result ) ) {
+			$result = Webmastery_MCP_Response::from_wp_error( $result );
+		}
+		self::assertFalse( $result['success'] );
+		self::assertSame( 'upstream_failed', $result['error']['code'] );
+		self::assertStringNotContainsString( 'PRIVATE', json_encode( $result, JSON_THROW_ON_ERROR ) );
+		self::assertSame( $queries + 1, $GLOBALS['wpdb']->num_queries, 'Only priming executes SQL on the warm candidate query.' );
+		self::assertSame( $references, $GLOBALS['wpdb']->queries );
+		self::assertSame( 1, Probe::$cache_invalidations );
+		foreach ( Probe::$caps as [ $cap, $args ] ) {
+			self::assertSame( array(), $args );
+		}
+	}
+
 	public function test_empty_intermediate_window_does_not_end_iteration(): void {
 		Probe::$size = 9;
 		Probe::$denied = array( 4, 5, 6 );

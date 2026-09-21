@@ -658,7 +658,10 @@ class Webmastery_MCP_SEO {
 		}
 
 		$window = Webmastery_MCP_List_Query::window( $args, $page, $per_page );
-		$items  = [];
+		if ( is_wp_error( $window ) ) {
+			return Webmastery_MCP_Response::from_wp_error( $window );
+		}
+		$items = [];
 		foreach ( $window['ids'] as $post_id ) {
 			if ( ! Webmastery_MCP_Posts::can_read_post_meta_key( $post_id, $meta_key ) ) {
 				continue;

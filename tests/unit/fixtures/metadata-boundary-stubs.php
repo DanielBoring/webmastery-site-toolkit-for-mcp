@@ -33,6 +33,7 @@ final class Probe {
 	public static bool $providers_active = true;
 
 	public static function reset( string $type = 'post' ): void {
+		$GLOBALS['wpdb'] = (object) array( 'num_queries' => 0, 'last_error' => '' );
 		self::$abilities = self::$mutations = self::$capabilities = self::$reads = self::$denied_keys = array();
 		self::$denied_by_id = self::$denied_objects = self::$posts = self::$metadata = self::$queries = self::$head_requests = array();
 		self::$post_type = $type;

@@ -62,7 +62,10 @@ class Webmastery_MCP_Media {
 
 	private static function query_readable_attachments( $args, $page, $per_page ) {
 		$window = Webmastery_MCP_List_Query::window( $args, $page, $per_page );
-		$items  = [];
+		if ( is_wp_error( $window ) ) {
+			return $window;
+		}
+		$items = [];
 		foreach ( $window['ids'] as $id ) {
 			if ( self::can_read_attachment( (int) $id ) ) {
 				$item = self::normalize( $id );
@@ -395,6 +398,9 @@ class Webmastery_MCP_Media {
 				$per_page = min( max( 1, (int) ( $input['per_page'] ?? 20 ) ), 100 );
 				$page     = max( 1, (int) ( $input['page'] ?? 1 ) );
 				$data     = self::query_readable_attachments( $args, $page, $per_page );
+				if ( is_wp_error( $data ) ) {
+					return Webmastery_MCP_Response::from_wp_error( $data );
+				}
 
 				return [
 					'success' => true,

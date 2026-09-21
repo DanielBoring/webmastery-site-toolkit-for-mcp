@@ -91,7 +91,10 @@ class Webmastery_MCP_Posts {
 
 	private static function query_readable_posts( $args, $page, $per_page, $fields = 'summary' ) {
 		$window = Webmastery_MCP_List_Query::window( $args, $page, $per_page );
-		$items  = [];
+		if ( is_wp_error( $window ) ) {
+			return $window;
+		}
+		$items = [];
 		foreach ( self::filter_readable_post_ids( $window['ids'] ) as $id ) {
 			$item = self::normalize( $id );
 			if ( null !== $item ) {
@@ -1730,6 +1733,9 @@ class Webmastery_MCP_Posts {
 				$per_page = min( max( 1, (int) ( $input['per_page'] ?? 20 ) ), 100 );
 				$page     = max( 1, (int) ( $input['page'] ?? 1 ) );
 				$data     = self::query_readable_posts( $args, $page, $per_page, $input['fields'] ?? 'summary' );
+				if ( is_wp_error( $data ) ) {
+					return Webmastery_MCP_Response::from_wp_error( $data );
+				}
 
 				return [
 					'success' => true,

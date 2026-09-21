@@ -81,7 +81,10 @@ class Webmastery_MCP_Content_Hygiene {
 			$args['author'] = get_current_user_id();
 		}
 
-		$window      = Webmastery_MCP_List_Query::window( $args, self::page( $input ), self::per_page( $input ) );
+		$window = Webmastery_MCP_List_Query::window( $args, self::page( $input ), self::per_page( $input ) );
+		if ( is_wp_error( $window ) ) {
+			return $window;
+		}
 		$attachments = [];
 		foreach ( $window['ids'] as $id ) {
 			$attachment = get_post( $id );
