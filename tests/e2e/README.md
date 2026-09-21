@@ -163,7 +163,25 @@ source mutants and requires them to reach the sentinel callback. State,
 mutation-hook, query/capability, and missing-evidence negative controls validate
 the no-work oracle separately.
 
-This schema checkpoint retains all 563 preexisting manifest labels and inputs:
+The corrected schema manifest retains all 563 preexisting labels and inputs.
+Checkpoint `1c460f1` did not fully preserve input identity: associative JSON
+decoding hid two unintended empty-object-to-array changes. The correction below
+restores the original objects from approved parent `ad26b21`; it changes no
+expected error, label, role, or other assertion.
+
+| Original case label | Field | Parent `ad26b21` | Source `1c460f1` | Corrected |
+| --- | --- | --- | --- | --- |
+| `wstm110 update-post rejects empty metadata presence` | `input.meta` | `{}` | `[]` | `{}` |
+| `wstm110 create-cpt-mcp-case-study rejects metadata input` | `input.meta_input` | `{}` | `[]` | `{}` |
+
+Both cases retain `invalid_input` / `ability_invalid_input`. The focused
+`MetadataMigrationTest` regression uses non-associative JSON decoding, asserts
+empty `stdClass` values and the complete original inputs, and distinguishes
+an empty-array mutation. It failed on both source inputs before correction.
+The earlier unqualified input-preservation claim and associative-decoded
+migration artifact did not detect these container changes; retain that failed
+evidence rather than presenting the source checkpoint as already corrected.
+The authorized schema expectation changes and additions remain:
 
 | Acceptance change | Cases | Exact new expectation |
 | --- | ---: | --- |

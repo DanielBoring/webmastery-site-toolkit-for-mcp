@@ -11,6 +11,33 @@ final class MetadataMigrationTest extends TestCase {
 		return json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
 	}
 
+	public static function original_empty_object_inputs(): array {
+		return array(
+			array( 'wstm110 update-post rejects empty metadata presence', 'meta', '{"post_id":"__post_id__","title":"Must not persist","meta":{}}' ),
+			array( 'wstm110 create-cpt-mcp-case-study rejects metadata input', 'meta_input', '{"title":"Must not exist","content":"Must not persist","meta_input":{}}' ),
+		);
+	}
+
+	/** @dataProvider original_empty_object_inputs */
+	public function test_original_empty_metadata_inputs_preserve_json_container_identity( string $label, string $field, string $original_json ): void {
+		$manifest = json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		$matches = array_values( array_filter( $manifest, static fn( $case ) => $label === $case->label ) );
+		self::assertCount( 1, $matches );
+		$case = $matches[0];
+		self::assertInstanceOf( stdClass::class, $case->input->$field );
+		self::assertSame( array(), get_object_vars( $case->input->$field ) );
+		self::assertSame( $original_json, json_encode( $case->input, JSON_THROW_ON_ERROR ) );
+		self::assertSame( 'failure', $case->expect );
+		self::assertSame( 'invalid_input', $case->expect_error_code );
+		self::assertSame( 'ability_invalid_input', $case->expect_error_reason );
+		self::assertSame( 'canonical', $case->expect_error_shape );
+		self::assertTrue( $case->assert_metadata_boundary );
+
+		$mutant = clone $case->input;
+		$mutant->$field = array();
+		self::assertNotSame( $original_json, json_encode( $mutant, JSON_THROW_ON_ERROR ), 'An empty-array mutation must not compare equal to the original object input.' );
+	}
+
 	public function test_all_removed_aliases_have_an_exact_documented_migration(): void {
 		$guide = file_get_contents( dirname( __DIR__, 2 ) . '/docs/3.0-migration.md' );
 		foreach ( wstm110_batch_aliases() as $alias => [ $key ] ) {
