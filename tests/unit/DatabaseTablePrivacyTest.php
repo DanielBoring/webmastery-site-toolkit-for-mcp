@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once dirname( __DIR__, 2 ) . '/includes/class-database-health.php';
+require_once dirname( __DIR__ ) . '/e2e/database-table-privacy-fixture.php';
 
 if ( ! defined( 'ARRAY_A' ) ) {
 	define( 'ARRAY_A', 'ARRAY_A' );
@@ -122,6 +123,24 @@ final class DatabaseTablePrivacyTest extends TestCase {
 		$result = Webmastery_MCP_Database_Health::execute();
 		$this->assertSame( array( 'posts', 'custom_table_1' ), array_column( $result['data']['table_sizes'], 'table' ) );
 		$this->assertSame( array( 'private_database', 'tenant\\_7\\_%' ), $database->prepared[4][1] );
+	}
+
+	public function test_real_shared_users_and_opaque_shadow_coexist_but_full_shadow_disclosure_fails(): void {
+		$this->database(
+			array( 'users' => 'private_shared_users', 'usermeta' => 'private_shared_usermeta' ),
+			array( 'private_shared_users', 'private_users', 'private_shared_usermeta', 'private_usermeta' )
+		);
+		$result = Webmastery_MCP_Database_Health::execute();
+		$this->assertSame( array( 'users', 'custom_table_1', 'usermeta', 'custom_table_2' ), array_column( $result['data']['table_sizes'], 'table' ) );
+		$this->assertSame( array( true, false, true, false ), array_column( $result['data']['table_sizes'], 'is_core_table' ) );
+		$tokens = array_merge(
+			Webmastery_MCP_Database_Table_Privacy_Fixture::private_tokens( 'private_users', 'private_' ),
+			Webmastery_MCP_Database_Table_Privacy_Fixture::private_tokens( 'private_usermeta', 'private_' )
+		);
+		$disclosed = static fn( $payload ) => array_values( array_filter( $tokens, static fn( $token ) => str_contains( json_encode( $payload ), $token ) ) );
+		$this->assertSame( array(), $disclosed( $result ) );
+		$result['data']['unexpected_diagnostic'] = 'private_users';
+		$this->assertSame( array( 'private_users' ), $disclosed( $result ) );
 	}
 
 	public function test_custom_labels_restart_for_each_response_and_empty_tables_are_valid(): void {
