@@ -102,6 +102,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 - Updated E2E ability manifest coverage counts and cases for bulk post operation abilities.
 - Updated release, E2E, PHPCS, Composer, and documentation automation references for the Webmastery Site Toolkit for MCP package rename.
 - Fixed the README top-navigation Security link to point to the renamed `## Security Best Practices` heading anchor (`#security-best-practices`).
+- Updated all 17 workflow checkout pins, including release recovery checkouts, to the verified `actions/checkout` v7.0.1 commit. Existing workflow events are compatible with its fork-PR checkout restriction; checkout inputs, disabled credential persistence, permissions, and release approval controls are unchanged.
 
 ## 1.6.0
 
