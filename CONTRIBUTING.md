@@ -131,6 +131,26 @@ wp_register_ability( 'webmastery-site-toolkit-for-mcp/your-ability', [
 
 Set `annotations` accurately — `readonly: true` for read-only abilities, `destructive: true` for deletes, `idempotent: true` if calling it twice produces the same result.
 
+### Shared capability checks (partial #119, row 2)
+
+`includes/class-permissions.php` provides `Webmastery_MCP_Permissions::check( string $cap )` for an immediate `true` or trusted local `WP_Error`, `cap( string $cap )` for a deferred zero-argument permission closure, and `admin()` for the `manage_options` closure. Each invocation checks the current effective WordPress capability exactly once; factories never check capabilities during registration or cache a user's authorization. Denials retain `forbidden` and the exact `Requires {$cap} capability.` diagnostic through `Webmastery_MCP_Response::local_error()`. Callback input remains ignored.
+
+This extraction covers only the Health and Security registration closures, Site Info's public `permission()` / `admin_permission()` facades, and Webmaster Verification's public `permission()` facade. Keep those facades and the direct verification execution guard intact. Remaining permission closures and object-permission helpers in #119 are still outstanding; do not substitute a simple capability check for object, list, or delegated authorization.
+
+Related file map:
+
+| File | Responsibility |
+| --- | --- |
+| `includes/class-permissions.php` | Shared simple capability checks and deferred factories |
+| `webmastery-site-toolkit-for-mcp.php` | Loads the helper after Response, before ability registration |
+| `tests/unit/bootstrap.php` | Loads the production helper for unit tests |
+| `tests/unit/PermissionsCharacterizationTest.php` | Actual callback/facade characterization retained from before extraction |
+| `tests/unit/PermissionsTest.php` | Helper/factory behavior and mutation controls |
+| `tests/unit/PermissionsLoadingTest.php` | Actual plugin bootstrap and release package-map guards |
+| `tests/unit/fixtures/permissions-stubs.php`, `tests/unit/fixtures/wstm114-verification.php` | Load actual helper/ability source together within isolated WordPress namespaces |
+
+The existing recursive `includes/` release map includes the helper without a packaging allowlist change. This is behavior-preserving repository maintenance, not a new ability or a user-facing permission policy change.
+
 ---
 
 ## Submitting a pull request
