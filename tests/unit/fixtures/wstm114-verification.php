@@ -4,6 +4,8 @@ namespace Wstm114;
 
 // Load the unchanged class body in a test namespace so PHP's DNS boundary can
 // be counted deterministically without adding a production bypass/filter.
+$wstm114_permissions = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-permissions.php' );
+eval( 'namespace Wstm114; use \Closure; use \WP_Error; use \Webmastery_MCP_Response; ' . substr( $wstm114_permissions, 5 ) );
 $wstm114_source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-webmaster-verification.php' );
 eval( 'namespace Wstm114; use \WP_Error; use \Webmastery_MCP_Response; ' . substr( $wstm114_source, 5 ) );
 
