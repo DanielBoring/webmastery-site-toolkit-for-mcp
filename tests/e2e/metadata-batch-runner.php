@@ -83,6 +83,7 @@ try {
 		update_option( 'wstm110_batch_http', array( 'token' => $token, 'user_id' => $user_id ), false );
 		$transport = new Wstm110_Metadata_Transport( 'individual' === $boundary, array( 'login' => $run, 'password' => $password[0] ) );
 		$transport->initialize();
+		$summary['tools'] = $transport->catalog();
 	}
 	$execute = static function ( string $name, array $input ) use ( $boundary, $transport, $token ): array {
 		if ( null !== $transport ) {
@@ -220,6 +221,9 @@ try {
 					wstm110_batch_require( 'C:\\migration\\' === get_post_meta( $migration_id, '_yoast_wpseo_metadesc', true ), 'Migration lost metadata or backslashes.' );
 				}
 				$record['steps'][] = array( 'ability' => $slug, 'result' => $result, 'hooks' => $events, 'status' => $stored->post_status );
+				if ( null !== $transport ) {
+					$record['steps'][ $step ]['wire'] = $transport->last_response;
+				}
 			}
 			$record['passed'] = true;
 			$summary['passed']++;

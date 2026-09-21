@@ -37,10 +37,13 @@ $user_id = 0;
 $post_ids = array();
 $password = null;
 $transport = null;
+$token = '';
+$calls = array();
 $old_user = get_current_user_id();
 $run = 'wstm110-seo-' . wp_generate_uuid4();
-$record_case = static function ( string $label, callable $check ) use ( &$summary ): void {
+$record_case = static function ( string $label, callable $check ) use ( &$summary, &$calls ): void {
 	$record = array( 'label' => $label );
+	$calls = array();
 	try {
 		$check( $record );
 		$record['passed'] = true;
@@ -51,6 +54,7 @@ $record_case = static function ( string $label, callable $check ) use ( &$summar
 		$summary['failed']++;
 		echo "FAIL {$label}: {$error->getMessage()}\n";
 	} finally {
+		$record['calls'] = $calls;
 		delete_option( 'wstm110_seo_read_probe' );
 		delete_option( 'wstm110_seo_read_events' );
 		delete_option( 'wstm110_policy' );
@@ -70,26 +74,50 @@ try {
 	if ( in_array( $boundary, array( 'http', 'individual' ), true ) ) {
 		$password = WP_Application_Passwords::create_new_application_password( $user_id, array( 'name' => $run ) );
 		wstm110_seo_assert( is_array( $password ), 'Cannot create SEO HTTP application password.' );
+		$token = bin2hex( random_bytes( 32 ) );
+		update_option( 'wstm110_batch_http', array( 'token' => $token, 'user_id' => $user_id ), false );
 		$transport = new Wstm110_Metadata_Transport( 'individual' === $boundary, array( 'login' => $run, 'password' => $password[0] ) );
 		$transport->initialize();
+		$summary['tools'] = $transport->catalog();
 	}
-	$execute = static function ( string $slug, array $input ) use ( $boundary, $transport ): array {
+	$execute = static function ( string $slug, array $input ) use ( $boundary, $transport, $token, &$calls ): array {
 		$name = 'webmastery-site-toolkit-for-mcp/' . $slug;
-		if ( null !== $transport ) {
-			$result = $transport->execute( $name, $input );
-			wp_cache_flush();
-			return $result;
+		$call = array( 'ability' => $name, 'input' => $input, 'before' => wstm110_batch_snapshot() );
+		$events = array();
+		$observer = null;
+		try {
+			if ( null !== $transport ) {
+				$result = $transport->execute( $name, $input, $token );
+			} else {
+				$observer = wstm110_batch_observe( static function ( $hook ) use ( &$events ): void { $events[] = $hook; } );
+				$ability = wp_get_ability( $name );
+				wstm110_seo_assert( null !== $ability, "Missing {$name}." );
+				if ( 'direct' === $boundary ) {
+					$property = new ReflectionProperty( WP_Ability::class, 'execute_callback' );
+					$property->setAccessible( true );
+					$result = ( $property->getValue( $ability ) )( $input );
+				} else {
+					$result = $ability->execute( array() === $input && ! $ability->get_input_schema() ? null : $input );
+				}
+			}
+			$result = is_wp_error( $result ) ? wstm118_error_envelope( $result ) : $result;
+			$call['result'] = $result;
+		} finally {
+			if ( $observer instanceof Closure ) {
+				wstm110_batch_unobserve( $observer );
+			}
+			if ( null !== $transport ) {
+				wp_cache_flush();
+				$events = $transport->last_events;
+				$call['wire'] = $transport->last_response;
+				$call['tool_name'] = $transport->tool_name( $name );
+			}
+			$call['mutation_hooks'] = $events;
+			$call['after'] = wstm110_batch_snapshot();
+			$calls[] = $call;
 		}
-		$ability = wp_get_ability( $name );
-		wstm110_seo_assert( null !== $ability, "Missing {$name}." );
-		if ( 'direct' === $boundary ) {
-			$property = new ReflectionProperty( WP_Ability::class, 'execute_callback' );
-			$property->setAccessible( true );
-			$result = ( $property->getValue( $ability ) )( $input );
-		} else {
-			$result = $ability->execute( $input );
-		}
-		return is_wp_error( $result ) ? wstm118_error_envelope( $result ) : $result;
+		wstm110_batch_assert_unchanged( $call['before'], $call['after'], $events );
+		return $result;
 	};
 	foreach ( array( 'post', 'page' ) as $type ) {
 		$id = wp_insert_post( array( 'post_type' => $type, 'post_title' => $run, 'post_content' => 'Read-only fixture', 'post_status' => 'draft', 'post_author' => $user_id ), true );
@@ -238,6 +266,9 @@ try {
 	};
 	foreach ( array( 'wstm110_policy', 'wstm110_seo_read_probe', 'wstm110_seo_read_events' ) as $option ) {
 		delete_option( $option );
+	}
+	if ( '' !== $token ) {
+		delete_option( 'wstm110_batch_http' );
 	}
 	if ( $transport instanceof Wstm110_Metadata_Transport ) {
 		$cleanup( 'HTTP session', static function () use ( $transport ): void { $transport->close(); } );

@@ -81,6 +81,16 @@ The repo strategy docs explain how maintainers operate the project:
 
 ## Adding a new ability
 
+### Shared diagnostic plugin inventory
+
+`Webmastery_MCP_Plugins::active_basenames()` supplies backup and performance diagnostics with uncached option-based inventory: local values first, followed by network option keys only on multisite, then string conversion, deduplication, and numeric reindexing. Non-array local/network options are ignored. The helper does not load the plugin API, mutate options, or check plugin-management capabilities; each diagnostic retains its existing `manage_options` permission callback.
+
+This is only the identical diagnostic-inventory portion of #119. Do not use inventory membership as a substitute for SEO or Site Kit provider readiness: Yoast uses runtime constants/classes/functions, SEOPress combines readiness signals with its existing local-option cast, and Site Kit combines core plugin APIs with loaded-provider and installed/version information. Those policies and the other helper rows remain separate.
+
+`PluginInventoryTest` characterizes the actual shared helper and both diagnostic forwarding methods through isolated WordPress stubs, including fresh filtered reads, malformed options, exact response shapes, and unchanged capability checks. These units complement, rather than replace, the existing diagnostic allowed/denied E2E manifest cases and real WordPress/MCP checks.
+
+### Ability registration
+
 Each group of abilities lives in its own file under `includes/`. Follow the existing pattern:
 
 1. **Create or open** the relevant class file (e.g., `includes/class-media.php`)
@@ -246,9 +256,11 @@ Release checklist:
 7. Review the latest scheduled/manual `6 - Compatibility QA` result for upstream WordPress/PHP/plugin dependency drift.
 8. Confirm the protected `wordpress-org` GitHub Environment and `SVN_USERNAME` / `SVN_PASSWORD` GitHub Actions secrets are configured.
 9. Tag and push `vX.Y.Z` to trigger the release workflow.
-10. Approve the protected WordPress.org deployment after release QA passes.
+10. Review the ready-for-approval summary and approve **Publish release (GitHub approval required)** after release QA passes. The `wordpress-org` environment is a GitHub production gate, not WordPress.org staff review.
 
 Release tags must point into reviewed `main` history. Release QA must run static/unit checks as well as package validation. Approve the source SHA and validated artifact, not a rebuilt replacement. Publishing is serialized across all release tags; if SVN succeeds but a later step fails, follow the partial-failure procedure rather than moving a tag or starting a different build.
+
+If recovery needs workflow fixes, follow the [guarded recovery runbook](docs/release-strategy.md#recovery-when-the-frozen-workflow-itself-needs-a-fix). A separately authorized annotated `v-release-recovery-*` control tag on the reviewed merged fix satisfies the existing tag-only environment policy; it is not a plugin release and its push never triggers release QA/publication. Only dispatch on that control tag may resume the original successful QA run/artifact, without rebuilding or modifying the original release tag. Keep the `wordpress-org` environment ID, protections and scoped secrets unchanged. `composer test:release-safeguards` covers resolver provenance/authorization, control-ref entrypoints and host-SVN prerequisite failures with mocks/local Git fixtures, without Docker or production writes.
 
 ---
 

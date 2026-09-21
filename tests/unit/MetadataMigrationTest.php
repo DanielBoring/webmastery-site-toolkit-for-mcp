@@ -109,6 +109,51 @@ final class MetadataMigrationTest extends TestCase {
 		return $cases;
 	}
 
+	public function test_unrelated_draft_keeps_combined_payload_and_separate_object_authorization(): void {
+		$cases = array_column( $this->manifest(), null, 'label' );
+		$combined = $cases['wstm120 contributor cannot update unrelated draft'];
+		self::assertSame( 'Must not change', $combined['input']['yoast_meta_description'] );
+		self::assertSame( 'invalid_input', $combined['assert_permission'] );
+		self::assertSame( 'ability_invalid_input', $combined['expect_error_reason'] );
+		self::assertTrue( $combined['assert_unchanged'] );
+		self::assertTrue( $combined['assert_metadata_boundary'] );
+		$plain = $cases['wstm120 contributor cannot update unrelated draft with plain input'];
+		$input = $combined['input'];
+		unset( $input['yoast_meta_description'] );
+		self::assertSame( $input, $plain['input'] );
+		self::assertSame( 'contributor', $plain['role'] );
+		self::assertSame( 'forbidden', $plain['assert_permission'] );
+		self::assertSame( 'forbidden', $plain['expect_error_code'] );
+		self::assertSame( 'ability_invalid_permissions', $plain['expect_error_reason'] );
+		self::assertTrue( $plain['assert_unchanged'] );
+		self::assertSame( array(
+			array( 'capability' => 'edit_posts', 'args' => array(), 'allowed' => true ),
+			array( 'capability' => 'edit_post', 'args' => array( '__wstm120_other_draft_id__' ), 'allowed' => false ),
+		), $plain['assert_capabilities'] );
+		self::assertSame( $combined['assert_capabilities'], $plain['assert_capabilities'] );
+	}
+
+	public function test_subscriber_plain_denials_preserve_exact_metadata_sentinels(): void {
+		$cases = array_column( $this->manifest(), null, 'label' );
+		foreach ( array( 'post' => '\\\\server\\share\\', 'page' => '{"regex":"\\\\d+\\w"}' ) as $type => $sentinel ) {
+			$combined = $cases[ "wstm122 denied {$type} write preserves metadata" ];
+			$plain = $cases[ "wstm122 denied {$type} write with plain input preserves metadata" ];
+			$id = "__{$type}_id__";
+			self::assertSame( array( "{$type}_id" => $id, 'yoast_meta_description' => 'Denied\\meta' ), $combined['input'] );
+			self::assertSame( array( "{$type}_id" => $id, 'title' => 'Must not change' ), $plain['input'] );
+			self::assertSame( 'subscriber', $plain['role'] );
+			self::assertSame( 'forbidden', $plain['assert_permission'] );
+			self::assertSame( 'forbidden', $plain['expect_error_code'] );
+			self::assertSame( 'ability_invalid_permissions', $plain['expect_error_reason'] );
+			self::assertTrue( $plain['assert_unchanged'] );
+			self::assertTrue( $combined['assert_unchanged'] );
+			self::assertTrue( $combined['assert_metadata_boundary'] );
+			self::assertSame( array( array( 'capability' => 'edit_post', 'args' => array( $id ), 'allowed' => false ) ), $plain['assert_capabilities'] );
+			self::assertSame( array( array( 'post_id' => $id, 'meta_key' => '_yoast_wpseo_metadesc', 'value' => $sentinel ) ), $plain['assert_post_meta'] );
+			self::assertSame( $combined['assert_post_meta'], $plain['assert_post_meta'] );
+		}
+	}
+
 	/**
 	 * @dataProvider unsafe_runtime_invocations
 	 */
