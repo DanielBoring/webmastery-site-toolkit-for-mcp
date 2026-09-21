@@ -474,7 +474,7 @@ class Webmastery_MCP_Posts {
 		];
 	}
 
-	private static function bulk_input_error( $input ) {
+	public static function bulk_input_error( $input ) {
 		if ( true !== ( $input['confirm'] ?? null ) ) {
 			return Webmastery_MCP_Response::legacy_error( 'missing_confirmation', 'Set confirm to true to acknowledge this operation, including a dry run.' );
 		}
