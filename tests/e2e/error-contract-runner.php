@@ -6,6 +6,10 @@ if ( PHP_SAPI !== 'cli' ) {
 	http_response_code( 403 );
 	exit( 'CLI only.' );
 }
+if ( '1' !== getenv( 'WSTM118_DISPOSABLE' ) ) {
+	fwrite( STDERR, "Error-contract proof requires WSTM118_DISPOSABLE=1 on an owned disposable site.\n" );
+	exit( 1 );
+}
 
 $_SERVER['HTTP_HOST'] = 'localhost';
 require_once '/var/www/html/wp-load.php';
@@ -51,31 +55,50 @@ try {
 	}
 	$listing = $clients['individual']->call( 'tools/list' );
 	webmastery_mcp_e2e_assert( isset( $listing['tools'] ) && ! isset( $listing['nextCursor'] ), 'Individual fixture discovery is incomplete.' );
-	$individual_names = array_column( $listing['tools'], 'name' );
-	$summary['individual_tools'] = $individual_names;
-	$call = static function ( $boundary, $name, $input ) use ( &$clients, $individual_names ) {
-		$tool_name = str_replace( '/', '-', $name );
+	$summary['individual_catalog'] = $listing;
+	$summary['discovered_mapping'] = array();
+	$summary['error_wire_keys'] = array();
+	$call = static function ( $boundary, $name, $input ) use ( &$clients, $listing, &$summary ) {
+		$tool_name = 'mcp-adapter-execute-ability';
 		if ( 'individual' === $boundary ) {
-			webmastery_mcp_e2e_assert( in_array( $tool_name, $individual_names, true ), 'Individual ability tool was not discovered: ' . $name );
+			$description = trim( wp_get_ability( $name )->get_description() );
+			$matches = array_values( array_filter( $listing['tools'], static fn( $tool ) => $description === ( $tool['description'] ?? null ) ) );
+			webmastery_mcp_e2e_assert( 1 === count( $matches ) && is_string( $matches[0]['name'] ?? null ), 'Individual ability descriptor was missing or ambiguous: ' . $name );
+			webmastery_mcp_e2e_assert( 'object' === ( $matches[0]['inputSchema']['type'] ?? null ), 'Discovered tool lacks an object input schema.' );
+			$tool_name = $matches[0]['name'];
+			$summary['discovered_mapping'][ $name ] = $tool_name;
 		}
-		return $clients[ $boundary ]->call( 'tools/call', array(
-			'name' => 'gateway' === $boundary ? 'mcp-adapter-execute-ability' : $tool_name,
+		$result = $clients[ $boundary ]->call( 'tools/call', array(
+			'name' => $tool_name,
 			'arguments' => 'gateway' === $boundary ? array( 'ability_name' => $name, 'parameters' => (object) $input ) : (object) $input,
 		) );
+		if ( true === ( $result['isError'] ?? null ) ) {
+			$summary['error_wire_keys'][] = array( 'boundary' => $boundary, 'ability' => $name, 'keys' => array_keys( $result ), 'has_structured_content' => array_key_exists( 'structuredContent', $result ) );
+		}
+		return $result;
 	};
 	$name = 'webmastery-site-toolkit-for-mcp/wstm118-probe';
 	$ability = wp_get_ability( $name );
 	webmastery_mcp_e2e_assert( $ability instanceof Webmastery_MCP_Ability, 'Owned ability class was not installed.' );
 	webmastery_mcp_e2e_assert( ! wp_get_ability( 'wstm118-foreign/probe' ) instanceof Webmastery_MCP_Ability, 'Foreign ability class was intercepted.' );
+	foreach ( array( 'execute', 'permission' ) as $kind ) {
+		$record( "registration/{$kind}-callback", static function () use ( $kind ) {
+			$evidence = $GLOBALS['wstm118_registration'][ $kind ];
+			$floor = 0 === strpos( get_bloginfo( 'version' ), '6.9' );
+			webmastery_mcp_e2e_assert( $floor === $evidence['rejected'], 'Unexpected core invalid-callback registration behavior.' );
+			webmastery_mcp_e2e_assert( ( $floor ? 1 : 0 ) === count( $evidence['notices'] ), 'Unexpected registry diagnostic count.' );
+			return array( 'registration' => $evidence, 'execution_fixture' => 'Non-callable callback injected after successful registration.' );
+		} );
+	}
 	$cases = array(
 		'forbidden' => 'missing_capability', 'not_found' => 'target_not_found', 'invalid_input' => 'invalid_meta_key',
 		'precondition_failed' => 'content_hash_mismatch', 'conflict' => 'ambiguous_target', 'unsupported' => 'unsupported_type', 'upstream_failed' => 'update_failed',
 		'provider-known' => 'external_error', 'provider-unknown' => 'external_error', 'exception' => 'ability_callback_exception', 'invalid-output' => 'ability_invalid_output',
-		'deny' => 'missing_capability', 'provider-deny' => 'external_error', 'false-permission' => 'forbidden',
+		'deny' => 'missing_capability', 'provider-deny' => 'external_error', 'false-permission' => 'forbidden', 'permission-exception' => 'ability_callback_exception',
 	);
 	foreach ( $cases as $mode => $reason ) {
 		$input = array( 'mode' => $mode );
-		$denied = in_array( $mode, array( 'deny', 'provider-deny', 'false-permission' ), true );
+		$denied = in_array( $mode, array( 'deny', 'provider-deny', 'false-permission', 'permission-exception' ), true );
 		$record( "ability/{$mode}", static function () use ( $ability, $input, $denied, $mode, $reason, $assert_reason ) {
 			$GLOBALS['wstm118_counts'] = array_fill_keys( array( 'permission', 'execute', 'before', 'after' ), 0 );
 			$result = $assert_reason( $ability->execute( $input ), $denied ? 'ability_invalid_permissions' : $reason );
@@ -87,7 +110,8 @@ try {
 		if ( $denied ) {
 			$record( "permission/{$mode}", static function () use ( $ability, $input, $reason, $assert_reason ) {
 				$native = $ability->check_permissions( $input );
-				webmastery_mcp_e2e_assert( $native instanceof WP_Error && 403 === $native->get_error_data()['status'], 'Native carrier or status changed.' );
+				$status = 'permission-exception' === $input['mode'] ? 502 : 403;
+				webmastery_mcp_e2e_assert( $native instanceof WP_Error && $status === $native->get_error_data()['status'], 'Native carrier or status changed.' );
 				return $assert_reason( $native, $reason );
 			} );
 		} elseif ( in_array( $mode, array( 'forbidden', 'not_found', 'invalid_input', 'precondition_failed', 'conflict', 'unsupported', 'upstream_failed' ), true ) ) {
@@ -177,7 +201,9 @@ try {
 	}
 	if ( is_array( $password ) ) {
 		$deleted = WP_Application_Passwords::delete_application_password( $admin->ID, $password[1]['uuid'] );
-		if ( true !== $deleted ) {
+		$remaining = array_filter( WP_Application_Passwords::get_user_application_passwords( $admin->ID ), static fn( $item ) => $password[1]['uuid'] === $item['uuid'] );
+		$summary['application_password_absent_after_cleanup'] = array() === $remaining;
+		if ( true !== $deleted || array() !== $remaining ) {
 			$summary['failed']++;
 			$summary['cleanup_errors'][] = array( 'resource' => 'application password', 'message' => 'Revocation failed.' );
 		}
