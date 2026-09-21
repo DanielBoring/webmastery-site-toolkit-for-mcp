@@ -8,7 +8,7 @@ require_once __DIR__ . '/fixtures/permissions-stubs.php';
 
 final class PermissionsCharacterizationTest extends TestCase {
 	protected function setUp(): void {
-		$GLOBALS['wstm119'] = array(
+		$GLOBALS['wstm119_permissions'] = array(
 			'user' => 11,
 			'caps' => array(),
 			'calls' => array(),
@@ -18,16 +18,16 @@ final class PermissionsCharacterizationTest extends TestCase {
 	}
 
 	protected function tearDown(): void {
-		unset( $GLOBALS['wstm119'] );
+		unset( $GLOBALS['wstm119_permissions'] );
 	}
 
 	private function registerAbilities(): array {
-		Wstm119\Webmastery_MCP_Health::register();
-		Wstm119\Webmastery_MCP_Security::register();
-		Wstm119\Webmastery_MCP_Site_Info::register();
-		Wstm119\Webmastery_MCP_Webmaster_Verification::register();
-		self::assertSame( array(), $GLOBALS['wstm119']['calls'], 'Registration must not check the current user.' );
-		return $GLOBALS['wstm119']['abilities'];
+		Wstm119Permissions\Webmastery_MCP_Health::register();
+		Wstm119Permissions\Webmastery_MCP_Security::register();
+		Wstm119Permissions\Webmastery_MCP_Site_Info::register();
+		Wstm119Permissions\Webmastery_MCP_Webmaster_Verification::register();
+		self::assertSame( array(), $GLOBALS['wstm119_permissions']['calls'], 'Registration must not check the current user.' );
+		return $GLOBALS['wstm119_permissions']['abilities'];
 	}
 
 	public static function callbackProvider(): array {
@@ -55,8 +55,8 @@ final class PermissionsCharacterizationTest extends TestCase {
 			array( 22, array( $cap ), true ),
 			array( 33, array( $other ), false ),
 		) as [ $user, $caps, $allowed ] ) {
-			$GLOBALS['wstm119']['user'] = $user;
-			$GLOBALS['wstm119']['caps'] = $caps;
+			$GLOBALS['wstm119_permissions']['user'] = $user;
+			$GLOBALS['wstm119_permissions']['caps'] = $caps;
 			// The original zero-argument callbacks ignore even non-array input.
 			foreach ( array( null, array( 'capability' => $other ), 'ignored', new stdClass() ) as $input ) {
 				$result = $callback( $input );
@@ -66,7 +66,7 @@ final class PermissionsCharacterizationTest extends TestCase {
 					$this->assertLocalDenial( $result, $cap );
 				}
 				$expected_calls[] = array( $user, $cap );
-				self::assertSame( $expected_calls, $GLOBALS['wstm119']['calls'], 'Exactly one effective capability lookup per invocation.' );
+				self::assertSame( $expected_calls, $GLOBALS['wstm119_permissions']['calls'], 'Exactly one effective capability lookup per invocation.' );
 			}
 		}
 	}
@@ -89,23 +89,23 @@ final class PermissionsCharacterizationTest extends TestCase {
 
 	public function testPublicFacadesRemainCallableWithoutRegistration(): void {
 		foreach ( array(
-			array( Wstm119\Webmastery_MCP_Site_Info::class, 'permission', 'read' ),
-			array( Wstm119\Webmastery_MCP_Site_Info::class, 'admin_permission', 'manage_options' ),
-			array( Wstm119\Webmastery_MCP_Webmaster_Verification::class, 'permission', 'read' ),
+			array( Wstm119Permissions\Webmastery_MCP_Site_Info::class, 'permission', 'read' ),
+			array( Wstm119Permissions\Webmastery_MCP_Site_Info::class, 'admin_permission', 'manage_options' ),
+			array( Wstm119Permissions\Webmastery_MCP_Webmaster_Verification::class, 'permission', 'read' ),
 		) as [ $class, $method, $cap ] ) {
-			$GLOBALS['wstm119']['caps'] = array();
+			$GLOBALS['wstm119_permissions']['caps'] = array();
 			$this->assertLocalDenial( $class::$method(), $cap );
-			$GLOBALS['wstm119']['caps'] = array( $cap );
+			$GLOBALS['wstm119_permissions']['caps'] = array( $cap );
 			self::assertTrue( $class::$method() );
 		}
-		self::assertCount( 6, $GLOBALS['wstm119']['calls'] );
+		self::assertCount( 6, $GLOBALS['wstm119_permissions']['calls'] );
 	}
 
 	public function testDirectVerificationDeniesBeforeAllPublicCacheAndPluginBoundaries(): void {
-		$GLOBALS['wstm119']['caps'] = array( 'manage_options', 'activate_plugins' );
-		$result = Wstm119\Webmastery_MCP_Webmaster_Verification::execute();
+		$GLOBALS['wstm119_permissions']['caps'] = array( 'manage_options', 'activate_plugins' );
+		$result = Wstm119Permissions\Webmastery_MCP_Webmaster_Verification::execute();
 		$this->assertLocalDenial( $result, 'read' );
-		self::assertSame( array( array( 11, 'read' ) ), $GLOBALS['wstm119']['calls'] );
-		self::assertSame( array(), $GLOBALS['wstm119']['boundaries'] );
+		self::assertSame( array( array( 11, 'read' ) ), $GLOBALS['wstm119_permissions']['calls'] );
+		self::assertSame( array(), $GLOBALS['wstm119_permissions']['boundaries'] );
 	}
 }

@@ -90,7 +90,7 @@ final class PermissionsTest extends TestCase {
 		$source = str_replace( "\r\n", "\n", $source );
 		$source = str_replace( $before, $after, $source, $count );
 		self::assertSame( 1, $count, 'Mutation must change exactly one actual source location.' );
-		$namespace = 'Wstm119Mutation' . md5( $before . $after );
+		$namespace = 'Wstm119PermissionsMutation' . md5( $before . $after );
 		eval(
 			'namespace ' . $namespace . '; use \Closure; use \WP_Error; use \Webmastery_MCP_Response; '
 			. 'function current_user_can( $cap ) { return \current_user_can( $cap ); } '

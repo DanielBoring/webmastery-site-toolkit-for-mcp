@@ -1,24 +1,24 @@
 <?php
 
-namespace Wstm119;
+namespace Wstm119Permissions;
 
 // Evaluate the actual source against isolated WordPress boundaries, not copied checks.
 foreach ( array( 'permissions', 'health', 'security', 'site-info', 'webmaster-verification' ) as $file ) {
 	$source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-' . $file . '.php' );
-	eval( 'namespace Wstm119; use \Closure; use \WP_Error; use \Webmastery_MCP_Response; ' . substr( $source, 5 ) );
+	eval( 'namespace Wstm119Permissions; use \Closure; use \WP_Error; use \Webmastery_MCP_Response; ' . substr( $source, 5 ) );
 }
 
 function current_user_can( $capability ) {
-	$GLOBALS['wstm119']['calls'][] = array( $GLOBALS['wstm119']['user'], $capability );
-	return in_array( $capability, $GLOBALS['wstm119']['caps'], true );
+	$GLOBALS['wstm119_permissions']['calls'][] = array( $GLOBALS['wstm119_permissions']['user'], $capability );
+	return in_array( $capability, $GLOBALS['wstm119_permissions']['caps'], true );
 }
 
 function wp_register_ability( $name, $args ) {
-	$GLOBALS['wstm119']['abilities'][ $name ] = $args;
+	$GLOBALS['wstm119_permissions']['abilities'][ $name ] = $args;
 }
 
 function unexpected_boundary( $name ) {
-	$GLOBALS['wstm119']['boundaries'][] = $name;
+	$GLOBALS['wstm119_permissions']['boundaries'][] = $name;
 	throw new \RuntimeException( 'Denied verification reached ' . $name );
 }
 
