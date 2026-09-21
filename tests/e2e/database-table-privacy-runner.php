@@ -8,6 +8,8 @@ if ( '1' !== getenv( 'WSTM111_DISPOSABLE_SITE' ) ) {
 	throw new RuntimeException( 'Database privacy fixtures require WSTM111_DISPOSABLE_SITE=1 on an owned disposable installation.' );
 }
 
+$_SERVER['HTTP_HOST'] = 'localhost';
+require_once '/var/www/html/wp-load.php';
 require_once __DIR__ . '/database-table-privacy-fixture.php';
 define( 'WEBMASTERY_MCP_E2E_CLIENT_ONLY', true );
 require_once __DIR__ . '/mcp-crud-runner.php';
@@ -63,11 +65,11 @@ function wstm111_privacy_pair( string $boundary, callable $execute, array $priva
 	return array_column( $raw_rows, 'table' );
 }
 
-function wstm111_privacy_http( array $private_names ): void {
+function wstm111_privacy_http( array $private_names, array $actors ): void {
 	require_once __DIR__ . '/error-contract-assertions.php';
 	foreach ( array( 'gateway', 'individual' ) as $transport ) {
-		foreach ( array( 'admin', 'subscriber_test' ) as $login ) {
-			$user = get_user_by( 'login', $login );
+		foreach ( $actors as $role => $user ) {
+			$login = $user->user_login;
 			$credential = WP_Application_Passwords::create_new_application_password( $user->ID, array( 'name' => 'wstm111 owned privacy proof' ) );
 			if ( is_wp_error( $credential ) ) {
 				throw new RuntimeException( 'Could not create owned transport credential.' );
@@ -79,8 +81,13 @@ function wstm111_privacy_http( array $private_names ): void {
 				$client->initialize();
 				$tool = 'mcp-adapter-execute-ability';
 				if ( 'individual' === $transport ) {
-					$tools = $client->call( 'tools/list' )['tools'];
-					$matches = array_values( array_filter( $tools, static fn( $entry ) => str_ends_with( $entry['name'], '-database-health' ) ) );
+					$listing = $client->call( 'tools/list' );
+					$GLOBALS['wstm111_privacy_report']['catalog'][ $transport ][ $role ] = $listing;
+					if ( isset( $listing['nextCursor'] ) || ! isset( $listing['tools'] ) ) {
+						throw new RuntimeException( 'Individual tool catalog was incomplete.' );
+					}
+					$description = trim( wp_get_ability( 'webmastery-site-toolkit-for-mcp/database-health' )->get_description() );
+					$matches = array_values( array_filter( $listing['tools'], static fn( $entry ) => $description === ( $entry['description'] ?? null ) ) );
 					if ( 1 !== count( $matches ) ) {
 						throw new RuntimeException( 'Expected exactly one individual database-health tool.' );
 					}
@@ -115,7 +122,7 @@ function wstm111_privacy_http( array $private_names ): void {
 					}
 					return $payload;
 				};
-				if ( 'admin' === $login ) {
+				if ( 'admin' === $role ) {
 					$physical_names = wstm111_privacy_pair( "http/{$transport}/admin", $execute, $private_names );
 					foreach ( array_slice( $wire_results, 0, 2 ) as $index => $wire ) {
 						$predicates = array();
@@ -171,19 +178,29 @@ $GLOBALS['wstm111_privacy_report'] = array(
 	'cases' => array(), 'cleanup' => array(),
 );
 $queries = array();
+$actors = array();
+$run = 'wstm111-' . wp_generate_uuid4();
 $observe = static function ( $query ) use ( &$queries ) {
 	$queries[] = $query;
 	return $query;
 };
 try {
-	$admin = get_user_by( 'login', 'admin' );
-	$subscriber = get_user_by( 'login', 'subscriber_test' );
-	if ( ! $admin || ! $subscriber ) {
-		throw new RuntimeException( 'Requires disposable admin and subscriber_test actors.' );
+	require_once ABSPATH . 'wp-admin/includes/user.php';
+	foreach ( array( 'admin' => 'administrator', 'subscriber' => 'subscriber' ) as $label => $role ) {
+		$login = $run . '-' . $label;
+		$id = wp_create_user( $login, wp_generate_password( 40 ), $login . '@example.test' );
+		if ( is_wp_error( $id ) ) {
+			throw new RuntimeException( 'Could not create exclusively owned privacy actor.' );
+		}
+		$actors[ $label ] = new WP_User( $id );
+		$actors[ $label ]->set_role( $role );
 	}
+	$admin = $actors['admin'];
+	$subscriber = $actors['subscriber'];
 	wp_set_current_user( $admin->ID );
 	$fixture->create();
-	foreach ( array( 'direct', 'registered' ) as $boundary ) {
+	$native_boundaries = '1' === getenv( 'WSTM111_PRIVACY_HTTP' ) ? array() : array( 'direct', 'registered' );
+	foreach ( $native_boundaries as $boundary ) {
 		$execute = 'direct' === $boundary
 			? array( Webmastery_MCP_Database_Health::class, 'execute' )
 			: array( wp_get_ability( 'webmastery-site-toolkit-for-mcp/database-health' ), 'execute' );
@@ -228,7 +245,7 @@ try {
 		wp_set_current_user( $admin->ID );
 	}
 	if ( '1' === getenv( 'WSTM111_PRIVACY_HTTP' ) ) {
-		wstm111_privacy_http( $fixture->names );
+		wstm111_privacy_http( $fixture->names, $actors );
 	}
 } catch ( Throwable $error ) {
 	wstm111_privacy_check( 'runner-error', array( 'no_exception' => false ), array( 'message' => $error->getMessage() ) );
@@ -240,6 +257,16 @@ try {
 		wstm111_privacy_check( "cleanup/table-{$index}", array( 'dropped' => $cleanup['dropped'], 'absent' => $cleanup['absent'] ), $cleanup );
 	}
 	wp_set_current_user( $original_user );
+	foreach ( $actors as $role => $actor ) {
+		try {
+			$deleted = is_multisite() ? wpmu_delete_user( $actor->ID ) : wp_delete_user( $actor->ID );
+			wstm111_privacy_check( "cleanup/actor/{$role}", array(
+				'deleted' => true === $deleted, 'absent' => false === get_user_by( 'id', $actor->ID ),
+			), null );
+		} catch ( Throwable $error ) {
+			wstm111_privacy_check( "cleanup/actor/{$role}", array( 'deleted_and_verified' => false ), $error->getMessage() );
+		}
+	}
 }
 $report = $GLOBALS['wstm111_privacy_report'];
 webmastery_mcp_e2e_write_summary(

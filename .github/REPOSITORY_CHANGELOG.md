@@ -9,6 +9,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 ### Added
 
 - Add database diagnostic privacy regressions for strict boolean opt-in, query-free direct denials, custom-prefix/multisite physical mappings and suffix collisions, and complete metric/order parity. Keep prior SQL-error and security-audit coverage; add synthetic manifest controls and owned real-table/HTTP evidence with checked table and credential cleanup.
+- Wire database privacy proof through native and actual gateway/individual boundaries in contract, HTTP, and original-ZIP QA, with pre-bootstrap CLI/disposable guards, unique owned actors, separate retained artifacts, and package/bootstrap safeguard coverage.
 
 - Wire metadata batch and SEO authorization proofs through direct, registered, gateway, and individual-tool execution in source and original-package QA; retain per-call state, mutation hooks, advertised catalogs, raw wire results, and failed-run artifacts. Package and bootstrap safeguards require the disposable opt-in and non-CLI refusal.
 
