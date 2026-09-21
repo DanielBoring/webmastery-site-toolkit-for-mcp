@@ -36,6 +36,41 @@ final class BoundedListManifestTest extends TestCase {
 		}
 		self::assertCount( 563, $ledger->baseline );
 		self::assertCount( 18, $ledger->changed );
+		$schema = json_decode( file_get_contents( $root . '/fixtures/input-schema-manifest-migration.json' ), false, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( '3f6226bb947687d48f7ec5412290dfca6fd76574', $schema->baseline_sha );
+		self::assertSame( '1c460f1e4468d73103e2ec55a21f990f1da94ef5', $schema->source_sha );
+		self::assertCount( 31, $schema->changed );
+		self::assertCount( 16, $schema->added );
+		self::assertCount( 2, $schema->integration_corrections );
+		$corrections = array();
+		foreach ( $schema->integration_corrections as $correction ) {
+			self::assertContains( $correction->label, array(
+				'wstm110 update-post rejects empty metadata presence',
+				'wstm110 create-cpt-mcp-case-study rejects metadata input',
+			) );
+			$corrections[ $correction->label ] = $correction;
+		}
+		self::assertCount( 2, $corrections );
+		foreach ( $schema->changed as $change ) {
+			self::assertArrayNotHasKey( $change->label, $changes, 'Schema and window migrations must remain disjoint.' );
+			$expected = $change->after;
+			if ( isset( $corrections[ $change->label ] ) ) {
+				$correction = $corrections[ $change->label ];
+				self::assertEquals( $change->after, $correction->source_after );
+				$restored = clone $change->after;
+				$restored->input = $change->before->input;
+				self::assertEquals( $restored, $correction->corrected_after, 'Only restore original input; retain the approved schema oracle.' );
+				$expected = $correction->corrected_after;
+			}
+			self::assertEquals( $expected, $cases[ $change->label ], $change->label );
+			self::assertSame( $change->before->role, $expected->role );
+			self::assertEquals( $change->before->input, $expected->input );
+			$changes[ $change->label ] = $change;
+		}
+		foreach ( $schema->added as $case ) {
+			self::assertArrayHasKey( $case->label, $cases );
+			self::assertEquals( $case, $cases[ $case->label ], $case->label );
+		}
 		foreach ( $ledger->baseline as $base ) {
 			self::assertArrayHasKey( $base->label, $cases );
 			$case = isset( $changes[ $base->label ] ) ? $changes[ $base->label ]->before : $cases[ $base->label ];

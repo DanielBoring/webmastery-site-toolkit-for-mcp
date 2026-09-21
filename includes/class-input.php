@@ -10,6 +10,9 @@ final class Webmastery_MCP_Input {
 		if ( ! Webmastery_MCP_Response::owns( $name ) ) {
 			return $args;
 		}
+		if ( isset( $args['input_schema'] ) && ! is_array( $args['input_schema'] ) ) {
+			return $args;
+		}
 
 		$no_input             = empty( $args['input_schema'] );
 		$schema               = self::close_schema( $no_input ? [
@@ -171,12 +174,7 @@ final class Webmastery_MCP_Input {
 				if ( ! is_array( $value ) ) {
 					return false;
 				}
-				foreach ( array_keys( $value ) as $key ) {
-					if ( ! is_string( $key ) ) {
-						return false;
-					}
-				}
-				return true;
+				return [] === $value || ! self::is_type( $value, 'array' );
 			default:
 				return false;
 		}

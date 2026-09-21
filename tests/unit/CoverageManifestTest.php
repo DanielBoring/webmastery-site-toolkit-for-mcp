@@ -22,6 +22,7 @@ final class CoverageManifestTest extends TestCase {
 			array( 'disabled-state', 'e2e', 1 ),
 			array( 'invalid-capability', 'e2e', 1 ),
 			array( 'invalid-stored-post', 'e2e', 1 ),
+			array( 'metadata-old-reason', 'e2e', 1 ),
 		);
 	}
 
@@ -42,6 +43,9 @@ final class CoverageManifestTest extends TestCase {
 				if ( 'window-items' === $mutation ) { unset( $case['assert_values']['data.items'] ); }
 				if ( 'window-continuation' === $mutation ) { unset( $case['assert_values']['data.next_page'] ); }
 				if ( 'window-no-totals' === $mutation ) { $case['assert_missing_paths'] = array(); }
+			}
+			if ( 'metadata-old-reason' === $mutation && ! empty( $case['assert_metadata_boundary'] ) ) {
+				$case['expect_error_reason'] = 'metadata_requires_separate_call';
 			}
 			if ( 'webmastery-site-toolkit-for-mcp/delete-media' === $case['ability'] && 'failure' === $case['expect'] ) {
 				if ( 'denial-code' === $mutation ) { $case['expect_error_code'] = 'not_found'; }

@@ -56,7 +56,7 @@ final class MetadataMigrationTest extends TestCase {
 				++$combined;
 				self::assertTrue( $case['assert_metadata_boundary'] );
 				self::assertTrue( $case['assert_unchanged'] );
-				self::assertSame( 'metadata_requires_separate_call', $case['expect_error_reason'] );
+				self::assertSame( 'ability_invalid_input', $case['expect_error_reason'] );
 				self::assertSame( 'invalid_input', $case['expect_error_code'] );
 			}
 			if ( preg_match( '/^wstm120 contributor cannot transition draft to (publish|private|future)$/', $case['label'] ) ) {

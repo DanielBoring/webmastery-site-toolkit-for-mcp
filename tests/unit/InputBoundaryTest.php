@@ -91,7 +91,7 @@ final class InputBoundaryTest extends TestCase {
 	}
 
 	public function test_parent_presence_is_rejected_for_posts_and_nonhierarchical_cpts_even_zero(): void {
-		foreach ( array( 'create-post', 'update-post', 'create-cpt-mcp-book', 'update-cpt-mcp-book' ) as $slug ) {
+		foreach ( array( 'create-post', 'update-post', 'create-cpt-mcp-book', 'update-cpt-mcp-book', 'create-cpt-mcp-case-study', 'update-cpt-mcp-case-study' ) as $slug ) {
 			$args = $this->definition( $slug );
 			foreach ( array( 0, 42, null, false, '0', array(), (object) array() ) as $parent ) {
 				$input = $this->input( $args['input_schema'] ) + array( 'parent' => $parent );
@@ -99,7 +99,12 @@ final class InputBoundaryTest extends TestCase {
 				$this->rejected( $args['permission_callback']( $input ), true );
 			}
 		}
-		foreach ( array( 'create-page', 'update-page', 'create-cpt-mcp-case-study', 'update-cpt-mcp-case-study' ) as $slug ) {
+		$hierarchical = Wstm126Boundary\get_post_type_object( 'mcp_case_study' );
+		$hierarchical->hierarchical = true;
+		$register = new ReflectionMethod( Wstm126Boundary\Webmastery_MCP_Custom_Post_Types::class, 'register_custom_post_type' );
+		$register->setAccessible( true );
+		$register->invoke( null, $hierarchical, 'hierarchical-control' );
+		foreach ( array( 'create-page', 'update-page', 'create-cpt-hierarchical-control', 'update-cpt-hierarchical-control' ) as $slug ) {
 			$schema = $this->definition( $slug )['input_schema'];
 			foreach ( array( array(), array( 'parent' => 0 ), array( 'parent' => 42 ) ) as $parent ) {
 				self::assertNull( Webmastery_MCP_Input::validate( $this->input( $schema ) + $parent, $schema ) );
@@ -143,7 +148,7 @@ final class InputBoundaryTest extends TestCase {
 	public function test_open_maps_and_polymorphic_values_are_not_closed_or_rewritten(): void {
 		$meta = $this->definition( 'update-post-meta' )['input_schema']['properties']['meta_value'];
 		self::assertArrayNotHasKey( 'additionalProperties', $meta );
-		foreach ( array( array( 'extension' => array( 'anything' => true ) ), (object) array( 'custom' => 'value' ), array( 1, 'x' ), false ) as $value ) {
+		foreach ( array( array( 'extension' => array( 'anything' => true ) ), array( 2 => 'numeric JSON property' ), (object) array( 'custom' => 'value' ), array( 1, 'x' ), false ) as $value ) {
 			self::assertNull( Webmastery_MCP_Input::validate( $value, $meta ) );
 		}
 		$taxonomy = $this->definition( 'create-cpt-mcp-book' )['input_schema']['properties']['taxonomy_terms'];
@@ -211,6 +216,10 @@ final class InputBoundaryTest extends TestCase {
 	}
 
 	public function test_invalid_callbacks_foreign_namespaces_and_callback_exceptions_are_untouched(): void {
+		foreach ( array( false, 1, 'invalid', (object) array() ) as $schema ) {
+			$args = array( 'input_schema' => $schema );
+			self::assertSame( $args, Webmastery_MCP_Input::register_args( $args, 'webmastery-site-toolkit-for-mcp/test' ) );
+		}
 		foreach ( array( 'foreign/test', 'webmastery-site-toolkit-for-mcp-lookalike/test' ) as $name ) {
 			$args = array( 'execute_callback' => 'not_callable', 'permission_callback' => null );
 			self::assertSame( $args, Webmastery_MCP_Input::register_args( $args, $name ) );

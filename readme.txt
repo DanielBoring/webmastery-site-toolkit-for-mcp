@@ -141,7 +141,13 @@ A positive parent must exist, have the same hierarchical post type, and be edita
 
 Set parent to 0 to detach an item. Omit parent to leave it unchanged on update. Reassigning the same parent still requires permission to edit that parent, but not every ancestor. Custom post types use their registered edit capability and WordPress capability filters.
 
-Positive parent values on nonhierarchical custom post types are rejected; older versions persisted this unsupported extra field. Zero and omitted parents remain accepted. Built-in post abilities still ignore an extra parent field.
+In 3.0 development, built-in posts and nonhierarchical custom post types reject any supplied parent field, including zero or null. Omit it on those types. Pages and hierarchical custom post types retain detach-to-zero and omitted-parent behavior, with the existing authorization and cycle checks.
+
+= Are ability inputs strict? =
+
+3.0 development closes fixed-property input objects and validates types, exact enums, required fields, numeric bounds, and array items before raw permission or execute callbacks. Unknown keys, numeric strings used as IDs, coerced booleans, and unadvertised null values are refused. Omit optional values to retain defaults. Input-free abilities accept omitted input or an empty object.
+
+Standalone metadata JSON values and dynamic registered-taxonomy maps remain open where intended; existing metadata and taxonomy authorization still applies. WordPress handles other schema keywords such as URI formats. Output schemas are deferred to avoid constraining legitimate provider/error response shapes. No capabilities or external services are added.
 
 = How are image URL uploads limited? =
 
@@ -218,6 +224,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 * Replace unbounded list materialization with candidate windows and next_page continuation, including empty windows; remove exact filtered totals for content, media, orphan-media, and score lists.
 * Default content and revision lists to summary projection; explicit fields:"full" preserves stored content. Batch known media references without relaxing permission or database-failure safeguards.
+* Close fixed-property input schemas and reject malformed types/enums before raw permission checks or execute callbacks; preserve explicit open maps and omitted defaults.
+* Reject unadvertised parent fields on posts and nonhierarchical custom post types, including zero, while retaining hierarchical detach and parent authorization.
 * Require exact confirmation for permanent media/term deletion and both bulk post operations; bound raw bulk requests to 100 IDs and add non-mutating eligibility previews.
 * Guard media deletion with shared known-reference checks; require explicit force for known usage, fail closed on scan errors, and report in_use on success without changing capabilities.
 * Reject combined metadata and SEO inputs in post/page/custom-post-type create and update before any mutation; migrate to draft creation, separate authorized key writes, then publication.
@@ -295,6 +303,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 3.0 development: lists use next_page, not exact totals; continue after empty windows. Content/revision lists default to summary; request fields:"full" for content. Metadata writes are separate/non-atomic. Errors and destructive confirmation also change; read the migration guide.
+
+3.0 development rejects unknown input keys, coercible types and invalid enum values; omit parent on posts/nonhierarchical types. Metadata requires separate calls: create a draft, write authorized keys, then publish; this is not atomic. SEO reads omit denied keys, generated Yoast head output is unavailable, and overview counts describe an authorized sample.
 
 = 2.6.0 =
 Standalone metadata, comment and taxonomy permissions are tighter. Create/update metadata, SEO aliases and separate SEO reads retain authorization gaps (see FAQ). Clients using custom role/key policies must review denials. Image upload limits and PHP 8.0 minimum are unchanged.

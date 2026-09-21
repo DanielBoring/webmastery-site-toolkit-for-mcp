@@ -95,7 +95,7 @@ foreach ( $manifest as $index => $case ) {
 		$errors[] = "case {$case_number} capture_post_id requires a successful post/page creation and unique wstm110_created_ fixture name.";
 	}
 	if ( isset( $case['assert_metadata_boundary'] ) && ( true !== $case['assert_metadata_boundary']
-		|| 'failure' !== $expect || 'metadata_requires_separate_call' !== ( $case['expect_error_reason'] ?? null ) ) ) {
+		|| 'failure' !== $expect || 'ability_invalid_input' !== ( $case['expect_error_reason'] ?? null ) ) ) {
 		$errors[] = "case {$case_number} assert_metadata_boundary requires combined-input rejection.";
 	}
 	if ( '' !== $expect && ! in_array( $expect, array( 'success', 'failure' ), true ) ) {
