@@ -8,6 +8,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Reconciled all ten ranked coverage groups for #120 against named tests, effective capability controls, persisted-state/write observers and source-bound runtime evidence, with metadata acceptance kept explicit. Added focused manifest unit guards and isolated mutations protecting existing destructive no-write denials and media-update denial/readback controls; corrected stale Contributor error-envelope guidance without changing production behavior or manifest inputs.
 - Wire metadata batch and SEO authorization proofs through direct, registered, gateway, and individual-tool execution in source and original-package QA; retain per-call state, mutation hooks, advertised catalogs, raw wire results, and failed-run artifacts. Package and bootstrap safeguards require the disposable opt-in and non-CLI refusal.
 
 - Added metadata presence and per-key SEO regression probes, full state snapshots and mutation-hook counters. Migrated combined-write manifest successes to explicit rejections plus separate authorized writes while retaining every original stored-value assertion, Contributor/parent/scheduling permission checks, and the dedicated future-post HTTP deletion scenario.
