@@ -119,6 +119,39 @@ Unit observations are not substitutes for actual WordPress/provider/HTTP QA.
 The [migration guide](../../docs/3.0-migration.md#metadata-and-seo-authorization)
 documents all changed user-facing contracts.
 
+## Accepted error-contract runtime evidence
+
+`error-contract-runner.php` requires `WSTM118_DISPOSABLE=1` before loading
+WordPress or creating credentials/fixtures. The managed harness grants it only
+inside the disposable stack. A test-only MU fixture, installed after the normal
+85-ability audit, exposes individual tools at `/wp-json/wstm118/tools`.
+The proof discovers tools by unique advertised descriptions, retains the full
+catalog and schemas, and uses the returned names (including deliberately renamed
+owned/foreign probes), not guessed namespace spelling.
+
+`error-contract.json` retains native, registered, gateway, and individual
+responses; all seven categories; schema/callback and early permission failures;
+known-code provider redaction; exact core hook/callback counts; foreign and
+nested-success controls; mixed/all-failed bulk outcomes and stored state.
+Adapter version and installed handler hash/order accompany the evidence.
+Adapter 0.6.1 uses internal null structured content but **omits** that key on
+the actual error wire. The parser separately accepts omitted and explicit-null
+forms and rejects nonnull structured payloads; evidence records actual key
+presence. Cleanup verifies owned application-password absence after revocation
+and removes only owned posts. Contract, HTTP, and package workflows retain the
+report for seven days, including failed runs.
+
+The floor and pinned-core runs record actual invalid-callback registration
+behavior: WordPress 6.9 rejects it with a registry diagnostic, while 7.1 accepts
+registration and rejects invocation. Two synthetic probes therefore inject
+non-callable callbacks via test-only reflection after successful registration;
+they exercise real core execution guards on both versions, not nonexistent
+tool errors. Registry rejection remains a separate exact assertion and only
+those controlled diagnostic messages are suppressed from the debug log.
+Execution and permission exceptions are both covered, including native 403
+authorization denials and default 502 callback failures, no execution after
+permission failure, and unchanged action counts.
+
 ## Comment moderation regression coverage
 
 `comments-fixture.php` adds `wstm105_*` fixtures and comment-specific checks. Its `wstm105_moderator` actor has the actual `comment_moderator` role with only `read` and `moderate_comments`. Cases cover all four writes, optional update statuses, Author moderation-floor denials, mapped-CPT allowed/denied controls, own-draft moderation, Administrator access, orphan comments, and missing/nonpositive IDs. Existing Editor cases and every landed main manifest case remain unchanged; runtime registrations remain the coverage authority.

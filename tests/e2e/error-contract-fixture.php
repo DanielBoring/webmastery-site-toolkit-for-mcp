@@ -45,6 +45,9 @@ function wstm118_permission( $input = null ) {
 	if ( 'false-permission' === $mode ) {
 		return false;
 	}
+	if ( 'permission-exception' === $mode ) {
+		throw new RuntimeException( 'WSTM118_PRIVATE_SENTINEL permission exception' );
+	}
 	return true;
 }
 
@@ -65,11 +68,42 @@ add_action( 'wp_abilities_api_init', static function () {
 		'meta' => array( 'mcp' => array( 'public' => true, 'type' => 'tool' ), 'annotations' => array( 'readonly' => true, 'destructive' => false, 'idempotent' => true ) ),
 	);
 	wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-probe', $args );
-	wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-bad-execute', array_replace( $args, array( 'execute_callback' => 'wstm118_nonexistent_callback' ) ) );
-	wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-bad-permission', array_replace( $args, array( 'permission_callback' => 'wstm118_nonexistent_callback' ) ) );
-	wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-missing-schema', array_replace( $args, array( 'input_schema' => array() ) ) );
-	wp_register_ability( 'wstm118-foreign/probe', array_replace( $args, array( 'execute_callback' => 'wstm118_foreign_result', 'permission_callback' => '__return_true' ) ) );
+	foreach ( array( 'execute', 'permission' ) as $kind ) {
+		$field = $kind . '_callback';
+		$name = 'webmastery-site-toolkit-for-mcp/wstm118-bad-' . $kind;
+		$probe_args = array_replace( $args, array( 'description' => 'Controlled invalid ' . $kind . ' callback.' ) );
+		$GLOBALS['wstm118_registration'][ $kind ] = array( 'notices' => array() );
+		$GLOBALS['wstm118_registering_callback'] = $kind;
+		try {
+			$probe = wp_register_ability( $name, array_replace( $probe_args, array( $field => 'wstm118_nonexistent_callback' ) ) );
+		} finally {
+			unset( $GLOBALS['wstm118_registering_callback'] );
+		}
+		$GLOBALS['wstm118_registration'][ $kind ]['rejected'] = null === $probe;
+		if ( null === $probe ) {
+			$probe = wp_register_ability( $name, $probe_args );
+		}
+		if ( ! $probe instanceof Webmastery_MCP_Ability ) {
+			throw new RuntimeException( 'Error-contract callback fixture registration failed.' );
+		}
+		// Fault injection reaches core execution guards even when registration rejects invalid callbacks.
+		$property = new ReflectionProperty( WP_Ability::class, $field );
+		$property->setAccessible( true );
+		$property->setValue( $probe, 'wstm118_nonexistent_callback' );
+	}
+	wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-missing-schema', array_replace( $args, array( 'description' => 'Controlled missing schema.', 'input_schema' => array() ) ) );
+	wp_register_ability( 'wstm118-foreign/probe', array_replace( $args, array( 'description' => 'Controlled foreign namespace.', 'execute_callback' => 'wstm118_foreign_result', 'permission_callback' => '__return_true' ) ) );
 }, 100 );
+
+add_filter( 'mcp_adapter_tool_name', static function ( $name, $ability ) {
+	if ( 'webmastery-site-toolkit-for-mcp/wstm118-probe' === $ability->get_name() ) {
+		return 'fixture-owned-probe';
+	}
+	if ( 'wstm118-foreign/probe' === $ability->get_name() ) {
+		return 'webmastery-site-toolkit-for-mcp-foreign-control';
+	}
+	return $name;
+}, 10, 2 );
 
 foreach ( array( 'before', 'after' ) as $stage ) {
 	add_action( "wp_{$stage}_execute_ability", static function ( $name ) use ( $stage ) {
@@ -80,6 +114,15 @@ foreach ( array( 'before', 'after' ) as $stage ) {
 }
 
 add_filter( 'doing_it_wrong_trigger_error', static function ( $trigger, $function, $message ) {
+	$kind = $GLOBALS['wstm118_registering_callback'] ?? null;
+	$registration_messages = array(
+		'execute' => 'The ability properties must contain a valid `execute_callback` function.',
+		'permission' => 'The ability properties must provide a valid `permission_callback` function.',
+	);
+	if ( 'WP_Abilities_Registry::register' === $function && isset( $registration_messages[ $kind ] ) && $registration_messages[ $kind ] === $message ) {
+		$GLOBALS['wstm118_registration'][ $kind ]['notices'][] = array( 'function' => $function, 'message' => $message );
+		return false;
+	}
 	if ( 'WP_Ability::execute' !== $function ) {
 		return $trigger;
 	}
@@ -88,6 +131,7 @@ add_filter( 'doing_it_wrong_trigger_error', static function ( $trigger, $functio
 		Webmastery_MCP_Response::permission_error( new WP_Error( 'forbidden', 'WSTM118_PRIVATE_SENTINEL permission' ) )->get_error_message(),
 		Webmastery_MCP_Response::permission_error( Webmastery_MCP_Response::local_error( 'forbidden', 'You do not have permission to execute this ability.' ) )->get_error_message(),
 		Webmastery_MCP_Response::permission_error( new WP_Error( 'ability_invalid_permission_callback', 'fixture' ) )->get_error_message(),
+		Webmastery_MCP_Response::permission_error( new WP_Error( 'ability_callback_exception', 'fixture' ) )->get_error_message(),
 	);
 	foreach ( $expected as $text ) {
 		if ( $message === esc_html( $text ) ) {
