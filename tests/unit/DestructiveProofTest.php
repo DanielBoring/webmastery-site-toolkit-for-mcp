@@ -28,7 +28,7 @@ final class DestructiveProofTest extends TestCase {
 	}
 
 	public static function weakened_evidence(): array {
-		return array( array( 'confirmation' ), array( 'dry-run-state' ), array( 'missing-case' ) );
+		return array( array( 'confirmation' ), array( 'dry-run-state' ), array( 'missing-case' ), array( 'wrong-layer' ), array( 'changed-type' ), array( 'wrong-code' ) );
 	}
 
 	/** @dataProvider weakened_evidence */
@@ -56,6 +56,16 @@ final class DestructiveProofTest extends TestCase {
 			if ( 'missing-case' === $mutation && ! array_key_exists( 'confirm', $case['input'] ) ) {
 				unset( $cases[ $index ] );
 			}
+			if ( 'true' === ( $case['input']['confirm'] ?? null ) ) {
+				if ( 'wrong-layer' === $mutation ) {
+					$case['expect_error_code'] = 'invalid_input';
+					$case['expect_error_reason'] = 'ability_invalid_input';
+				} elseif ( 'changed-type' === $mutation ) {
+					$case['input']['confirm'] = true;
+				} elseif ( 'wrong-code' === $mutation ) {
+					$case['expect_error_code'] = 'invalid_input';
+				}
+			}
 		}
 		unset( $case );
 		try {
@@ -67,7 +77,7 @@ final class DestructiveProofTest extends TestCase {
 			fclose( $pipes[1] );
 			fclose( $pipes[2] );
 			self::assertSame( 1, proc_close( $process ), $output );
-			self::assertStringContainsString( 'bulk-publish-posts', $output );
+			self::assertStringContainsString( 'wrong-code' === $mutation ? 'Negative cases require canonical code, precise reason, and envelope shape.' : 'bulk-publish-posts', $output );
 		} finally {
 			unlink( $manifest );
 			unlink( $validator );

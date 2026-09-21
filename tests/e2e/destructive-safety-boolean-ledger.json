@@ -1,0 +1,34 @@
+{
+  "source_sha": "6a47b52c86f50d42cfe3235c1395bf139ac09d0b",
+  "tested_merge_sha": "22e30ea467b04be12db03163c84beb56e88a5377",
+  "contract_run": 35666138942,
+  "package_run": 35666138916,
+  "manifest_count": 563,
+  "unchanged_cases": 547,
+  "unchanged_cases_sha256": "fc9d7bb5d647420053112d37d21dec4b16c3446e832f3641e20594b39ee034c1",
+  "all_non_oracle_fields_sha256": "f5e2f312e85f84ba3ee67a8d0975b4f0f55d275e9426e5b67351969e0707ea2f",
+  "before": {"expect_error_code":"invalid_input","expect_error_reason":"ability_invalid_input"},
+  "core_sources": {
+    "7.1.1": {"rest-api.php":"9c4af1341e37de253323cf7c28da1424f41decc2154904e2b71a4e71c9cdd70c","class-wp-ability.php":"0c0aa1db27f284cb9942865e6fbed0610178439430e2ac9a9f6a7dd209df049e"},
+    "6.9": {"rest-api.php":"092f3f02204adaf9f8d49d52e1ae61da166d334843816675ff8eca3d8b68e2f6","class-wp-ability.php":"d7c867aad5c6a3019db18c8d0f440c6272527c6d113d89cbce07b3ad4da9f250"},
+    "6.9.4": {"rest-api.php":"092f3f02204adaf9f8d49d52e1ae61da166d334843816675ff8eca3d8b68e2f6","class-wp-ability.php":"d7c867aad5c6a3019db18c8d0f440c6272527c6d113d89cbce07b3ad4da9f250"}
+  },
+  "cases": [
+    {"index":2,"label":"wstm116 bulk-trash-posts confirm string","flag":"confirm","value":"true","after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":3,"label":"wstm116 bulk-trash-posts confirm number","flag":"confirm","value":1,"after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":5,"label":"wstm116 bulk-trash-posts dry_run string","flag":"dry_run","value":"true","after":{"expect_error_code":"invalid_input","expect_error_reason":"invalid_input"}},
+    {"index":6,"label":"wstm116 bulk-trash-posts dry_run number","flag":"dry_run","value":1,"after":{"expect_error_code":"invalid_input","expect_error_reason":"invalid_input"}},
+    {"index":15,"label":"wstm116 bulk-publish-posts confirm string","flag":"confirm","value":"true","after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":16,"label":"wstm116 bulk-publish-posts confirm number","flag":"confirm","value":1,"after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":18,"label":"wstm116 bulk-publish-posts dry_run string","flag":"dry_run","value":"true","after":{"expect_error_code":"invalid_input","expect_error_reason":"invalid_input"}},
+    {"index":19,"label":"wstm116 bulk-publish-posts dry_run number","flag":"dry_run","value":1,"after":{"expect_error_code":"invalid_input","expect_error_reason":"invalid_input"}},
+    {"index":28,"label":"wstm116 delete-media confirm string","flag":"confirm","value":"true","after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":29,"label":"wstm116 delete-media confirm number","flag":"confirm","value":1,"after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":31,"label":"wstm116 delete-media force string","flag":"force","value":"true","after":{"expect_error_code":"invalid_input","expect_error_reason":"invalid_input"}},
+    {"index":32,"label":"wstm116 delete-media force number","flag":"force","value":1,"after":{"expect_error_code":"invalid_input","expect_error_reason":"invalid_input"}},
+    {"index":36,"label":"wstm116 delete-category confirm string","flag":"confirm","value":"true","after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":37,"label":"wstm116 delete-category confirm number","flag":"confirm","value":1,"after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":41,"label":"wstm116 delete-tag confirm string","flag":"confirm","value":"true","after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":42,"label":"wstm116 delete-tag confirm number","flag":"confirm","value":1,"after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}}
+  ]
+}

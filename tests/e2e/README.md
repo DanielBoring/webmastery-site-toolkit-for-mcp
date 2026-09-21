@@ -32,6 +32,20 @@ reasons, exact schema bounds, canonical per-ID failures, query failure with forc
 and unchanged capability/trash behavior. Existing error-contract, taxonomy, and
 trash runners retain all earlier assertions.
 
+`destructive-safety-boolean-ledger.json` records the reviewed correction from
+head `6a47b52` (tested synthetic merge `22e30ea`): 547 manifest cases remain
+unchanged and 16 change only expected error code/reason, with all 563 typed
+inputs, ordering and other assertions preserved. WordPress 6.9, 6.9.4 and
+7.1.1 accept boolean-like values during schema validation; enum checks sanitize
+only a local comparison value, not the input passed to the callback. Therefore
+confirmation `"true"`/`1` fails the strict callback with
+`precondition_failed/missing_confirmation`; optional `"true"`/`"false"`/`0`/`1`
+fails there with `invalid_input/invalid_input`. Missing/false/null confirmation,
+null/array optional flags and 101 IDs still fail registered schema validation.
+Direct-callback expectations and independent permission-denial checks do not
+change. Recalibrate explicitly if a future input wrapper changes that ordering;
+do not broadly accept multiple reasons or coerce test inputs to make them pass.
+
 `run_destructive_safety_qa` in the shared harness runs serially in a subshell:
 `contract` selects direct callbacks and registered abilities, `e2e` selects
 gateway and individual HTTP, and `all` runs all four. Each selection repeats
@@ -61,6 +75,12 @@ An exclusive `destructive-<token>` artifact directory contains `stage.log`,
 with append-only `.jsonl` journals. The runner exclusively reserves both files
 before WordPress bootstrap, records each successful/failed case, and retains a
 partial summary on fatal shutdown. Do not overwrite or relabel failed attempts.
+Boot failures retain CLI identity, HTTP status, public REST error and response
+digest before credentials; successful HTTP attestation additionally records
+server SAPI/UID, config digest and OPcache revalidation settings. Deletion
+diagnostics retain actual HTTP unlink-path ownership/writability and fresh CLI
+file existence/content evidence. These diagnostics do not retry failed boots,
+alter file permissions, or waive any persisted-state or file-deletion assertion.
 The stage restores exact prior config bytes/permissions and removes only
 token-marked owned MU files on EXIT, without replacing the parent's cleanup
 trap. A foreign edit fails closed, retains the private backup, and reports the
@@ -71,6 +91,11 @@ catalog. The runner reuses `metadata-transport.php` for actual advertised names,
 retains actor catalogs, and parses Adapter 0.6.1 errors as `isError:true` with
 one canonical JSON text block and absent/null `structuredContent`, not a
 structured error object.
+For successful bulk summaries, the runner also retains the original HTTP body
+and checks `details` object types before associative decoding can turn `{}` into
+`[]`. Both structured and text payloads must agree when both are present; an
+actual array remains a failure. State and hook evidence is captured before this
+wire-shape assertion, so a parser failure cannot hide the operation's effects.
 
 The same stage uses the mounted plugin root in source, floor, and original
 development-ZIP QA. Tests are harness-only mounts for package QA; production

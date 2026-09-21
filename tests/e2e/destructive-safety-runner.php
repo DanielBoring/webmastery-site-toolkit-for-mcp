@@ -36,13 +36,28 @@ require_once '/var/www/html/wp-load.php';
 require_once __DIR__ . '/destructive-safety-fixture.php';
 require_once __DIR__ . '/error-contract-assertions.php';
 require_once __DIR__ . '/metadata-transport.php';
+require_once __DIR__ . '/destructive-safety-wire.php';
 
 wstm116_require( defined( 'WSTM116_DISPOSABLE_RUNTIME' ) && true === WSTM116_DISPOSABLE_RUNTIME, 'Runtime must explicitly define WSTM116_DISPOSABLE_RUNTIME=true before fixture writes or credentials.' );
 $expected_days = getenv( 'WSTM116_EXPECT_TRASH_DAYS' );
 $stage_token = getenv( 'WSTM116_STAGE_TOKEN' );
 wstm116_require( in_array( $expected_days, array( '0', '30' ), true ) && (int) $expected_days === EMPTY_TRASH_DAYS, 'Actual CLI trash configuration mismatch.' );
 wstm116_require( defined( 'WSTM116_STAGE_TOKEN' ) && is_string( $stage_token ) && hash_equals( WSTM116_STAGE_TOKEN, $stage_token ), 'CLI stage ownership mismatch.' );
+$summary['cli_boot'] = array( 'owner' => $stage_token, 'trash_days' => EMPTY_TRASH_DAYS, 'disposable' => WSTM116_DISPOSABLE_RUNTIME,
+	'wordpress' => get_bloginfo( 'version' ), 'php' => PHP_VERSION, 'sapi' => PHP_SAPI,
+	'effective_uid' => function_exists( 'posix_geteuid' ) ? posix_geteuid() : null,
+	'config_sha256' => hash_file( 'sha256', ABSPATH . 'wp-config.php' ) );
 $boot = wp_remote_get( 'http://localhost/wp-json/wstm116/runtime', array( 'headers' => array( 'X-WSTM116-Stage' => $stage_token ) ) );
+$summary['http_boot_attempt'] = is_wp_error( $boot )
+	? array( 'error_code' => $boot->get_error_code(), 'error_message' => $boot->get_error_message() )
+	: wstm116_boot_diagnostics( wp_remote_retrieve_response_code( $boot ), wp_remote_retrieve_body( $boot ) );
+if ( ! is_wp_error( $boot ) && '' !== wp_remote_retrieve_header( $boot, 'x-wstm116-boot' ) ) {
+	$diagnostics = base64_decode( wp_remote_retrieve_header( $boot, 'x-wstm116-boot' ), true );
+	wstm116_require( false !== $diagnostics, 'Invalid HTTP boot diagnostics encoding.' );
+	$summary['http_boot_attempt']['runtime'] = json_decode( $diagnostics, true, 512, JSON_THROW_ON_ERROR );
+}
+$evidence->append( array( 'phase' => 'boot', 'cli' => $summary['cli_boot'], 'http' => $summary['http_boot_attempt'] ) );
+$evidence->save( $summary );
 wstm116_require( ! is_wp_error( $boot ) && 200 === wp_remote_retrieve_response_code( $boot ), 'Cannot attest actual HTTP boot before credentials.' );
 $http_boot = json_decode( wp_remote_retrieve_body( $boot ), true, 512, JSON_THROW_ON_ERROR );
 wstm116_require( array( 'owner' => $stage_token, 'trash_days' => EMPTY_TRASH_DAYS, 'disposable' => true ) === $http_boot, 'Actual HTTP and CLI safety configuration differ.' );
@@ -54,11 +69,12 @@ $summary = array(
 	'boundary' => $boundary, 'wordpress' => get_bloginfo( 'version' ), 'php' => PHP_VERSION,
 	'source_sha' => getenv( 'WSTM116_SOURCE_SHA' ) ?: 'not supplied',
 	'trash_days' => EMPTY_TRASH_DAYS, 'http_boot' => $http_boot,
+	'cli_boot' => $summary['cli_boot'], 'http_boot_attempt' => $summary['http_boot_attempt'],
 	'passed' => 0, 'failed' => 0, 'cases' => array(), 'cleanup' => array(),
 );
 foreach ( array( __FILE__, __DIR__ . '/destructive-safety-fixture.php', __DIR__ . '/destructive-safety-http-fixture.php',
 	__DIR__ . '/destructive-safety-evidence.php', __DIR__ . '/destructive-safety-lifecycle.php', __DIR__ . '/destructive-safety-stage.php',
-	__DIR__ . '/destructive-safety-preflight.php', __DIR__ . '/metadata-transport.php', __DIR__ . '/metadata-batch-fixture.php',
+	__DIR__ . '/destructive-safety-preflight.php', __DIR__ . '/destructive-safety-wire.php', __DIR__ . '/destructive-safety-diagnostics.php', __DIR__ . '/metadata-transport.php', __DIR__ . '/metadata-batch-fixture.php',
 	__DIR__ . '/error-contract-assertions.php', __DIR__ . '/error-contract-fixture.php', __DIR__ . '/abilities-manifest.json',
 	__DIR__ . '/../../includes/class-posts.php', __DIR__ . '/../../includes/class-media.php',
 	__DIR__ . '/../../includes/class-taxonomy.php', __DIR__ . '/../../includes/class-content-hygiene.php' ) as $source ) {
@@ -169,29 +185,16 @@ try {
 				$result = $transports[ $role ]->execute( $ability->get_name(), $input );
 			} finally {
 				$entry['wire'] = $transports[ $role ]->last_response;
-				$evidence->append( array( 'phase' => 'wire', 'ability' => $slug, 'role' => $role, 'input' => $input, 'wire' => $entry['wire'] ) );
+				$entry['wire_body'] = $transports[ $role ]->last_response_body;
+				$evidence->append( array( 'phase' => 'wire', 'ability' => $slug, 'role' => $role, 'input' => $input, 'wire' => $entry['wire'], 'wire_body' => $entry['wire_body'] ) );
 				wp_cache_flush();
-			}
-			if ( true === ( $result['success'] ?? false ) && isset( $result['data']['failures'] ) ) {
-				$wire = $entry['wire']['result'];
-				$payload = isset( $wire['structuredContent'] )
-					? json_decode( wp_json_encode( $wire['structuredContent'] ) )
-					: json_decode( $wire['content'][0]['text'], false, 512, JSON_THROW_ON_ERROR );
-				if ( 'http' === $boundary ) {
-					$payload = $payload->data;
-				}
-				foreach ( $result['data']['failures'] as $index => &$failure ) {
-					$details = $payload->data->failures[ $index ]->details ?? null;
-					wstm116_require( $details instanceof stdClass, 'Wire per-ID details are not an object.' );
-					$failure['details'] = $details;
-				}
-				unset( $failure );
 			}
 			wp_cache_delete( 'wstm116_control', 'options' );
 			$control = get_option( 'wstm116_control' );
 			wstm116_require( $nonce === ( $control['observed'] ?? null ), 'HTTP mutation observer did not attest this invocation.' );
 			wstm116_require( EMPTY_TRASH_DAYS === ( $control['trash_days'] ?? null ) && WSTM116_STAGE_TOKEN === ( $control['stage_owner'] ?? null ), 'HTTP boot changed during safety proof.' );
 			$events = $control['events'];
+			$entry['http_file_operations'] = $control['file_operations'] ?? null;
 		} else {
 			$observer = wstm116_observe( static function ( $hook ) use ( &$events ): void { $events[] = $hook; } );
 			$undo = wstm116_faults( $fault );
@@ -220,6 +223,10 @@ try {
 			wstm116_require( $entry['before'] === $entry['after'], 'Guard/preview changed persisted state or owned files.' );
 			wstm116_require( array() === $events, 'Guard/preview reached a mutation hook.' );
 		}
+		if ( isset( $transports[ $role ] ) && true === ( $result['success'] ?? false ) && isset( $result['data']['failures'] ) ) {
+			$result = wstm116_bulk_wire_result( $entry['wire_body'], 'individual' === $boundary, $result );
+			$entry['result'] = $result;
+		}
 		return $result;
 	};
 	$inputs = array(
@@ -243,10 +250,11 @@ try {
 	};
 	foreach ( $inputs as $slug => $base ) {
 		foreach ( array( 'missing' => array(), 'false' => array( 'confirm' => false ), 'string' => array( 'confirm' => 'true' ), 'number' => array( 'confirm' => 1 ), 'null' => array( 'confirm' => null ) ) as $label => $flags ) {
-			$error_case( "{$slug} confirmation {$label}", $slug, array_merge( $base, $flags ), 'editor', 'direct' === $boundary ? 'missing_confirmation' : 'ability_invalid_input' );
-			$error_case( "{$slug} administrator confirmation {$label}", $slug, array_merge( $base, $flags ), 'administrator', 'direct' === $boundary ? 'missing_confirmation' : 'ability_invalid_input' );
+			$reason = 'direct' === $boundary || in_array( $label, array( 'string', 'number' ), true ) ? 'missing_confirmation' : 'ability_invalid_input';
+			$error_case( "{$slug} confirmation {$label}", $slug, array_merge( $base, $flags ), 'editor', $reason );
+			$error_case( "{$slug} administrator confirmation {$label}", $slug, array_merge( $base, $flags ), 'administrator', $reason );
 			if ( 0 === strpos( $slug, 'bulk-' ) ) {
-				$error_case( "{$slug} preview confirmation {$label}", $slug, array_merge( $base, $flags, array( 'dry_run' => true ) ), 'editor', 'direct' === $boundary ? 'missing_confirmation' : 'ability_invalid_input' );
+				$error_case( "{$slug} preview confirmation {$label}", $slug, array_merge( $base, $flags, array( 'dry_run' => true ) ), 'editor', $reason );
 			}
 		}
 		if ( 'direct' === $boundary && 0 === strpos( $slug, 'bulk-' ) ) {
@@ -261,7 +269,7 @@ try {
 	}
 	foreach ( array( 'bulk-trash-posts' => 'dry_run', 'bulk-publish-posts' => 'dry_run', 'delete-media' => 'force' ) as $slug => $flag ) {
 		foreach ( array( 'true', 'false', 0, 1, null, array() ) as $index => $value ) {
-			$error_case( "{$slug} strict {$flag} {$index}", $slug, $inputs[ $slug ] + array( 'confirm' => true, $flag => $value ), 'editor', 'direct' === $boundary ? 'invalid_input' : 'ability_invalid_input' );
+			$error_case( "{$slug} strict {$flag} {$index}", $slug, $inputs[ $slug ] + array( 'confirm' => true, $flag => $value ), 'editor', 'direct' === $boundary || $index < 4 ? 'invalid_input' : 'ability_invalid_input' );
 		}
 	}
 	foreach ( array( 'bulk-trash-posts', 'bulk-publish-posts' ) as $slug ) {
@@ -322,7 +330,9 @@ try {
 		}
 		$record( "media {$reference} truthful deletion", static function ( &$entry ) use ( $invoke, $id, $known ): void {
 			$file = get_attached_file( $id );
+			$entry['file_before'] = wstm116_file_diagnostics( $file );
 			$result = $invoke( 'delete-media', array( 'media_id' => $id, 'confirm' => true, 'force' => $known ), 'author', array(), $entry, false );
+			$entry['deletion_state'] = array( 'post_exists' => null !== get_post( $id ), 'file' => wstm116_file_diagnostics( $file ) );
 			wstm116_require( array( 'success' => true, 'data' => array( 'id' => $id, 'deleted' => true, 'in_use' => $known ) ) === $result, 'Incorrect in_use/deleted result.' );
 			wstm116_require( null === get_post( $id ) && ! file_exists( $file ), 'Attachment or file remains after reported deletion.' );
 		} );

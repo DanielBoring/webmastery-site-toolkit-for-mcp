@@ -5,6 +5,7 @@
 
 defined( 'ABSPATH' ) || exit;
 require_once __DIR__ . '/metadata-batch-fixture.php';
+require_once __DIR__ . '/destructive-safety-diagnostics.php';
 
 function wstm116_require( bool $condition, string $message ): void {
 	if ( ! $condition ) {
@@ -71,6 +72,7 @@ function wstm116_snapshot( array $files ): array {
 	wstm116_require( '' === $wpdb->last_error && is_array( $rows ), 'Cannot snapshot term metadata.' );
 	$result['termmeta'] = array( 'count' => count( $rows ), 'sha256' => hash( 'sha256', serialize( $rows ) ) );
 	foreach ( $files as $file ) {
+		clearstatcache( true, $file );
 		$result['files'][ $file ] = is_file( $file ) ? hash_file( 'sha256', $file ) : null;
 	}
 	return $result;
@@ -87,15 +89,19 @@ function wstm116_http_observer( $result, $server, $request ) {
 		return $result;
 	}
 	$events = array();
+	$file_operations = array();
+	$file_observer = wstm116_file_observer( $config['owner'], $file_operations );
+	add_filter( 'wp_delete_file', $file_observer, PHP_INT_MAX );
 	$observer = wstm116_observe( static function ( $hook ) use ( &$events ): void { $events[] = $hook; } );
 	$undo = wstm116_faults( $config );
 	$finish = null;
-	$finish = static function ( $response, $response_server, $response_request ) use ( $request, $config, &$events, $observer, $undo, &$finish ) {
+	$finish = static function ( $response, $response_server, $response_request ) use ( $request, $config, &$events, &$file_operations, $file_observer, $observer, $undo, &$finish ) {
 		if ( $request === $response_request ) {
 			$undo();
 			wstm116_unobserve( $observer );
+			remove_filter( 'wp_delete_file', $file_observer, PHP_INT_MAX );
 			remove_filter( 'rest_post_dispatch', $finish, PHP_INT_MAX );
-			update_option( 'wstm116_control', array_merge( $config, array( 'active' => false, 'observed' => $config['nonce'], 'events' => $events, 'trash_days' => EMPTY_TRASH_DAYS, 'stage_owner' => WSTM116_STAGE_TOKEN ) ), false );
+			update_option( 'wstm116_control', array_merge( $config, array( 'active' => false, 'observed' => $config['nonce'], 'events' => $events, 'file_operations' => $file_operations, 'trash_days' => EMPTY_TRASH_DAYS, 'stage_owner' => WSTM116_STAGE_TOKEN ) ), false );
 		}
 		return $response;
 	};
