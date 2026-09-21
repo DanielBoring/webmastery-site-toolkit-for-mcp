@@ -16,6 +16,7 @@
 - [ ] Delegated permissions retain a local WordPress floor plus upstream authorization in both entry paths, fail closed on missing/non-callable upstream checks, and distinguish fixture evidence from version-specific real-provider inspection
 - [ ] List/query abilities filter returned objects with object/status-aware checks and do not leak unauthorized totals or sensitive identity fields
 - [ ] Security-sensitive abilities include allowed and denied E2E manifest cases, plus `assert_missing_paths` for fields hidden from lower-privilege callers
+- [ ] Metadata changes preserve pre-mutation combined-input rejection, real-object effective key authorization, and direct/ability/gateway/individual-tool no-write/no-forbidden-read proof, with plain-content and draft/write/publish migration controls
 - [ ] Inputs are sanitized or validated (`sanitize_text_field`, `sanitize_key`, `absint`, `wp_kses_post`, enum validation, or an equivalent WordPress API)
 - [ ] Successful payloads are preserved; failures use canonical code/reason/message/object-details, native permissions retain `WP_Error`, and MCP gateway/individual-tool errors plus foreign-namespace isolation are covered
 - [ ] New ability names use the `webmastery-site-toolkit-for-mcp/` prefix and set accurate `annotations` (`readonly`, `destructive`, `idempotent`)

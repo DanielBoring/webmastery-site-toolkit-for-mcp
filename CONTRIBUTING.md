@@ -46,6 +46,7 @@ This plugin follows [WordPress Coding Standards](https://developer.wordpress.org
 - **Sanitize inputs** — use `sanitize_text_field()` for strings, `absint()` for IDs, `wp_kses_post()` for HTML content, and enum validation for fixed-value fields
 - **Capability checks** — every ability must have a `permission_callback` that returns a `WP_Error` on failure, not just `false`; prefer object-specific checks such as `edit_post` / `delete_post` when an object ID is available, and make list/query abilities filter each returned object plus totals before exposing full details
 - **Security-sensitive abilities** — include allowed and denied manifest cases for abilities that expose private data, user identity, environment/plugin details, destructive actions, uploads, or status transitions; use `assert_missing_paths` when lower-privilege responses must hide fields
+- **Metadata boundaries** — reject metadata containers and reserved SEO aliases in general create/update before mutation, including empty/null values. Use real-object effective key capabilities for separate writes and SEO reads; prove denied calls have no writes/hooks or forbidden reads across direct, ability, gateway, and individual-tool execution. Preserve plain-content and draft/write/publish migration controls; see `docs/3.0-migration.md`.
 - **Delegated permissions** — require a local WordPress capability floor plus the exact upstream route permission in both permission and direct execution paths. Test missing/non-callable upstream checks, and distinguish controlled fixtures from version-specific real-provider inspection; see the Site Kit policy in `docs/security-strategy.md`.
 - **Prefer WordPress APIs** — use WordPress API functions (`get_posts()`, `wp_insert_post()`, etc.) for normal reads and writes. Direct `$wpdb` reads are limited to administrator-only diagnostics such as database health checks, must be prepared where variables are present, and must surface query errors.
 - **No output buffering** — abilities return arrays or `WP_Error` objects; the MCP Adapter handles serialization
@@ -77,6 +78,16 @@ The repo strategy docs explain how maintainers operate the project:
 ---
 
 ## Adding a new ability
+
+### Shared diagnostic plugin inventory
+
+`Webmastery_MCP_Plugins::active_basenames()` supplies backup and performance diagnostics with uncached option-based inventory: local values first, followed by network option keys only on multisite, then string conversion, deduplication, and numeric reindexing. Non-array local/network options are ignored. The helper does not load the plugin API, mutate options, or check plugin-management capabilities; each diagnostic retains its existing `manage_options` permission callback.
+
+This is only the identical diagnostic-inventory portion of #119. Do not use inventory membership as a substitute for SEO or Site Kit provider readiness: Yoast uses runtime constants/classes/functions, SEOPress combines readiness signals with its existing local-option cast, and Site Kit combines core plugin APIs with loaded-provider and installed/version information. Those policies and the other helper rows remain separate.
+
+`PluginInventoryTest` characterizes the actual shared helper and both diagnostic forwarding methods through isolated WordPress stubs, including fresh filtered reads, malformed options, exact response shapes, and unchanged capability checks. These units complement, rather than replace, the existing diagnostic allowed/denied E2E manifest cases and real WordPress/MCP checks.
+
+### Ability registration
 
 Each group of abilities lives in its own file under `includes/`. Follow the existing pattern:
 
