@@ -12,7 +12,7 @@ class Webmastery_MCP_Site_Info {
 
 	public static function permission() {
 		if ( ! current_user_can( 'read' ) ) {
-			return new WP_Error( 'forbidden', 'Requires read capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
 		}
 
 		return true;
@@ -20,7 +20,7 @@ class Webmastery_MCP_Site_Info {
 
 	public static function admin_permission() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			return new WP_Error( 'forbidden', 'Requires manage_options capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
 		}
 
 		return true;

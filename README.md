@@ -27,6 +27,11 @@ Use it to let an agent draft or update content, manage media and comments, inspe
 
 For release history, see [CHANGELOG.md](CHANGELOG.md).
 
+**Unreleased 3.0 development:** this branch changes the error contract, not the
+2.6.0 stable tag. Clients must follow the [3.0 migration guide](docs/3.0-migration.md)
+before deploying it. Ability names, roles, inputs, defaults, and successful
+payloads are unchanged by error normalization.
+
 ## Who This Is For
 
 - WordPress site owners who want safe AI-assisted content workflows.
@@ -241,7 +246,7 @@ Create/update abilities accept `status: "future"` and `scheduled_date`. Creating
 
 An ordinary edit to an already-scheduled item may omit `scheduled_date`, with `status` omitted or still `future`. Both stored date strings are retained, and the stored GMT date must still meet the cutoff. Near-now or overdue schedules must be given a new safe date, or an explicit nonfuture status. Changing the site timezone does not invalidate an otherwise valid stored schedule or silently rewrite its dates. WordPress remains responsible for cron timing; timezone changes can affect the cron event's local-date conversion.
 
-Malformed dates, invalid calendar/time values (such as February 30), and missing or unsafe future dates fail before the ability writes content, metadata, or terms. New scheduling errors use `success: false` with `error.code` and `error.message`: `invalid_scheduled_date`, `missing_scheduled_date`, or `scheduled_date_too_soon`. Existing permission and other error responses are unchanged. An explicitly blank date is not a request to reuse an existing future schedule.
+Malformed dates, invalid calendar/time values (such as February 30), and missing or unsafe future dates fail before the ability writes content, metadata, or terms. Scheduling errors use `success:false`, `error.code:"invalid_input"` and the specific `error.reason`: `invalid_scheduled_date`, `missing_scheduled_date`, or `scheduled_date_too_soon`. An explicitly blank date is not a request to reuse an existing future schedule.
 
 For 2.x compatibility, valid PHP `strtotime()` date families remain supported, including relative dates. Offset-less input keeps its previous PHP-default timezone interpretation, normally **UTC**, not the site's local timezone. Named-zone DST folds/gaps retain PHP's resolution, including gap normalization; explicit offsets preserve the specified instant even during a repeated local hour. Local and GMT dates are formatted from the same instant without a lossy local-to-GMT round trip.
 
@@ -275,17 +280,17 @@ title change with the denied request and confirm that the title is unchanged.
 
 ## Response format
 
-Plugin callbacks commonly return `{"success":true,"data":...}`, but there is no uniform error envelope. For example, [comment status actions](includes/class-comments.php) can return `{"success":false,"error":"Comment not found."}`, while comment reply/update failures use `{"success":false,"error":{"code":"not_found","message":"Comment not found."}}`. Other errors can include additional `data`. Read the affected ability's response, including per-item outcomes for bulk operations, rather than assuming every error is a string or every successful call changed every item.
+Registered Webmastery ability failures use `{"success":false,"error":{"code":"not_found","reason":"not_found","message":"Comment not found.","details":{}}}`. The fixed categories are `forbidden`, `not_found`, `invalid_input`, `precondition_failed`, `conflict`, `unsupported`, and `upstream_failed`. Parse `code` and the specific `reason`, never message substrings. Empty `details` is an object. Existing successful `success:true,data` payloads are unchanged.
 
-Direct WordPress ability execution is another layer: the normal [`WP_Ability::execute()` path in WordPress 7.1](https://github.com/WordPress/WordPress/blob/7.1/wp-includes/abilities-api/class-wp-ability.php) validates inputs and permissions and can return `WP_Error`, including schema or permission failures, instead of a plugin result array. Output schema validation applies where a schema is defined. WordPress 7.1 filters can short-circuit execution or alter validation, permissions, and results. A transport may represent these errors differently from plugin-returned errors.
+The owned ability subclass retains core input/output validation, permission redaction, and execution hooks. Native permission checks still return `true` or `WP_Error`, never error arrays. Unknown provider diagnostics, including familiar-code collisions, are redacted; core schema errors cannot echo secret input values. This does not change WordPress's own logging.
 
-For MCP Adapter **0.5.0**, the [execute gateway](https://github.com/WordPress/mcp-adapter/blob/v0.5.0/includes/Abilities/ExecuteAbilityAbility.php) wraps a non-`WP_Error` result in its own `success`/`data`. The [tool handler](https://github.com/WordPress/mcp-adapter/blob/v0.5.0/includes/Handlers/Tools/ToolsHandler.php) then places that result in MCP `structuredContent` and JSON-encoded text `content`. Thus gateway `success: true` and MCP `isError: false` can coexist with an inner plugin `success: false`.
+For MCP Adapter **0.6.1**, owned gateway and individual-tool failures set `isError:true` with the canonical JSON envelope in one text block. Native code/data and structured error content are not retained by the Adapter, so clients must decode that text. The Adapter sets structured content to null internally; actual HTTP responses omit the `structuredContent` key. Clients may accept absence or explicit null, but neither carries a structured error payload. Success through the gateway retains its extra `success/data` wrapper. Foreign plugin results are not intercepted. Check HTTP/JSON-RPC failures separately.
 
-Clients must check HTTP/JSON-RPC errors, MCP tool errors, the gateway result, and the inner ability result as applicable. Do not assume `isError` matches the inner `success`, or that individually exposed tools and the default gateway have identical envelopes. The 0.5.0 source handles `WP_Error` and top-level scalar error arrays differently from structured or nested errors; per-tool wire parity has not been verified here.
+Bulk operations remain non-atomic: top-level `success:true` means the batch was processed, including an all-failed batch. Inspect counts and every `{id,code,reason,message,details}` failure. See the [migration matrix, mappings, examples, and Adapter limitation](docs/3.0-migration.md).
 
 For comment permission checks, use a disposable site: a custom account with only `read` and `moderate_comments` must be denied when updating, approving, trashing, or marking a comment as spam on a post it cannot edit. Confirm both comment content and status remain unchanged, including when an update supplies a status. An Editor with access to that post should succeed.
 
-Missing-comment responses are unchanged: authorized updates return `not_found`, while approve/trash/spam return the existing `"Comment not found."` string error. Callers without `moderate_comments` still fail at the permission boundary. The MCP gateway can successfully deliver a failed inner ability response; inspect `data.success`, not just outer transport success. Invalid/nonpositive IDs are rejected without falling back to a global comment or coercing a negative ID into another target.
+Missing-comment failures now uniformly use code/reason `not_found`; callers without `moderate_comments` still fail at the permission boundary. Invalid/nonpositive IDs are rejected without falling back to a global comment or coercing a negative ID into another target. On a disposable site, also try an authorized future create with `scheduled_date:"bad date"`: the wire error must be `invalid_input/invalid_scheduled_date`, with no created post.
 
 ## Security Best Practices
 

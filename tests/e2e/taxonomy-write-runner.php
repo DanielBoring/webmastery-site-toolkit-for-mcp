@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/error-contract-assertions.php';
+
 
 // This fixture mutates disposable WordPress data; never expose it over HTTP.
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
@@ -39,7 +41,7 @@ function wstm117_run_taxonomy_tests() {
 		return is_array( $result ) && true === ( $result['success'] ?? null );
 	};
 	$error = static function ( $result ) {
-		return is_wp_error( $result ) ? $result->get_error_message() : ( $result['error'] ?? '' );
+		return wstm118_error_envelope( $result )['error']['message'];
 	};
 	$original_user = get_current_user_id();
 	$admin = get_user_by( 'login', 'admin' );
@@ -195,8 +197,10 @@ function wstm117_run_taxonomy_tests() {
 							$input = array( "{$slug}_id" => $id, 'name' => 'Must not write' );
 							$before = wstm117_term_snapshot();
 							$result = 'wrapped' === $path ? $ability->execute( $input ) : $execute( $input );
-							$expected = array( 'success' => false, 'error' => ( 'category' === $taxonomy ? 'Category' : 'Tag' ) . ' not found.' );
-							$record( "{$action}-{$slug}: {$scenario} {$path}", $expected === $result && $before === wstm117_term_snapshot(), $result );
+							$expected = ( 'category' === $taxonomy ? 'Category' : 'Tag' ) . ' not found.';
+							$record( "{$action}-{$slug}: {$scenario} {$path}", 'not_found' === wstm118_error_reason( $result )
+								&& $expected === $result['error']['message'] && '{}' === wp_json_encode( $result['error']['details'] )
+								&& $before === wstm117_term_snapshot(), $result );
 						}
 					}
 				}

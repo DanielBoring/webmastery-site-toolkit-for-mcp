@@ -315,31 +315,11 @@ function e2e_resolve_placeholders( $value, $fixtures ) {
 }
 
 function e2e_result_error_code( $result ) {
-	if ( is_wp_error( $result ) ) {
-		return $result->get_error_code();
-	}
-
-	if ( is_array( $result ) && false === ( $result['success'] ?? true ) && is_array( $result['error'] ?? null ) ) {
-		return $result['error']['code'] ?? null;
-	}
-
-	return null;
+	return wstm118_error_envelope( $result )['error']['code'];
 }
 
 function e2e_result_error_message( $result ) {
-	if ( is_wp_error( $result ) ) {
-		return $result->get_error_message();
-	}
-
-	if ( is_array( $result ) && false === ( $result['success'] ?? true ) ) {
-		if ( is_array( $result['error'] ?? null ) ) {
-			return $result['error']['message'] ?? '';
-		}
-
-		return (string) ( $result['error'] ?? '' );
-	}
-
-	return '';
+	return wstm118_error_envelope( $result )['error']['message'];
 }
 
 function e2e_result_is_success( $result ) {
@@ -351,6 +331,9 @@ function e2e_get_path_value( $value, $path, &$exists = false ) {
 	$segments = explode( '.', $path );
 
 	foreach ( $segments as $segment ) {
+		if ( is_object( $value ) ) {
+			$value = (array) $value;
+		}
 		if ( is_array( $value ) && array_key_exists( $segment, $value ) ) {
 			$value = $value[ $segment ];
 			continue;
@@ -996,6 +979,7 @@ if ( $missing || $extra ) {
 }
 
 require_once __DIR__ . '/wstm114-verification-fixture.php';
+require_once __DIR__ . '/error-contract-assertions.php';
 
 foreach ( $manifest as $case ) {
 	$case = e2e_resolve_placeholders( $case, $fixtures );
@@ -1056,6 +1040,13 @@ foreach ( $manifest as $case ) {
 
 	if ( $passed && ! empty( $case['expect_error_code'] ) ) {
 		$passed = $case['expect_error_code'] === e2e_result_error_code( $result );
+	}
+
+	if ( $passed && isset( $case['expect_error_reason'] ) ) {
+		$passed = $case['expect_error_reason'] === wstm118_error_reason( $result );
+	}
+	if ( $passed && isset( $case['expect_error_shape'] ) ) {
+		wstm118_error_envelope( $result );
 	}
 
 	if ( $passed && ! empty( $case['expect_error_message_contains'] ) ) {

@@ -27,27 +27,12 @@ class Webmastery_MCP_Comments {
 		];
 	}
 
-	private static function error_response( $code, $message, $data = [] ) {
-		$response = [
-			'success' => false,
-			'error'   => [
-				'code'    => $code,
-				'message' => $message,
-			],
-		];
-
-		if ( ! empty( $data ) ) {
-			$response['data'] = $data;
-		}
-
-		return $response;
-	}
 
 	private static function get_comment_or_error( $comment_id ) {
 		$comment = get_comment( absint( $comment_id ) );
 
 		if ( ! $comment ) {
-			return new WP_Error( 'not_found', 'Comment not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', 'Comment not found.' );
 		}
 
 		return $comment;
@@ -57,7 +42,7 @@ class Webmastery_MCP_Comments {
 		$post = get_post( (int) $comment->comment_post_ID );
 
 		if ( ! $post ) {
-			return new WP_Error( 'not_found', 'Comment post not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', 'Comment post not found.' );
 		}
 
 		return $post;
@@ -75,7 +60,7 @@ class Webmastery_MCP_Comments {
 	private static function reply_permission() {
 		return function () {
 			if ( ! current_user_can( 'edit_posts' ) ) {
-				return new WP_Error( 'forbidden', 'Requires edit_posts capability.' );
+				return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_posts capability.' );
 			}
 
 			return true;
@@ -96,11 +81,11 @@ class Webmastery_MCP_Comments {
 	private static function moderate_comment_or_error( $input = [], $permission_check = false ) {
 		$can_moderate = current_user_can( 'moderate_comments' );
 		if ( $permission_check && ! $can_moderate ) {
-			return new WP_Error( 'forbidden', 'Requires moderate_comments capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires moderate_comments capability.' );
 		}
 
 		if ( ! is_array( $input ) ) {
-			return new WP_Error( 'invalid_input', 'Comment input must be an object.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_input', 'Comment input must be an object.' );
 		}
 
 		$id = $input['comment_id'] ?? null;
@@ -109,7 +94,7 @@ class Webmastery_MCP_Comments {
 			|| false === filter_var( $id, FILTER_VALIDATE_INT, [ 'options' => [ 'min_range' => 1 ] ] )
 		) {
 			// Never pass zero to get_comment(): it can resolve the global comment.
-			return new WP_Error( 'not_found', 'Comment not found.' );
+			return Webmastery_MCP_Response::local_error( 'not_found', 'Comment not found.' );
 		}
 
 		$comment = self::get_comment_or_error( $id );
@@ -118,11 +103,11 @@ class Webmastery_MCP_Comments {
 		}
 
 		if ( ! $can_moderate ) {
-			return new WP_Error( 'forbidden', 'Requires moderate_comments capability.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires moderate_comments capability.' );
 		}
 
 		if ( ! current_user_can( 'edit_comment', (int) $comment->comment_ID ) ) {
-			return new WP_Error( 'forbidden', 'Requires edit_comment capability for this comment.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_comment capability for this comment.' );
 		}
 
 		return $comment;
@@ -171,7 +156,7 @@ class Webmastery_MCP_Comments {
 			},
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'moderate_comments' ) ) {
-					return new WP_Error( 'forbidden', 'Requires moderate_comments capability.' );
+					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires moderate_comments capability.' );
 				}
 				return true;
 			},
@@ -199,28 +184,28 @@ class Webmastery_MCP_Comments {
 				$parent = self::get_comment_or_error( $input['comment_id'] ?? 0 );
 
 				if ( is_wp_error( $parent ) ) {
-					return self::error_response( $parent->get_error_code(), $parent->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $parent );
 				}
 
 				$post = self::get_comment_post_or_error( $parent );
 
 				if ( is_wp_error( $post ) ) {
-					return self::error_response( $post->get_error_code(), $post->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $post );
 				}
 
 				if ( ! current_user_can( 'edit_post', (int) $post->ID ) ) {
-					return self::error_response( 'forbidden', 'Requires edit_post capability for the related post.' );
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'Requires edit_post capability for the related post.' );
 				}
 
 				$content = wp_kses_post( (string) ( $input['content'] ?? '' ) );
 
 				if ( '' === trim( wp_strip_all_tags( $content ) ) ) {
-					return self::error_response( 'invalid_content', 'Comment content is required.' );
+					return Webmastery_MCP_Response::legacy_error( 'invalid_content', 'Comment content is required.' );
 				}
 
 				$user = wp_get_current_user();
 				if ( ! $user || ! $user->exists() ) {
-					return self::error_response( 'forbidden', 'Authenticated user is required to reply to a comment.' );
+					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'Authenticated user is required to reply to a comment.' );
 				}
 
 				$result = wp_new_comment(
@@ -239,13 +224,13 @@ class Webmastery_MCP_Comments {
 				);
 
 				if ( is_wp_error( $result ) ) {
-					return self::error_response( $result->get_error_code(), $result->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $result );
 				}
 
 				$comment = get_comment( (int) $result );
 
 				if ( ! $comment ) {
-					return self::error_response( 'create_failed', 'Failed to create comment reply.' );
+					return Webmastery_MCP_Response::legacy_error( 'create_failed', 'Failed to create comment reply.' );
 				}
 
 				return [
@@ -279,30 +264,30 @@ class Webmastery_MCP_Comments {
 				$comment = self::moderate_comment_or_error( $input );
 
 				if ( is_wp_error( $comment ) ) {
-					return self::error_response( $comment->get_error_code(), $comment->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $comment );
 				}
 
 				if ( ! isset( $input['content'] ) || ! is_string( $input['content'] ) ) {
-					return self::error_response( 'invalid_content', 'Comment content must be a string.' );
+					return Webmastery_MCP_Response::legacy_error( 'invalid_content', 'Comment content must be a string.' );
 				}
 
 				$content = wp_kses_post( $input['content'] );
 
 				if ( '' === trim( wp_strip_all_tags( $content ) ) ) {
-					return self::error_response( 'invalid_content', 'Comment content is required.' );
+					return Webmastery_MCP_Response::legacy_error( 'invalid_content', 'Comment content is required.' );
 				}
 
 				$status = null;
 				if ( array_key_exists( 'status', $input ) && null !== $input['status'] && '' !== $input['status'] ) {
 					if ( ! is_string( $input['status'] ) ) {
-						return self::error_response( 'invalid_status', 'Comment status must be a string.' );
+						return Webmastery_MCP_Response::legacy_error( 'invalid_status', 'Comment status must be a string.' );
 					}
 
 					$status   = sanitize_key( $input['status'] );
 					$statuses = self::allowed_update_statuses();
 
 					if ( ! isset( $statuses[ $status ] ) ) {
-						return self::error_response(
+						return Webmastery_MCP_Response::legacy_error(
 							'invalid_status',
 							'Comment status must be one of approve, hold, spam, or trash.',
 							[ 'allowed_statuses' => array_keys( $statuses ) ]
@@ -321,25 +306,25 @@ class Webmastery_MCP_Comments {
 				);
 
 				if ( is_wp_error( $result ) ) {
-					return self::error_response( $result->get_error_code(), $result->get_error_message() );
+					return Webmastery_MCP_Response::from_wp_error( $result );
 				}
 
 				if ( false === $result ) {
-					return self::error_response( 'update_failed', 'Failed to update comment.' );
+					return Webmastery_MCP_Response::legacy_error( 'update_failed', 'Failed to update comment.' );
 				}
 
 				if ( null !== $status ) {
 					$status_result = wp_set_comment_status( (int) $comment->comment_ID, self::allowed_update_statuses()[ $status ] );
 
 					if ( ! $status_result ) {
-						return self::error_response( 'status_update_failed', 'Failed to update comment status.' );
+						return Webmastery_MCP_Response::legacy_error( 'status_update_failed', 'Failed to update comment status.' );
 					}
 				}
 
 				$updated = get_comment( (int) $comment->comment_ID );
 
 				if ( ! $updated ) {
-					return self::error_response( 'not_found', 'Comment not found after update.' );
+					return Webmastery_MCP_Response::legacy_error( 'not_found', 'Comment not found after update.' );
 				}
 
 				return [
@@ -371,14 +356,14 @@ class Webmastery_MCP_Comments {
 				$comment = self::moderate_comment_or_error( $input );
 
 				if ( is_wp_error( $comment ) ) {
-					return [ 'success' => false, 'error' => $comment->get_error_message() ];
+					return Webmastery_MCP_Response::from_wp_error( $comment );
 				}
 
 				$id     = (int) $comment->comment_ID;
 				$result = wp_set_comment_status( $id, $wp_status );
 
 				if ( ! $result ) {
-					return [ 'success' => false, 'error' => "Failed to {$label}." ];
+					return Webmastery_MCP_Response::legacy_error( 'status_update_failed', "Failed to {$label}." );
 				}
 
 				return [ 'success' => true, 'data' => [ 'id' => $id, 'status' => wp_get_comment_status( $id ) ] ];

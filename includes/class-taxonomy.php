@@ -31,19 +31,19 @@ class Webmastery_MCP_Taxonomy {
 	private static function check_write_permission( $taxonomy, $action, $term_id = null ) {
 		$tax = get_taxonomy( $taxonomy );
 		if ( ! $tax ) {
-			return new WP_Error( 'invalid_taxonomy', 'Taxonomy is not registered.' );
+			return Webmastery_MCP_Response::local_error( 'invalid_taxonomy', 'Taxonomy is not registered.' );
 		}
 
 		$capability = 'delete' === $action ? $tax->cap->delete_terms : $tax->cap->edit_terms;
 		if ( ! current_user_can( $capability ) ) {
-			return new WP_Error( 'forbidden', "Requires {$capability} capability." );
+			return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$capability} capability." );
 		}
 
 		if ( null !== $term_id ) {
 			$term = get_term( $term_id, $taxonomy );
 			// Leave missing/wrong-taxonomy errors to the existing execute response.
 			if ( $term && ! is_wp_error( $term ) && ! current_user_can( "{$action}_term", $term_id ) ) {
-				return new WP_Error( 'forbidden', "Cannot {$action} this term." );
+				return Webmastery_MCP_Response::local_error( 'forbidden', "Cannot {$action} this term." );
 			}
 		}
 
@@ -79,7 +79,7 @@ class Webmastery_MCP_Taxonomy {
 				$terms = get_terms( $args );
 
 				if ( is_wp_error( $terms ) ) {
-					return [ 'success' => false, 'error' => $terms->get_error_message() ];
+					return Webmastery_MCP_Response::from_wp_error( $terms );
 				}
 
 				return [
@@ -89,7 +89,7 @@ class Webmastery_MCP_Taxonomy {
 			},
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'read' ) ) {
-					return new WP_Error( 'forbidden', 'Requires read capability.' );
+					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
 				}
 				return true;
 			},
@@ -121,14 +121,14 @@ class Webmastery_MCP_Taxonomy {
 				$term = get_term( $id, $taxonomy );
 
 				if ( ! $term || is_wp_error( $term ) ) {
-					return [ 'success' => false, 'error' => "{$label} not found." ];
+					return Webmastery_MCP_Response::legacy_error( 'not_found', "{$label} not found." );
 				}
 
 				return [ 'success' => true, 'data' => self::normalize_term( $term ) ];
 			},
 			'permission_callback' => function () {
 				if ( ! current_user_can( 'read' ) ) {
-					return new WP_Error( 'forbidden', 'Requires read capability.' );
+					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
 				}
 				return true;
 			},
@@ -166,7 +166,7 @@ class Webmastery_MCP_Taxonomy {
 			'execute_callback'    => function ( $input ) use ( $taxonomy ) {
 				$permission = self::check_write_permission( $taxonomy, 'edit' );
 				if ( is_wp_error( $permission ) ) {
-					return [ 'success' => false, 'error' => $permission->get_error_message() ];
+					return Webmastery_MCP_Response::from_wp_error( $permission );
 				}
 
 				$args = [];
@@ -184,7 +184,7 @@ class Webmastery_MCP_Taxonomy {
 				$result = wp_insert_term( sanitize_text_field( $input['name'] ), $taxonomy, $args );
 
 				if ( is_wp_error( $result ) ) {
-					return [ 'success' => false, 'error' => $result->get_error_message() ];
+					return Webmastery_MCP_Response::from_wp_error( $result );
 				}
 
 				$term = get_term( $result['term_id'], $taxonomy );
@@ -231,12 +231,12 @@ class Webmastery_MCP_Taxonomy {
 				$term = get_term( $id, $taxonomy );
 
 				if ( ! $term || is_wp_error( $term ) ) {
-					return [ 'success' => false, 'error' => "{$label} not found." ];
+					return Webmastery_MCP_Response::legacy_error( 'not_found', "{$label} not found." );
 				}
 
 				$permission = self::check_write_permission( $taxonomy, 'edit', $id );
 				if ( is_wp_error( $permission ) ) {
-					return [ 'success' => false, 'error' => $permission->get_error_message() ];
+					return Webmastery_MCP_Response::from_wp_error( $permission );
 				}
 
 				$args = [];
@@ -257,13 +257,13 @@ class Webmastery_MCP_Taxonomy {
 				$result = wp_update_term( $id, $taxonomy, $args );
 
 				if ( is_wp_error( $result ) ) {
-					return [ 'success' => false, 'error' => $result->get_error_message() ];
+					return Webmastery_MCP_Response::from_wp_error( $result );
 				}
 
 				$updated = get_term( $result['term_id'], $taxonomy );
 
 				if ( ! $updated || is_wp_error( $updated ) ) {
-					return [ 'success' => false, 'error' => "{$label} not found." ];
+					return Webmastery_MCP_Response::legacy_error( 'not_found', "{$label} not found." );
 				}
 
 				return [ 'success' => true, 'data' => self::normalize_term( $updated ) ];
@@ -299,22 +299,22 @@ class Webmastery_MCP_Taxonomy {
 				$term = get_term( $id, $taxonomy );
 
 				if ( ! $term || is_wp_error( $term ) ) {
-					return [ 'success' => false, 'error' => "{$label} not found." ];
+					return Webmastery_MCP_Response::legacy_error( 'not_found', "{$label} not found." );
 				}
 
 				$permission = self::check_write_permission( $taxonomy, 'delete', $id );
 				if ( is_wp_error( $permission ) ) {
-					return [ 'success' => false, 'error' => $permission->get_error_message() ];
+					return Webmastery_MCP_Response::from_wp_error( $permission );
 				}
 
 				$result = wp_delete_term( $id, $taxonomy );
 
 				if ( is_wp_error( $result ) ) {
-					return [ 'success' => false, 'error' => $result->get_error_message() ];
+					return Webmastery_MCP_Response::from_wp_error( $result );
 				}
 
 				if ( ! $result ) {
-					return [ 'success' => false, 'error' => "{$label} was not deleted." ];
+					return Webmastery_MCP_Response::legacy_error( 'delete_failed', "{$label} was not deleted." );
 				}
 
 				return [ 'success' => true, 'data' => [ 'id' => $id, 'deleted' => true ] ];

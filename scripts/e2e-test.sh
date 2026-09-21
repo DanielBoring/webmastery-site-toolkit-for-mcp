@@ -296,6 +296,20 @@ run_post_meta_authorization_qa() (
 	done
 )
 
+run_error_contract_qa() (
+	local fixture="/var/www/html/wp-content/mu-plugins/wstm-issue118-errors.php"
+	local status
+	trap 'compose exec -T wordpress rm -f /var/www/html/wp-content/mu-plugins/wstm-issue118-errors.php' EXIT
+	compose exec -T wordpress cp "${CONTAINER_PLUGIN_ROOT}/tests/e2e/error-contract-fixture.php" "$fixture"
+	status="$(compose exec -T wordpress curl --silent --show-error --output /tmp/wstm118-cli-response --write-out '%{http_code}' "http://localhost/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/error-contract-runner.php")"
+	if [ "$status" != "403" ]; then
+		echo "Error-contract runner must reject non-CLI requests (HTTP ${status})." >&2
+		exit 1
+	fi
+	compose exec -T wordpress grep -Fxq 'CLI only.' /tmp/wstm118-cli-response
+	compose exec -T -e WSTM118_DISPOSABLE=1 wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/error-contract-runner.php"
+)
+
 run_debug_log_check() {
 	echo "Checking WordPress debug log..."
 	if ! compose exec -T wordpress test -f /var/www/html/wp-content/debug.log; then
@@ -371,6 +385,7 @@ main() {
 
 	run_parent_assignment_qa
 	run_post_meta_authorization_qa
+	run_error_contract_qa
 	run_debug_log_check
 
 	echo "Docker QA (${QA_MODE}) completed successfully"

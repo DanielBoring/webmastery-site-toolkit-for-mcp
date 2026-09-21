@@ -43,6 +43,12 @@ function is_wp_error( $value ): bool {
 	return $value instanceof WP_Error;
 }
 
+function wp_json_encode( $value, $flags = 0 ) {
+	return json_encode( $value, $flags );
+}
+
+require_once dirname(__DIR__, 2) . '/includes/class-response.php';
+
 function sanitize_key( $key ): string {
 	$key = strtolower( (string) $key );
 	return preg_replace( '/[^a-z0-9_\-]/', '', $key ) ?? '';

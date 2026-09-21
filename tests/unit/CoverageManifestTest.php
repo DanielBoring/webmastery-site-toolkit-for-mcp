@@ -32,6 +32,7 @@ final class CoverageManifestTest extends TestCase {
 		$script = $tmp . '/scripts/' . $name;
 		$file = $tmp . '/tests/e2e/abilities-manifest.json';
 		copy( $root . '/scripts/' . $name, $script );
+		copy( $root . '/tests/e2e/error-contract-assertions.php', $tmp . '/tests/e2e/error-contract-assertions.php' );
 		$cases = json_decode( file_get_contents( $root . '/tests/e2e/abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
 		foreach ( $cases as &$case ) {
 			if ( 'webmastery-site-toolkit-for-mcp/delete-media' === $case['ability'] && 'failure' === $case['expect'] ) {
@@ -43,7 +44,7 @@ final class CoverageManifestTest extends TestCase {
 			if ( 'contributor' === $case['role'] ) {
 				if ( 'unknown-role' === $mutation ) { $case['role'] = 'contributor_typo'; }
 				if ( 'contributor-private' === $mutation && 'private' === ( $case['input']['status'] ?? '' ) ) { unset( $case['assert_unchanged'] ); }
-				if ( 'contributor-future-message' === $mutation && 'future' === ( $case['input']['status'] ?? '' ) && isset( $case['assert_values']['error'] ) ) { $case['assert_values']['error'] = 'Invalid date.'; }
+				if ( 'contributor-future-message' === $mutation && 'future' === ( $case['input']['status'] ?? '' ) && isset( $case['assert_values']['error.message'] ) ) { $case['assert_values']['error.message'] = 'Invalid date.'; }
 				if ( 'invalid-capability' === $mutation ) { $case['assert_capabilities'] = array( array( 'capability' => 'edit_posts', 'args' => array(), 'allowed' => 'true' ) ); }
 				if ( 'invalid-stored-post' === $mutation ) { $case['assert_stored_post'] = array( 'fields' => array() ); }
 			}
@@ -64,6 +65,7 @@ final class CoverageManifestTest extends TestCase {
 		} finally {
 			if ( is_file( $file ) ) { unlink( $file ); }
 			unlink( $script );
+			unlink( $tmp . '/tests/e2e/error-contract-assertions.php' );
 			rmdir( $tmp . '/tests/e2e' );
 			rmdir( $tmp . '/tests' );
 			rmdir( $tmp . '/scripts' );

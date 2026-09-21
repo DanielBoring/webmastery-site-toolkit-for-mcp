@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/error-contract-assertions.php';
+
 
 function wstm105_comment_fixtures( $author_id, $book_id ) {
 	// Only the deliberately orphaned fixture has no post author to notify.
@@ -136,7 +138,7 @@ function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 		wstm105_assert( true === $result, "{$action} missing comment must reach the existing execute error." );
 		$result = $execute( $input );
 		wstm105_assert( false === $result['success'], "{$action} missing comment succeeded." );
-		wstm105_assert( 'update' === $action ? 'not_found' === $result['error']['code'] : 'Comment not found.' === $result['error'], 'Missing direct response contract changed.' );
+		wstm105_assert( 'not_found' === wstm118_error_reason( $result ) && 'Comment not found.' === $result['error']['message'], 'Missing direct response contract changed.' );
 		$checks++;
 
 		$comment_id = $fixtures[ "wstm105_{$action}_other" ];
@@ -147,8 +149,8 @@ function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 			wstm105_assert( true === $permission( $input ), "{$action} zero ID must defer to the missing-comment execution error." );
 			wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Zero-ID permission callback changed the global comment.' );
 			$result = $execute( $input );
-			$expected = array( 'success' => false, 'error' => 'update' === $action ? array( 'code' => 'not_found', 'message' => 'Comment not found.' ) : 'Comment not found.' );
-			wstm105_assert( $expected === $result, "{$action} zero ID resolved the global comment." );
+			wstm105_assert( 'not_found' === wstm118_error_reason( $result ) && 'Comment not found.' === $result['error']['message']
+				&& '{}' === wp_json_encode( $result['error']['details'] ), "{$action} zero ID resolved the global comment." );
 			wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Zero-ID execution changed the global comment.' );
 			$checks++;
 		} finally {
