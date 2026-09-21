@@ -113,13 +113,15 @@ The standalone get-post-meta and update-post-meta abilities require edit_post_me
 
 Global/subtype registrations and effective WordPress capability filters are respected, including explicit primitive grants from providers. The compatibility default for genuinely unregistered supported SEO keys does not bypass those filters. Successful response shapes are unchanged.
 
-This is a partial authorization fix: post/page create and update metadata/SEO aliases and separate SEO inspection, analysis, and scoring paths retain their existing policies and can still bypass restrictive per-key checks. Standalone hardening does not resolve those risks or establish release readiness. Existing one-call SEO create workflows are unchanged.
+In unreleased 3.0 development, post/page/custom-post-type create and general update reject metadata containers and all SEO aliases before writes, even when empty or null. Create a draft without metadata, write each exact key through update-post-meta, verify the results, and then publish with a plain update. These separate calls are not atomic; keep the draft unpublished if any write fails.
 
-Clients using custom roles or registered per-key policies should handle new standalone denials and omitted listing keys. Clients relying on those policies to restrict metadata inside create/update requests, SEO aliases, or separate SEO reads remain affected by the unresolved gaps; do not treat standalone hardening as protection for those paths.
+Separate SEO inspection and analysis omit denied fields and report unavailable_fields; they never read a denied key. Analysis skips unevaluable checks, and score pagination includes only authorized objects and score keys. Generated Yoast head output is unavailable; URL-only head requests return unsupported. This conservative read policy requires effective edit_post and edit_post_meta, not just permission to see the public page.
+
+SEO overview samples at most 100 published posts/pages ordered by ID. Missing counts and up to 20 IDs per field refer only to authorized sampled observations; observed_count is that field's authorized denominator, not a sitewide count. Zero observations are no evidence, not an all-clear. See the repository's 3.0 migration guide for every removed alias and its exact metadata key.
 
 = Can metadata and media text contain backslashes? =
 
-Yes. Post/page metadata and media titles, captions, and alt text preserve backslashes through WordPress storage. Use normal JSON escaping, not an extra WordPress slashing layer. Existing text, HTML, and SEO-provider sanitization still applies; responses reflect sanitized stored values. Allowed metadata keys and object permissions are unchanged. Post/page create/update metadata accepts scalar values; the direct post-meta update ability also supports JSON-compatible arrays and objects.
+Yes. Standalone post metadata and media titles, captions, and alt text preserve backslashes through WordPress storage. Use normal JSON escaping, not an extra WordPress slashing layer. Existing text, HTML, and SEO-provider sanitization still applies; responses reflect sanitized stored values. Use update-post-meta with an exact key: public keys also support JSON-compatible arrays and objects; supported protected SEO keys retain scalar normalization.
 
 = What are the rules for page and custom post type parents? =
 
@@ -202,6 +204,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 
+* Reject combined metadata and SEO inputs in post/page/custom-post-type create and update before any mutation; migrate to draft creation, separate authorized key writes, then publication.
+* Authorize separate SEO reads per real object/key, omit denied fields, filter score pagination, remove opaque generated head output, and bound overview to authorized observations from a 100-post sample.
 * Prepare a breaking 3.0 error contract with canonical categories, precise reasons, safe messages, and object details.
 * Signal owned MCP failures consistently, preserve successful payloads and non-atomic bulk summaries, and leave foreign tools unchanged.
 * Keep the 2.6.0 stable tag and release notes intact while development migration work continues.
@@ -273,6 +277,9 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Add block inspection, single-block replacement, and safer partial post body edits.
 
 == Upgrade Notice ==
+
+= Unreleased =
+3.0 development requires separate metadata calls. Create a draft, write authorized keys, then publish; this is not atomic. SEO reads omit denied keys, generated Yoast head output is unavailable, and overview counts describe an authorized sample.
 
 = 2.6.0 =
 Standalone metadata, comment and taxonomy permissions are tighter. Create/update metadata, SEO aliases and separate SEO reads retain authorization gaps (see FAQ). Clients using custom role/key policies must review denials. Image upload limits and PHP 8.0 minimum are unchanged.

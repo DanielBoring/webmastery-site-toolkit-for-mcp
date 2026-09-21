@@ -530,7 +530,7 @@ class Webmastery_MCP_Custom_Post_Types {
 			self::ability_name( 'create', $ability_base ),
 			[
 				'label'               => "Create {$label}",
-				'description'         => "Create a {$label} custom post type item.",
+				'description'         => "Create a {$label} custom post type item without metadata or SEO aliases. Create a draft, write metadata with update-post-meta, then publish; the steps are not atomic.",
 				'category'            => self::NAMESPACE,
 				'input_schema'        => [
 					'type'       => 'object',
@@ -538,6 +538,10 @@ class Webmastery_MCP_Custom_Post_Types {
 					'required'   => [ 'title', 'content' ],
 				],
 				'execute_callback'    => function ( $input ) use ( $post_type_object, $post_type_name ) {
+					$metadata_error = Webmastery_MCP_Posts::reject_combined_metadata( $input );
+					if ( null !== $metadata_error ) {
+						return $metadata_error;
+					}
 					$permission = self::create_permission( $post_type_object );
 					$allowed    = $permission( $input );
 
@@ -598,7 +602,7 @@ class Webmastery_MCP_Custom_Post_Types {
 			self::ability_name( 'update', $ability_base ),
 			[
 				'label'               => "Update {$label}",
-				'description'         => "Update a {$label} custom post type item.",
+				'description'         => "Update a {$label} custom post type item without metadata or SEO aliases. Use update-post-meta separately for each metadata key.",
 				'category'            => self::NAMESPACE,
 				'input_schema'        => [
 					'type'       => 'object',
@@ -611,6 +615,10 @@ class Webmastery_MCP_Custom_Post_Types {
 					'required'   => [ 'id' ],
 				],
 				'execute_callback'    => function ( $input ) use ( $post_type_object, $post_type_name ) {
+					$metadata_error = Webmastery_MCP_Posts::reject_combined_metadata( $input );
+					if ( null !== $metadata_error ) {
+						return $metadata_error;
+					}
 					$id   = absint( $input['id'] ?? 0 );
 					$post = get_post( $id );
 

@@ -379,7 +379,6 @@ try {
 			'title'   => $title_marker,
 			'content' => 'Created through real MCP HTTP JSON-RPC.',
 			'status'  => 'draft',
-			'yoast_meta_description' => 'C:\\path\\ \"quoted\"',
 		),
 		'create post'
 	);
@@ -388,7 +387,10 @@ try {
 	$summary['created_post_id'] = $created_post_id;
 	webmastery_mcp_e2e_assert( $created_post_id > 0, 'create-post did not return a post ID.' );
 	webmastery_mcp_e2e_assert( 'draft' === ( $create['data']['status'] ?? null ), 'create-post did not create a draft post.' );
-	webmastery_mcp_e2e_assert( 'C:\\path\\ \"quoted\"' === ( $create['data']['meta']['written']['_yoast_wpseo_metadesc'] ?? null ), 'create-post did not preserve metadata backslashes.' );
+	$create_meta = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/update-post-meta', array(
+		'post_id' => $created_post_id, 'meta_key' => '_yoast_wpseo_metadesc', 'meta_value' => 'C:\\path\\ \"quoted\"',
+	), 'write metadata after draft creation' );
+	webmastery_mcp_e2e_assert( true === ( $create_meta['success'] ?? false ) && 'C:\\path\\ \"quoted\"' === ( $create_meta['data']['current_value'] ?? null ), 'Standalone metadata write after create did not preserve backslashes.' );
 	webmastery_mcp_e2e_pass( $summary, 'create post through MCP' );
 
 	$get = webmastery_mcp_e2e_execute_ability(
@@ -410,14 +412,16 @@ try {
 			'post_id' => $created_post_id,
 			'title'   => $updated_title,
 			'content' => 'Updated through real MCP HTTP JSON-RPC.',
-			'yoast_meta_description' => '\\\\server\\share\\',
 		),
 		'update post'
 	);
 	webmastery_mcp_e2e_assert( true === ( $update['success'] ?? false ), 'update-post did not succeed: ' . webmastery_mcp_e2e_json( $update ) );
 	webmastery_mcp_e2e_assert( $updated_title === ( $update['data']['title'] ?? null ), 'update-post returned the wrong title.' );
 	webmastery_mcp_e2e_assert( 'Updated through real MCP HTTP JSON-RPC.' === ( $update['data']['content'] ?? null ), 'update-post returned the wrong content.' );
-	webmastery_mcp_e2e_assert( '\\\\server\\share\\' === ( $update['data']['meta']['written']['_yoast_wpseo_metadesc'] ?? null ), 'update-post did not preserve metadata backslashes.' );
+	$update_meta = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/update-post-meta', array(
+		'post_id' => $created_post_id, 'meta_key' => '_yoast_wpseo_metadesc', 'meta_value' => '\\\\server\\share\\',
+	), 'write metadata separately after content update' );
+	webmastery_mcp_e2e_assert( true === ( $update_meta['success'] ?? false ) && '\\\\server\\share\\' === ( $update_meta['data']['current_value'] ?? null ), 'Standalone metadata write after update did not preserve backslashes.' );
 	webmastery_mcp_e2e_pass( $summary, 'update post through MCP' );
 
 	foreach ( array( 'create', 'update' ) as $operation ) {
@@ -466,11 +470,13 @@ try {
 			'title' => $seo_case['title'],
 			'content' => $seo_case['content'],
 			'slug' => $seo_case['slug'],
-			'meta' => $seo_case['meta'],
 		), "wstm108 seed {$name}" );
 		webmastery_mcp_e2e_assert( true === ( $seed['success'] ?? false ), "wstm108 {$name} HTTP fixture update failed." );
 		foreach ( $seo_case['meta'] as $key => $value ) {
-			webmastery_mcp_e2e_assert( $value === ( $seed['data']['meta']['written'][ $key ] ?? null ), "wstm108 {$name} stored metadata differs for {$key}." );
+			$metadata = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/update-post-meta', array(
+				'post_id' => $seo_post_id, 'meta_key' => $key, 'meta_value' => $value,
+			), "wstm108 {$name} separately write {$key}" );
+			webmastery_mcp_e2e_assert( true === ( $metadata['success'] ?? false ) && $value === ( $metadata['data']['current_value'] ?? null ), "wstm108 {$name} stored metadata differs for {$key}." );
 		}
 		$analysis = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/seo-analyze-post', array( 'post_id' => $seo_post_id ), "wstm108 analyze {$name}" );
 		$summary['seo_analysis'][ $name ] = $analysis;

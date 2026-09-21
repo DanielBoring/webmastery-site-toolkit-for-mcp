@@ -7,6 +7,16 @@ source "$root/scripts/e2e-test.sh"
 
 compose() {
 	case "$*" in
+		*curl*"/tests/e2e/metadata-batch-runner.php"|*curl*"/tests/e2e/seo-metadata-runner.php")
+			printf '%s' "${WSTM110_MOCK_HTTP_STATUS:-403}"
+			;;
+		*"/tests/e2e/metadata-batch-runner.php"|*"/tests/e2e/seo-metadata-runner.php")
+			assert_cron_isolated
+			if [[ "$*" != "exec -T -e WSTM110_BATCH_DISPOSABLE=1 -e WSTM110_BATCH_BOUNDARY="* ]]; then
+				echo 'Metadata boundary QA must explicitly opt in to disposable-site execution.' >&2
+				exit 1
+			fi
+			;;
 		*curl*"/tests/e2e/error-contract-runner.php")
 			printf '%s' "${WSTM118_MOCK_HTTP_STATUS:-403}"
 			;;
@@ -91,4 +101,9 @@ if output="$(WSTM118_MOCK_HTTP_STATUS=200 run_error_contract_qa 2>&1)"; then
 	exit 1
 fi
 grep -Fx 'Error-contract runner must reject non-CLI requests (HTTP 200).' <<< "$output"
+if output="$(WSTM110_MOCK_HTTP_STATUS=200 run_metadata_boundary_qa 2>&1)"; then
+	echo 'Metadata boundary QA must reject an HTTP-accessible runner.' >&2
+	exit 1
+fi
+grep -Fx 'Metadata boundary runner must reject non-CLI requests (HTTP 200).' <<< "$output"
 echo 'Compatibility dependency policy and QA bootstrap tests passed without Docker or network.'
