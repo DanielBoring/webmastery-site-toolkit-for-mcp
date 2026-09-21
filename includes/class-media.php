@@ -657,6 +657,16 @@ class Webmastery_MCP_Media {
 		] );
 	}
 
+	public static function delete_input_error( array $input ): ?array {
+		if ( true !== ( $input['confirm'] ?? null ) ) {
+			return Webmastery_MCP_Response::legacy_error( 'missing_confirmation', 'Set confirm to true to acknowledge permanent deletion.' );
+		}
+		if ( array_key_exists( 'force', $input ) && ! is_bool( $input['force'] ) ) {
+			return Webmastery_MCP_Response::legacy_error( 'invalid_input', 'force must be a boolean.' );
+		}
+		return null;
+	}
+
 	private static function register_delete() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/delete-media', [
 			'label'               => 'Delete Media',
@@ -672,11 +682,9 @@ class Webmastery_MCP_Media {
 				'required'   => [ 'media_id', 'confirm' ],
 			],
 			'execute_callback'    => function ( $input ) {
-				if ( true !== ( $input['confirm'] ?? null ) ) {
-					return Webmastery_MCP_Response::legacy_error( 'missing_confirmation', 'Set confirm to true to acknowledge permanent deletion.' );
-				}
-				if ( array_key_exists( 'force', $input ) && ! is_bool( $input['force'] ) ) {
-					return Webmastery_MCP_Response::legacy_error( 'invalid_input', 'force must be a boolean.' );
+				$error = self::delete_input_error( $input );
+				if ( null !== $error ) {
+					return $error;
 				}
 				$id         = absint( $input['media_id'] );
 				$attachment = get_post( $id );

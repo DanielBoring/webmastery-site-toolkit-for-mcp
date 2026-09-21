@@ -16,6 +16,8 @@
 defined( 'ABSPATH' ) || exit;
 
 require_once __DIR__ . '/includes/class-response.php';
+require_once __DIR__ . '/includes/class-input.php';
+add_filter( 'wp_register_ability_args', [ Webmastery_MCP_Input::class, 'register_args' ], 20, 2 );
 add_filter( 'wp_register_ability_args', [ Webmastery_MCP_Response::class, 'register_args' ], 10, 2 );
 add_filter( 'mcp_adapter_tool_call_result', [ Webmastery_MCP_Response::class, 'mcp_result' ], 10, 4 );
 
