@@ -14,6 +14,10 @@ final class BoundedListManifestTest extends TestCase {
 		return is_array( $value ) ? array_map( array( self::class, 'canonical' ), $value ) : $value;
 	}
 
+	private static function encoded( $value ): string {
+		return json_encode( self::canonical( $value ), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION );
+	}
+
 	public function test_all_base_cases_preserved_or_explicitly_migrated(): void {
 		$root = dirname( __DIR__ );
 		$manifest = json_decode( file_get_contents( $root . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
@@ -22,10 +26,23 @@ final class BoundedListManifestTest extends TestCase {
 		foreach ( $manifest as $case ) {
 			$cases[ $case->label ] = $case;
 		}
+		$integration = json_decode( file_get_contents( $root . '/fixtures/bounded-integration-manifest-migration.json' ), false, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( '1a8e76dae6183d99a48ff4c0a7ae34c1cdd17e18', $integration->parent_sha );
+		self::assertSame( '062a6e4f587cc6aa656aca9d020d364d3259eb12', $integration->reviewed_source_sha );
+		self::assertCount( 6, $integration->changed );
+		self::assertCount( 3, $integration->added );
+		$permission_corrections = array();
+		foreach ( $integration->changed as $correction ) {
+			self::assertArrayNotHasKey( $correction->label, $permission_corrections );
+			$permission_corrections[ $correction->label ] = $correction;
+			foreach ( array( 'ability', 'role', 'input', 'expect', 'assert_capabilities', 'assert_post_meta' ) as $field ) {
+				self::assertSame( self::encoded( $correction->before->$field ?? null ), self::encoded( $correction->after->$field ?? null ), $correction->label . ':' . $field );
+			}
+		}
 		$changes = array();
 		foreach ( $ledger->changed as $change ) {
 			$changes[ $change->label ] = $change;
-			self::assertEquals( $change->after, $cases[ $change->label ], $change->label );
+			self::assertSame( self::encoded( $change->after ), self::encoded( $cases[ $change->label ] ), $change->label );
 			self::assertSame( $change->before->role, $change->after->role );
 			self::assertSame( $change->before->expect, $change->after->expect );
 			foreach ( get_object_vars( $change->before->assert_values ?? new stdClass() ) as $path => $value ) {
@@ -62,10 +79,28 @@ final class BoundedListManifestTest extends TestCase {
 				self::assertEquals( $restored, $correction->corrected_after, 'Only restore original input; retain the approved schema oracle.' );
 				$expected = $correction->corrected_after;
 			}
-			self::assertEquals( $expected, $cases[ $change->label ], $change->label );
+			if ( isset( $permission_corrections[ $change->label ] ) ) {
+				$correction = $permission_corrections[ $change->label ];
+				self::assertSame( self::encoded( $expected ), self::encoded( $correction->before ), 'Preserve the earlier reviewed schema oracle before applying the permission correction.' );
+				$expected = $correction->after;
+			}
+			self::assertSame( self::encoded( $expected ), self::encoded( $cases[ $change->label ] ), $change->label );
 			self::assertSame( $change->before->role, $expected->role );
 			self::assertEquals( $change->before->input, $expected->input );
 			$changes[ $change->label ] = $change;
+		}
+		$additional_native_changes = 0;
+		foreach ( $permission_corrections as $label => $correction ) {
+			self::assertSame( self::encoded( $correction->after ), self::encoded( $cases[ $label ] ), $label );
+			if ( ! isset( $changes[ $label ] ) ) {
+				$changes[ $label ] = $correction;
+				++$additional_native_changes;
+			}
+		}
+		self::assertSame( 3, $additional_native_changes );
+		foreach ( $integration->added as $case ) {
+			self::assertArrayHasKey( $case->label, $cases );
+			self::assertSame( self::encoded( $case ), self::encoded( $cases[ $case->label ] ), $case->label );
 		}
 		foreach ( $schema->added as $case ) {
 			self::assertArrayHasKey( $case->label, $cases );

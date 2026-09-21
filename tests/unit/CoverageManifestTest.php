@@ -5,6 +5,211 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 final class CoverageManifestTest extends TestCase {
+	private function manifest(): array {
+		return json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
+	}
+
+	public static function destructive_state_cases(): array {
+		return array(
+			array( 'bulk-trash-posts', 'editor' ),
+			array( 'delete-post', 'editor' ),
+			array( 'delete-page', 'editor' ),
+			array( 'delete-cpt-mcp-book', 'book_manager' ),
+			array( 'delete-cpt-mcp-case-study', 'case_manager' ),
+			array( 'delete-post-meta', 'editor' ),
+		);
+	}
+
+	/** @dataProvider destructive_state_cases */
+	public function test_destructive_permission_denials_retain_state_evidence_and_allowed_controls( string $slug, string $allowed_role ): void {
+		$this->assert_destructive_controls( $this->manifest(), $slug, $allowed_role );
+	}
+
+	private function assert_destructive_controls( array $cases, string $slug, string $allowed_role ): void {
+		$denied = $allowed = array();
+		foreach ( $cases as $case ) {
+			if ( "webmastery-site-toolkit-for-mcp/{$slug}" !== $case['ability'] ) {
+				continue;
+			}
+			if ( $allowed_role === $case['role'] && 'success' === $case['expect'] && $this->has_destructive_write_evidence( $case, $slug ) ) {
+				$allowed[] = $case;
+			}
+			if ( 'subscriber' === $case['role'] && 'failure' === $case['expect']
+				&& 'forbidden' === ( $case['assert_permission'] ?? null )
+				&& 'ability_invalid_permissions' === ( $case['expect_error_reason'] ?? null )
+				&& true === ( $case['assert_unchanged'] ?? null ) ) {
+				$denied[] = $case;
+			}
+		}
+		$this->assertNotEmpty( $denied, "{$slug} must retain a Subscriber permission denial with unchanged persisted state." );
+		$this->assertNotEmpty( $allowed, "{$slug} must retain its {$allowed_role} positive write control, not a preview or zero-write result." );
+	}
+
+	private function has_destructive_write_evidence( array $case, string $slug ): bool {
+		if ( true === ( $case['input']['dry_run'] ?? false ) ) {
+			return false;
+		}
+		$values = $case['assert_values'] ?? array();
+		if ( 'bulk-trash-posts' === $slug ) {
+			if ( ! is_int( $values['data.success_count'] ?? null ) || $values['data.success_count'] <= 0 ) {
+				return false;
+			}
+			foreach ( $values as $path => $id ) {
+				if ( preg_match( '/^data\.successes\.(\d+)\.id$/', $path, $match )
+					&& 'trash' === ( $values[ "data.successes.{$match[1]}.status" ] ?? null )
+					&& in_array( $id, $case['input']['ids'], true ) ) {
+					return true;
+				}
+			}
+			return false;
+		}
+		if ( 'delete-post-meta' === $slug ) {
+			return is_int( $values['data.deleted_count'] ?? null ) && $values['data.deleted_count'] > 0;
+		}
+		$id_key = array( 'delete-post' => 'post_id', 'delete-page' => 'page_id' )[ $slug ] ?? 'id';
+		return 'trash' === ( $values['data.status'] ?? null )
+			&& isset( $values['data.id'], $case['input'][ $id_key ] )
+			&& $values['data.id'] === $case['input'][ $id_key ];
+	}
+
+	public function test_media_update_denial_retains_previously_stored_alt_metadata(): void {
+		$this->assert_media_update_controls( $this->manifest() );
+	}
+
+	private function assert_media_update_controls( array $manifest ): void {
+		$cases = array_column( $manifest, null, 'label' );
+		$allowed_label = 'wstm122 update-media preserves sanitized title caption and alt backslashes';
+		$denied_label = 'wstm122 denied media write preserves alt metadata';
+		$readback_label = 'wstm122 denied media write preserves title and caption';
+		$this->assertArrayHasKey( $allowed_label, $cases );
+		$this->assertArrayHasKey( $denied_label, $cases );
+		$this->assertArrayHasKey( $readback_label, $cases );
+		$allowed = $cases[ $allowed_label ];
+		$denied = $cases[ $denied_label ];
+		$readback = $cases[ $readback_label ];
+		foreach ( array( $allowed, $denied ) as $case ) {
+			$this->assertSame( 'webmastery-site-toolkit-for-mcp/update-media', $case['ability'] );
+			$this->assertArrayHasKey( 'alt_text', $case['input'] );
+			$this->assertNotEmpty( $case['assert_post_meta'] ?? array() );
+			$this->assertSame( $case['input']['media_id'], $case['assert_post_meta'][0]['post_id'] );
+			$this->assertSame( '_wp_attachment_image_alt', $case['assert_post_meta'][0]['meta_key'] );
+		}
+		$this->assertSame( 'author', $allowed['role'] );
+		$this->assertSame( 'success', $allowed['expect'] );
+		$this->assertSame( $allowed['input']['alt_text'], $allowed['assert_values']['data.alt_text'] );
+		$this->assertSame( $allowed['input']['alt_text'], $allowed['assert_post_meta'][0]['value'] );
+		$this->assertSame( 'subscriber', $denied['role'] );
+		$this->assertSame( 'failure', $denied['expect'] );
+		$this->assertSame( 'ability_invalid_permissions', $denied['expect_error_reason'] );
+		$this->assertSame( $allowed['assert_post_meta'], $denied['assert_post_meta'] );
+		$this->assertNotSame( $denied['input']['alt_text'], $denied['assert_post_meta'][0]['value'] );
+		$this->assertLessThan( array_search( $denied_label, array_keys( $cases ), true ), array_search( $allowed_label, array_keys( $cases ), true ) );
+		$this->assertSame( 'webmastery-site-toolkit-for-mcp/get-media', $readback['ability'] );
+		$this->assertSame( 'author', $readback['role'] );
+		$this->assertSame( 'success', $readback['expect'] );
+		$this->assertSame( $allowed['input']['media_id'], $readback['input']['media_id'] );
+		foreach ( array( 'data.title', 'data.caption', 'data.alt_text' ) as $field ) {
+			$this->assertSame( $allowed['assert_values'][ $field ], $readback['assert_values'][ $field ] );
+		}
+		$this->assertLessThan( array_search( $readback_label, array_keys( $cases ), true ), array_search( $denied_label, array_keys( $cases ), true ) );
+	}
+
+	public static function destructive_guard_mutations(): array {
+		$mutations = array();
+		foreach ( self::destructive_state_cases() as list( $slug, $role ) ) {
+			$variants = array( 'remove-denial', 'remove-state', 'not_found', 'invalid_input', 'missing_confirmation', 'remove-allowed', 'remove-write-evidence', 'zero-write', 'preview-only' );
+			if ( 'delete-post-meta' !== $slug ) {
+				$variants[] = 'wrong-target';
+			}
+			if ( 'bulk-trash-posts' === $slug ) {
+				$variants[] = 'missing-success-count';
+				$variants[] = 'missing-success-item';
+				$variants[] = 'wrong-success-status';
+			}
+			foreach ( $variants as $mutation ) {
+				$mutations[ "{$slug} {$mutation}" ] = array( $slug, $role, $mutation );
+			}
+		}
+		return $mutations;
+	}
+
+	/** @dataProvider destructive_guard_mutations */
+	public function test_destructive_guard_rejects_weakened_evidence( string $slug, string $allowed_role, string $mutation ): void {
+		$cases = $this->manifest();
+		$this->assert_destructive_controls( $cases, $slug, $allowed_role );
+		foreach ( $cases as $index => &$case ) {
+			if ( "webmastery-site-toolkit-for-mcp/{$slug}" !== $case['ability'] ) {
+				continue;
+			}
+			if ( $allowed_role === $case['role'] && 'success' === $case['expect'] ) {
+				if ( 'remove-allowed' === $mutation ) { unset( $cases[ $index ] ); }
+				if ( 'remove-write-evidence' === $mutation ) { unset( $case['assert_values'] ); }
+				if ( 'preview-only' === $mutation ) { $case['input']['dry_run'] = true; }
+				if ( 'zero-write' === $mutation ) {
+					$case['assert_values']['data.success_count'] = 0;
+					$case['assert_values']['data.deleted_count'] = 0;
+					$case['assert_values']['data.status'] = 'draft';
+				}
+				if ( 'missing-success-count' === $mutation ) { unset( $case['assert_values']['data.success_count'] ); }
+				foreach ( array_keys( $case['assert_values'] ?? array() ) as $path ) {
+					if ( 'wrong-target' === $mutation && ( 'data.id' === $path || preg_match( '/^data\.successes\.\d+\.id$/', $path ) ) ) {
+						$case['assert_values'][ $path ] = '__unsubmitted_target__';
+					}
+					if ( 'missing-success-item' === $mutation && str_starts_with( $path, 'data.successes.' ) ) {
+						unset( $case['assert_values'][ $path ] );
+					}
+					if ( 'wrong-success-status' === $mutation && preg_match( '/^data\.successes\.\d+\.status$/', $path ) ) {
+						$case['assert_values'][ $path ] = 'draft';
+					}
+				}
+			}
+			if ( 'subscriber' !== $case['role'] || 'failure' !== $case['expect'] ) {
+				continue;
+			}
+			if ( 'remove-denial' === $mutation ) {
+				unset( $cases[ $index ] );
+			} elseif ( 'remove-state' === $mutation ) {
+				unset( $case['assert_unchanged'] );
+			} elseif ( in_array( $mutation, array( 'not_found', 'invalid_input', 'missing_confirmation' ), true ) ) {
+				$case['expect_error_reason'] = $mutation;
+			}
+		}
+		unset( $case );
+		$this->expectException( \PHPUnit\Framework\AssertionFailedError::class );
+		$this->assert_destructive_controls( $cases, $slug, $allowed_role );
+	}
+
+	public static function media_guard_mutations(): array {
+		return array_map( static function ( $mutation ) { return array( $mutation ); }, array(
+			'remove-denial', 'remove-state', 'wrong-state', 'not_found', 'invalid_input',
+			'missing_confirmation', 'remove-allowed', 'remove-readback', 'wrong-readback',
+		) );
+	}
+
+	/** @dataProvider media_guard_mutations */
+	public function test_media_guard_rejects_weakened_evidence( string $mutation ): void {
+		$cases = $this->manifest();
+		$this->assert_media_update_controls( $cases );
+		foreach ( $cases as $index => &$case ) {
+			if ( 'wstm122 denied media write preserves alt metadata' === $case['label'] ) {
+				if ( 'remove-denial' === $mutation ) { unset( $cases[ $index ] ); }
+				if ( 'remove-state' === $mutation ) { unset( $case['assert_post_meta'] ); }
+				if ( 'wrong-state' === $mutation ) { $case['assert_post_meta'][0]['value'] = $case['input']['alt_text']; }
+				if ( in_array( $mutation, array( 'not_found', 'invalid_input', 'missing_confirmation' ), true ) ) { $case['expect_error_reason'] = $mutation; }
+			}
+			if ( 'remove-allowed' === $mutation && 'wstm122 update-media preserves sanitized title caption and alt backslashes' === $case['label'] ) {
+				unset( $cases[ $index ] );
+			}
+			if ( 'wstm122 denied media write preserves title and caption' === $case['label'] ) {
+				if ( 'remove-readback' === $mutation ) { unset( $cases[ $index ] ); }
+				if ( 'wrong-readback' === $mutation ) { $case['assert_values']['data.title'] = 'Changed after denial'; }
+			}
+		}
+		unset( $case );
+		$this->expectException( \PHPUnit\Framework\AssertionFailedError::class );
+		$this->assert_media_update_controls( $cases );
+	}
+
 	public static function mutations(): array {
 		return array(
 			array( 'none', 'security', 0 ),
@@ -23,6 +228,10 @@ final class CoverageManifestTest extends TestCase {
 			array( 'invalid-capability', 'e2e', 1 ),
 			array( 'invalid-stored-post', 'e2e', 1 ),
 			array( 'metadata-old-reason', 'e2e', 1 ),
+			array( 'permission-metadata-reason', 'e2e', 1 ),
+			array( 'permission-schema-reason', 'e2e', 1 ),
+			array( 'permission-unknown-code', 'e2e', 1 ),
+			array( 'permission-array-code', 'e2e', 1 ),
 		);
 	}
 
@@ -46,6 +255,12 @@ final class CoverageManifestTest extends TestCase {
 			}
 			if ( 'metadata-old-reason' === $mutation && ! empty( $case['assert_metadata_boundary'] ) ) {
 				$case['expect_error_reason'] = 'metadata_requires_separate_call';
+			}
+			if ( 'invalid_input' === ( $case['assert_permission'] ?? null ) ) {
+				if ( 'permission-metadata-reason' === $mutation ) { $case['assert_permission'] = 'metadata_requires_separate_call'; }
+				if ( 'permission-schema-reason' === $mutation ) { $case['assert_permission'] = 'ability_invalid_input'; }
+				if ( 'permission-unknown-code' === $mutation ) { $case['assert_permission'] = 'unknown'; }
+				if ( 'permission-array-code' === $mutation ) { $case['assert_permission'] = array( 'invalid_input' ); }
 			}
 			if ( 'webmastery-site-toolkit-for-mcp/delete-media' === $case['ability'] && 'failure' === $case['expect'] ) {
 				if ( 'denial-code' === $mutation ) { $case['expect_error_code'] = 'not_found'; }

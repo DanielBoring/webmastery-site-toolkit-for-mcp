@@ -77,7 +77,7 @@ final class GithubSafeguardsTest extends TestCase {
 		self::assertSame('php scripts/test-phpstan-baseline.php', $composer['scripts']['test:phpstan-baseline']);
 		self::assertContains('@test:phpstan-baseline', $composer['scripts']['qa:static']);
 		self::assertSame(
-			array('php scripts/test-release-safeguards.php', 'bash scripts/test-release-tag-check.sh', 'bash scripts/test-release-plugin-check.sh', 'bash scripts/test-release-runtime.sh'),
+			array('php scripts/test-release-safeguards.php', 'bash scripts/test-release-tag-check.sh', 'bash scripts/test-release-plugin-check.sh', 'bash scripts/test-release-runtime.sh', 'php scripts/test-release-recovery.php', 'bash scripts/test-release-control-check.sh', 'bash scripts/test-release-publish-prerequisites.sh'),
 			$composer['scripts']['test:release-safeguards']
 		);
 		$workflow = file_get_contents($root . '/.github/workflows/unit-tests.yml');
@@ -86,6 +86,9 @@ final class GithubSafeguardsTest extends TestCase {
 		foreach (array('release.yml', 'release-package-qa.yml') as $file) {
 			$release_workflow = file_get_contents($root . '/.github/workflows/' . $file);
 			self::assertStringContainsString('bash scripts/test-release-runtime.sh', $release_workflow);
+			self::assertStringContainsString('php scripts/test-release-recovery.php', $release_workflow);
+			self::assertStringContainsString('bash scripts/test-release-control-check.sh', $release_workflow);
+			self::assertStringContainsString('bash scripts/test-release-publish-prerequisites.sh', $release_workflow);
 		}
 	}
 

@@ -33,7 +33,7 @@
 - [ ] Workflow/shell changes pass the dedicated workflow linters; required PR checks do not rely on manually dispatched runs or failure-induced skips
 - [ ] Dependency updates preserve the declared PHP support floor, verified download digests, and baseline metadata; unavailable candidate lanes cannot promote versions
 - [ ] CI/CD, security, or release process changes update the matching strategy document when policy changes
-- [ ] Release-impacting changes account for GitHub tag `vX.Y.Z`, WordPress.org SVN tag `X.Y.Z`, protected `wordpress-org` deployment approval, and package/readme/version alignment
-- [ ] Release changes preserve the exact validated artifact through approval and publication, and cover partial-publish recovery without rewriting tags
+- [ ] Release-impacting changes account for GitHub tag `vX.Y.Z`, WordPress.org SVN tag `X.Y.Z`, protected `wordpress-org` GitHub production approval (not WordPress.org staff review), and package/readme/version alignment
+- [ ] Release changes preserve the exact validated artifact through approval and publication, and cover partial-publish recovery without rewriting release tags; recovery dispatch requires a separately authorized annotated control tag in reviewed main history, never a branch or a normal release-tag dispatch
 - [ ] WordPress.org Detailed Plugin Guidelines were considered for public-facing or release-impacting changes such as naming, readme text, privacy/external calls, licensing, bundled assets, and release packaging; see `CONTRIBUTING.md`, `docs/security-strategy.md`, and `docs/release-strategy.md`
 - [ ] E2E QA is passing, or failures are unrelated and explained above
