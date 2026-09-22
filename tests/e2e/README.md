@@ -45,6 +45,10 @@ null/array optional flags and 101 IDs still fail registered schema validation.
 Direct-callback expectations and independent permission-denial checks do not
 change. Recalibrate explicitly if a future input wrapper changes that ordering;
 do not broadly accept multiple reasons or coerce test inputs to make them pass.
+Preservation fingerprints decode JSON as objects and encode with
+`JSON_PRESERVE_ZERO_FRACTION`, retaining property order and sparse case indexes.
+Their goldens come from exact `6a47b52`, not the corrected working manifest.
+Mutation controls distinguish both `{}` from `[]` and integers from floats.
 
 `run_destructive_safety_qa` in the shared harness runs serially in a subshell:
 `contract` selects direct callbacks and registered abilities, `e2e` selects
@@ -53,6 +57,12 @@ with actual `EMPTY_TRASH_DAYS` values 30 and 0: eight invocations in full QA.
 Use only an explicitly owned disposable `COMPOSE_PROJECT_NAME`, never a live
 site or another worker's project. Unit and mocked stages do not constitute
 real WordPress, HTTP, floor, or original-package evidence.
+Both runtime entrypoints reject an absent or invalid project name before any
+Compose startup or cleanup. Package CI and pre-publication QA provide distinct
+job/run/attempt-scoped names. Local callers must explicitly export their own
+unique disposable name; neither the runner nor `qa-compose.sh` invents a fallback.
+The local-only `SKIP_PLUGIN_CHECK=1` offline package check still needs no project
+name and performs no runtime work; CI cannot use that bypass.
 
 Before test-only MU capabilities are installed, `destructive-safety-preflight.php`
 audits actual `wp_get_abilities()` against all 85 manifest abilities and records
@@ -69,6 +79,24 @@ stage token and expected trash days, and an authenticated-by-token read-only
 HTTP boot attestation **before creating actors or credentials**. Every observed
 HTTP mutation probe also attests the same configuration. An environment flag
 alone is never evidence of the server's trash behavior.
+After the native audit, an independently token-owned, GET-only read-only probe
+captures the original runtime. Each owned config transition allows at most five
+GETs, two seconds per request, four one-second intervals and a 14-second overall
+budget. Every attempt is journaled. Only a recognized previous owned runtime
+with the correct owner, roots and current disk digest may retry; malformed,
+foreign, denied, wrong-digest or unexpected opt-in results fail immediately.
+This cache-readiness barrier never retries abilities, actors or mutations and
+never resets or disables global OPcache.
+
+Each invocation exclusively creates one token-owned subdirectory beneath the
+resolved existing upload root. Only that new directory may change ownership,
+to the integer UID from the exact HTTP attestation; existing site/month/upload
+directories keep their ownership and modes. The HTTP probe must confirm it is
+writable before actors are created. The `upload_dir` filter exists only during
+seeding and is removed in `finally` before ability calls. Attachment paths,
+URLs/GUIDs, reference checks and post/file absence assertions remain real.
+Cleanup checks ownership, deletes only tracked unchanged files, and uses
+nonrecursive `rmdir`; foreign entries, symlinks or ownership changes fail closed.
 
 An exclusive `destructive-<token>` artifact directory contains `stage.log`,
 `preflight.json`, and uniquely named `<enabled|disabled>-<boundary>.json` reports
@@ -77,14 +105,17 @@ before WordPress bootstrap, records each successful/failed case, and retains a
 partial summary on fatal shutdown. Do not overwrite or relabel failed attempts.
 Boot failures retain CLI identity, HTTP status, public REST error and response
 digest before credentials; successful HTTP attestation additionally records
-server SAPI/UID, config digest and OPcache revalidation settings. Deletion
+server SAPI/UID and config digest. Deletion
 diagnostics retain actual HTTP unlink-path ownership/writability and fresh CLI
-file existence/content evidence. These diagnostics do not retry failed boots,
-alter file permissions, or waive any persisted-state or file-deletion assertion.
-The stage restores exact prior config bytes/permissions and removes only
-token-marked owned MU files on EXIT, without replacing the parent's cleanup
-trap. A foreign edit fails closed, retains the private backup, and reports the
-restoration error; an earlier probe failure remains the exit status.
+file existence/content evidence. No persisted-state or file-deletion assertion
+is waived. On EXIT, the stage restores exact prior config bytes/mode/UID/GID and
+removes the owned mutation loaders, then requires HTTP to converge to the
+captured original runtime before removing the read-only probe and retiring the
+private backup/lock. It preserves the parent's cleanup trap. Restoration failure
+is independently nonzero and retains the private backup and necessary owned
+read-only evidence; an earlier failure remains the exit status. The fixes target
+the proven `4edeb17` stale-config and root-owned-upload failures; the historical
+`6a47b52` first-enabled boot failure remains undiagnosed.
 
 The temporary individual fixture exposes the real `/wp-json/wstm118/tools`
 catalog. The runner reuses `metadata-transport.php` for actual advertised names,

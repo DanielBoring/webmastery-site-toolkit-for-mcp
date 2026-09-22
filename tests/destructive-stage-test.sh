@@ -21,6 +21,9 @@ compose() {
 		*"destructive-safety-preflight.php "*)
 			[[ "${FAIL_STAGE:-}" != preflight ]] || return 42
 			;;
+		*"destructive-safety-stage.php prepare "*)
+			[[ "${FAIL_STAGE:-}" != prepare ]] || return 49
+			;;
 		*"destructive-safety-stage.php enabled "*)
 			[[ "${FAIL_STAGE:-}" != configure ]] || return 43
 			;;
@@ -55,7 +58,8 @@ for mode in contract e2e all; do
 	[[ "$(grep -c 'destructive-safety-stage.php restore ' "$TRACE")" == 1 ]]
 	audit_line="$(grep -n 'destructive-safety-preflight.php ' "$TRACE" | cut -d: -f1)"
 	config_line="$(grep -n 'destructive-safety-stage.php enabled ' "$TRACE" | cut -d: -f1)"
-	[[ "$audit_line" -lt "$config_line" ]]
+	prepare_line="$(grep -n 'destructive-safety-stage.php prepare ' "$TRACE" | cut -d: -f1)"
+	[[ "$audit_line" -lt "$prepare_line" && "$prepare_line" -lt "$config_line" ]]
 	for trash in 30 0; do
 		for boundary in direct ability http individual; do
 			if [[ "$mode" == contract && "$boundary" =~ ^(http|individual)$ ]] || [[ "$mode" == e2e && "$boundary" =~ ^(direct|ability)$ ]]; then continue; fi
@@ -63,8 +67,8 @@ for mode in contract e2e all; do
 		done
 	done
 done
-for failure in acquire preflight configure runner; do
-	case "$failure" in acquire) expected=41 ;; preflight) expected=42 ;; configure) expected=43 ;; runner) expected=44 ;; esac
+for failure in acquire preflight prepare configure runner; do
+	case "$failure" in acquire) expected=41 ;; preflight) expected=42 ;; prepare) expected=49 ;; configure) expected=43 ;; runner) expected=44 ;; esac
 	FAIL_STAGE="$failure" run_stage all "$expected"
 	if [[ "$failure" == acquire ]]; then
 		if grep -q 'destructive-safety-stage.php restore ' "$TRACE"; then exit 1; fi
@@ -72,6 +76,9 @@ for failure in acquire preflight configure runner; do
 		grep -q 'destructive-safety-stage.php restore ' "$TRACE"
 	fi
 	if [[ "$failure" == runner ]]; then [[ "$(grep -c 'destructive-safety-runner.php$' "$TRACE")" == 8 ]]; fi
+	if [[ "$failure" != runner ]]; then
+		if grep -q 'destructive-safety-runner.php$' "$TRACE"; then exit 1; fi
+	fi
 done
 FAIL_STAGE=runner FAIL_RESTORE=1 run_stage all 44
 grep -F 'original_status=44 restoration_status=47' "$WORK/latest.log"

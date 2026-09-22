@@ -24,6 +24,8 @@ if [[ "${SKIP_PLUGIN_CHECK:-0}" == "1" ]]; then
 	exit 0
 fi
 
+: "${COMPOSE_PROJECT_NAME:?Package runtime requires an explicitly owned disposable Compose project}"
+[[ "$COMPOSE_PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || { echo "Invalid disposable Compose project name." >&2; exit 1; }
 PLUGIN_CHECK_VERSION="${PLUGIN_CHECK_VERSION:-$(php scripts/compatibility-baselines.php plugin_check)}"
 if [[ "$PLUGIN_CHECK_VERSION" != "latest" && ! "$PLUGIN_CHECK_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	echo "Invalid PLUGIN_CHECK_VERSION." >&2

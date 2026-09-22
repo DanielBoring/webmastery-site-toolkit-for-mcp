@@ -69,6 +69,8 @@ jobs:
           bash scripts/test-release-publish-prerequisites.sh
 
       - name: Run Release Package QA
+        env:
+          COMPOSE_PROJECT_NAME: wstm-package-qa-${{ github.run_id }}-${{ github.run_attempt }}
         run: bash scripts/release-qa.sh
 
       - name: Upload destructive safety package evidence

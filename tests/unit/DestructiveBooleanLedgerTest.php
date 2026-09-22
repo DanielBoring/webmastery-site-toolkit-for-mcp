@@ -5,33 +5,53 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 final class DestructiveBooleanLedgerTest extends TestCase {
+	private static function fingerprint( array $cases, bool $without_oracles = false ): string {
+		$copy = json_decode( json_encode( $cases, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION ), false, 512, JSON_THROW_ON_ERROR );
+		if ( $without_oracles ) {
+			foreach ( $copy as $case ) {
+				unset( $case->expect_error_code, $case->expect_error_reason );
+			}
+		}
+		return hash( 'sha256', json_encode( $copy, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION ) );
+	}
+
 	public function test_approved_oracle_delta_preserves_all_typed_inputs_and_other_cases(): void {
 		$directory = dirname( __DIR__ ) . '/e2e/';
 		$ledger = json_decode( file_get_contents( $directory . 'destructive-safety-boolean-ledger.json' ), true, 512, JSON_THROW_ON_ERROR );
-		$manifest = json_decode( file_get_contents( $directory . 'abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
+		$manifest = json_decode( file_get_contents( $directory . 'abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
 		self::assertCount( 563, $manifest );
 		self::assertCount( 16, $ledger['cases'] );
 		$unchanged = $manifest;
 		foreach ( $ledger['cases'] as $change ) {
 			$case = $manifest[ $change['index'] ];
-			self::assertSame( $change['label'], $case['label'] );
-			self::assertSame( $change['value'], $case['input'][ $change['flag'] ] );
-			self::assertSame( 'editor', $case['role'] );
-			self::assertSame( 'failure', $case['expect'] );
-			self::assertSame( 'canonical', $case['expect_error_shape'] );
-			self::assertTrue( $case['assert_unchanged'] );
+			self::assertSame( $change['label'], $case->label );
+			self::assertSame( $change['value'], $case->input->{$change['flag']} );
+			self::assertSame( 'editor', $case->role );
+			self::assertSame( 'failure', $case->expect );
+			self::assertSame( 'canonical', $case->expect_error_shape );
+			self::assertTrue( $case->assert_unchanged );
 			foreach ( $change['after'] as $field => $value ) {
-				self::assertSame( $value, $case[ $field ] );
+				self::assertSame( $value, $case->$field );
 			}
 			unset( $unchanged[ $change['index'] ] );
 		}
 		self::assertCount( 547, $unchanged );
-		self::assertSame( $ledger['unchanged_cases_sha256'], hash( 'sha256', json_encode( $unchanged ) ) );
-		foreach ( $manifest as &$case ) {
-			unset( $case['expect_error_code'], $case['expect_error_reason'] );
-		}
-		unset( $case );
-		self::assertSame( $ledger['all_non_oracle_fields_sha256'], hash( 'sha256', json_encode( $manifest ) ) );
+		self::assertSame( $ledger['unchanged_cases_sha256'], self::fingerprint( $unchanged ) );
+		self::assertSame( $ledger['all_non_oracle_fields_sha256'], self::fingerprint( $manifest, true ) );
+	}
+
+	public function test_fingerprints_distinguish_objects_arrays_and_integer_float_inputs(): void {
+		$manifest = json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		$before = self::fingerprint( $manifest, true );
+		$case = json_decode( '{"input":{"ids":[42],"value":{}}}', false, 512, JSON_THROW_ON_ERROR );
+		$manifest[0] = $case;
+		$typed = self::fingerprint( $manifest, true );
+		self::assertNotSame( $before, $typed );
+		$case->input->ids[0] = 42.0;
+		self::assertNotSame( $typed, self::fingerprint( $manifest, true ) );
+		$case->input->ids[0] = 42;
+		$case->input->value = array();
+		self::assertNotSame( $typed, self::fingerprint( $manifest, true ) );
 	}
 
 	public function test_runtime_matrix_changes_only_the_calibrated_non_direct_values(): void {

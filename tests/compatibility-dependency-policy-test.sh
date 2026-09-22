@@ -58,6 +58,7 @@ assert_cron_isolated() {
 }
 
 # Exercise main's ordering without Docker, network, or filesystem mutations.
+export COMPOSE_PROJECT_NAME=compatibility-bootstrap-fixture
 rm() { :; }
 mkdir() { :; }
 start_compose() { :; }

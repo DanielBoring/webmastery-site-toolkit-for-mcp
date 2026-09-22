@@ -38,11 +38,27 @@ final class DestructiveLifecycleTest extends TestCase {
 		return new Wstm116_Lifecycle( $this->root, $this->plugin, $this->lock, $token ?? $this->token );
 	}
 
+	private function original_runtime(): array {
+		return array( 'trash_days' => 17, 'disposable_defined' => false, 'disposable' => null, 'stage_defined' => false, 'stage_owner' => null );
+	}
+
+	private function verify( array $identity, array $expected ): array {
+		return array( 'identity' => $identity + array( 'uid' => 33 ), 'runtime' => $expected, 'php' => '8.2.33', 'sapi' => 'apache2handler' );
+	}
+
+	private function prepare( Wstm116_Lifecycle $stage ): void {
+		$stage->prepare( $this->original_runtime() );
+		$stage->attest( 'original', $this->original_runtime(), Closure::fromCallable( array( $this, 'verify' ) ) );
+	}
+
 	public function test_actual_boots_and_exact_restoration(): void {
 		$prior_mode = fileperms( $this->root . '/wp-config.php' ) & 0777;
+		$prior_uid = fileowner( $this->root . '/wp-config.php' );
+		$prior_gid = filegroup( $this->root . '/wp-config.php' );
 		$stage = $this->lifecycle();
 		$stage->acquire();
 		self::assertSame( $this->original, file_get_contents( $this->root . '/wp-config.php' ) );
+		$this->prepare( $stage );
 		foreach ( array( 'enabled' => 30, 'disabled' => 0 ) as $mode => $days ) {
 			$stage->configure( $mode );
 			$process = proc_open( array( PHP_BINARY, '-r', 'require $argv[1]; echo json_encode([EMPTY_TRASH_DAYS,WSTM116_DISPOSABLE_RUNTIME,WSTM116_STAGE_TOKEN]);', $this->root . '/wp-config.php' ), array( array( 'pipe', 'r' ), array( 'pipe', 'w' ), array( 'pipe', 'w' ) ), $pipes );
@@ -57,14 +73,22 @@ final class DestructiveLifecycleTest extends TestCase {
 		}
 		$stage->restore();
 		self::assertSame( $this->original, file_get_contents( $this->root . '/wp-config.php' ) );
+		self::assertFileExists( $this->lock . '/state.json' );
+		self::assertFileDoesNotExist( $this->root . '/wp-content/mu-plugins/wstm116-individual.php' );
+		self::assertFileDoesNotExist( $this->root . '/wp-content/mu-plugins/wstm116-http.php' );
+		self::assertCount( 1, glob( $this->root . '/wp-content/mu-plugins/*' ) );
+		$boot = $stage->attest( 'original', $this->original_runtime(), Closure::fromCallable( array( $this, 'verify' ) ) );
+		$stage->finalize_restore( $boot );
 		self::assertSame( array(), glob( $this->root . '/wp-content/mu-plugins/*' ) );
 		self::assertDirectoryDoesNotExist( $this->lock );
 		clearstatcache();
 		self::assertSame( $prior_mode, fileperms( $this->root . '/wp-config.php' ) & 0777 );
+		self::assertSame( $prior_uid, fileowner( $this->root . '/wp-config.php' ) );
+		self::assertSame( $prior_gid, filegroup( $this->root . '/wp-config.php' ) );
 	}
 
 	public static function collision_types(): array {
-		return array( array( 'lock' ), array( 'fixture' ), array( 'configuration' ) );
+		return array( array( 'lock' ), array( 'fixture' ), array( 'configuration' ), array( 'probe' ) );
 	}
 
 	/** @dataProvider collision_types */
@@ -73,6 +97,8 @@ final class DestructiveLifecycleTest extends TestCase {
 			mkdir( $this->lock );
 		} elseif ( 'fixture' === $type ) {
 			file_put_contents( $this->root . '/wp-content/mu-plugins/wstm116-http.php', 'unowned' );
+		} elseif ( 'probe' === $type ) {
+			file_put_contents( $this->root . '/wp-content/mu-plugins/wstm116-probe-foreign.php', 'unowned' );
 		} else {
 			file_put_contents( $this->root . '/wp-config.php', '<?php define("EMPTY_TRASH_DAYS", getenv("UNSAFE"));' );
 		}
@@ -100,6 +126,7 @@ final class DestructiveLifecycleTest extends TestCase {
 	public function test_restoration_failure_retains_backup_and_unowned_bytes( string $path ): void {
 		$stage = $this->lifecycle();
 		$stage->acquire();
+		$this->prepare( $stage );
 		$stage->configure( 'enabled' );
 		$owned = file_get_contents( $this->root . $path );
 		file_put_contents( $this->root . $path, 'external edit' );
@@ -110,16 +137,95 @@ final class DestructiveLifecycleTest extends TestCase {
 			self::assertStringContainsString( 'backup retained', $error->getMessage() );
 			self::assertSame( 'external edit', file_get_contents( $this->root . $path ) );
 			self::assertFileExists( $this->lock . '/state.json' );
+			self::assertFileDoesNotExist( $this->root . '/wp-content/mu-plugins/wstm116-individual.php' );
+			if ( '/wp-config.php' === $path ) {
+				self::assertFileDoesNotExist( $this->root . '/wp-content/mu-plugins/wstm116-http.php' );
+			}
 		}
 		file_put_contents( $this->root . $path, $owned );
 		$stage->restore();
+		$stage->finalize_restore( $stage->attest( 'original', $this->original_runtime(), Closure::fromCallable( array( $this, 'verify' ) ) ) );
 		self::assertSame( $this->original, file_get_contents( $this->root . '/wp-config.php' ) );
+	}
+
+	public function test_configuration_cannot_precede_original_http_attestation(): void {
+		$stage = $this->lifecycle();
+		$stage->acquire();
+		$stage->prepare( $this->original_runtime() );
+		try {
+			$stage->configure( 'enabled' );
+			self::fail( 'Configured before HTTP attestation.' );
+		} catch ( RuntimeException $error ) {
+			self::assertStringContainsString( 'must be attested', $error->getMessage() );
+			self::assertSame( $this->original, file_get_contents( $this->root . '/wp-config.php' ) );
+			self::assertFileDoesNotExist( $this->root . '/wp-content/mu-plugins/wstm116-individual.php' );
+		}
+	}
+
+	public function test_failed_restoration_convergence_retains_only_probe_and_backup(): void {
+		$stage = $this->lifecycle();
+		$stage->acquire();
+		$this->prepare( $stage );
+		$stage->configure( 'disabled' );
+		$stage->restore();
+		$stale = $this->verify( $stage->identity(), wstm116_stage_configuration( $this->token, 0 ) );
+		try {
+			$stage->finalize_restore( $stale );
+			self::fail( 'Stale HTTP accepted as restored.' );
+		} catch ( RuntimeException $error ) {
+			self::assertStringContainsString( 'backup retained', $error->getMessage() );
+			self::assertFileExists( $this->lock . '/state.json' );
+			self::assertSame( $this->original, file_get_contents( $this->root . '/wp-config.php' ) );
+			self::assertCount( 1, glob( $this->root . '/wp-content/mu-plugins/*' ) );
+			self::assertFileDoesNotExist( $this->root . '/wp-content/mu-plugins/wstm116-http.php' );
+			self::assertFileDoesNotExist( $this->root . '/wp-content/mu-plugins/wstm116-individual.php' );
+		}
+	}
+
+	public function test_private_retirement_collision_keeps_backup_and_readonly_probe(): void {
+		$stage = $this->lifecycle();
+		$stage->acquire();
+		$this->prepare( $stage );
+		$stage->configure( 'enabled' );
+		$stage->restore();
+		$boot = $stage->attest( 'original', $this->original_runtime(), Closure::fromCallable( array( $this, 'verify' ) ) );
+		file_put_contents( $this->lock . '/foreign', 'leave me' );
+		try {
+			$stage->finalize_restore( $boot );
+			self::fail( 'Foreign private entry accepted.' );
+		} catch ( RuntimeException $error ) {
+			self::assertStringContainsString( 'backup and probe retained', $error->getMessage() );
+			self::assertFileExists( $this->lock . '/state.json' );
+			self::assertCount( 1, glob( $this->root . '/wp-content/mu-plugins/*' ) );
+			self::assertSame( 'leave me', file_get_contents( $this->lock . '/foreign' ) );
+		}
+	}
+
+	public function test_mutation_loaders_remain_independently_strict_optin_gated(): void {
+		$stage = $this->lifecycle();
+		$stage->acquire();
+		$this->prepare( $stage );
+		$stage->configure( 'enabled' );
+		foreach ( array( '', "define('WSTM116_DISPOSABLE_RUNTIME', false);", "define('WSTM116_DISPOSABLE_RUNTIME', 'true');", "define('WSTM116_DISPOSABLE_RUNTIME', 1);",
+			"define('WSTM116_DISPOSABLE_RUNTIME', true);", "define('WSTM116_DISPOSABLE_RUNTIME', true); define('WSTM116_STAGE_TOKEN', 'foreign');" ) as $definition ) {
+			$source = $definition . 'require $argv[1]; require $argv[2]; echo function_exists("wstm118_probe") ? "unsafe" : "denied-before-fixture";';
+			$process = proc_open( array( PHP_BINARY, '-r', $source, $this->root . '/wp-content/mu-plugins/wstm116-http.php', $this->root . '/wp-content/mu-plugins/wstm116-individual.php' ),
+				array( array( 'pipe', 'r' ), array( 'pipe', 'w' ), array( 'pipe', 'w' ) ), $pipes );
+			fclose( $pipes[0] );
+			$output = stream_get_contents( $pipes[1] );
+			$error = stream_get_contents( $pipes[2] );
+			fclose( $pipes[1] );
+			fclose( $pipes[2] );
+			self::assertSame( 0, proc_close( $process ), $error );
+			self::assertSame( 'denied-before-fixture', $output );
+		}
 	}
 
 	public function test_restore_after_acquire_without_configuration(): void {
 		$stage = $this->lifecycle();
 		$stage->acquire();
 		$stage->restore();
+		$stage->finalize_restore( null );
 		self::assertSame( $this->original, file_get_contents( $this->root . '/wp-config.php' ) );
 	}
 

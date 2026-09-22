@@ -5,8 +5,9 @@
   "package_run": 35666138916,
   "manifest_count": 563,
   "unchanged_cases": 547,
-  "unchanged_cases_sha256": "fc9d7bb5d647420053112d37d21dec4b16c3446e832f3641e20594b39ee034c1",
-  "all_non_oracle_fields_sha256": "f5e2f312e85f84ba3ee67a8d0975b4f0f55d275e9426e5b67351969e0707ea2f",
+  "fingerprint_encoding": "PHP json_decode associative=false; retain original array keys and property order; json_encode JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION; SHA-256. Goldens regenerated from source_sha, not the corrected working manifest.",
+  "unchanged_cases_sha256": "ec2873ed7f4ee32e2d4f8486d58e09aa998b9ee4eda928cbcc6b8860eaaba0de",
+  "all_non_oracle_fields_sha256": "2c10a9826b0c613499685252ca3544ed333c76733b07737009eb06fbd8eb01a9",
   "before": {"expect_error_code":"invalid_input","expect_error_reason":"ability_invalid_input"},
   "core_sources": {
     "7.1.1": {"rest-api.php":"9c4af1341e37de253323cf7c28da1424f41decc2154904e2b71a4e71c9cdd70c","class-wp-ability.php":"0c0aa1db27f284cb9942865e6fbed0610178439430e2ac9a9f6a7dd209df049e"},

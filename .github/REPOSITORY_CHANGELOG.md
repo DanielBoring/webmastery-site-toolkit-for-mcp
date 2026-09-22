@@ -6,6 +6,10 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Require an explicit disposable Compose project before runtime startup or cleanup, and wire unique job/run/attempt names into package CI and pre-publication QA. Add zero-Docker missing-name checks, unchanged offline-only validation and same-project startup/teardown regressions; leave publication policy and immutable artifacts unchanged.
+
+- Bound destructive-test HTTP cache readiness to five journaled read-only requests and verify original HTTP configuration before retiring private restoration evidence. Seed media only in a new token-owned upload directory assigned to the attested HTTP UID, with scoped filters and nonrecursive guarded cleanup. Preserve production and runtime oracles; strengthen historical manifest fingerprints to retain object/array and integer/float distinctions.
+
 ### Added
 
 - Added destructive-operation red/green unit coverage and strict manifest policy for confirmation, raw bulk bounds, previews, canonical per-item failures, unchanged state, and preserved permission denials. Migrated existing bulk/error/trash/taxonomy callers without dropping their assertions.

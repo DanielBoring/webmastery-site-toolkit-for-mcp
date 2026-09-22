@@ -96,6 +96,19 @@ expect_failure() {
 	FAILURE_STATUS="$status"
 }
 
+(
+	unset COMPOSE_PROJECT_NAME
+	: > "$TRACE"
+	expect_failure 'Package runtime requires an explicitly owned disposable Compose project' bash scripts/release-qa.sh
+	test ! -s "$TRACE"
+	expect_failure 'Runtime QA requires an explicitly owned disposable Compose project' bash scripts/e2e-test.sh all
+	test ! -s "$TRACE"
+	SKIP_PLUGIN_CHECK=1 CI=false GITHUB_ACTIONS=false bash scripts/release-qa.sh > "$WORK/offline.log" 2>&1
+	grep -F 'runtime QA NOT RUN' "$WORK/offline.log"
+	test ! -s "$TRACE"
+)
+COMPOSE_PROJECT_NAME='invalid name' expect_failure 'Invalid disposable Compose project name.' bash scripts/release-qa.sh
+test ! -s "$TRACE"
 bash scripts/release-qa.sh > "$WORK/success.log" 2>&1
 [[ "$(sha256sum "$RELEASE_ZIP")" == "$IDENTITY" ]]
 for runner in ability-runner media-download-runner scheduling-runner trash-safety-runner mcp-crud-runner site-kit-mcp-runner parent-assignment-runner post-meta-authorization-runner error-contract-runner metadata-batch-runner seo-metadata-runner destructive-safety-runner; do
@@ -122,6 +135,9 @@ grep -F 'plugin install plugin-check --version=2.1.0' "$TRACE"
 grep -F 'plugin install plugin-check --activate --force' "$TRACE"
 grep -F 'Unchanged release archive:' "$WORK/success.log"
 [[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]]
+for operation in ' up -d' ' exec ' ' cp ' ' down -v --remove-orphans'; do
+	grep -F "compose --project-name release-runtime-fixture -f docker-compose.yml -f docker-compose.release.yml${operation}" "$TRACE" >/dev/null
+done
 test -f e2e-artifacts/plugin-check-latest-verdict.json
 php scripts/release-tools.php runtime-package build/release-check/webmastery-site-toolkit-for-mcp "$RELEASE_ZIP"
 

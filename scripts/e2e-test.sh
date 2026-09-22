@@ -375,6 +375,7 @@ run_destructive_safety_qa() (
 	compose exec -T -e WSTM116_STAGE_DISPOSABLE=1 -e WSTM116_SOURCE_SHA="$source_sha" wordpress php \
 		"${CONTAINER_PLUGIN_ROOT}/tests/e2e/destructive-safety-preflight.php" "$container_directory/preflight.json" \
 		2>&1 | tee -a "$directory/stage.log" || exit $?
+	stage_command prepare 2>&1 | tee -a "$directory/stage.log" || exit $?
 	if [[ "$QA_MODE" == contract || "$QA_MODE" == all ]]; then boundaries+=( direct ability ); fi
 	if [[ "$QA_MODE" == e2e || "$QA_MODE" == all ]]; then boundaries+=( http individual ); fi
 	[[ "${#boundaries[@]}" != 0 ]] || exit 1
@@ -429,6 +430,8 @@ main() {
 			;;
 	esac
 
+	: "${COMPOSE_PROJECT_NAME:?Runtime QA requires an explicitly owned disposable Compose project}"
+	[[ "$COMPOSE_PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || { echo "Invalid disposable Compose project name." >&2; exit 1; }
 	if [ -n "${E2E_PACKAGE_ROOT:-}${E2E_PACKAGE_ZIP:-}" ]; then
 		: "${E2E_PACKAGE_ROOT:?Package runtime requires E2E_PACKAGE_ROOT}"
 		: "${E2E_PACKAGE_ZIP:?Package runtime requires E2E_PACKAGE_ZIP}"
