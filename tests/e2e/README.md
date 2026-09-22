@@ -257,8 +257,14 @@ permission failure, and unchanged action counts.
 
 ## Untrusted-content coverage (3.0 Unreleased, #108)
 
-The manifest adds exactly 200 marker assertions to 190 reviewed cases. The
-test-only inventory in `tests/unit/fixtures/untrusted-manifest-inventory.json`
+The current manifest has exactly 195 marker assertions on 185 stored-content
+cases. Five compact post/page/CPT trash responses contain only `id` and
+`status:"trash"`; their complete `data` maps are asserted exactly, with no
+phantom stored fields or marker. Standalone metadata deletion still marks
+`meta_key`.
+
+The historical 190-case/200-marker test-only inventory in
+`tests/unit/fixtures/untrusted-manifest-inventory.json`
 was derived from reviewed marker source
 `2ef8c40b7d0ac3cc8b15a9292a4ec987b55854e6` and accepted baseline
 `2feed8d18d0721a4c7ca2e0187005c8cfae76322`, not regenerated from the working
@@ -266,7 +272,17 @@ manifest. Its pinned inventory checks exact case indices, labels, paths and
 ordered field lists before removing only those direct `assert_values`
 properties. It restores an absent `assert_values` only where the frozen
 baseline lacked it; arbitrary stored maps are never traversed.
-The resulting complete, ordered, typed 570-case manifest must retain SHA-256
+Before that historical projection, the separate
+`untrusted-compact-delete-calibration.json` ledger validates and reverses only
+the five exact strengthened cases (indices 69, 79, 202, 219, 509). It pins full
+typed before/after rows to source `18a8716e469778819b1c92a3d6720df19c1d029b`,
+accepted `2feed8d`, and the genuine compact responses from package run
+`35680977162`. Every role, input, permission, state and metadata assertion is
+preserved; any other change to those five rows fails. All other 565 rows remain
+unchanged. Historical marker validation still checks all original 190 cases
+and 200 paths, using explicit full-row historical handling only for those five.
+
+The resulting complete, ordered, typed 570-case baseline must retain SHA-256
 `da4395a6a9d6532c10423e25d02c710c2ed150d226dfa87a988b5594ede8fa4a`.
 Only then do the unchanged historical 547-case, 16-error-correction and
 seven-privacy-row checks run. Object/array and integer/float distinctions,

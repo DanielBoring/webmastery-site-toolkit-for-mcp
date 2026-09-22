@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\Assert;
 
+require_once __DIR__ . '/untrusted-compact-delete-calibration.php';
+
 final class Wstm108_Manifest_Projection {
 	public const BASELINE_SHA256 = 'da4395a6a9d6532c10423e25d02c710c2ed150d226dfa87a988b5594ede8fa4a';
 	private const INVENTORY_SHA256 = '01ba6e13c4ecd6f1bb6d2323c158898f501ca2b6d0b9adffe2cfa478d556c9da';
@@ -25,6 +27,9 @@ final class Wstm108_Manifest_Projection {
 
 	public static function project( array $manifest ): array {
 		$inventory = self::inventory();
+		$calibration = Wstm108_Compact_Delete_Calibration::ledger();
+		$manifest = Wstm108_Compact_Delete_Calibration::restore_historical_cases( $manifest, $calibration );
+		$historical_deletes = array_column( $calibration->cases, null, 'index' );
 		Assert::assertCount( 570, $manifest );
 		Assert::assertSame( range( 0, 569 ), array_keys( $manifest ) );
 		$copy = json_decode( json_encode( $manifest, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION ), false, 512, JSON_THROW_ON_ERROR );
@@ -38,7 +43,13 @@ final class Wstm108_Manifest_Projection {
 			$policy = (array) $case;
 			$policy['input'] = (array) $case->input;
 			$policy['assert_values'] = (array) $case->assert_values;
-			Assert::assertSame( (array) $entry->markers, self::required_markers( $policy ) );
+			$required = self::required_markers( $policy );
+			if ( isset( $historical_deletes[ $entry->index ] ) ) {
+				$historical = $historical_deletes[ $entry->index ];
+				Assert::assertSame( $historical->before_sha256, self::fingerprint( $case ) );
+				$required = array( 'data.untrusted_fields' => $historical->before->assert_values->{'data.untrusted_fields'} );
+			}
+			Assert::assertSame( (array) $entry->markers, $required );
 			foreach ( $entry->markers as $path => $fields ) {
 				Assert::assertTrue( property_exists( $case->assert_values, $path ), 'Missing approved marker: ' . $path );
 				Assert::assertSame( $fields, $case->assert_values->$path, 'Changed approved marker: ' . $path );
@@ -63,7 +74,7 @@ final class Wstm108_Manifest_Projection {
 		$slug = substr( $case['ability'], strlen( 'webmastery-site-toolkit-for-mcp/' ) );
 		$post = array( 'title', 'content', 'excerpt', 'slug', 'url', 'author_name' );
 		$revision = array( 'author_name', 'title', 'content', 'excerpt' );
-		if ( preg_match( '/^(get|create|update|delete)-(post|page|cpt-.+)$/', $slug ) || in_array( $slug, array( 'set-featured-image', 'remove-featured-image' ), true ) ) {
+		if ( preg_match( '/^(get|create|update)-(post|page|cpt-.+)$/', $slug ) || in_array( $slug, array( 'set-featured-image', 'remove-featured-image' ), true ) ) {
 			return array( 'data.untrusted_fields' => $post );
 		}
 		if ( preg_match( '/^list-(posts|pages|cpt-.+)$/', $slug ) && 0 !== ( $case['assert_values']['data.total'] ?? null ) ) {

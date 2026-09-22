@@ -299,6 +299,38 @@ final class UntrustedContentTest extends TestCase {
 		$this->assert_marked( self::expected_revision(), array( 'author_name', 'title', 'content', 'excerpt' ), $data['revisions'][0] );
 	}
 
+	public static function compact_delete_cases(): array {
+		return array(
+			'book' => array( 'mcp_book', 'mcp-book', 'id' ),
+			'case study' => array( 'mcp_case_study', 'mcp-case-study', 'id' ),
+			'post' => array( 'post', null, 'post_id' ),
+			'page' => array( 'page', null, 'page_id' ),
+			'owned contributor draft' => array( 'post', null, 'post_id' ),
+		);
+	}
+
+	/** @dataProvider compact_delete_cases */
+	public function test_actual_compact_delete_callbacks_never_claim_absent_stored_fields( string $type, ?string $base, string $id_key ): void {
+		if ( null === $base ) {
+			Posts::register();
+			$name = 'delete-' . $type;
+		} else {
+			$object = (object) array(
+				'name' => $type, 'label' => $type, 'labels' => (object) array( 'singular_name' => $type ),
+				'hierarchical' => false, 'cap' => (object) array(),
+			);
+			self::invoke( CustomPostTypes::class, 'register_custom_post_type', array( $object, $base ) );
+			$name = 'delete-cpt-' . $base;
+		}
+		$post = self::post( $type );
+		$expected = clone $post;
+		$expected->post_status = 'trash';
+		$data = $this->execute( $name, array( $id_key => 42 ) );
+		self::assertSame( array( 'id' => 42, 'status' => 'trash' ), $data );
+		self::assertSame( array( 42 ), $GLOBALS['wstm108']['trashed'] );
+		self::assertEquals( $expected, $post );
+	}
+
 	public function test_registered_user_callbacks_preserve_capability_dependent_record_shapes(): void {
 		Users::register();
 		self::user();

@@ -347,6 +347,10 @@ apply. Markers never restore omitted/redacted fields.
 | SEO/readability score record | `title`, `url`, `score` |
 | Sitemap containing record / robots record | Sitemap: `url`, `entries`; robots: `url` |
 
+Compact post/page/CPT trash results remain exactly `{"id":123,"status":"trash"}`:
+they contain no stored text and do not acquire a marker or extra content fields.
+This does not apply to `delete-post-meta`, which returns and marks `meta_key`.
+
 Container values such as `attrs`, `meta`, `metadata`, `raw_meta`, and `entries`
 are marked on their containing record; their nested maps are untouched.
 Standalone metadata updates likewise leave nested stored maps in

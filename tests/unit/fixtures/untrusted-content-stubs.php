@@ -149,6 +149,12 @@ function wp_update_post( $args, $error ) {
 	return $args['ID'];
 }
 
+function wp_trash_post( $id ) {
+	$GLOBALS['wstm108']['trashed'][] = $id;
+	$GLOBALS['wstm_test_posts'][ $id ]->post_status = 'trash';
+	return $GLOBALS['wstm_test_posts'][ $id ];
+}
+
 function wp_get_post_revisions( $id, $args ) {
 	return array( get_post( 43 ) );
 }

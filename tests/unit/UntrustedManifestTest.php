@@ -32,7 +32,7 @@ final class UntrustedManifestTest extends TestCase {
 	}
 
 	public function test_existing_success_cases_require_record_markers_without_replacing_their_data_assertions(): void {
-		self::assertSame( array( 'cases' => 190, 'assertions' => 200 ), self::validate( self::cases() ) );
+		self::assertSame( array( 'cases' => 185, 'assertions' => 195 ), self::validate( self::cases() ) );
 	}
 
 	public static function mutations(): array {
