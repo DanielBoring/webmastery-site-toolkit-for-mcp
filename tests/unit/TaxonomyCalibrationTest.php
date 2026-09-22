@@ -155,6 +155,8 @@ final class TaxonomyCalibrationTest extends TestCase {
 	public static function source_mutants(): array {
 		return array(
 			'drop original eight' => array( "array( 'original' => \$input, 'minimal' => \$minimal )", "array( 'minimal' => \$minimal )" ),
+			'drop minimal counterparts' => array( "array( 'original' => \$input, 'minimal' => \$minimal )", "array( 'original' => \$input )" ),
+			'reverse pair order' => array( "array( 'original' => \$input, 'minimal' => \$minimal )", "array( 'minimal' => \$minimal, 'original' => \$input )" ),
 			'retarget minimal integer ID' => array( "unset( \$minimal['name'] );", "unset( \$minimal['name'] ); \$minimal[ \"{\$slug}_id\" ] = 987654320;" ),
 			'coerce original ID' => array( "\$input = array( \"{\$slug}_id\" => \$id, 'name' => 'Must not write' );", "\$input = array( \"{\$slug}_id\" => (string) \$id, 'name' => 'Must not write' );" ),
 			'remove confirmation' => array( "unset( \$minimal['name'] );", "unset( \$minimal['name'], \$minimal['confirm'] );" ),
