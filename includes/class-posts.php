@@ -476,14 +476,39 @@ class Webmastery_MCP_Posts {
 					'description' => $description,
 					'items'       => [ 'type' => 'integer' ],
 					'minItems'    => 1,
+					'maxItems'    => 100,
 				],
+				'confirm' => [ 'type' => 'boolean', 'enum' => [ true ], 'description' => 'Must be exactly true, including for a dry run.' ],
+				'dry_run' => [ 'type' => 'boolean', 'default' => false, 'description' => 'Check eligibility without writing; successes describe posts that would be changed.' ],
 			],
-			'required'   => [ 'ids' ],
+			'required'   => [ 'ids', 'confirm' ],
 		];
 	}
 
-	private static function bulk_post_summary( $ids, $successes, $failures ) {
-		return [
+	private static function bulk_input_error( $input ) {
+		if ( true !== ( $input['confirm'] ?? null ) ) {
+			return Webmastery_MCP_Response::legacy_error( 'missing_confirmation', 'Set confirm to true to acknowledge this operation, including a dry run.' );
+		}
+		if ( array_key_exists( 'dry_run', $input ) && ! is_bool( $input['dry_run'] ) ) {
+			return Webmastery_MCP_Response::legacy_error( 'invalid_input', 'dry_run must be a boolean.' );
+		}
+		if ( ! isset( $input['ids'] ) || ! is_array( $input['ids'] ) || ! $input['ids'] ) {
+			return Webmastery_MCP_Response::legacy_error( 'invalid_input', 'ids must be a non-empty array of integers.' );
+		}
+		// Bound the raw request before normalization or duplicate removal.
+		if ( count( $input['ids'] ) > 100 ) {
+			return Webmastery_MCP_Response::legacy_error( 'too_many_ids', 'A bulk operation accepts at most 100 IDs.', [ 'limit' => 100 ] );
+		}
+		foreach ( $input['ids'] as $id ) {
+			if ( ! is_int( $id ) ) {
+				return Webmastery_MCP_Response::legacy_error( 'invalid_input', 'ids must contain only integers.' );
+			}
+		}
+		return null;
+	}
+
+	private static function bulk_post_summary( $ids, $successes, $failures, $dry_run ) {
+		$result = [
 			'success' => true,
 			'data'    => [
 				'requested'     => count( $ids ),
@@ -493,16 +518,25 @@ class Webmastery_MCP_Posts {
 				'failures'      => $failures,
 			],
 		];
+		if ( $dry_run ) {
+			$result['data']['dry_run'] = true;
+		}
+		return $result;
 	}
 
 	private static function register_bulk_trash_posts() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/bulk-trash-posts', [
 			'label'               => 'Bulk Trash Posts',
-			'description'         => 'Move multiple WordPress posts to trash and return per-post successes and failures. Refuses to delete when site trash is disabled.',
+			'description'         => 'Move up to 100 WordPress post IDs to trash with confirm:true. Use dry_run:true to check eligibility without writes. Duplicate IDs are processed once. Refuses to delete when site trash is disabled.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => self::bulk_post_ids_schema( 'Post IDs to move to trash.' ),
 			'execute_callback'    => function ( $input ) {
-				$ids       = array_map( 'absint', (array) ( $input['ids'] ?? [] ) );
+				$error = self::bulk_input_error( $input );
+				if ( null !== $error ) {
+					return $error;
+				}
+				$ids       = array_values( array_unique( array_map( 'absint', $input['ids'] ) ) );
+				$dry_run   = $input['dry_run'] ?? false;
 				$successes = [];
 				$failures  = [];
 
@@ -524,8 +558,7 @@ class Webmastery_MCP_Posts {
 						continue;
 					}
 
-					$result = wp_trash_post( $id );
-					if ( ! $result ) {
+					if ( 'trash' === $post->post_status || ( ! $dry_run && ! wp_trash_post( $id ) ) ) {
 						$failures[] = Webmastery_MCP_Response::item_error( $id, 'trash_failed', 'Failed to trash post.' );
 						continue;
 					}
@@ -536,7 +569,7 @@ class Webmastery_MCP_Posts {
 					];
 				}
 
-				return self::bulk_post_summary( $ids, $successes, $failures );
+				return self::bulk_post_summary( $ids, $successes, $failures, $dry_run );
 			},
 			'permission_callback' => self::permission( 'delete_posts' ),
 			'meta'                => [
@@ -549,11 +582,16 @@ class Webmastery_MCP_Posts {
 	private static function register_bulk_publish_posts() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/bulk-publish-posts', [
 			'label'               => 'Bulk Publish Posts',
-			'description'         => 'Publish multiple draft WordPress posts and return per-post successes and failures.',
+			'description'         => 'Publish up to 100 draft WordPress post IDs with confirm:true. Use dry_run:true to check eligibility without writes. Duplicate IDs are processed once.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => self::bulk_post_ids_schema( 'Draft post IDs to publish.' ),
 			'execute_callback'    => function ( $input ) {
-				$ids       = array_map( 'absint', (array) ( $input['ids'] ?? [] ) );
+				$error = self::bulk_input_error( $input );
+				if ( null !== $error ) {
+					return $error;
+				}
+				$ids       = array_values( array_unique( array_map( 'absint', $input['ids'] ) ) );
+				$dry_run   = $input['dry_run'] ?? false;
 				$successes = [];
 				$failures  = [];
 
@@ -579,19 +617,21 @@ class Webmastery_MCP_Posts {
 						continue;
 					}
 
-					$result = wp_update_post(
-						wp_slash(
-							[
-								'ID'          => $id,
-								'post_status' => 'publish',
-							]
-						),
-						true
-					);
+					if ( ! $dry_run ) {
+						$result = wp_update_post(
+							wp_slash(
+								[
+									'ID'          => $id,
+									'post_status' => 'publish',
+								]
+							),
+							true
+						);
 
-					if ( is_wp_error( $result ) ) {
-						$failures[] = Webmastery_MCP_Response::item_error( $id, 'update_failed', 'Failed to publish post.' );
-						continue;
+						if ( is_wp_error( $result ) || ! $result ) {
+							$failures[] = Webmastery_MCP_Response::item_error( $id, 'update_failed', 'Failed to publish post.' );
+							continue;
+						}
 					}
 
 					$successes[] = [
@@ -600,11 +640,11 @@ class Webmastery_MCP_Posts {
 					];
 				}
 
-				return self::bulk_post_summary( $ids, $successes, $failures );
+				return self::bulk_post_summary( $ids, $successes, $failures, $dry_run );
 			},
 			'permission_callback' => self::permission( 'publish_posts' ),
 			'meta'                => [
-				'annotations' => [ 'readonly' => false, 'destructive' => false, 'idempotent' => false ],
+				'annotations' => [ 'readonly' => false, 'destructive' => true, 'idempotent' => false ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
 			],
 		] );

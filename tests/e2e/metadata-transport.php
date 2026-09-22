@@ -11,6 +11,7 @@ final class Wstm110_Metadata_Transport {
 	private array $tools = array();
 	private int $request_id = 0;
 	public array $last_response = array();
+	public string $last_response_body = '';
 	public array $last_events = array();
 
 	public function catalog(): array {
@@ -55,6 +56,7 @@ final class Wstm110_Metadata_Transport {
 
 	public function execute( string $ability, array $input, string $observation_token = '' ): array {
 		$this->last_response = array();
+		$this->last_response_body = '';
 		$this->last_events = array();
 		$arguments = $this->individual ? (object) $input : array( 'ability_name' => $ability, 'parameters' => (object) $input );
 		$response = $this->rpc( 'tools/call', array( 'name' => $this->tool_name( $ability ), 'arguments' => $arguments ), $observation_token );
@@ -83,6 +85,7 @@ final class Wstm110_Metadata_Transport {
 	}
 
 	private function rpc( string $method, array $params, string $token = '' ): array {
+		$this->last_response_body = '';
 		$headers = array( 'Content-Type' => 'application/json', 'Authorization' => 'Basic ' . base64_encode( $this->credential['login'] . ':' . $this->credential['password'] ) );
 		if ( '' !== $this->session ) {
 			$headers['Mcp-Session-Id'] = $this->session;
@@ -98,6 +101,7 @@ final class Wstm110_Metadata_Transport {
 		if ( is_wp_error( $response ) ) {
 			throw new RuntimeException( 'Metadata HTTP request failed: ' . $response->get_error_message() );
 		}
+		$this->last_response_body = wp_remote_retrieve_body( $response );
 		$status = wp_remote_retrieve_response_code( $response );
 		if ( $status < 200 || $status >= 300 ) {
 			throw new RuntimeException( 'Metadata HTTP status ' . $status );
@@ -112,7 +116,7 @@ final class Wstm110_Metadata_Transport {
 			}
 			$this->last_events = json_decode( $decoded, true, 512, JSON_THROW_ON_ERROR );
 		}
-		$text = wp_remote_retrieve_body( $response );
+		$text = $this->last_response_body;
 		$payload = '' === $text ? array() : json_decode( $text, true, 512, JSON_THROW_ON_ERROR );
 		if ( isset( $payload['error'] ) ) {
 			throw new RuntimeException( 'Metadata HTTP JSON-RPC failure: ' . wp_json_encode( $payload['error'] ) );

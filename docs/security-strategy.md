@@ -25,6 +25,12 @@ Primary risks for this plugin:
 
 ## Agent threat model
 
+### Administrator diagnostic minimization (3.0 development)
+
+Administrator access does not imply that database identifiers should be sent to a model provider. Database health reports omit the configured prefix and custom/plugin table names by default, exposing only core logical labels and response-local opaque custom labels. Core classification uses WordPress's physical mapping rather than suffix guessing, without expanding the current-prefix query scope. Raw identifiers require explicit boolean `include_table_names: true` and effective `manage_options` even for direct callbacks. This opt-in deliberately discloses environment fingerprints; clients should confirm that disclosure is needed rather than enabling it automatically. It never enables passwords, raw SQL errors, or filesystem paths. Opaque labels are not stable cross-response identities, and unchanged counts/sizes remain diagnostic information, not complete anonymization.
+
+### Untrusted site content
+
 Stored site content can contain prompt injection: text that asks an agent to disregard its task, change site data, or send information elsewhere. Treat post, page, custom post type, and revision bodies, titles, excerpts, and author display names as untrusted data. The same applies to block markup and attributes, comment bodies and author fields (including email and URL), media titles/captions/alt text, authorized SEO metadata and keywords, user profile fields, and user-chosen application-password `app_name` values. These fields can originate with another user or an attacker. A `message` field is not necessarily trusted instructions. In unreleased 3.0, opaque generated Yoast head HTML/JSON is not fetched or returned; the untrusted-content work does not restore it.
 
 SEO Analyze Post uses exactly `Focus keyword found in title.` and `Focus keyword not found in title.` for those two diagnostics. Authorized stored values remain in `data.metrics.yoast_focus_keyword` and `data.metrics.seopress_focus_keywords`, alongside the title and existing authorized-provider precedence. This data/message separation shipped independently of the unreleased 3.0 field markers. The markers do not strip, escape, or otherwise rewrite existing values, change authorization, or guarantee prompt-injection prevention.
@@ -39,7 +45,7 @@ Client and operator controls should work together:
 - Use a dedicated account with only the capabilities needed for the task. Contributor or Author can be sufficient for work on editable own posts; use Editor only when broader editorial access is needed, and keep Administrator credentials out of routine content sessions.
 - Keep trustworthy backups and a tested recovery procedure outside the agent's control before destructive work. Do not assume trash, revisions, or a diagnostic backup-status response guarantees recovery.
 
-Input sanitization and stripped HTML address different risks; plain text can still contain instructions. Unreleased 3.0 field markers, annotation hints, and the confirmation interlocks still under development in #116 are defense-in-depth, not a security boundary, capability check, content filter, or prompt-injection guarantee. A model-supplied `confirm: true` would not prove human approval, and a `dry_run` would not authorize a later write. Do not assume universal `confirm`/`dry_run` inputs. Optional text-only `content_format` output is not implemented.
+Input sanitization and stripped HTML address different risks; plain text can still contain instructions. Unreleased 3.0 field markers, annotation hints, and confirmation interlocks are defense-in-depth, not a security boundary, capability check, content filter, or prompt-injection guarantee. A model-supplied `confirm: true` does not prove human approval, and a `dry_run` does not authorize a later write. The interlocks apply only to the five documented destructive/bulk abilities below, not universally to writes. Optional text-only `content_format` output is not implemented.
 
 ### Untrusted-field contract (3.0 Unreleased)
 
@@ -98,6 +104,32 @@ Only public checks and homepage reachability are stored in a shared 60-second Wo
 Regression evidence separates deterministic namespaced HTTP/DNS/plugin-boundary fixtures from real WordPress capability/transient contract checks and real MCP HTTP transport QA. The security validator requires successful Subscriber and Author cases with both omission paths, denial coverage, and explicit contract HTTP counts.
 
 ## Trash safety
+
+### Destructive-operation interlocks
+
+The 3.0 development schemas require `confirm:true` on permanent media, category,
+and tag deletion and both bulk post operations. Callbacks independently require
+strict true, including previews; false/missing/non-boolean confirmation cannot
+write. Bulk `dry_run` and media `force` accept only booleans. Core schema
+validation may precede callback errors; permission denial must be proven with
+otherwise valid input rather than conflated with schema rejection.
+
+Bound raw bulk arrays to 100 before normalization/deduplication. Preview the same
+per-ID type, capability, status, and disabled-trash eligibility without calling
+mutation APIs. Report would-act successes, canonical item failures, and
+`data.dry_run:true`; an all-failed processed batch remains `success:true`. A
+preview cannot reserve state or predict subsequent third-party write hooks.
+
+Media deletion requires actual `delete_post` on the attachment before scanning
+the shared orphan-media helper's featured-image metadata and literal content
+URL/GUID references. Only a known positive hit may be overridden with
+`force:true`; query failures fail closed, even when forced, with safe canonical
+diagnostics. Preserve the orphan-list reference semantics. `in_use:false` is
+not a guarantee: custom/serialized storage, derivative URLs, external users,
+and concurrent references are outside this limited scan. These inputs are
+interlocks, not capability grants or guaranteed human authorization.
+
+### Disabled trash
 
 Post, page, generated CPT, and bulk post trash abilities must refuse before calling `wp_trash_post()` when `EMPTY_TRASH_DAYS` is falsy: core otherwise falls back to permanent deletion. Validate existence/type and object-delete permission first; retain existing errors and use `trash_disabled` only for authorized, existing items. Bulk operations keep per-ID failures and existing totals, not a new global-error contract. This safety fix adds no force/permanent-delete route.
 

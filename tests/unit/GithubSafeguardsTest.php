@@ -71,7 +71,7 @@ final class GithubSafeguardsTest extends TestCase {
 		$root = dirname(__DIR__, 2);
 		$composer = json_decode(file_get_contents($root . '/composer.json'), true, 512, JSON_THROW_ON_ERROR);
 		self::assertSame(
-			array('@test:phpstan-baseline', '@test:release-safeguards', 'bash tests/compatibility-download-test.sh', 'bash tests/compatibility-dependency-policy-test.sh'),
+			array('@test:phpstan-baseline', '@test:release-safeguards', 'bash tests/destructive-stage-test.sh', 'bash tests/compatibility-download-test.sh', 'bash tests/compatibility-dependency-policy-test.sh'),
 			$composer['scripts']['test:ci-safeguards']
 		);
 		self::assertSame('php scripts/test-phpstan-baseline.php', $composer['scripts']['test:phpstan-baseline']);

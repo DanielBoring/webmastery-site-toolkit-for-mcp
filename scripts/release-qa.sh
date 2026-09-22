@@ -7,6 +7,16 @@ if [[ ( "${CI:-}" == "true" || "${GITHUB_ACTIONS:-}" == "true" ) && "${SKIP_PLUG
 	echo "Plugin Check cannot be bypassed in CI." >&2
 	exit 1
 fi
+# shellcheck source=scripts/destructive-retention.sh
+source scripts/destructive-retention.sh
+if [[ "${SKIP_PLUGIN_CHECK:-0}" != "1" ]]; then
+	: "${COMPOSE_PROJECT_NAME:?Package runtime requires an explicitly owned disposable Compose project}"
+	[[ "$COMPOSE_PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || { echo "Invalid disposable Compose project name." >&2; exit 1; }
+	wstm116_require_no_retention
+else
+	# Offline validation must not overwrite another invocation's retained package.
+	wstm116_require_no_retention
+fi
 ZIP_FILE="${RELEASE_ZIP:-}"
 if [[ -z "$ZIP_FILE" ]]; then
 	ZIP_FILE="$(bash scripts/build-release.sh "$VERSION")"
@@ -40,9 +50,15 @@ export E2E_KEEP_COMPOSE=1
 # shellcheck source=scripts/qa-compose.sh
 source scripts/qa-compose.sh
 cleanup_release() {
-	local status=$?
-	compose down -v --remove-orphans || exit $?
-	exit "$status"
+	local status=$? cleanup=0
+	if ! wstm116_require_no_retention; then
+		if [[ "$status" != 0 ]]; then exit "$status"; fi
+		exit 1
+	fi
+	compose down -v --remove-orphans || cleanup=$?
+	printf 'Package cleanup: original_status=%s cleanup_status=%s\n' "$status" "$cleanup"
+	if [[ "$status" != 0 ]]; then exit "$status"; fi
+	exit "$cleanup"
 }
 trap cleanup_release EXIT
 bash scripts/e2e-test.sh all

@@ -11,19 +11,11 @@ class Webmastery_MCP_Site_Info {
 	}
 
 	public static function permission() {
-		if ( ! current_user_can( 'read' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
-		}
-
-		return true;
+		return Webmastery_MCP_Permissions::check( 'read' );
 	}
 
 	public static function admin_permission() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
-		}
-
-		return true;
+		return Webmastery_MCP_Permissions::check( 'manage_options' );
 	}
 
 	public static function get_site_info() {

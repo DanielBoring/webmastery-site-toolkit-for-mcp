@@ -128,7 +128,7 @@ class Webmastery_MCP_Content_Hygiene {
 		];
 	}
 
-	private static function is_attachment_referenced( $attachment ) {
+	public static function is_attachment_referenced( $attachment ) {
 		global $wpdb;
 
 		$attachment = get_post( $attachment );
@@ -144,7 +144,7 @@ class Webmastery_MCP_Content_Hygiene {
 				(string) $attachment->ID
 			)
 		);
-		if ( '' !== $wpdb->last_error ) {
+		if ( null === $thumbnail_count || '' !== $wpdb->last_error ) {
 			return self::database_error( 'attachment thumbnail references' );
 		}
 
@@ -169,7 +169,7 @@ class Webmastery_MCP_Content_Hygiene {
 					'%' . $wpdb->esc_like( $reference ) . '%'
 				)
 			);
-			if ( '' !== $wpdb->last_error ) {
+			if ( null === $content_count || '' !== $wpdb->last_error ) {
 				return self::database_error( 'attachment content references' );
 			}
 

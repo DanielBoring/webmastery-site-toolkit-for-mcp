@@ -264,9 +264,9 @@ $before  = wstm109_snapshot( $own );
 $other   = wstm109_snapshot( $foreign );
 $wrong   = wstm109_snapshot( $wrong_type );
 $events  = count( $wstm109_events );
-wstm109_denied( 'bulk denied role', 'bulk-trash-posts', [ 'ids' => $ids ], $subscriber, 'forbidden' );
+wstm109_denied( 'bulk denied role', 'bulk-trash-posts', [ 'ids' => $ids, 'confirm' => true ], $subscriber, 'forbidden' );
 wstm109_unchanged( 'bulk denied role', $own, $before, $events );
-$result = wstm109_execute( 'bulk-trash-posts', [ 'ids' => $ids ], $author );
+$result = wstm109_execute( 'bulk-trash-posts', [ 'ids' => $ids, 'confirm' => true ], $author );
 $data   = $result['data'] ?? [];
 $codes  = array_column( $data['failures'] ?? [], 'reason', 'id' );
 foreach ( $data['failures'] ?? [] as $failure ) {

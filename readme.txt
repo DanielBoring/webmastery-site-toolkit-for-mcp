@@ -57,6 +57,8 @@ The stable tag remains 2.6.0. Development failures now use success:false and an 
 
 Migration matrix and examples: https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/3.0-migration.md
 
+Permanent media/category/tag deletion and both bulk post operations now require the exact JSON boolean confirm:true, including bulk previews. Bulk requests accept at most 100 raw IDs and process duplicates once; dry_run:true reports would-act successes without mutation. These explicitly documented changes add a preview marker and media in_use boolean to successful responses.
+
 = Which AI clients and MCP hosts work with this? =
 
 Any MCP client that can reach your site through the MCP Adapter works. This includes Claude (Desktop and Code), ChatGPT, GitHub Copilot, Gemini CLI, Windsurf, and Codex. Most local clients connect through the `@automattic/mcp-wordpress-remote` bridge.
@@ -106,6 +108,10 @@ Public results, including failures and unknowns, are cached for 60 seconds per s
 = Are write operations safe? =
 
 Write operations go through WordPress APIs and capability checks. Posts, pages, and custom post type items move to trash rather than being permanently deleted. Media deletion is permanent. Block and partial-content patching can use hashes so stale or ambiguous edits fail safely.
+
+On the unreleased 3.0 development branch, permanent media/term deletion and both bulk operations require confirm:true. Bulk dry_run:true performs the same eligibility checks without writes, including when trash is disabled, and adds data.dry_run:true. Strings and numbers cannot substitute for boolean safety flags. Batch success does not mean every item succeeded; inspect successes and failures.
+
+Media deletion checks known featured-image and literal content URL/GUID references; a hit requires force:true. Permission and reference-query failures still deny forced deletion. The successful in_use flag describes known references, not universal non-use: external sites, custom storage, transformed URLs, and concurrent edits can be missed. These interlocks neither grant capabilities nor prove human approval; clients still need independent authorization for the exact action and IDs.
 
 Publishing, scheduling, or marking content private requires the relevant WordPress publish capability. User login/email fields and author login names are not exposed to lower-privilege list responses.
 
@@ -212,7 +218,7 @@ Both abilities require manage_options. The security audit's ssl finding checks t
 
 Debug-log findings omit filesystem paths. Enabled logging warns that access is unverified, even when a neighboring .htaccess file exists or the location is outside wp-content; neither proves that web access is denied. Disabled logging still passes. Necessary logging need not be disabled merely because it is enabled.
 
-Database query failures return a contextual database_health_query_failed error without raw SQL/server error details, leaving WordPress's own logging unchanged. Successful table-size reports still return prefixed table names, including matching plugin tables. These Administrator-only diagnostics are not fully redacted.
+Database query failures retain the contextual database_health_query_failed reason without raw SQL/server error details, leaving WordPress's own logging unchanged. In 3.0 development, table-size reports use core logical names (such as posts) and response-local opaque custom labels (such as custom_table_1), with an is_core_table boolean. The default reveals neither the configured prefix nor custom/plugin names. Labels are not stable across reports. Explicit include_table_names: true deliberately sends raw table identifiers to the model provider; it still requires manage_options. Only actual booleans are accepted, including in direct execution. Both modes retain counts, bytes, ordering, and current-prefix scope and never return passwords, SQL errors, or filesystem paths.
 
 = How do I report a security vulnerability? =
 
@@ -225,11 +231,14 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 = Unreleased =
 
 * Add 3.0 development untrusted_fields arrays to affected successful records, preserving existing values/types/markup, capability checks and privacy omissions. These data markers are not prompt-injection prevention.
+* Require exact confirmation for permanent media/term deletion and both bulk post operations; bound raw bulk requests to 100 IDs and add non-mutating eligibility previews.
+* Guard media deletion with shared known-reference checks; require explicit force for known usage, fail closed on scan errors, and report in_use on success without changing capabilities.
 * Reject combined metadata and SEO inputs in post/page/custom-post-type create and update before any mutation; migrate to draft creation, separate authorized key writes, then publication.
 * Authorize separate SEO reads per real object/key, omit denied fields, filter score pagination, remove opaque generated head output, and bound overview to authorized observations from a 100-post sample.
 * Prepare a breaking 3.0 error contract with canonical categories, precise reasons, safe messages, and object details.
 * Signal owned MCP failures consistently; error normalization preserves successful payloads and non-atomic bulk summaries and leaves foreign tools unchanged.
 * Keep the 2.6.0 stable tag and release notes intact while development migration work continues.
+* Redact database table identifiers by default for 3.0; add exact core classification and an explicit Administrator-only boolean opt-in for raw names, preserving diagnostic metrics and query scope.
 
 = 2.6.0 =
 

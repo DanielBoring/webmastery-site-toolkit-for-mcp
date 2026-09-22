@@ -112,7 +112,7 @@ function wstm117_run_taxonomy_tests() {
 							$input[ "{$slug}_id" ] = $id;
 						}
 						if ( 'delete' === $action ) {
-							$input = array( "{$slug}_id" => $id );
+							$input = array( "{$slug}_id" => $id, 'confirm' => true );
 						}
 						if ( $remap ) {
 							get_taxonomy( $taxonomy )->cap->edit_terms = 'wstm117_edit';
@@ -195,6 +195,9 @@ function wstm117_run_taxonomy_tests() {
 					foreach ( array( 'missing' => 987654321, 'wrong taxonomy' => $wrong_id ) as $scenario => $id ) {
 						foreach ( array( 'wrapped', 'direct' ) as $path ) {
 							$input = array( "{$slug}_id" => $id, 'name' => 'Must not write' );
+							if ( 'delete' === $action ) {
+								$input['confirm'] = true;
+							}
 							$before = wstm117_term_snapshot();
 							$result = 'wrapped' === $path ? $ability->execute( $input ) : $execute( $input );
 							$expected = ( 'category' === $taxonomy ? 'Category' : 'Tag' ) . ' not found.';
@@ -217,7 +220,7 @@ function wstm117_run_taxonomy_tests() {
 		$raw = wp_delete_term( $id, 'category' );
 		$record( 'core default category returns integer zero and meta-cap denies', 0 === $raw && ! current_user_can( 'delete_term', $id ) && $before === wstm117_term_snapshot(), array( 'raw_result' => $raw, 'mapped_caps' => map_meta_cap( 'delete_term', $editor->ID, $id ) ) );
 		foreach ( array( 'wrapped', 'direct' ) as $path ) {
-			$result = 'wrapped' === $path ? $ability->execute( array( 'category_id' => $id ) ) : $execute( array( 'category_id' => $id ) );
+			$result = 'wrapped' === $path ? $ability->execute( array( 'category_id' => $id, 'confirm' => true ) ) : $execute( array( 'category_id' => $id, 'confirm' => true ) );
 			$record( "default category explicit failure {$path}", ! $success( $result ) && '' !== $error( $result ) && $before === wstm117_term_snapshot() && get_term( $id, 'category' ) instanceof WP_Term, array( 'result' => is_wp_error( $result ) ? $error( $result ) : $result, 'persisted_unchanged' => $before === wstm117_term_snapshot() ) );
 		}
 		// A final site policy may override core's denial; the real zero return must still fail.
@@ -226,7 +229,7 @@ function wstm117_run_taxonomy_tests() {
 		};
 		add_filter( 'map_meta_cap', $allow_default, 10, 4 );
 		try {
-			$result = $ability->execute( array( 'category_id' => $id ) );
+			$result = $ability->execute( array( 'category_id' => $id, 'confirm' => true ) );
 			$record( 'default category zero remains failure after final meta-cap override', ! $success( $result ) && '' !== $error( $result ) && $before === wstm117_term_snapshot(), $result );
 		} finally {
 			remove_filter( 'map_meta_cap', $allow_default );

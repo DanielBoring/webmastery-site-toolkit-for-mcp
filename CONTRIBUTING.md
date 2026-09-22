@@ -48,6 +48,7 @@ This plugin follows [WordPress Coding Standards](https://developer.wordpress.org
 - **Security-sensitive abilities** — include allowed and denied manifest cases for abilities that expose private data, user identity, environment/plugin details, destructive actions, uploads, or status transitions; use `assert_missing_paths` when lower-privilege responses must hide fields
 - **Metadata boundaries** — reject metadata containers and reserved SEO aliases in general create/update before mutation, including empty/null values. Use real-object effective key capabilities for separate writes and SEO reads; prove denied calls have no writes/hooks or forbidden reads across direct, ability, gateway, and individual-tool execution. Preserve plain-content and draft/write/publish migration controls; see `docs/3.0-migration.md`.
 - **Untrusted result fields (3.0 Unreleased)** — add unique record-local `untrusted_fields` names only for present fields, including null/empty values. Preserve original values/types/HTML/block markup and container maps; never restore redacted values or put markers in canonical errors or diagnostic error subrecords. Keep SEO head output unavailable and all #110/#118 authorization/error evidence intact. See the field table in `README.md` and disposable-runtime requirements in `tests/e2e/README.md`.
+- **Destructive interlocks** — retain exact boolean confirmation for the five guarded abilities, raw bulk bounds before normalization, and strict optional flags. Prove previews/denials leave posts, metadata, terms, files, cron, and mutation hooks unchanged; distinguish permission-callback rejection from direct/per-item denial. Media force must never bypass capability or reference-query failure. Preserve existing caller assertions when adding confirmation.
 - **Delegated permissions** — require a local WordPress capability floor plus the exact upstream route permission in both permission and direct execution paths. Test missing/non-callable upstream checks, and distinguish controlled fixtures from version-specific real-provider inspection; see the Site Kit policy in `docs/security-strategy.md`.
 - **Prefer WordPress APIs** — use WordPress API functions (`get_posts()`, `wp_insert_post()`, etc.) for normal reads and writes. Direct `$wpdb` reads are limited to administrator-only diagnostics such as database health checks, must be prepared where variables are present, and must surface query errors.
 - **No output buffering** — abilities return arrays or `WP_Error` objects; the MCP Adapter handles serialization
@@ -65,6 +66,8 @@ composer qa
 PHPStan runs at level 5 with a reviewed, file/message/identifier/count-scoped baseline and a PHP 8.0 analysis target. New diagnostics must be fixed rather than added to the baseline. When fixing existing debt, lower the matching count or remove the resolved entry in the same PR; unmatched entries fail full-project analysis. Run `composer phpstan` without individual-file arguments and `composer test:phpstan-baseline` to verify the ratchet. See the [baseline review and regeneration policy](docs/qa-strategy.md#phpstan-level-5-and-baseline-ratchet).
 
 Workflow and shell changes also need the dedicated workflow lint checks. These tools are separate from the PHP-only `composer qa` path. Docker validation must use a disposable, uniquely named Compose project; do not run cleanup commands against a shared development stack.
+
+Destructive safety orchestration must retain eight serial boundary/trash-mode invocations, an actual native registration audit before test-only MU capabilities, matching real CLI/HTTP configuration, exclusive evidence reservation before credentials, and token-owned exact restoration on every exit. Keep failed journals and original failure status; do not replace real source/floor/original-package proof with mocked orchestration. See `tests/e2e/README.md`.
 
 `composer lint:workflows` requires actionlint 1.7.12, ShellCheck 0.11.0, and zizmor 1.30.1 on `PATH`. Install the pinned upstream releases and verify their checksums as shown in `.github/workflows/workflow-lint.yml`; the command rejects missing or mismatched versions.
 
@@ -140,6 +143,26 @@ pending. Both gateway and individual result data must retain field markers.
 Markers, hints, and the #116 confirmation interlocks still in development
 are defense-in-depth, not capability checks, content filters, a security
 boundary, or prompt-injection prevention. Text-only output is not implemented.
+
+### Shared capability checks (partial #119, row 2)
+
+`includes/class-permissions.php` provides `Webmastery_MCP_Permissions::check( string $cap )` for an immediate `true` or trusted local `WP_Error`, `cap( string $cap )` for a deferred zero-argument permission closure, and `admin()` for the `manage_options` closure. Each invocation checks the current effective WordPress capability exactly once; factories never check capabilities during registration or cache a user's authorization. Denials retain `forbidden` and the exact `Requires {$cap} capability.` diagnostic through `Webmastery_MCP_Response::local_error()`. Callback input remains ignored.
+
+This extraction covers only the Health and Security registration closures, Site Info's public `permission()` / `admin_permission()` facades, and Webmaster Verification's public `permission()` facade. Keep those facades and the direct verification execution guard intact. Remaining permission closures and object-permission helpers in #119 are still outstanding; do not substitute a simple capability check for object, list, or delegated authorization.
+
+Related file map:
+
+| File | Responsibility |
+| --- | --- |
+| `includes/class-permissions.php` | Shared simple capability checks and deferred factories |
+| `webmastery-site-toolkit-for-mcp.php` | Loads the helper after Response, before ability registration |
+| `tests/unit/bootstrap.php` | Loads the production helper for unit tests |
+| `tests/unit/PermissionsCharacterizationTest.php` | Actual callback/facade characterization retained from before extraction |
+| `tests/unit/PermissionsTest.php` | Helper/factory behavior and mutation controls |
+| `tests/unit/PermissionsLoadingTest.php` | Actual plugin bootstrap and release package-map guards |
+| `tests/unit/fixtures/permissions-stubs.php`, `tests/unit/fixtures/wstm114-verification.php` | Load actual helper/ability source together within isolated WordPress namespaces |
+
+The existing recursive `includes/` release map includes the helper without a packaging allowlist change. This is behavior-preserving repository maintenance, not a new ability or a user-facing permission policy change.
 
 ---
 

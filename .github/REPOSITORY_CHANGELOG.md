@@ -6,10 +6,25 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Retain destructive-QA recovery evidence across stage, managed-source, package and workflow cleanup boundaries using an exclusive host owner/project/source guard. Block teardown and re-entry until actual restoration and explicit source-bound runner cleanup are proven; preserve original failures and keep private configuration out of artifacts. Validate attachment references before cleanup and retain files plus ownership proof after refusal/veto, with full outer-orchestration and actual cleanup-flow regressions.
+
+- Require an explicit disposable Compose project before runtime startup or cleanup, and wire unique job/run/attempt names into package CI and pre-publication QA. Add zero-Docker missing-name checks, unchanged offline-only validation and same-project startup/teardown regressions; leave publication policy and immutable artifacts unchanged.
+
+- Bound destructive-test HTTP cache readiness to five journaled read-only requests and verify original HTTP configuration before retiring private restoration evidence. Seed media only in a new token-owned upload directory assigned to the attested HTTP UID, with scoped filters and nonrecursive guarded cleanup. Preserve production and runtime oracles; strengthen historical manifest fingerprints to retain object/array and integer/float distinctions.
+- Preserve the original 563-case typed safety ledger across the accepted seven-case database privacy import: require all 570 rows, pin the imported rows and insertion order to their accepted source, and verify the original 547 unchanged cases plus 16 approved error corrections without regenerating baseline goldens.
+
 ### Added
 
+- Preserve the accepted 570-case typed destructive/privacy manifest through an immutable, source-pinned inventory of the 190 reviewed cases and 200 untrusted-field assertions. Validate exact marker locations and ordered field lists before shallow projection, retain historical safety goldens unchanged, and reject marker, input, role, type, ordering, no-write, error and imported-case mutations.
 - Made the opt-in untrusted-content proof reserve its summary and raw HTTP journal exclusively before WordPress bootstrap or credentials. Existing evidence and concurrent creators fail closed without overwrites; regression cases preserve preexisting bytes and partial reservations while retaining failed-response and cleanup evidence.
 - Documented the #108 unreleased 3.0 record-local marker contract, coverage and privacy table, agent threat model, and migration examples without changing 2.6.0 release notes. Aligned contributor/PR requirements for value-preservation, omission/error checks, and actual Adapter 0.6.1 annotation evidence. Documented the explicitly opted-in disposable runtime probes separately from pending HTTP/annotation proof.
+- Added destructive-operation red/green unit coverage and strict manifest policy for confirmation, raw bulk bounds, previews, canonical per-item failures, unchanged state, and preserved permission denials. Migrated existing bulk/error/trash/taxonomy callers without dropping their assertions.
+- Added opt-in disposable direct/registered/gateway/individual-tool proof runners with collision checks, persisted post/meta/term/file/cron snapshots, mutation observers, request-scoped database/capability faults, retained wire evidence, and owned-resource cleanup verification.
+- Wire destructive safety through eight serial boundary/trash-mode combinations in full source and original-package QA. Audit native registration and bootstrap denials before temporary MU fixtures; attest actual matching CLI/HTTP configuration, reserve evidence before credentials, and restore exact owned configuration/fixtures on failure. Add filesystem/mocked orchestration and package regressions plus always-retained CI reports; source/unit evidence does not establish real runtime acceptance.
+- Calibrate 16 destructive safety error expectations against real contract/package failures and unchanged official WordPress 6.9/6.9.4/7.1.1 schema/callback ordering, preserving all 563 typed inputs and no-write assertions. Retain original response bytes before associative decoding so bulk error details remain provably JSON objects; add negative array controls and bootstrap/filesystem diagnostics without bypassing failed attestation or file-deletion checks.
+- Add database diagnostic privacy regressions for strict boolean opt-in, query-free direct denials, custom-prefix/multisite physical mappings and suffix collisions, and complete metric/order parity. Keep prior SQL-error and security-audit coverage; add synthetic manifest controls and owned real-table/HTTP evidence with checked table and credential cleanup.
+- Wire database privacy proof through native and actual gateway/individual boundaries in contract, HTTP, and original-ZIP QA, with pre-bootstrap CLI/disposable guards, unique owned actors, separate retained artifacts, and package/bootstrap safeguard coverage.
+
 - Added guarded recovery of an original successful release-QA artifact through a separately authorized, annotated recovery-control tag, while preserving the original release tag/source/ZIP and the existing protected publish job. Read-only run/attempt/artifact provenance and authorization checks fail closed before and after approval; the control-tag object and complete original artifact identity/digest must remain unchanged, and control-tag pushes never build or publish a plugin release. Added recovery entrypoint, postapproval identity drift, immutable-artifact and missing-prerequisite regression coverage and a normal/recovery runbook.
 - Explicitly install and verify publish-host Subversion before release preflight and retain it for post-publication verification. Clarified the publish job and preapproval summaries as GitHub production approval, not WordPress.org staff review, without renaming or weakening the `wordpress-org` environment.
 
@@ -68,6 +83,9 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Changed
 
+- Extracted partial #119 row 2 simple capability checks into `Webmastery_MCP_Permissions` for Health, Security, Site Info, and Webmaster Verification only. Retained public facades, deferred current-user evaluation, trusted local denial diagnostics, direct verification authorization, and unchanged registration/execution contracts. Added pre/post-extraction callback characterization, helper mutation controls, bootstrap/package-map guards, and contributor guidance. Remaining permission closures and object helpers are still outstanding.
+- Isolated capability characterization fixtures under `Wstm119Permissions` / `wstm119_permissions` so they can load alongside the independent #119 plugin-inventory fixtures without function redeclarations or shared test state.
+
 - Partially addressed #119 by sharing the unchanged active-plugin-basename inventory between backup and performance diagnostics through `Webmastery_MCP_Plugins::active_basenames()`. Added isolated characterization of ordering, casts, malformed options, fresh reads, diagnostic responses, and permissions. SEO and Site Kit provider-readiness policies remain separate; other helper rows are not included.
 - Updated the verified MCP Adapter baseline to 0.6.1 and its matching SHA-256; distinguished current configuration from the historical 0.5.0 rollout evidence without changing WordPress or PHP support.
 - Raised PHPStan analysis from level 0 to level 5 with an explicitly PHP 8.0-targeted, generated/reviewed baseline of 35 existing diagnostics in 21 exact file/message/identifier/count entries. Enabled unmatched-ignore failures, documented incremental debt reduction, and added isolated regression guards for new errors, count growth, and stale-entry removal in static QA and both CI PHP safeguard lanes. Plugin behavior, schemas, dependencies, and runtime tests are unchanged.
@@ -104,6 +122,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 - Updated E2E ability manifest coverage counts and cases for bulk post operation abilities.
 - Updated release, E2E, PHPCS, Composer, and documentation automation references for the Webmastery Site Toolkit for MCP package rename.
 - Fixed the README top-navigation Security link to point to the renamed `## Security Best Practices` heading anchor (`#security-best-practices`).
+- Updated all 17 workflow checkout pins, including release recovery checkouts, to the verified `actions/checkout` v7.0.1 commit. Existing workflow events are compatible with its fork-PR checkout restriction; checkout inputs, disabled credential persistence, permissions, and release approval controls are unchanged.
 
 ## 1.6.0
 
