@@ -4,6 +4,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once dirname( __DIR__ ) . '/e2e/input-schema-lifecycle.php';
+require_once __DIR__ . '/fixtures/input-schema-journal-fake.php';
 
 final class InputSchemaLifecycleTest extends TestCase {
 	private string $base;
@@ -17,6 +18,7 @@ final class InputSchemaLifecycleTest extends TestCase {
 	private string $config;
 	private array $before;
 	private Wstm126_Lifecycle $lifecycle;
+	private InputSchemaJournalFake $journal;
 	private array $http_calls = array();
 
 	protected function setUp(): void {
@@ -25,6 +27,7 @@ final class InputSchemaLifecycleTest extends TestCase {
 		$this->plugin = $this->root . '/plugin';
 		$this->artifacts = $this->base . '/artifacts';
 		$this->lock = $this->base . '/private-lock';
+		$this->journal = new InputSchemaJournalFake( $this->lock );
 		$this->token = str_repeat( 'a', 32 );
 		$this->source = str_repeat( 'b', 40 );
 		foreach ( array( $this->root . '/wp-content/mu-plugins', $this->plugin . '/includes', $this->plugin . '/tests/e2e', $this->artifacts ) as $directory ) {
@@ -68,16 +71,16 @@ final class InputSchemaLifecycleTest extends TestCase {
 	}
 
 	private function instance( ?string $token = null, ?string $root = null, ?array $boundaries = null, ?callable $filesystem = null ): Wstm126_Lifecycle {
-		return new Wstm126_Lifecycle( $root ?? $this->root, $this->plugin, $this->lock, $token ?? $this->token, $this->source, 'fake-project', $this->artifacts, $boundaries ?? array( 'direct', 'http' ), $filesystem );
+		$journal = $this->journal;
+		$adapter = static function ( string $operation, string $path, ?int $mode, array $context ) use ( $journal, $filesystem ) {
+			$next = static fn() => $journal( $operation, $path, $mode, $context );
+			return null === $filesystem ? $next() : $filesystem( $operation, $path, $mode, array_merge( $context, array( 'native' => $next ) ) );
+		};
+		return new Wstm126_Lifecycle( $root ?? $this->root, $this->plugin, $this->lock, $token ?? $this->token, $this->source, 'fake-project', $this->artifacts, $boundaries ?? array( 'direct', 'http' ), $adapter );
 	}
 
-	private static function filesystem( string $operation, string $path, ?int $mode ) {
-		switch ( $operation ) {
-			case 'is_link': return is_link( $path );
-			case 'stat': return stat( $path );
-			case 'chmod': return chmod( $path, $mode );
-		}
-		throw new RuntimeException( 'Unknown test filesystem operation.' );
+	private static function filesystem( string $operation, string $path, ?int $mode, array $context ) {
+		return ( $context['native'] )();
 	}
 
 	private function config_metadata(): array {
@@ -161,6 +164,249 @@ final class InputSchemaLifecycleTest extends TestCase {
 		$this->lifecycle->acquire( $this->cli() );
 		$this->lifecycle->prepare( $this->cli(), $this->http() );
 		$this->lifecycle->restore( $this->cli(), $this->http() );
+	}
+
+	private function sealed_payload( array $node ): array {
+		$sealed = json_decode( $node['bytes'], true, 64, JSON_THROW_ON_ERROR );
+		$this->assertSame( hash_hmac( 'sha256', json_encode( $sealed['payload'], JSON_THROW_ON_ERROR ), $this->token ), $sealed['seal'] );
+		return $sealed['payload'];
+	}
+
+	private function memory_operation( string $operation, string $name, ?int $mode = null, array $context = array() ) {
+		return ( $this->journal )( $operation, $this->lock . '/' . $name, $mode, array_merge( $context, array(
+			'native' => static function () { self::fail( 'Managed journal operation escaped its memory overlay.' ); },
+		) ) );
+	}
+
+	public function test_memory_replacement_transfers_sealed_bytes_and_metadata_without_native_overwrite(): void {
+		$this->lifecycle->acquire( $this->cli() );
+		$this->assertCount( 1, $this->journal->replacements );
+		$replacement = $this->journal->replacements[0];
+		$state = $this->journal->node( $this->lock . '/state.json' );
+		$this->assertSame( 'success', $replacement['outcome'] );
+		$this->assertSame( $replacement['before']['source'], $state );
+		$this->assertNotSame( $replacement['before']['destination']['stat']['ino'], $state['stat']['ino'] );
+		$this->assertSame( 0600, $state['stat']['mode'] & 07777 );
+		$this->assertSame( fileowner( $this->lock ), $state['stat']['uid'] );
+		$this->assertSame( filegroup( $this->lock ), $state['stat']['gid'] );
+		$payload = $this->sealed_payload( $state );
+		$this->assertSame( 'acquired', $payload['phase'] );
+		$this->assertArrayNotHasKey( 'pending', $payload );
+		$this->assertNull( $this->journal->node( $this->lock . '/next.json' ) );
+		$this->assertFileDoesNotExist( $this->lock . '/state.json' );
+		$this->assertFileDoesNotExist( $this->lock . '/next.json' );
+		$this->assertTrue( $this->memory_operation( 'exists', 'state.json' ) );
+		$this->assertTrue( $this->memory_operation( 'is_file', 'state.json' ) );
+		$this->assertFalse( $this->memory_operation( 'is_link', 'state.json' ) );
+		$this->assertSame( $state['bytes'], $this->memory_operation( 'read', 'state.json' ) );
+		$this->assertSame( strlen( $state['bytes'] ), $this->memory_operation( 'size', 'state.json' ) );
+		$this->assertSame( $state['stat'], $this->memory_operation( 'stat', 'state.json' ) );
+		$this->assertSame( $state['stat'], $this->memory_operation( 'lstat', 'state.json' ) );
+		$this->assertTrue( $this->memory_operation( 'chmod', 'state.json', 0640 ) );
+		$this->assertSame( 0640, $this->memory_operation( 'stat', 'state.json' )['mode'] & 07777 );
+		$this->assertTrue( $this->memory_operation( 'chmod', 'state.json', 0600 ) );
+		$list = ( $this->journal )( 'list', $this->lock, null, array( 'native' => fn(): array => scandir( $this->lock ) ) );
+		$this->assertSame( array( '.', '..', 'boot-wire', 'invocations', 'state.json' ), $list );
+		$this->assertTrue( $this->memory_operation( 'remove', 'state.json' ) );
+		$this->assertFalse( $this->memory_operation( 'exists', 'state.json' ) );
+		$this->assertFalse( $this->memory_operation( 'is_file', 'state.json' ) );
+		$this->assertFalse( $this->memory_operation( 'size', 'state.json' ) );
+		$this->assertFalse( $this->memory_operation( 'stat', 'state.json' ) );
+		$this->assertFalse( $this->memory_operation( 'lstat', 'state.json' ) );
+		$this->assertFalse( $this->memory_operation( 'read', 'state.json' ) );
+		$this->assertFalse( $this->memory_operation( 'remove', 'state.json' ) );
+		$this->unchanged();
+	}
+
+	/** @dataProvider replacement_failures */
+	public function test_memory_acquire_failure_preserves_both_sealed_nodes_and_lock( string $outcome ): void {
+		$injected = new RuntimeException( 'Injected journal replacement exception.' );
+		$this->journal->decide_replacement( static function ( array $before ) use ( $outcome, $injected ): bool {
+			if ( 'throw' === $outcome ) {
+				throw $injected;
+			}
+			return false;
+		} );
+		try {
+			$this->lifecycle->acquire( $this->cli() );
+			$this->fail( 'Journal replacement failure was accepted.' );
+		} catch ( RuntimeException $error ) {
+			if ( 'throw' === $outcome ) {
+				$this->assertSame( $injected, $error );
+			} else {
+				$this->assertSame( 'Cannot persist owner journal transition.', $error->getMessage() );
+			}
+		}
+		$this->assertCount( 1, $this->journal->replacements );
+		$event = $this->journal->replacements[0];
+		$this->assertSame( 'throw' === $outcome ? 'thrown' : 'false', $event['outcome'] );
+		$this->assertSame( $event['before']['source'], $this->journal->node( $this->lock . '/next.json' ) );
+		$this->assertSame( $event['before']['destination'], $this->journal->node( $this->lock . '/state.json' ) );
+		$old = $this->sealed_payload( $event['before']['destination'] );
+		$next = $this->sealed_payload( $event['before']['source'] );
+		$this->assertSame( 'journal-directory', $old['pending'] );
+		$this->assertArrayNotHasKey( 'pending', $next );
+		$this->assertDirectoryExists( $this->lock );
+		$this->assertDirectoryExists( $this->lock . '/invocations' );
+		$this->assertDirectoryExists( $this->lock . '/boot-wire' );
+		$this->assertFileDoesNotExist( $this->probe() );
+		try {
+			$this->lifecycle->restore( $this->cli(), $this->http() );
+			$this->fail( 'Uncertain acquisition was guessed recoverable.' );
+		} catch ( RuntimeException $error ) {
+			$this->assertStringContainsString( 'Uncertain partial creation', $error->getMessage() );
+		}
+		$this->assertCount( 1, $this->journal->replacements );
+		$this->unchanged();
+	}
+
+	public static function replacement_failures(): array {
+		return array( array( 'false' ), array( 'throw' ) );
+	}
+
+	public function test_memory_finalize_proof_save_failure_retains_state_next_all_wire_probe_and_lock(): void {
+		$this->restored();
+		$this->reports();
+		$matched = 0;
+		$wire = array();
+		$probe = file_get_contents( $this->probe() );
+		$this->journal->decide_replacement( function ( array $before ) use ( &$matched, &$wire ): bool {
+			$source = json_decode( $before['source']['bytes'], true, 64, JSON_THROW_ON_ERROR )['payload'];
+			$destination = json_decode( $before['destination']['bytes'], true, 64, JSON_THROW_ON_ERROR )['payload'];
+			if ( isset( $source['proofs'] ) && ! isset( $destination['proofs'] ) ) {
+				$matched++;
+				foreach ( glob( $this->lock . '/boot-wire/*.bin' ) as $path ) {
+					$wire[ $path ] = file_get_contents( $path );
+				}
+				return false;
+			}
+			return true;
+		} );
+		try {
+			$this->lifecycle->finalize( $this->cli(), $this->http(), $this->validator(), $this->hashes() );
+			$this->fail( 'Failed proof-state save allowed finalization.' );
+		} catch ( RuntimeException $error ) {
+			$this->assertSame( 'Cannot persist owner journal transition.', $error->getMessage() );
+		}
+		$this->assertSame( 1, $matched );
+		$event = $this->journal->replacements[ count( $this->journal->replacements ) - 1 ];
+		$this->assertSame( 'false', $event['outcome'] );
+		$this->assertSame( $event['before']['source'], $this->journal->node( $this->lock . '/next.json' ) );
+		$this->assertSame( $event['before']['destination'], $this->journal->node( $this->lock . '/state.json' ) );
+		$old = $this->sealed_payload( $event['before']['destination'] );
+		$next = $this->sealed_payload( $event['before']['source'] );
+		$this->assertSame( 'restored', $old['phase'] );
+		$this->assertArrayNotHasKey( 'proofs', $old );
+		$this->assertSame( array( 'direct', 'http' ), array_keys( $next['proofs'] ) );
+		$this->assertNotEmpty( $wire );
+		$this->assertSame( array_keys( $wire ), glob( $this->lock . '/boot-wire/*.bin' ) );
+		foreach ( $wire as $path => $bytes ) {
+			$this->assertSame( $bytes, file_get_contents( $path ) );
+		}
+		$this->assertSame( $probe, file_get_contents( $this->probe() ) );
+		$this->assertDirectoryExists( $this->lock );
+		$this->assertDirectoryExists( $this->lock . '/invocations' );
+		$this->unchanged();
+	}
+
+	public function test_memory_occupied_next_refuses_overwrite_before_replacement(): void {
+		$this->lifecycle->acquire( $this->cli() );
+		$state = $this->journal->node( $this->lock . '/state.json' );
+		$count = count( $this->journal->replacements );
+		$this->assertTrue( $this->memory_operation( 'create', 'next.json', 0600, array( 'bytes' => 'foreign next bytes' ) ) );
+		$next = $this->journal->node( $this->lock . '/next.json' );
+		$this->assertFalse( $this->memory_operation( 'create', 'next.json', 0600, array( 'bytes' => 'replacement bytes' ) ) );
+		try {
+			$this->lifecycle->prepare( $this->cli(), $this->http() );
+			$this->fail( 'Occupied pending journal was overwritten.' );
+		} catch ( RuntimeException $error ) {
+			$this->assertSame( 'Lifecycle path collision.', $error->getMessage() );
+		}
+		$this->assertCount( $count, $this->journal->replacements );
+		$this->assertSame( $state, $this->journal->node( $this->lock . '/state.json' ) );
+		$this->assertSame( $next, $this->journal->node( $this->lock . '/next.json' ) );
+		$this->assertFileDoesNotExist( $this->probe() );
+		$this->assertDirectoryExists( $this->lock );
+		$this->unchanged();
+	}
+
+	/** @dataProvider invalid_memory_journals */
+	public function test_memory_foreign_journal_is_rejected_before_replacement( string $kind ): void {
+		$this->lifecycle->acquire( $this->cli() );
+		$path = $this->lock . '/state.json';
+		$count = count( $this->journal->replacements );
+		if ( 'seal' === $kind ) {
+			$sealed = json_decode( $this->journal->bytes( $path ), true, 64, JSON_THROW_ON_ERROR );
+			$sealed['seal'] = str_repeat( '0', 64 );
+			$this->journal->change_bytes( $path, json_encode( $sealed, JSON_THROW_ON_ERROR ) );
+		} elseif ( 'hardlink' === $kind ) {
+			$this->journal->change_metadata( $path, array( 'nlink' => 2 ) );
+		} elseif ( 'symlink' === $kind ) {
+			$this->journal->dangling_link( $path );
+			$this->assertTrue( $this->memory_operation( 'is_link', 'state.json' ) );
+			$this->assertFalse( $this->memory_operation( 'stat', 'state.json' ) );
+			$this->assertSame( 0120000, $this->memory_operation( 'lstat', 'state.json' )['mode'] & 0170000 );
+		} else {
+			$this->journal->change_bytes( $path, str_repeat( 'x', 1048577 ) );
+		}
+		$foreign = $this->journal->node( $path );
+		try {
+			$this->lifecycle->prepare( $this->cli(), $this->http() );
+			$this->fail( 'Foreign journal was accepted.' );
+		} catch ( RuntimeException $error ) {
+			$this->assertCount( $count, $this->journal->replacements );
+			$this->assertSame( $foreign, $this->journal->node( $path ) );
+			$this->assertNull( $this->journal->node( $this->lock . '/next.json' ) );
+			$this->assertFileDoesNotExist( $this->probe() );
+			$this->assertDirectoryExists( $this->lock );
+			$this->unchanged();
+		}
+	}
+
+	public static function invalid_memory_journals(): array {
+		return array( array( 'seal' ), array( 'hardlink' ), array( 'symlink' ), array( 'oversized' ) );
+	}
+
+	public function test_memory_adapter_delegates_every_other_path_to_native_operations(): void {
+		$calls = array();
+		$sentinel = new stdClass();
+		foreach ( array( 'create', 'read', 'exists', 'is_file', 'size', 'stat', 'lstat', 'is_link', 'chmod', 'remove', 'list', 'replace_journal' ) as $operation ) {
+			$result = ( $this->journal )( $operation, $this->base . '/not-a-journal', 0600, array(
+				'bytes' => 'unused', 'destination' => $this->base . '/not-a-journal-destination',
+				'native' => static function () use ( &$calls, $operation, $sentinel ) { $calls[] = $operation; return $sentinel; },
+			) );
+			$this->assertSame( $sentinel, $result );
+			$this->assertSame( $operation, $calls[ count( $calls ) - 1 ] );
+		}
+		$this->assertCount( 12, $calls );
+		$this->assertSame( array(), $this->journal->replacements );
+	}
+
+	public function test_default_native_atomic_replacement_control(): void {
+		$native = new Wstm126_Lifecycle( $this->root, $this->plugin, $this->lock, $this->token, $this->source, 'fake-project', $this->artifacts, array( 'direct', 'http' ) );
+		$this->lifecycle = $native;
+		$result = $native->acquire( $this->cli() );
+		$path = $this->lock . '/state.json';
+		$this->assertFileExists( $path );
+		$payload = $this->sealed_payload( array( 'bytes' => file_get_contents( $path ) ) );
+		$this->assertSame( 'acquired', $result['phase'] );
+		$this->assertArrayNotHasKey( 'pending', $payload );
+		$this->assertArrayHasKey( 'fingerprint', $payload['journal'] );
+		$this->assertArrayHasKey( 'fingerprint', $payload['wire'] );
+		$this->assertFileDoesNotExist( $this->lock . '/next.json' );
+		$this->assertSame( array(), $this->journal->replacements );
+		$this->assertNull( $this->journal->node( $path ) );
+		$this->assertSame( 'active', $native->prepare( $this->cli(), $this->http() )['phase'] );
+		$this->assertSame( 'restored', $native->restore( $this->cli(), $this->http() )['phase'] );
+		$restored = $this->sealed_payload( array( 'bytes' => file_get_contents( $path ) ) );
+		$this->assertArrayHasKey( 'restored_http', $restored );
+		$this->reports();
+		$this->assertSame( 'finalized', $native->finalize( $this->cli(), $this->http(), $this->validator(), $this->hashes() )['phase'] );
+		$this->assertDirectoryDoesNotExist( $this->lock );
+		$this->assertFileDoesNotExist( $this->probe() );
+		$this->assertFileDoesNotExist( $this->wrapper() );
+		$this->assertSame( array(), $this->journal->replacements );
+		$this->unchanged();
 	}
 
 	public function test_all_phases_preserve_config_and_exact_unrelated_original_flags(): void {
@@ -250,13 +496,13 @@ final class InputSchemaLifecycleTest extends TestCase {
 
 	public function test_second_owner_cannot_acquire_or_restore_owned_lock(): void {
 		$this->lifecycle->acquire( $this->cli() );
-		$state = file_get_contents( $this->lock . '/state.json' );
+		$state = $this->journal->bytes( $this->lock . '/state.json' );
 		foreach ( array( 'acquire', 'restore' ) as $operation ) {
 			try {
 				$this->instance( str_repeat( 'c', 32 ) )->$operation( $this->cli(), $this->http() );
 				$this->fail( 'Foreign owner accepted.' );
 			} catch ( RuntimeException $error ) {
-				$this->assertSame( $state, file_get_contents( $this->lock . '/state.json' ) );
+				$this->assertSame( $state, $this->journal->bytes( $this->lock . '/state.json' ) );
 			}
 		}
 		$this->unchanged();
@@ -469,11 +715,11 @@ final class InputSchemaLifecycleTest extends TestCase {
 	/** @dataProvider rejected_wire_statuses */
 	public function test_failed_http_raw_wire_is_private_before_parse_and_retained_until_verified_finalization( int $status ): void {
 		$modes = array();
-		$this->lifecycle = $this->instance( null, null, null, static function ( string $operation, string $path, ?int $mode ) use ( &$modes ) {
+		$this->lifecycle = $this->instance( null, null, null, static function ( string $operation, string $path, ?int $mode, array $context ) use ( &$modes ) {
 			if ( 'chmod' === $operation ) {
 				$modes[ $path ] = $mode;
 			}
-			return self::filesystem( $operation, $path, $mode );
+			return self::filesystem( $operation, $path, $mode, $context );
 		} );
 		$this->lifecycle->acquire( $this->cli() );
 		$key = $this->lifecycle->probe_key();
@@ -565,11 +811,11 @@ final class InputSchemaLifecycleTest extends TestCase {
 	}
 
 	public function test_partial_private_wire_creation_retains_raw_bytes_and_blocks_recovery_guessing(): void {
-		$this->lifecycle = $this->instance( null, null, null, static function ( string $operation, string $path, ?int $mode ) {
+		$this->lifecycle = $this->instance( null, null, null, static function ( string $operation, string $path, ?int $mode, array $context ) {
 			if ( 'chmod' === $operation && '.bin' === substr( $path, -4 ) ) {
 				return false;
 			}
-			return self::filesystem( $operation, $path, $mode );
+			return self::filesystem( $operation, $path, $mode, $context );
 		} );
 		$this->lifecycle->acquire( $this->cli() );
 		$wire = '{"malformed-private-wire":';
@@ -604,8 +850,8 @@ final class InputSchemaLifecycleTest extends TestCase {
 		if ( ! @symlink( $target, $this->root . '/wp-config.php' ) ) {
 			rename( $target, $this->root . '/wp-config.php' );
 			$target = $this->root . '/wp-config.php';
-			$this->lifecycle = $this->instance( null, null, null, static function ( string $operation, string $path, ?int $mode ) use ( $target ) {
-				return 'is_link' === $operation && $path === $target ? true : self::filesystem( $operation, $path, $mode );
+			$this->lifecycle = $this->instance( null, null, null, static function ( string $operation, string $path, ?int $mode, array $context ) use ( $target ) {
+				return 'is_link' === $operation && $path === $target ? true : self::filesystem( $operation, $path, $mode, $context );
 			} );
 		}
 		try {
@@ -620,8 +866,8 @@ final class InputSchemaLifecycleTest extends TestCase {
 	public function test_private_config_mode_change_retains_guard(): void {
 		$mode = 0640;
 		$config_path = $this->root . '/wp-config.php';
-		$this->lifecycle = $this->instance( null, null, null, static function ( string $operation, string $path, ?int $requested_mode ) use ( &$mode, $config_path ) {
-			$result = self::filesystem( $operation, $path, $requested_mode );
+		$this->lifecycle = $this->instance( null, null, null, static function ( string $operation, string $path, ?int $requested_mode, array $context ) use ( &$mode, $config_path ) {
+			$result = self::filesystem( $operation, $path, $requested_mode, $context );
 			if ( 'stat' === $operation && $path === $config_path ) {
 				$result['mode'] = ( $result['mode'] & ~07777 ) | $mode;
 			}
@@ -653,8 +899,8 @@ final class InputSchemaLifecycleTest extends TestCase {
 	public function test_config_ownership_changes_fail_closed_through_filesystem_seam( string $field ): void {
 		$changed = false;
 		$config = $this->root . '/wp-config.php';
-		$this->lifecycle = $this->instance( null, null, null, static function ( string $operation, string $path, ?int $mode ) use ( &$changed, $config, $field ) {
-			$result = self::filesystem( $operation, $path, $mode );
+		$this->lifecycle = $this->instance( null, null, null, static function ( string $operation, string $path, ?int $mode, array $context ) use ( &$changed, $config, $field ) {
+			$result = self::filesystem( $operation, $path, $mode, $context );
 			if ( $changed && 'stat' === $operation && $path === $config ) {
 				$result[ $field ]++;
 			}
@@ -679,15 +925,15 @@ final class InputSchemaLifecycleTest extends TestCase {
 	public function test_foreign_journal_content_is_never_overwritten(): void {
 		$this->lifecycle->acquire( $this->cli() );
 		$path = $this->lock . '/state.json';
-		$state = json_decode( file_get_contents( $path ), true );
+		$state = json_decode( $this->journal->bytes( $path ), true );
 		$state['payload']['phase'] = 'foreign';
 		$foreign = json_encode( $state );
-		file_put_contents( $path, $foreign );
+		$this->journal->change_bytes( $path, $foreign );
 		try {
 			$this->lifecycle->restore( $this->cli(), $this->http() );
 			$this->fail( 'Foreign state accepted.' );
 		} catch ( RuntimeException $error ) {
-			$this->assertSame( $foreign, file_get_contents( $path ) );
+			$this->assertSame( $foreign, $this->journal->bytes( $path ) );
 			$this->assertDirectoryExists( $this->lock );
 			$this->unchanged();
 		}
@@ -848,10 +1094,10 @@ final class InputSchemaLifecycleTest extends TestCase {
 	public function test_partial_creation_intent_is_retained_not_guessed(): void {
 		$this->lifecycle->acquire( $this->cli() );
 		$path = $this->lock . '/state.json';
-		$sealed = json_decode( file_get_contents( $path ), true );
+		$sealed = json_decode( $this->journal->bytes( $path ), true );
 		$sealed['payload']['pending'] = 'probe';
 		$sealed['seal'] = hash_hmac( 'sha256', json_encode( $sealed['payload'], JSON_THROW_ON_ERROR ), $this->token );
-		file_put_contents( $path, json_encode( $sealed ) );
+		$this->journal->change_bytes( $path, json_encode( $sealed ) );
 		file_put_contents( $this->probe(), '<?php /* incomplete */' );
 		try {
 			$this->lifecycle->restore( $this->cli(), $this->http() );

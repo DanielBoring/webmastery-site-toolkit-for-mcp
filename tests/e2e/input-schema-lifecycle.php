@@ -36,16 +36,28 @@ final class Wstm126_Lifecycle {
 		$this->filesystem = null === $filesystem ? null : Closure::fromCallable( $filesystem );
 	}
 
-	private function filesystem( string $operation, string $path, ?int $mode = null ) {
+	private function filesystem( string $operation, string $path, ?int $mode = null, array $context = array() ) {
+		$native = function () use ( $operation, $path, $mode, $context ) {
+			switch ( $operation ) {
+				case 'is_link': return is_link( $path );
+				case 'stat': return stat( $path );
+				case 'lstat': return lstat( $path );
+				case 'chmod': return chmod( $path, $mode );
+				case 'exists': return file_exists( $path );
+				case 'is_file': return is_file( $path );
+				case 'size': return filesize( $path );
+				case 'read': return file_get_contents( $path );
+				case 'list': return scandir( $path );
+				case 'remove': return unlink( $path );
+				case 'create': return $this->create_native( $path, $context['bytes'], $mode );
+				case 'replace_journal': return rename( $path, $context['destination'] );
+			}
+			throw new RuntimeException( 'Unsupported lifecycle filesystem operation.' );
+		};
 		if ( null !== $this->filesystem ) {
-			return ( $this->filesystem )( $operation, $path, $mode );
+			return ( $this->filesystem )( $operation, $path, $mode, array_merge( $context, array( 'native' => $native ) ) );
 		}
-		switch ( $operation ) {
-			case 'is_link': return is_link( $path );
-			case 'stat': return stat( $path );
-			case 'chmod': return chmod( $path, $mode );
-		}
-		throw new RuntimeException( 'Unsupported lifecycle filesystem operation.' );
+		return $native();
 	}
 
 	private function directory( string $path ): void {
@@ -58,8 +70,8 @@ final class Wstm126_Lifecycle {
 
 	private function read( string $path ): string {
 		$this->directory( dirname( $path ) );
-		Wstm126_Boot::check( is_file( $path ) && ! $this->filesystem( 'is_link', $path ), 'Missing or symlinked owned file.' );
-		$data = file_get_contents( $path );
+		Wstm126_Boot::check( $this->filesystem( 'is_file', $path ) && ! $this->filesystem( 'is_link', $path ), 'Missing or symlinked owned file.' );
+		$data = $this->filesystem( 'read', $path );
 		Wstm126_Boot::check( is_string( $data ), 'Cannot read owned file.' );
 		return $data;
 	}
@@ -85,12 +97,16 @@ final class Wstm126_Lifecycle {
 
 	private function absent( string $path ): void {
 		clearstatcache( true, $path );
-		Wstm126_Boot::check( ! file_exists( $path ) && ! $this->filesystem( 'is_link', $path ), 'Lifecycle path collision.' );
+		Wstm126_Boot::check( ! $this->filesystem( 'exists', $path ) && ! $this->filesystem( 'is_link', $path ), 'Lifecycle path collision.' );
 	}
 
 	private function create( string $path, string $bytes, int $mode ): void {
 		$this->directory( dirname( $path ) );
 		$this->absent( $path );
+		Wstm126_Boot::check( $this->filesystem( 'create', $path, $mode, array( 'bytes' => $bytes ) ), 'Cannot exclusively create stage file.' );
+	}
+
+	private function create_native( string $path, string $bytes, int $mode ): bool {
 		$mask = umask( 0077 );
 		try {
 			$handle = fopen( $path, 'x+b' );
@@ -104,6 +120,7 @@ final class Wstm126_Lifecycle {
 		} finally {
 			fclose( $handle );
 		}
+		return true;
 	}
 
 	private function wrappers( string $probe_key_hash = '' ): array {
@@ -240,7 +257,7 @@ final class Wstm126_Lifecycle {
 		$this->paths();
 		$this->private_directory();
 		$path = $this->lock . '/state.json';
-		Wstm126_Boot::check( is_file( $path ) && filesize( $path ) <= 1048576, 'Missing or oversized owner journal.' );
+		Wstm126_Boot::check( $this->filesystem( 'is_file', $path ) && $this->filesystem( 'size', $path ) <= 1048576, 'Missing or oversized owner journal.' );
 		$metadata = $this->fingerprint( $path );
 		if ( 'Windows' !== PHP_OS_FAMILY ) {
 			Wstm126_Boot::check( 0600 === $metadata['mode'] && posix_geteuid() === $metadata['uid'], 'Foreign or exposed private state.' );
@@ -301,7 +318,7 @@ final class Wstm126_Lifecycle {
 		$this->state();
 		$path = $this->lock . '/next.json';
 		$this->create( $path, $this->encode( $state ), 0600 );
-		Wstm126_Boot::check( rename( $path, $this->lock . '/state.json' ), 'Cannot persist owner journal transition.' );
+		Wstm126_Boot::check( $this->filesystem( 'replace_journal', $path, null, array( 'destination' => $this->lock . '/state.json' ) ), 'Cannot persist owner journal transition.' );
 	}
 
 	public function acquire( callable $cli ): array {
@@ -445,12 +462,12 @@ final class Wstm126_Lifecycle {
 		$state['restored_http'] = $this->attest( $state, $cli, $http, $state['original'], array() );
 		$state['proofs'] = $proofs;
 		$this->save( $state );
-		Wstm126_Boot::check( array( '.', '..', 'boot-wire', 'invocations', 'state.json' ) === scandir( $this->lock ), 'Foreign content in private lock; retained.' );
+		Wstm126_Boot::check( array( '.', '..', 'boot-wire', 'invocations', 'state.json' ) === $this->filesystem( 'list', $this->lock ), 'Foreign content in private lock; retained.' );
 		Wstm126_Boot::check( isset( $state['journal']['fingerprint'] ), 'Missing invocation journal directory ownership.' );
 		self::assert_invocations_empty( $state['journal']['path'] );
 		$this->remove( $state, 'probe' );
 		$this->invariant( $state );
-		Wstm126_Boot::check( array( '.', '..', 'boot-wire', 'invocations', 'state.json' ) === scandir( $this->lock ), 'Foreign content in private lock; retained.' );
+		Wstm126_Boot::check( array( '.', '..', 'boot-wire', 'invocations', 'state.json' ) === $this->filesystem( 'list', $this->lock ), 'Foreign content in private lock; retained.' );
 		$state_bytes = $this->read( $this->lock . '/state.json' );
 		$state_metadata = $this->fingerprint( $this->lock . '/state.json' );
 		$this->state();
@@ -461,7 +478,7 @@ final class Wstm126_Lifecycle {
 		}
 		Wstm126_Boot::check( array( '.', '..' ) === scandir( $state['wire']['path'] ) && rmdir( $state['wire']['path'] ), 'Cannot retire exact empty wire directory.' );
 		Wstm126_Boot::check( $state['journal']['fingerprint'] === $this->directory_fingerprint( $state['journal']['path'] ) && array( '.', '..' ) === scandir( $state['journal']['path'] ) && rmdir( $state['journal']['path'] ), 'Cannot retire exact empty invocation journal directory.' );
-		Wstm126_Boot::check( unlink( $this->lock . '/state.json' ) && rmdir( $this->lock ), 'Cannot finalize private stage ownership.' );
+		Wstm126_Boot::check( $this->filesystem( 'remove', $this->lock . '/state.json' ) && rmdir( $this->lock ), 'Cannot finalize private stage ownership.' );
 		$state['phase'] = 'finalized';
 		return $this->summary( $state );
 	}

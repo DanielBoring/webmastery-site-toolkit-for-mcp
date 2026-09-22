@@ -6,6 +6,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add journal-only deterministic filesystem modeling and replacement-failure controls for schema-stage tests, retaining a separate default-native replacement control. Preserve one-shot native atomic replacement and failure evidence; this testability change neither explains nor waives the retained Windows acquire/finalize access-denied QA failures.
+
 - Calibrate comment regression fixtures at the strict-input rejection boundary: preserve all typed inputs and historical baseline behavior, correct 16 observed HTTP and 32 source-derived direct error expectations, and retain 39 legacy extra-property payloads as schema-negative controls before 39 additive valid authorization counterparts. Pin typed source provenance and production-wrapper/mutation regressions; do not treat this test-only correction as completed runtime acceptance.
 
 - Add an isolated schema QA stage for three contract and two HTTP boundaries, automatically included in source `all` and original-ZIP QA. Keep the accepted safety lifecycle and retention functions unchanged; verify owned MU/HTTP restoration without configuration writes, strict 152-case source-bound cleanup evidence, retained failures and separate package/harness hashes. Add fake filesystem/HTTP/orchestration failure controls and pinned always-upload evidence paths; actual integrated runtime acceptance remains separate.

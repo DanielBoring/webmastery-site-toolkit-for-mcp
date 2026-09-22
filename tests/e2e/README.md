@@ -500,6 +500,24 @@ database cleanup alone cannot authorize container teardown that would destroy
 that evidence. Preserve it through coordinator-controlled recovery; never copy
 private response archives into the public artifact upload directories.
 
+Journal fault-injection tests use a coherent in-memory model of only
+`state.json` and `next.json`; other paths retain their normal filesystem
+behavior. Successful model replacement transfers the complete node and removes
+the source, while false/throw controls preserve both nodes. Acquire and
+finalize-proof-save failures must retain ownership and pending state; finalize
+failures must also retain every private wire file and the probe. A separate
+no-adapter control exercises native replacement. The default remains exactly
+one native atomic `rename()`, with no retry, suppression, destination deletion,
+copy fallback, runtime flag or platform skip.
+
+This is deterministic testability coverage, not a native Windows repair.
+Full Windows QA at `8061e62` and `3f6e8e0` reported access-denied journal
+replacements in acquire and finalize, respectively. Their cause is unproven;
+both failed logs remain evidence. A focused pass, a later full pass or the
+in-memory model does not explain or waive those failures. The owner ran the
+second QA without parallel safeguards, but parent comments-only tests overlapped
+part of its interval; neither host-wide isolation nor interference is established.
+
 Local unit/static results do not establish the source-derived HTTP expectations.
 Actual direct/native/raw-permission/gateway/individual proof, runtime coverage
 audit, and integration with concurrent changes remain pending. Optional output
