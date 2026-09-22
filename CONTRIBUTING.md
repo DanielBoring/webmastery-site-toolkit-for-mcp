@@ -41,6 +41,13 @@ Suspected security vulnerabilities must use [private vulnerability reporting](ht
 
 ## Code conventions
 
+Schema runtime changes must retain the isolated three-contract/two-HTTP stage,
+152 exact cases per invocation, unchanged configuration and original HTTP
+state. Validate resource identities before cleanup; a retained post also retains
+its actor and credential evidence. Missing or foreign cleanup proof keeps the
+outer retention guard armed. Fake stages do not replace leased disposable
+source/floor/original-ZIP execution.
+
 This plugin follows [WordPress Coding Standards](https://developer.wordpress.org/coding-standards/wordpress-coding-standards/) and is evaluated against the [WordPress.org Detailed Plugin Guidelines](https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/). Key rules enforced throughout the codebase:
 
 - **Sanitize inputs** — use `sanitize_text_field()` for strings, `absint()` for IDs, `wp_kses_post()` for HTML content, and enum validation for fixed-value fields

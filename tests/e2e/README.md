@@ -426,11 +426,13 @@ is now exactly `ability_invalid_input`, while direct/gateway/individual
 presence rejection stays exactly `metadata_requires_separate_call`.
 The manifest validator and its mutation test enforce that distinction.
 
-`input-schema-runner.php` and `input-schema-fixture.php` are **unexecuted,
-opt-in runtime scaffolding**, not completed WordPress or wire acceptance.
+`input-schema-runner.php` and `input-schema-fixture.php` have an isolated,
+opt-in stage, but **actual integrated runtime execution remains pending**;
+stage mocks are not completed WordPress or wire acceptance.
 Do not start Docker or local WordPress without the coordinator's explicit
-exclusive runtime lease. Shared orchestration and the error-contract runner
-are intentionally untouched. Final integration must preserve the newer error
+exclusive runtime lease. The accepted safety lifecycle and error-contract runner
+are untouched; schema orchestration is a separate serial call after metadata
+QA and before the final debug-log check. Final integration must preserve the newer error
 floor, metadata authorization, destructive guards, and performance projections.
 The synthetic missing-schema error fixture clears its schema after registration
 and restores only that probe's original permission callback: clearing the
@@ -440,19 +442,22 @@ schema-only negative control, untouched execute wrapping, and continued
 rejection by ordinary input-free abilities. The error runner's 78 oracles are
 unchanged; their integrated real-runtime rerun remains pending.
 
-Inside that later owned disposable runtime, install an MU **loader requiring
-the repository's** `input-schema-fixture.php` (do not copy it away from its
-relative includes), enable `WSTM126_DISPOSABLE_RUNTIME` with literal `true`
-in both CLI/HTTP configuration, and load the normal CPT fixture plus the
-existing individual-tool server fixture. Before bootstrap the runner requires
-exact `WSTM126_DISPOSABLE=1`, `WSTM126_BOUNDARY` set to each of `direct`,
-`permission`, `ability`, `http`, and `individual`, and `WSTM126_ARTIFACT`
-pointing to a new file in an existing writable artifact directory. Set
-`WSTM126_SOURCE_SHA` to the exact tested commit. Invoke the standalone runner:
+The stage exclusively owns a temporary MU **loader requiring the original**
+`input-schema-fixture.php` and individual-tool fixture; copying the schema
+fixture into another directory would break its relative includes. The loader
+defines the schema opt-in for CLI and HTTP. **No `wp-config.php` writes** are
+needed or permitted. Configuration bytes, permissions and ownership must remain
+original, and an authenticated GET-only probe attests original, active and
+restored HTTP/CLI state. The normal harness supplies the CPT/Site Kit fixtures.
 
-```bash
-php /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/input-schema-runner.php
-```
+Runner identity is mandatory before bootstrap: exact `WSTM126_DISPOSABLE=1`,
+the selected `WSTM126_BOUNDARY`, stage token, project, exact source SHA, and a
+new boundary artifact path. The stage proves CLI opt-in refusal and HTTP 403
+before installing its opt-in or creating actors/credentials. Do not manually
+invoke the runner outside its stage and then claim cleanup/retention acceptance.
+Contract QA selects `direct`, `permission`, `ability`; transport QA selects
+`http`, `individual`; `all` runs all five serially with no additional trash
+boots. Every invocation has exactly **152 ordered cases**, or **760** for `all`.
 
 The fixture counts only SQL and capability hooks inside registered callbacks,
 not bootstrap/HTTP authentication work. Malformed cases also require unchanged
@@ -461,9 +466,39 @@ exact callback observation count for that boundary; missing evidence fails.
 Valid denied-role and hierarchical detach/omission controls calibrate real
 authorization and writes. The runner uses unique owned actors/posts, refuses
 an existing observation option, retains raw inputs/results/wire/state/counters,
-records cleanup failures, and removes its own actors, credentials, objects,
-and option. Keep failed artifacts as well as later passes. Remove the MU
-loader and runtime opt-in when retiring the leased runtime.
+records cleanup failures, and journals only its own actors, credentials,
+sessions, objects and observation option. Cleanup first validates ownership.
+The stage supplies the exclusive private container journal directory
+`/tmp/wstm126-stage/invocations` through `WSTM126_JOURNAL_DIR`, never a public
+artifact directory. The stage refuses finalization while any journal remains.
+Foreign replacements or deletion vetoes retain the affected objects and their
+actor/credential evidence rather than allowing implicit `wp_delete_user()`
+deletion. Independent absence and original scoped-state/cron checks, not
+deletion return values, determine cleanup success. Keep failed artifacts and
+private recovery journals as well as later passes.
+
+`input-schema-proof.php` validates complete owner/project/source/boundary-bound
+evidence, all 152 labels/outcomes, exact callback/error/no-work controls and
+cleanup attestations. Production/package hashes are distinct from the read-only
+test harness overlay. A failed test with complete proven cleanup retains its
+nonzero exit but may retire the retention marker; missing, partial, malformed
+or foreign proof may not. The unchanged project retention functions block
+outer source/package/workflow teardown until cleanup and original actual HTTP
+restoration are proven. The read-only probe/private stage lock retire last.
+HTTP convergence is bounded and retries only recognized owned stale state,
+never mutations or global OPcache/configuration changes.
+
+Source and original-ZIP workflows upload `e2e-artifacts/input-schema-*/`
+including failed stage/boot/boundary evidence. Configuration backups,
+credentials, Authorization headers and session secrets do not belong in public
+artifacts. Package QA uses the existing verified original ZIP production mount
+and read-only test overlay, without a checkout-production fallback.
+Malformed or denied HTTP bytes are captured privately before decoding; public
+diagnostics expose only safe evidence and byte-count/hash references. Retained
+private failure evidence keeps an invocation ownership marker, so successful
+database cleanup alone cannot authorize container teardown that would destroy
+that evidence. Preserve it through coordinator-controlled recovery; never copy
+private response archives into the public artifact upload directories.
 
 Local unit/static results do not establish the source-derived HTTP expectations.
 Actual direct/native/raw-permission/gateway/individual proof, runtime coverage
@@ -471,7 +506,7 @@ audit, and integration with concurrent changes remain pending. Optional output
 schemas are explicitly deferred; the [migration guide](../../docs/3.0-migration.md#strict-input-schemas-and-raw-permissions)
 documents open maps, validation scope, and exact failure-layer differences.
 
-### Frozen-parent integration and remaining runtime gates
+### Historical frozen-parent integration and remaining runtime gates
 
 The schema candidate integrates the existing destructive-safety parent
 `1a8e76dae6183d99a48ff4c0a7ae34c1cdd17e18` (tree
@@ -483,15 +518,15 @@ destructive-operation runtime proof or permission to merge/publish. The
 force/preview semantics, and original metadata object corrections are retained.
 No list-performance or other pending PR implementation is imported.
 
-Shared orchestration and workflows are inherited unchanged from that frozen
-parent. The schema proof is still a standalone runner. Proposed wiring, subject
-to coordinator ownership and an exclusive disposable runtime lease, is to run
-`direct`, `permission`, and `ability` in contract QA, `http` and `individual`
-in transport QA, and all five against the original packaged artifact. Install
-the opt-in schema MU loader only after the normal registration audit, verify
-non-CLI refusal before mutation, preserve the precise source SHA/tree and
-fresh per-boundary artifacts, and remove the owned loader/opt-in afterward.
-Retain failed artifacts rather than replacing a failed run with a later pass.
+That source freeze deliberately had no shared schema wiring. The later
+`5b39f6a` integration accepted exact safety parent `f93b7d1`, and the separately
+authorized schema stage above adds only its isolated callsite, new helpers and
+artifact uploads without redesigning the accepted safety lifecycle.
+`InputSchemaProofTest`, lifecycle/cleanup/boot units and
+`tests/input-schema-stage-test.sh` exercise local fake filesystem/HTTP/clock and
+outer orchestration failures. They do not grant a runtime lease or replace
+source/floor/original-package evidence. Retain failed artifacts rather than
+replacing a failed run with a later pass.
 The integrated 78 error oracles, metadata/SEO suites, parent matrix and
 destructive proof must also be rerun on the supported WordPress floor and
 pinned version. These are pending runtime/package gates, not claims made by
@@ -507,7 +542,33 @@ The contract runner also invokes both registered callbacks directly for authoriz
 
 The CLI-only `comments-runner.php` adds 308 cases across direct execution (104), the actual WordPress ability wrapper (104), and authenticated MCP HTTP (100). It retains raw HTTP tool results, exact error messages/codes, effective capabilities, per-comment content/status, and before/after hashes of all comment and commentmeta rows. Failed calls must leave both tables unchanged. Global-comment controls cover both direct execution and the ability wrapper; the contract fixture also calls the permission callback with a populated global comment and a zero ID. Negative-existing-ID controls cover all three boundaries. HTTP fixture application passwords are revoked. The runner refuses web access before WordPress bootstrap; artifact write failures are fatal.
 
-Contract and HTTP lanes run their respective boundaries via `WSTM105_BOUNDARY` and retain `comments-direct.json`, `comments-ability.json`, and `comments-http.json` for seven days, including failed runs. For baseline comparison, use this identical runner with `WSTM105_MODE=baseline` against the old registered callbacks on a disposable site, and a separate `WSTM105_ARTIFACT` path. Baseline mode records the old authorization/global-comment bugs rather than asserting the fix; malformed direct calls without a stable historical contract are fixed-only. Compare the 152 cases marked `compatibility` without normalizing away raw envelopes or error codes. Never install old callbacks on a shared/live site, and preserve baseline/failed calibration artifacts outside `e2e-artifacts` before a fresh suite clears it.
+Contract and HTTP lanes run their respective boundaries via `WSTM105_BOUNDARY` and retain `comments-direct.json`, `comments-ability.json`, and `comments-http.json` for seven days, including failed runs. For baseline comparison, use this identical runner with `WSTM105_MODE=baseline` against the old registered callbacks on a disposable site, and a separate `WSTM105_ARTIFACT` path. Baseline mode records the old authorization/global-comment bugs rather than asserting the fix; malformed direct calls without a stable historical contract are fixed-only. The calibrated fixed mode marks 136 cases as `compatibility` (24 direct, 64 ability, 48 HTTP); unchanged baseline mode retains 276 cases and its historical 152 compatibility flags. Compare only the shared compatibility-marked cases without normalizing away raw envelopes or error codes. Never install old callbacks on a shared/live site, and preserve baseline/failed calibration artifacts outside `e2e-artifacts` before a fresh suite clears it.
+
+The strict-input integration calibrates exactly 16 HTTP Subscriber malformed-ID
+cases and 32 direct Editor/Subscriber malformed-ID cases across update, approve,
+trash and spam. They now require `invalid_input` / `ability_invalid_input`, the
+exact schema message, and object details, before original callbacks or
+capability/query work. The 16 HTTP failures were observed in genuine frozen
+`5b39f6a` CI; the 32 direct changes are source-derived and verified against the
+actual registered production wrappers in isolated tests. The corresponding 32
+native-ability cases already expected schema rejection and are unchanged.
+Changed cases are not legacy compatibility claims. All typed runner inputs,
+ordering, capability facts and no-write snapshots remain intact; the integrated
+real-runtime rerun is still pending.
+
+Raw fixture coverage grows from 102 to 141 checks without dropping inputs:
+all 44 malformed payloads remain (41 schema rejections and three
+negative-integer-ID permission deferrals), and all 39 original approve/trash/spam
+payloads containing irrelevant content/status remain explicit schema-negative
+controls before 39 additive minimal-ID counterparts. The counterparts preserve
+the original role, CPT, orphan, state and content assertions. Valid authorization,
+missing-object, zero/global-comment, capability-filter and six update
+content/status controls remain; no minimum-ID restriction or blanket schema
+error mapping is added. Private unwrapped moderation-helper deferral remains
+correct and unchanged. The typed
+[calibration ledger](../unit/fixtures/comments-calibration-ledger.json) pins
+`2feed8d` and `5b39f6a` before/after cases; mutation tests reject error-envelope,
+input, original-payload, authorization and no-write regressions.
 
 HTTP session-close and application-password revocation failures are recorded individually under `cleanup_errors`, increment the failed count, and do not prevent subsequent cleanup or evidence writing. Existing case failures remain intact and the runner exits nonzero. Unit regressions inject both transport-close and credential-revocation failures to verify this behavior.
 

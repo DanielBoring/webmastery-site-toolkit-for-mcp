@@ -6,6 +6,10 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Calibrate comment regression fixtures at the strict-input rejection boundary: preserve all typed inputs and historical baseline behavior, correct 16 observed HTTP and 32 source-derived direct error expectations, and retain 39 legacy extra-property payloads as schema-negative controls before 39 additive valid authorization counterparts. Pin typed source provenance and production-wrapper/mutation regressions; do not treat this test-only correction as completed runtime acceptance.
+
+- Add an isolated schema QA stage for three contract and two HTTP boundaries, automatically included in source `all` and original-ZIP QA. Keep the accepted safety lifecycle and retention functions unchanged; verify owned MU/HTTP restoration without configuration writes, strict 152-case source-bound cleanup evidence, retained failures and separate package/harness hashes. Add fake filesystem/HTTP/orchestration failure controls and pinned always-upload evidence paths; actual integrated runtime acceptance remains separate.
+
 - Integrated exact frozen safety parent `f93b7d1` into the schema candidate without changing shared startup/retention/orchestration. Added native validation lifecycle and mutation controls, explicit 16 safety/two privacy error-layer calibrations, and a typed ordered ledger that reconstructs the unchanged parent manifest/goldens from every reviewed schema delta. Schema proof now hashes the owned ability class and observes native numeric-string/boolean rejection before permission callbacks; actual integrated runtime acceptance remains pending.
 
 - Retain destructive-QA recovery evidence across stage, managed-source, package and workflow cleanup boundaries using an exclusive host owner/project/source guard. Block teardown and re-entry until actual restoration and explicit source-bound runner cleanup are proven; preserve original failures and keep private configuration out of artifacts. Validate attachment references before cleanup and retain files plus ownership proof after refusal/veto, with full outer-orchestration and actual cleanup-flow regressions.

@@ -168,7 +168,7 @@ try {
 					$after = wstm105_snapshot();
 					$record['after_sha256'] = hash( 'sha256', serialize( $after ) );
 					$record['after'] = wstm105_comment_state( $id );
-					$schema_invalid = 'direct' !== $boundary && in_array( $invalid, array( 'missing_id', 'string_id', 'array_id', 'null_id' ), true );
+					$schema_invalid = ( 'fixed' === $mode || 'direct' !== $boundary ) && in_array( $invalid, array( 'missing_id', 'string_id', 'array_id', 'null_id' ), true );
 					$schema_message = 'Ability input does not match its schema.';
 					$legacy_target = in_array( $invalid, array( '', 'negative_existing', 'global_zero' ), true );
 					$allowed = 'baseline' === $mode ? $legacy_target && ( 'direct' === $boundary || $moderate ) : '' === $invalid && $moderate && $edit;
@@ -182,7 +182,7 @@ try {
 					} else {
 						wstm105_assert( $before === $after, 'Denied/invalid call changed persisted comments or metadata.' );
 						$permission_denied = ( '' === $invalid ? ! $moderate || ! $edit : ! $moderate ) && 'direct' !== $boundary;
-						if ( 'http' === $boundary && ! $moderate ) {
+						if ( 'http' === $boundary && ! $moderate && ( 'baseline' === $mode || ! $schema_invalid ) ) {
 							$reason = 'forbidden';
 							$message = 'Requires moderate_comments capability.';
 						} elseif ( $schema_invalid ) {
@@ -205,7 +205,7 @@ try {
 						}
 					}
 					$record['compatibility'] = in_array( $invalid, array( 'missing', 'zero', 'negative_missing' ), true )
-						|| ( $schema_invalid )
+						|| ( $schema_invalid && ! ( 'fixed' === $mode && ( 'direct' === $boundary || ( 'http' === $boundary && ! $moderate ) ) ) )
 						|| ( '' === $invalid && ! $moderate && 'direct' !== $boundary );
 					$record['passed'] = true;
 					$summary['passed']++;

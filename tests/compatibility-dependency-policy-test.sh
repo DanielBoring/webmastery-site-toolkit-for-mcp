@@ -100,11 +100,17 @@ run_destructive_safety_qa() {
 	assert_cron_isolated
 	destructive_stage_calls=$(( destructive_stage_calls + 1 ))
 }
+run_input_schema_qa() {
+	assert_cron_isolated
+	schema_stage_calls=$(( schema_stage_calls + 1 ))
+	[[ "$destructive_stage_calls" == 1 && "$metadata_stage_calls" == 1 ]] || { echo 'Schema stage must follow safety and metadata authorization.' >&2; exit 1; }
+}
 run_debug_log_check() { assert_cron_isolated; }
 for QA_MODE in contract e2e all; do
 	cron_configured=0
 	metadata_stage_calls=0
 	destructive_stage_calls=0
+	schema_stage_calls=0
 	main >/dev/null
 	assert_cron_isolated
 	if [ "$metadata_stage_calls" != 1 ]; then
@@ -113,6 +119,10 @@ for QA_MODE in contract e2e all; do
 	fi
 	if [ "$destructive_stage_calls" != 1 ]; then
 		echo "Destructive safety QA must run exactly once in ${QA_MODE} mode." >&2
+		exit 1
+	fi
+	if [ "$schema_stage_calls" != 1 ]; then
+		echo "Schema QA must run exactly once in ${QA_MODE} mode." >&2
 		exit 1
 	fi
 done
