@@ -9,7 +9,14 @@ trap 'status=$?; if [[ "$status" != 0 ]]; then cat "$WORK/"*.log >&2; fi; rm -rf
 cp -R scripts includes tests "$WORK/source with spaces/"
 cp docker-compose*.yml webmastery-site-toolkit-for-mcp.php readme.txt LICENSE CHANGELOG.md "$WORK/source with spaces/"
 cp .github/compatibility-versions.json "$WORK/source with spaces/.github/"
+cp -R .github/workflows "$WORK/source with spaces/.github/"
 cd "$WORK/source with spaces"
+# The untrusted stage binds its real producer to committed source bytes, not the
+# ancestor checkout. This disposable Git fixture is never pushed or published.
+git init --quiet
+git config --local core.autocrlf false
+git -c core.autocrlf=false add scripts includes tests .github docker-compose*.yml webmastery-site-toolkit-for-mcp.php readme.txt LICENSE CHANGELOG.md
+git -c user.name='QA fixture' -c user.email='qa@example.test' -c core.autocrlf=false commit --quiet -m 'Create isolated runtime fixture' -m 'Co-authored-by: Copilot App <223556219+Copilot@users.noreply.github.com>'
 # shellcheck source=scripts/qa-compose.sh
 source scripts/qa-compose.sh
 host_php tests/e2e/post-meta-authorization-runner.php --test-cleanup "$WORK/metadata-cleanup.json"
@@ -38,6 +45,19 @@ docker() {
 			{ echo "Release runtime did not select its extracted package." >&2; return 92; }
 	fi
 	case "$*" in
+		*"untrusted-content-stage.php "*)
+			local context="${*: -1}" operation="${*: -2:1}"
+			context="${context#*/webmastery-site-toolkit-for-mcp/}"
+			( unset MSYS_NO_PATHCONV; php tests/unit/fixtures/untrusted-stage-envelope.php "$operation" "$context" )
+			;;
+		*"untrusted-content-runner.php")
+			local arg context=''
+			for arg in "$@"; do
+				case "$arg" in WSTM108_STAGE_CONTEXT=*) context="${arg#*=}"; context="${context#*/webmastery-site-toolkit-for-mcp/}" ;; esac
+			done
+			[[ -n "$context" ]] || return 96
+			( unset MSYS_NO_PATHCONV; php tests/unit/fixtures/untrusted-stage-envelope.php runner "$context" )
+			;;
 		*" down -v --remove-orphans")
 			rm -f "$WORK/private-backup" "$WORK/readonly-probe" "$WORK/retained-attachment" "$WORK/retained-file" "$WORK/retained-marker"
 			if [[ "${FAIL_CLEANUP:-0}" == 1 && "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]]; then

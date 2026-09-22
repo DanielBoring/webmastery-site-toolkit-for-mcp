@@ -293,45 +293,81 @@ rows to those same immutable sources: indices 0-43, 187, and 372-378. An
 executable provenance check requires the mutation provider to match that
 entire ordered inventory, rejecting omissions, duplicates and extra indices.
 
-The dedicated runtime entrypoints are `untrusted-content-runner.php` and
-`untrusted-content-fixture.php`. They require explicit
-`WSTM108_ALLOW_DISPOSABLE=1` opt-in on an **owned disposable** WordPress
-installation. Do not run them on a shared or live site. The flag is not a
-Docker lease or permission to modify another session's stack; obtain an
-isolated runtime before invoking them. Runtime/HTTP annotation evidence for
-this work is pending; a fixture or unit pass is not actual `tools/list` proof.
+`scripts/untrusted-stage.sh` runs one separate serial stage after the existing
+destructive-safety stage has fully restored, before the later metadata/error
+fixtures. Source `contract`, `e2e`, and `all` selections each require both
+actual gateway and individual HTTP boundaries. Original-ZIP and compatibility
+lanes use that same stage; they do not rebuild the archive or overlay checkout
+production. The complete ordered plan is 90 individual annotation/get-info
+comparisons (85 native abilities plus five owned CPT abilities), followed by
+98 semantic cases per HTTP boundary: 286 cases, not a minimum-pass threshold.
+Actual advertised tool names come from the catalog rather than a guessed
+sanitizer. Bulk publish retains `destructiveHint:true`.
 
-The CLI-only runner requires the environment variable before it loads
-WordPress from `/var/www/html/wp-load.php` in the existing disposable
-installation. Setting a WordPress constant alone does not satisfy that
-pre-bootstrap CLI check. Install `untrusted-content-fixture.php` as an MU
-plugin **only in that disposable site**. For separate HTTP processes, opt in
-with `define( 'WSTM108_ALLOW_DISPOSABLE', true );` in its `wp-config.php`,
-or the environment variable set to exactly `1`. Reuse the existing shared
-`error-contract-fixture.php`, also installed as an MU plugin in the disposable
-site, for the individual-tool endpoint
-`/wp-json/wstm118/tools`; this is test configuration, not a production endpoint.
+Run only within an explicitly authorized **owned disposable** project.
+`WSTM108_STAGE_DISPOSABLE=1` guards the stage entrypoint;
+`WSTM108_ALLOW_DISPOSABLE=1`, `WSTM108_STAGE_CONTEXT`, and the exact
+`WSTM108_ARTIFACT` identify its runner. These flags are not a Docker lease or
+permission to change another session's stack. The stage verifies actual
+missing-opt-in CLI exit 2 and actual HTTP 403 `CLI only.` for both entrypoints
+before credentials. Do not copy MU fixtures manually or edit `wp-config.php`.
+Exclusively owned loaders reference the original fixture files and expose
+`/wp-json/wstm118/tools` only for the disposable proof.
 
-`WSTM108_ARTIFACT` selects the report path, defaulting to
-`e2e-artifacts/untrusted-content-wstm108-<nonce>.json` in the repository,
-with a unique nonce to retain separate runs. The companion
-`.http.jsonl` evidence retains incremental, credential-redacted raw HTTP
-observations. Before WordPress bootstrap or credential creation, the runner
-refuses an existing summary **or** journal, including an explicitly selected
-path. `untrusted-content-evidence.php` reserves both files with exclusive
-creation and writes through the retained handles rather than reopening paths.
-If a concurrent creator prevents the second reservation, any empty first
-reservation is retained instead of risking deletion of a replaced path.
-Choose a new artifact path for another invocation. Preserve both artifacts,
-including on failure. Fixtures use
-unique owned records and cleanup rather than global role/option mutations.
-The runner requires actual MCP Adapter 0.6.1. Install and activate real Yoast
-SEO and SEOPress externally in the disposable runtime before full validation;
-inactive providers produce an incomplete, nonzero result, not a passing
-substitute for provider evidence. Runner self-tests, where available, remain
-unit evidence and do not replace these runtime requirements.
-No Docker runtime or lease is currently available for this proof; actual
-Adapter 0.6.1 runtime evidence remains pending.
+Evidence lives in `e2e-artifacts/untrusted-<owner>/`: source/tree/project/owner
+and original-ZIP digest binding, actual production/harness file hashes, active
+provider versions, native/enabled/restored CLI and owner-authenticated GET
+attestations, actual actor capabilities, catalogs/schemas, case responses,
+cleanup and finalization. Both files for every report are exclusively reserved
+before bootstrap or credentials; an existing summary **or** `.http.jsonl`
+journal fails closed, including racing creators. Partial reservations remain.
+No existing directory is created recursively or chmodded. Raw failed status
+and body are persisted before parsing; credential-redacted `body_base64`
+preserves malformed UTF-8, while JSON evidence retains object/list and
+integer/float distinctions. Keep failed artifacts as well as passing ones.
+The complete runner journal digest is checked before retirement; its six raw
+`tools/list` responses must match the captured typed catalogs. Registration
+records must match the enabled runtime's schema digests, not just its names.
+Host verification accepts the two exact report basenames or their exact absolute
+paths only under the explicitly supplied, source-bound owned artifact directory.
+It does not resolve against ambient working directories or alternate roots;
+traversal, foreign roots/identities, symlinks and multiply linked files fail closed.
+
+The private stage/resource journals never enter public artifacts. Creation
+intents, owned actors/IDs, application-password UUIDs and MCP sessions support
+narrow recovery after a lost response. Cleanup must prove resource and metadata
+absence; attachment reference failures or deletion vetoes retain the associated
+file and actor, never bypassed through user deletion. The unchanged host
+retention guard is armed before runtime alteration. Missing, partial or foreign
+proof, unknown lock entries, changed source/configuration, or failed restoration
+blocks teardown and re-entry. Original config bytes/hash/mode/UID/GID and actual
+native schema/server/observer state must match again before retiring the probe,
+private journals and guard. Only known-owned stale GET observations may retry:
+five requests of at most two seconds, four one-second sleeps, 14 seconds total.
+Mutations, wrong identities, malformed responses and authorization denials do
+not retry.
+Application-password ownership binds the exact pre-creation adversarial name,
+owned actor and returned UUID; it does not replace the stored name with a test
+label. The owner token in public evidence is a run identity, not an authentication
+secret. Its keyed digest cannot authenticate evidence against an operator who
+can rewrite public files: exact private-journal equality and fresh live absence
+remain mandatory for retirement. The separately private probe secret authenticates
+GET observations. Only the exclusively created upload child receives public
+traversal permissions; existing upload-parent permissions are never changed.
+
+The actual Adapter must be 0.6.1. Both real SEO providers must already be active;
+pinned lanes require the selected Yoast/SEOPress versions, and candidate lanes
+retain their actual versions. The wire decoder preserves original JSON types
+and strips only the single marker owned by the compared record. Exactly two
+legacy expected diagnostic `details:[]` literals are corrected to canonical
+`details:{}` through a source-pinned ledger; legitimate empty lists remain lists.
+No production serializer or existing value/authorization oracle changes.
+
+Dedicated runtime acceptance remains pending. Local/fake-stage tests and green
+CI on a predecessor without this stage do not establish provider/catalog/HTTP,
+floor, or original-ZIP proof. Later summary/full response-selection composition
+also requires separate integration and actual proof; no speculative selection
+input is sent by this stage.
 
 Retain the following evidence independently of static registration/manifest
 coverage:

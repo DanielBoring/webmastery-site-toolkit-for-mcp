@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/untrusted-content-files.php';
+
 /**
  * Own both proof artifacts before WordPress or any fixture mutation can run.
  * Keep the exclusive-create handles: subsequent writes never reopen a path.
@@ -10,16 +12,13 @@ final class Wstm108_Evidence {
 	private array $secrets = array();
 
 	public function __construct( string $summary_path ) {
+		\Wstm108_Files::directory( dirname( $summary_path ) );
 		$paths = array( 'summary' => $summary_path, 'journal' => $summary_path . '.http.jsonl' );
 		foreach ( $paths as $path ) {
 			clearstatcache( true, $path );
 			if ( file_exists( $path ) || is_link( $path ) ) {
 				throw new RuntimeException( 'WSTM108 Evidence path already exists; refusing to overwrite: ' . $path );
 			}
-		}
-		$directory = dirname( $summary_path );
-		if ( ! is_dir( $directory ) && ! @mkdir( $directory, 0777, true ) && ! is_dir( $directory ) ) {
-			throw new RuntimeException( 'WSTM108 Cannot create evidence directory.' );
 		}
 		try {
 			foreach ( $paths as $kind => $path ) {
@@ -61,11 +60,15 @@ final class Wstm108_Evidence {
 	}
 
 	public function append( array $event ): void {
-		$this->write( 'journal', $this->redact( json_encode( $event, JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR ) ) . "\n" );
+		if ( isset( $event['body'] ) && is_string( $event['body'] ) ) {
+			// Preserve malformed UTF-8 bytes without encoding credentials into a bypass.
+			$event['body_base64'] = base64_encode( $this->redact( $event['body'] ) );
+		}
+		$this->write( 'journal', $this->redact( json_encode( $event, JSON_PRESERVE_ZERO_FRACTION | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR ) ) . "\n" );
 	}
 
 	public function save( array $summary ): void {
-		$text = $this->redact( json_encode( $summary, JSON_PRETTY_PRINT | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR ) ) . "\n";
+		$text = $this->redact( json_encode( $summary, JSON_PRETTY_PRINT | JSON_PRESERVE_ZERO_FRACTION | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR ) ) . "\n";
 		if ( ! rewind( $this->handles['summary'] ) || ! ftruncate( $this->handles['summary'], 0 ) ) {
 			throw new RuntimeException( 'WSTM108 Cannot reset owned proof summary.' );
 		}

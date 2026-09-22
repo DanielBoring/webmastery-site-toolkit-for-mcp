@@ -11,6 +11,7 @@ use Wstm108_Evidence;
 
 require_once dirname( __DIR__ ) . '/e2e/error-contract-assertions.php';
 require_once dirname( __DIR__ ) . '/e2e/untrusted-content-evidence.php';
+require_once dirname( __DIR__ ) . '/e2e/untrusted-content-wire.php';
 
 $wstm108_old_optin = getenv( 'WSTM108_ALLOW_DISPOSABLE' );
 putenv( 'WSTM108_ALLOW_DISPOSABLE=1' );
@@ -217,6 +218,92 @@ final class UntrustedProofTest extends TestCase {
 		self::assertSame( $before, array( file_get_contents( $path ), file_get_contents( $path . '.http.jsonl' ) ) );
 	}
 
+	public function test_missing_evidence_directory_is_not_created_or_chmodded(): void {
+		$directory = __DIR__ . '/.wstm108-missing-' . bin2hex( random_bytes( 8 ) );
+		try {
+			new Wstm108_Evidence( $directory . '/proof.json' );
+			self::fail( 'Missing evidence directories require explicit caller ownership.' );
+		} catch ( RuntimeException $error ) {
+			self::assertStringContainsString( 'already exist at its exact resolved path', $error->getMessage() );
+		}
+		self::assertDirectoryDoesNotExist( $directory );
+	}
+
+	public function test_existing_evidence_directory_metadata_is_unchanged(): void {
+		$path = $this->path();
+		$before = array_intersect_key( stat( __DIR__ ), array_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode' ) ) );
+		$evidence = new Wstm108_Evidence( $path );
+		$evidence->save( array( 'reserved' => true ) );
+		clearstatcache();
+		self::assertSame( $before, array_intersect_key( stat( __DIR__ ), array_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode' ) ) ) );
+	}
+
+	public function test_malformed_utf8_response_bytes_survive_without_base64_credential_leakage(): void {
+		$path = $this->path();
+		$evidence = new Wstm108_Evidence( $path );
+		$evidence->secret( 'private-password' );
+		$body = "\xff\x00invalid private-password body";
+		$evidence->append( array( 'status' => 500, 'body' => $body ) );
+		$entry = json_decode( file_get_contents( $path . '.http.jsonl' ), true, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( "\xff\x00invalid [REDACTED] body", base64_decode( $entry['body_base64'], true ) );
+		self::assertStringNotContainsString( 'private-password', file_get_contents( $path . '.http.jsonl' ) );
+	}
+
+	public function test_retained_summary_and_journal_keep_integral_floats_distinct_from_integers(): void {
+		$path = $this->path();
+		$evidence = new Wstm108_Evidence( $path );
+		$value = array( 'integer' => 1, 'float' => 1.0, 'object' => (object) array(), 'list' => array() );
+		$evidence->save( $value );
+		$evidence->append( $value );
+		foreach ( array( $path, $path . '.http.jsonl' ) as $file ) {
+			$actual = json_decode( file_get_contents( $file ), false, 512, JSON_THROW_ON_ERROR );
+			self::assertSame( 1, $actual->integer );
+			self::assertSame( 1.0, $actual->float );
+			self::assertInstanceOf( \stdClass::class, $actual->object );
+			self::assertSame( array(), $actual->list );
+		}
+	}
+
+	public function test_session_recorder_runs_after_raw_persistence_once_per_new_token(): void {
+		$path = $this->path();
+		$evidence = new Wstm108_Evidence( $path );
+		$recorded = array();
+		$client = new Wstm108_Transport(
+			true, 'actor', 'secret-password', $evidence, 'admin', 'owned-client',
+			static function ( string $token, string $label ) use ( &$recorded, $path ): void {
+				self::assertFileExists( $path . '.http.jsonl' );
+				$bytes = file_get_contents( $path . '.http.jsonl' );
+				self::assertNotSame( '', $bytes );
+				self::assertStringNotContainsString( $token, $bytes );
+				$recorded[] = array( $token, $label );
+			}
+		);
+		foreach ( array( 'private-session', 'private-session', 'different-session' ) as $token ) {
+			$GLOBALS['wstm108_responses'][] = $this->response( '{"result":{}}', 200, array( 'mcp-session-id' => $token ) );
+			$client->rpc( 'initialize', array() );
+		}
+		self::assertSame( array( array( 'private-session', 'individual:admin' ), array( 'different-session', 'individual:admin' ) ), $recorded );
+		self::assertCount( 3, file( $path . '.http.jsonl' ) );
+	}
+
+	public function test_thrown_session_cleanup_transport_failure_is_retained_before_propagation(): void {
+		$path = $this->path();
+		$evidence = new Wstm108_Evidence( $path );
+		$client = $this->initialize( $evidence );
+		try {
+			$client->close();
+			self::fail( 'Missing HTTP response must throw.' );
+		} catch ( RuntimeException $error ) {
+			self::assertSame( 'Unexpected HTTP call.', $error->getMessage() );
+		}
+		$lines = file( $path . '.http.jsonl' );
+		$last = json_decode( end( $lines ), true, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( 'DELETE', $last['method'] );
+		self::assertSame( 0, $last['status'] );
+		self::assertSame( '', $last['body'] );
+		self::assertSame( 'Unexpected HTTP call.', $last['transport_error'] );
+	}
+
 	public static function racing_paths(): array {
 		return array( 'summary' => array( '' ), 'journal' => array( '.http.jsonl' ) );
 	}
@@ -258,17 +345,17 @@ final class UntrustedProofTest extends TestCase {
 
 	public function test_only_record_marker_is_removed_and_full_original_shape_is_required(): void {
 		$expected = array( 'post_id' => 7, 'meta' => array( 'literal' => wstm108_nested() ) );
-		$actual = $expected + array( 'untrusted_fields' => array( 'meta' ) );
+		$actual = json_decode( json_encode( $expected + array( 'untrusted_fields' => array( 'meta' ) ) ), false, 512, JSON_THROW_ON_ERROR );
 		wstm108_compare_record( $actual, $expected, 'meta' );
-		unset( $actual['meta']['literal']['untrusted_fields'] );
+		unset( $actual->meta->literal->untrusted_fields );
 		$this->expectException( RuntimeException::class );
-		$this->expectExceptionMessage( 'full pre-marker shape or original value changed' );
+		$this->expectExceptionMessage( 'original object/list/scalar shape or stored value changed' );
 		wstm108_compare_record( $actual, $expected, 'meta' );
 	}
 
 	public function test_extra_marker_fields_cannot_restore_redacted_login_or_email(): void {
 		$expected = array( 'id' => 9, 'display_name' => 'visible', 'nicename' => 'visible', 'url' => '', 'roles' => array( 'subscriber' ), 'registered' => '2026-01-01' );
-		$actual = $expected + array( 'untrusted_fields' => array( 'display_name', 'nicename', 'url', 'login', 'email' ) );
+		$actual = (object) ( $expected + array( 'untrusted_fields' => array( 'display_name', 'nicename', 'url', 'login', 'email' ) ) );
 		$this->expectException( RuntimeException::class );
 		wstm108_compare_record( $actual, $expected, 'user' );
 	}
@@ -283,7 +370,7 @@ final class UntrustedProofTest extends TestCase {
 			array( 'robots', array( 'url' => 'https://example.test/robots.txt', 'accessible' => true ), array( 'url' ) ),
 		);
 		foreach ( $records as list( $kind, $expected, $markers ) ) {
-			wstm108_compare_record( $expected + array( 'untrusted_fields' => $markers ), $expected, $kind );
+			wstm108_compare_record( (object) ( $expected + array( 'untrusted_fields' => $markers ) ), $expected, $kind );
 			$this->addToAssertionCount( 1 );
 		}
 	}
@@ -299,8 +386,12 @@ final class UntrustedProofTest extends TestCase {
 		$client = $this->initialize( $evidence, $individual );
 		$success = array( 'success' => true, 'data' => wstm108_nested() );
 		$wire = $individual ? $success : array( 'success' => true, 'data' => $success );
-		$GLOBALS['wstm108_responses'][] = $this->response( json_encode( array( 'result' => array( 'structuredContent' => $wire ) ) ) );
-		self::assertSame( $success, $client->execute( 'fixture/read', array() ) );
+		$GLOBALS['wstm108_responses'][] = $this->response( json_encode( array( 'result' => array(
+			'structuredContent' => $wire, 'content' => array( array( 'type' => 'text', 'text' => json_encode( $wire, JSON_THROW_ON_ERROR ) ) ),
+		) ) ) );
+		$result = $client->execute( 'fixture/read', array() );
+		self::assertSame( \wstm108_wire_canonical( $success ), \wstm108_wire_canonical( $result ) );
+		self::assertInstanceOf( \stdClass::class, $result['data'] );
 		$request = json_decode( $GLOBALS['wstm108_requests'][3][1]['body'], true );
 		self::assertSame( $individual ? 'not-a-guessed-sanitized-name' : 'arbitrary-gateway-executor', $request['params']['name'] );
 		$text = file_get_contents( $path . '.http.jsonl' );
@@ -337,9 +428,9 @@ final class UntrustedProofTest extends TestCase {
 
 	public function test_actual_error_wire_contract_is_preserved(): void {
 		$error = array( 'success' => false, 'error' => array( 'code' => 'forbidden', 'reason' => 'forbidden', 'message' => 'Unchanged.', 'details' => (object) array() ) );
-		$wire = array( 'isError' => true, 'content' => array( array( 'type' => 'text', 'text' => json_encode( $error ) ) ) );
+		$wire = (object) array( 'isError' => true, 'content' => array( (object) array( 'type' => 'text', 'text' => json_encode( $error ) ) ) );
 		self::assertEquals( $error, wstm108_decode_tool( $wire, false ) );
-		$wire['structuredContent'] = $error;
+		$wire->structuredContent = $error;
 		$this->expectException( RuntimeException::class );
 		wstm108_decode_tool( $wire, false );
 	}
@@ -378,7 +469,7 @@ final class UntrustedProofTest extends TestCase {
 namespace Wstm108EvidenceRace;
 
 $source = file_get_contents( dirname( __DIR__ ) . '/e2e/untrusted-content-evidence.php' );
-eval( 'namespace Wstm108EvidenceRace; use \RuntimeException; use \Throwable; ' . substr( $source, 5 ) );
+eval( 'namespace Wstm108EvidenceRace; use \RuntimeException; use \Throwable; ' . str_replace( '__DIR__', var_export( dirname( __DIR__ ) . '/e2e', true ), substr( $source, 5 ) ) );
 
 function fopen( string $path, string $mode ) {
 	( $GLOBALS['wstm108_before_exclusive_open'] )( $path, $mode );

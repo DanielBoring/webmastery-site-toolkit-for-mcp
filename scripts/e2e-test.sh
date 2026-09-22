@@ -19,6 +19,8 @@ E2E_SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$(dirname "${BASH_SOURCE[0]}")/qa-compose.sh"
 # shellcheck source=scripts/destructive-retention.sh
 source "$(dirname "${BASH_SOURCE[0]}")/destructive-retention.sh"
+# shellcheck source=scripts/untrusted-stage.sh
+source "$(dirname "${BASH_SOURCE[0]}")/untrusted-stage.sh"
 
 wp() {
 	compose exec -T wordpress wp --allow-root "$@"
@@ -527,6 +529,7 @@ main() {
 	fi
 
 	run_destructive_safety_qa
+	run_untrusted_content_qa
 	run_parent_assignment_qa
 	run_post_meta_authorization_qa
 	run_error_contract_qa

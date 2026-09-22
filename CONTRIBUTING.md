@@ -140,6 +140,10 @@ individually exposed tools: `readOnlyHint`, `destructiveHint`, and
 per-ability hints; obtain ability metadata through get-info. Source/unit
 checks alone do not prove emitted hints; runtime annotation proof for #108 is
 pending. Both gateway and individual result data must retain field markers.
+Untrusted runtime changes must retain the complete source/package-bound case
+plan, original JSON types, exclusive evidence before credentials, no-config-write
+CLI/HTTP restoration, owned resource cleanup and fail-closed outer retention.
+Neither mock-stage tests nor predecessor CI establishes dedicated runtime proof.
 Markers, hints, and the #116 confirmation interlocks still in development
 are defense-in-depth, not capability checks, content filters, a security
 boundary, or prompt-injection prevention. Text-only output is not implemented.

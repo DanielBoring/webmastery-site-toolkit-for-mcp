@@ -398,6 +398,9 @@ canonical error. Check lower-privilege user lookup omissions and denied SEO
 keys without reintroducing values or marker names. The
 [dedicated QA guidance](tests/e2e/README.md#untrusted-content-coverage-30-unreleased-108)
 requires explicit disposable-runtime opt-in; examples are not runtime proof.
+Its serial source/package stage uses exclusive MU loaders rather than config
+edits and retains source-bound catalog, typed-wire and cleanup evidence.
+Missing or incomplete restoration proof retains the disposable runtime.
 
 ## Security Best Practices
 
