@@ -55,11 +55,23 @@ final class Webmastery_MCP_Diagnostics_Fixture {
 	}
 
 	public function query( $query ) {
+		global $wpdb;
 		$this->queries[] = $query;
 		$context = $this->scenario['db_failure'] ?? '';
 		if ( isset( self::ERROR_CONTEXTS[ $context ] ) && str_contains( $query, self::ERROR_CONTEXTS[ $context ] ) ) {
 			++$this->injected;
 			return 'SELECT wstm111_RAW_SQL_PRIVATE_SENTINEL FROM information_schema.TABLES LIMIT 1';
+		}
+		if ( ! empty( $this->scenario['table_privacy'] ) && str_contains( $query, self::ERROR_CONTEXTS['table sizes'] ) ) {
+			++$this->injected;
+			return $wpdb->prepare(
+				'SELECT %s AS table_name, 3 AS row_count, 200 AS data_bytes, 10 AS index_bytes, 210 AS total_bytes
+				UNION ALL SELECT %s, 2, 100, 10, 110
+				UNION ALL SELECT %s, 1, 50, 10, 60',
+				$wpdb->posts,
+				$wpdb->prefix . 'wstm111_plugin_fingerprint',
+				$wpdb->prefix . 'wstm111_posts'
+			);
 		}
 		return $query;
 	}

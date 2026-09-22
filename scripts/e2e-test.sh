@@ -308,7 +308,31 @@ run_error_contract_qa() (
 	fi
 	compose exec -T wordpress grep -Fxq 'CLI only.' /tmp/wstm118-cli-response
 	compose exec -T -e WSTM118_DISPOSABLE=1 wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/error-contract-runner.php"
+	if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then
+		run_database_privacy_qa http
+	fi
 )
+
+run_database_privacy_qa() {
+	local boundary="$1"
+	local http=0
+	local status
+	if [ "$boundary" = "http" ]; then
+		http=1
+	elif [ "$boundary" != "native" ]; then
+		echo "Unknown database privacy boundary: ${boundary}" >&2
+		return 1
+	fi
+	status="$(compose exec -T wordpress curl --silent --show-error --output /tmp/wstm111-cli-response --write-out '%{http_code}' "http://localhost/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/database-table-privacy-runner.php")"
+	if [ "$status" != "403" ]; then
+		echo "Database privacy runner must reject non-CLI requests (HTTP ${status})." >&2
+		return 1
+	fi
+	compose exec -T wordpress grep -Fxq 'CLI only.' /tmp/wstm111-cli-response
+	compose exec -T -e WSTM111_DISPOSABLE_SITE=1 -e WSTM111_PRIVACY_HTTP="$http" \
+		-e WSTM111_PRIVACY_ARTIFACT="${CONTAINER_PLUGIN_ROOT}/e2e-artifacts/database-table-privacy-${boundary}.json" \
+		wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/database-table-privacy-runner.php"
+}
 
 run_metadata_boundary_qa() (
 	local boundaries=()
@@ -462,6 +486,7 @@ main() {
 		echo "Running Ability Contract QA..."
 		run_php_lint
 		run_ability_manifest
+		run_database_privacy_qa native
 		echo "Running scheduling side-effect regressions..."
 		compose exec -T wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/scheduling-runner.php"
 		run_trash_safety

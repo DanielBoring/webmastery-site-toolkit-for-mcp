@@ -297,6 +297,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Upload database privacy native evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: database-privacy-native-evidence
+          path: e2e-artifacts/database-table-privacy-native.json
+          if-no-files-found: error
+          retention-days: 7
+
   full-mcp-e2e-qa:
     name: 4 - Full MCP E2E QA
     needs: changes
@@ -401,6 +410,15 @@ jobs:
         with:
           name: error-contract-http-evidence
           path: e2e-artifacts/error-contract.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload database privacy HTTP evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: database-privacy-http-evidence
+          path: e2e-artifacts/database-table-privacy-http.json
           if-no-files-found: error
           retention-days: 7
 

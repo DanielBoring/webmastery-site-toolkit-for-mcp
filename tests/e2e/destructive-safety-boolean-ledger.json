@@ -5,6 +5,21 @@
   "package_run": 35666138916,
   "manifest_count": 563,
   "unchanged_cases": 547,
+  "integration": {
+    "source_sha": "db041ce338634ebf829ca01c69056b08fe6397d1",
+    "manifest_count": 570,
+    "insertion_index": 372,
+    "source_insertion_index": 327,
+    "cases": [
+      {"label":"database-health default private table labels","sha256":"de67e37bb2fa5681ad70215921597cc4c490cd4213ee6654da311eafca47a6e6"},
+      {"label":"database-health explicit false private table labels","sha256":"8fbfaeaaf84dbfea23dee412daa389c19188bf57071e2e1f2fe626ec7c551513"},
+      {"label":"database-health admin raw table opt-in","sha256":"1932fae9b257a9d2ee2167848f85820bcb00ad45206be025d9ce7a0e7b1c46b4"},
+      {"label":"database-health subscriber raw table opt-in denied","sha256":"958d0ff4617a3389a8689adec1937ddc2d703eeb3700cd3d1255b26108e994ad"},
+      {"label":"database-health string flag rejected","sha256":"2a5324892d27db64aa9f0583b32cad72f6755c054cf8b9b0eb30b6b981dd1bd5"},
+      {"label":"database-health numeric flag rejected","sha256":"3dd5701eebdf6888d5ecbd3772e961936cb753025995522f05110aa7ae73925c"},
+      {"label":"database-health null flag rejected","sha256":"5992bd278526097586220348bb42bd46e9ad5c08b3ed4c48fd8bb14a18056fd5"}
+    ]
+  },
   "fingerprint_encoding": "PHP json_decode associative=false; retain original array keys and property order; json_encode JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION; SHA-256. Goldens regenerated from source_sha, not the corrected working manifest.",
   "unchanged_cases_sha256": "ec2873ed7f4ee32e2d4f8486d58e09aa998b9ee4eda928cbcc6b8860eaaba0de",
   "all_non_oracle_fields_sha256": "2c10a9826b0c613499685252ca3544ed333c76733b07737009eb06fbd8eb01a9",
