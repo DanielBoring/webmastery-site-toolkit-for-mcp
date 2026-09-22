@@ -7,6 +7,16 @@ source "$root/scripts/e2e-test.sh"
 
 compose() {
 	case "$*" in
+		*curl*"/tests/e2e/database-table-privacy-runner.php")
+			printf '%s' "${WSTM111_MOCK_HTTP_STATUS:-403}"
+			;;
+		*"/tests/e2e/database-table-privacy-runner.php")
+			assert_cron_isolated
+			if [[ "$*" != "exec -T -e WSTM111_DISPOSABLE_SITE=1 -e WSTM111_PRIVACY_HTTP="* ]]; then
+				echo 'Database privacy QA must explicitly opt in to disposable-site execution.' >&2
+				exit 1
+			fi
+			;;
 		*curl*"/tests/e2e/metadata-batch-runner.php"|*curl*"/tests/e2e/seo-metadata-runner.php")
 			printf '%s' "${WSTM110_MOCK_HTTP_STATUS:-403}"
 			;;
@@ -106,4 +116,9 @@ if output="$(WSTM110_MOCK_HTTP_STATUS=200 run_metadata_boundary_qa 2>&1)"; then
 	exit 1
 fi
 grep -Fx 'Metadata boundary runner must reject non-CLI requests (HTTP 200).' <<< "$output"
+if output="$(WSTM111_MOCK_HTTP_STATUS=200 run_database_privacy_qa native 2>&1)"; then
+	echo 'Database privacy QA must reject an HTTP-accessible runner.' >&2
+	exit 1
+fi
+grep -Fx 'Database privacy runner must reject non-CLI requests (HTTP 200).' <<< "$output"
 echo 'Compatibility dependency policy and QA bootstrap tests passed without Docker or network.'

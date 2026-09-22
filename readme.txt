@@ -192,7 +192,7 @@ Both abilities require manage_options. The security audit's ssl finding checks t
 
 Debug-log findings omit filesystem paths. Enabled logging warns that access is unverified, even when a neighboring .htaccess file exists or the location is outside wp-content; neither proves that web access is denied. Disabled logging still passes. Necessary logging need not be disabled merely because it is enabled.
 
-Database query failures return a contextual database_health_query_failed error without raw SQL/server error details, leaving WordPress's own logging unchanged. Successful table-size reports still return prefixed table names, including matching plugin tables. These Administrator-only diagnostics are not fully redacted.
+Database query failures retain the contextual database_health_query_failed reason without raw SQL/server error details, leaving WordPress's own logging unchanged. In 3.0 development, table-size reports use core logical names (such as posts) and response-local opaque custom labels (such as custom_table_1), with an is_core_table boolean. The default reveals neither the configured prefix nor custom/plugin names. Labels are not stable across reports. Explicit include_table_names: true deliberately sends raw table identifiers to the model provider; it still requires manage_options. Only actual booleans are accepted, including in direct execution. Both modes retain counts, bytes, ordering, and current-prefix scope and never return passwords, SQL errors, or filesystem paths.
 
 = How do I report a security vulnerability? =
 
@@ -209,6 +209,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Prepare a breaking 3.0 error contract with canonical categories, precise reasons, safe messages, and object details.
 * Signal owned MCP failures consistently, preserve successful payloads and non-atomic bulk summaries, and leave foreign tools unchanged.
 * Keep the 2.6.0 stable tag and release notes intact while development migration work continues.
+* Redact database table identifiers by default for 3.0; add exact core classification and an explicit Administrator-only boolean opt-in for raw names, preserving diagnostic metrics and query scope.
 
 = 2.6.0 =
 

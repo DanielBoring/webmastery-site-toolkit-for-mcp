@@ -8,6 +8,9 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Add database diagnostic privacy regressions for strict boolean opt-in, query-free direct denials, custom-prefix/multisite physical mappings and suffix collisions, and complete metric/order parity. Keep prior SQL-error and security-audit coverage; add synthetic manifest controls and owned real-table/HTTP evidence with checked table and credential cleanup.
+- Wire database privacy proof through native and actual gateway/individual boundaries in contract, HTTP, and original-ZIP QA, with pre-bootstrap CLI/disposable guards, unique owned actors, separate retained artifacts, and package/bootstrap safeguard coverage.
+
 - Added guarded recovery of an original successful release-QA artifact through a separately authorized, annotated recovery-control tag, while preserving the original release tag/source/ZIP and the existing protected publish job. Read-only run/attempt/artifact provenance and authorization checks fail closed before and after approval; the control-tag object and complete original artifact identity/digest must remain unchanged, and control-tag pushes never build or publish a plugin release. Added recovery entrypoint, postapproval identity drift, immutable-artifact and missing-prerequisite regression coverage and a normal/recovery runbook.
 - Explicitly install and verify publish-host Subversion before release preflight and retain it for post-publication verification. Clarified the publish job and preapproval summaries as GitHub production approval, not WordPress.org staff review, without renaming or weakening the `wordpress-org` environment.
 
