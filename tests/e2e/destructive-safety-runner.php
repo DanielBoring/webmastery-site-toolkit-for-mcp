@@ -23,10 +23,11 @@ if ( ! is_string( $artifact ) || '' === $artifact || file_exists( $artifact ) ||
 require_once __DIR__ . '/destructive-safety-evidence.php';
 $evidence = new Wstm116_Evidence( $artifact );
 $completed = false;
-$summary = array( 'boundary' => $boundary, 'source_sha' => getenv( 'WSTM116_SOURCE_SHA' ), 'failed' => 1, 'phase' => 'bootstrap' );
+$summary = array( 'boundary' => $boundary, 'source_sha' => getenv( 'WSTM116_SOURCE_SHA' ), 'failed' => 1, 'phase' => 'bootstrap', 'cleanup_complete' => false );
 register_shutdown_function( static function () use ( $evidence, &$summary, &$completed ): void {
 	if ( ! $completed ) {
 		$summary['completed'] = false;
+		$summary['cleanup_complete'] = false;
 		$summary['fatal_shutdown'] = error_get_last();
 		$evidence->save( $summary );
 	}
@@ -39,6 +40,7 @@ require_once __DIR__ . '/metadata-transport.php';
 require_once __DIR__ . '/destructive-safety-wire.php';
 require_once __DIR__ . '/destructive-safety-lifecycle.php';
 require_once __DIR__ . '/destructive-safety-uploads.php';
+require_once __DIR__ . '/destructive-safety-cleanup.php';
 
 wstm116_require( defined( 'WSTM116_DISPOSABLE_RUNTIME' ) && true === WSTM116_DISPOSABLE_RUNTIME, 'Runtime must explicitly define WSTM116_DISPOSABLE_RUNTIME=true before fixture writes or credentials.' );
 $expected_days = getenv( 'WSTM116_EXPECT_TRASH_DAYS' );
@@ -76,12 +78,13 @@ $summary = array(
 	'trash_days' => EMPTY_TRASH_DAYS, 'http_boot' => $http_boot,
 	'cli_boot' => $summary['cli_boot'], 'http_boot_attempt' => $summary['http_boot_attempt'],
 	'http_attestation' => $http_attestation,
-	'passed' => 0, 'failed' => 0, 'cases' => array(), 'cleanup' => array(),
+	'passed' => 0, 'failed' => 0, 'cases' => array(), 'cleanup' => array(), 'cleanup_complete' => false,
 );
 foreach ( array( __FILE__, __DIR__ . '/destructive-safety-fixture.php', __DIR__ . '/destructive-safety-http-fixture.php',
 	__DIR__ . '/destructive-safety-evidence.php', __DIR__ . '/destructive-safety-lifecycle.php', __DIR__ . '/destructive-safety-stage.php',
 	__DIR__ . '/destructive-safety-preflight.php', __DIR__ . '/destructive-safety-wire.php', __DIR__ . '/destructive-safety-diagnostics.php',
 	__DIR__ . '/destructive-safety-boot.php', __DIR__ . '/destructive-safety-probe.php', __DIR__ . '/destructive-safety-uploads.php',
+	__DIR__ . '/destructive-safety-cleanup.php',
 	__DIR__ . '/metadata-transport.php', __DIR__ . '/metadata-batch-fixture.php',
 	__DIR__ . '/error-contract-assertions.php', __DIR__ . '/error-contract-fixture.php', __DIR__ . '/abilities-manifest.json',
 	__DIR__ . '/../../includes/class-posts.php', __DIR__ . '/../../includes/class-media.php',
@@ -94,17 +97,7 @@ $file_hashes = array();
 $file_identities = array();
 $owned_uploads = null;
 $owned_configuration = null;
-$check_file = static function ( string $file ) use ( &$owned_uploads, &$owned_configuration, &$files, &$file_hashes, &$file_identities ): void {
-	wstm116_require( null !== $owned_uploads, 'No owned upload directory.' );
-	$owned_uploads->validate_known_file( $file, true );
-	wstm116_require( in_array( $file, $files, true ) && ! is_link( $file ) && realpath( dirname( $file ) ) === $owned_configuration['path'], 'Untracked, outside-directory or symlinked upload; retaining evidence.' );
-	if ( file_exists( $file ) ) {
-		$identity = lstat( $file );
-		wstm116_require( is_array( $identity ) && is_file( $file ) && is_string( $file_hashes[ $file ] )
-			&& hash_file( 'sha256', $file ) === $file_hashes[ $file ]
-			&& array_intersect_key( $identity, array_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode' ) ) ) === $file_identities[ $file ], 'Owned upload identity or contents changed; retaining evidence.' );
-	}
-};
+$check_file = wstm116_cleanup_file_guard( $owned_uploads, $owned_configuration, $files, $file_hashes, $file_identities );
 $old_user = get_current_user_id();
 $owns_control = false;
 $record = static function ( string $label, callable $test ) use ( &$summary, $evidence ): void {
@@ -398,73 +391,7 @@ try {
 	$summary['fatal'] = $error->getMessage();
 	echo 'FAIL runtime: ' . $error->getMessage() . "\n";
 } finally {
-	$cleanup = static function ( string $label, callable $action ) use ( &$summary ): void {
-		try {
-			$action();
-			$summary['cleanup'][ $label ] = true;
-		} catch ( Throwable $error ) {
-			$summary['failed']++;
-			$summary['cleanup'][ $label ] = $error->getMessage();
-		}
-	};
-	foreach ( $transports as $role => $transport ) {
-		$cleanup( "HTTP {$role}", static function () use ( $transport ): void { $transport->close(); } );
-	}
-	if ( $owns_control ) {
-		$cleanup( 'control option', static function () use ( $run ): void {
-			wp_cache_delete( 'wstm116_control', 'options' );
-			wstm116_require( $run === ( get_option( 'wstm116_control' )['owner'] ?? null ), 'Refusing to delete another owner control option.' );
-			delete_option( 'wstm116_control' );
-			wstm116_require( false === get_option( 'wstm116_control', false ), 'Control option remains.' );
-		} );
-	}
-	foreach ( array_reverse( $posts ) as $id ) {
-		$cleanup( "post {$id}", static function () use ( $id, $check_file ): void {
-			if ( get_post( $id ) ) {
-				if ( 'attachment' === get_post_type( $id ) ) {
-					$check_file( get_attached_file( $id ) );
-					wstm116_require( in_array( wp_get_attachment_metadata( $id ), array( false, array() ), true )
-						&& in_array( get_post_meta( $id, '_wp_attachment_backup_sizes', true ), array( '', array() ), true ),
-						'Unexpected derivative attachment references; refusing untracked file deletion.' );
-				}
-				'attachment' === get_post_type( $id ) ? wp_delete_attachment( $id, true ) : wp_delete_post( $id, true );
-			}
-			wstm116_require( null === get_post( $id ) && array() === get_post_meta( $id ) && false === wp_next_scheduled( 'publish_future_post', array( $id ) ), 'Owned post/meta/scheduled event remains.' );
-		} );
-	}
-	foreach ( $terms as $taxonomy => $id ) {
-		$cleanup( "term {$id}", static function () use ( $taxonomy, $id ): void {
-			if ( term_exists( $id, $taxonomy ) ) {
-				wp_delete_term( $id, $taxonomy );
-			}
-			wstm116_require( ! term_exists( $id, $taxonomy ) && array() === get_term_meta( $id ), 'Owned term/meta remains.' );
-		} );
-	}
-	foreach ( $files as $file ) {
-		$cleanup( 'file ' . basename( $file ), static function () use ( $file, $check_file ): void {
-			$check_file( $file );
-			if ( is_file( $file ) ) {
-				wp_delete_file( $file );
-			}
-			wstm116_require( ! file_exists( $file ), 'Owned upload remains.' );
-		} );
-	}
-	if ( null !== $owned_uploads ) {
-		$cleanup( 'owned upload directory', static function () use ( $owned_uploads ): void { $owned_uploads->finalize(); } );
-	}
-	foreach ( $users as $role => $id ) {
-		$cleanup( "actor {$role}", static function () use ( $id, $posts ): void {
-			WP_Application_Passwords::delete_all_application_passwords( $id );
-			foreach ( $posts as $post_id ) {
-				$post = get_post( $post_id );
-				wstm116_require( null === $post || (int) $post->post_author !== $id, 'Actor still owns a retained post; refusing implicit file deletion.' );
-			}
-			wp_delete_user( $id );
-			wstm116_require( false === get_userdata( $id ) && array() === WP_Application_Passwords::get_user_application_passwords( $id ), 'Owned actor or credentials remain.' );
-		} );
-	}
-	wp_set_current_user( $old_user );
-	$summary['completed'] = true;
+	wstm116_cleanup( $summary, $transports, $owns_control, $run, $posts, $terms, $files, $owned_uploads, $users, $old_user, $check_file );
 	$evidence->save( $summary );
 	$completed = true;
 }

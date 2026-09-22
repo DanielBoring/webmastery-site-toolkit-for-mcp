@@ -6,6 +6,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Retain destructive-QA recovery evidence across stage, managed-source, package and workflow cleanup boundaries using an exclusive host owner/project/source guard. Block teardown and re-entry until actual restoration and explicit source-bound runner cleanup are proven; preserve original failures and keep private configuration out of artifacts. Validate attachment references before cleanup and retain files plus ownership proof after refusal/veto, with full outer-orchestration and actual cleanup-flow regressions.
+
 - Require an explicit disposable Compose project before runtime startup or cleanup, and wire unique job/run/attempt names into package CI and pre-publication QA. Add zero-Docker missing-name checks, unchanged offline-only validation and same-project startup/teardown regressions; leave publication policy and immutable artifacts unchanged.
 
 - Bound destructive-test HTTP cache readiness to five journaled read-only requests and verify original HTTP configuration before retiring private restoration evidence. Seed media only in a new token-owned upload directory assigned to the attested HTTP UID, with scoped filters and nonrecursive guarded cleanup. Preserve production and runtime oracles; strengthen historical manifest fingerprints to retain object/array and integer/float distinctions.

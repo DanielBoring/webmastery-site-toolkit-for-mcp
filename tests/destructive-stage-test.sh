@@ -35,6 +35,16 @@ compose() {
 			;;
 		*"destructive-safety-runner.php")
 			[[ "$*" == *"WSTM116_DISPOSABLE=1"* && "$*" == *"WSTM116_SOURCE_SHA="* && "$*" == *"WSTM116_ARTIFACT="* ]] || return 91
+			local arg artifact source boundary days
+			for arg in "$@"; do
+				case "$arg" in
+					WSTM116_ARTIFACT=*) artifact="${arg#*=}"; artifact="${artifact#*/webmastery-site-toolkit-for-mcp/}" ;;
+					WSTM116_SOURCE_SHA=*) source="${arg#*=}" ;;
+					WSTM116_BOUNDARY=*) boundary="${arg#*=}" ;;
+					WSTM116_EXPECT_TRASH_DAYS=*) days="${arg#*=}" ;;
+				esac
+			done
+			printf '{"completed":true,"cleanup_complete":true,"source_sha":"%s","boundary":"%s","trash_days":%s,"cleanup":{"fixture":true}}\n' "$source" "$boundary" "$days" > "$artifact"
 			[[ "${FAIL_STAGE:-}" != runner ]] || return 44
 			;;
 	esac
@@ -43,6 +53,8 @@ export -f compose
 run_stage() {
 	local mode="$1" expected="$2" status=0
 	: > "$TRACE"
+	# Reset only this mock's retained marker between independently asserted cases.
+	rm -f "$WORK/build/wstm116-retention-owned-destructive-stage-fixture"
 	(
 		cd "$WORK"
 		# qa-compose defines compose; restore the exported fixture after sourcing.

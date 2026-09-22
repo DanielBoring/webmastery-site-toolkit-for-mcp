@@ -13,15 +13,19 @@ E2E_ARTIFACTS_DIR="${E2E_ARTIFACTS_DIR:-e2e-artifacts}"
 E2E_MANAGE_COMPOSE="${E2E_MANAGE_COMPOSE:-0}"
 E2E_KEEP_COMPOSE="${E2E_KEEP_COMPOSE:-0}"
 QA_MODE="${1:-all}"
+E2E_SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck source=scripts/qa-compose.sh
 source "$(dirname "${BASH_SOURCE[0]}")/qa-compose.sh"
+# shellcheck source=scripts/destructive-retention.sh
+source "$(dirname "${BASH_SOURCE[0]}")/destructive-retention.sh"
 
 wp() {
 	compose exec -T wordpress wp --allow-root "$@"
 }
 
 start_compose() {
+	wstm116_require_no_retention || return $?
 	if [ "$E2E_MANAGE_COMPOSE" != "1" ]; then
 		return 0
 	fi
@@ -34,12 +38,20 @@ start_compose() {
 }
 
 cleanup_compose() {
+	local original=$? cleanup=0
+	if ! wstm116_require_no_retention; then
+		if [[ "$original" != 0 ]]; then return "$original"; fi
+		return 1
+	fi
 	if [ "$E2E_MANAGE_COMPOSE" != "1" ] || [ "$E2E_KEEP_COMPOSE" = "1" ]; then
 		return 0
 	fi
 
 	echo "Stopping Docker Compose stack..."
-	compose down -v --remove-orphans
+	compose down -v --remove-orphans || cleanup=$?
+	printf 'Compose cleanup: original_status=%s cleanup_status=%s\n' "$original" "$cleanup"
+	if [[ "$original" != 0 ]]; then return "$original"; fi
+	return "$cleanup"
 }
 
 wait_for_wordpress_files() {
@@ -367,7 +379,7 @@ run_metadata_boundary_qa() (
 run_destructive_safety_qa() (
 	: "${COMPOSE_PROJECT_NAME:?Destructive QA requires an explicitly owned disposable Compose project}"
 	[[ "$E2E_ARTIFACTS_DIR" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "Unsafe destructive artifact directory." >&2; exit 1; }
-	local token source_sha directory container_directory acquired=0 first_failure=0
+	local token source_sha directory container_directory acquired=0 first_failure=0 cleanup_verified=1
 	local mode days boundary status
 	local boundaries=()
 	token="$(host_php -r 'echo bin2hex(random_bytes(16));')"
@@ -383,15 +395,20 @@ run_destructive_safety_qa() (
 	}
 	# shellcheck disable=SC2329 # Invoked by this subshell's EXIT trap.
 	stage_finish() {
-		local original=$? restoration=0
+		local original=$? restoration=0 retention=1
 		trap - EXIT
 		if [[ "$acquired" == 1 ]]; then
 			stage_command restore 2>&1 | tee -a "$directory/stage.log" || restoration=$?
+			if [[ "$restoration" == 0 && "$cleanup_verified" == 1 ]]; then
+				wstm116_clear_retention "$token" "$source_sha" 2>&1 | tee -a "$directory/stage.log" && retention=0
+			fi
 		fi
-		printf 'source=%s original_status=%s restoration_status=%s\n' "$source_sha" "$original" "$restoration" | tee -a "$directory/stage.log"
+		printf 'source=%s original_status=%s restoration_status=%s retention_status=%s owner=%s project=%s\n' "$source_sha" "$original" "$restoration" "$retention" "$token" "$COMPOSE_PROJECT_NAME" | tee -a "$directory/stage.log"
 		if [[ "$original" != 0 ]]; then exit "$original"; fi
-		exit "$restoration"
+		if [[ "$restoration" != 0 ]]; then exit "$restoration"; fi
+		exit "$retention"
 	}
+	wstm116_arm_retention "$token" "$source_sha" 2>&1 | tee -a "$directory/stage.log" || exit $?
 	trap stage_finish EXIT
 	stage_command acquire 2>&1 | tee -a "$directory/stage.log" || exit $?
 	acquired=1
@@ -414,12 +431,19 @@ run_destructive_safety_qa() (
 		fi
 		for boundary in "${boundaries[@]}"; do
 			status=0
+			cleanup_verified=0
 			compose exec -T -e WSTM116_DISPOSABLE=1 -e WSTM116_BOUNDARY="$boundary" \
 				-e WSTM116_EXPECT_TRASH_DAYS="$days" -e WSTM116_STAGE_TOKEN="$token" \
 				-e WSTM116_SOURCE_SHA="$source_sha" -e WSTM116_ARTIFACT="$container_directory/$mode-$boundary.json" \
 				wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/destructive-safety-runner.php" \
 				2>&1 | tee -a "$directory/stage.log" || status=$?
 			if [[ "$first_failure" == 0 && "$status" != 0 ]]; then first_failure="$status"; fi
+			if host_php "$E2E_SCRIPT_ROOT/destructive-cleanup-proof.php" "$directory/$mode-$boundary.json" "$source_sha" "$boundary" "$days" 2>&1 | tee -a "$directory/stage.log"; then
+				cleanup_verified=1
+			else
+				if [[ "$first_failure" != 0 ]]; then exit "$first_failure"; fi
+				exit 1
+			fi
 		done
 	done
 	exit "$first_failure"
@@ -456,6 +480,7 @@ main() {
 
 	: "${COMPOSE_PROJECT_NAME:?Runtime QA requires an explicitly owned disposable Compose project}"
 	[[ "$COMPOSE_PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || { echo "Invalid disposable Compose project name." >&2; exit 1; }
+	wstm116_require_no_retention || return $?
 	if [ -n "${E2E_PACKAGE_ROOT:-}${E2E_PACKAGE_ZIP:-}" ]; then
 		: "${E2E_PACKAGE_ROOT:?Package runtime requires E2E_PACKAGE_ROOT}"
 		: "${E2E_PACKAGE_ZIP:?Package runtime requires E2E_PACKAGE_ZIP}"

@@ -103,6 +103,10 @@ seeding and is removed in `finally` before ability calls. Attachment paths,
 URLs/GUIDs, reference checks and post/file absence assertions remain real.
 Cleanup checks ownership, deletes only tracked unchanged files, and uses
 nonrecursive `rmdir`; foreign entries, symlinks or ownership changes fail closed.
+Attachment references are validated before any attachment cleanup. A reference
+refusal, deletion veto or retained post prevents independent upload-file deletion
+and retirement of the upload directory/marker. Safe unrelated cleanup continues;
+an actor still owning a retained post is not implicitly deleted.
 
 An exclusive `destructive-<token>` artifact directory contains `stage.log`,
 `preflight.json`, and uniquely named `<enabled|disabled>-<boundary>.json` reports
@@ -122,6 +126,25 @@ is independently nonzero and retains the private backup and necessary owned
 read-only evidence; an earlier failure remains the exit status. The fixes target
 the proven `4edeb17` stale-config and root-owned-upload failures; the historical
 `6a47b52` first-enabled boot failure remains undiagnosed.
+
+Before acquiring or mutating runtime configuration, the stage exclusively arms
+`build/wstm116-retention-<compose-project>` on the host checkout. It contains only
+the owner token, project name and source SHA, never configuration or credentials.
+Retirement requires verified restoration plus an explicit, strictly boolean,
+source/boundary/trash-bound `cleanup_complete` report from every invoked runner.
+An ordinary case failure with proven successful cleanup still tears down normally;
+missing/incomplete cleanup proof retains the runtime and its upload evidence.
+Both outer wrappers and source/floor workflow cleanup honor this guard and skip
+`down -v` while it exists. Any retained, foreign, invalid or symlink guard blocks
+restart and artifact/package replacement, even under another project name.
+
+A retention failure requires manual recovery of that exact owned runtime; do not
+delete its guard or run Compose teardown merely to unblock another run. Preserve
+private backup/probe and attachment ownership evidence, resolve the recorded
+failure, and verify original configuration and owned cleanup before retirement.
+Private configuration stays outside ordinary artifacts inside the retained
+runtime. This protects against harness teardown, not disposal of an ephemeral
+hosted runner; public reports must never be represented as a private-config backup.
 
 The temporary individual fixture exposes the real `/wp-json/wstm118/tools`
 catalog. The runner reuses `metadata-transport.php` for actual advertised names,

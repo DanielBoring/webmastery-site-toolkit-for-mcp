@@ -24,4 +24,15 @@ final class DestructivePackageOwnershipTest extends TestCase {
 		self::assertStringContainsString( 'run: bash scripts/release-qa.sh', $body );
 		self::assertLessThan( strpos( $body, 'run: bash scripts/release-qa.sh' ), strpos( $body, $assignment ) );
 	}
+
+	public function test_outer_workflow_teardown_cannot_bypass_retention(): void {
+		$root = dirname( __DIR__, 2 ) . '/.github/workflows/';
+		$source = file_get_contents( $root . 'e2e-qa.yml' );
+		$floor = file_get_contents( $root . 'compatibility-qa.yml' );
+		self::assertSame( 2, substr_count( $source, 'bash scripts/destructive-retention.sh cleanup' ) );
+		self::assertSame( 1, substr_count( $floor, 'bash scripts/destructive-retention.sh cleanup' ) );
+		self::assertSame( 2, substr_count( $source, "bash scripts/destructive-retention.sh check\n          docker compose down -v --remove-orphans" ) );
+		self::assertSame( 2, substr_count( $source, 'docker compose down' ) );
+		self::assertStringNotContainsString( 'docker compose down', $floor );
+	}
 }

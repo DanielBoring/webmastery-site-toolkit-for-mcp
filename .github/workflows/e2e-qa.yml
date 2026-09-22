@@ -113,6 +113,7 @@ jobs:
 
       - name: Start WordPress stack
         run: |
+          bash scripts/destructive-retention.sh check
           docker compose down -v --remove-orphans
           docker compose up -d
 
@@ -192,7 +193,7 @@ jobs:
 
       - name: Clean up
         if: always()
-        run: docker compose down -v --remove-orphans
+        run: bash scripts/destructive-retention.sh cleanup
 
       - name: Upload contract summary
         if: ${{ always() }}
@@ -330,6 +331,7 @@ jobs:
 
       - name: Start WordPress stack
         run: |
+          bash scripts/destructive-retention.sh check
           docker compose down -v --remove-orphans
           docker compose up -d
 
@@ -342,7 +344,7 @@ jobs:
 
       - name: Clean up
         if: always()
-        run: docker compose down -v --remove-orphans
+        run: bash scripts/destructive-retention.sh cleanup
 
       - name: Upload transport summary
         if: ${{ always() }}
