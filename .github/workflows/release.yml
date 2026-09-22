@@ -85,6 +85,7 @@ jobs:
 
       - name: Build once and test the package with pinned and current Plugin Check
         env:
+          COMPOSE_PROJECT_NAME: wstm-release-qa-${{ github.run_id }}-${{ github.run_attempt }}
           RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
           REQUIRE_CURRENT_PLUGIN_CHECK: '1'
         run: bash scripts/release-qa.sh "$RELEASE_VERSION"

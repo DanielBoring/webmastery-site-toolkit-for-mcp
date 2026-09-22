@@ -660,16 +660,24 @@ class Webmastery_MCP_Media {
 	private static function register_delete() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/delete-media', [
 			'label'               => 'Delete Media',
-			'description'         => 'Permanently delete a WordPress media item by ID.',
+			'description'         => 'Permanently delete a WordPress media item with confirm:true. Known featured-image or literal content URL/GUID references block deletion unless force:true. A successful scan is required even with force.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
 					'media_id' => [ 'type' => 'integer', 'description' => 'Media attachment ID to permanently delete' ],
+					'confirm'  => [ 'type' => 'boolean', 'enum' => [ true ], 'description' => 'Must be exactly true to acknowledge permanent deletion.' ],
+					'force'    => [ 'type' => 'boolean', 'default' => false, 'description' => 'Override a known positive reference, never permissions or a failed reference scan.' ],
 				],
-				'required'   => [ 'media_id' ],
+				'required'   => [ 'media_id', 'confirm' ],
 			],
 			'execute_callback'    => function ( $input ) {
+				if ( true !== ( $input['confirm'] ?? null ) ) {
+					return Webmastery_MCP_Response::legacy_error( 'missing_confirmation', 'Set confirm to true to acknowledge permanent deletion.' );
+				}
+				if ( array_key_exists( 'force', $input ) && ! is_bool( $input['force'] ) ) {
+					return Webmastery_MCP_Response::legacy_error( 'invalid_input', 'force must be a boolean.' );
+				}
 				$id         = absint( $input['media_id'] );
 				$attachment = get_post( $id );
 
@@ -680,13 +688,21 @@ class Webmastery_MCP_Media {
 					return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to delete this media item.' );
 				}
 
+				$in_use = Webmastery_MCP_Content_Hygiene::is_attachment_referenced( $id );
+				if ( is_wp_error( $in_use ) ) {
+					return Webmastery_MCP_Response::from_wp_error( $in_use );
+				}
+				if ( $in_use && true !== ( $input['force'] ?? false ) ) {
+					return Webmastery_MCP_Response::legacy_error( 'media_in_use', 'Media has known references. Set force to true only if deleting referenced media is intended.' );
+				}
+
 				$result = wp_delete_attachment( $id, true );
 
 				if ( ! $result ) {
 					return Webmastery_MCP_Response::legacy_error( 'delete_failed', 'Failed to delete media item.' );
 				}
 
-				return [ 'success' => true, 'data' => [ 'id' => $id, 'deleted' => true ] ];
+				return [ 'success' => true, 'data' => [ 'id' => $id, 'deleted' => true, 'in_use' => $in_use ] ];
 			},
 			'permission_callback' => self::attachment_permission( 'media_id', 'delete_post' ),
 			'meta'                => [

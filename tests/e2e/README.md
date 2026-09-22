@@ -21,6 +21,162 @@ Historical baseline comparisons require the pre-migration runner from 2.6.0;
 the current strict canonical parser intentionally rejects those old envelopes.
 Do not weaken current assertions to make a historical baseline pass.
 
+## Destructive-operation safety coverage (3.0)
+
+The five guarded abilities retain their original success and permission oracles,
+now with `confirm:true`. Added manifest cases reject missing/false/string/number/
+null confirmation, non-boolean optional flags, and 101 raw IDs (including
+duplicates); 100 duplicates, mixed/all-failed previews, and known featured-image
+refusal include persisted-state assertions. Unit tests separately pin callback
+reasons, exact schema bounds, canonical per-ID failures, query failure with force,
+and unchanged capability/trash behavior. Existing error-contract, taxonomy, and
+trash runners retain all earlier assertions.
+
+`destructive-safety-boolean-ledger.json` records the reviewed correction from
+head `6a47b52` (tested synthetic merge `22e30ea`): 547 manifest cases remain
+unchanged and 16 change only expected error code/reason, with all 563 typed
+inputs, ordering and other assertions preserved. WordPress 6.9, 6.9.4 and
+7.1.1 accept boolean-like values during schema validation; enum checks sanitize
+only a local comparison value, not the input passed to the callback. Therefore
+confirmation `"true"`/`1` fails the strict callback with
+`precondition_failed/missing_confirmation`; optional `"true"`/`"false"`/`0`/`1`
+fails there with `invalid_input/invalid_input`. Missing/false/null confirmation,
+null/array optional flags and 101 IDs still fail registered schema validation.
+Direct-callback expectations and independent permission-denial checks do not
+change. Recalibrate explicitly if a future input wrapper changes that ordering;
+do not broadly accept multiple reasons or coerce test inputs to make them pass.
+Preservation fingerprints decode JSON as objects and encode with
+`JSON_PRESERVE_ZERO_FRACTION`, retaining property order and sparse case indexes.
+Their goldens come from exact `6a47b52`, not the corrected working manifest.
+Mutation controls distinguish both `{}` from `[]` and integers from floats.
+The accepted `db041ce` privacy integration adds exactly seven cases, for 570
+total: 547 original unchanged cases, 16 approved error corrections, and seven
+inherited privacy cases. Each imported row has an object/type-preserving hash
+derived from exact `db041ce`; tests require its exact insertion position/order
+before removing only those seven rows to verify the original 563-case goldens.
+Unknown extra cases, altered privacy rows, and reordered baseline rows fail.
+
+`run_destructive_safety_qa` in the shared harness runs serially in a subshell:
+`contract` selects direct callbacks and registered abilities, `e2e` selects
+gateway and individual HTTP, and `all` runs all four. Each selection repeats
+with actual `EMPTY_TRASH_DAYS` values 30 and 0: eight invocations in full QA.
+Use only an explicitly owned disposable `COMPOSE_PROJECT_NAME`, never a live
+site or another worker's project. Unit and mocked stages do not constitute
+real WordPress, HTTP, floor, or original-package evidence.
+Both runtime entrypoints reject an absent or invalid project name before any
+Compose startup or cleanup. Package CI and pre-publication QA provide distinct
+job/run/attempt-scoped names. Local callers must explicitly export their own
+unique disposable name; neither the runner nor `qa-compose.sh` invents a fallback.
+The local-only `SKIP_PLUGIN_CHECK=1` offline package check still needs no project
+name and performs no runtime work; CI cannot use that bypass.
+
+Before test-only MU capabilities are installed, `destructive-safety-preflight.php`
+audits actual `wp_get_abilities()` against all 85 manifest abilities and records
+missing-opt-in CLI failure plus HTTP 403/`CLI only.` refusal. Whole core-table
+snapshots (including users, credentials, options and cron) and upload hashes
+must remain unchanged across those bootstrap denials.
+
+`destructive-safety-lifecycle.php` acquires an exclusive token-owned lock outside
+the document root, keeps a private exact config backup, refuses existing MU
+destinations, and configures both actual CLI and HTTP boots. It supports absent
+or conventional literal trash definitions and refuses ambiguous configuration.
+The runner requires `WSTM116_DISPOSABLE=1`, the runtime opt-in constant, matching
+stage token and expected trash days, and an authenticated-by-token read-only
+HTTP boot attestation **before creating actors or credentials**. Every observed
+HTTP mutation probe also attests the same configuration. An environment flag
+alone is never evidence of the server's trash behavior.
+After the native audit, an independently token-owned, GET-only read-only probe
+captures the original runtime. Each owned config transition allows at most five
+GETs, two seconds per request, four one-second intervals and a 14-second overall
+budget. Every attempt is journaled. Only a recognized previous owned runtime
+with the correct owner, roots and current disk digest may retry; malformed,
+foreign, denied, wrong-digest or unexpected opt-in results fail immediately.
+This cache-readiness barrier never retries abilities, actors or mutations and
+never resets or disables global OPcache.
+
+Each invocation exclusively creates one token-owned subdirectory beneath the
+resolved existing upload root. Only that new directory may change ownership,
+to the integer UID from the exact HTTP attestation; existing site/month/upload
+directories keep their ownership and modes. The HTTP probe must confirm it is
+writable before actors are created. The `upload_dir` filter exists only during
+seeding and is removed in `finally` before ability calls. Attachment paths,
+URLs/GUIDs, reference checks and post/file absence assertions remain real.
+Cleanup checks ownership, deletes only tracked unchanged files, and uses
+nonrecursive `rmdir`; foreign entries, symlinks or ownership changes fail closed.
+Attachment references are validated before any attachment cleanup. A reference
+refusal, deletion veto or retained post prevents independent upload-file deletion
+and retirement of the upload directory/marker. Safe unrelated cleanup continues;
+an actor still owning a retained post is not implicitly deleted.
+
+An exclusive `destructive-<token>` artifact directory contains `stage.log`,
+`preflight.json`, and uniquely named `<enabled|disabled>-<boundary>.json` reports
+with append-only `.jsonl` journals. The runner exclusively reserves both files
+before WordPress bootstrap, records each successful/failed case, and retains a
+partial summary on fatal shutdown. Do not overwrite or relabel failed attempts.
+Boot failures retain CLI identity, HTTP status, public REST error and response
+digest before credentials; successful HTTP attestation additionally records
+server SAPI/UID and config digest. Deletion
+diagnostics retain actual HTTP unlink-path ownership/writability and fresh CLI
+file existence/content evidence. No persisted-state or file-deletion assertion
+is waived. On EXIT, the stage restores exact prior config bytes/mode/UID/GID and
+removes the owned mutation loaders, then requires HTTP to converge to the
+captured original runtime before removing the read-only probe and retiring the
+private backup/lock. It preserves the parent's cleanup trap. Restoration failure
+is independently nonzero and retains the private backup and necessary owned
+read-only evidence; an earlier failure remains the exit status. The fixes target
+the proven `4edeb17` stale-config and root-owned-upload failures; the historical
+`6a47b52` first-enabled boot failure remains undiagnosed.
+
+Before acquiring or mutating runtime configuration, the stage exclusively arms
+`build/wstm116-retention-<compose-project>` on the host checkout. It contains only
+the owner token, project name and source SHA, never configuration or credentials.
+Retirement requires verified restoration plus an explicit, strictly boolean,
+source/boundary/trash-bound `cleanup_complete` report from every invoked runner.
+An ordinary case failure with proven successful cleanup still tears down normally;
+missing/incomplete cleanup proof retains the runtime and its upload evidence.
+Both outer wrappers and source/floor workflow cleanup honor this guard and skip
+`down -v` while it exists. Any retained, foreign, invalid or symlink guard blocks
+restart and artifact/package replacement, even under another project name.
+
+A retention failure requires manual recovery of that exact owned runtime; do not
+delete its guard or run Compose teardown merely to unblock another run. Preserve
+private backup/probe and attachment ownership evidence, resolve the recorded
+failure, and verify original configuration and owned cleanup before retirement.
+Private configuration stays outside ordinary artifacts inside the retained
+runtime. This protects against harness teardown, not disposal of an ephemeral
+hosted runner; public reports must never be represented as a private-config backup.
+
+The temporary individual fixture exposes the real `/wp-json/wstm118/tools`
+catalog. The runner reuses `metadata-transport.php` for actual advertised names,
+retains actor catalogs, and parses Adapter 0.6.1 errors as `isError:true` with
+one canonical JSON text block and absent/null `structuredContent`, not a
+structured error object.
+For successful bulk summaries, the runner also retains the original HTTP body
+and checks `details` object types before associative decoding can turn `{}` into
+`[]`. Both structured and text payloads must agree when both are present; an
+actual array remains a failure. State and hook evidence is captured before this
+wire-shape assertion, so a parser failure cannot hide the operation's effects.
+
+The same stage uses the mounted plugin root in source, floor, and original
+development-ZIP QA. Tests are harness-only mounts for package QA; production
+does not fall back to the checkout and ZIP bytes remain immutable. Contract,
+HTTP and package workflows upload the complete stage directory even on failure;
+compatibility lanes already retain the complete artifact tree. Archive reports
+before starting a new suite, whose existing top-level wrapper clears artifacts.
+
+The runner distinguishes callback permission outcomes from execution denial;
+compares preview summaries to real writes; snapshots posts, postmeta, terms,
+termmeta, taxonomy relationships, cron, and owned upload bytes; and records
+mutation hooks. It probes featured-image, literal URL, GUID, unused media,
+forced known-reference deletion, forced scan failures, and final object denials.
+HTTP fault injection and observers are authenticated-actor/request scoped and
+return a unique nonce attestation through the owned control option.
+Cleanup verifies absence of owned posts/meta/scheduled events, terms/meta,
+uploads, users/application passwords, and the control option, retaining failure
+evidence even when cleanup fails. The stage, not a manual config edit, manages
+the MU loaders and runtime opt-in. Actual eight-invocation/floor/package
+acceptance must still be established on the exact source under review.
+
 ## Metadata batch and SEO authorization coverage (3.0)
 
 `metadata-batch-fixture.php` independently lists 34 removed aliases and 147

@@ -6,8 +6,19 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Retain destructive-QA recovery evidence across stage, managed-source, package and workflow cleanup boundaries using an exclusive host owner/project/source guard. Block teardown and re-entry until actual restoration and explicit source-bound runner cleanup are proven; preserve original failures and keep private configuration out of artifacts. Validate attachment references before cleanup and retain files plus ownership proof after refusal/veto, with full outer-orchestration and actual cleanup-flow regressions.
+
+- Require an explicit disposable Compose project before runtime startup or cleanup, and wire unique job/run/attempt names into package CI and pre-publication QA. Add zero-Docker missing-name checks, unchanged offline-only validation and same-project startup/teardown regressions; leave publication policy and immutable artifacts unchanged.
+
+- Bound destructive-test HTTP cache readiness to five journaled read-only requests and verify original HTTP configuration before retiring private restoration evidence. Seed media only in a new token-owned upload directory assigned to the attested HTTP UID, with scoped filters and nonrecursive guarded cleanup. Preserve production and runtime oracles; strengthen historical manifest fingerprints to retain object/array and integer/float distinctions.
+- Preserve the original 563-case typed safety ledger across the accepted seven-case database privacy import: require all 570 rows, pin the imported rows and insertion order to their accepted source, and verify the original 547 unchanged cases plus 16 approved error corrections without regenerating baseline goldens.
+
 ### Added
 
+- Added destructive-operation red/green unit coverage and strict manifest policy for confirmation, raw bulk bounds, previews, canonical per-item failures, unchanged state, and preserved permission denials. Migrated existing bulk/error/trash/taxonomy callers without dropping their assertions.
+- Added opt-in disposable direct/registered/gateway/individual-tool proof runners with collision checks, persisted post/meta/term/file/cron snapshots, mutation observers, request-scoped database/capability faults, retained wire evidence, and owned-resource cleanup verification.
+- Wire destructive safety through eight serial boundary/trash-mode combinations in full source and original-package QA. Audit native registration and bootstrap denials before temporary MU fixtures; attest actual matching CLI/HTTP configuration, reserve evidence before credentials, and restore exact owned configuration/fixtures on failure. Add filesystem/mocked orchestration and package regressions plus always-retained CI reports; source/unit evidence does not establish real runtime acceptance.
+- Calibrate 16 destructive safety error expectations against real contract/package failures and unchanged official WordPress 6.9/6.9.4/7.1.1 schema/callback ordering, preserving all 563 typed inputs and no-write assertions. Retain original response bytes before associative decoding so bulk error details remain provably JSON objects; add negative array controls and bootstrap/filesystem diagnostics without bypassing failed attestation or file-deletion checks.
 - Add database diagnostic privacy regressions for strict boolean opt-in, query-free direct denials, custom-prefix/multisite physical mappings and suffix collisions, and complete metric/order parity. Keep prior SQL-error and security-audit coverage; add synthetic manifest controls and owned real-table/HTTP evidence with checked table and credential cleanup.
 - Wire database privacy proof through native and actual gateway/individual boundaries in contract, HTTP, and original-ZIP QA, with pre-bootstrap CLI/disposable guards, unique owned actors, separate retained artifacts, and package/bootstrap safeguard coverage.
 

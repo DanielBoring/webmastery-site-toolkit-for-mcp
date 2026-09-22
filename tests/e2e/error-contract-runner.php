@@ -169,7 +169,7 @@ try {
 			$owned_posts[] = $id;
 			$record( "{$boundary}/bulk/{$batch}", static function () use ( $call, $boundary, $batch, $id ) {
 				$ids = 'mixed' === $batch ? array( $id, PHP_INT_MAX ) : array( PHP_INT_MAX );
-				$raw = $call( $boundary, 'webmastery-site-toolkit-for-mcp/bulk-publish-posts', array( 'ids' => $ids ) );
+				$raw = $call( $boundary, 'webmastery-site-toolkit-for-mcp/bulk-publish-posts', array( 'ids' => $ids, 'confirm' => true ) );
 				webmastery_mcp_e2e_assert( false === $raw['isError'], 'Non-atomic batch became a tool error.' );
 				$result = webmastery_mcp_e2e_extract_tool_payload( $raw, 'bulk' );
 				$result = 'gateway' === $boundary ? $result['data'] : $result;

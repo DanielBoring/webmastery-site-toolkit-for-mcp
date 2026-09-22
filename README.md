@@ -116,7 +116,25 @@ These names use the `webmastery-site-toolkit-for-mcp/` prefix. WordPress's final
 
 Both permission callbacks and direct execution enforce write checks. Category/tag list and get permissions are unchanged. For callers with the taxonomy capability, missing IDs or IDs from the other taxonomy still return the existing `success: false` not-found envelope. Object-policy denials now fail before writes instead of bypassing the site's restrictions.
 
-Term deletion is permanent and uses WordPress's normal relationship handling (including category reassignment). Core denies deleting the default category through `delete_term`; if site filters override that denial, an underlying `0` or `false` deletion result still returns `success: false`, never `deleted: true`. Successful deletion keeps the existing `{ "success": true, "data": { "id": 123, "deleted": true } }` shape. On a disposable site, a `delete-category` request with `{ "category_id": <default-category-ID> }` must fail and a subsequent `get-category` must still find it.
+Term deletion is permanent and uses WordPress's normal relationship handling (including category reassignment). Core denies deleting the default category through `delete_term`; if site filters override that denial, an underlying `0` or `false` deletion result still returns `success: false`, never `deleted: true`. Successful deletion keeps the existing `{ "success": true, "data": { "id": 123, "deleted": true } }` shape. On a disposable site, a `delete-category` request with `{ "category_id": <default-category-ID>, "confirm": true }` must fail and a subsequent `get-category` must still find it.
+
+### Destructive-operation interlocks (3.0 development)
+
+| Abilities | Required inputs and unchanged access |
+| --- | --- |
+| `delete-media` | `media_id`, `confirm:true`; object-specific `delete_post`. Optional boolean `force` overrides only known references. |
+| `delete-category`, `delete-tag` | Term ID and `confirm:true`; registered taxonomy and per-term delete capabilities above. |
+| `bulk-trash-posts`, `bulk-publish-posts` | `ids` (1-100 raw entries), `confirm:true`; `delete_posts` / `publish_posts` plus existing per-object checks. Optional boolean `dry_run` defaults to false. |
+
+Confirmation must be the JSON boolean `true`, **including previews**. Missing, false, string, numeric, or null confirmation cannot authorize a write. The callback reports `precondition_failed/missing_confirmation`; registered schema validation can reject first with `invalid_input/ability_invalid_input`. WordPress 6.9/7.1.1 schema validation accepts some boolean-like strings and integers without changing callback input types, so `"true"` and `1` still reach and fail the strict confirmation guard. Optional `dry_run` and media `force` reject non-booleans rather than coercing them.
+
+Bulk requests reject 101 entries even when all IDs are identical. Accepted IDs are normalized and deduplicated before processing; `requested` counts unique normalized IDs. A preview performs the same type, per-object authorization, status, and disabled-trash checks without post, metadata, term, scheduling, or mutation-hook writes. Its normal batch summary adds `data.dry_run:true`; successes mean **would act**, not already changed. All-failed batches still return `success:true`. A preview is not a reservation: concurrent changes or real write-hook/storage failures can change a later execution.
+
+For example, preview a bounded selection with `{"ids":[123,456],"confirm":true,"dry_run":true}`, inspect every success/failure, obtain independent approval, then send the same IDs with `confirm:true` and omitted/false `dry_run`. Do not retry an entire partially successful batch blindly.
+
+Media deletion scans the same known references as orphan-media inspection: `_thumbnail_id` metadata and literal attachment URL/GUID strings in post content. A hit returns `precondition_failed/media_in_use` unless `force:true`; successful deletion always includes `data.in_use` as a boolean. Even forced deletion scans and fails closed on query errors, returning a safe canonical error, never SQL details. This is **not proof of universal non-use**: serialized settings, custom metadata, transformed image URLs, external sites, and concurrent edits may be missed.
+
+These interlocks do not grant capabilities, prove human approval, or prevent prompt injection. Clients must independently bind approval to the action and exact IDs. Single post/page/CPT soft-delete inputs are unchanged. See the [migration guide](docs/3.0-migration.md#destructive-operation-interlocks).
 
 ### Targeted content patching
 
@@ -313,6 +331,7 @@ SEO Analyze Post uses static focus-keyword diagnostics: `Focus keyword found in 
 - Author display names remain in content responses, but login names are omitted from post, page, CPT, revision, and content-hygiene responses. User login and email fields are only returned from user lookup abilities when the caller can edit that user.
 - Deletes for posts, pages, and custom post type items move content to trash. If `EMPTY_TRASH_DAYS` is `0` or another falsy value, these abilities refuse with `trash_disabled` before mutation instead of allowing WordPress to permanently delete the item. Bulk post trash reports this per authorized ID in `data.failures`, with no false success entries; its existing top-level summary remains successful even when every ID fails. Missing/type and permission errors take precedence. No permanent-delete override is offered.
 - Comment trash and comment updates with `status: "trash"` set the comment status through `wp_set_comment_status()`, retaining the row even when site trash is disabled. Media deletion remains permanent.
+- In 3.0 development, permanent media/term deletion and both bulk post operations require exact `confirm:true`; bulk requests are bounded to 100 raw IDs and support non-mutating `dry_run:true`. Media reference checks fail closed even with `force:true`. These are safety interlocks, not human-approval or capability grants.
 - Block and partial-content edits can use hash preconditions and fail when a target is missing, ambiguous, or stale.
 - Targeted patches sanitize replacements only and retain WordPress's capability-dependent save filters; they do not grant unfiltered HTML write access.
 - Subscriber-safe site info deliberately avoids secrets, filesystem paths, salts, auth keys, raw server internals, WordPress version, and theme version. `get-environment-info` requires `manage_options`.

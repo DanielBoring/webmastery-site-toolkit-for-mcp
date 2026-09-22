@@ -157,7 +157,7 @@ jobs:
           docker compose exec -T wordpress cat /var/www/html/wp-content/debug.log > compatibility-artifacts/wordpress-debug.log 2>/dev/null || true
       - name: Clean up
         if: always()
-        run: docker compose down -v --remove-orphans
+        run: bash scripts/destructive-retention.sh cleanup
       - name: Upload lane evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -113,6 +113,7 @@ jobs:
 
       - name: Start WordPress stack
         run: |
+          bash scripts/destructive-retention.sh check
           docker compose down -v --remove-orphans
           docker compose up -d
 
@@ -192,7 +193,7 @@ jobs:
 
       - name: Clean up
         if: always()
-        run: docker compose down -v --remove-orphans
+        run: bash scripts/destructive-retention.sh cleanup
 
       - name: Upload contract summary
         if: ${{ always() }}
@@ -279,6 +280,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Upload destructive safety contract evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: destructive-safety-contract-evidence
+          path: e2e-artifacts/destructive-*/
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Upload canonical error contract evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -321,6 +331,7 @@ jobs:
 
       - name: Start WordPress stack
         run: |
+          bash scripts/destructive-retention.sh check
           docker compose down -v --remove-orphans
           docker compose up -d
 
@@ -333,7 +344,7 @@ jobs:
 
       - name: Clean up
         if: always()
-        run: docker compose down -v --remove-orphans
+        run: bash scripts/destructive-retention.sh cleanup
 
       - name: Upload transport summary
         if: ${{ always() }}
@@ -383,6 +394,15 @@ jobs:
         with:
           name: comment-http-evidence
           path: e2e-artifacts/comments-http.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload destructive safety HTTP evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: destructive-safety-http-evidence
+          path: e2e-artifacts/destructive-*/
           if-no-files-found: error
           retention-days: 7
 
