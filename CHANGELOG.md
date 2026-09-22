@@ -8,6 +8,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Changed
 
+- Validate strict input types after core schema checks and before registered permission checks, so numeric-string IDs and boolean-like flags report input errors rather than permission denials. Preserve core lifecycle behavior, direct destructive preflight diagnostics, and real authorization failures.
 - Breaking development change for 3.0: close fixed-property ability input objects and reject unknown fields, invalid explicit nulls, coerced scalar types, and non-exact enum values before raw permission or execute callbacks. Preserve omitted defaults, intentional metadata/extension maps, and existing capability decisions.
 - Reject any supplied parent field on built-in posts and nonhierarchical custom post types, including zero; retain hierarchical detach-to-zero, omission, and the existing parent authorization/type/cycle safeguards.
 - Breaking development change for 3.0: require explicit boolean confirmation for permanent media/category/tag deletion and both bulk post operations, including previews. Bound bulk inputs to 100 raw entries and process normalized duplicate IDs once.
@@ -19,6 +20,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 - Breaking development change for 3.0: standardize ability failures on seven error categories with precise reasons, safe messages, and object-shaped details; keep successful payloads and capability policies unchanged.
 - Signal owned MCP gateway and individual-tool failures as tool errors with canonical JSON text, including early permission refusals. Preserve foreign tool behavior and document the Adapter's missing structured error support.
 - Keep non-atomic bulk summaries while standardizing every per-item failure. Redact external diagnostics even when providers reuse familiar error codes.
+- Breaking development change for 3.0: database health reports use core logical table names and response-local opaque custom labels by default, with exact WordPress core-table classification. Explicit Administrator-only `include_table_names: true` opts into sending raw identifiers to the model provider; malformed flags are rejected before queries. Counts, byte sizes, ordering, and current-prefix query scope are unchanged.
 - Normalize thrown execution and permission callback failures safely on WordPress 6.9 as well as newer core versions, without replaying callbacks or changing core lifecycle ordering.
 
 ## 2.6.0

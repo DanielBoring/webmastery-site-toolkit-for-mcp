@@ -34,7 +34,7 @@ $summary = array(
 	'source_sha' => getenv( 'WSTM126_SOURCE_SHA' ) ?: 'not supplied',
 	'passed' => 0, 'failed' => 0, 'cases' => array(), 'cleanup' => array(),
 );
-foreach ( array( __FILE__, __DIR__ . '/input-schema-fixture.php', __DIR__ . '/../../includes/class-input.php' ) as $source ) {
+foreach ( array( __FILE__, __DIR__ . '/input-schema-fixture.php', __DIR__ . '/../../includes/class-input.php', __DIR__ . '/../../includes/class-ability.php' ) as $source ) {
 	$summary['hashes'][ basename( $source ) ] = hash_file( 'sha256', $source );
 }
 $old_user = get_current_user_id();
@@ -144,14 +144,32 @@ try {
 		}
 	}
 	$cases['page unknown property'] = array( 'update-page', array( 'page_id' => $posts['page'], 'title' => 'Must not persist', 'parent' => 0, 'unknown' => true ), 'ability_invalid_input' );
-	$cases['numeric string ID'] = array( 'update-page', array( 'page_id' => (string) $posts['page'], 'title' => 'Must not persist' ), 'ability' === $boundary ? 'ability_invalid_permissions' : 'ability_invalid_input' );
+	$cases['numeric string ID'] = array( 'update-page', array( 'page_id' => (string) $posts['page'], 'title' => 'Must not persist' ), 'ability_invalid_input' );
+	foreach ( array(
+		'bulk-trash-posts' => array( 'ids' => array( $posts['post'] ) ),
+		'bulk-publish-posts' => array( 'ids' => array( $posts['post'] ) ),
+		'delete-media' => array( 'media_id' => $posts['post'] ),
+		'delete-category' => array( 'category_id' => $posts['post'] ),
+		'delete-tag' => array( 'tag_id' => $posts['post'] ),
+	) as $slug => $base ) {
+		// Invalid flags must stop before even resolving these integer target IDs.
+		foreach ( array( array(), array( 'confirm' => false ), array( 'confirm' => null ), array( 'confirm' => 'true' ), array( 'confirm' => 1 ) ) as $index => $flags ) {
+			$cases[ "{$slug}:confirm:{$index}" ] = array( $slug, $base + $flags, 'direct' === $boundary ? 'missing_confirmation' : 'ability_invalid_input' );
+		}
+		$flag = 'delete-media' === $slug ? 'force' : ( str_starts_with( $slug, 'bulk-' ) ? 'dry_run' : null );
+		if ( null !== $flag ) {
+			foreach ( array( 'true', 'false', 0, 1, null, array() ) as $index => $value ) {
+				$cases[ "{$slug}:{$flag}:{$index}" ] = array( $slug, $base + array( 'confirm' => true, $flag => $value ), 'direct' === $boundary ? 'invalid_input' : 'ability_invalid_input' );
+			}
+		}
+	}
 	foreach ( $cases as $label => [ $slug, $input, $reason ] ) {
 		$record( $label, static function ( &$entry ) use ( $invoke, $slug, $input, $reason, $boundary ) {
 			$result = $invoke( $slug, $input, 'administrator', $entry );
 			wstm118_error_envelope( $result );
 			wstm126_require( $reason === $result['error']['reason'], 'Wrong rejection layer/reason.' );
 			wstm126_assert_no_work( $entry['before'], $entry['after'], $entry['evidence'] );
-			$expected = 'ability' === $boundary && 'ability_invalid_permissions' !== $reason ? 0 : 1;
+			$expected = 'ability' === $boundary ? 0 : 1;
 			wstm126_require( $expected === count( $entry['evidence']['callbacks'] ), 'Missing or replayed callback observation.' );
 		} );
 	}

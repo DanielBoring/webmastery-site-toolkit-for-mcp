@@ -141,6 +141,8 @@ In 3.0 development, built-in posts and nonhierarchical custom post types reject 
 
 3.0 development closes fixed-property input objects and validates types, exact enums, required fields, numeric bounds, and array items before raw permission or execute callbacks. Unknown keys, numeric strings used as IDs, coerced booleans, and unadvertised null values are refused. Omit optional values to retain defaults. Input-free abilities accept omitted input or an empty object.
 
+Registered execution retains core input validation and then applies strict types before permissions, so numeric-string IDs and boolean-like flags report invalid_input rather than permission denial. Direct destructive preflight reasons and real capability denials are unchanged. Core normalization and lifecycle hooks remain active.
+
 Standalone metadata JSON values and dynamic registered-taxonomy maps remain open where intended; existing metadata and taxonomy authorization still applies. WordPress handles other schema keywords such as URI formats. Output schemas are deferred to avoid constraining legitimate provider/error response shapes. No capabilities or external services are added.
 
 = How are image URL uploads limited? =
@@ -204,7 +206,7 @@ Both abilities require manage_options. The security audit's ssl finding checks t
 
 Debug-log findings omit filesystem paths. Enabled logging warns that access is unverified, even when a neighboring .htaccess file exists or the location is outside wp-content; neither proves that web access is denied. Disabled logging still passes. Necessary logging need not be disabled merely because it is enabled.
 
-Database query failures return a contextual database_health_query_failed error without raw SQL/server error details, leaving WordPress's own logging unchanged. Successful table-size reports still return prefixed table names, including matching plugin tables. These Administrator-only diagnostics are not fully redacted.
+Database query failures retain the contextual database_health_query_failed reason without raw SQL/server error details, leaving WordPress's own logging unchanged. In 3.0 development, table-size reports use core logical names (such as posts) and response-local opaque custom labels (such as custom_table_1), with an is_core_table boolean. The default reveals neither the configured prefix nor custom/plugin names. Labels are not stable across reports. Explicit include_table_names: true deliberately sends raw table identifiers to the model provider; it still requires manage_options. Only actual booleans are accepted, including in direct execution. Both modes retain counts, bytes, ordering, and current-prefix scope and never return passwords, SQL errors, or filesystem paths.
 
 = How do I report a security vulnerability? =
 
@@ -217,6 +219,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 = Unreleased =
 
 * Close fixed-property input schemas and reject malformed types/enums before raw permission checks or execute callbacks; preserve explicit open maps and omitted defaults.
+* Validate strict types during registered input validation after core checks, preventing malformed scalar inputs from being misclassified as permission denials.
 * Reject unadvertised parent fields on posts and nonhierarchical custom post types, including zero, while retaining hierarchical detach and parent authorization.
 * Require exact confirmation for permanent media/term deletion and both bulk post operations; bound raw bulk requests to 100 IDs and add non-mutating eligibility previews.
 * Guard media deletion with shared known-reference checks; require explicit force for known usage, fail closed on scan errors, and report in_use on success without changing capabilities.
@@ -225,6 +228,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Prepare a breaking 3.0 error contract with canonical categories, precise reasons, safe messages, and object details.
 * Signal owned MCP failures consistently, preserve successful payloads and non-atomic bulk summaries, and leave foreign tools unchanged.
 * Keep the 2.6.0 stable tag and release notes intact while development migration work continues.
+* Redact database table identifiers by default for 3.0; add exact core classification and an explicit Administrator-only boolean opt-in for raw names, preserving diagnostic metrics and query scope.
 
 = 2.6.0 =
 

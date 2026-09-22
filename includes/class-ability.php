@@ -6,6 +6,18 @@ defined( 'ABSPATH' ) || exit;
  * Preserve the core lifecycle while normalizing only this plugin's boundaries.
  */
 final class Webmastery_MCP_Ability extends WP_Ability {
+	public function validate_input( $input = null ) {
+		$result = parent::validate_input( $input );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		$schema = $this->get_input_schema();
+		if ( empty( $schema ) ) {
+			return $result;
+		}
+		return Webmastery_MCP_Input::validate( $input, $schema ) ?? $result;
+	}
+
 	protected function invoke_callback( callable $callback, $input = null ) {
 		try {
 			return parent::invoke_callback( $callback, $input );

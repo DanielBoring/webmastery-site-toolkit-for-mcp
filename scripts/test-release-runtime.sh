@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 REPO_ROOT="$(pwd)"
 WORK="$REPO_ROOT/build/release-runtime-tests-$$"
+export WORK
 mkdir -p "$WORK/source with spaces/.github"
 trap 'status=$?; if [[ "$status" != 0 ]]; then cat "$WORK/"*.log >&2; fi; rm -rf "$WORK"; exit "$status"' EXIT
 cp -R scripts includes tests "$WORK/source with spaces/"
@@ -28,18 +29,24 @@ IDENTITY="$(sha256sum "$RELEASE_ZIP")"
 # shellcheck disable=SC2329 # Exported into the real orchestration subprocesses.
 docker() {
 	printf '%s\n' "$*" >> "$TRACE"
-	[[ "$*" == "compose --project-name release-runtime-fixture -f docker-compose.yml -f docker-compose.release.yml "* ]] ||
-		{ echo "Release runtime attempted checkout Compose configuration." >&2; return 91; }
-	[[ "${E2E_PACKAGE_ROOT:-}" == "./build/release-runtime/webmastery-site-toolkit-for-mcp" ]] ||
-		{ echo "Release runtime did not select its extracted package." >&2; return 92; }
+	if [[ "${SOURCE_MODE:-0}" == 1 ]]; then
+		[[ "$*" == "compose --project-name release-runtime-fixture "* && "$*" != *"docker-compose.release.yml"* ]] || return 90
+	else
+		[[ "$*" == "compose --project-name release-runtime-fixture -f docker-compose.yml -f docker-compose.release.yml "* ]] ||
+			{ echo "Release runtime attempted checkout Compose configuration." >&2; return 91; }
+		[[ "${E2E_PACKAGE_ROOT:-}" == "./build/release-runtime/webmastery-site-toolkit-for-mcp" ]] ||
+			{ echo "Release runtime did not select its extracted package." >&2; return 92; }
+	fi
 	case "$*" in
 		*" down -v --remove-orphans")
+			rm -f "$WORK/private-backup" "$WORK/readonly-probe" "$WORK/retained-attachment" "$WORK/retained-file" "$WORK/retained-marker"
 			if [[ "${FAIL_CLEANUP:-0}" == 1 && "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]]; then
 				echo "Fixture cleanup failure." >&2
 				return 47
 			fi
 			;;
 		*" up -d")
+			[[ "${SOURCE_MODE:-0}" != 1 ]] || return 0
 			( unset MSYS_NO_PATHCONV; php scripts/release-tools.php runtime-package "$E2E_PACKAGE_ROOT" "$RELEASE_ZIP" ) || return
 			# Simulate Docker's nested bind placeholders; never contaminate Plugin Check.
 			mkdir -p "$E2E_PACKAGE_ROOT/scripts" "$E2E_PACKAGE_ROOT/.github" "$E2E_PACKAGE_ROOT/tests" "$E2E_PACKAGE_ROOT/e2e-artifacts"
@@ -50,6 +57,40 @@ docker() {
 				# shellcheck disable=SC2016 # PHP variables, not shell substitutions.
 				php -r '$z = new ZipArchive(); $z->open($argv[1]); $z->setArchiveComment("changed identity, same production files"); $z->close();' "$RELEASE_ZIP"
 			fi
+			;;
+		*"destructive-safety-stage.php acquire "*)
+			printf 'private-config-fixture\n' > "$WORK/private-backup"
+			printf 'owned-readonly-probe\n' > "$WORK/readonly-probe"
+			printf 'stage-acquired\n' >> "$TRACE"
+			;;
+		*"destructive-safety-stage.php restore "*)
+			[[ "${FAIL_STAGE_RESTORE:-0}" != 1 ]] || return 47
+			rm -f "$WORK/private-backup" "$WORK/readonly-probe"
+			;;
+		*"destructive-safety-runner.php")
+			local arg artifact source boundary days complete=true cleanup=true
+			for arg in "$@"; do
+				case "$arg" in
+					WSTM116_ARTIFACT=*) artifact="${arg#*=}"; artifact="${artifact#*/webmastery-site-toolkit-for-mcp/}" ;;
+					WSTM116_SOURCE_SHA=*) source="${arg#*=}" ;;
+					WSTM116_BOUNDARY=*) boundary="${arg#*=}" ;;
+					WSTM116_EXPECT_TRASH_DAYS=*) days="${arg#*=}" ;;
+				esac
+			done
+			if [[ "${FAIL_RUNNER_CLEANUP:-0}" != 0 ]]; then
+				printf 'owned-attachment\n' > "$WORK/retained-attachment"
+				printf 'original-file-bytes\n' > "$WORK/retained-file"
+				printf 'owned-upload-proof\n' > "$WORK/retained-marker"
+				complete=false
+				cleanup='"refused attachment cleanup"'
+			fi
+			if [[ "${FAIL_RUNNER_CLEANUP:-0}" == missing ]]; then
+				printf '{"completed":true,"source_sha":"%s","boundary":"%s","trash_days":%s,"cleanup":{"fixture":true}}\n' "$source" "$boundary" "$days" > "$artifact"
+			else
+				printf '{"completed":true,"cleanup_complete":%s,"source_sha":"%s","boundary":"%s","trash_days":%s,"cleanup":{"fixture":%s}}\n' "$complete" "$source" "$boundary" "$days" "$cleanup" > "$artifact"
+			fi
+			[[ "${FAIL_RUNNER:-0}" != 1 ]] || return 44
+			[[ "${FAIL_RUNNER_CLEANUP:-0}" == 0 ]] || return 45
 			;;
 		*"compatibility-baselines.php "*)
 			php scripts/compatibility-baselines.php "${@: -1}"
@@ -78,7 +119,7 @@ docker() {
 		*"test -f /var/www/html/wp-content/debug.log") return 1 ;;
 		*"wp --allow-root core is-installed") return 1 ;;
 		*"application-password create"*) printf 'fixture-password\n' ;;
-		*"--write-out"*"/tests/e2e/parent-assignment-runner.php"|*"--write-out"*"/tests/e2e/post-meta-authorization-runner.php"|*"--write-out"*"/tests/e2e/error-contract-runner.php"|*"--write-out"*"/tests/e2e/metadata-batch-runner.php"|*"--write-out"*"/tests/e2e/seo-metadata-runner.php") printf '403' ;;
+		*"--write-out"*"/tests/e2e/parent-assignment-runner.php"|*"--write-out"*"/tests/e2e/post-meta-authorization-runner.php"|*"--write-out"*"/tests/e2e/error-contract-runner.php"|*"--write-out"*"/tests/e2e/metadata-batch-runner.php"|*"--write-out"*"/tests/e2e/seo-metadata-runner.php"|*"--write-out"*"/tests/e2e/database-table-privacy-runner.php") printf '403' ;;
 	esac
 }
 export -f docker
@@ -96,10 +137,35 @@ expect_failure() {
 	FAILURE_STATUS="$status"
 }
 
+(
+	unset COMPOSE_PROJECT_NAME
+	: > "$TRACE"
+	expect_failure 'Package runtime requires an explicitly owned disposable Compose project' bash scripts/release-qa.sh
+	test ! -s "$TRACE"
+	expect_failure 'Runtime QA requires an explicitly owned disposable Compose project' bash scripts/e2e-test.sh all
+	test ! -s "$TRACE"
+	SKIP_PLUGIN_CHECK=1 CI=false GITHUB_ACTIONS=false bash scripts/release-qa.sh > "$WORK/offline.log" 2>&1
+	grep -F 'runtime QA NOT RUN' "$WORK/offline.log"
+	test ! -s "$TRACE"
+)
+COMPOSE_PROJECT_NAME='invalid name' expect_failure 'Invalid disposable Compose project name.' bash scripts/release-qa.sh
+test ! -s "$TRACE"
 bash scripts/release-qa.sh > "$WORK/success.log" 2>&1
 [[ "$(sha256sum "$RELEASE_ZIP")" == "$IDENTITY" ]]
-for runner in ability-runner media-download-runner scheduling-runner trash-safety-runner mcp-crud-runner site-kit-mcp-runner parent-assignment-runner post-meta-authorization-runner error-contract-runner metadata-batch-runner seo-metadata-runner; do
+for runner in ability-runner media-download-runner scheduling-runner trash-safety-runner mcp-crud-runner site-kit-mcp-runner parent-assignment-runner post-meta-authorization-runner error-contract-runner metadata-batch-runner seo-metadata-runner destructive-safety-runner database-table-privacy-runner; do
 	grep -F "/tests/e2e/${runner}.php" "$TRACE" > /dev/null
+done
+[[ "$(grep -c 'destructive-safety-runner.php$' "$TRACE")" == 8 ]]
+for days in 30 0; do
+	for boundary in direct ability http individual; do
+		grep -E "WSTM116_DISPOSABLE=1 -e WSTM116_BOUNDARY=${boundary} -e WSTM116_EXPECT_TRASH_DAYS=${days} .*WSTM116_ARTIFACT=.* wordpress php /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/destructive-safety-runner.php$" "$TRACE" > /dev/null
+	done
+done
+grep -F 'destructive-safety-stage.php restore ' "$TRACE" > /dev/null
+for boundary in native http; do
+	http=0
+	[[ "$boundary" != http ]] || http=1
+	grep -F "WSTM111_DISPOSABLE_SITE=1 -e WSTM111_PRIVACY_HTTP=${http} -e WSTM111_PRIVACY_ARTIFACT=/var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/e2e-artifacts/database-table-privacy-${boundary}.json wordpress php /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/database-table-privacy-runner.php" "$TRACE" > /dev/null
 done
 for boundary in direct ability http individual; do
 	for runner in metadata-batch seo-metadata; do
@@ -115,8 +181,112 @@ grep -F 'plugin install plugin-check --version=2.1.0' "$TRACE"
 grep -F 'plugin install plugin-check --activate --force' "$TRACE"
 grep -F 'Unchanged release archive:' "$WORK/success.log"
 [[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]]
+for operation in ' up -d' ' exec ' ' cp ' ' down -v --remove-orphans'; do
+	grep -F "compose --project-name release-runtime-fixture -f docker-compose.yml -f docker-compose.release.yml${operation}" "$TRACE" >/dev/null
+done
 test -f e2e-artifacts/plugin-check-latest-verdict.json
 php scripts/release-tools.php runtime-package build/release-check/webmastery-site-toolkit-for-mcp "$RELEASE_ZIP"
+
+# Exercise both complete outer paths; simulated down really destroys the private fixtures.
+# shellcheck disable=SC2030,SC2031 # Each fault injection is intentionally isolated to its subprocess.
+for outer in package source; do
+	for failure in restoration attachment missing-proof ordinary combined success teardown ordinary-teardown; do
+		rm -f build/wstm116-retention-release-runtime-fixture
+		: > "$TRACE"
+		status=0
+		(
+			export FAIL_STAGE_RESTORE=0 FAIL_RUNNER=0 FAIL_RUNNER_CLEANUP=0 FAIL_CLEANUP=0
+			case "$failure" in
+				restoration) export FAIL_STAGE_RESTORE=1 ;;
+				attachment) export FAIL_RUNNER_CLEANUP=1 ;;
+				missing-proof) export FAIL_RUNNER_CLEANUP=missing ;;
+				ordinary) export FAIL_RUNNER=1 ;;
+				combined) export FAIL_RUNNER=1 FAIL_STAGE_RESTORE=1 ;;
+				teardown) export FAIL_CLEANUP=1 ;;
+				ordinary-teardown) export FAIL_RUNNER=1 FAIL_CLEANUP=1 ;;
+			esac
+			if [[ "$outer" == source ]]; then
+				unset E2E_PACKAGE_ROOT E2E_PACKAGE_ZIP
+				export SOURCE_MODE=1 E2E_KEEP_COMPOSE=0
+				bash scripts/e2e-test.sh all
+			else
+				bash scripts/release-qa.sh
+			fi
+		) > "$WORK/retention-$outer-$failure.log" 2>&1 || status=$?
+		case "$failure" in
+			restoration|teardown) expected=47 ;;
+			attachment|missing-proof) expected=45 ;;
+			ordinary|combined|ordinary-teardown) expected=44 ;;
+			success) expected=0 ;;
+		esac
+		[[ "$status" == "$expected" ]] || { cat "$WORK/retention-$outer-$failure.log" >&2; exit 1; }
+		if [[ "$failure" == ordinary || "$failure" == success || "$failure" == teardown || "$failure" == ordinary-teardown ]]; then
+			[[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]]
+			test ! -e build/wstm116-retention-release-runtime-fixture
+			test ! -e "$WORK/private-backup"
+		else
+			test -f build/wstm116-retention-release-runtime-fixture
+			grep -Eq '^owner=[a-f0-9]{32}$' build/wstm116-retention-release-runtime-fixture
+			grep -Fx 'project=release-runtime-fixture' build/wstm116-retention-release-runtime-fixture
+			grep -Eq '^source=[a-f0-9]{40}$' build/wstm116-retention-release-runtime-fixture
+			[[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 1 ]]
+			awk '/stage-acquired/{armed=1} armed && / down -v --remove-orphans$/{exit 1}' "$TRACE"
+			if [[ "$failure" == restoration || "$failure" == combined ]]; then
+				grep -Fx 'private-config-fixture' "$WORK/private-backup" >/dev/null
+				grep -Fx 'owned-readonly-probe' "$WORK/readonly-probe" >/dev/null
+			else
+				grep -Fx 'owned-attachment' "$WORK/retained-attachment" >/dev/null
+				grep -Fx 'original-file-bytes' "$WORK/retained-file" >/dev/null
+				grep -Fx 'owned-upload-proof' "$WORK/retained-marker" >/dev/null
+			fi
+			lines="$(wc -l < "$TRACE")"
+			expect_failure 'RECOVERY REQUIRED' bash scripts/destructive-retention.sh cleanup
+			expect_failure 'RECOVERY REQUIRED' bash scripts/release-qa.sh
+			COMPOSE_PROJECT_NAME=another-project expect_failure 'RECOVERY REQUIRED' bash scripts/release-qa.sh
+			expect_failure 'RECOVERY REQUIRED' bash scripts/e2e-test.sh all
+			[[ "$(wc -l < "$TRACE")" == "$lines" ]]
+		fi
+	done
+done
+rm -f build/wstm116-retention-release-runtime-fixture
+printf 'foreign-invalid-marker\n' > build/wstm116-retention-foreign
+: > "$TRACE"
+expect_failure 'RECOVERY REQUIRED' bash scripts/release-qa.sh
+expect_failure 'RECOVERY REQUIRED' bash scripts/destructive-retention.sh cleanup
+test ! -s "$TRACE"
+grep -Fx 'foreign-invalid-marker' build/wstm116-retention-foreign
+rm build/wstm116-retention-foreign
+echo 'PASS full package/managed-source retention, private evidence survival, no teardown, re-entry refusal and original statuses'
+
+# Negative controls restore unconditional outer teardown only in this copied fixture.
+# The identical injected restoration failure must now lose its private evidence.
+# shellcheck disable=SC2030,SC2031 # Fault flags never leak between independent subprocesses.
+for outer in package source; do
+	script=scripts/release-qa.sh
+	[[ "$outer" != source ]] || script=scripts/e2e-test.sh
+	cp "$script" "$WORK/fixed-retention-$outer.sh"
+	sed 's/if ! wstm116_require_no_retention; then/if false; then/' "$WORK/fixed-retention-$outer.sh" > "$script"
+	: > "$TRACE"
+	status=0
+	(
+		export FAIL_STAGE_RESTORE=1
+		if [[ "$outer" == source ]]; then
+			unset E2E_PACKAGE_ROOT E2E_PACKAGE_ZIP
+			export SOURCE_MODE=1 E2E_KEEP_COMPOSE=0
+			bash scripts/e2e-test.sh all
+		else
+			bash scripts/release-qa.sh
+		fi
+	) > "$WORK/legacy-retention-$outer.log" 2>&1 || status=$?
+	[[ "$status" == 47 ]]
+	[[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]]
+	test ! -e "$WORK/private-backup"
+	test ! -e "$WORK/readonly-probe"
+	test -f build/wstm116-retention-release-runtime-fixture
+	cp "$WORK/fixed-retention-$outer.sh" "$script"
+	rm build/wstm116-retention-release-runtime-fixture
+	echo "RED control confirmed: legacy $outer teardown destroyed retained backup/probe after restoration failure"
+done
 
 # Negative control: restoring the old checkout-mode selection must fail this test.
 cp scripts/release-qa.sh "$WORK/fixed-release-qa.sh"

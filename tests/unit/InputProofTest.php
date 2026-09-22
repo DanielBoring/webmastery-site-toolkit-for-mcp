@@ -7,6 +7,33 @@ use PHPUnit\Framework\TestCase;
 require_once dirname( __DIR__, 2 ) . '/includes/class-input.php';
 
 final class InputProofTest extends TestCase {
+	public function test_runtime_adds_exact_typed_destructive_matrix_and_hashes_native_validator(): void {
+		$source = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__ ) . '/e2e/input-schema-runner.php' ) );
+		self::assertStringContainsString( "__DIR__ . '/../../includes/class-ability.php'", $source );
+		$start = strpos( $source, "\tforeach ( array(\n\t\t'bulk-trash-posts'" );
+		$end = strpos( $source, "\tforeach ( \$cases as \$label =>" );
+		self::assertNotFalse( $start );
+		self::assertNotFalse( $end );
+		$posts = array( 'post' => 42 );
+		foreach ( array( 'direct', 'ability', 'permission', 'http', 'individual' ) as $boundary ) {
+			$cases = array();
+			eval( substr( $source, $start, $end - $start ) );
+			self::assertCount( 43, $cases );
+			foreach ( array( 'bulk-trash-posts' => 'ids', 'bulk-publish-posts' => 'ids', 'delete-media' => 'media_id', 'delete-category' => 'category_id', 'delete-tag' => 'tag_id' ) as $slug => $key ) {
+				$base = array( $key => 'ids' === $key ? array( 42 ) : 42 );
+				foreach ( array( array(), array( 'confirm' => false ), array( 'confirm' => null ), array( 'confirm' => 'true' ), array( 'confirm' => 1 ) ) as $index => $flags ) {
+					self::assertSame( array( $slug, $base + $flags, 'direct' === $boundary ? 'missing_confirmation' : 'ability_invalid_input' ), $cases[ "{$slug}:confirm:{$index}" ] );
+				}
+				$flag = 'delete-media' === $slug ? 'force' : ( str_starts_with( $slug, 'bulk-' ) ? 'dry_run' : null );
+				if ( null !== $flag ) {
+					foreach ( array( 'true', 'false', 0, 1, null, array() ) as $index => $value ) {
+						self::assertSame( array( $slug, $base + array( 'confirm' => true, $flag => $value ), 'direct' === $boundary ? 'invalid_input' : 'ability_invalid_input' ), $cases[ "{$slug}:{$flag}:{$index}" ] );
+					}
+				}
+			}
+		}
+	}
+
 	public static function unsafe_invocations(): array {
 		return array_map( static fn( $value ) => array( $value ), array( null, '', '0', 'true', ' 1', '1 ' ) );
 	}

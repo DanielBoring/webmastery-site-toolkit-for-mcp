@@ -46,6 +46,7 @@
 		"test:ci-safeguards": [
 			"@test:phpstan-baseline",
 			"@test:release-safeguards",
+			"bash tests/destructive-stage-test.sh",
 			"bash tests/compatibility-download-test.sh",
 			"bash tests/compatibility-dependency-policy-test.sh"
 		],

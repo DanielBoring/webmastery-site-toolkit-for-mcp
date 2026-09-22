@@ -41,6 +41,8 @@ final class Probe {
 	}
 }
 
+eval( 'namespace Wstm126Boundary; use \Closure; use \WP_Error; use \Webmastery_MCP_Response; ' . substr( file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-permissions.php' ), 5 ) );
+
 foreach ( glob( dirname( __DIR__, 3 ) . '/includes/class-*.php' ) as $file ) {
 	$source = file_get_contents( $file );
 	if ( ! str_contains( $source, 'public static function register()' ) ) {
