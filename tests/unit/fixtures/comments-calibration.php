@@ -204,6 +204,25 @@ function json( $value ): string {
 	return json_encode( $value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR ) . "\n";
 }
 
+// Independently verified against both pinned Git trees and the original typed ledger.
+const LEDGER_CANONICAL_SHA256 = 'c350dd9f4915c4b4f84940fa083ab46a807dac285d40007a536ddc041adf3b2d';
+
+function assert_ledger_seal( stdClass $sealed ): void {
+	if ( ! hash_equals( LEDGER_CANONICAL_SHA256, hash( 'sha256', json( $sealed ) ) ) ) {
+		throw new RuntimeException( 'Calibration ledger canonical fingerprint mismatch.' );
+	}
+}
+
+function load_ledger( ?string $source = null ): stdClass {
+	$source = $source ?? file_get_contents( __DIR__ . '/comments-calibration-ledger.json' );
+	$sealed = json_decode( $source, false, 512, JSON_THROW_ON_ERROR );
+	if ( ! $sealed instanceof stdClass ) {
+		throw new RuntimeException( 'Calibration ledger must be a JSON object.' );
+	}
+	assert_ledger_seal( $sealed );
+	return $sealed;
+}
+
 function between( string $source, string $start, string $end ): string {
 	$a = strpos( $source, $start );
 	$b = false === $a ? false : strpos( $source, $end, $a );
@@ -253,15 +272,10 @@ function runner_inventory( string $source ): array {
 			eval( between( $source, '$scenarios = array(', 'foreach ( $scenarios as $scenario' ) );
 			foreach ( $scenarios as $scenario => list( $role, $scope, $moderate, $edit ) ) {
 				$invalid = $scenarios[ $scenario ][4] ?? '';
-				$input = array( 'comment_id' => $id );
-				if ( 'update' === $action ) {
-					$input['content'] = 'WSTM105 changed.';
-					$input['status'] = 'spam';
-				}
-				// Evaluate the actual typed input switch, except its global-comment setup.
-				$switch = between( $source, 'switch ( $invalid )', '$record[\'input\']' );
-				$switch = str_replace( '$GLOBALS[\'comment\'] = get_comment( $id );', '', $switch );
-				eval( $switch );
+				// Evaluate the entire actual input construction, except its global-comment lookup.
+				$construction = between( $source, '$input = array(', '$record[\'input\']' );
+				$construction = str_replace( '$GLOBALS[\'comment\'] = get_comment( $id );', '', $construction );
+				eval( $construction );
 				$mode = 'baseline';
 				eval( between( $source, '$schema_invalid =', 'wstm105_assert( $allowed ===' ) );
 				$baseline = $allowed ? array( 'success' => true ) : contract( $source, 'baseline', $boundary, $invalid, $moderate, $edit );
@@ -285,6 +299,9 @@ function runner_inventory( string $source ): array {
 }
 
 function derive( ?stdClass $sealed = null ): array {
+	if ( null !== $sealed ) {
+		assert_ledger_seal( $sealed );
+	}
 	Probe::load();
 	$main = '2feed8d18d0721a4c7ca2e0187005c8cfae76322';
 	$head = '5b39f6a373b35bdb85f52916d4bb5b2f51ebc410';
@@ -384,7 +401,7 @@ function derive( ?stdClass $sealed = null ): array {
 		|| 39 !== count( $legacy ) || 141 !== $counts['raw_total'] ) {
 		throw new RuntimeException( 'STOP: approved A-D classification mismatch: ' . json( $counts ) );
 	}
-	return array(
+	$derived = array(
 		'purpose' => 'TEST-ONLY draft168 WSTM105 source calibration; not runtime acceptance',
 		'main' => $main, 'head' => $head, 'source_hash_algorithm' => 'sha256 LF-normalized source bytes',
 		'source_hashes' => $hashes,
@@ -393,4 +410,6 @@ function derive( ?stdClass $sealed = null ): array {
 		'counts' => $counts, 'closed_registered_schemas' => $schemas, 'runner_cases' => $rows,
 		'raw_malformed_cases' => $raw, 'legacy_payload_pairs' => $legacy,
 	);
+	assert_ledger_seal( (object) $derived );
+	return $derived;
 }

@@ -17,7 +17,7 @@ require_once dirname( __DIR__ ) . '/e2e/error-contract-assertions.php';
  */
 final class CommentsCalibrationTest extends TestCase {
 	private function ledger(): stdClass {
-		return json_decode( file_get_contents( __DIR__ . '/fixtures/comments-calibration-ledger.json' ), false, 512, JSON_THROW_ON_ERROR );
+		return Wstm105Calibration\load_ledger();
 	}
 
 	private function runner(): string {
@@ -50,6 +50,99 @@ final class CommentsCalibrationTest extends TestCase {
 		} finally {
 			ob_end_clean();
 		}
+	}
+
+	public static function provenance_mutants(): array {
+		return array(
+			'baseline absent hash replaced' => array( 'baseline_hash' ),
+			'historical source and embedded hash forged together' => array( 'historical_source' ),
+			'empty object changed to array' => array( 'object_to_array' ),
+			'empty array changed to object' => array( 'array_to_object' ),
+			'integer ID changed to float' => array( 'integer_to_float' ),
+			'typed case changed' => array( 'typed_case' ),
+			'error oracle changed' => array( 'oracle' ),
+			'historical source execution attempted' => array( 'historical_execution' ),
+		);
+	}
+
+	private function forged_ledger( string $mutation ): stdClass {
+		$ledger = $this->ledger();
+		switch ( $mutation ) {
+			case 'baseline_hash':
+				$ledger->source_hashes->{$ledger->main}->{'includes/class-input.php'} = str_repeat( 'a', 64 );
+				break;
+			case 'historical_source':
+				$path = 'tests/e2e/comments-runner.php';
+				$ledger->original_sources->$path .= "\n// Forged historical source.\n";
+				$ledger->source_hashes->{$ledger->head}->$path = hash( 'sha256', $ledger->original_sources->$path );
+				break;
+			case 'object_to_array':
+				$ledger->raw_malformed_cases[4]->input = array();
+				break;
+			case 'array_to_object':
+				$ledger->raw_malformed_cases[5]->input = new stdClass();
+				break;
+			case 'integer_to_float':
+				$ledger->symbolic_ids->existing_comment_id = 42.0;
+				break;
+			case 'typed_case':
+				$ledger->raw_malformed_cases[10]->input->comment_id = '1.5';
+				break;
+			case 'oracle':
+				$ledger->raw_malformed_cases[0]->new_execute->message = 'Forged oracle.';
+				break;
+			case 'historical_execution':
+				$path = 'tests/e2e/comments-fixture.php';
+				$ledger->original_sources->$path = str_replace(
+					'$invalid_inputs = array( null,',
+					'$invalid_inputs = array( ( $GLOBALS[\'wstm105_untrusted_source_executed\'] = true ),',
+					$ledger->original_sources->$path
+				);
+				$ledger->source_hashes->{$ledger->head}->$path = hash( 'sha256', $ledger->original_sources->$path );
+				break;
+			default:
+				throw new LogicException( 'Unknown provenance mutation.' );
+		}
+		return $ledger;
+	}
+
+	/** @dataProvider provenance_mutants */
+	public function test_sealed_derivation_rejects_whole_ledger_provenance_mutants( string $mutation ): void {
+		$ledger = $this->forged_ledger( $mutation );
+		self::assertNotSame( $this->typed( $this->ledger() ), $this->typed( $ledger ) );
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'Calibration ledger canonical fingerprint mismatch.' );
+		try {
+			Wstm105Calibration\derive( $ledger );
+		} finally {
+			$executed = isset( $GLOBALS['wstm105_untrusted_source_executed'] );
+			unset( $GLOBALS['wstm105_untrusted_source_executed'] );
+			self::assertFalse( $executed, 'Fingerprint verification must precede historical source evaluation.' );
+		}
+	}
+
+	/** @dataProvider provenance_mutants */
+	public function test_ledger_load_rejects_whole_ledger_provenance_mutants( string $mutation ): void {
+		$source = $this->typed( $this->forged_ledger( $mutation ) );
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'Calibration ledger canonical fingerprint mismatch.' );
+		Wstm105Calibration\load_ledger( $source );
+	}
+
+	public function test_verified_ledger_load_uses_existing_typed_serializer_and_accepts_only_identical_content(): void {
+		$ledger = $this->ledger();
+		self::assertSame( Wstm105Calibration\LEDGER_CANONICAL_SHA256, hash( 'sha256', $this->typed( $ledger ) ) );
+		$reformatted = "\r\n " . json_encode( $ledger, JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR ) . "\r\n";
+		self::assertSame( $this->typed( $ledger ), $this->typed( Wstm105Calibration\load_ledger( $reformatted ) ) );
+		self::assertSame( $this->typed( $ledger ), $this->typed( Wstm105Calibration\derive( $ledger ) ) );
+		self::assertInstanceOf( stdClass::class, $ledger->raw_malformed_cases[4]->input );
+		self::assertSame( array(), $ledger->raw_malformed_cases[5]->input );
+	}
+
+	public function test_ledger_load_rejects_nonobject_root(): void {
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'Calibration ledger must be a JSON object.' );
+		Wstm105Calibration\load_ledger( '[]' );
 	}
 
 	public function test_ledger_is_exact_pinned_typed_source_derivation(): void {
@@ -350,6 +443,9 @@ final class CommentsCalibrationTest extends TestCase {
 
 	public static function runner_mutants(): array {
 		return array(
+			'actual initializer content' => array( "\$input['content'] = 'WSTM105 changed.';", "\$input['content'] = 'Forged initial content.';", 77 ),
+			'actual initializer status' => array( "\$input['status'] = 'spam';", "\$input['status'] = 'trash';", 77 ),
+			'actual initializer ID' => array( "\$input = array( 'comment_id' => \$id );", "\$input = array( 'comment_id' => \$id + 1 );", 108 ),
 			'old HTTP precedence' => array( "'http' === \$boundary && ! \$moderate && ( 'baseline' === \$mode || ! \$schema_invalid )", "'http' === \$boundary && ! \$moderate" ),
 			'old direct not_found' => array( "( 'fixed' === \$mode || 'direct' !== \$boundary ) &&", "'direct' !== \$boundary &&" ),
 			'ID coercion' => array( "\$input['comment_id'] = 'not-an-id'", "\$input['comment_id'] = 0" ),
@@ -361,11 +457,23 @@ final class CommentsCalibrationTest extends TestCase {
 	}
 
 	/** @dataProvider runner_mutants */
-	public function test_runner_mutations_are_rejected( string $from, string $to ): void {
+	public function test_runner_mutations_are_rejected( string $from, string $to, ?int $changed_inputs = null ): void {
 		$source = $this->runner();
 		self::assertStringContainsString( $from, $source );
+		$mutated = str_replace( $from, $to, $source, $replacements );
+		if ( null !== $changed_inputs ) {
+			self::assertSame( 1, $replacements, 'Mutate exactly one actual initializer assignment.' );
+			$original_rows = Wstm105Calibration\runner_inventory( $source );
+			$mutated_rows = Wstm105Calibration\runner_inventory( $mutated );
+			self::assertCount( 308, $mutated_rows );
+			$changed = 0;
+			foreach ( $original_rows as $i => $row ) {
+				$changed += (int) ( $this->typed( $row['input'] ) !== $this->typed( $mutated_rows[ $i ]['input'] ) );
+			}
+			self::assertSame( $changed_inputs, $changed, 'Actual initializer changes must reach precisely the affected payloads.' );
+		}
 		$this->expectException( AssertionFailedError::class );
-		$this->assert_runner_inventory( str_replace( $from, $to, $source ) );
+		$this->assert_runner_inventory( $mutated );
 	}
 
 	public static function error_mutants(): array {
