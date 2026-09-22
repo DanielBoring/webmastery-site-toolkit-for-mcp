@@ -23,6 +23,7 @@
 - [ ] Inputs are sanitized or validated (`sanitize_text_field`, `sanitize_key`, `absint`, `wp_kses_post`, enum validation, or an equivalent WordPress API)
 - [ ] Fixed input objects are closed, raw permissions and execute callbacks reject malformed types/enums/nulls/unknown keys before work, intentional maps remain open, and mutation/no-query/no-write controls preserve exact boundary-specific errors and hierarchical detach/omission
 - [ ] Native input validation delegates to core once before strict types, preserving core errors/empty schemas/normalization/lifecycle, genuine permission denials and direct destructive diagnostics; zero-work evidence does not claim zero core hooks
+- [ ] Permission-default changes retain null-only exact-object-root materialization before one parent permission call, no normalization-filter replay or raw-callback relaxation, and Adapter empty-object/allowed-denied/nested-null/invalid-default/lifecycle/reentrancy/privacy controls
 - [ ] Successful payloads are preserved; failures use canonical code/reason/message/object-details, native permissions retain `WP_Error`, and MCP gateway/individual-tool errors plus foreign-namespace isolation are covered
 - [ ] New ability names use the `webmastery-site-toolkit-for-mcp/` prefix and set accurate `annotations` (`readonly`, `destructive`, `idempotent`)
 - [ ] If this PR adds or changes `webmastery-site-toolkit-for-mcp/*` abilities, `tests/e2e/abilities-manifest.json` includes matching positive and negative cases where permissions apply

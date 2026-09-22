@@ -33,6 +33,10 @@ final class Webmastery_MCP_Ability extends WP_Ability {
 	}
 
 	public function check_permissions( $input = null ) {
+		$schema = $this->get_input_schema();
+		if ( null === $input && 'object' === ( $schema['type'] ?? null ) && array_key_exists( 'default', $schema ) ) {
+			$input = $schema['default'];
+		}
 		$result = parent::check_permissions( $input );
 		if ( true === $result ) {
 			return true;

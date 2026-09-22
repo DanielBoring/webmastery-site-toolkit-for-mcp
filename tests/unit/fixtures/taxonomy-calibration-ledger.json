@@ -1,0 +1,3109 @@
+{
+    "purpose": "Test-only taxonomy closed-schema calibration; no runtime acceptance",
+    "parent": "3f6e8e055a664b0f21d93c79cf25c239f36fd93f",
+    "head": "436191f9ce83281de2a4a036eb338627e52680e9",
+    "source_hashes": {
+        "3f6e8e055a664b0f21d93c79cf25c239f36fd93f": {
+            "tests/e2e/taxonomy-write-runner.php": "09b719a9627e8fa0c2067afc1b207668984b2f43d36d7a0d570cca51a45bafa4",
+            "includes/class-taxonomy.php": "b9acfc828f6e5bd6607ece9aff9c85db571601f891de6dcd698a612fe1507e96",
+            "includes/class-input.php": "7e84ddf668840c01826a2865fc8929f3f55ad2ac49d8b038b5210a751925fc30",
+            "includes/class-response.php": "98c4dcd24f3ae2d82467c28ce28c05a271c587d8df2bfc1f1b80901de94a34ab"
+        },
+        "436191f9ce83281de2a4a036eb338627e52680e9": {
+            "tests/e2e/taxonomy-write-runner.php": "09b719a9627e8fa0c2067afc1b207668984b2f43d36d7a0d570cca51a45bafa4",
+            "includes/class-taxonomy.php": "b9acfc828f6e5bd6607ece9aff9c85db571601f891de6dcd698a612fe1507e96",
+            "includes/class-input.php": "7e84ddf668840c01826a2865fc8929f3f55ad2ac49d8b038b5210a751925fc30",
+            "includes/class-response.php": "98c4dcd24f3ae2d82467c28ce28c05a271c587d8df2bfc1f1b80901de94a34ab"
+        }
+    },
+    "original_source": "<?php\nrequire_once __DIR__ . '/error-contract-assertions.php';\n\n\n// This fixture mutates disposable WordPress data; never expose it over HTTP.\nif ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {\n\texit;\n}\n\nfunction wstm117_term_snapshot() {\n\tglobal $wpdb;\n\n\t// Read the persisted tables, not term caches, including metadata and relationships.\n\t$queries = array(\n\t\t'terms'         => \"SELECT * FROM {$wpdb->terms} ORDER BY term_id\",\n\t\t'taxonomies'    => \"SELECT * FROM {$wpdb->term_taxonomy} ORDER BY term_taxonomy_id\",\n\t\t'meta'          => \"SELECT * FROM {$wpdb->termmeta} ORDER BY meta_id\",\n\t\t'relationships' => \"SELECT * FROM {$wpdb->term_relationships} ORDER BY object_id, term_taxonomy_id\",\n\t);\n\t$snapshot = array();\n\tforeach ( $queries as $key => $query ) {\n\t\t$rows = $wpdb->get_results( $query, ARRAY_A );\n\t\tif ( ! is_array( $rows ) || '' !== $wpdb->last_error ) {\n\t\t\tthrow new RuntimeException( \"Could not read persisted {$key}: {$wpdb->last_error}\" );\n\t\t}\n\t\t$snapshot[ $key ] = $rows;\n\t}\n\treturn $snapshot;\n}\n\nfunction wstm117_run_taxonomy_tests() {\n\tglobal $wp_version;\n\n\t$summary = array( 'wordpress' => $wp_version, 'php' => PHP_VERSION, 'passed' => 0, 'failed' => 0, 'cases' => array() );\n\t$record = static function ( $label, $passed, $evidence ) use ( &$summary ) {\n\t\t$summary[ $passed ? 'passed' : 'failed' ]++;\n\t\t$summary['cases'][] = array( 'label' => $label, 'passed' => $passed, 'evidence' => $evidence );\n\t\techo ( $passed ? 'PASS ' : 'FAIL ' ) . $label . \"\\n\";\n\t};\n\t$success = static function ( $result ) {\n\t\treturn is_array( $result ) && true === ( $result['success'] ?? null );\n\t};\n\t$error = static function ( $result ) {\n\t\treturn wstm118_error_envelope( $result )['error']['message'];\n\t};\n\t$original_user = get_current_user_id();\n\t$admin = get_user_by( 'login', 'admin' );\n\t$editor = get_user_by( 'login', 'editor_test' );\n\t$subscriber = get_user_by( 'login', 'subscriber_test' );\n\tif ( ! $admin || ! $editor || ! $subscriber ) {\n\t\tthrow new RuntimeException( 'Run the ability manifest bootstrap before the taxonomy regression runner.' );\n\t}\n\t$original_caps = array();\n\tforeach ( array( 'category', 'post_tag' ) as $taxonomy ) {\n\t\t$original_caps[ $taxonomy ] = clone get_taxonomy( $taxonomy )->cap;\n\t}\n\n\t$make_term = static function ( $taxonomy ) {\n\t\t$result = wp_insert_term( 'WSTM117 ' . wp_generate_uuid4(), $taxonomy, array( 'description' => 'Original description.' ) );\n\t\tif ( is_wp_error( $result ) ) {\n\t\t\tthrow new RuntimeException( $result->get_error_message() );\n\t\t}\n\t\t$id = (int) $result['term_id'];\n\t\tadd_term_meta( $id, 'wstm117_proof', 'Original metadata.' );\n\t\treturn $id;\n\t};\n\t$post_id = wp_insert_post( array( 'post_title' => 'WSTM117 relationship proof', 'post_status' => 'draft' ), true );\n\tif ( is_wp_error( $post_id ) ) {\n\t\tthrow new RuntimeException( $post_id->get_error_message() );\n\t}\n\n\ttry {\n\t\tforeach ( array( 'category' => 'category', 'post_tag' => 'tag' ) as $taxonomy => $slug ) {\n\t\t\tforeach ( array( 'create', 'update', 'delete' ) as $action ) {\n\t\t\t\t$ability = wp_get_ability( \"webmastery-site-toolkit-for-mcp/{$action}-{$slug}\" );\n\t\t\t\t$property = new ReflectionProperty( WP_Ability::class, 'execute_callback' );\n\t\t\t\t$property->setAccessible( true );\n\t\t\t\t$execute = $property->getValue( $ability );\n\t\t\t\t$scenarios = array(\n\t\t\t\t\t'admin default' => array( $admin->ID, false, array(), true ),\n\t\t\t\t\t'editor default' => array( $editor->ID, false, array(), true ),\n\t\t\t\t\t'subscriber default' => array( $subscriber->ID, false, array(), false ),\n\t\t\t\t\t'remapped edit only' => array( $subscriber->ID, true, array( 'wstm117_edit' ), 'delete' !== $action ),\n\t\t\t\t\t'remapped delete only' => array( $subscriber->ID, true, array( 'wstm117_delete' ), 'delete' === $action ),\n\t\t\t\t\t'remapped manage only' => array( $subscriber->ID, true, array( 'wstm117_manage' ), false ),\n\t\t\t\t\t'global cap cannot bypass remap' => array( $editor->ID, true, array(), false ),\n\t\t\t\t\t'final user_has_cap denial' => array( $editor->ID, false, array(), false ),\n\t\t\t\t\t'core alias editor' => array( $editor->ID, false, array(), true ),\n\t\t\t\t\t'core alias raw grant does not bypass' => array( $subscriber->ID, false, array( 'edit_post_tags', 'delete_post_tags', 'manage_post_tags' ), false ),\n\t\t\t\t);\n\t\t\t\tif ( 'create' !== $action ) {\n\t\t\t\t\t$scenarios['per-term map_meta_cap denial'] = array( $editor->ID, false, array(), false );\n\t\t\t\t\t$scenarios['remapped per-term denial'] = array( $subscriber->ID, true, array( 'wstm117_edit', 'wstm117_delete' ), false );\n\t\t\t\t}\n\t\t\t\tforeach ( $scenarios as $scenario => [ $user_id, $remap, $grants, $allowed ] ) {\n\t\t\t\t\tforeach ( array( 'wrapped', 'direct' ) as $path ) {\n\t\t\t\t\t\twp_set_current_user( $admin->ID );\n\t\t\t\t\t\tget_taxonomy( $taxonomy )->cap = clone $original_caps[ $taxonomy ];\n\t\t\t\t\t\t$id = $make_term( $taxonomy );\n\t\t\t\t\t\twp_set_object_terms( $post_id, array( $id ), $taxonomy );\n\t\t\t\t\t\tif ( 'category' === $taxonomy ) {\n\t\t\t\t\t\t\t$parent_id = $make_term( $taxonomy );\n\t\t\t\t\t\t\twp_update_term( $id, $taxonomy, array( 'parent' => $parent_id ) );\n\t\t\t\t\t\t\t$child_id = $make_term( $taxonomy );\n\t\t\t\t\t\t\twp_update_term( $child_id, $taxonomy, array( 'parent' => $id ) );\n\t\t\t\t\t\t}\n\t\t\t\t\t\t$input = array( 'name' => 'Changed ' . wp_generate_uuid4(), 'slug' => 'changed-' . wp_generate_uuid4(), 'description' => 'Changed description.' );\n\t\t\t\t\t\tif ( 'category' === $taxonomy ) {\n\t\t\t\t\t\t\t$input['parent'] = 0;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif ( 'create' !== $action ) {\n\t\t\t\t\t\t\t$input[ \"{$slug}_id\" ] = $id;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif ( 'delete' === $action ) {\n\t\t\t\t\t\t\t$input = array( \"{$slug}_id\" => $id, 'confirm' => true );\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif ( $remap ) {\n\t\t\t\t\t\t\tget_taxonomy( $taxonomy )->cap->edit_terms = 'wstm117_edit';\n\t\t\t\t\t\t\tget_taxonomy( $taxonomy )->cap->delete_terms = 'wstm117_delete';\n\t\t\t\t\t\t\tget_taxonomy( $taxonomy )->cap->manage_terms = 'wstm117_manage';\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif ( 0 === strpos( $scenario, 'core alias' ) ) {\n\t\t\t\t\t\t\tget_taxonomy( $taxonomy )->cap->edit_terms = 'edit_post_tags';\n\t\t\t\t\t\t\tget_taxonomy( $taxonomy )->cap->delete_terms = 'delete_post_tags';\n\t\t\t\t\t\t}\n\t\t\t\t\t\t$cap_filter = static function ( $allcaps, $caps, $args, $user ) use ( $user_id, $grants, $scenario ) {\n\t\t\t\t\t\t\tif ( (int) $user_id === $user->ID ) {\n\t\t\t\t\t\t\t\tforeach ( $grants as $grant ) {\n\t\t\t\t\t\t\t\t\t$allcaps[ $grant ] = true;\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\tif ( 'final user_has_cap denial' === $scenario ) {\n\t\t\t\t\t\t\t\t\t$allcaps['manage_categories'] = false;\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\treturn $allcaps;\n\t\t\t\t\t\t};\n\t\t\t\t\t\t$map_filter = static function ( $caps, $cap, $user_id, $args ) use ( $id, $scenario ) {\n\t\t\t\t\t\t\tif ( false !== strpos( $scenario, 'per-term' ) && in_array( $cap, array( 'edit_term', 'delete_term' ), true ) && $id === ( $args[0] ?? null ) ) {\n\t\t\t\t\t\t\t\treturn array( 'do_not_allow' );\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\treturn $caps;\n\t\t\t\t\t\t};\n\t\t\t\t\t\t$hooks = array();\n\t\t\t\t\t\t$hook = static function () use ( &$hooks ) {\n\t\t\t\t\t\t\t$hooks[] = current_filter();\n\t\t\t\t\t\t};\n\t\t\t\t\t\t$watched = array( 'create_term', 'edit_terms', 'pre_delete_term', 'added_term_meta', 'updated_term_meta', 'deleted_term_meta', 'set_object_terms' );\n\t\t\t\t\t\tadd_filter( 'user_has_cap', $cap_filter, 10, 4 );\n\t\t\t\t\t\tadd_filter( 'map_meta_cap', $map_filter, 10, 4 );\n\t\t\t\t\t\tforeach ( $watched as $name ) {\n\t\t\t\t\t\t\tadd_action( $name, $hook );\n\t\t\t\t\t\t}\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\twp_set_current_user( $user_id );\n\t\t\t\t\t\t\t$before = wstm117_term_snapshot();\n\t\t\t\t\t\t\t$permission = $ability->check_permissions( $input );\n\t\t\t\t\t\t\t$result = 'wrapped' === $path ? $ability->execute( $input ) : $execute( $input );\n\t\t\t\t\t\t\t$after = wstm117_term_snapshot();\n\t\t\t\t\t\t\t$passed = $allowed === $success( $result );\n\t\t\t\t\t\t\t$passed = $passed && ( $allowed ? true === $permission : is_wp_error( $permission ) );\n\t\t\t\t\t\t\tif ( ! $allowed ) {\n\t\t\t\t\t\t\t\t$passed = $passed && is_wp_error( $permission ) && 'forbidden' === $permission->get_error_code() && $before === $after && array() === $hooks && '' !== $error( $result );\n\t\t\t\t\t\t\t\tif ( 'direct' === $path ) {\n\t\t\t\t\t\t\t\t\t$passed = $passed && is_array( $result ) && false === ( $result['success'] ?? null );\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t} elseif ( 'delete' === $action ) {\n\t\t\t\t\t\t\t\t$passed = $passed && null === get_term( $id, $taxonomy ) && array( 'success' => true, 'data' => array( 'id' => $id, 'deleted' => true ) ) === $result;\n\t\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\t\t$saved = get_term( is_array( $result ) ? ( $result['data']['id'] ?? 0 ) : 0, $taxonomy );\n\t\t\t\t\t\t\t\t$passed = $passed && $saved instanceof WP_Term && $input['name'] === $saved->name && $input['slug'] === $saved->slug && $input['description'] === $saved->description;\n\t\t\t\t\t\t\t\tif ( 'category' === $taxonomy && $saved instanceof WP_Term ) {\n\t\t\t\t\t\t\t\t\t$passed = $passed && 0 === $saved->parent;\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t$record( \"{$action}-{$slug}: {$scenario} {$path}\", $passed, array(\n\t\t\t\t\t\t\t\t'result' => is_wp_error( $result ) ? array( 'code' => $result->get_error_code(), 'error' => $error( $result ) ) : $result,\n\t\t\t\t\t\t\t\t'persisted_unchanged' => $before === $after,\n\t\t\t\t\t\t\t\t'before_sha256' => hash( 'sha256', wp_json_encode( $before ) ),\n\t\t\t\t\t\t\t\t'after_sha256' => hash( 'sha256', wp_json_encode( $after ) ),\n\t\t\t\t\t\t\t\t'write_hooks' => $hooks,\n\t\t\t\t\t\t\t) );\n\t\t\t\t\t\t} finally {\n\t\t\t\t\t\t\tremove_filter( 'user_has_cap', $cap_filter );\n\t\t\t\t\t\t\tremove_filter( 'map_meta_cap', $map_filter );\n\t\t\t\t\t\t\tforeach ( $watched as $name ) {\n\t\t\t\t\t\t\t\tremove_action( $name, $hook );\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tget_taxonomy( $taxonomy )->cap = clone $original_caps[ $taxonomy ];\n\t\t\t\twp_set_current_user( $editor->ID );\n\t\t\t\tif ( 'create' !== $action ) {\n\t\t\t\t\t$wrong_id = $make_term( 'category' === $taxonomy ? 'post_tag' : 'category' );\n\t\t\t\t\tforeach ( array( 'missing' => 987654321, 'wrong taxonomy' => $wrong_id ) as $scenario => $id ) {\n\t\t\t\t\t\tforeach ( array( 'wrapped', 'direct' ) as $path ) {\n\t\t\t\t\t\t\t$input = array( \"{$slug}_id\" => $id, 'name' => 'Must not write' );\n\t\t\t\t\t\t\tif ( 'delete' === $action ) {\n\t\t\t\t\t\t\t\t$input['confirm'] = true;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t$before = wstm117_term_snapshot();\n\t\t\t\t\t\t\t$result = 'wrapped' === $path ? $ability->execute( $input ) : $execute( $input );\n\t\t\t\t\t\t\t$expected = ( 'category' === $taxonomy ? 'Category' : 'Tag' ) . ' not found.';\n\t\t\t\t\t\t\t$record( \"{$action}-{$slug}: {$scenario} {$path}\", 'not_found' === wstm118_error_reason( $result )\n\t\t\t\t\t\t\t\t&& $expected === $result['error']['message'] && '{}' === wp_json_encode( $result['error']['details'] )\n\t\t\t\t\t\t\t\t&& $before === wstm117_term_snapshot(), $result );\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\n\t\twp_set_current_user( $editor->ID );\n\t\t$id = (int) get_option( 'default_category' );\n\t\t$ability = wp_get_ability( 'webmastery-site-toolkit-for-mcp/delete-category' );\n\t\t$property = new ReflectionProperty( WP_Ability::class, 'execute_callback' );\n\t\t$property->setAccessible( true );\n\t\t$execute = $property->getValue( $ability );\n\t\t$before = wstm117_term_snapshot();\n\t\t$raw = wp_delete_term( $id, 'category' );\n\t\t$record( 'core default category returns integer zero and meta-cap denies', 0 === $raw && ! current_user_can( 'delete_term', $id ) && $before === wstm117_term_snapshot(), array( 'raw_result' => $raw, 'mapped_caps' => map_meta_cap( 'delete_term', $editor->ID, $id ) ) );\n\t\tforeach ( array( 'wrapped', 'direct' ) as $path ) {\n\t\t\t$result = 'wrapped' === $path ? $ability->execute( array( 'category_id' => $id, 'confirm' => true ) ) : $execute( array( 'category_id' => $id, 'confirm' => true ) );\n\t\t\t$record( \"default category explicit failure {$path}\", ! $success( $result ) && '' !== $error( $result ) && $before === wstm117_term_snapshot() && get_term( $id, 'category' ) instanceof WP_Term, array( 'result' => is_wp_error( $result ) ? $error( $result ) : $result, 'persisted_unchanged' => $before === wstm117_term_snapshot() ) );\n\t\t}\n\t\t// A final site policy may override core's denial; the real zero return must still fail.\n\t\t$allow_default = static function ( $caps, $cap, $user_id, $args ) use ( $id ) {\n\t\t\treturn 'delete_term' === $cap && $id === ( $args[0] ?? null ) ? array( 'manage_categories' ) : $caps;\n\t\t};\n\t\tadd_filter( 'map_meta_cap', $allow_default, 10, 4 );\n\t\ttry {\n\t\t\t$result = $ability->execute( array( 'category_id' => $id, 'confirm' => true ) );\n\t\t\t$record( 'default category zero remains failure after final meta-cap override', ! $success( $result ) && '' !== $error( $result ) && $before === wstm117_term_snapshot(), $result );\n\t\t} finally {\n\t\t\tremove_filter( 'map_meta_cap', $allow_default );\n\t\t}\n\t} finally {\n\t\tforeach ( $original_caps as $taxonomy => $caps ) {\n\t\t\tget_taxonomy( $taxonomy )->cap = $caps;\n\t\t}\n\t\twp_set_current_user( $original_user );\n\t}\n\n\t$path = WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/e2e-artifacts/taxonomy-write-summary.json';\n\tif ( false === file_put_contents( $path, wp_json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . \"\\n\" ) ) {\n\t\tthrow new RuntimeException( 'Could not persist taxonomy write regression evidence.' );\n\t}\n\techo \"TAXONOMY SUMMARY {$summary['passed']} passed, {$summary['failed']} failed\\n\";\n\treturn $summary;\n}\n",
+    "symbolic_values": {
+        "category_id": 42,
+        "tag_id": 84,
+        "default_category_id": 1,
+        "admin_id": 1,
+        "editor_id": 2,
+        "subscriber_id": 3,
+        "uuid": "00000000-0000-4000-8000-000000000042"
+    },
+    "counts": {
+        "original": 156,
+        "unchanged": 148,
+        "original_schema_controls": 8,
+        "minimal_counterparts": 8,
+        "new_total": 164
+    },
+    "original_cases": [
+        {
+            "label": "create-category: admin default wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 1,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: admin default direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 1,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: editor default wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: editor default direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: subscriber default wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: subscriber default direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: remapped edit only wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit"
+            ],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: remapped edit only direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit"
+            ],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: remapped delete only wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: remapped delete only direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: remapped manage only wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_manage"
+            ],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: remapped manage only direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_manage"
+            ],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: global cap cannot bypass remap wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 2,
+            "remap": true,
+            "grants": [],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: global cap cannot bypass remap direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 2,
+            "remap": true,
+            "grants": [],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: final user_has_cap denial wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: final user_has_cap denial direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: core alias editor wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: core alias editor direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: core alias raw grant does not bypass wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [
+                "edit_post_tags",
+                "delete_post_tags",
+                "manage_post_tags"
+            ],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-category: core alias raw grant does not bypass direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [
+                "edit_post_tags",
+                "delete_post_tags",
+                "manage_post_tags"
+            ],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: admin default wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 1,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: admin default direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 1,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: editor default wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: editor default direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: subscriber default wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: subscriber default direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: remapped edit only wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit"
+            ],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: remapped edit only direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit"
+            ],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: remapped delete only wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: remapped delete only direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: remapped manage only wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_manage"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: remapped manage only direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_manage"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: global cap cannot bypass remap wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 2,
+            "remap": true,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: global cap cannot bypass remap direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 2,
+            "remap": true,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: final user_has_cap denial wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: final user_has_cap denial direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: core alias editor wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: core alias editor direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: core alias raw grant does not bypass wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [
+                "edit_post_tags",
+                "delete_post_tags",
+                "manage_post_tags"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: core alias raw grant does not bypass direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [
+                "edit_post_tags",
+                "delete_post_tags",
+                "manage_post_tags"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: per-term map_meta_cap denial wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: per-term map_meta_cap denial direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: remapped per-term denial wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit",
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: remapped per-term denial direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "parent": 0,
+                "category_id": 42
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit",
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: missing wrapped",
+            "input": {
+                "category_id": 987654321,
+                "name": "Must not write"
+            },
+            "actor": 2,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "scenario": "missing",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: missing direct",
+            "input": {
+                "category_id": 987654321,
+                "name": "Must not write"
+            },
+            "actor": 2,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "direct",
+            "scenario": "missing",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: wrong taxonomy wrapped",
+            "input": {
+                "category_id": 84,
+                "name": "Must not write"
+            },
+            "actor": 2,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "scenario": "wrong taxonomy",
+            "calibrated": false
+        },
+        {
+            "label": "update-category: wrong taxonomy direct",
+            "input": {
+                "category_id": 84,
+                "name": "Must not write"
+            },
+            "actor": 2,
+            "action": "update",
+            "taxonomy": "category",
+            "path": "direct",
+            "scenario": "wrong taxonomy",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: admin default wrapped",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 1,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: admin default direct",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 1,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: editor default wrapped",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: editor default direct",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: subscriber default wrapped",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: subscriber default direct",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: remapped edit only wrapped",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: remapped edit only direct",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: remapped delete only wrapped",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_delete"
+            ],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: remapped delete only direct",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_delete"
+            ],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: remapped manage only wrapped",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_manage"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: remapped manage only direct",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_manage"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: global cap cannot bypass remap wrapped",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": true,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: global cap cannot bypass remap direct",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": true,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: final user_has_cap denial wrapped",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: final user_has_cap denial direct",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: core alias editor wrapped",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: core alias editor direct",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: core alias raw grant does not bypass wrapped",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [
+                "edit_post_tags",
+                "delete_post_tags",
+                "manage_post_tags"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: core alias raw grant does not bypass direct",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [
+                "edit_post_tags",
+                "delete_post_tags",
+                "manage_post_tags"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: per-term map_meta_cap denial wrapped",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: per-term map_meta_cap denial direct",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: remapped per-term denial wrapped",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit",
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: remapped per-term denial direct",
+            "input": {
+                "category_id": 42,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit",
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-category: missing wrapped",
+            "input": {
+                "category_id": 987654321,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "actor": 2,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "scenario": "missing",
+            "calibrated": true
+        },
+        {
+            "label": "delete-category: missing direct",
+            "input": {
+                "category_id": 987654321,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "actor": 2,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "direct",
+            "scenario": "missing",
+            "calibrated": true
+        },
+        {
+            "label": "delete-category: wrong taxonomy wrapped",
+            "input": {
+                "category_id": 84,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "actor": 2,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "scenario": "wrong taxonomy",
+            "calibrated": true
+        },
+        {
+            "label": "delete-category: wrong taxonomy direct",
+            "input": {
+                "category_id": 84,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "actor": 2,
+            "action": "delete",
+            "taxonomy": "category",
+            "path": "direct",
+            "scenario": "wrong taxonomy",
+            "calibrated": true
+        },
+        {
+            "label": "create-tag: admin default wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 1,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: admin default direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 1,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: editor default wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: editor default direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: subscriber default wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: subscriber default direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: remapped edit only wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit"
+            ],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: remapped edit only direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit"
+            ],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: remapped delete only wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: remapped delete only direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: remapped manage only wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_manage"
+            ],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: remapped manage only direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_manage"
+            ],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: global cap cannot bypass remap wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 2,
+            "remap": true,
+            "grants": [],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: global cap cannot bypass remap direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 2,
+            "remap": true,
+            "grants": [],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: final user_has_cap denial wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: final user_has_cap denial direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: core alias editor wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: core alias editor direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: core alias raw grant does not bypass wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [
+                "edit_post_tags",
+                "delete_post_tags",
+                "manage_post_tags"
+            ],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "create-tag: core alias raw grant does not bypass direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description."
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [
+                "edit_post_tags",
+                "delete_post_tags",
+                "manage_post_tags"
+            ],
+            "allowed": false,
+            "action": "create",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: admin default wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 1,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: admin default direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 1,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: editor default wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: editor default direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: subscriber default wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: subscriber default direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: remapped edit only wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit"
+            ],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: remapped edit only direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit"
+            ],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: remapped delete only wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: remapped delete only direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: remapped manage only wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_manage"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: remapped manage only direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_manage"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: global cap cannot bypass remap wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 2,
+            "remap": true,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: global cap cannot bypass remap direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 2,
+            "remap": true,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: final user_has_cap denial wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: final user_has_cap denial direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: core alias editor wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: core alias editor direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: core alias raw grant does not bypass wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [
+                "edit_post_tags",
+                "delete_post_tags",
+                "manage_post_tags"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: core alias raw grant does not bypass direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [
+                "edit_post_tags",
+                "delete_post_tags",
+                "manage_post_tags"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: per-term map_meta_cap denial wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: per-term map_meta_cap denial direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: remapped per-term denial wrapped",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit",
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: remapped per-term denial direct",
+            "input": {
+                "name": "Changed 00000000-0000-4000-8000-000000000042",
+                "slug": "changed-00000000-0000-4000-8000-000000000042",
+                "description": "Changed description.",
+                "tag_id": 84
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit",
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: missing wrapped",
+            "input": {
+                "tag_id": 987654321,
+                "name": "Must not write"
+            },
+            "actor": 2,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "scenario": "missing",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: missing direct",
+            "input": {
+                "tag_id": 987654321,
+                "name": "Must not write"
+            },
+            "actor": 2,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "scenario": "missing",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: wrong taxonomy wrapped",
+            "input": {
+                "tag_id": 42,
+                "name": "Must not write"
+            },
+            "actor": 2,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "scenario": "wrong taxonomy",
+            "calibrated": false
+        },
+        {
+            "label": "update-tag: wrong taxonomy direct",
+            "input": {
+                "tag_id": 42,
+                "name": "Must not write"
+            },
+            "actor": 2,
+            "action": "update",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "scenario": "wrong taxonomy",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: admin default wrapped",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 1,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: admin default direct",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 1,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: editor default wrapped",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: editor default direct",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: subscriber default wrapped",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: subscriber default direct",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: remapped edit only wrapped",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: remapped edit only direct",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: remapped delete only wrapped",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_delete"
+            ],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: remapped delete only direct",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_delete"
+            ],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: remapped manage only wrapped",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_manage"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: remapped manage only direct",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_manage"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: global cap cannot bypass remap wrapped",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": true,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: global cap cannot bypass remap direct",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": true,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: final user_has_cap denial wrapped",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: final user_has_cap denial direct",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: core alias editor wrapped",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: core alias editor direct",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": true,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: core alias raw grant does not bypass wrapped",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [
+                "edit_post_tags",
+                "delete_post_tags",
+                "manage_post_tags"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: core alias raw grant does not bypass direct",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": false,
+            "grants": [
+                "edit_post_tags",
+                "delete_post_tags",
+                "manage_post_tags"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: per-term map_meta_cap denial wrapped",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: per-term map_meta_cap denial direct",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 2,
+            "remap": false,
+            "grants": [],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: remapped per-term denial wrapped",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit",
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: remapped per-term denial direct",
+            "input": {
+                "tag_id": 84,
+                "confirm": true
+            },
+            "actor": 3,
+            "remap": true,
+            "grants": [
+                "wstm117_edit",
+                "wstm117_delete"
+            ],
+            "allowed": false,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "calibrated": false
+        },
+        {
+            "label": "delete-tag: missing wrapped",
+            "input": {
+                "tag_id": 987654321,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "actor": 2,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "scenario": "missing",
+            "calibrated": true
+        },
+        {
+            "label": "delete-tag: missing direct",
+            "input": {
+                "tag_id": 987654321,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "actor": 2,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "scenario": "missing",
+            "calibrated": true
+        },
+        {
+            "label": "delete-tag: wrong taxonomy wrapped",
+            "input": {
+                "tag_id": 42,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "actor": 2,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "scenario": "wrong taxonomy",
+            "calibrated": true
+        },
+        {
+            "label": "delete-tag: wrong taxonomy direct",
+            "input": {
+                "tag_id": 42,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "actor": 2,
+            "action": "delete",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "scenario": "wrong taxonomy",
+            "calibrated": true
+        },
+        {
+            "label": "core default category returns integer zero and meta-cap denies",
+            "input": 1,
+            "actor": 2,
+            "calibrated": false
+        },
+        {
+            "label": "default category explicit failure wrapped",
+            "input": {
+                "category_id": 1,
+                "confirm": true
+            },
+            "actor": 2,
+            "calibrated": false
+        },
+        {
+            "label": "default category explicit failure direct",
+            "input": {
+                "category_id": 1,
+                "confirm": true
+            },
+            "actor": 2,
+            "calibrated": false
+        },
+        {
+            "label": "default category zero remains failure after final meta-cap override",
+            "input": {
+                "category_id": 1,
+                "confirm": true
+            },
+            "actor": 2,
+            "calibrated": false
+        }
+    ],
+    "calibration_pairs": [
+        {
+            "label": "delete-category: missing wrapped",
+            "counterpart_label": "delete-category: missing wrapped minimal counterpart",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "actor": 2,
+            "original_input": {
+                "category_id": 987654321,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "minimal_input": {
+                "category_id": 987654321,
+                "confirm": true
+            },
+            "old_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Category not found.",
+                    "details": {}
+                }
+            },
+            "new_original_oracle": {
+                "success": false,
+                "error": {
+                    "code": "invalid_input",
+                    "reason": "ability_invalid_input",
+                    "message": "Ability input does not match its schema.",
+                    "details": {}
+                }
+            },
+            "new_minimal_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Category not found.",
+                    "details": {}
+                }
+            },
+            "capability": {
+                "name": "manage_categories",
+                "allowed": true
+            },
+            "original_counts": {
+                "callbacks": 0,
+                "capabilities": 0,
+                "queries": 0
+            },
+            "no_write": true,
+            "order": [
+                "original",
+                "minimal"
+            ]
+        },
+        {
+            "label": "delete-category: missing direct",
+            "counterpart_label": "delete-category: missing direct minimal counterpart",
+            "taxonomy": "category",
+            "path": "direct",
+            "actor": 2,
+            "original_input": {
+                "category_id": 987654321,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "minimal_input": {
+                "category_id": 987654321,
+                "confirm": true
+            },
+            "old_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Category not found.",
+                    "details": {}
+                }
+            },
+            "new_original_oracle": {
+                "success": false,
+                "error": {
+                    "code": "invalid_input",
+                    "reason": "ability_invalid_input",
+                    "message": "Ability input does not match its schema.",
+                    "details": {}
+                }
+            },
+            "new_minimal_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Category not found.",
+                    "details": {}
+                }
+            },
+            "capability": {
+                "name": "manage_categories",
+                "allowed": true
+            },
+            "original_counts": {
+                "callbacks": 0,
+                "capabilities": 0,
+                "queries": 0
+            },
+            "no_write": true,
+            "order": [
+                "original",
+                "minimal"
+            ]
+        },
+        {
+            "label": "delete-category: wrong taxonomy wrapped",
+            "counterpart_label": "delete-category: wrong taxonomy wrapped minimal counterpart",
+            "taxonomy": "category",
+            "path": "wrapped",
+            "actor": 2,
+            "original_input": {
+                "category_id": 84,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "minimal_input": {
+                "category_id": 84,
+                "confirm": true
+            },
+            "old_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Category not found.",
+                    "details": {}
+                }
+            },
+            "new_original_oracle": {
+                "success": false,
+                "error": {
+                    "code": "invalid_input",
+                    "reason": "ability_invalid_input",
+                    "message": "Ability input does not match its schema.",
+                    "details": {}
+                }
+            },
+            "new_minimal_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Category not found.",
+                    "details": {}
+                }
+            },
+            "capability": {
+                "name": "manage_categories",
+                "allowed": true
+            },
+            "original_counts": {
+                "callbacks": 0,
+                "capabilities": 0,
+                "queries": 0
+            },
+            "no_write": true,
+            "order": [
+                "original",
+                "minimal"
+            ]
+        },
+        {
+            "label": "delete-category: wrong taxonomy direct",
+            "counterpart_label": "delete-category: wrong taxonomy direct minimal counterpart",
+            "taxonomy": "category",
+            "path": "direct",
+            "actor": 2,
+            "original_input": {
+                "category_id": 84,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "minimal_input": {
+                "category_id": 84,
+                "confirm": true
+            },
+            "old_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Category not found.",
+                    "details": {}
+                }
+            },
+            "new_original_oracle": {
+                "success": false,
+                "error": {
+                    "code": "invalid_input",
+                    "reason": "ability_invalid_input",
+                    "message": "Ability input does not match its schema.",
+                    "details": {}
+                }
+            },
+            "new_minimal_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Category not found.",
+                    "details": {}
+                }
+            },
+            "capability": {
+                "name": "manage_categories",
+                "allowed": true
+            },
+            "original_counts": {
+                "callbacks": 0,
+                "capabilities": 0,
+                "queries": 0
+            },
+            "no_write": true,
+            "order": [
+                "original",
+                "minimal"
+            ]
+        },
+        {
+            "label": "delete-tag: missing wrapped",
+            "counterpart_label": "delete-tag: missing wrapped minimal counterpart",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "actor": 2,
+            "original_input": {
+                "tag_id": 987654321,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "minimal_input": {
+                "tag_id": 987654321,
+                "confirm": true
+            },
+            "old_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Tag not found.",
+                    "details": {}
+                }
+            },
+            "new_original_oracle": {
+                "success": false,
+                "error": {
+                    "code": "invalid_input",
+                    "reason": "ability_invalid_input",
+                    "message": "Ability input does not match its schema.",
+                    "details": {}
+                }
+            },
+            "new_minimal_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Tag not found.",
+                    "details": {}
+                }
+            },
+            "capability": {
+                "name": "manage_categories",
+                "allowed": true
+            },
+            "original_counts": {
+                "callbacks": 0,
+                "capabilities": 0,
+                "queries": 0
+            },
+            "no_write": true,
+            "order": [
+                "original",
+                "minimal"
+            ]
+        },
+        {
+            "label": "delete-tag: missing direct",
+            "counterpart_label": "delete-tag: missing direct minimal counterpart",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "actor": 2,
+            "original_input": {
+                "tag_id": 987654321,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "minimal_input": {
+                "tag_id": 987654321,
+                "confirm": true
+            },
+            "old_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Tag not found.",
+                    "details": {}
+                }
+            },
+            "new_original_oracle": {
+                "success": false,
+                "error": {
+                    "code": "invalid_input",
+                    "reason": "ability_invalid_input",
+                    "message": "Ability input does not match its schema.",
+                    "details": {}
+                }
+            },
+            "new_minimal_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Tag not found.",
+                    "details": {}
+                }
+            },
+            "capability": {
+                "name": "manage_categories",
+                "allowed": true
+            },
+            "original_counts": {
+                "callbacks": 0,
+                "capabilities": 0,
+                "queries": 0
+            },
+            "no_write": true,
+            "order": [
+                "original",
+                "minimal"
+            ]
+        },
+        {
+            "label": "delete-tag: wrong taxonomy wrapped",
+            "counterpart_label": "delete-tag: wrong taxonomy wrapped minimal counterpart",
+            "taxonomy": "post_tag",
+            "path": "wrapped",
+            "actor": 2,
+            "original_input": {
+                "tag_id": 42,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "minimal_input": {
+                "tag_id": 42,
+                "confirm": true
+            },
+            "old_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Tag not found.",
+                    "details": {}
+                }
+            },
+            "new_original_oracle": {
+                "success": false,
+                "error": {
+                    "code": "invalid_input",
+                    "reason": "ability_invalid_input",
+                    "message": "Ability input does not match its schema.",
+                    "details": {}
+                }
+            },
+            "new_minimal_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Tag not found.",
+                    "details": {}
+                }
+            },
+            "capability": {
+                "name": "manage_categories",
+                "allowed": true
+            },
+            "original_counts": {
+                "callbacks": 0,
+                "capabilities": 0,
+                "queries": 0
+            },
+            "no_write": true,
+            "order": [
+                "original",
+                "minimal"
+            ]
+        },
+        {
+            "label": "delete-tag: wrong taxonomy direct",
+            "counterpart_label": "delete-tag: wrong taxonomy direct minimal counterpart",
+            "taxonomy": "post_tag",
+            "path": "direct",
+            "actor": 2,
+            "original_input": {
+                "tag_id": 42,
+                "name": "Must not write",
+                "confirm": true
+            },
+            "minimal_input": {
+                "tag_id": 42,
+                "confirm": true
+            },
+            "old_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Tag not found.",
+                    "details": {}
+                }
+            },
+            "new_original_oracle": {
+                "success": false,
+                "error": {
+                    "code": "invalid_input",
+                    "reason": "ability_invalid_input",
+                    "message": "Ability input does not match its schema.",
+                    "details": {}
+                }
+            },
+            "new_minimal_oracle": {
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "reason": "not_found",
+                    "message": "Tag not found.",
+                    "details": {}
+                }
+            },
+            "capability": {
+                "name": "manage_categories",
+                "allowed": true
+            },
+            "original_counts": {
+                "callbacks": 0,
+                "capabilities": 0,
+                "queries": 0
+            },
+            "no_write": true,
+            "order": [
+                "original",
+                "minimal"
+            ]
+        }
+    ]
+}

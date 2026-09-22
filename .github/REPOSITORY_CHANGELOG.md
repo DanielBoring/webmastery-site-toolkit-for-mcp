@@ -6,6 +6,10 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Preserve eight original taxonomy-delete extra-property payloads as strict schema-negative controls, then add eight minimal authorized not-found counterparts. Keep the other 148 runner cases unchanged, pin the original 156-row typed inventory to its frozen source, and add production-wrapper and provenance/mutation regressions without changing production taxonomy policy or manifest/privacy/error expectations.
+
+- Add permission-default regressions and actual-source mutation controls covering strict raw callbacks, real database permission/redaction behavior, defaults, malformed flags, metadata precedence, native lifecycle filters and reentrancy. Retain immutable WordPress 6.9/6.9.4/7.1.1 plus Adapter 0.6.1 isolated-library RED/GREEN evidence separately from the lifecycle double and from pending real HTTP/runtime acceptance.
+
 - Add journal-only deterministic filesystem modeling and replacement-failure controls for schema-stage tests, retaining a separate default-native replacement control. Preserve one-shot native atomic replacement and failure evidence; this testability change neither explains nor waives the retained Windows acquire/finalize access-denied QA failures.
 
 - Calibrate comment regression fixtures at the strict-input rejection boundary: preserve all typed inputs and historical baseline behavior, correct 16 observed HTTP and 32 source-derived direct error expectations, and retain 39 legacy extra-property payloads as schema-negative controls before 39 additive valid authorization counterparts. Pin typed source provenance and production-wrapper/mutation regressions; do not treat this test-only correction as completed runtime acceptance.

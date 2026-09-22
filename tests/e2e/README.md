@@ -288,6 +288,37 @@ original callbacks/capability/query/mutation boundaries, **not all core
 hooks**; normal core invocation, normalization, validation filters and
 pre-execution short circuits retain their semantics.
 
+### Standalone permission defaults
+
+Adapter 0.6.1 converts an empty object to null for a declared empty root default,
+then invokes target permission checks without native execution's normalization.
+The owned permission boundary now materializes a declared default only when
+input is null and the schema's type is exactly `object`, before calling the
+parent once. It does not call `normalize_input()` or `validate_input()`, broaden
+scalar/nullable/untyped schemas, or change raw callback validation.
+
+The immutable `436191f` source reproduced eight default-preflight failures and
+14 unchanged controls on each of official WordPress 6.9, 6.9.4 and 7.1.1 with
+actual Adapter 0.6.1 normalizer/gateway/individual preflight methods. Distinct
+candidate snapshots pass the same 22-case contract on all three versions.
+These are PHP 8.4 isolated-library observations, not PHP-floor, bootstrapped
+WordPress, database or HTTP acceptance: inert platform functions provide the
+outer environment, real database registration/permission code runs, and a
+counter replaces database execution. Exact upstream Git blobs, file hashes,
+baseline/candidate hashes and raw RED/GREEN output are retained with that proof.
+
+`PermissionDefaultTest` separately uses the explicitly labeled lifecycle double
+and real plugin registration/wrappers/permission/database callbacks against a
+controlled database. It covers unchanged redaction and raw-name opt-in, genuine
+denials, malformed flags/defaults, required fields, raw null rejection, foreign
+namespaces, metadata precedence, no normalization replay, native errors,
+filter order, reentrancy and actual-source mutations. The double accepts the
+schema `description` annotation but still throws for unmodeled constraints.
+Neither evidence layer changes privacy-runner oracles or the 78 canonical-error
+cases, and neither claims new real runtime acceptance.
+
+### Preserved typed manifest
+
 The independently derived `input-schema-integration-ledger.json` pins all
 **589 ordered typed cases**, including full before/after content for exactly
 52 changed parent cases and the 19 previously reviewed additions. Its source
@@ -892,6 +923,24 @@ For baseline/fixed comparison, run the same runner on owned disposable WordPress
 The contract runner also executes `taxonomy-write-runner.php` on the disposable WordPress database and writes `e2e-artifacts/taxonomy-write-summary.json`. Contract CI always attempts to upload this synthetic-fixture evidence as the `taxonomy-write-summary` artifact, retained for seven days, including failed runs when the file exists. Its CLI-only guard prevents HTTP invocation. The unchanged original manifest cases remain, with added create/delete denials and a default-category failure/read-back pair. All six writes have positive and negative manifest coverage.
 
 The supplemental runner exercises wrapped abilities and their direct execute callbacks for default Administrators, Editors, and Subscribers; remapped edit-only/delete-only/manage-only capabilities; a global capability without the remapped grant; WordPress core aliases; final `user_has_cap` denial; and per-object `map_meta_cap` denials with otherwise sufficient capabilities. Denied calls must leave the persisted terms, taxonomy rows (including parents/counts), metadata, and relationships identical, with no watched write hooks. Successful calls verify persisted names/slugs/descriptions/parents or deleted-term absence and the legacy success envelope. Missing/wrong-taxonomy IDs retain their authorized not-found envelopes.
+
+The 3.0 strict-schema calibration expands this separate runner from **156 to
+164 cases**, not the 589-case manifest. Eight original delete payloads (category
+or tag, missing or wrong-taxonomy ID, wrapped or direct) retain their identical
+integer IDs, `name: "Must not write"` and `confirm: true`. Their unadvertised
+`name` field now has the exact `invalid_input` / `ability_invalid_input` schema
+expectation, empty object details and unchanged-state/write-hook assertions.
+Each original precedes a new counterpart removing only `name`; that counterpart
+retains the original authorized `not_found` purpose, message, ID and state
+checks. The other 148 original cases are unchanged.
+
+`TaxonomyCalibrationTest` and the sealed `taxonomy-calibration-ledger.json`
+derive the actual runner's typed construction from frozen `3f6e8e0`/`436191f`
+source. They verify the retained originals, additive counterparts, order and
+unrelated rows, and reject provenance, input-type, error, authorization and
+no-write mutations. Isolated real production callbacks reproduce eight old
+schema mismatches and pass the 16 calibrated paths with original-work counters;
+that source proof does not replace execution on a disposable WordPress site.
 
 Core's `delete_term` mapping denies the default category with `do_not_allow`. Separately, real `wp_delete_term()` returns integer `0` and leaves that category stored. The runner tests both, then temporarily overrides the meta-cap denial to reach the real zero-return guard. This last case is a **forced permission policy on real core**, not a normal configuration. Unit `TaxonomyWriteTest` uses **stubbed** zero, false, and `WP_Error` returns to cover otherwise rare deletion branches; these are not evidence of a real database failure.
 

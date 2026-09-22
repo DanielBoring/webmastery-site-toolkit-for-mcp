@@ -143,6 +143,8 @@ In 3.0 development, built-in posts and nonhierarchical custom post types reject 
 
 Registered execution retains core input validation and then applies strict types before permissions, so numeric-string IDs and boolean-like flags report invalid_input rather than permission denial. Direct destructive preflight reasons and real capability denials are unchanged. Core normalization and lifecycle hooks remain active.
 
+Registered permission preflight honors a declared object-root default for omitted or null input, including empty database-health requests normalized by the Adapter. It does not replay normalization filters, grant capabilities, expose table names, coerce non-null inputs, or default nested null values. Directly invoked raw callbacks keep their existing strict checks.
+
 Standalone metadata JSON values and dynamic registered-taxonomy maps remain open where intended; existing metadata and taxonomy authorization still applies. WordPress handles other schema keywords such as URI formats. Output schemas are deferred to avoid constraining legitimate provider/error response shapes. No capabilities or external services are added.
 
 = How are image URL uploads limited? =
@@ -220,6 +222,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 * Close fixed-property input schemas and reject malformed types/enums before raw permission checks or execute callbacks; preserve explicit open maps and omitted defaults.
 * Validate strict types during registered input validation after core checks, preventing malformed scalar inputs from being misclassified as permission denials.
+* Preserve empty database-health requests at Adapter permission preflight by honoring the declared object-root default, without changing Administrator authorization, table-name privacy, or strict raw callback validation.
 * Reject unadvertised parent fields on posts and nonhierarchical custom post types, including zero, while retaining hierarchical detach and parent authorization.
 * Require exact confirmation for permanent media/term deletion and both bulk post operations; bound raw bulk requests to 100 IDs and add non-mutating eligibility previews.
 * Guard media deletion with shared known-reference checks; require explicit force for known usage, fail closed on scan errors, and report in_use on success without changing capabilities.

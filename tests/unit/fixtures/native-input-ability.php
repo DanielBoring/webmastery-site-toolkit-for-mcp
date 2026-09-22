@@ -160,7 +160,7 @@ class WP_Ability {
 	}
 
 	private static function matches( $value, array $schema ): bool {
-		$known = array( 'type', 'properties', 'required', 'additionalProperties', 'items', 'enum', 'default', 'minimum', 'maximum', 'format', 'oneOf', 'anyOf' );
+		$known = array( 'type', 'properties', 'required', 'additionalProperties', 'items', 'enum', 'default', 'description', 'minimum', 'maximum', 'format', 'oneOf', 'anyOf' );
 		if ( array_diff( array_keys( $schema ), $known ) ) {
 			throw new LogicException( 'Schema keyword outside the lifecycle double boundary.' );
 		}

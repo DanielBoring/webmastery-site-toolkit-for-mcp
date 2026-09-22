@@ -328,6 +328,13 @@ accept an empty object or omitted input (native null normalizes to the empty
 default), not arbitrary properties. No text sanitization can turn an invalid
 enum into a valid one.
 
+Registered permission preflight also honors an explicitly declared root default
+when the root type is exactly `object` and input is omitted or null. This keeps
+Adapter-normalized empty database-health requests working without replaying
+WordPress normalization filters. Administrator checks and default table-name
+redaction remain unchanged. This is not coercion of non-null input, a default
+for nested null values, or a relaxation of directly invoked raw callbacks.
+
 Standalone `meta_value` remains a polymorphic JSON value, and CPT
 `taxonomy_terms` remains an extensible map of taxonomy names to integer arrays;
 registration and assign-term authorization still apply. Unstructured objects
