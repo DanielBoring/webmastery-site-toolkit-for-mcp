@@ -924,6 +924,27 @@ owned runtime removes its remaining test sessions and data.
 
 The contract phase also runs the CLI-only `scheduling-runner.php`. It exercises post/page create and update plus both fixture CPT capability maps, including malformed/missing/past/near-now dates, calendar overflow, valid offsets and relative dates, draft/pending zero-GMT scheduling, existing schedules, explicit status changes, DST folds/gaps, and site timezone changes. The manifest separately includes allowed and denied scheduling cases for all eight affected abilities.
 
+The dedicated runner retains all 264 original cases in order and adds four direct
+counterparts, for 268 cases. The original `direct-invalid-status-overdue` inputs
+still contain the string `status: "not-a-status"` and now require the registered
+callback's exact `invalid_input` / `ability_invalid_input` envelope. Each is
+immediately followed by `direct-existing-future-overdue`, using the same fixture
+and fully constructed payload with only `status` removed. These schema-valid
+direct calls retain the exact `invalid_input` / `scheduled_date_too_soon` purpose.
+Both require the canonical message, empty object details, unchanged state,
+zero observed mutation hooks and the unchanged metadata sentinel. The other
+260 cases keep their original inputs, boundaries and expectations.
+
+`SchedulingCalibrationTest` and its sealed typed ledger derive the whole actual
+input construction from frozen `735d31d` and the current runner, including the
+initializer, actor, fixture and boundary choices. They protect original/counterpart
+ordering, source bindings, exact errors and no-write predicates against mutations.
+The unwrapped scheduling helper's invalid-status fallback, fixed-clock boundary
+and timezone tests remain separate and unchanged. These isolated proofs do not
+replace real WordPress execution: the retained `735d31d` CI artifact showed the
+four old expectation mismatches and 260 passing controls; runtime acceptance of
+the 268-case correction requires a new genuine run.
+
 For rejected calls, the runner compares post/revision, metadata, term-relationship, and cron snapshots and asserts that relevant pre-write/save/publication/term/meta/cron hooks did not run. Successful controls exercise those observers. It checks stored local/GMT dates and actual future status, and calls core's future-publication guard early to verify that ambiguous local cron conversions do not publish before authoritative GMT. Existing stored local/GMT strings survive a site timezone change without a new pair-equality restriction or cron override.
 
 Exact -1/0/+1/+59/+60/+61-second boundaries use a fixed clock in unit tests. Real WordPress success cases are comfortably in the future: core's later clock sample can cross the cutoff even after an exactly +60-second preflight. These tests establish preflight behavior, not an atomic guarantee against clock ticks, process delays, or arbitrary third-party hooks.

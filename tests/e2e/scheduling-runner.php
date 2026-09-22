@@ -109,7 +109,7 @@ try {
 					[ 'existing-future-empty', [ 'scheduled_date' => '' ], 'missing_scheduled_date', 'future' ],
 					[ 'existing-future-near', [], 'scheduled_date_too_soon', 'near' ],
 					[ 'existing-future-overdue', [], 'scheduled_date_too_soon', 'overdue' ],
-					[ 'direct-invalid-status-overdue', [ 'status' => 'not-a-status' ], 'scheduled_date_too_soon', 'overdue' ],
+					[ 'direct-invalid-status-overdue', [ 'status' => 'not-a-status' ], 'ability_invalid_input', 'overdue' ],
 					[ 'existing-future-invalid', [], 'invalid_scheduled_date', 'invalid' ],
 					[ 'existing-timezone-change', [], null, 'timezone-change' ],
 					[ 'explicit-unschedule', [ 'status' => 'draft' ], null, 'future' ],
@@ -152,55 +152,74 @@ try {
 				if ( 'mcp_book' === $type ) {
 					$input['taxonomy_terms'] = [ 'mcp_genre' => array_map( 'intval', $terms ) ];
 				}
-				$before_post = $id ? get_post( $id, ARRAY_A ) : null;
-				$before = wstm113_snapshot();
-				$observed = [];
-				foreach ( $hooks as $hook ) {
-					add_filter( $hook, $observer, PHP_INT_MAX );
+				$direct = 'direct-invalid-status-overdue' === $label;
+				$attempts = [ [ $label, $input, $error ] ];
+				if ( $direct ) {
+					$minimal = $input;
+					unset( $minimal['status'] );
+					$attempts[] = [ 'direct-existing-future-overdue', $minimal, 'scheduled_date_too_soon' ];
 				}
-				if ( 'direct-invalid-status-overdue' === $label ) {
-					// The API schema rejects this enum; also verify callback defense.
-					$property = new ReflectionProperty( $ability, 'execute_callback' );
-					$property->setAccessible( true );
-					$callback = $property->getValue( $ability );
-					$result = $callback( $input );
-				} else {
-					$result = $ability->execute( $input );
-				}
-				foreach ( $hooks as $hook ) {
-					remove_filter( $hook, $observer, PHP_INT_MAX );
-				}
-				$after = wstm113_snapshot();
-				$result_id = $result['data']['id'] ?? $id;
-				$post = $result_id ? get_post( $result_id ) : null;
-				$initial_cron = $post ? wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) : null;
-				$code = wstm118_error_reason( $result );
-				$passed = $error ? $code === $error && $before === $after && [] === $observed : true === ( $result['success'] ?? false ) && ! empty( $observed['save_post'] );
-				if ( $id ) {
-					$passed = $passed && 'Scheduling metadata sentinel' === get_post_meta( $id, '_yoast_wpseo_metadesc', true );
-				}
-				$expected = [];
-				if ( ! $error && $post ) {
-					$effective = $input['status'] ?? ( $before_post['post_status'] ?? 'draft' );
-					if ( 'future' === $effective ) {
-						$timestamp = isset( $input['scheduled_date'] ) ? strtotime( $input['scheduled_date'] ) : strtotime( $before_post['post_date_gmt'] . ' GMT' );
-						$expected = [ 'status' => 'future', 'gmt' => gmdate( 'Y-m-d H:i:s', $timestamp ), 'local' => isset( $input['scheduled_date'] ) ? wp_date( 'Y-m-d H:i:s', $timestamp ) : $before_post['post_date'] ];
-						$passed = $passed && $post->post_status === $expected['status'] && $post->post_date_gmt === $expected['gmt'] && $post->post_date === $expected['local'];
-						// An early fold/timezone event must not publish ahead of authoritative GMT.
-						check_and_publish_future_post( $post->ID );
-						$passed = $passed && 'future' === get_post_status( $post->ID ) && wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) >= $timestamp;
+				foreach ( $attempts as [ $label, $input, $error ] ) {
+					$before_post = $id ? get_post( $id, ARRAY_A ) : null;
+					$before = wstm113_snapshot();
+					$observed = [];
+					foreach ( $hooks as $hook ) {
+						add_filter( $hook, $observer, PHP_INT_MAX );
+					}
+					if ( $direct ) {
+						// Exercise the registered guard, then the schema-valid scheduling path.
+						$property = new ReflectionProperty( $ability, 'execute_callback' );
+						$property->setAccessible( true );
+						$callback = $property->getValue( $ability );
+						$result = $callback( $input );
 					} else {
-						$passed = $passed && $post->post_status === $effective;
-						if ( 'create' === $operation && isset( $input['scheduled_date'] ) ) {
-							$passed = $passed && $post->post_date === wp_date( 'Y-m-d H:i:s', strtotime( $input['scheduled_date'] ) );
-						}
-						if ( in_array( $label, [ 'nonfuture-date', 'nonfuture-zero-gmt', 'nonfuture-omitted-status-date' ], true ) && 'update' === $operation ) {
-							$passed = $passed && '0000-00-00 00:00:00' === $post->post_date_gmt && str_starts_with( $post->post_date, wp_date( 'Y-m-d' ) );
+						$result = $ability->execute( $input );
+					}
+					foreach ( $hooks as $hook ) {
+						remove_filter( $hook, $observer, PHP_INT_MAX );
+					}
+					$after = wstm113_snapshot();
+					$result_id = $result['data']['id'] ?? $id;
+					$post = $result_id ? get_post( $result_id ) : null;
+					$initial_cron = $post ? wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) : null;
+					$code = wstm118_error_reason( $result );
+					$passed = $error ? $code === $error && $before === $after && [] === $observed : true === ( $result['success'] ?? false ) && ! empty( $observed['save_post'] );
+					if ( $direct ) {
+						$envelope = wstm118_error_envelope( $result );
+						$expected_message = 'ability_invalid_input' === $error
+							? 'Ability input does not match its schema.'
+							: 'The scheduled date must be at least 60 seconds in the future when validated.';
+						$passed = $passed && 'invalid_input' === $envelope['error']['code']
+							&& $error === $envelope['error']['reason']
+							&& $expected_message === $envelope['error']['message']
+							&& [] === get_object_vars( $envelope['error']['details'] );
+					}
+					if ( $id ) {
+						$passed = $passed && 'Scheduling metadata sentinel' === get_post_meta( $id, '_yoast_wpseo_metadesc', true );
+					}
+					$expected = [];
+					if ( ! $error && $post ) {
+						$effective = $input['status'] ?? ( $before_post['post_status'] ?? 'draft' );
+						if ( 'future' === $effective ) {
+							$timestamp = isset( $input['scheduled_date'] ) ? strtotime( $input['scheduled_date'] ) : strtotime( $before_post['post_date_gmt'] . ' GMT' );
+							$expected = [ 'status' => 'future', 'gmt' => gmdate( 'Y-m-d H:i:s', $timestamp ), 'local' => isset( $input['scheduled_date'] ) ? wp_date( 'Y-m-d H:i:s', $timestamp ) : $before_post['post_date'] ];
+							$passed = $passed && $post->post_status === $expected['status'] && $post->post_date_gmt === $expected['gmt'] && $post->post_date === $expected['local'];
+							// An early fold/timezone event must not publish ahead of authoritative GMT.
+							check_and_publish_future_post( $post->ID );
+							$passed = $passed && 'future' === get_post_status( $post->ID ) && wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) >= $timestamp;
+						} else {
+							$passed = $passed && $post->post_status === $effective;
+							if ( 'create' === $operation && isset( $input['scheduled_date'] ) ) {
+								$passed = $passed && $post->post_date === wp_date( 'Y-m-d H:i:s', strtotime( $input['scheduled_date'] ) );
+							}
+							if ( in_array( $label, [ 'nonfuture-date', 'nonfuture-zero-gmt', 'nonfuture-omitted-status-date' ], true ) && 'update' === $operation ) {
+								$passed = $passed && '0000-00-00 00:00:00' === $post->post_date_gmt && str_starts_with( $post->post_date, wp_date( 'Y-m-d' ) );
+							}
 						}
 					}
+					$summary[ $passed ? 'passed' : 'failed' ]++;
+					$summary['cases'][] = [ 'ability' => $operation . '-' . $base, 'label' => $label, 'passed' => $passed, 'expected_error' => $error, 'result' => $result, 'before' => $before, 'after' => $after, 'hooks' => $observed, 'expected_date' => $expected, 'stored' => $post ? [ 'id' => $post->ID, 'status' => $post->post_status, 'local' => $post->post_date, 'gmt' => $post->post_date_gmt, 'initial_cron' => $initial_cron, 'cron_after_early_guard' => wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) ] : null ];
 				}
-				$summary[ $passed ? 'passed' : 'failed' ]++;
-				$summary['cases'][] = [ 'ability' => $operation . '-' . $base, 'label' => $label, 'passed' => $passed, 'expected_error' => $error, 'result' => $result, 'before' => $before, 'after' => $after, 'hooks' => $observed, 'expected_date' => $expected, 'stored' => $post ? [ 'id' => $post->ID, 'status' => $post->post_status, 'local' => $post->post_date, 'gmt' => $post->post_date_gmt, 'initial_cron' => $initial_cron, 'cron_after_early_guard' => wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) ] : null ];
 				if ( 'timezone-change' === $fixture ) {
 					update_option( 'timezone_string', 'America/New_York' );
 				}

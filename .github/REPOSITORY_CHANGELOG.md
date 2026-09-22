@@ -6,6 +6,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Preserve the scheduling runner's four original invalid-status direct payloads as strict schema-negative controls, followed immediately by four schema-valid direct counterparts removing only `status`. Retain the other 260 cases, no-write snapshots, 14 hook observers and metadata sentinels. Bind the original 264/current 268 typed inventories to frozen source and add exact-error, provenance and mutation regressions without changing production scheduling, authorization or privacy behavior.
+
 - Keep the historical comments ledger sealed while verifying the exact reviewed permission-default source transition: pin current Ability bytes, reverse only the anchored four-line addition, and require the restored historical hash and unchanged ledger binding. Reject malformed transitions and forged bindings. Add the missing empty-schema getter to the callback-only legacy double and strengthen once-only exception, redaction and passthrough checks; no production fallback or oracle relaxation.
 
 - Preserve eight original taxonomy-delete extra-property payloads as strict schema-negative controls, then add eight minimal authorized not-found counterparts. Keep the other 148 runner cases unchanged, pin the original 156-row typed inventory to its frozen source, and add production-wrapper and provenance/mutation regressions without changing production taxonomy policy or manifest/privacy/error expectations.
