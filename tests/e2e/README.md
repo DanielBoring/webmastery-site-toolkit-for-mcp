@@ -619,6 +619,20 @@ correct and unchanged. The typed
 `2feed8d` and `5b39f6a` before/after cases; mutation tests reject error-envelope,
 input, original-payload, authorization and no-write regressions.
 
+The sealed historical ledger is not regenerated for the later permission-default
+fix. Its current-production check has one explicit test-local transition:
+verify the LF-normalized current Ability SHA-256 and Git blob, reverse exactly
+one anchored four-line permission-default addition, and require both the
+historical source hash and unchanged ledger head pin. All other production
+hash checks stay unchanged. Missing, reordered, modified or duplicated guards,
+unrelated source drift and forged historical bindings must fail; this is not
+an alternate-hash allowlist or a skipped provenance check.
+
+The separate callback-only legacy double exposes its faithful empty schema.
+`AbilityCallbackTest` still checks once-only `RuntimeException`/`Error`
+handling, exact safe permission errors and unchanged native return values.
+It is not a production fallback or a replacement for actual-core evidence.
+
 HTTP session-close and application-password revocation failures are recorded individually under `cleanup_errors`, increment the failed count, and do not prevent subsequent cleanup or evidence writing. Existing case failures remain intact and the runner exits nonzero. Unit regressions inject both transport-close and credential-revocation failures to verify this behavior.
 
 ## Shared runtime and coverage

@@ -16,6 +16,12 @@ require_once dirname( __DIR__ ) . '/e2e/error-contract-assertions.php';
  * @preserveGlobalState disabled
  */
 final class CommentsCalibrationTest extends TestCase {
+	private const ABILITY_PERMISSION_ANCHOR = "\tpublic function check_permissions( \$input = null ) {\n";
+	private const ABILITY_DEFAULT_GUARD = "\t\t\$schema = \$this->get_input_schema();\n"
+		. "\t\tif ( null === \$input && 'object' === ( \$schema['type'] ?? null ) && array_key_exists( 'default', \$schema ) ) {\n"
+		. "\t\t\t\$input = \$schema['default'];\n"
+		. "\t\t}\n";
+
 	private function ledger(): stdClass {
 		return Wstm105Calibration\load_ledger();
 	}
@@ -145,6 +151,51 @@ final class CommentsCalibrationTest extends TestCase {
 		Wstm105Calibration\load_ledger( '[]' );
 	}
 
+	private function assert_ability_provenance_bridge( string $source, string $historical_hash ): void {
+		$source = str_replace( "\r\n", "\n", $source );
+		self::assertSame( '9a237e25baa11fc823fcdaee45277d1ca9462ca04af462e33dede511bdb0edf5', hash( 'sha256', $source ), 'Current Ability source drift.' );
+		self::assertSame( '2214514af8462ddefdf63a87f26040d990e21aa3', hash( 'sha1', 'blob ' . strlen( $source ) . "\0" . $source ), 'Current Ability Git blob drift.' );
+		$restored = str_replace( self::ABILITY_PERMISSION_ANCHOR . self::ABILITY_DEFAULT_GUARD, self::ABILITY_PERMISSION_ANCHOR, $source, $replacements );
+		self::assertSame( 1, $replacements, 'Reverse exactly one approved four-line addition at check_permissions.' );
+		self::assertSame( '9591998817fa5feb17cb08cd2f93e023f21a720d7b4b4b05875dbb4ff9993c78', hash( 'sha256', $restored ), 'Restored historical Ability source drift.' );
+		self::assertSame( $historical_hash, hash( 'sha256', $restored ), 'Restored Ability must match the unchanged sealed ledger binding.' );
+	}
+
+	public function test_ability_provenance_bridge_accepts_only_approved_source_in_lf_or_crlf(): void {
+		$source = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/includes/class-ability.php' ) );
+		$ledger = $this->ledger();
+		$historical_hash = $ledger->source_hashes->{$ledger->head}->{'includes/class-ability.php'};
+		$this->assert_ability_provenance_bridge( $source, $historical_hash );
+		$this->assert_ability_provenance_bridge( str_replace( "\n", "\r\n", $source ), $historical_hash );
+	}
+
+	public static function ability_bridge_mutants(): array {
+		$parent_call = "\t\t\$result = parent::check_permissions( \$input );\n";
+		return array(
+			'missing guard' => array( self::ABILITY_DEFAULT_GUARD, '' ),
+			'reordered guard' => array( self::ABILITY_DEFAULT_GUARD . $parent_call, $parent_call . self::ABILITY_DEFAULT_GUARD ),
+			'modified guard' => array( "array_key_exists( 'default', \$schema )", "isset( \$schema['default'] )" ),
+			'duplicated guard' => array( self::ABILITY_DEFAULT_GUARD, self::ABILITY_DEFAULT_GUARD . self::ABILITY_DEFAULT_GUARD ),
+			'unrelated Ability drift' => array( 'The ability could not complete the operation.', 'Changed unrelated callback message.' ),
+			'forged historical binding' => array( null, null ),
+		);
+	}
+
+	/** @dataProvider ability_bridge_mutants */
+	public function test_ability_provenance_bridge_rejects_mutants( ?string $from, ?string $to ): void {
+		$source = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/includes/class-ability.php' ) );
+		$ledger = $this->ledger();
+		$historical_hash = $ledger->source_hashes->{$ledger->head}->{'includes/class-ability.php'};
+		if ( null === $from ) {
+			$historical_hash = str_repeat( 'a', 64 );
+		} else {
+			$source = str_replace( $from, $to, $source, $replacements );
+			self::assertSame( 1, $replacements, 'Mutate exactly one source location.' );
+		}
+		$this->expectException( AssertionFailedError::class );
+		$this->assert_ability_provenance_bridge( $source, $historical_hash );
+	}
+
 	public function test_ledger_is_exact_pinned_typed_source_derivation(): void {
 		$ledger = $this->ledger();
 		self::assertSame( $this->typed( $ledger ), $this->typed( Wstm105Calibration\derive( $ledger ) ) );
@@ -153,7 +204,11 @@ final class CommentsCalibrationTest extends TestCase {
 		self::assertSame( 141, $ledger->counts->raw_total );
 		foreach ( $ledger->source_hashes->{$ledger->head} as $path => $hash ) {
 			if ( str_starts_with( $path, 'includes/' ) ) {
-				self::assertSame( $hash, hash( 'sha256', str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) ) ), 'Production drift: ' . $path );
+				if ( 'includes/class-ability.php' === $path ) {
+					$this->assert_ability_provenance_bridge( file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ), $hash );
+				} else {
+					self::assertSame( $hash, hash( 'sha256', str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) ) ), 'Production drift: ' . $path );
+				}
 			}
 		}
 		self::assertInstanceOf( stdClass::class, $ledger->raw_malformed_cases[4]->input );
