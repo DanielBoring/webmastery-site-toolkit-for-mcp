@@ -272,6 +272,10 @@ Only then do the unchanged historical 547-case, 16-error-correction and
 seven-privacy-row checks run. Object/array and integer/float distinctions,
 original properties, all 52 imported cases, and historical ledger goldens
 remain protected. Mutation tests exercise the same strict projection.
+The separately pinned `untrusted-import-inventory.json` binds all 52 new
+rows to those same immutable sources: indices 0-43, 187, and 372-378. An
+executable provenance check requires the mutation provider to match that
+entire ordered inventory, rejecting omissions, duplicates and extra indices.
 
 The dedicated runtime entrypoints are `untrusted-content-runner.php` and
 `untrusted-content-fixture.php`. They require explicit

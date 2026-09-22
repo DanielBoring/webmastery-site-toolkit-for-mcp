@@ -131,13 +131,53 @@ final class UntrustedManifestProjectionTest extends TestCase {
 		Wstm108_Manifest_Projection::project( $manifest );
 	}
 
+	private static function validate_import_indices( array $indices ): object {
+		$imports = json_decode( file_get_contents( __DIR__ . '/fixtures/untrusted-import-inventory.json' ), false, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( '29d13070311dc94c334e12ea8102852f29248036e09d027bf762e6a85dde6d8e', Wstm108_Manifest_Projection::fingerprint( $imports ) );
+		$markers = Wstm108_Manifest_Projection::inventory();
+		foreach ( array( 'marker_source_sha', 'baseline_source_sha', 'marker_source_manifest_sha256', 'baseline_manifest_sha256' ) as $field ) {
+			self::assertSame( $markers->$field, $imports->$field );
+		}
+		self::assertCount( 52, $imports->cases );
+		self::assertSame( array_column( $imports->cases, 'index' ), $indices );
+		return $imports;
+	}
+
+	public function test_mutation_provider_matches_the_entire_immutable_import_inventory(): void {
+		$imports = self::validate_import_indices( array_column( self::imported_rows(), 0 ) );
+		$manifest = self::manifest();
+		foreach ( $imports->cases as $entry ) {
+			$case = $manifest[ $entry->index ];
+			self::assertSame( $entry->ability, $case->ability );
+			self::assertSame( $entry->label, $case->label );
+			self::assertSame( $entry->sha256, Wstm108_Manifest_Projection::fingerprint( $case ) );
+		}
+	}
+
+	public static function import_index_mutations(): array {
+		return array_map( static fn( $name ) => array( $name ), array( 'missing', 'extra', 'duplicate', 'wrong', 'reordered' ) );
+	}
+
+	/** @dataProvider import_index_mutations */
+	public function test_import_provenance_rejects_omissions_duplicates_and_other_index_changes( string $mutation ): void {
+		$indices = array_column( self::imported_rows(), 0 );
+		if ( 'missing' === $mutation ) { array_pop( $indices ); }
+		if ( 'extra' === $mutation ) { $indices[] = 44; }
+		if ( 'duplicate' === $mutation ) { $indices[44] = $indices[0]; }
+		if ( 'wrong' === $mutation ) { $indices[44] = 44; }
+		if ( 'reordered' === $mutation ) { [ $indices[0], $indices[1] ] = array( $indices[1], $indices[0] ); }
+		$this->expectException( AssertionFailedError::class );
+		self::validate_import_indices( $indices );
+	}
+
 	public static function imported_rows(): array {
-		return array_map( static fn( $index ) => array( $index ), array_merge( range( 0, 44 ), range( 372, 378 ) ) );
+		return array_map( static fn( $index ) => array( $index ), array_merge( range( 0, 43 ), array( 187 ), range( 372, 378 ) ) );
 	}
 
 	/** @dataProvider imported_rows */
 	public function test_all_52_imported_safety_and_privacy_rows_remain_exact_and_unmarked( int $index ): void {
 		$manifest = self::manifest();
+		self::assertNotContains( $index, array_column( Wstm108_Manifest_Projection::inventory()->cases, 'index' ) );
 		$manifest[ $index ]->assert_values ??= new stdClass();
 		$manifest[ $index ]->assert_values->{'data.untrusted_fields'} = array();
 		$this->expectException( AssertionFailedError::class );
