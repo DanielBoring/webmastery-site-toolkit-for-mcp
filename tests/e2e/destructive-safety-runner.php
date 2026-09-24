@@ -208,12 +208,16 @@ try {
 		$entry['role'] = $role;
 		$entry['mode'] = $fault;
 		$events = array();
-		$undo = wstm116_faults( $fault );
+		$permission_queries = $fault_queries = array();
+		$undo = wstm116_faults( $fault, $permission_queries );
 		try {
 			$permission = $ability->check_permissions( $input );
+			$entry['permission_is_wp_error'] = is_wp_error( $permission );
+			$entry['permission_error_code'] = is_wp_error( $permission ) ? $permission->get_error_code() : null;
 			$entry['permission'] = true === $permission ? true : Webmastery_MCP_Response::from_wp_error( $permission );
 		} finally {
 			$undo();
+			$entry['permission_fault_queries'] = $permission_queries;
 		}
 		$before = wstm116_snapshot( $files );
 		$entry['before'] = $before;
@@ -236,9 +240,12 @@ try {
 			wstm116_require( EMPTY_TRASH_DAYS === ( $control['trash_days'] ?? null ) && WSTM116_STAGE_TOKEN === ( $control['stage_owner'] ?? null ), 'HTTP boot changed during safety proof.' );
 			$events = $control['events'];
 			$entry['http_file_operations'] = $control['file_operations'] ?? null;
+			wstm116_require( isset( $control['fault_queries'], $control['fault_query_hits'] ) && is_array( $control['fault_queries'] )
+				&& count( $control['fault_queries'] ) === $control['fault_query_hits'], 'HTTP fault observer did not attest its query count.' );
+			$fault_queries = $control['fault_queries'];
 		} else {
 			$observer = wstm116_observe( static function ( $hook ) use ( &$events ): void { $events[] = $hook; } );
-			$undo = wstm116_faults( $fault );
+			$undo = wstm116_faults( $fault, $fault_queries );
 			try {
 				if ( 'direct' === $boundary ) {
 					$property = new ReflectionProperty( WP_Ability::class, 'execute_callback' );
@@ -259,7 +266,14 @@ try {
 		$entry['before'] = $before;
 		$entry['after'] = wstm116_snapshot( $files );
 		$entry['hooks'] = $events;
+		$entry['fault_queries'] = $fault_queries;
+		$entry['fault_query_hits'] = count( $fault_queries );
 		$evidence->append( array( 'phase' => 'invocation', 'ability' => $slug, 'evidence' => $entry ) );
+		if ( 'query_failure' === ( $fault['mode'] ?? '' ) ) {
+			wstm116_require( array() === $permission_queries && 1 === count( $fault_queries ), 'Reference fault must hit exactly one execution query, never a permission query.' );
+			wstm116_require( $fault['phase'] === $fault_queries[0]['phase'] && $fault['id'] === $fault_queries[0]['candidate_id']
+				&& $fault_queries[0]['original'] !== $fault_queries[0]['replacement'], 'Reference fault did not attest the intended phase/candidate and changed SQL.' );
+		}
 		if ( $unchanged ) {
 			wstm116_require( $entry['before'] === $entry['after'], 'Guard/preview changed persisted state or owned files.' );
 			wstm116_require( array() === $events, 'Guard/preview reached a mutation hook.' );
@@ -282,7 +296,20 @@ try {
 			$result = $invoke( $slug, $input, $role, $fault, $entry, true );
 			$envelope = wstm118_error_envelope( $result );
 			wstm116_require( $reason === $envelope['error']['reason'], 'Wrong failure layer/reason: ' . $envelope['error']['reason'] );
-			wstm116_require( $permission === ( true === $entry['permission'] ), 'Permission callback result did not match the expected independent boundary.' );
+			if ( 'invalid_input' === $permission ) {
+				wstm116_require( true === $entry['permission_is_wp_error'] && 'invalid_input' === $entry['permission_error_code'], 'Strict permission rejection must be a canonical native WP_Error.' );
+				$raw = wstm118_error_envelope( $entry['permission'] );
+				wstm116_require( 'invalid_input' === $raw['error']['code'] && 'ability_invalid_input' === $raw['error']['reason']
+					&& 'Ability input does not match its schema.' === $raw['error']['message'] && '{}' === wp_json_encode( $raw['error']['details'] ), 'Wrong strict raw permission envelope.' );
+				if ( 'ability_invalid_input' === $reason ) {
+					wstm116_require( wp_json_encode( $raw ) === wp_json_encode( $envelope ), 'Native schema rejection must retain the exact raw schema envelope.' );
+				}
+			} else {
+				wstm116_require( $permission === ( true === $entry['permission'] ), 'Permission callback result did not match the expected independent boundary.' );
+				if ( false === $permission ) {
+					wstm116_require( true === $entry['permission_is_wp_error'] && 'forbidden' === $entry['permission_error_code'] && 'forbidden' === $entry['permission']['error']['code'] && 'forbidden' === $entry['permission']['error']['reason'], 'Valid-input actor denial must retain its native forbidden permission error.' );
+				}
+			}
 			wstm116_require( false === strpos( wp_json_encode( $envelope ), 'WSTM116_PRIVATE_SQL_FAILURE' ), 'Private SQL escaped.' );
 			if ( 'too_many_ids' === $reason ) {
 				wstm116_require( (object) array( 'limit' => 100 ) == $envelope['error']['details'], 'Missing raw ID limit details.' );
@@ -291,11 +318,11 @@ try {
 	};
 	foreach ( $inputs as $slug => $base ) {
 		foreach ( array( 'missing' => array(), 'false' => array( 'confirm' => false ), 'string' => array( 'confirm' => 'true' ), 'number' => array( 'confirm' => 1 ), 'null' => array( 'confirm' => null ) ) as $label => $flags ) {
-			$reason = 'direct' === $boundary || in_array( $label, array( 'string', 'number' ), true ) ? 'missing_confirmation' : 'ability_invalid_input';
-			$error_case( "{$slug} confirmation {$label}", $slug, array_merge( $base, $flags ), 'editor', $reason );
-			$error_case( "{$slug} administrator confirmation {$label}", $slug, array_merge( $base, $flags ), 'administrator', $reason );
+			$reason = 'direct' === $boundary ? 'missing_confirmation' : 'ability_invalid_input';
+			$error_case( "{$slug} confirmation {$label}", $slug, array_merge( $base, $flags ), 'editor', $reason, 'invalid_input' );
+			$error_case( "{$slug} administrator confirmation {$label}", $slug, array_merge( $base, $flags ), 'administrator', $reason, 'invalid_input' );
 			if ( 0 === strpos( $slug, 'bulk-' ) ) {
-				$error_case( "{$slug} preview confirmation {$label}", $slug, array_merge( $base, $flags, array( 'dry_run' => true ) ), 'editor', $reason );
+				$error_case( "{$slug} preview confirmation {$label}", $slug, array_merge( $base, $flags, array( 'dry_run' => true ) ), 'editor', $reason, 'invalid_input' );
 			}
 		}
 		if ( 'direct' === $boundary && 0 === strpos( $slug, 'bulk-' ) ) {
@@ -310,13 +337,13 @@ try {
 	}
 	foreach ( array( 'bulk-trash-posts' => 'dry_run', 'bulk-publish-posts' => 'dry_run', 'delete-media' => 'force' ) as $slug => $flag ) {
 		foreach ( array( 'true', 'false', 0, 1, null, array() ) as $index => $value ) {
-			$error_case( "{$slug} strict {$flag} {$index}", $slug, $inputs[ $slug ] + array( 'confirm' => true, $flag => $value ), 'editor', 'direct' === $boundary || $index < 4 ? 'invalid_input' : 'ability_invalid_input' );
+			$error_case( "{$slug} strict {$flag} {$index}", $slug, $inputs[ $slug ] + array( 'confirm' => true, $flag => $value ), 'editor', 'direct' === $boundary ? 'invalid_input' : 'ability_invalid_input', 'invalid_input' );
 		}
 	}
 	foreach ( array( 'bulk-trash-posts', 'bulk-publish-posts' ) as $slug ) {
 		foreach ( array( range( 10000001, 10000101 ), array_fill( 0, 101, $draft ) ) as $index => $ids ) {
 			foreach ( array( false, true ) as $dry_run ) {
-				$error_case( "{$slug} 101 raw {$index} preview " . (int) $dry_run, $slug, array( 'ids' => $ids, 'confirm' => true, 'dry_run' => $dry_run ), 'editor', 'direct' === $boundary ? 'too_many_ids' : 'ability_invalid_input' );
+				$error_case( "{$slug} 101 raw {$index} preview " . (int) $dry_run, $slug, array( 'ids' => $ids, 'confirm' => true, 'dry_run' => $dry_run ), 'editor', 'direct' === $boundary ? 'too_many_ids' : 'ability_invalid_input', 'invalid_input' );
 			}
 		}
 		foreach ( array( 'unique' => range( 10000001, 10000100 ), 'duplicate' => array_fill( 0, 100, $draft ) ) as $label => $ids ) {
@@ -367,7 +394,10 @@ try {
 		}
 		$error_case( "media {$reference} force cannot bypass object denial", 'delete-media', array( 'media_id' => $id, 'confirm' => true, 'force' => true ), 'author', 'ability' === $boundary ? 'ability_invalid_permissions' : 'forbidden', false, array( 'mode' => 'deny_object', 'id' => $id ) );
 		foreach ( array( false, true ) as $force ) {
-			$error_case( "media {$reference} scan failure force " . (int) $force, 'delete-media', array( 'media_id' => $id, 'confirm' => true, 'force' => $force ), 'author', 'content_hygiene_query_failed', true, array( 'mode' => 'query_failure' ) );
+			$error_case( "media {$reference} scan failure force " . (int) $force, 'delete-media', array( 'media_id' => $id, 'confirm' => true, 'force' => $force ), 'author', 'content_hygiene_query_failed', true, array( 'mode' => 'query_failure', 'phase' => 'thumbnail', 'id' => $id, 'owner' => $run ) );
+			if ( 'featured' !== $reference ) {
+				$error_case( "media {$reference} content scan failure force " . (int) $force, 'delete-media', array( 'media_id' => $id, 'confirm' => true, 'force' => $force ), 'author', 'content_hygiene_query_failed', true, array( 'mode' => 'query_failure', 'phase' => 'content', 'id' => $id, 'owner' => $run ) );
+			}
 		}
 		$record( "media {$reference} truthful deletion", static function ( &$entry ) use ( $invoke, $id, $known ): void {
 			$file = get_attached_file( $id );

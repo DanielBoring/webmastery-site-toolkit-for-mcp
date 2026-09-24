@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/fixtures/bounded-manifest-projection.php';
+require_once __DIR__ . '/fixtures/runtime-calibration.php';
 
 final class DestructiveBooleanLedgerTest extends TestCase {
 	private static function fingerprint( array $cases, bool $without_oracles = false ): string {
@@ -103,13 +104,17 @@ final class DestructiveBooleanLedgerTest extends TestCase {
 	}
 
 	public function test_runtime_matrix_changes_only_the_calibrated_non_direct_values(): void {
-		$source = file_get_contents( dirname( __DIR__ ) . '/e2e/destructive-safety-runner.php' );
-		self::assertStringContainsString( "'direct' === \$boundary || in_array( \$label, array( 'string', 'number' ), true ) ? 'missing_confirmation' : 'ability_invalid_input'", $source );
-		self::assertStringContainsString( "'direct' === \$boundary || \$index < 4 ? 'invalid_input' : 'ability_invalid_input'", $source );
-		self::assertStringContainsString( "array( 'true', 'false', 0, 1, null, array() )", $source );
-		self::assertStringContainsString( "'direct' === \$boundary ? 'too_many_ids' : 'ability_invalid_input'", $source );
-		self::assertStringContainsString( "'ability' === \$boundary ? 'ability_invalid_permissions' : 'forbidden'", $source );
-		self::assertStringContainsString( "\$entry['before'] === \$entry['after']", $source );
-		self::assertStringContainsString( 'array() === $events', $source );
+		foreach ( array( 'direct', 'ability', 'http', 'individual' ) as $boundary ) {
+			$original = Wstm121Runtime\original_labels( $boundary );
+			$actual = array_keys( Wstm121Runtime\matrix( $boundary ) );
+			self::assertCount( 124, $original );
+			self::assertCount( 130, $actual );
+			self::assertSame( $original, array_values( array_intersect( $actual, $original ) ), 'All original controls and their relative order remain.' );
+			$additional = array();
+			foreach ( array( 'url', 'guid', 'unused' ) as $reference ) {
+				foreach ( array( 0, 1 ) as $force ) { $additional[] = "media $reference content scan failure force $force"; }
+			}
+			self::assertSame( $additional, array_values( array_diff( $actual, $original ) ) );
+		}
 	}
 }

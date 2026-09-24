@@ -262,6 +262,18 @@ runtime acceptance are implied by this verifier source.
 
 ### Proposed large-fixture stage (not wired or executed)
 
+Ordinary unit CI separately runs the ten existing synthetic process/receipt
+components through `scripts/test-controller-components.py`, plus eight
+in-process harness regressions. The component job requires Python 3.11+ and an
+actual Linux pidfd/P_PIDFD precheck; exactly ten discovered, started, finished
+and passing IDs must match, with no skipped or expected-failure outcomes.
+It uses fresh private runner-temporary storage and always retains a scoped
+synthetic ZIP and result/hash ledger for seven days. Deliberate symlinks are
+recorded only as metadata, never dereferenced or archived as live links.
+No WordPress, benchmark entrypoint or private producer directory is used.
+Passing these components does **not** satisfy any large-fixture, private-custody,
+receiver, platform-floor, transport or package requirement below.
+
 The shared harness and workflows do not yet invoke the bounded benchmark.
 After an explicit coordinator lease, a separate disposable large-fixture stage
 should run the commands above, including a WordPress 6.9 / PHP 8.1 measurement
@@ -355,8 +367,10 @@ confirmation `"true"`/`1` fails the strict callback with
 fails there with `invalid_input/invalid_input`. Missing/false/null confirmation,
 null/array optional flags and 101 IDs still fail registered schema validation.
 Direct-callback expectations and independent permission-denial checks do not
-change. Recalibrate explicitly if a future input wrapper changes that ordering;
-do not broadly accept multiple reasons or coerce test inputs to make them pass.
+change in that historical baseline. The composed strict input wrapper now
+rejects these malformed native inputs earlier; the exact current calibration
+below supersedes only the boundary expectations, not these historical goldens.
+Do not broadly accept multiple reasons or coerce test inputs to make them pass.
 Preservation fingerprints decode JSON as objects and encode with
 `JSON_PRESERVE_ZERO_FRACTION`, retaining property order and sparse case indexes.
 Their goldens come from exact `6a47b52`, not the corrected working manifest.
@@ -369,6 +383,32 @@ before removing only those seven rows to verify the original 563-case goldens.
 Unknown extra cases, altered privacy rows, and reordered baseline rows fail.
 In the 601-case bounded integration, the exact owned-delta projection described
 above runs first; the 570/563-case historical counts and hashes remain unchanged.
+
+The existing `input-schema-integration-ledger.json` defines the current runtime
+calibration: all 60 confirmation, 18 optional-flag and 8 oversized-array raw
+permission observations become native `WP_Error` with canonical
+`invalid_input/ability_invalid_input`. Of those 86 calls, exactly 36 native
+results change (24 string/number confirmations and 12 string/integer flags).
+The other 50 native reasons and all direct interlocks remain unchanged.
+The runner checks the exact raw error code, envelope and native result separately
+from valid-input actor denials. `RuntimeCalibrationTest` evaluates actual case
+construction and production callbacks with scoped doubles; it is not HTTP or
+WordPress acceptance.
+
+All 124 original destructive controls and labels remain in relative order.
+Their eight reference-scan fault cases now target the actual bounded thumbnail
+query, not the obsolete `SELECT COUNT(1)` shape. Six additive cases independently
+fail the content query for URL, GUID and unused attachments, with both force
+values, making **130 cases per boundary/trash invocation**. Featured-image hits
+correctly skip content queries and therefore are not claimed as content-fault
+coverage. Each fault is scoped to an owned candidate and exact prepared SQL;
+native and HTTP evidence records its phase, candidate, original/replacement SQL
+and hit count. Exactly one execution hit and zero permission hits are required.
+A zero-hit claim fails even if an envelope happens to look right. Existing
+snapshot, hook, file, reference, permission and truthful-deletion controls remain.
+The earlier failed CI's 16 premature fixture deletions across four HTTP lanes
+remain failed evidence, not a successful error-path demonstration. Genuine
+SQL-failure fail-closed behavior needs a fresh separately authorized runtime run.
 
 `run_destructive_safety_qa` in the shared harness runs serially in a subshell:
 `contract` selects direct callbacks and registered abilities, `e2e` selects
@@ -979,6 +1019,18 @@ For baseline/fixed comparison, run the same runner on owned disposable WordPress
 The contract runner also executes `taxonomy-write-runner.php` on the disposable WordPress database and writes `e2e-artifacts/taxonomy-write-summary.json`. Contract CI always attempts to upload this synthetic-fixture evidence as the `taxonomy-write-summary` artifact, retained for seven days, including failed runs when the file exists. Its CLI-only guard prevents HTTP invocation. The unchanged original manifest cases remain, with added create/delete denials and a default-category failure/read-back pair. All six writes have positive and negative manifest coverage.
 
 The supplemental runner exercises wrapped abilities and their direct execute callbacks for default Administrators, Editors, and Subscribers; remapped edit-only/delete-only/manage-only capabilities; a global capability without the remapped grant; WordPress core aliases; final `user_has_cap` denial; and per-object `map_meta_cap` denials with otherwise sufficient capabilities. Denied calls must leave the persisted terms, taxonomy rows (including parents/counts), metadata, and relationships identical, with no watched write hooks. Successful calls verify persisted names/slugs/descriptions/parents or deleted-term absence and the legacy success envelope. Missing/wrong-taxonomy IDs retain their authorized not-found envelopes.
+
+The eight historical missing/wrong-taxonomy **delete** payloads also contain
+`name:"Must not write"`, an undeclared delete property. They remain intact as
+explicit closed-schema denials with exact `invalid_input/ability_invalid_input`,
+message/object details, zero operation-local capability/query calls and unchanged
+state/hooks. Eight additive typed counterparts remove only `name`, retaining
+the same ID, `confirm:true`, actor, capability and wrapped/direct path to reach
+the intended exact not-found result. Thus 148 other controls plus these eight
+originals and eight counterparts make 164 cases. After-state hashes and hook
+evidence are captured before evaluating either oracle; an original mutation
+cannot become the next counterpart's baseline. This fixture migration does not
+change production deletion or permission behavior.
 
 Core's `delete_term` mapping denies the default category with `do_not_allow`. Separately, real `wp_delete_term()` returns integer `0` and leaves that category stored. The runner tests both, then temporarily overrides the meta-cap denial to reach the real zero-return guard. This last case is a **forced permission policy on real core**, not a normal configuration. Unit `TaxonomyWriteTest` uses **stubbed** zero, false, and `WP_Error` returns to cover otherwise rare deletion branches; these are not evidence of a real database failure.
 

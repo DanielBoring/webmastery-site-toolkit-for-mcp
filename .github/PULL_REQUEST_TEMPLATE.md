@@ -33,6 +33,7 @@
 - [ ] PHPStan level 5 passes without new baseline debt; resolved entries/counts are removed or lowered, and baseline changes follow the ratchet policy in `docs/qa-strategy.md`
 - [ ] Compatibility QA was considered for release candidates, dependency-sensitive changes, or WordPress/PHP support changes
 - [ ] Workflow/shell changes pass the dedicated workflow linters; required PR checks do not rely on manually dispatched runs or failure-induced skips
+- [ ] Controller CI preserves operational Linux pidfd/P_PIDFD checks, exactly ten started/finished/passing component IDs without skips/expected failures, separate harness regressions, and scoped always-retained private synthetic outputs with non-dereferenced symlink metadata; synthetic evidence does not replace WordPress/benchmark/private-custody/floor/package acceptance
 - [ ] Dependency updates preserve the declared PHP support floor, verified download digests, and baseline metadata; unavailable candidate lanes cannot promote versions
 - [ ] CI/CD, security, or release process changes update the matching strategy document when policy changes
 - [ ] Release-impacting changes account for GitHub tag `vX.Y.Z`, WordPress.org SVN tag `X.Y.Z`, protected `wordpress-org` GitHub production approval (not WordPress.org staff review), and package/readme/version alignment

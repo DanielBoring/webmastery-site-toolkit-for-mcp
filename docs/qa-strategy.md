@@ -25,6 +25,26 @@ Related strategy guides:
 
 Static QA runs the full toolchain on PHP 8.0 and syntax checks on PHP 8.4; Unit Tests run on both versions. Each workflow has a stable aggregate result. `Docker QA gate` reports successful change detection and the required Docker results; failure-induced skips cannot pass it. A separate workflow lint check runs actionlint, ShellCheck, and zizmor without making local PHP QA depend on Docker.
 
+The `2 - Unit Tests` gate also requires a separate ten-minute Ubuntu 24.04
+synthetic controller-component job using preinstalled Python 3.11 or newer.
+`scripts/test-controller-components.py` fails unsupported/denied pidfd hosts
+rather than accepting skipped tests. Its result ledger requires the exact ten
+component IDs to start, finish and pass; skips, expected failures, substitutions
+and partial execution fail. Eight additional in-process harness regressions
+check that accounting and scoped retention; they are not part of the ten
+controller cases and do not launch children.
+
+The job reserves a fresh mode-0700 namespace under runner temporary storage.
+The test class, not the launcher, creates its absent capture child. Always-run
+retention copies only allowlisted synthetic regular files, hashes their original
+bytes and records intentional symlinks as metadata without following targets.
+The synthetic bundle/result ledger is retained for seven days even when tests
+fail. File/count/byte retention limits are synthetic CI safeguards, not the
+WordPress benchmark's payload or memory budgets. This job neither starts
+WordPress/Docker nor invokes the benchmark entrypoint, reads private producer
+directories, or proves durable private custody, receiver completion, floor,
+transport or original-package correctness. Local `composer qa` remains PHP-only.
+
 ## PHPStan level 5 and baseline ratchet
 
 `composer phpstan` analyses the plugin entry point and all of `includes/` at level 5, explicitly targeting PHP 8.0 regardless of the local interpreter. `phpstan-baseline.neon` records pre-existing diagnostics, not permission to introduce new ones. Each generated ignore has an anchored message, identifier, positive count, and individual file path. There are no excluded production paths or identifier-only/global ignores. The existing `treatPhpDocTypesAsCertain: false` policy and WordPress stubs bootstrap are retained; no extra bootstrap constants or relaxed rules hide debt.

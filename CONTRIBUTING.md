@@ -69,7 +69,23 @@ PHPStan runs at level 5 with a reviewed, file/message/identifier/count-scoped ba
 
 Workflow and shell changes also need the dedicated workflow lint checks. These tools are separate from the PHP-only `composer qa` path. Docker validation must use a disposable, uniquely named Compose project; do not run cleanup commands against a shared development stack.
 
+Controller CI changes must retain the required Ubuntu synthetic-component job:
+operational Linux pidfd/P_PIDFD, exactly ten started/finished/passing component
+IDs with no skipped/expected-failure outcomes, separate in-process harness
+regressions, and always-retained fresh private synthetic outputs with symlink
+metadata rather than target bytes. The unit gate must reject any failed or
+skipped dependency. Synthetic captures never substitute for leased WordPress,
+performance-budget, private-producer/custody, floor or package evidence.
+
 Destructive safety orchestration must retain eight serial boundary/trash-mode invocations, an actual native registration audit before test-only MU capabilities, matching real CLI/HTTP configuration, exclusive evidence reservation before credentials, and token-owned exact restoration on every exit. Keep failed journals and original failure status; do not replace real source/floor/original-package proof with mocked orchestration. See `tests/e2e/README.md`.
+
+When query shapes change, fault fixtures must attest an actual hit on each
+intended prepared query phase, owned table and candidate. Retain original and
+replacement SQL in the disposable evidence, preserve no-write/hook/file checks,
+and fail a zero-hit fault claim. Never discard earlier mutations or reset their
+baseline to make a subsequent control pass. Boundary-oracle migrations preserve
+typed inputs, actors and direct interlocks; unrelated historical ledgers remain
+unchanged.
 
 `composer lint:workflows` requires actionlint 1.7.12, ShellCheck 0.11.0, and zizmor 1.30.1 on `PATH`. Install the pinned upstream releases and verify their checksums as shown in `.github/workflows/workflow-lint.yml`; the command rejects missing or mismatched versions.
 
