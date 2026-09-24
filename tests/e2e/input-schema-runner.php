@@ -146,13 +146,17 @@ try {
 		}
 	}
 	wp_set_current_user( $users['administrator'] );
+	$seed_gmt = '2000-01-01 12:00:00';
+	$seed_date = get_date_from_gmt( $seed_gmt );
+	wstm126_require( is_string( $seed_date ) && '' !== $seed_date && '0000-00-00 00:00:00' !== $seed_date, 'Cannot resolve fixed fixture date.' );
 	foreach ( array( 'post', 'page', 'mcp_book', 'mcp_case_study', 'parent-page' ) as $type ) {
 		$post_type = 'parent-page' === $type ? 'page' : $type;
-		$journal->plan( 'post:' . $type, array( 'post_type' => $post_type, 'post_author' => (string) $users['administrator'], 'post_name' => $run . '-' . $type ) );
-		$id = wp_insert_post( array( 'post_type' => $post_type, 'post_name' => $run . '-' . $type, 'post_title' => $run, 'post_content' => 'Original', 'post_author' => $users['administrator'], 'post_status' => 'draft' ), true );
+		$journal->plan( 'post:' . $type, array( 'post_type' => $post_type, 'post_author' => (string) $users['administrator'], 'post_name' => $run . '-' . $type, 'post_date' => $seed_date ) );
+		$id = wp_insert_post( array( 'post_type' => $post_type, 'post_name' => $run . '-' . $type, 'post_title' => $run, 'post_content' => 'Original', 'post_author' => $users['administrator'], 'post_status' => 'draft', 'post_date' => $seed_date, 'post_date_gmt' => $seed_gmt ), true );
 		wstm126_require( ! is_wp_error( $id ) && $id > 0, 'Cannot seed proof target.' );
 		$posts[ $type ] = $id;
 		$created = array_column( wstm126_cleanup_snapshot()['posts'], null, 'ID' );
+		wstm126_require( isset( $created[ $id ] ) && $seed_date === ( $created[ $id ]['post_date'] ?? null ) && $seed_gmt === ( $created[ $id ]['post_date_gmt'] ?? null ), 'Fixture dates differ from the fixed ownership plan.' );
 		$journal->created( 'post:' . $type, 'posts', (string) $id, Wstm126_Cleanup::post_identity( $created[ $id ] ) );
 	}
 	$invoke = static function ( string $slug, array $input, string $role, array &$entry ) use ( $boundary, $users, $transports, $token, $run, &$http_actor, &$http_plan, &$http_capture ): array {
@@ -257,6 +261,7 @@ try {
 	foreach ( array( array( 'parent' => 0 ), array() ) as $index => $parent ) {
 		$record( 'allowed hierarchical detach/omission ' . $index, static function ( &$entry ) use ( $invoke, $posts, $parent, $index, $boundary, $run, $users ) {
 			wp_set_current_user( $users['administrator'] );
+			clean_post_cache( $posts['page'] );
 			wstm126_require( $posts['page'] === wp_update_post( array( 'ID' => $posts['page'], 'post_parent' => $posts['parent-page'] ), true ), 'Cannot seed positive parent control.' );
 			$result = $invoke( 'update-page', array( 'page_id' => $posts['page'], 'title' => $run . '-' . $index ) + $parent, 'administrator', $entry );
 			wstm126_require( true === $result['success'], 'Advertised parent/default control rejected.' );
@@ -264,7 +269,23 @@ try {
 			if ( 'permission' !== $boundary ) {
 				wstm126_require( $entry['before'] !== $entry['after'] && ! empty( $entry['evidence']['mutations'] ), 'Valid write did not calibrate state/hook oracle.' );
 				$expected_parent = array_key_exists( 'parent', $parent ) ? 0 : $posts['parent-page'];
-				wstm126_require( $expected_parent === (int) get_post( $posts['page'] )->post_parent, 'Hierarchical detach/omission changed parent semantics.' );
+				global $wpdb;
+				$row = $wpdb->get_row( $wpdb->prepare( "SELECT ID, post_parent FROM {$wpdb->posts} WHERE ID = %d", $posts['page'] ), ARRAY_A );
+				wstm126_require( '' === $wpdb->last_error, 'Cannot read positive parent control.' );
+				wstm126_require( is_array( $row ) && array( 'ID', 'post_parent' ) === array_keys( $row ), 'Missing or malformed positive parent row.' );
+				foreach ( array( 'ID', 'post_parent' ) as $field ) {
+					$value = is_int( $row[ $field ] ) && $row[ $field ] >= 0 ? (string) $row[ $field ] : $row[ $field ];
+					$maximum = (string) PHP_INT_MAX;
+					wstm126_require(
+						is_string( $value ) && 1 === preg_match( '/^(?:0|[1-9][0-9]*)$/D', $value )
+						&& ( strlen( $value ) < strlen( $maximum ) || ( strlen( $value ) === strlen( $maximum ) && strcmp( $value, $maximum ) <= 0 ) ),
+						'Malformed or nonrepresentable positive parent identity.'
+					);
+					$row[ $field ] = (int) $value;
+				}
+				wstm126_require( $posts['page'] === $row['ID'], 'Positive parent row belongs to another target.' );
+				$entry['parent'] = array( 'id' => $row['ID'], 'expected' => $expected_parent, 'observed' => $row['post_parent'] );
+				wstm126_require( $expected_parent === $row['post_parent'], 'Hierarchical detach/omission changed parent semantics.' );
 			}
 		} );
 	}

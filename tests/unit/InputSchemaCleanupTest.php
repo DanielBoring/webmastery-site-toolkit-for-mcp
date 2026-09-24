@@ -89,6 +89,33 @@ final class InputSchemaCleanupTest extends TestCase {
 		return array_map( static fn( $v ) => array( $v ), array( 'post', 'revision', 'postmeta', 'actor', 'usermeta', 'credential', 'observation' ) );
 	}
 
+	public static function immutable_identity_fields(): array {
+		$cases = array();
+		foreach ( array( 'users' => array( 'ID', 'user_login', 'user_email', 'user_registered' ), 'posts' => array( 'ID', 'post_author', 'post_type', 'post_name', 'post_date', 'guid' ) ) as $table => $fields ) {
+			foreach ( $fields as $field ) {
+				$cases[ $table . ':' . $field ] = array( $table, $field );
+			}
+		}
+		return $cases;
+	}
+
+	/** @dataProvider immutable_identity_fields */
+	public function test_every_immutable_identity_field_blocks_all_cleanup( string $table, string $field ): void {
+		$this->fake->seed( $this->journal );
+		$this->fake->rows[ $table ][0][ $field ] .= '-changed';
+		$before = $this->fake->rows;
+		$journal = file_get_contents( $this->path() );
+		$closed = false;
+		$result = $this->journal->finish( static function () use ( &$closed ): void { $closed = true; }, true );
+		self::assertSame( 'Owned identity changed; no cleanup allowed.', $result['error'] );
+		self::assertCount( 8, $result['proof'] );
+		self::assertNotContains( true, $result['proof'] );
+		self::assertFalse( $closed );
+		self::assertSame( array(), $this->fake->deleted );
+		self::assertSame( $before, $this->fake->rows );
+		self::assertSame( $journal, file_get_contents( $this->path() ) );
+	}
+
 	/** @dataProvider retained_rows */
 	public function test_observed_rows_not_delete_return_values_control_proof( string $kind ): void {
 		$this->fake->seed( $this->journal );

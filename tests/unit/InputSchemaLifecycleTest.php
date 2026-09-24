@@ -959,6 +959,50 @@ final class InputSchemaLifecycleTest extends TestCase {
 		$this->unchanged();
 	}
 
+	public function test_retained_observation_blocks_restored_http_and_finalization(): void {
+		$this->lifecycle->acquire( $this->cli() );
+		$this->lifecycle->prepare( $this->cli(), $this->http() );
+		$path = $this->lock . '/invocations/' . $this->token . '-direct.json';
+		$journal = '{"cleanup_complete":false,"identity_validated":false}';
+		file_put_contents( $path, $journal );
+		$probe = file_get_contents( $this->probe() );
+		$wire_path = $this->lock . '/boot-wire/000001.bin';
+		$wire = file_get_contents( $wire_path );
+		$http_calls = count( $this->http_calls );
+		$normal = $this->cli();
+		$retained = function ( bool $baseline ) use ( $normal ): array {
+			$body = $normal( $baseline );
+			$this->assertFalse( $baseline );
+			$this->assertSame( $this->original, $body['runtime'] );
+			$body['runtime']['observation_absent'] = false;
+			return $body;
+		};
+		try {
+			$this->lifecycle->restore( $retained, $this->http() );
+			$this->fail( 'Retained observation accepted as original runtime.' );
+		} catch ( RuntimeException $error ) {
+			$this->assertSame( 'Fresh CLI runtime differs from expected state.', $error->getMessage() );
+		}
+		$this->assertFileDoesNotExist( $this->wrapper() );
+		$state = $this->sealed_payload( $this->journal->node( $this->lock . '/state.json' ) );
+		$this->assertSame( 'active', $state['phase'] );
+		$this->assertArrayNotHasKey( 'restored_http', $state );
+		$validations = 0;
+		try {
+			$this->lifecycle->finalize( $retained, $this->http(), static function () use ( &$validations ): void { $validations++; }, $this->hashes() );
+			$this->fail( 'Unrestored runtime reached finalization.' );
+		} catch ( RuntimeException $error ) {
+			$this->assertSame( 'Verified restored runtime is required before finalization.', $error->getMessage() );
+		}
+		$this->assertSame( 0, $validations );
+		$this->assertCount( $http_calls, $this->http_calls );
+		$this->assertSame( $journal, file_get_contents( $path ) );
+		$this->assertSame( $probe, file_get_contents( $this->probe() ) );
+		$this->assertSame( $wire, file_get_contents( $wire_path ) );
+		$this->assertDirectoryExists( $this->lock );
+		$this->unchanged();
+	}
+
 	public function test_preexisting_nested_mu_prerequisites_are_preserved_through_every_phase(): void {
 		$directory = $this->root . '/wp-content/mu-plugins/modules';
 		mkdir( $directory, 0700 );

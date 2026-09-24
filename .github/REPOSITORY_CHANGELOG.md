@@ -6,6 +6,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Seed schema-proof drafts with verified fixed local/GMT dates before recording immutable ownership, and read positive parent controls from fresh bounded SQL rather than a stale HTTP caller cache. Preserve all 152 cases, strict parent semantics, ownership fields and restoration/retention guards; add isolated cache, malformed-row, immutable-identity and retained-observation regressions. Source-level diagnosis does not establish historical database values or genuine runtime acceptance.
+
 - Initialize the schema runner's lazy native abilities registry through the public API before verifying loaded production classes. Preserve source-identity checks, fixture and ownership guards, the 152-case requirement and cleanup policy; add isolated actual-preflight regressions for the old initialization order, unavailable API or class, and foreign class sources. These doubles do not establish genuine WordPress runtime acceptance.
 
 - Check schema-stage probe collisions with the public ability-presence API available since WordPress 6.9, avoiding diagnostics from deliberate missing-ability lookups. Preserve all four collision checks and the strict quiet-bootstrap guard; add isolated CLI-entry regressions for absent probes, each registered collision and an unavailable presence API. Attribution of the retained CI bootstrap failure remains provisional until genuine runtime validation.
