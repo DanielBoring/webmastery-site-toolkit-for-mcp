@@ -112,10 +112,12 @@ final class Probe {
 			eval( 'namespace ' . __NAMESPACE__ . '; use \\Webmastery_MCP_Response; ' . substr( $source, 5 ) );
 		}
 		$method = new ReflectionMethod( Webmastery_MCP_Posts::class, 'register_post_type' );
+		$method->setAccessible( true );
 		foreach ( array( 'post', 'page' ) as $type ) {
 			$method->invoke( null, $type );
 		}
 		$method = new ReflectionMethod( Webmastery_MCP_Custom_Post_Types::class, 'register_custom_post_type' );
+		$method->setAccessible( true );
 		foreach ( array( 'mcp_book', 'mcp_case_study' ) as $type ) {
 			$method->invoke( null, get_post_type_object( $type ), str_replace( '_', '-', $type ) );
 		}
