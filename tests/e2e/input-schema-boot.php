@@ -166,9 +166,9 @@ if ( isset( $_SERVER['SCRIPT_FILENAME'] ) && realpath( $_SERVER['SCRIPT_FILENAME
 		foreach ( array_keys( rest_get_server()->get_routes() ) as $route ) {
 			Wstm126_Boot::check( 0 !== stripos( $route, '/wstm126' ), 'Existing schema REST probe namespace.' );
 		}
-		Wstm126_Boot::check( function_exists( 'wp_get_ability' ), 'Required native abilities runtime unavailable.' );
+		Wstm126_Boot::check( function_exists( 'wp_has_ability' ), 'Required native abilities runtime unavailable.' );
 		foreach ( array( 'wstm118-probe', 'wstm118-bad-execute', 'wstm118-bad-permission', 'wstm118-missing-schema' ) as $slug ) {
-			Wstm126_Boot::check( null === wp_get_ability( 'webmastery-site-toolkit-for-mcp/' . $slug ), 'Existing schema ability probe collision.' );
+			Wstm126_Boot::check( ! wp_has_ability( 'webmastery-site-toolkit-for-mcp/' . $slug ), 'Existing schema ability probe collision.' );
 		}
 	}
 	echo json_encode( Wstm126_Boot::body( $argv[2], $argv[3], $argv[4], $argv[5], $argv[6] ), JSON_THROW_ON_ERROR );

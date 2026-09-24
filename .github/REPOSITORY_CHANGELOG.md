@@ -6,6 +6,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Check schema-stage probe collisions with the public ability-presence API available since WordPress 6.9, avoiding diagnostics from deliberate missing-ability lookups. Preserve all four collision checks and the strict quiet-bootstrap guard; add isolated CLI-entry regressions for absent probes, each registered collision and an unavailable presence API. Attribution of the retained CI bootstrap failure remains provisional until genuine runtime validation.
+
 - Restore PHP 8.0 compatibility in the scheduling calibration fixture by explicitly enabling access to both private registration methods before reflective invocation. Preserve production visibility, historical ledgers, test assertions and case counts.
 
 - Exercise all 16 historical destructive boolean inputs at the composed native and direct boundaries with the real plugin Ability/Input/Response classes, original callback bodies and a limited lifecycle double. Require pre-permission native schema rejection, unchanged direct interlock diagnostics, no reads/queries/writes, valid-preview and denied-capability controls; preserve the historical 563/547/16 ledger and current exact integration projection without regenerating or relaxing either oracle set.

@@ -33,6 +33,62 @@ final class InputSchemaBootTest extends TestCase {
 		return array( 'identity' => $this->identity(), 'runtime' => $runtime, 'php' => '8.0.30', 'sapi' => 'apache2handler' );
 	}
 
+	public static function baseline_probe_cases(): array {
+		return array(
+			'absent probes' => array( null, true ),
+			'probe collision' => array( 'wstm118-probe', true ),
+			'execute collision' => array( 'wstm118-bad-execute', true ),
+			'permission collision' => array( 'wstm118-bad-permission', true ),
+			'schema collision' => array( 'wstm118-missing-schema', true ),
+			'missing presence API' => array( null, false ),
+		);
+	}
+
+	/** @dataProvider baseline_probe_cases */
+	public function test_baseline_checks_registration_without_missing_lookup_diagnostics( ?string $collision, bool $presence_api ): void {
+		$boot = dirname( __DIR__ ) . '/e2e/input-schema-boot.php';
+		$root = sys_get_temp_dir() . '/wstm126-baseline-' . bin2hex( random_bytes( 8 ) );
+		$this->assertTrue( mkdir( $root, 0700 ) );
+		try {
+			// Execute the actual CLI entry against an inert bootstrap, stopping before real attestation.
+			$this->assertSame( 6, file_put_contents( $root . '/wp-load.php', "<?php\n" ) );
+			$code = '$GLOBALS["presence"]=[]; $GLOBALS["lookups"]=[]; $GLOBALS["collision"]='
+				. var_export( null === $collision ? null : 'webmastery-site-toolkit-for-mcp/' . $collision, true ) . ';'
+				. 'function rest_get_server(){return new class{public function get_routes(){return [];}};}'
+				. 'function wp_get_ability($name){$GLOBALS["lookups"][]=$name;'
+				. 'if($name===$GLOBALS["collision"]){return new stdClass();}'
+				. 'trigger_error("Missing ability lookup diagnostic.",E_USER_NOTICE);return null;}'
+				. 'function wp_get_abilities(){throw new LogicException("Stopped before attestation.");}';
+			if ( $presence_api ) {
+				$code .= 'function wp_has_ability(string $name):bool{$GLOBALS["presence"][]=$name;return $name===$GLOBALS["collision"];}';
+			}
+			$code .= '$argv=' . var_export( array( $boot, '--baseline', $root, dirname( __DIR__, 2 ), str_repeat( 'a', 32 ), str_repeat( 'b', 40 ), 'baseline-test' ), true ) . ';'
+				. '$_SERVER["SCRIPT_FILENAME"]=$argv[0];$phase="unexpected-return";'
+				. 'try{require $argv[0];}catch(LogicException $error){'
+				. 'if("Stopped before attestation."!==$error->getMessage()){throw $error;}$phase="attestation";'
+				. '}catch(RuntimeException $error){$phase=$error->getMessage();}'
+				. 'echo json_encode([$phase,$GLOBALS["presence"],$GLOBALS["lookups"]],JSON_THROW_ON_ERROR);';
+			$environment = getenv();
+			$environment['WSTM126_STAGE_DISPOSABLE'] = '1';
+			$result = $this->php( array( '-d', 'display_errors=stderr', '-d', 'error_reporting=-1', '-r', $code ), $environment );
+			$this->assertSame( 0, $result[0], $result[2] );
+			$this->assertSame( '', $result[2], 'Absent probes must not emit lookup diagnostics.' );
+			$expected = ! $presence_api ? 'Required native abilities runtime unavailable.' : ( null === $collision ? 'attestation' : 'Existing schema ability probe collision.' );
+			$names = array_map( static fn( string $slug ): string => 'webmastery-site-toolkit-for-mcp/' . $slug, array( 'wstm118-probe', 'wstm118-bad-execute', 'wstm118-bad-permission', 'wstm118-missing-schema' ) );
+			if ( ! $presence_api ) {
+				$names = array();
+			} elseif ( null !== $collision ) {
+				$names = array_slice( $names, 0, array_search( 'webmastery-site-toolkit-for-mcp/' . $collision, $names, true ) + 1 );
+			}
+			$this->assertSame( array( $expected, $names, array() ), json_decode( $result[1], true, 32, JSON_THROW_ON_ERROR ) );
+		} finally {
+			if ( is_file( $root . '/wp-load.php' ) ) {
+				$this->assertTrue( unlink( $root . '/wp-load.php' ) );
+			}
+			$this->assertTrue( rmdir( $root ) );
+		}
+	}
+
 	public function test_get_and_private_key_authentication_are_required_and_public_owner_is_not_a_credential(): void {
 		$secret = str_repeat( 'd', 64 );
 		$verifier = hash( 'sha256', $secret );
