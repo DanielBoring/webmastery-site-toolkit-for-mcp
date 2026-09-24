@@ -43,6 +43,29 @@ final class Wstm108_Files {
 		return array( 'identity' => $identity, 'sha256' => hash( 'sha256', $bytes ), 'bytes' => $bytes );
 	}
 
+	public static function read_bound( string $path, array $expected_identity ): array {
+		self::directory( dirname( $path ) );
+		self::require( self::identity( $path ) === $expected_identity
+			&& 0100000 === ( $expected_identity['mode'] & 0170000 ) && 1 === $expected_identity['nlink'],
+			'Authoritative journal identity changed before opening; retaining evidence.' );
+		$handle = @fopen( $path, 'rb' );
+		self::require( false !== $handle, 'Cannot open the independently bound journal.' );
+		try {
+			self::require( flock( $handle, LOCK_SH | LOCK_NB ), 'Authoritative journal is being updated.' );
+			$stat = fstat( $handle );
+			self::require( is_array( $stat ) && $expected_identity === array_intersect_key( $stat, array_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode', 'nlink' ) ) )
+				&& self::identity( $path ) === $expected_identity, 'Authoritative journal was replaced before reading.' );
+			$bytes = stream_get_contents( $handle );
+			$after = fstat( $handle );
+			self::require( is_string( $bytes ) && is_array( $after )
+				&& $expected_identity === array_intersect_key( $after, array_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode', 'nlink' ) ) )
+				&& self::identity( $path ) === $expected_identity, 'Authoritative journal changed while reading.' );
+			return array( 'identity' => $expected_identity, 'sha256' => hash( 'sha256', $bytes ), 'bytes' => $bytes );
+		} finally {
+			fclose( $handle );
+		}
+	}
+
 	public static function create( string $path, string $bytes, bool $public = false ): array {
 		$directory = self::directory( dirname( $path ) );
 		$old_mask = umask( $public ? 0022 : 0077 );
@@ -67,7 +90,7 @@ final class Wstm108_Files {
 	}
 
 	public static function assert_file( string $path, array $expected ): void {
-		self::require( self::file( $path ) === $expected, 'Owned file bytes, mode, owner or identity changed; retaining evidence.' );
+		self::require( self::read_bound( $path, $expected['identity'] ) === $expected, 'Owned file bytes, mode, owner or identity changed; retaining evidence.' );
 	}
 
 	public static function update( string $path, array $expected, string $bytes ): array {
@@ -79,10 +102,15 @@ final class Wstm108_Files {
 			$stat = fstat( $handle );
 			self::require( is_array( $stat ) && $expected['identity'] === array_intersect_key( $stat, array_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode', 'nlink' ) ) ), 'Journal was replaced before opening.' );
 			self::require( $expected['identity'] === self::identity( $path ) && $expected['bytes'] === stream_get_contents( $handle ), 'Journal changed before the locked write.' );
+			$before_write = fstat( $handle );
+			self::require( is_array( $before_write ) && $expected['identity'] === array_intersect_key( $before_write, array_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode', 'nlink' ) ) )
+				&& $expected['identity'] === self::identity( $path ), 'Journal ownership changed immediately before persistence.' );
 			self::require( rewind( $handle ) && ftruncate( $handle, 0 ), 'Cannot reset the owned journal handle.' );
 			self::write( $handle, $bytes );
 			self::require( rewind( $handle ) && $bytes === stream_get_contents( $handle ), 'Journal bytes did not persist through the owned handle.' );
-			self::require( $expected['identity'] === self::identity( $path ), 'Journal path changed during persistence; retaining evidence.' );
+			$after_write = fstat( $handle );
+			self::require( is_array( $after_write ) && $expected['identity'] === array_intersect_key( $after_write, array_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode', 'nlink' ) ) )
+				&& $expected['identity'] === self::identity( $path ), 'Journal path changed during persistence; retaining evidence.' );
 			$actual = array( 'identity' => $expected['identity'], 'sha256' => hash( 'sha256', $bytes ), 'bytes' => $bytes );
 		} finally {
 			fclose( $handle );

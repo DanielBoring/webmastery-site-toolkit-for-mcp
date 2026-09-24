@@ -28,6 +28,7 @@ final class Wstm108_Manifest_Projection {
 	public static function project( array $manifest ): array {
 		$inventory = self::inventory();
 		$calibration = Wstm108_Compact_Delete_Calibration::ledger();
+		$manifest = self::restore_pre_hygiene_manifest( $manifest );
 		$manifest = Wstm108_Compact_Delete_Calibration::restore_historical_cases( $manifest, $calibration );
 		$historical_deletes = array_column( $calibration->cases, null, 'index' );
 		Assert::assertCount( 570, $manifest );
@@ -64,6 +65,36 @@ final class Wstm108_Manifest_Projection {
 		Assert::assertSame( 200, $count );
 		// Unknown assertions and every untouched typed property remain hash-covered.
 		Assert::assertSame( self::BASELINE_SHA256, self::fingerprint( $copy ), 'Projected manifest differs from the complete accepted 570-case source.' );
+		return $copy;
+	}
+
+	public static function restore_pre_hygiene_manifest( array $manifest ): array {
+		Assert::assertCount( 570, $manifest );
+		Assert::assertSame( range( 0, 569 ), array_keys( $manifest ) );
+		$copy = json_decode( json_encode( $manifest, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION ), false, 512, JSON_THROW_ON_ERROR );
+		$cases = array(
+			332 => array( 'list-orphaned-media', 'list-orphaned-media', array( 'title', 'url' ) ),
+			334 => array( 'list-posts-no-featured-image', 'list-posts-no-featured-image posts', array( 'title', 'url' ) ),
+			335 => array( 'list-posts-no-featured-image', 'list-posts-no-featured-image pages', array( 'title', 'url' ) ),
+			337 => array( 'list-stuck-scheduled', 'list-stuck-scheduled', array( 'title', 'url', 'author_name' ) ),
+		);
+		$path = 'data.items.0.untrusted_fields';
+		foreach ( $cases as $index => [ $slug, $label, $fields ] ) {
+			$case = $copy[ $index ];
+			Assert::assertSame( 'webmastery-site-toolkit-for-mcp/' . $slug, $case->ability );
+			Assert::assertSame( $label, $case->label );
+			Assert::assertSame( 'success', $case->expect );
+			Assert::assertTrue( property_exists( $case, 'assert_values' ) );
+			Assert::assertInstanceOf( stdClass::class, $case->assert_values );
+			Assert::assertTrue( property_exists( $case->assert_values, $path ), 'Missing hygiene marker: ' . $label );
+			Assert::assertSame( $fields, $case->assert_values->$path, 'Changed hygiene marker: ' . $label );
+			unset( $case->assert_values->$path );
+		}
+		Assert::assertSame(
+			Wstm108_Compact_Delete_Calibration::ledger()->after_manifest_sha256,
+			self::fingerprint( $copy ),
+			'Hygiene projection changed more than the four approved marker assertions.'
+		);
 		return $copy;
 	}
 
@@ -122,6 +153,11 @@ final class Wstm108_Manifest_Projection {
 			case 'get-seo-scores':
 			case 'get-readability-scores':
 				return array( 'data.items.0.untrusted_fields' => array( 'title', 'url', 'score' ) );
+			case 'list-orphaned-media':
+			case 'list-posts-no-featured-image':
+				return array( 'data.items.0.untrusted_fields' => array( 'title', 'url' ) );
+			case 'list-stuck-scheduled':
+				return array( 'data.items.0.untrusted_fields' => array( 'title', 'url', 'author_name' ) );
 			case 'seo-analyze-post':
 				return array( 'data.metrics.untrusted_fields' => array( 'title', 'url', 'slug', 'yoast_meta_description', 'seopress_meta_description', 'yoast_focus_keyword', 'seopress_focus_keywords' ) );
 		}

@@ -108,6 +108,21 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Set up host QA PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.4'
+          extensions: posix
+          coverage: none
+
+      - name: Bind canonical host QA interpreter
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="$(readlink -e /usr/bin/php8.4)"
+          test "${binary##*/}" = php8.4
+          printf 'WSTM108_HOST_PHP=%s\n' "$binary" >> "$GITHUB_ENV"
+
       - name: Set up Docker Compose
         run: docker compose version
 
@@ -118,6 +133,9 @@ jobs:
           docker compose up -d
 
       - name: Run Ability Contract QA
+        id: qa
+        env:
+          WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
         run: bash scripts/e2e-test.sh contract
 
       - name: Upload isolated trash safety results
@@ -289,15 +307,53 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload untrusted content contract evidence
-        if: ${{ always() }}
+      - name: Verify independently published untrusted export
+        id: untrusted-export-check
+        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
+        env:
+          WSTM108_EXPORT_ROOT: ${{ steps.qa.outputs.untrusted_export_root }}
+          WSTM108_EXPORT_SHA256: ${{ steps.qa.outputs.untrusted_export_manifest_sha256 }}
+          WSTM108_EXPORT_CUSTODY: ${{ steps.qa.outputs.untrusted_export_custody }}
+          WSTM108_EXPECTED_EXPORT_PARENT: ${{ runner.temp }}
+          WSTM108_EXPECTED_SOURCE: ${{ github.sha }}
+          WSTM108_EXPECTED_PROJECT: ${{ env.COMPOSE_PROJECT_NAME }}
+          WSTM108_EXPECTED_RUN: ${{ github.run_id }}
+          WSTM108_EXPECTED_ATTEMPT: ${{ github.run_attempt }}
+          WSTM108_EXPECTED_JOB: ${{ github.job }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$WSTM108_EXPECTED_SOURCE"
+          "${WSTM108_HOST_PHP-php}" scripts/untrusted-export.php verify-published
+      - name: Upload only the closed safe untrusted export
+        id: untrusted-export-upload
+        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' && steps.untrusted-export-check.outcome == 'success' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: untrusted-content-contract-evidence
-          path: e2e-artifacts/untrusted-*/
+          name: untrusted-contract-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-proof.json
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-failure-witnesses.json
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-export-manifest.json
           if-no-files-found: error
           retention-days: 7
-
+      - name: Require QA and safe evidence success
+        id: untrusted-required-evidence
+        if: always()
+        env:
+          QA_OUTCOME: ${{ steps.qa.outcome }}
+          EXPORT_READY: ${{ steps.qa.outputs.untrusted_export_ready }}
+          EXPORT_STATUS: ${{ steps.qa.outputs.untrusted_export_status }}
+          PROOF_STATUS: ${{ steps.qa.outputs.untrusted_proof_status }}
+          EXPORT_CHECK: ${{ steps.untrusted-export-check.outcome }}
+          EXPORT_UPLOAD: ${{ steps.untrusted-export-upload.outcome }}
+        run: |
+          set -euo pipefail
+          test "$QA_OUTCOME" = success
+          test "$EXPORT_READY" = true
+          test "$EXPORT_STATUS" = published
+          test "$PROOF_STATUS" = passed
+          test "$EXPORT_CHECK" = success
+          test "$EXPORT_UPLOAD" = success
       - name: Upload canonical error contract evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -335,6 +391,21 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Set up host QA PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.4'
+          extensions: posix
+          coverage: none
+
+      - name: Bind canonical host QA interpreter
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="$(readlink -e /usr/bin/php8.4)"
+          test "${binary##*/}" = php8.4
+          printf 'WSTM108_HOST_PHP=%s\n' "$binary" >> "$GITHUB_ENV"
+
       - name: Set up Docker Compose
         run: docker compose version
 
@@ -345,6 +416,9 @@ jobs:
           docker compose up -d
 
       - name: Run Full MCP E2E QA
+        id: qa
+        env:
+          WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
         run: bash scripts/e2e-test.sh e2e
 
       - name: Publish transport job summary
@@ -415,15 +489,53 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload untrusted content HTTP evidence
-        if: ${{ always() }}
+      - name: Verify independently published untrusted export
+        id: untrusted-export-check
+        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
+        env:
+          WSTM108_EXPORT_ROOT: ${{ steps.qa.outputs.untrusted_export_root }}
+          WSTM108_EXPORT_SHA256: ${{ steps.qa.outputs.untrusted_export_manifest_sha256 }}
+          WSTM108_EXPORT_CUSTODY: ${{ steps.qa.outputs.untrusted_export_custody }}
+          WSTM108_EXPECTED_EXPORT_PARENT: ${{ runner.temp }}
+          WSTM108_EXPECTED_SOURCE: ${{ github.sha }}
+          WSTM108_EXPECTED_PROJECT: ${{ env.COMPOSE_PROJECT_NAME }}
+          WSTM108_EXPECTED_RUN: ${{ github.run_id }}
+          WSTM108_EXPECTED_ATTEMPT: ${{ github.run_attempt }}
+          WSTM108_EXPECTED_JOB: ${{ github.job }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$WSTM108_EXPECTED_SOURCE"
+          "${WSTM108_HOST_PHP-php}" scripts/untrusted-export.php verify-published
+      - name: Upload only the closed safe untrusted export
+        id: untrusted-export-upload
+        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' && steps.untrusted-export-check.outcome == 'success' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: untrusted-content-http-evidence
-          path: e2e-artifacts/untrusted-*/
+          name: untrusted-http-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-proof.json
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-failure-witnesses.json
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-export-manifest.json
           if-no-files-found: error
           retention-days: 7
-
+      - name: Require QA and safe evidence success
+        id: untrusted-required-evidence
+        if: always()
+        env:
+          QA_OUTCOME: ${{ steps.qa.outcome }}
+          EXPORT_READY: ${{ steps.qa.outputs.untrusted_export_ready }}
+          EXPORT_STATUS: ${{ steps.qa.outputs.untrusted_export_status }}
+          PROOF_STATUS: ${{ steps.qa.outputs.untrusted_proof_status }}
+          EXPORT_CHECK: ${{ steps.untrusted-export-check.outcome }}
+          EXPORT_UPLOAD: ${{ steps.untrusted-export-upload.outcome }}
+        run: |
+          set -euo pipefail
+          test "$QA_OUTCOME" = success
+          test "$EXPORT_READY" = true
+          test "$EXPORT_STATUS" = published
+          test "$PROOF_STATUS" = passed
+          test "$EXPORT_CHECK" = success
+          test "$EXPORT_UPLOAD" = success
       - name: Upload canonical error HTTP evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

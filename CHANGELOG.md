@@ -9,6 +9,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 ### Changed
 
 - 3.0 development: add record-local `untrusted_fields` arrays to affected content, revision, block, standalone metadata, comment, media, user/audit, and SEO results. Mark only present fields, preserve existing values/types/markup and privacy omissions, and leave canonical errors and diagnostic error subrecords unchanged. Markers are defense-in-depth, not prompt-injection prevention or authorization.
+- 3.0 development: include stored titles/URLs in orphaned-media and missing-featured-image result markers, plus author names in stuck-scheduled results. Preserve each summary's original fields, list ordering, reference checks and permissions.
 - Breaking development change for 3.0: require explicit boolean confirmation for permanent media/category/tag deletion and both bulk post operations, including previews. Bound bulk inputs to 100 raw entries and process normalized duplicate IDs once.
 - Add non-mutating bulk eligibility previews with would-act successes, unchanged authorization/status/trash safeguards, and an explicit preview marker; retain non-atomic per-item failure summaries.
 - Refuse media deletion with known featured-image or literal content URL/GUID references unless explicitly forced. Reuse orphan-media reference checks, fail closed on scan errors even with force, and report known usage on successful deletion. Confirmation and force do not grant capabilities or prove human approval.

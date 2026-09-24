@@ -5,18 +5,35 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once dirname( __DIR__ ) . '/e2e/untrusted-content-convergence.php';
+require_once __DIR__ . '/fixtures/untrusted-stage-envelope.php';
 
 final class UntrustedConvergenceTest extends TestCase {
 	private string $path;
+	private ?string $private_directory = null;
 
 	protected function setUp(): void {
 		$this->path = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'wstm108-convergence-' . bin2hex( random_bytes( 8 ) ) . '.json';
 	}
 
 	protected function tearDown(): void {
+		if ( null !== $this->private_directory ) {
+			foreach ( glob( $this->private_directory . '/*' ) as $file ) { unlink( $file ); }
+			rmdir( $this->private_directory );
+		}
 		foreach ( array( $this->path, $this->path . '.http.jsonl' ) as $path ) {
 			if ( file_exists( $path ) ) { unlink( $path ); }
 		}
+	}
+
+	private function evidence( string $scope = 'enabled' ): Wstm108_Evidence {
+		list( $evidence, $this->private_directory ) = Wstm108_ProofFixture::evidence( $this->path, $scope );
+		return $evidence;
+	}
+
+	private function original_event( int $id ): array {
+		$frame = file_get_contents( $this->private_directory . '/' . sprintf( 'wire-%06d.bin', $id ) );
+		self::assertStringStartsWith( "WSTM108-WIRE-1\n", $frame );
+		return unserialize( substr( $frame, strlen( "WSTM108-WIRE-1\n" ) ), array( 'allowed_classes' => false ) );
 	}
 
 	private static function identity(): array {
@@ -28,7 +45,7 @@ final class UntrustedConvergenceTest extends TestCase {
 	}
 
 	public function test_only_known_owned_stale_boot_is_retried_with_exact_finite_budget(): void {
-		$evidence = new Wstm108_Evidence( $this->path );
+		$evidence = $this->evidence();
 		$now = 0.0;
 		$requests = array();
 		$sleeps = array();
@@ -51,7 +68,8 @@ final class UntrustedConvergenceTest extends TestCase {
 		self::assertSame( array_fill( 0, 5, 2.0 ), $requests );
 		self::assertSame( array_fill( 0, 4, 1 ), $sleeps );
 		self::assertSame( 14.0, $now );
-		self::assertCount( 10, file( $this->path . '.http.jsonl', FILE_IGNORE_NEW_LINES ) );
+		self::assertCount( 20, file( $this->path . '.http.jsonl', FILE_IGNORE_NEW_LINES ) );
+		self::assertCount( 10, glob( $this->private_directory . '/wire-*.bin' ) );
 	}
 
 	public static function immediate_failures(): array {
@@ -60,7 +78,7 @@ final class UntrustedConvergenceTest extends TestCase {
 
 	/** @dataProvider immediate_failures */
 	public function test_unknown_or_denied_responses_are_journaled_before_immediate_failure( string $kind ): void {
-		$evidence = new Wstm108_Evidence( $this->path );
+		$evidence = $this->evidence();
 		$evidence->secret( 'private-token' );
 		$requests = 0;
 		$body = self::body( array( 'optin' => true ) );
@@ -80,15 +98,17 @@ final class UntrustedConvergenceTest extends TestCase {
 				static fn(): float => 0.0
 			);
 			self::fail( 'Expected immediate fail-closed response.' );
-		} catch ( RuntimeException $error ) {
+		} catch ( RuntimeException | JsonException $error ) {
 			self::assertNotSame( '', $error->getMessage() );
 		}
 		self::assertSame( 1, $requests );
 		$journal = file_get_contents( $this->path . '.http.jsonl' );
 		self::assertStringNotContainsString( 'private-token', $journal );
 		$raw = json_decode( explode( "\n", $journal )[0], true, 512, JSON_THROW_ON_ERROR );
-		self::assertSame( 'owned-get-probe', $raw['boundary'] );
-		self::assertSame( 'transport' === $kind ? '' : str_replace( 'private-token', '[REDACTED]', $text ), base64_decode( $raw['body_base64'], true ) );
+		self::assertSame( 'owned-get-probe', $raw['origin']['boundary'] );
+		self::assertSame( 'transport' === $kind ? '' : $text, $this->original_event( $raw['id'] )['body'] );
+		self::assertSame( hash( 'sha256', 'transport' === $kind ? '' : $text ), $raw['body_sha256'] );
+		self::assertArrayNotHasKey( 'body_base64', $raw );
 	}
 
 	public function test_full_successful_runtime_state_is_retained_not_only_the_legacy_whitelist(): void {
@@ -96,11 +116,12 @@ final class UntrustedConvergenceTest extends TestCase {
 		$body = self::body( $runtime );
 		$result = wstm108_converge(
 			static fn(): array => array( 'status' => 200, 'body' => json_encode( $body, JSON_THROW_ON_ERROR ) ),
-			new Wstm108_Evidence( $this->path ), 'original', self::identity(), $runtime, array(),
+			$this->evidence( 'original' ), 'original', self::identity(), $runtime, array(),
 			static function (): void { self::fail( 'Expected no retry.' ); }, static fn(): float => 0.0
 		);
 		self::assertSame( $body, $result );
 		$raw = json_decode( file( $this->path . '.http.jsonl' )[0], true, 512, JSON_THROW_ON_ERROR );
-		self::assertSame( $body, json_decode( base64_decode( $raw['body_base64'], true ), true, 512, JSON_THROW_ON_ERROR ) );
+		self::assertSame( $body, json_decode( $this->original_event( $raw['id'] )['body'], true, 512, JSON_THROW_ON_ERROR ) );
+		self::assertSame( hash( 'sha256', json_encode( $body, JSON_THROW_ON_ERROR ) ), $raw['body_sha256'] );
 	}
 }

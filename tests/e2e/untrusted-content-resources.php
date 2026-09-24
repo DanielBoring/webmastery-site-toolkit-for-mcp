@@ -9,11 +9,14 @@ require_once __DIR__ . '/untrusted-content-files.php';
  *
  * Call intent before each write, then register its result immediately. Password
  * names are bound verbatim to their actor's intent, including adversarial text.
+ * user_created() journals identity before capability setup; user() seals the
+ * required capabilities afterward. Unsealed actors cannot authorize cleanup.
  * MCP clientInfo names are "<run>:<boundary>:<role>".
  * Only resume($journalPath, $binding) opens an existing journal; the run comes
  * from its validated private state. Cleanup checkpoints include the public proof.
- * After original CLI + HTTP attestation, a fresh process may call proof() and
- * retire($expectedProof). cleanup() never retires the journal.
+ * Lifecycle-owned regular wire files may share the existing private directory.
+ * After a successful runner/wire verdict and original CLI + HTTP attestation,
+ * a fresh process may retire($expectedProof). cleanup() never retires the journal.
  */
 final class Wstm108_Resources {
 	private const ROLES = array( 'administrator', 'subscriber', 'reader' );
@@ -28,6 +31,7 @@ final class Wstm108_Resources {
 	private string $path;
 	private array $snapshot;
 	private array $state;
+	private bool $independentlyAnchored = false;
 
 	public function __construct( string $journalPath, array $binding, string $run ) {
 		self::binding( $binding, $run );
@@ -36,7 +40,7 @@ final class Wstm108_Resources {
 		$this->path = $journalPath;
 		$this->state = array(
 			'version' => 1, 'binding' => $binding, 'run' => $run, 'parent' => $parent,
-			'intents' => array(), 'users' => array(), 'passwords' => array(), 'sessions' => array(),
+			'intents' => array(), 'users' => array(), 'ready_users' => array(), 'passwords' => array(), 'sessions' => array(),
 			'posts' => array(), 'comments' => array(), 'files' => array(), 'upload' => null,
 			'deleted_files' => array(),
 			'phase' => 'recording', 'cleanup' => array(), 'failed' => 0, 'first_error' => null, 'proof' => null,
@@ -44,6 +48,14 @@ final class Wstm108_Resources {
 		$this->snapshot = Wstm108_Files::create( $this->path, $this->encode() );
 		$this->state['journal_identity'] = $this->snapshot['identity'];
 		$this->save();
+		$this->independentlyAnchored = true;
+	}
+
+	/** Enroll this creation-time anchor outside the journal before creating actors. */
+	public function journal_identity(): array {
+		self::ensure( $this->independentlyAnchored );
+		$this->guard();
+		return $this->snapshot['identity'];
 	}
 
 	private static function ensure( bool $condition ): void {
@@ -67,8 +79,13 @@ final class Wstm108_Resources {
 		self::ensure( null === $binding['package_sha256'] || ( is_string( $binding['package_sha256'] ) && 1 === preg_match( '/^[a-f0-9]{64}$/D', $binding['package_sha256'] ) ) );
 	}
 
-	public static function resume( string $journalPath, array $binding ): self {
+	public static function resume( string $journalPath, array $binding, ?array $expectedIdentity = null ): self {
+		self::binding_schema( $binding );
 		$snapshot = Wstm108_Files::file( $journalPath );
+		if ( null !== $expectedIdentity ) {
+			self::identity_schema( $expectedIdentity, 0100000 );
+			self::ensure( $expectedIdentity === $snapshot['identity'] );
+		}
 		$state = json_decode( $snapshot['bytes'], true, 512, JSON_THROW_ON_ERROR );
 		self::ensure( is_array( $state ) && is_string( $state['run'] ?? null ) );
 		self::binding( $binding, $state['run'] );
@@ -77,7 +94,7 @@ final class Wstm108_Resources {
 			&& $snapshot['identity'] === ( $state['journal_identity'] ?? null )
 			&& Wstm108_Files::directory( dirname( $journalPath ) ) === ( $state['parent'] ?? null )
 			&& ( 'Windows' === PHP_OS_FAMILY || ( 0600 === ( $snapshot['identity']['mode'] & 0777 ) && 0700 === ( $state['parent']['mode'] & 0777 ) ) ) );
-		foreach ( array( 'intents', 'users', 'passwords', 'sessions', 'posts', 'comments', 'files', 'deleted_files', 'cleanup' ) as $key ) {
+		foreach ( array( 'intents', 'users', 'ready_users', 'passwords', 'sessions', 'posts', 'comments', 'files', 'deleted_files', 'cleanup' ) as $key ) {
 			self::ensure( isset( $state[ $key ] ) && is_array( $state[ $key ] ) );
 		}
 		foreach ( $state['files'] as &$file ) {
@@ -95,22 +112,30 @@ final class Wstm108_Resources {
 		$instance->path = $journalPath;
 		$instance->snapshot = $snapshot;
 		$instance->state = $state;
+		$instance->independentlyAnchored = null !== $expectedIdentity;
 		$instance->validate_state();
 		return $instance;
 	}
 
+	private static function is_list( array $value ): bool {
+		return array() === $value || array_keys( $value ) === range( 0, count( $value ) - 1 );
+	}
+
 	private function validate_state(): void {
 		self::ensure( array_keys( $this->state ) === array(
-			'version', 'binding', 'run', 'parent', 'intents', 'users', 'passwords', 'sessions',
+			'version', 'binding', 'run', 'parent', 'intents', 'users', 'ready_users', 'passwords', 'sessions',
 			'posts', 'comments', 'files', 'upload', 'deleted_files', 'phase', 'cleanup', 'failed', 'first_error', 'proof', 'journal_identity',
 		) );
 		self::identity_schema( $this->state['parent'], 0040000 );
 		self::identity_schema( $this->state['journal_identity'], 0100000 );
-		self::ensure( array_is_list( $this->state['intents'] ) && array_is_list( $this->state['deleted_files'] ) );
+		self::ensure( self::is_list( $this->state['intents'] ) && self::is_list( $this->state['deleted_files'] ) );
 		foreach ( $this->state['users'] as $role => $id ) {
 			self::ensure( in_array( $role, self::ROLES, true ) && is_int( $id ) && $id > 0 );
 		}
 		self::ensure( count( array_unique( $this->state['users'] ) ) === count( $this->state['users'] ) );
+		foreach ( $this->state['ready_users'] as $role => $id ) {
+			self::ensure( isset( $this->state['users'][ $role ] ) && $id === $this->state['users'][ $role ] );
+		}
 		foreach ( $this->state['passwords'] as $role => $record ) {
 			self::ensure( in_array( $role, self::ROLES, true ) && is_array( $record )
 				&& array_keys( $record ) === array( 'id', 'uuid', 'name' ) && isset( $this->state['users'][ $role ] )
@@ -328,19 +353,24 @@ final class Wstm108_Resources {
 
 	private function role( int $id ): string {
 		$role = array_search( $id, $this->state['users'], true );
-		self::ensure( is_string( $role ) && in_array( $role, self::ROLES, true ) );
+		self::ensure( is_string( $role ) && in_array( $role, self::ROLES, true )
+			&& isset( $this->state['ready_users'][ $role ] ) && $id === $this->state['ready_users'][ $role ] );
 		$this->actor( $role, $id );
 		return $role;
 	}
 
 	private function actor( string $role, int $id ): void {
+		$this->actor_identity( $role, $id );
+		self::ensure( 'reader' !== $role || user_can( $id, 'list_users' ) );
+	}
+
+	private function actor_identity( string $role, int $id ): void {
 		self::ensure( $id > 0 && in_array( $role, self::ROLES, true ) );
 		$user = get_userdata( $id );
 		$login = $this->state['run'] . '-' . $role;
 		self::ensure( false !== $user && $id === (int) $user->ID && $login === $user->user_login && $login . '@example.test' === $user->user_email
 			&& array( $this->state['binding']['owner'] ) === get_user_meta( $id, 'wstm108_owner', false )
-			&& array( 'reader' === $role ? 'subscriber' : $role ) === array_values( $user->roles )
-			&& ( 'reader' !== $role || user_can( $id, 'list_users' ) ) );
+			&& array( 'reader' === $role ? 'subscriber' : $role ) === array_values( $user->roles ) );
 	}
 
 	/**
@@ -409,12 +439,24 @@ final class Wstm108_Resources {
 		$this->state['intents'][ $matches[0] ]['resolved'] = true;
 	}
 
-	public function user( string $role, int $id ): void {
+	public function user_created( string $role, int $id ): void {
 		$this->guard();
-		$this->actor( $role, $id );
+		$this->actor_identity( $role, $id );
 		self::ensure( ! isset( $this->state['users'][ $role ] ) && ! in_array( $id, $this->state['users'], true ) );
 		$this->resolve( 'user', array( 'role' => $role ) );
 		$this->state['users'][ $role ] = $id;
+		$this->save();
+	}
+
+	public function user( string $role, int $id ): void {
+		$this->guard();
+		self::ensure( ! isset( $this->state['ready_users'][ $role ] ) );
+		if ( ! isset( $this->state['users'][ $role ] ) ) {
+			$this->user_created( $role, $id );
+		}
+		self::ensure( $id === $this->state['users'][ $role ] );
+		$this->actor( $role, $id );
+		$this->state['ready_users'][ $role ] = $id;
 		$this->save();
 	}
 
@@ -428,7 +470,7 @@ final class Wstm108_Resources {
 		self::ensure( isset( $this->state['passwords'][ $role ], $this->state['users'][ $role ] ) );
 		$record = $this->state['passwords'][ $role ];
 		self::ensure( $record['id'] === $this->state['users'][ $role ] );
-		$this->actor( $role, $record['id'] );
+		self::ensure( $role === $this->role( $record['id'] ) );
 		$intents = array_filter( $this->state['intents'], static fn( $intent ) =>
 			'password' === $intent['kind'] && $intent['resolved']
 			&& array( 'id' => $record['id'], 'name' => $record['name'] ) === $intent['details'] );
@@ -436,6 +478,9 @@ final class Wstm108_Resources {
 		$list = $this->password_list( $record['id'] );
 		// Prior registration proves ownership even if that credential is now absent.
 		self::ensure( count( $list ) <= 1 );
+		if ( true === ( $this->state['cleanup'][ 'password:' . $role ] ?? null ) ) {
+			self::ensure( array() === $list );
+		}
 		foreach ( $list as $password ) {
 			self::ensure( is_array( $password ) && $record['uuid'] === ( $password['uuid'] ?? null )
 				&& $record['name'] === ( $password['name'] ?? null ) );
@@ -750,15 +795,19 @@ final class Wstm108_Resources {
 		foreach ( $references as $reference ) {
 			self::ensure( isset( $this->state['posts'][ $reference ] ) && 'attachment' === $this->state['posts'][ $reference ]['type'] );
 		}
+		foreach ( $this->attachment_reference_ids() as $reference ) {
+			self::ensure( isset( $this->state['posts'][ $reference ] ) && 'attachment' === $this->state['posts'][ $reference ]['type'] );
+		}
+	}
+
+	private function attachment_reference_ids(): array {
 		global $wpdb;
 		$references = $wpdb->get_col( $wpdb->prepare(
 			"SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key IN ('_wp_attached_file', '_wp_attachment_metadata', '_wp_attachment_backup_sizes', '_wp_attachment_original_image') AND meta_value LIKE %s ORDER BY post_id ASC LIMIT 501",
 			'%' . $wpdb->esc_like( $this->state['run'] ) . '%'
 		) );
 		self::ensure( '' === $wpdb->last_error && is_array( $references ) && count( $references ) < self::LIMIT );
-		foreach ( $references as $reference ) {
-			self::ensure( isset( $this->state['posts'][ (int) $reference ] ) && 'attachment' === $this->state['posts'][ (int) $reference ]['type'] );
-		}
+		return array_map( 'intval', $references );
 	}
 
 	private function content_valid(): void {
@@ -785,16 +834,63 @@ final class Wstm108_Resources {
 				if ( 'attachment' === $record['type'] ) {
 					$this->attachment( $id, $record );
 				}
+			} else {
+				$this->post_absent( $id );
 			}
 		}
 		foreach ( $this->state['comments'] as $id => $record ) {
 			if ( null !== get_comment( $id ) ) {
 				self::ensure( $record === $this->comment_details( $id ) );
+			} else {
+				$this->comment_absent( $id );
 			}
 			foreach ( $this->raw_ids( 'comments', 'comment_parent', $id ) as $child ) {
 				self::ensure( isset( $this->state['comments'][ $child ] ) );
 			}
 		}
+	}
+
+	private function clients_valid( array $clients ): void {
+		$expected = array_keys( $this->state['sessions'] );
+		$actual = array_keys( $clients );
+		sort( $expected, SORT_STRING );
+		sort( $actual, SORT_STRING );
+		self::ensure( 6 === count( $expected ) && $expected === $actual );
+		foreach ( $clients as $client ) {
+			self::ensure( is_object( $client ) && is_callable( array( $client, 'close' ) ) );
+		}
+	}
+
+	private function credentials_valid(): void {
+		foreach ( self::ROLES as $role ) {
+			$record = $this->owned_password( $role );
+			$expected = array();
+			$list = $this->session_list( $record['id'] );
+			foreach ( self::BOUNDARIES as $boundary ) {
+				$key = $boundary . ':' . $role;
+				self::ensure( isset( $this->state['sessions'][ $key ] ) );
+				$session = $this->state['sessions'][ $key ];
+				self::ensure( $session['id'] === $record['id'] && ! isset( $expected[ $session['token'] ] ) );
+				$expected[ $session['token'] ] = $this->client_name( $role, $boundary );
+				if ( true === ( $this->state['cleanup'][ 'HTTP:' . $key ] ?? null )
+					|| true === ( $this->state['cleanup'][ 'session:' . $key ] ?? null ) ) {
+					self::ensure( ! array_key_exists( $session['token'], $list ) );
+				}
+			}
+			foreach ( $list as $token => $session ) {
+				self::ensure( isset( $expected[ $token ] ) && is_array( $session )
+					&& $expected[ $token ] === ( $session['client_params']['clientInfo']['name'] ?? null ) );
+			}
+		}
+	}
+
+	/** Recheck remaining resources immediately before each destructive call. */
+	private function mutation_preflight(): void {
+		$this->guard();
+		$this->coverage();
+		$this->credentials_valid();
+		$this->content_valid();
+		$this->guard();
 	}
 
 	private function check( string $label, callable $action ): bool {
@@ -827,11 +923,13 @@ final class Wstm108_Resources {
 		sort( $roles );
 		$expected = self::ROLES;
 		sort( $expected );
-		self::ensure( $roles === $expected && count( $this->state['passwords'] ) === 3 && count( $this->state['sessions'] ) === 6
+		self::ensure( $roles === $expected && count( $this->state['ready_users'] ) === 3
+			&& count( $this->state['passwords'] ) === 3 && count( $this->state['sessions'] ) === 6
 			&& count( $this->state['posts'] ) > 0 && count( $this->state['comments'] ) > 0 && count( $this->state['files'] ) > 0
 			&& is_array( $this->state['upload'] ) && in_array( 'attachment', array_column( $this->state['posts'], 'type' ), true ) );
 		foreach ( self::ROLES as $role ) {
-			self::ensure( isset( $this->state['passwords'][ $role ] ) );
+			self::ensure( isset( $this->state['passwords'][ $role ], $this->state['ready_users'][ $role ] )
+				&& $this->state['users'][ $role ] === $this->state['ready_users'][ $role ] );
 			foreach ( self::BOUNDARIES as $boundary ) {
 				self::ensure( isset( $this->state['sessions'][ $boundary . ':' . $role ] ) );
 			}
@@ -879,22 +977,25 @@ final class Wstm108_Resources {
 		}
 		if ( ! $this->check( 'journal', function (): void {
 			self::ensure( 'recording' === $this->state['phase'] );
+			$this->validate_state();
 			$this->state['phase'] = 'cleaning';
 		} ) ) {
 			return $this->proof();
 		}
 		$recovered = $this->check( 'recovery', function (): void { $this->recover(); } );
-		$this->check( 'coverage', function (): void { $this->coverage(); } );
-		$this->check( 'options', function (): void { $this->options_absent(); } );
-		$this->cleanup_credentials( $clients );
-		$content = $this->check( 'references', function () use ( $recovered ): void {
-			self::ensure( $recovered );
-			$this->content_valid();
+		$coverage = $this->check( 'coverage', function (): void { $this->coverage(); } );
+		$options = $this->check( 'options', function (): void { $this->options_absent(); } );
+		$client_coverage = $this->check( 'clients', function () use ( $clients ): void { $this->clients_valid( $clients ); } );
+		$preflight = $this->check( 'references', function () use ( $recovered, $coverage, $options, $client_coverage ): void {
+			self::ensure( $recovered && $coverage && $options && $client_coverage );
+			$this->mutation_preflight();
 		} );
+		$content = $this->cleanup_credentials( $clients, $preflight );
 		$index = 0;
 		foreach ( array_reverse( $this->state['comments'], true ) as $id => $record ) {
 			$ok = $this->check( 'comment:' . ++$index, function () use ( $id, $record, $content ): void {
 				self::ensure( $content );
+				$this->mutation_preflight();
 				if ( null !== get_comment( $id ) ) {
 					self::ensure( $record === $this->comment_details( $id ) && true === wp_delete_comment( $id, true ) );
 				}
@@ -908,7 +1009,7 @@ final class Wstm108_Resources {
 		return $this->proof();
 	}
 
-	/** Interrupted deletion is not replayed: only independently owned credentials. */
+	/** Interrupted content deletion is never replayed; credential recovery still needs full preflight. */
 	private function resume_cleanup( array $clients ): array {
 		if ( ! $this->check( 'journal', function (): void { $this->validate_state(); } ) ) {
 			return $this->proof();
@@ -916,7 +1017,7 @@ final class Wstm108_Resources {
 		if ( 0 === $this->state['failed'] ) {
 			$this->check( 'recovery-resumed', static function (): void { self::ensure( false ); } );
 		}
-		$this->check( 'recovery', function (): void {
+		$recovered = $this->check( 'recovery', function (): void {
 			$failed = false;
 			foreach ( $this->state['intents'] as $intent ) {
 				if ( ! $intent['resolved'] && in_array( $intent['kind'], array( 'user', 'password', 'session' ), true ) ) {
@@ -929,20 +1030,24 @@ final class Wstm108_Resources {
 			}
 			self::ensure( ! $failed );
 		} );
-		$this->cleanup_credentials( $clients );
+		$coverage = $this->check( 'coverage', function (): void { $this->coverage(); } );
+		$client_coverage = $this->check( 'clients', function () use ( $clients ): void { $this->clients_valid( $clients ); } );
+		$preflight = $this->check( 'references', function () use ( $recovered, $coverage, $client_coverage ): void {
+			self::ensure( $recovered && $coverage && $client_coverage );
+			$this->mutation_preflight();
+		} );
+		$this->cleanup_credentials( $clients, $preflight );
 		return $this->proof();
 	}
 
-	private function cleanup_credentials( array $clients ): void {
-		$this->check( 'clients', function () use ( $clients ): void {
-			foreach ( $clients as $key => $client ) {
-				self::ensure( isset( $this->state['sessions'][ $key ] ) && is_object( $client ) && is_callable( array( $client, 'close' ) ) );
-			}
-		} );
+	private function cleanup_credentials( array $clients, bool $preflight ): bool {
+		$complete = $preflight;
 		foreach ( self::BOUNDARIES as $boundary ) {
 			foreach ( self::ROLES as $role ) {
 				$key = $boundary . ':' . $role;
-				$this->check( 'HTTP:' . $key, function () use ( $key, $role, $clients ): void {
+				$closed = $this->check( 'HTTP:' . $key, function () use ( $key, $role, $clients, $preflight ): void {
+					self::ensure( $preflight );
+					$this->mutation_preflight();
 					self::ensure( isset( $this->state['sessions'][ $key ], $clients[ $key ] ) );
 					$record = $this->state['sessions'][ $key ];
 					$this->actor( $role, $record['id'] );
@@ -950,7 +1055,9 @@ final class Wstm108_Resources {
 					self::ensure( false !== $clients[ $key ]->close() );
 					self::ensure( ! isset( $this->session_list( $record['id'] )[ $record['token'] ] ) );
 				} );
-				$this->check( 'session:' . $key, function () use ( $key, $role, $boundary ): void {
+				$revoked = $this->check( 'session:' . $key, function () use ( $key, $role, $boundary, $preflight ): void {
+					self::ensure( $preflight );
+					$this->mutation_preflight();
 					self::ensure( isset( $this->state['sessions'][ $key ] ) );
 					$record = $this->state['sessions'][ $key ];
 					$this->actor( $role, $record['id'] );
@@ -964,10 +1071,13 @@ final class Wstm108_Resources {
 						self::ensure( $token !== $record['token'] && $this->client_name( $role, $boundary ) !== ( $session['client_params']['clientInfo']['name'] ?? null ) );
 					}
 				} );
+				$complete = $complete && $closed && $revoked;
 			}
 		}
 		foreach ( self::ROLES as $role ) {
-			$this->check( 'password:' . $role, function () use ( $role ): void {
+			$revoked = $this->check( 'password:' . $role, function () use ( $role, $preflight ): void {
+				self::ensure( $preflight );
+				$this->mutation_preflight();
 				$record = $this->owned_password( $role );
 				foreach ( $this->password_list( $record['id'] ) as $password ) {
 					if ( $record['uuid'] === ( $password['uuid'] ?? null ) ) {
@@ -977,7 +1087,9 @@ final class Wstm108_Resources {
 				}
 				self::ensure( array() === $this->password_list( $record['id'] ) );
 			} );
+			$complete = $complete && $revoked;
 		}
+		return $complete;
 	}
 
 	private function cleanup_content( bool $content ): void {
@@ -1000,7 +1112,7 @@ final class Wstm108_Resources {
 				$record = $pending[ $id ];
 				$ok = $this->check( 'post:' . ++$index, function () use ( $id, $record, $content ): void {
 					self::ensure( $content );
-					$this->content_valid();
+					$this->mutation_preflight();
 					if ( null !== get_post( $id ) ) {
 						$result = 'attachment' === $record['type'] ? wp_delete_attachment( $id, true ) : wp_delete_post( $id, true );
 						self::ensure( false !== $result && null !== $result && ! is_wp_error( $result ) );
@@ -1041,10 +1153,14 @@ final class Wstm108_Resources {
 		foreach ( $this->state['files'] as $path => $snapshot ) {
 			$ok = $this->check( 'file:' . ++$index, function () use ( $path, $snapshot, $files ): void {
 				self::ensure( $files );
+				$this->mutation_preflight();
 				if ( false !== @lstat( $path ) ) {
 					Wstm108_Files::remove( $path, $snapshot );
 				}
 				self::ensure( false === @lstat( $path ) );
+				if ( ! in_array( $path, $this->state['deleted_files'], true ) ) {
+					$this->state['deleted_files'][] = $path;
+				}
 			} );
 			$files = $files && $ok;
 		}
@@ -1054,30 +1170,30 @@ final class Wstm108_Resources {
 				&& Wstm108_Files::directory( $upload['root'] ) === $upload['active_root_identity']
 				&& Wstm108_Files::directory( $upload['path'] ) === $upload['identity']
 				&& array( '.', '..' ) === scandir( $upload['path'] ) );
+			$this->mutation_preflight();
 			self::ensure( rmdir( $upload['path'] ) && false === @lstat( $upload['path'] )
 				&& $upload['root_identity'] === Wstm108_Files::directory( $upload['root'] ) );
 		} ) && $files;
+		$actors = $content && $files;
 		foreach ( self::ROLES as $role ) {
-			$this->check( 'actor:' . $role, function () use ( $role, $content, $files ): void {
-				self::ensure( $content && $files && isset( $this->state['users'][ $role ] )
+			$removed = $this->check( 'actor:' . $role, function () use ( $role, $actors ): void {
+				self::ensure( $actors && isset( $this->state['users'][ $role ] )
 					&& true === ( $this->state['cleanup'][ 'password:' . $role ] ?? null ) );
+				$this->actor_deletion_preflight();
 				$id = $this->state['users'][ $role ];
 				$this->actor( $role, $id );
 				self::ensure( array() === $this->raw_ids( 'posts', 'post_author', $id )
 					&& array() === $this->raw_ids( 'comments', 'user_id', $id )
 					&& array() === $this->session_list( $id ) && array() === $this->password_list( $id ) );
 				self::ensure( true === wp_delete_user( $id ) );
-				self::ensure( false === get_userdata( $id ) && array() === get_user_meta( $id )
-					&& array() === $this->raw_ids( 'users', 'ID', $id ) && array() === $this->raw_ids( 'usermeta', 'user_id', $id )
-					&& array() === $this->password_list( $id ) && array() === $this->session_list( $id ) );
+				$this->user_absent( $role, $id );
 			} );
+			$actors = $actors && $removed;
 		}
 	}
 
-	private function absence(): void {
-		global $wpdb;
+	private function content_absent(): void {
 		clearstatcache();
-		$this->coverage();
 		$this->options_absent();
 		foreach ( $this->state['posts'] as $id => $record ) {
 			$this->post_absent( $id );
@@ -1085,23 +1201,54 @@ final class Wstm108_Resources {
 		foreach ( $this->state['comments'] as $id => $record ) {
 			$this->comment_absent( $id );
 		}
-		foreach ( $this->state['users'] as $role => $id ) {
-			self::ensure( false === get_userdata( $id ) && array() === get_user_meta( $id )
-				&& array() === $this->raw_ids( 'users', 'ID', $id ) && array() === $this->raw_ids( 'usermeta', 'user_id', $id )
-				&& array() === $this->password_list( $id ) && array() === $this->session_list( $id )
-				&& array() === $this->raw_ids( 'posts', 'post_author', $id ) && array() === $this->raw_ids( 'comments', 'user_id', $id ) );
-			$login = $this->state['run'] . '-' . $role;
-			$users = $wpdb->get_col( $wpdb->prepare(
-				"SELECT ID FROM {$wpdb->users} WHERE user_login = %s OR user_email = %s ORDER BY ID ASC LIMIT 2",
-				$login, $login . '@example.test'
-			) );
-			self::ensure( '' === $wpdb->last_error && array() === $users );
+		foreach ( $this->state['users'] as $id ) {
+			self::ensure( array() === $this->raw_ids( 'posts', 'post_author', $id )
+				&& array() === $this->raw_ids( 'comments', 'user_id', $id ) );
 		}
+		self::ensure( array() === $this->attachment_reference_ids() );
 		foreach ( $this->state['files'] as $path => $snapshot ) {
 			self::ensure( false === @lstat( $path ) );
 		}
 		$upload = $this->state['upload'];
 		self::ensure( false === @lstat( $upload['path'] ) && Wstm108_Files::directory( $upload['root'] ) === $upload['root_identity'] );
+	}
+
+	private function user_absent( string $role, int $id ): void {
+		global $wpdb;
+		self::ensure( false === get_userdata( $id ) && array() === get_user_meta( $id )
+			&& array() === $this->raw_ids( 'users', 'ID', $id ) && array() === $this->raw_ids( 'usermeta', 'user_id', $id )
+			&& array() === $this->password_list( $id ) && array() === $this->session_list( $id )
+			&& array() === $this->raw_ids( 'posts', 'post_author', $id ) && array() === $this->raw_ids( 'comments', 'user_id', $id ) );
+		$login = $this->state['run'] . '-' . $role;
+		$users = $wpdb->get_col( $wpdb->prepare(
+			"SELECT ID FROM {$wpdb->users} WHERE user_login = %s OR user_email = %s ORDER BY ID ASC LIMIT 2",
+			$login, $login . '@example.test'
+		) );
+		self::ensure( '' === $wpdb->last_error && array() === $users );
+	}
+
+	private function actor_deletion_preflight(): void {
+		$this->guard();
+		$this->coverage();
+		$this->content_absent();
+		foreach ( $this->state['users'] as $role => $id ) {
+			if ( true === ( $this->state['cleanup'][ 'actor:' . $role ] ?? null ) ) {
+				$this->user_absent( $role, $id );
+			} else {
+				$this->role( $id );
+				$this->owned_password( $role );
+				self::ensure( array() === $this->password_list( $id ) && array() === $this->session_list( $id ) );
+			}
+		}
+		$this->guard();
+	}
+
+	private function absence(): void {
+		$this->coverage();
+		$this->content_absent();
+		foreach ( $this->state['users'] as $role => $id ) {
+			$this->user_absent( $role, $id );
+		}
 	}
 
 	/** No options are created by this ledger; run-scoped rows are unexpected. */
@@ -1248,12 +1395,55 @@ final class Wstm108_Resources {
 		return $proof;
 	}
 
-	/** Caller supplies its validated receipt's resource proof AFTER reattestation. */
-	public function retire( array $expectedProof ): void {
+	private function retirement_ready( array $expectedProof ): void {
 		$this->guard();
 		self::validate_proof( $expectedProof, $this->state['binding'] );
 		self::ensure( $expectedProof === $this->state['proof'] );
 		$this->verify_absent();
+	}
+
+	/** Read-only preparation. The host binds this target; journal bytes stay private. */
+	public function retirement_snapshot( array $expectedProof ): array {
+		self::ensure( $this->independentlyAnchored );
+		$this->retirement_ready( $expectedProof );
+		return array( 'identity' => $this->snapshot['identity'], 'sha256' => $this->snapshot['sha256'] );
+	}
+
+	private function assert_retirement_snapshot( array $expectedSnapshot ): void {
+		self::ensure( $this->independentlyAnchored
+			&& array_keys( $expectedSnapshot ) === array( 'identity', 'sha256' )
+			&& is_array( $expectedSnapshot['identity'] ) && is_string( $expectedSnapshot['sha256'] ) );
+		self::identity_schema( $expectedSnapshot['identity'], 0100000 );
+		self::ensure( 1 === preg_match( '/^[a-f0-9]{64}$/D', $expectedSnapshot['sha256'] )
+			&& $expectedSnapshot['identity'] === $this->snapshot['identity']
+			&& hash_equals( $expectedSnapshot['sha256'], $this->snapshot['sha256'] ) );
+		$this->guard();
+	}
+
+	/**
+	 * Prepared retirement requires the independently enrolled identity on resume.
+	 * The optional caller guard must return true; refusal/exception never deletes.
+	 * Legacy proof-only retirement remains self-bound, not independently anchored.
+	 */
+	public function retire( array $expectedProof, ?array $expectedSnapshot = null, ?callable $beforeMutation = null ): void {
+		if ( null !== $expectedSnapshot ) {
+			$this->assert_retirement_snapshot( $expectedSnapshot );
+		}
+		self::ensure( null === $beforeMutation || null !== $expectedSnapshot );
+		$this->retirement_ready( $expectedProof );
+		if ( null !== $beforeMutation ) {
+			$authorized = false;
+			try {
+				$authorized = $beforeMutation();
+			} catch ( Throwable $error ) {
+				self::ensure( false );
+			}
+			self::ensure( true === $authorized );
+			$this->retirement_ready( $expectedProof );
+		}
+		if ( null !== $expectedSnapshot ) {
+			$this->assert_retirement_snapshot( $expectedSnapshot );
+		}
 		Wstm108_Files::remove( $this->path, $this->snapshot );
 	}
 }

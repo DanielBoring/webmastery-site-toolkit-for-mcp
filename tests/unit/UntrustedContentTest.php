@@ -8,6 +8,7 @@ use Wstm108Content\Webmastery_MCP_Custom_Post_Types as CustomPostTypes;
 use Wstm108Content\Webmastery_MCP_Comments as Comments;
 use Wstm108Content\Webmastery_MCP_Media as Media;
 use Wstm108Content\Webmastery_MCP_Users as Users;
+use Wstm108Content\Webmastery_MCP_Content_Hygiene as ContentHygiene;
 
 require_once __DIR__ . '/fixtures/untrusted-content-stubs.php';
 
@@ -55,6 +56,7 @@ final class UntrustedContentTest extends TestCase {
 			'post_status' => 'draft', 'post_name' => 'stored-"slug"-\\日本語',
 			'post_author' => '9', 'post_parent' => '42',
 			'post_date' => '2026-01-02 03:04:05', 'post_modified' => '2026-02-03 04:05:06',
+			'post_date_gmt' => '2026-01-02 02:04:05', 'guid' => $GLOBALS['wstm108']['url'],
 			'post_mime_type' => 'image/png',
 		);
 		$GLOBALS['wstm_test_posts'][ $id ] = $post;
@@ -159,6 +161,16 @@ final class UntrustedContentTest extends TestCase {
 				'date_created' => '2026-01-02 03:04:05', 'date_modified' => '2026-02-03 04:05:06',
 				'width' => 640, 'height' => 480,
 			), array( 'title', 'caption', 'alt_text', 'url', 'filename' ) ),
+			array( ContentHygiene::class, 'normalize_orphaned_media', array( self::post( 'attachment', 46 ) ), array(
+				'id' => 46, 'title' => self::TEXT, 'url' => $GLOBALS['wstm108']['url'], 'mime_type' => 'image/png', 'file_size' => 1234,
+			), array( 'title', 'url' ) ),
+			array( ContentHygiene::class, 'normalize_post_summary', array( self::post() ), array(
+				'id' => 42, 'title' => self::TEXT, 'url' => $GLOBALS['wstm108']['url'], 'post_type' => 'post', 'published_date' => '2026-01-02 03:04:05',
+			), array( 'title', 'url' ) ),
+			array( ContentHygiene::class, 'normalize_stuck_scheduled_post', array( self::post() ), array(
+				'id' => 42, 'title' => self::TEXT, 'url' => $GLOBALS['wstm108']['url'], 'scheduled_date' => '2026-01-02 03:04:05',
+				'scheduled_date_gmt' => '2026-01-02 02:04:05', 'author' => 9, 'author_name' => self::TEXT,
+			), array( 'title', 'url', 'author_name' ) ),
 			array( Users::class, 'normalize', array( $user ), self::expected_user(), array( 'display_name', 'nicename', 'url', 'login', 'email' ) ),
 			array( Users::class, 'normalize_admin_account', array( $user ), array(
 				'id' => 9, 'login' => 'stored\\login', 'email' => '"quoted"@example.test',
@@ -297,6 +309,87 @@ final class UntrustedContentTest extends TestCase {
 		$this->assertSame( 'post', $data['type'] );
 		$this->assertCount( 1, $data['revisions'] );
 		$this->assert_marked( self::expected_revision(), array( 'author_name', 'title', 'content', 'excerpt' ), $data['revisions'][0] );
+	}
+
+	public function test_hygiene_callbacks_mark_each_record_without_changing_queries_or_values(): void {
+		ContentHygiene::register();
+		self::post( 'post', 42 );
+		self::post( 'post', 43 );
+		$GLOBALS['wstm108']['denied'] = array( 'edit_others_posts' );
+		$before = serialize( $GLOBALS['wstm_test_posts'] );
+		foreach ( array( 'list-posts-no-featured-image', 'list-stuck-scheduled' ) as $slug ) {
+			$data = $this->execute( $slug, array() );
+			$this->assertSame( array( 'items', 'total', 'total_pages' ), array_keys( $data ) );
+			$this->assertSame( 2, $data['total'] );
+			$this->assertSame( 1, $data['total_pages'] );
+			$this->assertCount( 2, $data['items'] );
+			foreach ( $data['items'] as $index => $item ) {
+				$expected = array( 'id' => 42 + $index, 'title' => self::TEXT, 'url' => $GLOBALS['wstm108']['url'] );
+				$fields = array( 'title', 'url' );
+				if ( 'list-stuck-scheduled' === $slug ) {
+					$expected += array( 'scheduled_date' => '2026-01-02 03:04:05', 'scheduled_date_gmt' => '2026-01-02 02:04:05',
+						'author' => 9, 'author_name' => self::TEXT );
+					$fields[] = 'author_name';
+				} else {
+					$expected += array( 'post_type' => 'post', 'published_date' => '2026-01-02 03:04:05' );
+				}
+				$this->assert_marked( $expected, $fields, $item );
+			}
+		}
+		$this->assertSame( $before, serialize( $GLOBALS['wstm_test_posts'] ) );
+		$this->assertSame( array(
+			'post_type' => 'post', 'post_status' => 'publish', 'posts_per_page' => 20, 'paged' => 1,
+			'orderby' => array( 'date' => 'DESC', 'ID' => 'DESC' ), 'order' => 'DESC',
+			'meta_query' => array( array( 'key' => '_thumbnail_id', 'compare' => 'NOT EXISTS' ) ), 'author' => 9,
+		), $GLOBALS['wstm108']['queries'][0] );
+		$this->assertSame( array(
+			'post_type' => 'post', 'post_status' => 'future', 'posts_per_page' => 20, 'paged' => 1,
+			'orderby' => 'date', 'order' => 'ASC',
+			'date_query' => array( array( 'column' => 'post_date_gmt', 'before' => '2026-02-04 00:00:00', 'inclusive' => false ) ),
+			'author' => 9,
+		), $GLOBALS['wstm108']['queries'][1] );
+	}
+
+	public function test_orphan_callback_preserves_reference_checks_pagination_and_unmarked_failures(): void {
+		ContentHygiene::register();
+		self::post( 'attachment', 46 );
+		self::post( 'attachment', 47 );
+		$had_database = array_key_exists( 'wpdb', $GLOBALS );
+		$previous_database = $GLOBALS['wpdb'] ?? null;
+		$db = new Wstm108Content\ReferenceDatabase();
+		$GLOBALS['wpdb'] = $db;
+		try {
+			$db->results = array( 0, 0, 0, 0 );
+			$GLOBALS['wstm108']['denied'] = array( 'edit_others_posts' );
+			$before = serialize( $GLOBALS['wstm_test_posts'] );
+			$data = $this->execute( 'list-orphaned-media', array( 'per_page' => 1, 'page' => 2 ) );
+			$this->assertSame( array( 'items', 'total', 'total_pages' ), array_keys( $data ) );
+			$this->assertSame( 2, $data['total'] );
+			$this->assertSame( 2, $data['total_pages'] );
+			$this->assertCount( 1, $data['items'] );
+			$this->assert_marked( array( 'id' => 47, 'title' => self::TEXT, 'url' => $GLOBALS['wstm108']['url'],
+				'mime_type' => 'image/png', 'file_size' => 1234 ), array( 'title', 'url' ), $data['items'][0] );
+			$this->assertSame( array(
+				'post_type' => 'attachment', 'post_status' => 'inherit', 'post_parent' => 0, 'posts_per_page' => -1,
+				'orderby' => array( 'date' => 'DESC', 'ID' => 'DESC' ), 'order' => 'DESC', 'author' => 9,
+			), $GLOBALS['wstm108']['queries'][0] );
+			$this->assertCount( 4, $db->queries );
+			$this->assertSame( array( '_thumbnail_id', '46' ), $db->queries[0][1] );
+			$this->assertSame( array( '_thumbnail_id', '47' ), $db->queries[2][1] );
+			$this->assertSame( array( '%' . $db->esc_like( $GLOBALS['wstm108']['url'] ) . '%' ), $db->queries[1][1] );
+			$this->assertSame( $before, serialize( $GLOBALS['wstm_test_posts'] ) );
+			$db->results = array( null );
+			$error = ContentHygiene::execute_list_orphaned_media();
+			$this->assertInstanceOf( WP_Error::class, $error );
+			$canonical = Webmastery_MCP_Response::from_wp_error( $error );
+			$this->assertFalse( $canonical['success'] );
+			$this->assertSame( 'content_hygiene_query_failed', $canonical['error']['reason'] );
+			$this->assertArrayNotHasKey( 'untrusted_fields', $canonical );
+			$this->assertArrayNotHasKey( 'untrusted_fields', $canonical['error'] );
+			$this->assertSame( $before, serialize( $GLOBALS['wstm_test_posts'] ) );
+		} finally {
+			if ( $had_database ) { $GLOBALS['wpdb'] = $previous_database; } else { unset( $GLOBALS['wpdb'] ); }
+		}
 	}
 
 	public static function compact_delete_cases(): array {

@@ -10,6 +10,10 @@ if ( '1' !== getenv( 'WSTM108_STAGE_DISPOSABLE' ) ) {
 	fwrite( STDERR, "Refusing: WSTM108_STAGE_DISPOSABLE=1 is required before WordPress or stage writes.\n" );
 	exit( 2 );
 }
+if ( PHP_VERSION_ID < 80100 || ! function_exists( 'fsync' ) || ! ( new ReflectionFunction( 'fsync' ) )->isInternal() ) {
+	fwrite( STDERR, "BLOCKED: container stage requires builtin fsync before fixture mutation; host PHP is not substituted for container PHP.\n" );
+	exit( 2 );
+}
 
 require_once __DIR__ . '/untrusted-content-evidence.php';
 require_once __DIR__ . '/untrusted-content-lifecycle.php';
@@ -19,7 +23,7 @@ require_once __DIR__ . '/untrusted-content-boot.php';
 require_once __DIR__ . '/untrusted-content-proof.php';
 
 $operation = $argv[1] ?? '';
-if ( ! in_array( $operation, array( 'acquire', 'original', 'enable', 'enabled', 'restored', 'finalize' ), true ) ) {
+if ( ! in_array( $operation, array( 'acquire', 'original', 'enable', 'enabled', 'restored', 'finalize', 'retire' ), true ) ) {
 	throw new RuntimeException( 'Unknown owned untrusted-stage operation.' );
 }
 $context_path = $argv[2] ?? '';
@@ -28,7 +32,7 @@ $context = json_decode( $context_file['bytes'], true, 512, JSON_THROW_ON_ERROR )
 $directory = dirname( $context_path );
 $evidence = new Wstm108_Evidence( $directory . '/' . $operation . '.json' );
 $plugin = str_replace( '\\', '/', realpath( dirname( __DIR__, 2 ) ) );
-$lifecycle = new Wstm108_Lifecycle( '/var/www/html', $plugin, '/tmp/wstm108-stage', $context['binding'] );
+$lifecycle = new Wstm108_Lifecycle( '/var/www/html', $plugin, '/tmp/wstm108-stage', $context['binding'], Wstm108_Lifecycle::decode_anchor( getenv( 'WSTM108_STATE_ANCHOR' ) ?: '' ) );
 $summary = array( 'operation' => $operation, 'binding' => $context['binding'], 'stage_context_sha256' => $context_file['sha256'], 'completed' => false );
 $bootstrap = static function () use ( $plugin, $context ): array {
 	$_SERVER['HTTP_HOST'] = 'localhost';
@@ -57,7 +61,7 @@ $verify = static function ( array $identity, array $expected, array $stale ) use
 			) );
 			return is_wp_error( $response )
 				? array( 'status' => 0, 'body' => $response->get_error_message(), 'transport_error' => true )
-				: array( 'status' => wp_remote_retrieve_response_code( $response ), 'body' => wp_remote_retrieve_body( $response ) );
+				: array( 'status' => wp_remote_retrieve_response_code( $response ), 'body' => wp_remote_retrieve_body( $response ), 'headers' => wp_remote_retrieve_headers( $response ) );
 		},
 		$evidence, $operation, $identity, $expected, $stale,
 		static function ( int $seconds ): void { sleep( $seconds ); },
@@ -70,6 +74,21 @@ try {
 		$lifecycle->acquire();
 	}
 	$lifecycle->bind_context( $context, $context_file['sha256'] );
+	if ( 'finalize' === $operation || 'retire' === $operation ) {
+		$processes = Wstm108_Lifecycle::decode_anchor( getenv( 'WSTM108_PROCESS_VERDICTS' ) ?: '' );
+		$required = array( 'acquire', 'original', 'enable', 'enabled', 'runner', 'runner-proof', 'restored' );
+		if ( 'retire' === $operation ) { $required[] = 'finalize'; }
+		if ( null === $processes ) {
+			throw new RuntimeException( 'Missing independently validated process chain before retirement.' );
+		}
+		Wstm108_Proof::process_verdicts( $processes, $context['binding'], $required );
+		$summary['process_verdicts'] = $processes;
+	}
+	if ( 'acquire' === $operation ) {
+		$lifecycle->create_wire();
+	} elseif ( in_array( $operation, array( 'original', 'enabled', 'restored', 'finalize' ), true ) ) {
+		$evidence->attach( $lifecycle->wire(), $operation );
+	}
 	if ( 'original' === $operation ) {
 		$summary['providers'] = $bootstrap();
 		if ( defined( 'WSTM108_PROBE_OWNER' ) || defined( 'WSTM108_PROBE_SECRET' ) ) {
@@ -102,17 +121,22 @@ try {
 			fclose( $pipes[1] );
 			fclose( $pipes[2] );
 			$status = proc_close( $process );
-			$evidence->append( array( 'boundary' => 'actual-cli-missing-optin', 'file' => $file, 'status' => $status, 'body' => $out, 'stderr' => $error ) );
-			if ( 2 !== $status || '' !== $out || false === strpos( $error, $flag . '=1 is required before WordPress' ) ) {
+			$event = $evidence->append( array( 'boundary' => 'actual-cli-missing-optin', 'file' => $file, 'status' => $status, 'body' => $out, 'stderr' => $error ) );
+			$expected_error = 'untrusted-content-stage.php' === $file
+				? "Refusing: WSTM108_STAGE_DISPOSABLE=1 is required before WordPress or stage writes.\n"
+				: "Refusing: WSTM108_ALLOW_DISPOSABLE=1 is required before WordPress, fixtures, credentials, or writes.\n";
+			if ( 2 !== $status || '' !== $out || $expected_error !== $error ) {
 				throw new RuntimeException( 'Actual missing-opt-in CLI boundary did not exit 2 before bootstrap.' );
 			}
+			$evidence->validate( $event, 'cli-refusal' );
 			$response = wp_remote_get( 'http://localhost/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/' . $file, array( 'timeout' => 2, 'redirection' => 0 ) );
 			$status = is_wp_error( $response ) ? 0 : wp_remote_retrieve_response_code( $response );
 			$body = is_wp_error( $response ) ? $response->get_error_message() : wp_remote_retrieve_body( $response );
-			$evidence->append( array( 'boundary' => 'actual-http-cli-only', 'file' => $file, 'status' => $status, 'body' => $body ) );
+			$event = $evidence->append( array( 'boundary' => 'actual-http-cli-only', 'file' => $file, 'status' => $status, 'body' => $body, 'headers' => is_wp_error( $response ) ? array() : wp_remote_retrieve_headers( $response ) ) );
 			if ( 403 !== $status || 'CLI only.' !== $body ) {
 				throw new RuntimeException( 'Actual HTTP boundary did not return exact 403 CLI only.' );
 			}
+			$evidence->validate( $event, 'http-cli-refusal' );
 		}
 		$lifecycle->install_probe( $original );
 		$lifecycle->attest( 'original', $original, $verify );
@@ -130,7 +154,15 @@ try {
 		$lifecycle->attest( 'restored', wstm108_runtime_snapshot(), $verify );
 	}
 	$summary['state'] = $lifecycle->public_state();
-	if ( 'finalize' === $operation ) {
+	if ( 'retire' === $operation ) {
+		$summary['providers'] = $bootstrap();
+		$lifecycle->assert_original_runtime( wstm108_runtime_snapshot() );
+	}
+	$summary['completed'] = true;
+	if ( in_array( $operation, array( 'original', 'enabled', 'restored', 'finalize' ), true ) ) {
+		$summary['wire_proof'] = $evidence->seal( true, $summary );
+	}
+	if ( 'finalize' === $operation || 'retire' === $operation ) {
 		$runner_file = Wstm108_Files::file( $directory . '/runner.json' );
 		$runner = json_decode( $runner_file['bytes'], false, 512, JSON_THROW_ON_ERROR );
 		if ( ! $runner instanceof stdClass ) {
@@ -138,18 +170,51 @@ try {
 		}
 		$certificate = Wstm108_Proof::runner( $runner, $context, $context_file['sha256'], Wstm108_Plan::native_from_manifest( __DIR__ . '/abilities-manifest.json' ) );
 		Wstm108_Proof::journal( $directory . '/runner.json.http.jsonl', $runner );
-		$resources = Wstm108_Resources::resume( '/tmp/wstm108-stage/resources.json', $context['binding'] );
-		$lifecycle->preflight_finalization( $certificate );
-		$resources->retire( $certificate->receipt()['resource_proof'] );
-		$lifecycle->finalize( $certificate );
-		$summary['retired'] = array( 'runtime_loader' => true, 'probe' => true, 'resource_journal' => true, 'private_lock' => true );
+		if ( wstm108_wire_canonical( $runner->wire_proof ) !== wstm108_wire_canonical( $lifecycle->wire()->scope_proof( 'runner' ) ) ) {
+			throw new RuntimeException( 'Public runner verdict differs from the anchored private originals.' );
+		}
+		$resource_identity = $lifecycle->resource_identity();
+		$resources = Wstm108_Resources::resume( '/tmp/wstm108-stage/resources.json', $context['binding'], $resource_identity );
+		$resource_proof = $certificate->receipt()['resource_proof'];
+		$resource_target = $resources->retirement_snapshot( $resource_proof );
+		if ( 'finalize' === $operation ) {
+			$prepared = $lifecycle->prepare_retirement( $certificate );
+			$targets = $lifecycle->verify_retirement_targets( $prepared );
+			if ( $resource_target !== array_intersect_key( $targets['resources.json'], array( 'identity' => true, 'sha256' => true ) ) ) {
+				throw new RuntimeException( 'Resource journal changed during retirement preparation.' );
+			}
+			$summary['prepared'] = $prepared;
+		} else {
+			$prepared = Wstm108_Lifecycle::decode_anchor( getenv( 'WSTM108_PREPARED' ) ?: '' );
+			if ( null === $prepared ) { throw new RuntimeException( 'No independently validated prepared retirement binding.' ); }
+			$targets = $lifecycle->verify_retirement_targets( $prepared );
+			$summary['prepared'] = $prepared;
+			$wire_inventory = array_diff_key( $targets, array( 'probe' => true, 'resources.json' => true ) );
+			$prepared_resource = array_intersect_key( $targets['resources.json'], array( 'identity' => true, 'sha256' => true ) );
+			if ( $resource_target !== $prepared_resource ) {
+				throw new RuntimeException( 'Prepared resource journal changed before retirement.' );
+			}
+			$resources->retire( $resource_proof, $prepared_resource, static function () use ( $lifecycle, $prepared ): bool {
+				$lifecycle->verify_retirement_targets( $prepared );
+				return true;
+			} );
+			$lifecycle->wire( $prepared )->retire( $wire_inventory );
+			$lifecycle->finalize( $certificate, $prepared );
+			$summary['retired'] = array( 'runtime_loader' => true, 'probe' => true, 'resource_journal' => true, 'private_wire' => true, 'private_lock' => true );
+		}
 	}
-	$summary['completed'] = true;
 	$evidence->save( $summary );
-	echo 'WSTM108 stage ' . $operation . " completed with owned evidence.\n";
+	if ( 'acquire' === $operation ) {
+		echo 'WSTM108_ANCHOR ' . base64_encode( json_encode( $lifecycle->anchor(), JSON_THROW_ON_ERROR ) ) . "\n";
+	} elseif ( 'finalize' === $operation ) {
+		echo 'WSTM108_PREPARED ' . base64_encode( json_encode( $prepared, JSON_THROW_ON_ERROR ) ) . "\n";
+	} else {
+		echo 'WSTM108 stage ' . $operation . " completed with owned evidence.\n";
+	}
 } catch ( Throwable $error ) {
+	$summary['completed'] = false;
 	$summary['error'] = $error->getMessage();
 	$evidence->save( $summary );
-	fwrite( STDERR, 'WSTM108 stage retained: ' . $evidence->redact( $error->getMessage() ) . "\n" );
+	fwrite( STDERR, 'WSTM108 stage refused or partially retired: ' . $error->getMessage() . "\n" );
 	exit( 1 );
 }

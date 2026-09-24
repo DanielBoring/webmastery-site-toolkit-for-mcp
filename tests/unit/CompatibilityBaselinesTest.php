@@ -110,6 +110,51 @@ final class CompatibilityBaselinesTest extends TestCase {
 		);
 	}
 
+	public static function sourceBoundJobProvider(): array {
+		return array(
+			'baseline-only dirty harness' => array( 'compatibility-qa', '.github/compatibility-versions.json', 'cp compatibility-artifacts/lane-versions.json', 'bash scripts/e2e-test.sh all' ),
+			'current checker production metadata' => array( 'current-plugin-check', '.github/compatibility-versions.json docker-compose.yml readme.txt', 'php scripts/update-compatibility-baselines.php', 'bash scripts/release-qa.sh' ),
+		);
+	}
+
+	/** @dataProvider sourceBoundJobProvider */
+	public function testGeneratedInputsUseExactLocalCandidateBeforeQa( string $job, string $paths, string $generator, string $qa ): void {
+		$workflow = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/compatibility-qa.yml' ) );
+		self::assertSame( 1, preg_match( '/^  ' . preg_quote( $job, '/' ) . ':\n(.*?)(?=^  [a-z-]+:|\z)/ms', $workflow, $section ) );
+		$source = $section[1];
+		self::assertSame( 1, preg_match( '/      - name: Commit exact generated inputs for source-bound QA\n(.*?)(?=      - name:)/s', $source, $step ) );
+		$candidate = $step[1];
+		$exclude = implode( ' ', array_map( static fn( string $path ): string => "':(exclude)" . $path . "'", explode( ' ', $paths ) ) );
+		self::assertStringContainsString( 'git diff --quiet -- . ' . $exclude, $candidate );
+		self::assertStringContainsString( 'git add -- ' . $paths . "\n", $candidate );
+		foreach ( array(
+			'test "$(git rev-parse HEAD)" = "$BASE_SOURCE_SHA"',
+			'if [[ -e compatibility-artifacts/tested-source.json || -L compatibility-artifacts/tested-source.json ]]; then',
+			'git diff --cached --quiet || { status=$?;',
+			'untracked="$(git ls-files --others --exclude-standard -- . \':(exclude)compatibility-artifacts/**\')"',
+			'test -z "$untracked"',
+			"if git diff --cached --quiet; then\n            changed=false",
+			'test "$status" = 1 || exit "$status"',
+			'git diff --exit-code HEAD',
+			'tested="$(git rev-parse HEAD)"',
+			'set -o noclobber',
+			'{base_source:$base,tested_source:$tested,tested_tree:$tree,changed:$changed}',
+			'printf \'source-sha=%s\n\' "$tested"',
+		) as $guard ) {
+			self::assertStringContainsString( $guard, $candidate );
+		}
+		self::assertStringNotContainsString( 'git push', $candidate );
+		self::assertStringNotContainsString( 'git checkout', $candidate );
+		self::assertStringNotContainsString( '--allow-empty', $candidate );
+		self::assertStringNotContainsString( 'git add .', $candidate );
+		self::assertLessThan( strpos( $candidate, 'git add -- ' ), strpos( $candidate, 'if [[ -e compatibility-artifacts/tested-source.json' ) );
+		self::assertLessThan( strpos( $source, $step[0] ), strpos( $source, $generator ) );
+		self::assertLessThan( strpos( $source, $qa ), strpos( $source, $step[0] ) );
+		self::assertStringContainsString( 'BASE_SOURCE_SHA: ${{ needs.discover-versions.outputs.source-sha }}', $candidate );
+		self::assertStringContainsString( 'WSTM108_EXPECTED_SOURCE: ${{ steps.tested-source.outputs.source-sha }}', $source );
+		self::assertStringNotContainsString( 'WSTM108_EXPECTED_SOURCE: ${{ needs.discover-versions.outputs.source-sha }}', $source );
+	}
+
 	/** @dataProvider invalidCliProvider */
 	public function testCliRejectsInvalidArgumentsBeforeAnyWrite( array $overrides, array $remove, array $extra, string $error ): void {
 		$options = array_merge( $this->options(), array( 'wp-cli' => '99.1.0', 'wp-cli-sha512' => str_repeat( 'b', 128 ) ), $overrides );

@@ -32,6 +32,28 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Set up companion PHP for host-only QA controls
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.4'
+          extensions: zip, posix
+          tools: composer:v2
+          coverage: none
+
+      - name: Bind version-specific companion executable before restoring matrix PHP
+        id: host-php
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="$(readlink -e /usr/bin/php8.4)"
+          test "${binary##*/}" = php8.4
+          "$binary" -r 'exit(PHP_VERSION_ID >= 80400 && PHP_VERSION_ID < 80500 && function_exists("posix_geteuid") && function_exists("fsync") && (new ReflectionFunction("fsync"))->isInternal() ? 0 : 1);'
+          {
+            printf 'path=%s\n' "$binary"
+            printf 'identity=%s\n' "$(stat -c '%d:%i:%u:%g:%f:%h:%s' -- "$binary")"
+            printf 'sha256=%s\n' "$(sha256sum "$binary" | cut -d ' ' -f 1)"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Set up PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
@@ -39,6 +61,37 @@ jobs:
           extensions: zip
           tools: composer:v2
           coverage: none
+
+      - name: Verify restored matrix PHP and unchanged companion
+        shell: bash
+        env:
+          MATRIX_PHP: ${{ matrix.php }}
+          HOST_PHP: ${{ steps.host-php.outputs.path }}
+          HOST_IDENTITY: ${{ steps.host-php.outputs.identity }}
+          HOST_SHA256: ${{ steps.host-php.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          test "$HOST_PHP" = "$(readlink -e -- "$HOST_PHP")"
+          test "${HOST_PHP##*/}" = php8.4
+          test "$HOST_IDENTITY" = "$(stat -c '%d:%i:%u:%g:%f:%h:%s' -- "$HOST_PHP")"
+          test "$HOST_SHA256" = "$(sha256sum "$HOST_PHP" | cut -d ' ' -f 1)"
+          test "$(php -r 'echo PHP_MAJOR_VERSION, ".", PHP_MINOR_VERSION;')" = "$MATRIX_PHP"
+          "$HOST_PHP" -r 'exit(PHP_VERSION_ID >= 80400 && PHP_VERSION_ID < 80500 && function_exists("posix_geteuid") && function_exists("fsync") && (new ReflectionFunction("fsync"))->isInternal() ? 0 : 1);'
+
+      - name: Record executed workflow identity
+        if: github.repository == 'DanielBoring/webmastery-site-toolkit-for-mcp'
+        env:
+          WSTM_CUSTODY_REPOSITORY: ${{ github.repository }}
+          WSTM_CUSTODY_REPOSITORY_ID: ${{ github.repository_id }}
+          WSTM_CUSTODY_RUN_ID: ${{ github.run_id }}
+          WSTM_CUSTODY_ATTEMPT: ${{ github.run_attempt }}
+          WSTM_CUSTODY_EVENT: ${{ github.event_name }}
+          WSTM_CUSTODY_EVENT_SHA: ${{ github.sha }}
+          WSTM_CUSTODY_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha || 'none' }}
+          WSTM_CUSTODY_WORKFLOW_COMMIT: ${{ github.workflow_sha }}
+          WSTM_CUSTODY_WORKFLOW_PATH: .github/workflows/unit-tests.yml
+          WSTM_CUSTODY_WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: php tests/support/private-custody-context.php
 
       - name: Get Composer cache directory
         id: composer-cache
@@ -60,6 +113,8 @@ jobs:
         run: composer qa:unit
 
       - name: Run CI safeguards regression tests
+        env:
+          WSTM108_HOST_PHP: ${{ steps.host-php.outputs.path }}
         run: composer test:ci-safeguards
 
   unit-tests-gate:

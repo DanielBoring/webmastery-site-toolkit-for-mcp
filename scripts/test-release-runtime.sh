@@ -4,12 +4,49 @@ set -Eeuo pipefail
 REPO_ROOT="$(pwd)"
 WORK="$REPO_ROOT/build/release-runtime-tests-$$"
 export WORK
+if [[ "$(uname -s)" != Linux ]]; then
+	echo 'BLOCKED: positive authority and source/original-ZIP outer mocks require native POSIX; native-Windows refusal is separate.' >&2
+	exit 78
+fi
+WSTM108_MOCK_MATRIX_PHP="$(readlink -e -- "$(command -v php)")" || {
+	echo 'BLOCKED: cannot resolve the pinned native matrix PHP executable.' >&2
+	exit 78
+}
+WSTM108_MOCK_PHP="${WSTM108_HOST_PHP-$WSTM108_MOCK_MATRIX_PHP}"
+for php_binary in "$WSTM108_MOCK_MATRIX_PHP" "$WSTM108_MOCK_PHP"; do
+	[[ -n "$php_binary" && "$php_binary" == /* && "$php_binary" == "$(readlink -e -- "$php_binary")" \
+		&& -f "$php_binary" && -x "$php_binary" && "${php_binary##*/}" =~ ^php([0-9]+(\.[0-9]+)?)?$ \
+		&& "$(stat -c %u -- "$php_binary")" == 0 ]] \
+		&& (( ( 8#$(stat -c %a -- "$php_binary") & 0022 ) == 0 )) || {
+		echo 'BLOCKED: host and matrix PHP must be canonical trusted native PHP executables; explicit selection has no fallback.' >&2
+		exit 78
+	}
+done
+export WSTM108_HOST_PHP="$WSTM108_MOCK_PHP"
+readonly WSTM108_HOST_PHP WSTM108_MOCK_PHP WSTM108_MOCK_MATRIX_PHP
+"$WSTM108_MOCK_PHP" -r 'require $argv[1]; Wstm108_Export::require_host();' "$REPO_ROOT/scripts/untrusted-export.php"
 mkdir -p "$WORK/source with spaces/.github"
-trap 'status=$?; if [[ "$status" != 0 ]]; then cat "$WORK/"*.log >&2; fi; rm -rf "$WORK"; exit "$status"' EXIT
+trap 'status=$?; if [[ "$status" != 0 ]]; then echo "Failed release-runtime evidence retained at $WORK" >&2; else rm -rf "$WORK"; fi; exit "$status"' EXIT
 cp -R scripts includes tests "$WORK/source with spaces/"
 cp docker-compose*.yml webmastery-site-toolkit-for-mcp.php readme.txt LICENSE CHANGELOG.md "$WORK/source with spaces/"
 cp .github/compatibility-versions.json "$WORK/source with spaces/.github/"
 cp -R .github/workflows "$WORK/source with spaces/.github/"
+mkdir -p "$WORK/authority" "$WORK/docker-data" "$WORK/bin" "$WORK/untrusted-private"
+chmod 700 "$WORK/authority" "$WORK/untrusted-private"
+cp tests/unit/fixtures/untrusted-docker "$WORK/bin/docker"
+cp tests/unit/fixtures/untrusted-host-process "$WORK/bin/php"
+cp tests/unit/fixtures/untrusted-host-process "$WORK/bin/bash"
+chmod 700 "$WORK/bin/docker" "$WORK/bin/php" "$WORK/bin/bash"
+export WSTM108_MOCK_ONLY=1 WSTM108_MOCK_ROOT="$WORK" WSTM108_MOCK_CHECKOUT="$WORK/source with spaces"
+export WSTM108_MOCK_ORIGIN="$REPO_ROOT"
+export WSTM108_MOCK_LIVE="$WORK/untrusted-private" WSTM108_HOST_AUTHORITY_ROOT="$WORK/authority"
+WSTM108_MOCK_BASH="$(command -v bash)"
+export WSTM108_MOCK_PHP WSTM108_MOCK_MATRIX_PHP WSTM108_MOCK_BASH
+export PATH="$WORK/bin:$PATH"
+php tests/unit/fixtures/untrusted-host-boundaries.php install-mock
+export GITHUB_OUTPUT="$WORK/authority/synthetic-publication.private"
+export GITHUB_RUN_ID=123 GITHUB_RUN_ATTEMPT=1 GITHUB_JOB=synthetic-package
+( umask 077; set -o noclobber; : > "$GITHUB_OUTPUT" )
 cd "$WORK/source with spaces"
 # The untrusted stage binds its real producer to committed source bytes, not the
 # ancestor checkout. This disposable Git fixture is never pushed or published.
@@ -32,9 +69,16 @@ export COMPOSE_FILE=must-not-be-used.yml
 IDENTITY="$(sha256sum "$RELEASE_ZIP")"
 
 # Exercise the real wrapper, E2E main, package guards and verdict parser. Only
-# external Docker operations are stubbed; no container, network or real site is used.
+# external Docker operations and explicit copied endpoint/peer/executable and
+# interruption sites are synthetic; no container, network or real site is used.
 # shellcheck disable=SC2329 # Exported into the real orchestration subprocesses.
 docker() {
+	case "$*" in
+		*"untrusted-content-stage.php "*|*"untrusted-content-runner.php")
+			command php tests/unit/fixtures/untrusted-docker.php "$@"
+			return
+			;;
+	esac
 	printf '%s\n' "$*" >> "$TRACE"
 	if [[ "${SOURCE_MODE:-0}" == 1 ]]; then
 		[[ "$*" == "compose --project-name release-runtime-fixture "* && "$*" != *"docker-compose.release.yml"* ]] || return 90
@@ -45,21 +89,9 @@ docker() {
 			{ echo "Release runtime did not select its extracted package." >&2; return 92; }
 	fi
 	case "$*" in
-		*"untrusted-content-stage.php "*)
-			local context="${*: -1}" operation="${*: -2:1}"
-			context="${context#*/webmastery-site-toolkit-for-mcp/}"
-			( unset MSYS_NO_PATHCONV; php tests/unit/fixtures/untrusted-stage-envelope.php "$operation" "$context" )
-			;;
-		*"untrusted-content-runner.php")
-			local arg context=''
-			for arg in "$@"; do
-				case "$arg" in WSTM108_STAGE_CONTEXT=*) context="${arg#*=}"; context="${context#*/webmastery-site-toolkit-for-mcp/}" ;; esac
-			done
-			[[ -n "$context" ]] || return 96
-			( unset MSYS_NO_PATHCONV; php tests/unit/fixtures/untrusted-stage-envelope.php runner "$context" )
-			;;
 		*" down -v --remove-orphans")
 			rm -f "$WORK/private-backup" "$WORK/readonly-probe" "$WORK/retained-attachment" "$WORK/retained-file" "$WORK/retained-marker"
+			rm -f "$WSTM108_MOCK_LIVE/private-state" "$WSTM108_MOCK_LIVE/private-journal" "$WSTM108_MOCK_LIVE/probe" "$WSTM108_MOCK_LIVE/loader" "$WSTM108_MOCK_LIVE/actor" "$WSTM108_MOCK_LIVE/attachment" "$WSTM108_MOCK_LIVE/file" "$WSTM108_MOCK_LIVE/original-wire.private" "$WSTM108_MOCK_LIVE/original-wire-metadata.private.json"
 			if [[ "${FAIL_CLEANUP:-0}" == 1 && "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]]; then
 				echo "Fixture cleanup failure." >&2
 				return 47
@@ -277,6 +309,100 @@ test ! -s "$TRACE"
 grep -Fx 'foreign-invalid-marker' build/wstm116-retention-foreign
 rm build/wstm116-retention-foreign
 echo 'PASS full package/managed-source retention, private evidence survival, no teardown, re-entry refusal and original statuses'
+
+# These use the real outer wrappers, independent POSIX process capture and
+# public proof parsers. Only Docker topology and site payloads are synthetic.
+# shellcheck disable=SC2030,SC2031 # Each fault is isolated to its outer invocation.
+for outer in package source; do
+	for fault in http500 malformed-json failed-valid-json partial-spool partial-journal pending-parser pre-handler-stdout provider-stderr both-streams extra-line success; do
+		php tests/unit/fixtures/untrusted-release-proof.php isolate
+		rm -f build/wstm116-retention-release-runtime-fixture
+		export WSTM108_MOCK_LIVE="$WORK/untrusted-$outer-$fault"
+		mkdir -m 700 "$WSTM108_MOCK_LIVE"
+		: > "$TRACE"
+		status=0
+		(
+			export WSTM108_MOCK_FAULT="$fault"
+			if [[ "$outer" == source ]]; then
+				unset E2E_PACKAGE_ROOT E2E_PACKAGE_ZIP
+				export SOURCE_MODE=1 E2E_KEEP_COMPOSE=0
+				bash scripts/e2e-test.sh all
+			else
+				bash scripts/release-qa.sh
+			fi
+		) > "$WORK/untrusted-$outer-$fault.log" 2>&1 || status=$?
+		expected=1
+		case "$fault" in http500|malformed-json|failed-valid-json) expected=44 ;; success) expected=0 ;; esac
+		[[ "$status" == "$expected" ]] || { echo "Unexpected $outer/$fault status $status (expected $expected)." >&2; exit 1; }
+		[[ "$(sha256sum "$RELEASE_ZIP")" == "$IDENTITY" ]]
+		if [[ "$fault" == success ]]; then
+			[[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]]
+			[[ "$(grep -c 'untrusted-content-stage.php retire ' "$TRACE")" == 1 ]]
+			[[ ! -e build/wstm116-retention-release-runtime-fixture ]]
+			[[ ! -e "$WSTM108_MOCK_LIVE/private-state" && ! -e "$WSTM108_MOCK_LIVE/private-journal" && ! -e "$WSTM108_MOCK_LIVE/original-wire.private" ]]
+		else
+			[[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 1 ]]
+			test -f build/wstm116-retention-release-runtime-fixture
+			test -f "$WSTM108_MOCK_LIVE/private-state"
+			test -f "$WSTM108_MOCK_LIVE/private-journal"
+			test -f "$WSTM108_MOCK_LIVE/original-wire.private"
+			if grep -Eq 'untrusted-content-stage.php (finalize|retire) ' "$TRACE"; then exit 1; fi
+			if grep -Eq 'unknown-(original|bootstrap|provider|extra)-secret' "$WORK/untrusted-$outer-$fault.log"; then exit 1; fi
+			php tests/unit/fixtures/untrusted-mock-proof.php "$fault" > "$WORK/untrusted-$outer-$fault-assertions.log"
+			private_identity="$(sha256sum "$WSTM108_MOCK_LIVE/original-wire.private")"
+			lines="$(wc -l < "$TRACE")"
+			expect_failure 'RECOVERY REQUIRED' bash scripts/destructive-retention.sh cleanup
+			expect_failure 'RECOVERY REQUIRED' bash scripts/release-qa.sh
+			expect_failure 'RECOVERY REQUIRED' bash scripts/e2e-test.sh all
+			[[ "$(wc -l < "$TRACE")" == "$lines" ]]
+			[[ "$(sha256sum "$WSTM108_MOCK_LIVE/original-wire.private")" == "$private_identity" ]]
+		fi
+	done
+done
+rm -f build/wstm116-retention-release-runtime-fixture
+echo 'PASS untrusted failed-wire/private-process retention and validated retirement in both synthetic source/original-ZIP outer paths'
+
+# Unchanged f93 runs to its actual unlink/echo boundary. The companion alone
+# must block both outer gates when clear acknowledgment or authorization fails.
+# shellcheck disable=SC2030,SC2031 # Each injected boundary fault is isolated.
+for outer in package source; do
+	for fault in companion-partial clear-echo clear-exit clear-truncated precommit-controller authorization-collision precommit-evidence companion-replacement success postcommit-ack; do
+		php tests/unit/fixtures/untrusted-release-proof.php isolate
+		export WSTM108_MOCK_LIVE="$WORK/release-$outer-$fault"
+		mkdir -m 700 "$WSTM108_MOCK_LIVE"
+		: > "$TRACE"
+		status=0
+		(
+			export WSTM108_RELEASE_FAULT="$fault"
+			if [[ "$outer" == source ]]; then
+				unset E2E_PACKAGE_ROOT E2E_PACKAGE_ZIP
+				export SOURCE_MODE=1 E2E_KEEP_COMPOSE=0
+				bash scripts/e2e-test.sh all
+			else
+				bash scripts/release-qa.sh
+			fi
+		) > "$WORK/release-$outer-$fault.log" 2>&1 || status=$?
+		expected=1
+		case "$fault" in clear-exit) expected=73 ;; precommit-controller) expected=74 ;; success) expected=0 ;; postcommit-ack) expected=75 ;; esac
+		[[ "$status" == "$expected" ]]
+		[[ "$(sha256sum "$RELEASE_ZIP")" == "$IDENTITY" ]]
+		php tests/unit/fixtures/untrusted-release-proof.php "$fault" > "$WORK/release-$outer-$fault-assertions.log"
+		if [[ "$fault" == success || "$fault" == postcommit-ack ]]; then
+			[[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]]
+			# Exit 75 is expected contract coverage, never a green actual run.
+			bash scripts/destructive-retention.sh check
+		else
+			[[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 1 ]]
+			lines="$(wc -l < "$TRACE")"
+			expect_failure 'RECOVERY REQUIRED' bash scripts/destructive-retention.sh cleanup
+			expect_failure 'RECOVERY REQUIRED' bash scripts/release-qa.sh
+			expect_failure 'RECOVERY REQUIRED' bash scripts/e2e-test.sh all
+			[[ "$(wc -l < "$TRACE")" == "$lines" ]]
+			php tests/unit/fixtures/untrusted-release-proof.php "$fault" > "$WORK/release-$outer-$fault-reentry-assertions.log"
+		fi
+	done
+done
+echo 'PASS synthetic source/original-ZIP precommit retention and terminal release/failed-ack classification; not runtime acceptance'
 
 # Negative controls restore unconditional outer teardown only in this copied fixture.
 # The identical injected restoration failure must now lose its private evidence.

@@ -143,6 +143,19 @@ pending. Both gateway and individual result data must retain field markers.
 Untrusted runtime changes must retain the complete source/package-bound case
 plan, original JSON types, exclusive evidence before credentials, no-config-write
 CLI/HTTP restoration, owned resource cleanup and fail-closed outer retention.
+Capture original wire/stdout/stderr privately before parsing; publish only
+validated projections or safe witnesses, never arbitrary redacted bodies.
+Keep independent host authority outside every project bind, verify the exact
+prepared generation/inventory and process outcomes before retiring evidence,
+and retain failed/partial evidence even after successful resource cleanup.
+Keep the independently bound companion through primary clear and exact private
+capture validation. Complete evidence/authorization writes before its terminal
+unlink; that unlink commits release. A postcommit failed/lost acknowledgment is
+not retained protection or successful QA. The one public release-authorization
+receipt records precommit observations only, never completion.
+Report synthetic protocol tests, real POSIX process capture with mocked Docker,
+native-Windows refusal controls, and genuine Ubuntu runtime proof separately.
+Native-Windows positive authority/outer paths are blocked, not skipped or passed.
 Neither mock-stage tests nor predecessor CI establishes dedicated runtime proof.
 Markers, hints, and the #116 confirmation interlocks still in development
 are defense-in-depth, not capability checks, content filters, a security

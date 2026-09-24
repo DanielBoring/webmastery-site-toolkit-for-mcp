@@ -58,13 +58,19 @@ final class UntrustedStageProofTest extends TestCase {
 		self::assertTrue( ( new ReflectionClass( Wstm108_Proof::class ) )->getConstructor()->isPrivate() );
 	}
 
-	public function test_failed_semantic_case_preserves_failure_but_allows_proven_safe_cleanup(): void {
+	public function test_failed_semantic_case_preserves_failure_and_vetoes_retirement_despite_safe_resource_cleanup(): void {
 		$this->runner->cases[100]->passed = false;
 		$this->runner->cases[100]->error = 'Observed mismatch; raw response retained';
 		--$this->runner->passed;
 		++$this->runner->failed;
 		$this->runner->status = 'failed';
-		self::assertTrue( $this->certificate()->receipt()['cleanup_complete'] );
+		self::assertTrue( $this->runner->cleanup_complete );
+		try {
+			$this->certificate();
+			self::fail( 'Successful resource cleanup must not retire failed wire/semantic evidence.' );
+		} catch ( RuntimeException $error ) {
+			self::assertStringContainsString( 'case counts', $error->getMessage() );
+		}
 		self::assertSame( 'failed', $this->runner->status );
 		self::assertSame( 1, $this->runner->failed );
 	}
@@ -78,6 +84,8 @@ final class UntrustedStageProofTest extends TestCase {
 			'missing-actor', 'actor-id', 'roles-object', 'caps-list', 'missing-catalog', 'extra-catalog',
 			'catalog-count', 'duplicate-tool', 'empty-tool-name', 'schema-list', 'resource-missing',
 			'resource-label', 'resource-outcome', 'resource-digest', 'resource-count',
+			'reader-capability', 'subscriber-capability', 'wire-extra', 'wire-scope', 'wire-semantic-hash',
+			'case-extra', 'case-hash', 'verdict-extra', 'verdict-missing-event', 'verdict-shared-event', 'verdict-unordered', 'verdict-no-terminal',
 		) );
 	}
 
@@ -128,14 +136,53 @@ final class UntrustedStageProofTest extends TestCase {
 			case 'resource-outcome': $p->resource_proof->cleanup->coverage = 1; break;
 			case 'resource-digest': $p->resource_proof->cleanup_sha256 = str_repeat( '0', 64 ); break;
 			case 'resource-count': $p->resource_proof->resource_counts->posts = 0; break;
+			case 'reader-capability': $p->actors->reader->list_users = false; break;
+			case 'subscriber-capability': $p->actors->subscriber->list_users = true; break;
+			case 'wire-extra': $p->wire_proof->unexpected_body = 'must remain private'; break;
+			case 'wire-scope': $p->wire_proof->scope = 'original'; break;
+			case 'wire-semantic-hash': $p->wire_proof->semantic_sha256 = 'not a digest'; break;
+			case 'case-extra': $p->cases[0]->response = 'must remain private'; break;
+			case 'case-hash':
+				$p->cases[0]->private_case_sha256 = 'not a digest';
+				$p->wire_proof->cases->{$p->cases[0]->label}->sha256 = 'not a digest';
+				break;
+			case 'verdict-extra': $p->wire_proof->cases->{$p->cases[0]->label}->body = 'must remain private'; break;
+			case 'verdict-missing-event': $p->wire_proof->cases->{$p->cases[0]->label}->events = array( 99999 ); break;
+			case 'verdict-shared-event': $p->wire_proof->cases->{$p->cases[1]->label}->events = $p->wire_proof->cases->{$p->cases[0]->label}->events; break;
+			case 'verdict-unordered': $p->wire_proof->cases->{$p->cases[0]->label}->events = array( 7, 6 ); break;
+			case 'verdict-no-terminal': $p->wire_proof->cases->{$p->cases[0]->label}->events = array( 1 ); break;
 		}
 		$this->expectException( RuntimeException::class );
 		$this->certificate();
 	}
 
+	public static function unsafe_witnesses(): array {
+		return array_map( static fn( $kind ) => array( $kind ), array( 'scope', 'body-length', 'body-hash', 'status-type', 'status-range', 'origin-extra', 'origin-value', 'projection', 'extra-key' ) );
+	}
+
+	/** @dataProvider unsafe_witnesses */
+	public function test_public_witness_metadata_cannot_carry_unvalidated_data( string $kind ): void {
+		$event = Wstm108_ProofFixture::event( 1, 'runner', array( 'boundary' => 'wordpress-oracle' ), '{}', 'oracle' );
+		switch ( $kind ) {
+			case 'scope': $event['scope'] = 'foreign'; break;
+			case 'body-length': $event['body_length'] = null; break;
+			case 'body-hash': $event['body_sha256'] = 'private arbitrary value'; break;
+			case 'status-type': $event['status'] = '200'; break;
+			case 'status-range': $event['status'] = 600; break;
+			case 'origin-extra': $event['origin']->body = 'private arbitrary value'; break;
+			case 'origin-value': $event['origin']->boundary = 'private arbitrary value'; break;
+			case 'projection': $event['validation'] = array( 'body' => 'private arbitrary value' ); break;
+			case 'extra-key': $event['body'] = 'private arbitrary value'; break;
+		}
+		$this->expectException( RuntimeException::class );
+		Wstm108_Proof::witnesses( Wstm108_ProofFixture::journal( array( $event ) ) );
+	}
+
 	private function phases(): void {
-		foreach ( array( 'acquire', 'original', 'enable', 'enabled', 'restored', 'finalize' ) as $phase ) {
-			file_put_contents( $this->root . '/' . $phase . '.json', json_encode( Wstm108_ProofFixture::phase( $phase, $this->context, $this->sha256 ), JSON_THROW_ON_ERROR ) );
+		foreach ( array( 'acquire', 'original', 'enable', 'enabled', 'restored', 'finalize', 'retire' ) as $phase ) {
+			$record = Wstm108_ProofFixture::phase( $phase, $this->context, $this->sha256 );
+			file_put_contents( $this->root . '/' . $phase . '.json', json_encode( $record, JSON_THROW_ON_ERROR ) );
+			if ( isset( $record->wire_proof ) ) { file_put_contents( $this->root . '/' . $phase . '.json.http.jsonl', Wstm108_ProofFixture::journal( $record->wire_proof->events ) ); }
 		}
 		file_put_contents( $this->root . '/original.json.http.jsonl', Wstm108_ProofFixture::controls() );
 	}
@@ -144,6 +191,50 @@ final class UntrustedStageProofTest extends TestCase {
 		$this->phases();
 		Wstm108_Proof::lifecycle( $this->root, $this->runner, $this->context, $this->sha256 );
 		self::assertTrue( true );
+	}
+
+	public static function invalid_retirement_binding(): array {
+		return array_map( static fn( $kind ) => array( $kind ), array(
+			'prepared-missing', 'prepared-extra', 'prepared-generation', 'prepared-count', 'prepared-substitution',
+			'process-missing', 'process-extra', 'process-reordered', 'process-exit', 'process-partial',
+			'process-stderr', 'process-empty-stdout', 'process-private-body', 'process-links', 'process-prefix-substitution',
+		) );
+	}
+
+	/** @dataProvider invalid_retirement_binding */
+	public function test_retirement_requires_exact_prepared_binding_and_complete_safe_process_prefix( string $kind ): void {
+		$this->phases();
+		$path = $this->root . '/retire.json';
+		$record = json_decode( file_get_contents( $path ), false, 512, JSON_THROW_ON_ERROR );
+		switch ( $kind ) {
+			case 'prepared-missing': unset( $record->prepared ); break;
+			case 'prepared-extra': $record->prepared->body = 'must remain private'; break;
+			case 'prepared-generation': $record->prepared->generation = 'not a generation'; break;
+			case 'prepared-count': $record->prepared->target_count = '20'; break;
+			case 'prepared-substitution': $record->prepared->state_sha256 = str_repeat( '0', 64 ); break;
+			case 'process-missing': unset( $record->process_verdicts ); break;
+			case 'process-extra': $record->process_verdicts->body = 'must remain private'; break;
+			case 'process-reordered': $record->process_verdicts->processes = array_reverse( $record->process_verdicts->processes ); break;
+			case 'process-exit': $record->process_verdicts->processes[0]->witness->child_exit = 73; break;
+			case 'process-partial': $record->process_verdicts->processes[0]->witness->capture_complete = false; break;
+			case 'process-stderr':
+				$record->process_verdicts->processes[0]->witness->stderr->length = 1;
+				$record->process_verdicts->processes[0]->witness->stderr->sha256 = hash( 'sha256', 'x' );
+				break;
+			case 'process-empty-stdout': $record->process_verdicts->processes[0]->witness->stdout->length = 0; break;
+			case 'process-private-body': $record->process_verdicts->processes[0]->witness->stdout->body = 'must remain private'; break;
+			case 'process-links': $record->process_verdicts->processes[0]->witness->stdout->identity->nlink = 2; break;
+			case 'process-prefix-substitution': $record->process_verdicts->processes[0]->witness->stdout->sha256 = str_repeat( '0', 64 ); break;
+		}
+		$bytes = json_encode( $record, JSON_THROW_ON_ERROR );
+		file_put_contents( $path, $bytes );
+		try {
+			Wstm108_Proof::lifecycle( $this->root, $this->runner, $this->context, $this->sha256 );
+			self::fail( 'Invalid preparation/process binding must refuse retirement certification.' );
+		} catch ( RuntimeException $error ) {
+			self::assertSame( $bytes, file_get_contents( $path ) );
+			self::assertFileExists( $this->root . '/finalize.json' );
+		}
 	}
 
 	public static function host_invocations(): array {
@@ -252,19 +343,28 @@ final class UntrustedStageProofTest extends TestCase {
 			case 'changed-config': $p->state->config_sha256 = str_repeat( '0', 64 ); break;
 			case 'changed-mode': $p->state->config_identity->mode = 0100666; break;
 			case 'changed-mu': $p->state->mu_identity->uid = 42; break;
-			case 'changed-runtime': $p->state->restored_attestation->runtime->fixture = 'unexpected'; break;
-			case 'changed-provider': $p->providers->yoast->version = 'foreign'; break;
-			case 'wrong-enabled': $this->runner->actual_runtime->fixture = 'wrong'; break;
-			case 'partial-retirement': unset( $p->retired->resource_journal ); break;
+			case 'changed-runtime': $p->state->restored_attestation->runtime->sha256 = str_repeat( '0', 64 ); break;
+			case 'changed-provider': $p->providers->yoast->version_sha256 = str_repeat( '0', 64 ); break;
+			case 'wrong-enabled': $this->runner->actual_runtime->sha256 = str_repeat( '0', 64 ); break;
+			case 'partial-retirement':
+				$retired = Wstm108_ProofFixture::phase( 'retire', $this->context, $this->sha256 );
+				unset( $retired->retired->resource_journal );
+				file_put_contents( $this->root . '/retire.json', json_encode( $retired, JSON_THROW_ON_ERROR ) );
+				break;
 			case 'missing-controls': array_pop( $controls ); break;
 			case 'duplicate-control': $controls[] = $controls[0]; break;
-			case 'wrong-http': $controls[1]->status = 200; break;
-			case 'wrong-cli': $controls[0]->status = 1; break;
-			case 'wrong-body': $controls[1]->body = 'not exact'; break;
+			case 'wrong-http': $controls[2]->status = $controls[3]->status = 200; break;
+			case 'wrong-cli': $controls[0]->status = $controls[1]->status = 1; break;
+			case 'wrong-body':
+				foreach ( array( 2, 3 ) as $index ) {
+					$controls[ $index ]->body_sha256 = hash( 'sha256', 'not exact' );
+					$controls[ $index ]->body_length = strlen( 'not exact' );
+				}
+				break;
 			case 'wrong-raw-body': $controls[1]->body_base64 = base64_encode( 'different bytes' ); break;
-			case 'missing-raw-control': unset( $controls[0]->body_base64 ); break;
-			case 'missing-stderr': unset( $controls[0]->stderr ); break;
-			case 'foreign-file': $controls[0]->file = 'foreign.php'; break;
+			case 'missing-raw-control': unset( $controls[0]->body_sha256 ); break;
+			case 'missing-stderr': unset( $p->process_verdicts->processes[0]->witness->stderr ); break;
+			case 'foreign-file': $controls[0]->origin->file = 'foreign.php'; break;
 			case 'nonobject-control': $controls[] = array(); break;
 		}
 		file_put_contents( $path, json_encode( $p, JSON_THROW_ON_ERROR ) );
@@ -278,10 +378,14 @@ final class UntrustedStageProofTest extends TestCase {
 	}
 
 	/** @dataProvider journal_mutations */
-	public function test_original_typed_wire_catalogs_and_full_raw_journal_are_required( string $kind ): void {
+	public function test_original_typed_catalog_witnesses_and_complete_bound_journal_are_required( string $kind ): void {
 		$journal = Wstm108_ProofFixture::runner_journal( $this->runner );
 		$entries = array_map( static fn( $line ) => json_decode( $line, false, 512, JSON_THROW_ON_ERROR ), explode( "\n", rtrim( $journal, "\n" ) ) );
-		if ( 'missing-catalog' === $kind ) { array_pop( $entries ); }
+		if ( 'missing-catalog' === $kind ) {
+			$entries = array_slice( $entries, 2 );
+			$this->runner->wire_proof->events = array_slice( $this->runner->wire_proof->events, 1 );
+			$this->runner->wire_proof->events_sha256 = hash( 'sha256', json_encode( $this->runner->wire_proof->events, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION ) );
+		}
 		if ( 'duplicate-catalog' === $kind ) { $entries[] = $entries[0]; }
 		if ( 'foreign-catalog' === $kind ) { $entries[0]->boundary = 'foreign'; }
 		if ( 'wrong-status' === $kind ) { $entries[0]->status = 500; }

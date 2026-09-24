@@ -14,8 +14,9 @@ final class UntrustedCompactDeleteTest extends TestCase {
 
 	public function test_exact_five_case_calibration_preserves_the_other_565_typed_cases_and_historical_goldens(): void {
 		$ledger = Wstm108_Compact_Delete_Calibration::ledger();
-		$current = self::manifest();
-		$before = serialize( $current );
+		$live = self::manifest();
+		$before = serialize( $live );
+		$current = Wstm108_Manifest_Projection::restore_pre_hygiene_manifest( $live );
 		self::assertSame( $ledger->after_manifest_sha256, Wstm108_Manifest_Projection::fingerprint( $current ) );
 		$historical = Wstm108_Compact_Delete_Calibration::restore_historical_cases( $current, $ledger );
 		self::assertSame( $ledger->before_manifest_sha256, Wstm108_Manifest_Projection::fingerprint( $historical ) );
@@ -38,8 +39,8 @@ final class UntrustedCompactDeleteTest extends TestCase {
 			self::assertIsInt( $entry->observed_response->data->id );
 			self::assertSame( array( 'id', 'status' ), array_keys( get_object_vars( $entry->observed_response->data ) ) );
 		}
-		self::assertSame( Wstm108_Manifest_Projection::BASELINE_SHA256, Wstm108_Manifest_Projection::fingerprint( Wstm108_Manifest_Projection::project( $current ) ) );
-		self::assertSame( $before, serialize( $current ) );
+		self::assertSame( Wstm108_Manifest_Projection::BASELINE_SHA256, Wstm108_Manifest_Projection::fingerprint( Wstm108_Manifest_Projection::project( $live ) ) );
+		self::assertSame( $before, serialize( $live ) );
 	}
 
 	public static function case_mutations(): array {

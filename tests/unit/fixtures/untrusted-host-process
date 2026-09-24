@@ -1,0 +1,43 @@
+#!/bin/bash
+set -uo pipefail
+: "${WSTM108_MOCK_PHP:?Explicit native PHP required}"
+: "${WSTM108_MOCK_BASH:?Explicit native Bash required}"
+[[ "${WSTM108_MOCK_ONLY:-}" == 1 ]] || exit 96
+fault="${WSTM108_RELEASE_FAULT:-}"
+if [[ "${0##*/}" == bash ]]; then
+	if [[ " $* " == *" wstm108-clear "* ]]; then
+		case "$fault" in
+			clear-echo) exec "$WSTM108_MOCK_BASH" "$@" > /dev/full ;;
+			clear-exit) "$WSTM108_MOCK_BASH" "$@"; status=$?; [[ "$status" == 0 ]] || exit "$status"; exit 73 ;;
+			clear-truncated)
+				"$WSTM108_MOCK_BASH" "$@" > "$WSTM108_MOCK_LIVE/clear-full.private" || exit $?
+				head -c 16 "$WSTM108_MOCK_LIVE/clear-full.private"
+				exit $?
+				;;
+		esac
+	fi
+	exec "$WSTM108_MOCK_BASH" "$@"
+fi
+[[ "${0##*/}" == php ]] || exit 96
+case "${1:-}" in
+	*/untrusted-*.php) ;;
+	*) exec "${WSTM108_MOCK_MATRIX_PHP:?Explicit matrix PHP required}" "$@" ;;
+esac
+if [[ "${1:-}" == */untrusted-authority.php ]]; then
+	mode="${2:-}"
+	action="${4:-}"
+	if [[ "$mode" == run && "$action" == authorize-release && "$fault" == precommit-controller ]]; then exit 74; fi
+	if [[ ( "$mode" == run && "$action" == companion && "$fault" == companion-partial ) ||
+		( "$mode" == run && "$action" == authorize-release && "$fault" == authorization-collision ) ||
+		( "$mode" == commit && ( "$fault" == precommit-evidence || "$fault" == companion-replacement ) ) ]]; then
+		"$WSTM108_MOCK_PHP" "$WSTM108_MOCK_CHECKOUT/tests/unit/fixtures/untrusted-release-fault.php" "$fault" || exit $?
+	fi
+	if [[ "$mode" == commit && "$fault" == postcommit-ack ]]; then
+		"$WSTM108_MOCK_PHP" "$@"; status=$?
+		[[ "$status" == 0 ]] || exit "$status"
+		# The real terminal operation already committed. Inject only the lost/
+		# failed acknowledgment, never pretend a guard can now be retained.
+		exit 75
+	fi
+fi
+exec "$WSTM108_MOCK_PHP" "$@"

@@ -57,8 +57,9 @@ $harness = Wstm108_Provenance::harness( $root );
 $require_committed( $harness );
 $host_files = array();
 foreach ( array( 'scripts/e2e-test.sh', 'scripts/untrusted-stage.sh', 'scripts/untrusted-provenance.php',
-	'scripts/untrusted-cleanup-proof.php', 'scripts/destructive-retention.sh', 'scripts/qa-compose.sh',
-	'scripts/release-lib.php', 'scripts/release-qa.sh', '.github/workflows/e2e-qa.yml',
+	'scripts/untrusted-cleanup-proof.php', 'scripts/untrusted-authority.php', 'scripts/untrusted-release.php', 'scripts/destructive-retention.sh', 'scripts/qa-compose.sh',
+	'scripts/untrusted-host-topology.php', 'scripts/untrusted-host-bootstrap.sh', 'scripts/untrusted-host-controller.php', 'scripts/untrusted-export.php',
+	'scripts/release-lib.php', 'scripts/release-qa.sh', '.github/workflows/e2e-qa.yml', '.github/workflows/unit-tests.yml',
 	'.github/workflows/release-package-qa.yml', '.github/workflows/compatibility-qa.yml', '.github/workflows/release.yml' ) as $name ) {
 	$host_files[ $name ] = Wstm108_Files::file( $root . '/' . $name )['sha256'];
 }

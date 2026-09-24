@@ -339,6 +339,8 @@ apply. Markers never restore omitted/redacted fields.
 | Standalone `delete-post-meta` data record | `meta_key` |
 | Comment | `author`, `author_email`, `author_url`, `content` |
 | Media | `title`, `caption`, `alt_text`, `url`, `filename` |
+| Orphaned media / posts without a featured image | `title`, `url` on each `data.items` record |
+| Stuck scheduled posts | `title`, `url`, `author_name` on each `data.items` record |
 | User lookup | `display_name`, `nicename`, `url`, authorized `login` and `email` |
 | Administrator account audit | `login`, `email`, `last_login` |
 | Application-password audit | `user_login`, `app_name` |
@@ -400,7 +402,18 @@ keys without reintroducing values or marker names. The
 requires explicit disposable-runtime opt-in; examples are not runtime proof.
 Its serial source/package stage uses exclusive MU loaders rather than config
 edits and retains source-bound catalog, typed-wire and cleanup evidence.
-Missing or incomplete restoration proof retains the disposable runtime.
+Original wire/process bytes stay private; public reports contain validated
+catalog/hint projections and hash/length/verdict witnesses. Unexpected failed
+responses retain evidence even when resource cleanup succeeds. The proof
+requires an explicitly independent native POSIX host authority root and
+validated prepare/retire outcomes; native-Windows positive authority remains
+blocked. Missing or incomplete restoration proof retains the disposable runtime.
+An independently bound companion guard covers the unchanged primary guard's
+unlink/output interval. Its final unlink is the irreversible release commit,
+after all required checks and local receipt writes. The public release receipt
+records **precommit authorization**, not committed release or successful QA.
+A later failed/lost acknowledgment remains nonzero/unknown; it must not be
+reported as a retained guard or a green runtime run.
 
 ## Security Best Practices
 

@@ -9,6 +9,73 @@ require_once dirname( __DIR__ ) . '/e2e/untrusted-content-resources.php';
 final class UntrustedResourcesTest extends TestCase {
 	private string $directory;
 
+	public static function private_list_shapes(): array {
+		$cases = array();
+		foreach ( array( 'intents', 'deleted_files' ) as $field ) {
+			foreach ( array( 'empty', 'sequential', 'sparse', 'reordered', 'named', 'mixed' ) as $shape ) {
+				$cases[ $field . '-' . $shape ] = array( $field, $shape );
+			}
+		}
+		return $cases;
+	}
+
+	/** @dataProvider private_list_shapes */
+	public function test_private_list_shape_validation_preserves_original_journal_and_nodes( string $field, string $shape ): void {
+		$root = $this->directory . DIRECTORY_SEPARATOR . 'uploads';
+		self::assertTrue( mkdir( $root, 0755 ) );
+		$path = $this->directory . DIRECTORY_SEPARATOR . 'resources.json';
+		$binding = $this->proof_binding();
+		$run = 'wstm108-0123456789abcdef';
+		$resources = new Wstm108_Resources( $path, $binding, $run );
+		$files = array();
+		$items = array(
+			array( 'kind' => 'user', 'details' => array( 'role' => 'administrator' ), 'resolved' => false ),
+			array( 'kind' => 'user', 'details' => array( 'role' => 'subscriber' ), 'resolved' => false ),
+		);
+		if ( 'deleted_files' === $field ) {
+			$upload = $resources->create_upload_directory( $root );
+			$items = array();
+			foreach ( array( 'one', 'two' ) as $name ) {
+				$file = $upload . DIRECTORY_SEPARATOR . $run . '-' . $name . '.txt';
+				$bytes = 'owned list-shape fixture ' . $name;
+				$resources->intent( 'file', array( 'path' => $file, 'sha256' => hash( 'sha256', $bytes ) ) );
+				$files[ $file ] = Wstm108_Files::create( $file, $bytes, true );
+				$resources->file( $file );
+				$items[] = $file;
+			}
+		}
+		$original = Wstm108_Files::file( $path );
+		$state = json_decode( $original['bytes'], true, 512, JSON_THROW_ON_ERROR );
+		switch ( $shape ) {
+			case 'empty': $value = array(); break;
+			case 'sequential': $value = $items; break;
+			case 'sparse': $value = array( 0 => $items[0], 2 => $items[1] ); break;
+			case 'reordered': $value = array( 1 => $items[0], 0 => $items[1] ); break;
+			case 'named': $value = array( 'first' => $items[0], 'second' => $items[1] ); break;
+			case 'mixed': $value = array( 0 => $items[0], 'second' => $items[1] ); break;
+			default: self::fail( 'Unknown list shape.' );
+		}
+		$state[ $field ] = $value;
+		$before = Wstm108_Files::update( $path, $original, json_encode( $state, JSON_THROW_ON_ERROR ) );
+		$parent = Wstm108_Files::directory( $this->directory );
+		$upload_root = Wstm108_Files::directory( $root );
+		$names = scandir( $this->directory );
+		$valid = in_array( $shape, array( 'empty', 'sequential' ), true );
+		try {
+			$resumed = Wstm108_Resources::resume( $path, $binding, $before['identity'] );
+			self::assertTrue( $valid, 'Invalid keys must raise the existing RuntimeException, not be renumbered.' );
+			self::assertSame( $before['identity'], $resumed->journal_identity() );
+		} catch ( RuntimeException $error ) {
+			self::assertFalse( $valid, 'Valid contents and list shape must remain accepted: ' . $error->getMessage() );
+			self::assertSame( 'WSTM108 Resource ownership or completeness check failed; retain private evidence.', $error->getMessage() );
+		}
+		self::assertSame( $before, Wstm108_Files::file( $path ) );
+		self::assertSame( $parent, Wstm108_Files::directory( $this->directory ) );
+		self::assertSame( $upload_root, Wstm108_Files::directory( $root ) );
+		self::assertSame( $names, scandir( $this->directory ) );
+		foreach ( $files as $file => $snapshot ) { self::assertSame( $snapshot, Wstm108_Files::file( $file ) ); }
+	}
+
 	protected function setUp(): void {
 		$this->directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'wstm108-resources-' . bin2hex( random_bytes( 8 ) );
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
@@ -58,6 +125,15 @@ final class UntrustedResourcesTest extends TestCase {
 		return $result;
 	}
 
+	private function assert_no_cleanup_mutations( array $result ): void {
+		foreach ( array( 'closed_clients', 'session_delete_users', 'deleted_passwords', 'deleted_comments', 'deleted_posts', 'deleted_users' ) as $counter ) {
+			self::assertSame( array(), $result[ $counter ], $counter );
+		}
+		foreach ( array( 'database_unchanged', 'content_unchanged', 'file_unchanged', 'upload_unchanged' ) as $snapshot ) {
+			self::assertTrue( $result[ $snapshot ], $snapshot );
+		}
+	}
+
 	public static function successful_cases(): array {
 		return array_map( static fn( $mode ) => array( $mode ), array(
 			'normal', 'resume', 'resume-recording', 'lost-post', 'lost-comment', 'lost-session', 'lost-password',
@@ -66,6 +142,7 @@ final class UntrustedResourcesTest extends TestCase {
 			'payload-password-registration-actor', 'payload-password-absent',
 			'encoded-attachment', 'lost-encoded-attachment', 'resume-encoded-attachment',
 			'repeated-mutations',
+			'reader-resume-created', 'private-wire-siblings',
 		) );
 	}
 
@@ -88,6 +165,14 @@ final class UntrustedResourcesTest extends TestCase {
 		self::assertCount( 35, $result['proof']['cleanup'] );
 		self::assertTrue( $result['password_names_preserved'] );
 		self::assertTrue( $result['attachment_title_preserved'] );
+		self::assertFalse( $result['reader_capability_before'] );
+		self::assertTrue( $result['reader_capability_after'] );
+		self::assertTrue( $result['reader_identity_durable'] );
+		self::assertTrue( $result['reader_before_grant_rejected'] );
+		if ( 'private-wire-siblings' === $mode ) {
+			self::assertSame( 2, $result['wire_count'] );
+			self::assertTrue( $result['wire_unchanged'] );
+		}
 		if ( 'repeated-mutations' === $mode ) { self::assertSame( 5, $result['mutation_intents'] ); }
 		if ( 'payload-password-absent' === $mode ) { self::assertNotContains( 'PRIVATE-UUID-1', $result['deleted_passwords'] ); }
 		if ( in_array( $mode, array( 'payload-password-registration-name', 'payload-password-registration-uuid', 'payload-password-registration-actor' ), true ) ) {
@@ -119,7 +204,7 @@ final class UntrustedResourcesTest extends TestCase {
 		self::assertTrue( $result['directory_exists'] );
 		self::assertSame( array(), $result['deleted_users'] );
 		if ( ! in_array( $mode, array( 'attachment-veto', 'post-veto', 'comment-veto', 'commentmeta', 'commentmeta-hidden', 'postmeta', 'postmeta-hidden', 'cron', 'custom-cron', 'file-veto' ), true ) ) {
-			self::assertSame( array(), $result['deleted_posts'] );
+			$this->assert_no_cleanup_mutations( $result );
 		}
 	}
 
@@ -156,6 +241,7 @@ final class UntrustedResourcesTest extends TestCase {
 			self::assertTrue( $result['directory_exists'] );
 		}
 		if ( str_contains( $mode, 'payload-password' ) ) {
+			$this->assert_no_cleanup_mutations( $result );
 			self::assertTrue( $result['password_names_preserved'] );
 			self::assertNotContains( 1, $result['closed_clients'] );
 			self::assertNotContains( 1, $result['session_delete_users'] );
@@ -164,6 +250,10 @@ final class UntrustedResourcesTest extends TestCase {
 			self::assertNotContains( 'AMBIGUOUS-UUID', $result['deleted_passwords'] );
 			self::assertNotContains( 'CHANGED-UUID', $result['deleted_passwords'] );
 			self::assertNotContains( 'FOREIGN-MATCH-UUID', $result['deleted_passwords'] );
+		}
+		if ( in_array( $mode, array( 'empty', 'missing-journal', 'foreign-journal', 'malformed-session', 'unknown-session',
+			'unknown-password', 'partial-session', 'lost-actor', 'foreign-lost-actor', 'unfulfilled-user' ), true ) ) {
+			$this->assert_no_cleanup_mutations( $result );
 		}
 		if ( in_array( $mode, array( 'payload-password-missing-journal', 'payload-password-unbound-journal', 'payload-password-partial-intent', 'payload-password-foreign-source' ), true ) ) {
 			foreach ( array( 'closed_clients', 'session_delete_users', 'deleted_passwords', 'deleted_users', 'deleted_posts' ) as $operations ) {
@@ -185,6 +275,12 @@ final class UntrustedResourcesTest extends TestCase {
 		self::assertFalse( $result['proof']['cleanup_complete'] );
 		self::assertSame( 'password:administrator', $result['proof']['first_error'] );
 		self::assertSame( array(), $result['deleted_users'] );
+		self::assertSame( array(), $result['deleted_posts'] );
+		self::assertSame( array(), $result['deleted_comments'] );
+		self::assertTrue( $result['content_unchanged'] );
+		self::assertTrue( $result['file_unchanged'] );
+		self::assertTrue( $result['upload_unchanged'] );
+		self::assertFalse( $result['database_unchanged'] );
 		foreach ( array( 1, 2, 3 ) as $id ) {
 			self::assertContains( $id, $result['users'] );
 			self::assertContains( 'PRIVATE-UUID-' . $id, $result['deleted_passwords'] );
@@ -244,7 +340,96 @@ final class UntrustedResourcesTest extends TestCase {
 		self::assertSame( 'HTTP:gateway:administrator', $result['proof']['first_error'] );
 		self::assertTrue( $result['proof']['cleanup']['session:gateway:administrator'] );
 		self::assertIsString( $result['proof']['cleanup']['HTTP:gateway:administrator'] );
-		self::assertIsString( $result['proof']['cleanup']['references'] );
+		self::assertTrue( $result['proof']['cleanup']['references'] );
+		self::assertIsString( $result['proof']['cleanup']['content-absence'] );
+		self::assertTrue( $result['content_unchanged'] );
+		self::assertTrue( $result['file_unchanged'] );
+		self::assertFalse( $result['database_unchanged'] );
+	}
+
+	public static function reader_setup_failures(): array {
+		return array_map( static fn( $mode ) => array( $mode ), array(
+			'reader-grant-failed', 'reader-unsealed', 'reader-capability-lost', 'reader-ready-marker-missing',
+		) );
+	}
+
+	/** @dataProvider reader_setup_failures */
+	public function test_incomplete_reader_setup_is_durable_but_cannot_authorize_any_cleanup( string $mode ): void {
+		$result = $this->run_fixture( $mode );
+		self::assertFalse( $result['proof']['cleanup_complete'] );
+		self::assertFalse( $result['reader_capability_before'] );
+		self::assertTrue( $result['reader_identity_durable'] );
+		self::assertTrue( $result['reader_before_grant_rejected'] );
+		self::assertSame( 3, $result['recorded_users']['reader'] );
+		self::assertTrue( $result['journal_after_retire'] );
+		if ( 'reader-grant-failed' === $mode ) {
+			self::assertTrue( $result['reader_seal_rejected'] );
+			self::assertFalse( $result['reader_capability_after'] );
+		}
+		if ( 'reader-capability-lost' !== $mode ) { self::assertArrayNotHasKey( 'reader', $result['ready_users'] ); }
+		$this->assert_no_cleanup_mutations( $result );
+	}
+
+	public function test_resource_cleanup_does_not_retire_evidence_when_caller_withholds_wire_verdict(): void {
+		$result = $this->run_fixture( 'semantic-failed-retain' );
+		self::assertTrue( $result['proof']['cleanup_complete'] );
+		self::assertTrue( $result['proof_persisted'] );
+		self::assertTrue( $result['journal_after_cleanup'] );
+		self::assertTrue( $result['journal_after_retire'] );
+		self::assertTrue( $result['wire_unchanged'] );
+		self::assertSame( 2, $result['wire_count'] );
+		self::assertSame( array( 99 ), $result['users'] );
+		self::assertFalse( $result['file_exists'] );
+	}
+
+	public static function cleanup_races(): array {
+		return array_map( static fn( $mode ) => array( $mode ), array(
+			'race-password-after-close', 'race-session-after-close', 'race-file-after-close',
+			'race-post-after-comment', 'race-file-after-revision', 'race-user-after-actor',
+		) );
+	}
+
+	/** @dataProvider cleanup_races */
+	public function test_races_stop_subsequent_mutations_and_report_actual_partial_cleanup( string $mode ): void {
+		$result = $this->run_fixture( $mode );
+		self::assertTrue( $result['race_fired'] );
+		self::assertFalse( $result['proof']['cleanup_complete'] );
+		self::assertFalse( $result['database_unchanged'] );
+		self::assertTrue( $result['journal_after_retire'] );
+		self::assertTrue( $result['proof']['cleanup']['HTTP:gateway:administrator'] );
+		if ( str_ends_with( $mode, '-after-close' ) ) {
+			self::assertSame( array( 1 ), $result['closed_clients'] );
+			self::assertSame( array(), $result['session_delete_users'] );
+			self::assertSame( array(), $result['deleted_passwords'] );
+			self::assertSame( array(), $result['deleted_comments'] );
+			self::assertSame( array(), $result['deleted_posts'] );
+			self::assertTrue( $result['content_unchanged'] );
+			self::assertIsString( $result['proof']['cleanup']['session:gateway:administrator'] );
+		} elseif ( 'race-post-after-comment' === $mode ) {
+			self::assertSame( array( 20 ), $result['deleted_comments'] );
+			self::assertSame( array(), $result['deleted_posts'] );
+			self::assertTrue( $result['proof']['cleanup']['comment:1'] );
+			self::assertFalse( $result['content_unchanged'] );
+		} elseif ( 'race-file-after-revision' === $mode ) {
+			self::assertSame( array( 13 ), $result['deleted_posts'] );
+			self::assertTrue( $result['proof']['cleanup']['post:1'] );
+		}
+		if ( str_starts_with( $mode, 'race-file-' ) ) {
+			self::assertTrue( $result['injected_file_preserved'] );
+			self::assertFalse( $result['file_unchanged'] );
+		}
+		if ( 'race-user-after-actor' === $mode ) {
+			self::assertSame( array( 1 ), $result['deleted_users'] );
+			self::assertTrue( $result['proof']['cleanup']['actor:administrator'] );
+			self::assertIsString( $result['proof']['cleanup']['actor:subscriber'] );
+			self::assertContains( 2, $result['users'] );
+			self::assertContains( 3, $result['users'] );
+			self::assertFalse( $result['file_exists'] );
+		} else {
+			self::assertSame( array(), $result['deleted_users'] );
+			self::assertTrue( $result['file_exists'] );
+			self::assertTrue( $result['directory_exists'] );
+		}
 	}
 
 	public static function filesystem_controls(): array {
@@ -375,11 +560,16 @@ final class UntrustedResourcesTest extends TestCase {
 		self::assertFalse( $recovered['rejected'] );
 		self::assertNotSame( $prepared['pid'], $recovered['pid'] );
 		self::assertFalse( $recovered['proof']['cleanup_complete'] );
-		self::assertSame( 'HTTP:gateway:administrator', $recovered['proof']['first_error'] );
-		self::assertSame( 0, $recovered['sessions_remaining'] );
-		self::assertSame( 0, $recovered['passwords_remaining'] );
-		self::assertSame( array( 99 ), $recovered['users'] );
-		self::assertSame( array( 99 ), $recovered['posts'] );
+		self::assertSame( 'clients', $recovered['proof']['first_error'] );
+		self::assertSame( 3, $recovered['sessions_remaining'] );
+		self::assertSame( 3, $recovered['passwords_remaining'] );
+		self::assertSame( array( 99, 1, 2, 3 ), $recovered['users'] );
+		self::assertSame( array( 99, 10, 11, 12, 13 ), $recovered['posts'] );
+		self::assertTrue( $recovered['database_unchanged'] );
+		self::assertTrue( $recovered['upload_unchanged'] );
+		foreach ( array( 'closed_clients', 'session_delete_users', 'deleted_passwords', 'deleted_comments', 'deleted_posts', 'deleted_users' ) as $counter ) {
+			self::assertSame( array(), $recovered[ $counter ] );
+		}
 		self::assertTrue( $recovered['journal_exists'] );
 		self::assertTrue( $recovered['persisted_matches'] );
 		$inspected = $this->run_raw_fixture( 'inspect' );
@@ -388,7 +578,7 @@ final class UntrustedResourcesTest extends TestCase {
 		self::assertTrue( $inspected['journal_exists'] );
 	}
 
-	public function test_fresh_process_after_cleanup_interruption_only_recovers_owned_credentials(): void {
+	public function test_fresh_process_after_cleanup_interruption_retains_resources_without_complete_preflight(): void {
 		$prepared = $this->run_raw_fixture( 'prepare-interrupted' );
 		self::assertTrue( $prepared['prepared'] );
 		$recovered = $this->run_raw_fixture( 'recover' );
@@ -396,8 +586,13 @@ final class UntrustedResourcesTest extends TestCase {
 		self::assertNotSame( $prepared['pid'], $recovered['pid'] );
 		self::assertFalse( $recovered['proof']['cleanup_complete'] );
 		self::assertSame( 'recovery-resumed', $recovered['proof']['first_error'] );
-		self::assertSame( 0, $recovered['sessions_remaining'] );
-		self::assertSame( 0, $recovered['passwords_remaining'] );
+		self::assertSame( 3, $recovered['sessions_remaining'] );
+		self::assertSame( 3, $recovered['passwords_remaining'] );
+		self::assertTrue( $recovered['database_unchanged'] );
+		self::assertTrue( $recovered['upload_unchanged'] );
+		foreach ( array( 'closed_clients', 'session_delete_users', 'deleted_passwords', 'deleted_comments' ) as $counter ) {
+			self::assertSame( array(), $recovered[ $counter ] );
+		}
 		self::assertSame( array(), $recovered['deleted_users'] );
 		self::assertSame( array(), $recovered['deleted_posts'] );
 		self::assertTrue( $recovered['file_exists'] );

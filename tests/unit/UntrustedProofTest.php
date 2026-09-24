@@ -12,6 +12,7 @@ use Wstm108_Evidence;
 require_once dirname( __DIR__ ) . '/e2e/error-contract-assertions.php';
 require_once dirname( __DIR__ ) . '/e2e/untrusted-content-evidence.php';
 require_once dirname( __DIR__ ) . '/e2e/untrusted-content-wire.php';
+require_once __DIR__ . '/fixtures/untrusted-stage-envelope.php';
 
 $wstm108_old_optin = getenv( 'WSTM108_ALLOW_DISPOSABLE' );
 putenv( 'WSTM108_ALLOW_DISPOSABLE=1' );
@@ -47,6 +48,10 @@ function wp_remote_retrieve_body( $response ) {
 	return $response['body'];
 }
 
+function wp_remote_retrieve_headers( $response ) {
+	return $response['headers'];
+}
+
 function wp_get_ability( $name ) {
 	return new class() {
 		public function get_description(): string {
@@ -57,6 +62,7 @@ function wp_get_ability( $name ) {
 
 final class UntrustedProofTest extends TestCase {
 	private array $files = array();
+	private array $private_directories = array();
 
 	protected function setUp(): void {
 		$GLOBALS['wstm108_requests'] = array();
@@ -64,6 +70,10 @@ final class UntrustedProofTest extends TestCase {
 	}
 
 	protected function tearDown(): void {
+		foreach ( $this->private_directories as $directory ) {
+			foreach ( glob( $directory . '/*' ) as $file ) { unlink( $file ); }
+			rmdir( $directory );
+		}
 		foreach ( $this->files as $file ) {
 			if ( is_file( $file ) ) {
 				unlink( $file );
@@ -78,6 +88,18 @@ final class UntrustedProofTest extends TestCase {
 		$this->files[] = $path;
 		$this->files[] = $path . '.http.jsonl';
 		return $path;
+	}
+
+	private function evidence( string $path ): Wstm108_Evidence {
+		list( $evidence, $directory ) = \Wstm108_ProofFixture::evidence( $path );
+		$this->private_directories[ $path ] = $directory;
+		return $evidence;
+	}
+
+	private function original_event( string $path, int $id ): array {
+		$bytes = file_get_contents( $this->private_directories[ $path ] . '/' . sprintf( 'wire-%06d.bin', $id ) );
+		self::assertStringStartsWith( "WSTM108-WIRE-1\n", $bytes );
+		return unserialize( substr( $bytes, strlen( "WSTM108-WIRE-1\n" ) ), array( 'allowed_classes' => array( \stdClass::class ) ) );
 	}
 
 	/**
@@ -170,6 +192,40 @@ final class UntrustedProofTest extends TestCase {
 		return array( 'summary' => array( true, false ), 'journal' => array( false, true ), 'both' => array( true, true ) );
 	}
 
+	public function test_readonly_evidence_preflight_reserves_nothing(): void {
+		$path = $this->path();
+		Wstm108_Evidence::assert_available( $path );
+		self::assertFileDoesNotExist( $path );
+		self::assertFileDoesNotExist( $path . '.http.jsonl' );
+	}
+
+	/** @dataProvider collisions */
+	public function test_preflight_and_constructor_reject_a_later_collision_without_adopting_it( bool $summary_exists, bool $journal_exists ): void {
+		$path = $this->path();
+		Wstm108_Evidence::assert_available( $path );
+		$originals = array();
+		foreach ( array( $path => $summary_exists, $path . '.http.jsonl' => $journal_exists ) as $file => $exists ) {
+			if ( $exists ) {
+				file_put_contents( $file, "later foreign bytes\0\xff" );
+				$originals[ $file ] = \Wstm108_Files::file( $file );
+			}
+		}
+		foreach ( array( 'readonly', 'constructor' ) as $operation ) {
+			try {
+				if ( 'readonly' === $operation ) { Wstm108_Evidence::assert_available( $path ); }
+				else { new Wstm108_Evidence( $path ); }
+				self::fail( 'A preflight is not a reservation or permission to overwrite.' );
+			} catch ( RuntimeException $error ) {
+				self::assertSame( 'WSTM108 Evidence path already exists; refusing to overwrite: '
+					. ( $summary_exists ? $path : $path . '.http.jsonl' ), $error->getMessage() );
+			}
+			foreach ( array( $path, $path . '.http.jsonl' ) as $file ) {
+				if ( isset( $originals[ $file ] ) ) { self::assertSame( $originals[ $file ], \Wstm108_Files::file( $file ) ); }
+				else { self::assertFileDoesNotExist( $file ); }
+			}
+		}
+	}
+
 	/** @dataProvider collisions */
 	public function test_existing_artifacts_are_untouched_before_wordpress_or_credentials( bool $summary_exists, bool $journal_exists ): void {
 		$path = $this->path();
@@ -202,7 +258,7 @@ final class UntrustedProofTest extends TestCase {
 
 	public function test_reservation_prevents_a_second_owner_and_retains_both_evidence_files(): void {
 		$path = $this->path();
-		$evidence = new Wstm108_Evidence( $path );
+		$evidence = $this->evidence( $path );
 		self::assertFileExists( $path );
 		self::assertFileExists( $path . '.http.jsonl' );
 		$evidence->save( array( 'failed' => 1 ) );
@@ -240,33 +296,37 @@ final class UntrustedProofTest extends TestCase {
 
 	public function test_malformed_utf8_response_bytes_survive_without_base64_credential_leakage(): void {
 		$path = $this->path();
-		$evidence = new Wstm108_Evidence( $path );
+		$evidence = $this->evidence( $path );
 		$evidence->secret( 'private-password' );
 		$body = "\xff\x00invalid private-password body";
 		$evidence->append( array( 'status' => 500, 'body' => $body ) );
 		$entry = json_decode( file_get_contents( $path . '.http.jsonl' ), true, 512, JSON_THROW_ON_ERROR );
-		self::assertSame( "\xff\x00invalid [REDACTED] body", base64_decode( $entry['body_base64'], true ) );
+		self::assertSame( $body, $this->original_event( $path, $entry['id'] )['body'] );
+		self::assertSame( hash( 'sha256', $body ), $entry['body_sha256'] );
+		self::assertSame( strlen( $body ), $entry['body_length'] );
+		self::assertArrayNotHasKey( 'body_base64', $entry );
 		self::assertStringNotContainsString( 'private-password', file_get_contents( $path . '.http.jsonl' ) );
 	}
 
-	public function test_retained_summary_and_journal_keep_integral_floats_distinct_from_integers(): void {
+	public function test_private_summary_and_journal_keep_integral_floats_distinct_from_integers(): void {
 		$path = $this->path();
-		$evidence = new Wstm108_Evidence( $path );
+		$evidence = $this->evidence( $path );
 		$value = array( 'integer' => 1, 'float' => 1.0, 'object' => (object) array(), 'list' => array() );
 		$evidence->save( $value );
 		$evidence->append( $value );
-		foreach ( array( $path, $path . '.http.jsonl' ) as $file ) {
-			$actual = json_decode( file_get_contents( $file ), false, 512, JSON_THROW_ON_ERROR );
+		foreach ( array( $this->original_event( $path, 1 )['summary'], $this->original_event( $path, 2 ) ) as $record ) {
+			$actual = (object) $record;
 			self::assertSame( 1, $actual->integer );
 			self::assertSame( 1.0, $actual->float );
 			self::assertInstanceOf( \stdClass::class, $actual->object );
 			self::assertSame( array(), $actual->list );
 		}
+		self::assertSame( hash( 'sha256', serialize( $value ) ), json_decode( file_get_contents( $path ), true, 512, JSON_THROW_ON_ERROR )['private_summary_sha256'] );
 	}
 
 	public function test_session_recorder_runs_after_raw_persistence_once_per_new_token(): void {
 		$path = $this->path();
-		$evidence = new Wstm108_Evidence( $path );
+		$evidence = $this->evidence( $path );
 		$recorded = array();
 		$client = new Wstm108_Transport(
 			true, 'actor', 'secret-password', $evidence, 'admin', 'owned-client',
@@ -283,12 +343,15 @@ final class UntrustedProofTest extends TestCase {
 			$client->rpc( 'initialize', array() );
 		}
 		self::assertSame( array( array( 'private-session', 'individual:admin' ), array( 'different-session', 'individual:admin' ) ), $recorded );
-		self::assertCount( 3, file( $path . '.http.jsonl' ) );
+		self::assertCount( 6, file( $path . '.http.jsonl' ) );
+		foreach ( array( 'private-session', 'private-session', 'different-session' ) as $index => $token ) {
+			self::assertSame( $token, $this->original_event( $path, $index + 1 )['headers']['mcp-session-id'] );
+		}
 	}
 
 	public function test_thrown_session_cleanup_transport_failure_is_retained_before_propagation(): void {
 		$path = $this->path();
-		$evidence = new Wstm108_Evidence( $path );
+		$evidence = $this->evidence( $path );
 		$client = $this->initialize( $evidence );
 		try {
 			$client->close();
@@ -298,10 +361,11 @@ final class UntrustedProofTest extends TestCase {
 		}
 		$lines = file( $path . '.http.jsonl' );
 		$last = json_decode( end( $lines ), true, 512, JSON_THROW_ON_ERROR );
-		self::assertSame( 'DELETE', $last['method'] );
+		self::assertSame( 'DELETE', $last['origin']['method'] );
 		self::assertSame( 0, $last['status'] );
-		self::assertSame( '', $last['body'] );
-		self::assertSame( 'Unexpected HTTP call.', $last['transport_error'] );
+		$original = $this->original_event( $path, $last['id'] );
+		self::assertSame( '', $original['body'] );
+		self::assertSame( 'Unexpected HTTP call.', $original['transport_error'] );
 	}
 
 	public static function racing_paths(): array {
@@ -382,7 +446,7 @@ final class UntrustedProofTest extends TestCase {
 	/** @dataProvider boundaries */
 	public function test_discovered_names_and_legitimate_nested_errors_survive( bool $individual ): void {
 		$path = $this->path();
-		$evidence = new Wstm108_Evidence( $path );
+		$evidence = $this->evidence( $path );
 		$client = $this->initialize( $evidence, $individual );
 		$success = array( 'success' => true, 'data' => wstm108_nested() );
 		$wire = $individual ? $success : array( 'success' => true, 'data' => $success );
@@ -411,7 +475,7 @@ final class UntrustedProofTest extends TestCase {
 	/** @dataProvider failing_responses */
 	public function test_raw_status_and_body_are_durable_before_failure( int $status, string $body ): void {
 		$path = $this->path();
-		$evidence = new Wstm108_Evidence( $path );
+		$evidence = $this->evidence( $path );
 		$client = $this->initialize( $evidence );
 		$GLOBALS['wstm108_responses'][] = $this->response( $body, $status );
 		try {
@@ -421,8 +485,11 @@ final class UntrustedProofTest extends TestCase {
 			$lines = file( $path . '.http.jsonl', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
 			$event = json_decode( end( $lines ), true, 512, JSON_THROW_ON_ERROR );
 			self::assertSame( $status, $event['status'] );
-			self::assertSame( str_replace( 'secret-password', '[REDACTED]', $body ), $event['body'] );
-			self::assertCount( 4, $lines );
+			self::assertSame( $body, $this->original_event( $path, $event['id'] )['body'] );
+			self::assertSame( hash( 'sha256', $body ), $event['body_sha256'] );
+			self::assertSame( 'committed', $event['state'] );
+			self::assertStringNotContainsString( 'secret-password', implode( "\n", $lines ) );
+			self::assertCount( 7, $lines );
 		}
 	}
 
@@ -438,11 +505,11 @@ final class UntrustedProofTest extends TestCase {
 	public function test_cleanup_keeps_original_failure_and_attempts_every_action(): void {
 		$path = $this->path();
 		$summary_path = $path;
-		$evidence = new Wstm108_Evidence( $path );
+		$evidence = $this->evidence( $path );
 		$client = $this->initialize( $evidence );
 		$GLOBALS['wstm108_responses'][] = $this->response( '<html>failed cleanup secret-password</html>', 500 );
 		$attempted = array();
-		$summary = array( 'passed' => 0, 'failed' => 1, 'cases' => array( array( 'label' => 'original', 'error' => 'Original malformed HTTP failure.' ) ), 'cleanup' => array() );
+		$summary = array( 'passed' => 0, 'failed' => 1, 'cases' => array( array( 'label' => 'original', 'passed' => false, 'error' => 'Original malformed HTTP failure.' ) ), 'cleanup' => array() );
 		$actions = array(
 			'session' => static fn() => $client->close(),
 			'credential' => static function () use ( &$attempted ): void {
@@ -457,12 +524,16 @@ final class UntrustedProofTest extends TestCase {
 		self::assertSame( array( 'credential', 'post', 'user' ), $attempted );
 		self::assertSame( 3, $summary['failed'] );
 		self::assertSame( 'Original malformed HTTP failure.', $summary['cases'][0]['error'] );
-		self::assertSame( $summary, json_decode( file_get_contents( $summary_path ), true ) );
+		self::assertSame( $summary, $this->original_event( $path, 5 )['summary'] );
+		$public = json_decode( file_get_contents( $summary_path ), true, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( 3, $public['failed'] );
+		self::assertSame( hash( 'sha256', serialize( $summary ) ), $public['private_summary_sha256'] );
 		$lines = file( $path . '.http.jsonl', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
-		$event = json_decode( end( $lines ), true );
+		$event = $this->original_event( $path, 4 );
 		self::assertSame( 'DELETE', $event['method'] );
 		self::assertSame( 500, $event['status'] );
-		self::assertSame( '<html>failed cleanup [REDACTED]</html>', $event['body'] );
+		self::assertSame( '<html>failed cleanup secret-password</html>', $event['body'] );
+		self::assertStringNotContainsString( 'secret-password', implode( "\n", $lines ) );
 	}
 }
 

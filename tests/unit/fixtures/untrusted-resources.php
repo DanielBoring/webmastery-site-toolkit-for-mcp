@@ -32,6 +32,7 @@ namespace {
 	$users = $user_meta = $passwords = $sessions = $posts = $post_meta = $comments = $comment_meta = $cron = array();
 	$deleted_users = $deleted_posts = $deleted_comments = $deleted_passwords = array();
 	$closed_clients = $session_delete_users = array();
+	$race_fired = false;
 	$queries = array();
 	$options = array( 'foreign-option' => 'unchanged', $run . 'foreign' => 'not-the-owned-namespace' );
 	$users[99] = (object) array( 'ID' => 99, 'user_login' => 'foreign', 'user_email' => 'foreign@example.test', 'roles' => array( 'administrator' ) );
@@ -57,7 +58,62 @@ namespace {
 		}
 		return false;
 	}
-	function user_can( $id, $cap ): bool { return 3 === $id && 'list_users' === $cap; }
+	function user_can( $id, $cap ): bool {
+		return true === ( $GLOBALS['user_meta'][ $id ]['fixture_capabilities'][0][ $cap ] ?? false );
+	}
+	function fixture_records_snapshot( bool $content_only = false ): string {
+		$keys = $content_only ? array( 'posts', 'post_meta', 'comments', 'comment_meta' )
+			: array( 'users', 'user_meta', 'passwords', 'sessions', 'posts', 'post_meta', 'comments', 'comment_meta', 'cron', 'options' );
+		$records = array();
+		foreach ( $keys as $key ) { $records[ $key ] = $GLOBALS[ $key ]; }
+		return serialize( $records );
+	}
+	function fixture_path_snapshot( ?string $path ): ?array {
+		if ( null === $path ) { return null; }
+		clearstatcache( true, $path );
+		$stat = @lstat( $path );
+		if ( false === $stat ) { return null; }
+		$snapshot = array( 'identity' => array_intersect_key( $stat, array_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode', 'nlink' ) ) ) );
+		if ( is_link( $path ) ) {
+			$snapshot['link'] = readlink( $path );
+		} elseif ( 0100000 === ( $stat['mode'] & 0170000 ) ) {
+			$snapshot['bytes'] = file_get_contents( $path );
+			if ( false === $snapshot['bytes'] ) { throw new RuntimeException( 'Fixture file snapshot failed.' ); }
+		}
+		return $snapshot;
+	}
+	function fixture_upload_snapshot( ?string $path ): ?array {
+		$snapshot = fixture_path_snapshot( $path );
+		if ( null !== $snapshot && 0040000 === ( $snapshot['identity']['mode'] & 0170000 ) ) {
+			$entries = scandir( $path );
+			if ( false === $entries ) { throw new RuntimeException( 'Fixture directory snapshot failed.' ); }
+			$snapshot['entries'] = array();
+			foreach ( array_diff( $entries, array( '.', '..' ) ) as $entry ) {
+				$snapshot['entries'][ $entry ] = fixture_path_snapshot( $path . DIRECTORY_SEPARATOR . $entry );
+			}
+		}
+		return $snapshot;
+	}
+	function fixture_cleanup_race( string $point, int $id ): void {
+		if ( $GLOBALS['race_fired'] ) { return; }
+		$mode = $GLOBALS['mode'];
+		if ( 'close' === $point && 1 === $id ) {
+			if ( 'race-password-after-close' === $mode ) {
+				$GLOBALS['passwords'][2][0]['name'] .= ' changed';
+			} elseif ( 'race-session-after-close' === $mode ) {
+				$GLOBALS['sessions'][2]['FOREIGN-TOKEN'] = array( 'client_params' => array( 'clientInfo' => array( 'name' => 'foreign' ) ) );
+			} elseif ( 'race-file-after-close' === $mode ) {
+				file_put_contents( $GLOBALS['file'], 'foreign-after-preflight' );
+			} else { return; }
+		} elseif ( 'comment' === $point && 20 === $id && 'race-post-after-comment' === $mode ) {
+			$GLOBALS['posts'][10]->post_author = 99;
+		} elseif ( 'post' === $point && 13 === $id && 'race-file-after-revision' === $mode ) {
+			file_put_contents( $GLOBALS['file'], 'foreign-after-preflight' );
+		} elseif ( 'user' === $point && 1 === $id && 'race-user-after-actor' === $mode ) {
+			$GLOBALS['users'][2]->user_email = 'foreign@example.test';
+		} else { return; }
+		$GLOBALS['race_fired'] = true;
+	}
 	function fixture_meta( string $table, int $id, string $key, bool $single ) {
 		if ( str_ends_with( $GLOBALS['mode'], '-hidden' ) ) {
 			$records = array( 'user_meta' => 'users', 'post_meta' => 'posts', 'comment_meta' => 'comments' )[ $table ];
@@ -190,6 +246,7 @@ namespace {
 		if ( 'comment-veto' === $GLOBALS['mode'] ) { return false; }
 		unset( $GLOBALS['comments'][ $id ] );
 		if ( ! in_array( $GLOBALS['mode'], array( 'commentmeta', 'commentmeta-hidden' ), true ) ) { unset( $GLOBALS['comment_meta'][ $id ] ); }
+		fixture_cleanup_race( 'comment', $id );
 		return true;
 	}
 	function wp_delete_post( $id, $force ) {
@@ -199,6 +256,7 @@ namespace {
 		unset( $GLOBALS['posts'][ $id ] );
 		if ( ! in_array( $GLOBALS['mode'], array( 'postmeta', 'postmeta-hidden' ), true ) ) { unset( $GLOBALS['post_meta'][ $id ] ); }
 		if ( 'cron' !== $GLOBALS['mode'] ) { unset( $GLOBALS['cron'][ $id ] ); }
+		fixture_cleanup_race( 'post', $id );
 		return $post;
 	}
 	function wp_delete_attachment( $id, $force ) {
@@ -218,6 +276,7 @@ namespace {
 		if ( 'actor-veto' === $GLOBALS['mode'] ) { return false; }
 		unset( $GLOBALS['users'][ $id ] );
 		if ( ! in_array( $GLOBALS['mode'], array( 'usermeta', 'usermeta-hidden' ), true ) ) { unset( $GLOBALS['user_meta'][ $id ] ); }
+		fixture_cleanup_race( 'user', $id );
 		return true;
 	}
 	final class WP_Application_Passwords {
@@ -249,6 +308,7 @@ namespace {
 				throw new RuntimeException( 'SECRET-TOKEN SECRET-PASSWORD ' . $this->token );
 			}
 			unset( $GLOBALS['sessions'][ $this->id ][ $this->token ] );
+			fixture_cleanup_race( 'close', $this->id );
 		}
 	}
 
@@ -334,6 +394,8 @@ namespace {
 			), JSON_THROW_ON_ERROR );
 			exit;
 		}
+		$records_before_recovery = fixture_records_snapshot();
+		$upload_before_recovery = fixture_upload_snapshot( $upload );
 		$proof = 'recover' === $mode ? $resources->cleanup( array() ) : $resources->proof();
 		if ( 'recover' === $mode ) { write_fake_database( $proof ); }
 		$persisted = json_decode( Wstm108_Files::file( $journal )['bytes'], true, 512, JSON_THROW_ON_ERROR )['proof'];
@@ -353,6 +415,10 @@ namespace {
 			'pid' => getmypid(), 'prior_pid' => $database['pid'],
 			'users' => array_keys( $users ), 'posts' => array_keys( $posts ), 'comments' => array_keys( $comments ),
 			'deleted_users' => $deleted_users, 'deleted_posts' => $deleted_posts,
+			'deleted_comments' => $deleted_comments, 'deleted_passwords' => $deleted_passwords,
+			'closed_clients' => $closed_clients, 'session_delete_users' => $session_delete_users,
+			'database_unchanged' => $records_before_recovery === fixture_records_snapshot(),
+			'upload_unchanged' => $upload_before_recovery === fixture_upload_snapshot( $upload ),
 			'sessions_remaining' => count( array_filter( array_intersect_key( $sessions, array_flip( array( 1, 2, 3 ) ) ) ) ),
 			'passwords_remaining' => count( array_filter( array_intersect_key( $passwords, array_flip( array( 1, 2, 3 ) ) ) ) ),
 			'file_exists' => null !== $file && file_exists( $file ), 'directory_exists' => null !== $upload && is_dir( $upload ),
@@ -380,6 +446,11 @@ namespace {
 	$repeated_inputs_preserved = true;
 	$post_replay_rejected = false;
 	$post_replay_unchanged = false;
+	$reader_identity_durable = false;
+	$reader_before_grant_rejected = false;
+	$reader_seal_rejected = false;
+	$reader_capability_before = null;
+	$reader_capability_after = null;
 	if ( in_array( $mode, array( 'lost-actor', 'foreign-lost-actor', 'unfulfilled-user' ), true ) ) {
 		$resources->intent( 'user', array( 'role' => 'administrator' ) );
 		if ( 'unfulfilled-user' !== $mode ) {
@@ -394,6 +465,28 @@ namespace {
 			$login = $run . '-' . $role;
 			$users[ $id ] = (object) array( 'ID' => $id, 'user_login' => $login, 'user_email' => $login . '@example.test', 'roles' => array( 'reader' === $role ? 'subscriber' : $role ) );
 			$user_meta[ $id ] = array( 'wstm108_owner' => array( $binding['owner'] ) );
+			if ( 'reader' === $role ) {
+				$reader_capability_before = user_can( $id, 'list_users' );
+				$resources->user_created( $role, $id );
+				$created = Wstm108_Files::file( $journal );
+				$created_state = json_decode( $created['bytes'], true, 512, JSON_THROW_ON_ERROR );
+				$reader_identity_durable = $id === $created_state['users']['reader'] && ! isset( $created_state['ready_users']['reader'] );
+				try {
+					$resources->intent( 'password', array( 'id' => $id, 'name' => fixture_app_name() ) );
+				} catch ( RuntimeException $error ) {
+					$reader_before_grant_rejected = $created === Wstm108_Files::file( $journal );
+				}
+				if ( 'reader-resume-created' === $mode ) { $resources = Wstm108_Resources::resume( $journal, $binding ); }
+				if ( 'reader-grant-failed' !== $mode ) {
+					$user_meta[ $id ]['fixture_capabilities'] = array( array( 'list_users' => true ) );
+				}
+				$reader_capability_after = user_can( $id, 'list_users' );
+				if ( 'reader-unsealed' === $mode ) { continue; }
+				if ( 'reader-grant-failed' === $mode ) {
+					try { $resources->user( $role, $id ); } catch ( RuntimeException $error ) { $reader_seal_rejected = true; }
+					continue;
+				}
+			}
 			$resources->user( $role, $id );
 			$name = $payload_password ? fixture_app_name() : $run . ':' . $role;
 			$resources->intent( 'password', array( 'id' => $id, 'name' => $name ) );
@@ -556,7 +649,7 @@ namespace {
 		case 'unknown-post': $posts[98] = (object) array( 'ID' => 98, 'post_type' => 'foreign_type', 'post_author' => 1, 'post_parent' => 0, 'post_name' => $run . '-looks-owned' ); break;
 		case 'unregistered-type': $posts[98] = (object) array( 'ID' => 98, 'post_type' => 'unregistered_type', 'post_author' => 1, 'post_parent' => 0, 'post_name' => $run . '-looks-owned' ); break;
 		case 'postmeta': case 'cron': $cron[10] = 123; break;
-		case 'first-error': file_put_contents( $upload . DIRECTORY_SEPARATOR . 'unknown', 'foreign' ); break;
+		case 'reader-capability-lost': $user_meta[3]['fixture_capabilities'] = array( array( 'list_users' => false ) ); break;
 		case 'mode': chmod( $file, 0400 ); break;
 		case 'root-mode': chmod( $root, 0700 ); break;
 		case 'symlink':
@@ -580,6 +673,13 @@ namespace {
 		$resources = Wstm108_Resources::resume( $journal, $binding );
 	}
 	if ( in_array( $mode, array( 'resume-recording', 'resume-payload-password', 'resume-encoded-attachment' ), true ) ) {
+		$resources = Wstm108_Resources::resume( $journal, $binding );
+	}
+	if ( 'reader-ready-marker-missing' === $mode ) {
+		$snapshot = Wstm108_Files::file( $journal );
+		$state = json_decode( $snapshot['bytes'], true, 512, JSON_THROW_ON_ERROR );
+		unset( $state['ready_users']['reader'] );
+		Wstm108_Files::update( $journal, $snapshot, json_encode( $state, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES ) );
 		$resources = Wstm108_Resources::resume( $journal, $binding );
 	}
 	$password_names_preserved = true;
@@ -620,7 +720,20 @@ namespace {
 		echo json_encode( array( 'prepared' => true, 'pid' => getmypid() ), JSON_THROW_ON_ERROR );
 		exit;
 	}
+	$wire_snapshots = array();
+	$private_parent = Wstm108_Files::directory( $directory );
+	if ( in_array( $mode, array( 'private-wire-siblings', 'semantic-failed-retain' ), true ) ) {
+		foreach ( array( 'wire-cli.json', 'wire-http.json' ) as $name ) {
+			$path = $directory . DIRECTORY_SEPARATOR . $name;
+			$wire_snapshots[ $path ] = Wstm108_Files::create( $path, '{"private":"SECRET-WIRE"}' );
+		}
+		$resources = Wstm108_Resources::resume( $journal, $binding );
+	}
 	try { $resources->retire( $resources->proof() ); } catch ( Throwable $error ) { $early = true; }
+	$records_before_cleanup = fixture_records_snapshot();
+	$content_before_cleanup = fixture_records_snapshot( true );
+	$file_before_cleanup = fixture_path_snapshot( $file );
+	$upload_before_cleanup = fixture_upload_snapshot( $upload );
 	$proof = $resources->cleanup( $clients );
 	$journal_after_cleanup = file_exists( $journal );
 	$proof_persisted = $journal_after_cleanup && ( json_decode( file_get_contents( $journal ), true )['proof'] ?? null ) === $proof;
@@ -656,7 +769,11 @@ namespace {
 			$resources = Wstm108_Resources::resume( $journal, $binding );
 			$resumed = $proof === $resources->proof();
 		}
-		$resources->retire( $proof );
+		if ( 'semantic-failed-retain' !== $mode ) { $resources->retire( $proof ); }
+	}
+	$wire_unchanged = $private_parent === Wstm108_Files::directory( $directory );
+	foreach ( $wire_snapshots as $path => $snapshot ) {
+		$wire_unchanged = $wire_unchanged && $snapshot === Wstm108_Files::file( $path );
 	}
 	$foreign_after = serialize( array( $users[99], $user_meta[99], $passwords[99], $sessions[99], $posts[99], $post_meta[99], $comments[99], $comment_meta[99] ) );
 	$private = file_exists( $journal ) ? json_decode( file_get_contents( $journal ), true ) : array();
@@ -666,11 +783,21 @@ namespace {
 		'early_rejected' => $early, 'wrong_rejected' => $wrong, 'resumed' => $resumed,
 		'foreign_intact' => $foreign === $foreign_after, 'parent_restored' => $parent_restored,
 		'users' => array_keys( $users ), 'posts' => array_keys( $posts ), 'comments' => array_keys( $comments ),
-		'deleted_users' => $deleted_users, 'deleted_posts' => $deleted_posts, 'deleted_passwords' => $deleted_passwords,
+		'deleted_users' => $deleted_users, 'deleted_posts' => $deleted_posts, 'deleted_comments' => $deleted_comments, 'deleted_passwords' => $deleted_passwords,
 		'closed_clients' => $closed_clients, 'session_delete_users' => $session_delete_users,
+		'database_unchanged' => $records_before_cleanup === fixture_records_snapshot(),
+		'content_unchanged' => $content_before_cleanup === fixture_records_snapshot( true ),
+		'file_unchanged' => $file_before_cleanup === fixture_path_snapshot( $file ),
+		'upload_unchanged' => $upload_before_cleanup === fixture_upload_snapshot( $upload ),
+		'reader_identity_durable' => $reader_identity_durable, 'reader_before_grant_rejected' => $reader_before_grant_rejected,
+		'reader_capability_before' => $reader_capability_before, 'reader_capability_after' => $reader_capability_after,
+		'reader_seal_rejected' => $reader_seal_rejected,
+		'wire_unchanged' => $wire_unchanged, 'wire_count' => count( $wire_snapshots ), 'race_fired' => $race_fired,
+		'injected_file_preserved' => null !== $file && file_exists( $file ) && 'foreign-after-preflight' === file_get_contents( $file ),
 		'file_exists' => null !== $file && file_exists( $file ), 'directory_exists' => null !== $upload && is_dir( $upload ),
 		'symlink_available' => $symlink, 'hardlink_available' => $hardlink,
 		'recorded_users' => $private['users'] ?? array(),
+		'ready_users' => $private['ready_users'] ?? array(),
 		'repeated_inputs_preserved' => $repeated_inputs_preserved, 'mutation_intents' => $mutation_intents,
 		'post_replay_rejected' => $post_replay_rejected, 'post_replay_unchanged' => $post_replay_unchanged,
 		'password_names_preserved' => $password_names_preserved,

@@ -7,7 +7,8 @@
  * No wp-config edits or manually copied fixtures are supported.
  *
  * WSTM108_ARTIFACT selects the reserved summary path; <path>.http.jsonl keeps
- * credential-redacted raw responses, including malformed and failed responses.
+ * safe witnesses only. Original frames remain in the independently anchored
+ * private journal; unvalidated or failed cases veto evidence retirement.
  * This runner never provisions Docker, installs providers, or changes site roles.
  * Adapter 0.6.1 runtime proof is PENDING until this command actually succeeds.
  */
@@ -33,6 +34,10 @@ require_once __DIR__ . '/untrusted-content-resources.php';
 $run = 'wstm108-' . bin2hex( random_bytes( 8 ) );
 $artifact = getenv( 'WSTM108_ARTIFACT' ) ?: dirname( __DIR__, 2 ) . '/e2e-artifacts/untrusted-content-' . $run . '.json';
 try {
+	Wstm108_Evidence::assert_available( $artifact );
+	if ( PHP_VERSION_ID < 80100 || ! function_exists( 'fsync' ) || ! ( new ReflectionFunction( 'fsync' ) )->isInternal() ) {
+		throw new RuntimeException( 'BLOCKED: container runner requires builtin fsync before fixture mutation; host PHP is not substituted for container PHP.' );
+	}
 	$evidence = new Wstm108_Evidence( $artifact );
 } catch ( Throwable $error ) {
 	fwrite( STDERR, 'Refusing: ' . $error->getMessage() . "\n" );
@@ -47,8 +52,9 @@ try {
 	$context = json_decode( $context_file['bytes'], true, 512, JSON_THROW_ON_ERROR );
 	$plugin = str_replace( '\\', '/', realpath( dirname( __DIR__, 2 ) ) );
 	$actual_files = Wstm108_Provenance::verify( $plugin, $context['files'] );
-	$lifecycle = new Wstm108_Lifecycle( '/var/www/html', $plugin, '/tmp/wstm108-stage', $context['binding'] );
+	$lifecycle = new Wstm108_Lifecycle( '/var/www/html', $plugin, '/tmp/wstm108-stage', $context['binding'], Wstm108_Lifecycle::decode_anchor( getenv( 'WSTM108_STATE_ANCHOR' ) ?: '' ) );
 	$lifecycle->bind_context( $context, $context_file['sha256'] );
+	$evidence->attach( $lifecycle->wire(), 'runner' );
 } catch ( Throwable $error ) {
 	$evidence->save( array( 'status' => 'refused-before-bootstrap', 'error' => $error->getMessage() ) );
 	fwrite( STDERR, 'Refusing: ' . $error->getMessage() . "\n" );
@@ -67,11 +73,13 @@ Wstm108_Provenance::loaded_root( $plugin );
 $actual_runtime = wstm108_runtime_snapshot();
 $lifecycle->require_enabled( $actual_runtime, $context_file['sha256'] );
 $resources = new Wstm108_Resources( '/tmp/wstm108-stage/resources.json', $context['binding'], $run );
+$lifecycle->bind_resources( $resources->journal_identity() );
 
 function wstm108_case( string $label, callable $action, array &$summary, Wstm108_Evidence $evidence, string $artifact ) {
 	wstm108_assert( $label === ( $summary['expected_labels'][ count( $summary['cases'] ) ] ?? null ), 'Case execution diverged from the complete frozen ordered plan.' );
 	$case = array( 'label' => $label );
 	$result = null;
+	$evidence->begin_case();
 	try {
 		$result = $action( $case );
 		$case['passed'] = true;
@@ -81,6 +89,7 @@ function wstm108_case( string $label, callable $action, array &$summary, Wstm108
 		$case['error'] = $error->getMessage();
 		++$summary['failed'];
 	}
+	$evidence->case_verdict( $case );
 	$summary['cases'][] = $case;
 	$evidence->save( $summary );
 	echo ( $case['passed'] ? 'PASS ' : 'FAIL ' ) . $label . "\n";
@@ -116,12 +125,16 @@ function wstm108_observe_http( string $method, string $url, Wstm108_Evidence $ev
 		throw $error;
 	}
 	$error = is_wp_error( $response );
-	$evidence->append( array(
+	$id = $evidence->append( array(
 		'boundary' => 'wordpress-oracle', 'method' => $method, 'url' => $url,
 		'status' => $error ? 0 : wp_remote_retrieve_response_code( $response ),
 		'body' => $error ? $response->get_error_message() : wp_remote_retrieve_body( $response ),
 		'transport_error' => $error,
+		'headers' => $error ? array() : wp_remote_retrieve_headers( $response ),
 	) );
+	if ( ! $error && wp_remote_retrieve_response_code( $response ) >= 200 && wp_remote_retrieve_response_code( $response ) < 500 ) {
+		$evidence->validate( $id, 'oracle' );
+	}
 	return $response;
 }
 
@@ -306,7 +319,7 @@ try {
 		) );
 		wstm108_assert( ! is_wp_error( $id ) && $id > 0, 'Cannot create unique proof actor.' );
 		$users[ $role ] = (int) $id;
-		$resources->user( $role, (int) $id );
+		$resources->user_created( $role, (int) $id );
 		if ( 'administrator' === $role ) {
 			// Core may require the explicit primitive as well as object ownership.
 			( new WP_User( $id ) )->add_cap( 'edit_post_meta' );
@@ -315,6 +328,7 @@ try {
 			// Per-owned-user capability only; no global role mutation or auth bypass.
 			( new WP_User( $id ) )->add_cap( 'list_users' );
 		}
+		$resources->user( $role, (int) $id );
 		$actor = new WP_User( $id );
 		$summary['actors'][ $role ] = array( 'id' => (int) $id, 'roles' => array_values( $actor->roles ), 'caps' => (object) $actor->allcaps );
 		update_user_meta( $id, 'last_login', $payload );
@@ -828,6 +842,13 @@ try {
 	}
 	wp_set_current_user( $old_user );
 	$summary['status'] = $summary['failed'] ? 'failed' : ( $summary['blocked'] ? 'incomplete' : 'passed' );
+	try {
+		$summary['wire_proof'] = $evidence->seal( 'passed' === $summary['status'] && true === $summary['completed'] && true === $summary['cleanup_complete'], $summary );
+	} catch ( Throwable $error ) {
+		++$summary['failed'];
+		$summary['status'] = 'failed';
+		$summary['wire_error'] = $error->getMessage();
+	}
 	$summary['http_journal_sha256'] = Wstm108_Files::file( $artifact . '.http.jsonl' )['sha256'];
 	$evidence->save( $summary );
 }

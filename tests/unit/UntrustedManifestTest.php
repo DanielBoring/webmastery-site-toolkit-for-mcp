@@ -32,11 +32,11 @@ final class UntrustedManifestTest extends TestCase {
 	}
 
 	public function test_existing_success_cases_require_record_markers_without_replacing_their_data_assertions(): void {
-		self::assertSame( array( 'cases' => 185, 'assertions' => 195 ), self::validate( self::cases() ) );
+		self::assertSame( array( 'cases' => 189, 'assertions' => 199 ), self::validate( self::cases() ) );
 	}
 
 	public static function mutations(): array {
-		return array( array( 'get-post', false ), array( 'create-page', false ), array( 'update-cpt-mcp-book', true ), array( 'list-revisions', false ), array( 'list-comments', true ), array( 'get-media', false ), array( 'get-user', true ), array( 'user-access-audit', false ), array( 'get-yoast-metadata', true ), array( 'get-post-meta', false ), array( 'patch-content-block', false ), array( 'seo-analyze-post', true ) );
+		return array( array( 'get-post', false ), array( 'create-page', false ), array( 'update-cpt-mcp-book', true ), array( 'list-revisions', false ), array( 'list-comments', true ), array( 'get-media', false ), array( 'get-user', true ), array( 'user-access-audit', false ), array( 'get-yoast-metadata', true ), array( 'get-post-meta', false ), array( 'patch-content-block', false ), array( 'seo-analyze-post', true ), array( 'list-orphaned-media', false ), array( 'list-orphaned-media', true ), array( 'list-posts-no-featured-image', false ), array( 'list-posts-no-featured-image', true ), array( 'list-stuck-scheduled', false ), array( 'list-stuck-scheduled', true ) );
 	}
 
 	/** @dataProvider mutations */

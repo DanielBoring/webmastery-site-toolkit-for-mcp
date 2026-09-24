@@ -84,13 +84,66 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build once and test the package with pinned and current Plugin Check
+        id: qa
         env:
           COMPOSE_PROJECT_NAME: wstm-release-qa-${{ github.run_id }}-${{ github.run_attempt }}
           RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
           REQUIRE_CURRENT_PLUGIN_CHECK: '1'
+          WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
         run: bash scripts/release-qa.sh "$RELEASE_VERSION"
 
+      - name: Verify independently published untrusted export
+        id: untrusted-export-check
+        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
+        env:
+          WSTM108_EXPORT_ROOT: ${{ steps.qa.outputs.untrusted_export_root }}
+          WSTM108_EXPORT_SHA256: ${{ steps.qa.outputs.untrusted_export_manifest_sha256 }}
+          WSTM108_EXPORT_CUSTODY: ${{ steps.qa.outputs.untrusted_export_custody }}
+          WSTM108_EXPECTED_EXPORT_PARENT: ${{ runner.temp }}
+          WSTM108_EXPECTED_SOURCE: ${{ steps.metadata.outputs.source-sha }}
+          WSTM108_EXPECTED_PROJECT: wstm-release-qa-${{ github.run_id }}-${{ github.run_attempt }}
+          WSTM108_EXPECTED_RUN: ${{ github.run_id }}
+          WSTM108_EXPECTED_ATTEMPT: ${{ github.run_attempt }}
+          WSTM108_EXPECTED_JOB: ${{ github.job }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$WSTM108_EXPECTED_SOURCE"
+          "${WSTM108_HOST_PHP-php}" scripts/untrusted-export.php verify-published
+
+      - name: Upload only the closed safe untrusted export
+        id: untrusted-export-upload
+        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' && steps.untrusted-export-check.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: untrusted-release-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-proof.json
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-failure-witnesses.json
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-export-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Require QA and safe evidence success
+        id: untrusted-required-evidence
+        if: always()
+        env:
+          QA_OUTCOME: ${{ steps.qa.outcome }}
+          EXPORT_READY: ${{ steps.qa.outputs.untrusted_export_ready }}
+          EXPORT_STATUS: ${{ steps.qa.outputs.untrusted_export_status }}
+          PROOF_STATUS: ${{ steps.qa.outputs.untrusted_proof_status }}
+          EXPORT_CHECK: ${{ steps.untrusted-export-check.outcome }}
+          EXPORT_UPLOAD: ${{ steps.untrusted-export-upload.outcome }}
+        run: |
+          set -euo pipefail
+          test "$QA_OUTCOME" = success
+          test "$EXPORT_READY" = true
+          test "$EXPORT_STATUS" = published
+          test "$PROOF_STATUS" = passed
+          test "$EXPORT_CHECK" = success
+          test "$EXPORT_UPLOAD" = success
+
       - name: Seal original ZIP, scoped notes, listing assets and source manifest
+        if: ${{ success() && steps.untrusted-required-evidence.outcome == 'success' }}
         env:
           RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
           SOURCE_SHA: ${{ steps.metadata.outputs.source-sha }}
@@ -101,6 +154,7 @@ jobs:
 
       - name: Upload immutable run-scoped validated bundle
         id: upload
+        if: ${{ success() && steps.untrusted-required-evidence.outcome == 'success' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-${{ github.run_id }}-${{ github.run_attempt }}
@@ -110,6 +164,7 @@ jobs:
           compression-level: 0
 
       - name: Ready for GitHub production approval
+        if: ${{ success() && steps.untrusted-required-evidence.outcome == 'success' }}
         env:
           RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
           SOURCE_SHA: ${{ steps.metadata.outputs.source-sha }}

@@ -103,6 +103,7 @@ final class Wstm108_Transport {
 	private string $client_name;
 	private $session_recorder;
 	private array $probe_headers = array();
+	private int $last_event = 0;
 	public array $tools = array();
 	public string $label;
 
@@ -131,9 +132,18 @@ final class Wstm108_Transport {
 			$this->tools = array_merge( $this->tools, $page['result']->tools );
 			$cursor = $page['result']->nextCursor ?? null;
 			if ( null !== $cursor ) {
+				wstm108_assert( is_string( $cursor ) && '' !== $cursor, 'Invalid tools/list cursor.' );
 				wstm108_assert( ! isset( $seen[ $cursor ] ), 'Repeated tools/list cursor.' );
 				$seen[ $cursor ] = true;
 			}
+			foreach ( $page['result']->tools as $descriptor ) {
+				wstm108_assert( $descriptor instanceof \stdClass, 'Catalog descriptor must be an object.' );
+				Wstm108_Evidence::tool( $descriptor );
+			}
+			$this->evidence->validate( $this->last_event, 'catalog', array(
+				'tools' => array_map( static fn( $descriptor ) => Wstm108_Evidence::tool( $descriptor ), $page['result']->tools ),
+				'next_cursor_sha256' => hash( 'sha256', wstm108_wire_canonical( $cursor ) ),
+			) );
 		} while ( null !== $cursor );
 		wstm108_assert( array() !== $this->tools, 'Empty tool catalog.' );
 	}
@@ -163,12 +173,19 @@ final class Wstm108_Transport {
 		$arguments = $this->individual ? (object) $input : array( 'ability_name' => $ability, 'parameters' => (object) $input );
 		$response = $this->rpc( 'tools/call', array( 'name' => $tool->name, 'arguments' => $arguments ) );
 		wstm108_assert( ( $response['result'] ?? null ) instanceof \stdClass, 'Missing original MCP tool result object.' );
-		return wstm108_decode_tool( $response['result'], ! $this->individual );
+		$result = wstm108_decode_tool( $response['result'], ! $this->individual );
+		$this->evidence->validate( $this->last_event, 'canonical-tool', array(
+			'is_error' => false === $result['success'], 'payload_sha256' => hash( 'sha256', wstm108_wire_canonical( $result ) ),
+		) );
+		return $result;
 	}
 
 	public function info( string $ability ): array {
 		$descriptor = $this->gateway_descriptor( 'info' );
-		return $this->rpc( 'tools/call', array( 'name' => $descriptor->name, 'arguments' => array( 'ability_name' => $ability ) ) );
+		$result = $this->rpc( 'tools/call', array( 'name' => $descriptor->name, 'arguments' => array( 'ability_name' => $ability ) ) );
+		wstm108_assert( ( $result['result'] ?? null ) instanceof \stdClass, 'Gateway get-info returned no tool object.' );
+		$this->evidence->validate( $this->last_event, 'gateway-info' );
+		return $result;
 	}
 
 	public function deny_read( int $post_id = 0, string $key = '' ): void {
@@ -191,26 +208,34 @@ final class Wstm108_Transport {
 			throw $error;
 		}
 		$transport_error = is_wp_error( $response );
+		$status = $transport_error ? 0 : wp_remote_retrieve_response_code( $response );
+		$text = $transport_error ? $response->get_error_message() : wp_remote_retrieve_body( $response );
+		$this->last_event = $this->evidence->append( array(
+			'boundary' => $this->label, 'method' => $method, 'request' => $body, 'request_headers' => $headers,
+			'status' => $status, 'body' => $text, 'transport_error' => $transport_error,
+			'headers' => $transport_error ? array() : wp_remote_retrieve_headers( $response ),
+		) );
 		$previous_session = $this->session;
 		$session = $transport_error ? '' : (string) wp_remote_retrieve_header( $response, 'mcp-session-id' );
 		if ( '' !== $session ) {
 			$this->session = $session;
 			$this->evidence->secret( $session );
 		}
-		$status = $transport_error ? 0 : wp_remote_retrieve_response_code( $response );
-		$text = $transport_error ? $response->get_error_message() : wp_remote_retrieve_body( $response );
 		$fixture = $transport_error ? '' : (string) wp_remote_retrieve_header( $response, 'x-wstm108-fixture' );
-		$this->evidence->append( array( 'boundary' => $this->label, 'method' => $method, 'request' => $body, 'status' => $status, 'body' => $text, 'transport_error' => $transport_error, 'fixture' => $fixture, 'probe' => $this->probe_headers ) );
 		if ( '' !== $session && $session !== $previous_session && null !== $this->session_recorder ) {
 			( $this->session_recorder )( $session, $this->label );
 		}
 		wstm108_assert( ! $transport_error && $status >= 200 && $status < 300, 'HTTP transport failure (raw evidence retained), status ' . $status );
 		wstm108_assert( '1' === $fixture, 'HTTP fixture missing or HTTP opt-in absent.' );
 		if ( '' === $text && 'notifications/initialized' === $method ) {
+			$this->evidence->validate( $this->last_event, 'notification' );
 			return array();
 		}
 		$decoded = json_decode( $text, false, 512, JSON_THROW_ON_ERROR );
 		wstm108_assert( $decoded instanceof \stdClass && ! property_exists( $decoded, 'error' ), 'JSON-RPC error or nonobject envelope (raw evidence retained).' );
+		if ( 'initialize' === $method || 'notifications/initialized' === $method ) {
+			$this->evidence->validate( $this->last_event, 'initialize' === $method ? 'initialize' : 'notification' );
+		}
 		return get_object_vars( $decoded );
 	}
 
@@ -226,8 +251,13 @@ final class Wstm108_Transport {
 		}
 		$error = is_wp_error( $response );
 		$status = $error ? 0 : wp_remote_retrieve_response_code( $response );
-		$this->evidence->append( array( 'boundary' => $this->label, 'method' => 'DELETE', 'status' => $status, 'body' => $error ? $response->get_error_message() : wp_remote_retrieve_body( $response ) ) );
+		$id = $this->evidence->append( array(
+			'boundary' => $this->label, 'method' => 'DELETE', 'status' => $status,
+			'body' => $error ? $response->get_error_message() : wp_remote_retrieve_body( $response ),
+			'headers' => $error ? array() : wp_remote_retrieve_headers( $response ),
+		) );
 		wstm108_assert( ! $error && in_array( $status, array( 200, 202, 204 ), true ), 'Session cleanup failed.' );
+		$this->evidence->validate( $id, 'session-close' );
 		$this->session = '';
 	}
 }

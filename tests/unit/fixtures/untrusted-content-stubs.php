@@ -3,7 +3,7 @@
 namespace Wstm108Content;
 
 // Keep production class bodies intact while controlling their WordPress boundaries.
-foreach ( array( 'posts', 'custom-post-types', 'comments', 'media', 'users' ) as $module ) {
+foreach ( array( 'posts', 'custom-post-types', 'comments', 'media', 'users', 'content-hygiene' ) as $module ) {
 	$source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-' . $module . '.php' );
 	eval( 'namespace Wstm108Content; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Untrusted; use \Webmastery_MCP_Post_Scheduling; use \Webmastery_MCP_Post_Parent; ' . substr( $source, 5 ) );
 }
@@ -74,6 +74,19 @@ function get_attached_file( $id ) {
 	return $GLOBALS['wstm108']['file'];
 }
 
+function wp_filesize( $path ) {
+	$GLOBALS['wstm108']['file_size_paths'][] = $path;
+	return '1234';
+}
+
+function get_current_user_id() {
+	return 9;
+}
+
+function current_time( $type, $gmt = false ) {
+	return '2026-02-04 00:00:00';
+}
+
 function wp_get_attachment_url( $id ) {
 	return $GLOBALS['wstm108']['url'];
 }
@@ -101,14 +114,39 @@ function wp_register_ability( $name, $args ) {
 
 class WP_Query {
 	public $posts;
+	public $found_posts;
+	public $max_num_pages;
 
 	public function __construct( $args ) {
+		$GLOBALS['wstm108']['queries'][] = $args;
 		$this->posts = array();
 		foreach ( $GLOBALS['wstm_test_posts'] as $post ) {
 			if ( $post->post_type === $args['post_type'] ) {
 				$this->posts[] = 'ids' === ( $args['fields'] ?? '' ) ? $post->ID : $post;
 			}
 		}
+		$this->found_posts = count( $this->posts );
+		$per_page = $args['posts_per_page'] ?? 20;
+		$this->max_num_pages = $per_page > 0 ? (int) ceil( $this->found_posts / $per_page ) : 1;
+	}
+}
+
+class ReferenceDatabase {
+	public $postmeta = 'fixture_postmeta';
+	public $posts = 'fixture_posts';
+	public $last_error = '';
+	public $results = array();
+	public $queries = array();
+
+	public function prepare( $query, ...$args ) { return array( $query, $args ); }
+	public function esc_like( $value ) { return addcslashes( $value, '_%\\' ); }
+
+	public function get_var( $query ) {
+		if ( array() === $this->results ) { throw new \RuntimeException( 'Unexpected reference query.' ); }
+		$this->queries[] = $query;
+		$result = array_shift( $this->results );
+		$this->last_error = null === $result ? 'PRIVATE fixture database error' : '';
+		return $result;
 	}
 }
 
