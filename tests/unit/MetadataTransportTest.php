@@ -149,6 +149,26 @@ final class MetadataTransportTest extends TestCase {
 		self::assertInstanceOf( \stdClass::class, $body->params->arguments->parameters );
 	}
 
+	/** @dataProvider boundaries */
+	public function test_raw_response_preserves_bulk_details_objects_before_associative_decoding( bool $individual ): void {
+		$transport = $this->initialize( $individual );
+		$success = array( 'success' => true, 'data' => array( 'failures' => array(
+			array( 'id' => 17, 'code' => 'not_found', 'reason' => 'not_found', 'message' => 'Post not found.', 'details' => (object) array() ),
+		) ) );
+		$payload = $individual ? $success : array( 'success' => true, 'data' => $success );
+		$response = $this->response( array( 'result' => array( 'structuredContent' => $payload, 'content' => array(
+			array( 'type' => 'text', 'text' => json_encode( $payload ) ),
+		), 'isError' => false ) ) );
+		$GLOBALS['wstm110_transport_responses'][] = $response;
+		$result = $transport->execute( 'fixture/read', array() );
+		self::assertSame( array(), $result['data']['failures'][0]['details'] );
+		self::assertSame( $response['body'], $transport->last_response_body ?? null );
+		$raw = json_decode( $transport->last_response_body, false, 512, JSON_THROW_ON_ERROR );
+		$decoded = $individual ? $raw->result->structuredContent : $raw->result->structuredContent->data;
+		self::assertInstanceOf( \stdClass::class, $decoded->data->failures[0]->details );
+		self::assertStringNotContainsString( 'synthetic-password', $transport->last_response_body );
+	}
+
 	public function test_duplicate_descriptions_fail_discovery_instead_of_guessing(): void {
 		$transport = $this->initialize( true, array(
 			array( 'name' => 'first', 'description' => 'Fixture metadata reader.' ),
@@ -157,6 +177,66 @@ final class MetadataTransportTest extends TestCase {
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'exactly one advertised HTTP tool' );
 		$transport->execute( 'fixture/read', array() );
+	}
+
+	public static function existing_consumers(): array {
+		$responses = array(
+			'permission' => \Webmastery_MCP_Response::error( 'forbidden', 'Object capability denied.', array(), 'forbidden' ),
+			'metadata rejection' => \Webmastery_MCP_Response::error( 'invalid_input', 'Use separate metadata calls.', array(), 'metadata_requires_separate_call' ),
+			'metadata value' => array( 'success' => true, 'data' => array( 'id' => 17, 'key' => 'fixture', 'value' => array( 'nested' => false ) ) ),
+			'SEO projection' => array( 'success' => true, 'data' => array(
+				'metadata' => array(), 'raw_meta' => array(),
+				'unavailable_fields' => array( 'title' => array( 'reason' => 'metadata_not_readable' ) ),
+				'generated_head' => array( 'available' => false ),
+			) ),
+		);
+		$cases = array();
+		foreach ( $responses as $label => $result ) {
+			foreach ( array( false, true ) as $individual ) {
+				$cases[ $label . ( $individual ? ' individual' : ' gateway' ) ] = array( $individual, $result );
+			}
+		}
+		return $cases;
+	}
+
+	/** @dataProvider existing_consumers */
+	public function test_raw_evidence_addition_preserves_existing_consumer_results_and_observers( bool $individual, array $result ): void {
+		$transport = $this->initialize( $individual );
+		$is_error = false === $result['success'];
+		$payload = $is_error || $individual ? $result : array( 'success' => true, 'data' => $result );
+		$tool = array( 'isError' => $is_error, 'content' => array( array( 'type' => 'text', 'text' => json_encode( $payload ) ) ) );
+		if ( ! $is_error ) {
+			$tool['structuredContent'] = $payload;
+		}
+		$response = $this->response( array( 'result' => $tool ), array( 'x-wstm110-mutation-events' => base64_encode( '[]' ) ) );
+		$GLOBALS['wstm110_transport_responses'][] = $response;
+		$actual = $transport->execute( 'fixture/read', array( 'post_id' => 17 ), 'observer-token' );
+		if ( $is_error ) {
+			self::assertEquals( $result, $actual );
+			self::assertInstanceOf( \stdClass::class, $actual['error']['details'] );
+		} else {
+			self::assertSame( $result, $actual );
+		}
+		self::assertSame( array(), $transport->last_events );
+		self::assertSame( $response['body'], $transport->last_response_body );
+		self::assertSame( $tool['isError'], $transport->last_response['result']['isError'] );
+		self::assertStringNotContainsString( 'synthetic-password', $transport->last_response_body );
+	}
+
+	public function test_failed_http_status_retains_only_its_own_raw_body_not_a_previous_success(): void {
+		$transport = $this->initialize();
+		$GLOBALS['wstm110_transport_responses'][] = $this->response( array( 'result' => array( 'structuredContent' => array( 'success' => true ) ) ) );
+		$transport->execute( 'fixture/read', array() );
+		$denial = $this->response( array( 'code' => 'rest_forbidden', 'message' => 'Denied.' ), array(), 403 );
+		$GLOBALS['wstm110_transport_responses'][] = $denial;
+		try {
+			$transport->execute( 'fixture/read', array() );
+			self::fail( 'HTTP denial became successful.' );
+		} catch ( RuntimeException $error ) {
+			self::assertSame( 'Metadata HTTP status 403', $error->getMessage() );
+			self::assertSame( array(), $transport->last_response );
+			self::assertSame( $denial['body'], $transport->last_response_body );
+		}
 	}
 
 	public function test_failed_cleanup_retains_session_for_retry_and_success_is_idempotent(): void {

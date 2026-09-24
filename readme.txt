@@ -61,6 +61,8 @@ Post/page/custom-post-type, media, orphan-media, and score lists now return cand
 
 Post/page/custom-post-type and revision lists default to fields:"summary", which omits content only. Request fields:"full" for unchanged stored content. Excerpts and other values are unchanged; get/write responses stay full. These are not transactional snapshots or constant-time database queries, and summary payloads have no universal byte limit. Orphan-reference queries are batched over bounded candidates; scan errors still block forced media deletion.
 
+Authorized records include untrusted_fields, an array of field names relative to that record. Summary output never marks omitted content. Markers preserve stored values and nested maps; they do not sanitize data, grant capabilities, prove human approval, or guarantee prompt-injection prevention. Compact trash results and errors remain unmarked.
+
 Pagination whose offset or successor cannot fit a PHP integer is rejected before querying. Candidate/priming SQL failures return an error, not an empty end-of-list. Fresh SQL failures invalidate the current site's post-query cache generation to prevent cached false empty results; normal successful-query caching is unchanged.
 
 = Which AI clients and MCP hosts work with this? =
@@ -210,7 +212,7 @@ Both abilities require manage_options. The security audit's ssl finding checks t
 
 Debug-log findings omit filesystem paths. Enabled logging warns that access is unverified, even when a neighboring .htaccess file exists or the location is outside wp-content; neither proves that web access is denied. Disabled logging still passes. Necessary logging need not be disabled merely because it is enabled.
 
-Database query failures return a contextual database_health_query_failed error without raw SQL/server error details, leaving WordPress's own logging unchanged. Successful table-size reports still return prefixed table names, including matching plugin tables. These Administrator-only diagnostics are not fully redacted.
+Database query failures retain the contextual database_health_query_failed reason without raw SQL/server error details, leaving WordPress's own logging unchanged. In 3.0 development, table-size reports use core logical names (such as posts) and response-local opaque custom labels (such as custom_table_1), with an is_core_table boolean. The default reveals neither the configured prefix nor custom/plugin names. Labels are not stable across reports. Explicit include_table_names: true deliberately sends raw table identifiers to the model provider; it still requires manage_options. Only actual booleans are accepted, including in direct execution. Both modes retain counts, bytes, ordering, and current-prefix scope and never return passwords, SQL errors, or filesystem paths.
 
 = How do I report a security vulnerability? =
 
@@ -224,6 +226,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 * Replace unbounded list materialization with candidate windows and next_page continuation, including empty windows; remove exact filtered totals for content, media, orphan-media, and score lists.
 * Default content and revision lists to summary projection; explicit fields:"full" preserves stored content. Batch known media references without relaxing permission or database-failure safeguards.
+* Mark present untrusted fields on authorized records without changing stored values; summary projections never mark omitted content.
 * Close fixed-property input schemas and reject malformed types/enums before raw permission checks or execute callbacks; preserve explicit open maps and omitted defaults.
 * Reject unadvertised parent fields on posts and nonhierarchical custom post types, including zero, while retaining hierarchical detach and parent authorization.
 * Require exact confirmation for permanent media/term deletion and both bulk post operations; bound raw bulk requests to 100 IDs and add non-mutating eligibility previews.
@@ -233,6 +236,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Prepare a breaking 3.0 error contract with canonical categories, precise reasons, safe messages, and object details.
 * Signal owned MCP failures consistently, preserve successful payloads and non-atomic bulk summaries, and leave foreign tools unchanged.
 * Keep the 2.6.0 stable tag and release notes intact while development migration work continues.
+* Redact database table identifiers by default for 3.0; add exact core classification and an explicit Administrator-only boolean opt-in for raw names, preserving diagnostic metrics and query scope.
 
 = 2.6.0 =
 

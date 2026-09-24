@@ -25,6 +25,12 @@ Primary risks for this plugin:
 
 ## Agent threat model
 
+### Administrator diagnostic minimization (3.0 development)
+
+Administrator access does not imply that database identifiers should be sent to a model provider. Database health reports omit the configured prefix and custom/plugin table names by default, exposing only core logical labels and response-local opaque custom labels. Core classification uses WordPress's physical mapping rather than suffix guessing, without expanding the current-prefix query scope. Raw identifiers require explicit boolean `include_table_names: true` and effective `manage_options` even for direct callbacks. This opt-in deliberately discloses environment fingerprints; clients should confirm that disclosure is needed rather than enabling it automatically. It never enables passwords, raw SQL errors, or filesystem paths. Opaque labels are not stable cross-response identities, and unchanged counts/sizes remain diagnostic information, not complete anonymization.
+
+### Untrusted site content
+
 Stored site content can contain prompt injection: text that asks an agent to disregard its task, change site data, or send information elsewhere. Treat post, page, custom post type, and revision bodies, titles, excerpts, and author display names as untrusted data. The same applies to comment bodies and author fields (including email and URL), media titles/captions/alt text, SEO keywords and raw provider head HTML/JSON, and user-chosen application-password `app_name` values. These fields can originate with another user or an attacker. A `message` field is not necessarily trusted instructions.
 
 SEO Analyze Post no longer quotes stored focus keywords in its found/not-found diagnostic messages. Their exact stored values remain in `data.metrics.yoast_focus_keyword` and `data.metrics.seopress_focus_keywords`, alongside the unchanged title and Yoast-first `seo_provider_focus_source`. This compatible partial #108 change only separates those values from human-readable diagnostics; it does not strip or escape stored content, add field markers, verify all annotations, change authorization, or resolve #108. It is not prompt-injection prevention.

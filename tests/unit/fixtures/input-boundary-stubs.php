@@ -8,8 +8,10 @@ use Webmastery_MCP_Input;
 require_once dirname( __DIR__, 3 ) . '/includes/class-input.php';
 require_once dirname( __DIR__, 3 ) . '/includes/class-media.php';
 
-$list_query_source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-list-query.php' );
-eval( 'namespace Wstm126Boundary; use \WP_Error; use \Webmastery_MCP_Response; ' . substr( $list_query_source, 5 ) );
+foreach ( array( 'class-list-query.php', 'class-permissions.php' ) as $helper ) {
+	$source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/' . $helper );
+	eval( 'namespace Wstm126Boundary; use \Closure; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Untrusted; ' . substr( $source, 5 ) );
+}
 
 final class BoundaryReached extends RuntimeException {}
 
@@ -49,7 +51,7 @@ foreach ( glob( dirname( __DIR__, 3 ) . '/includes/class-*.php' ) as $file ) {
 		continue;
 	}
 	preg_match( '/class (Webmastery_MCP_\w+)/', $source, $matches );
-	eval( 'namespace Wstm126Boundary; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Post_Parent; use \Webmastery_MCP_Post_Scheduling; ' . substr( $source, 5 ) );
+	eval( 'namespace Wstm126Boundary; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Untrusted; use \Webmastery_MCP_Post_Parent; use \Webmastery_MCP_Post_Scheduling; ' . substr( $source, 5 ) );
 	Probe::$classes[] = __NAMESPACE__ . '\\' . $matches[1];
 }
 

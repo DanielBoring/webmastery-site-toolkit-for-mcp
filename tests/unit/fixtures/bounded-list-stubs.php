@@ -7,7 +7,7 @@ require_once dirname( __DIR__, 3 ) . '/includes/class-input.php';
 foreach ( array( 'class-list-query.php', 'class-posts.php', 'class-custom-post-types.php', 'class-media.php', 'class-content-hygiene.php', 'class-seo.php' ) as $file ) {
 	$path = dirname( __DIR__, 3 ) . '/includes/' . $file;
 	if ( is_file( $path ) ) {
-		eval( 'namespace Wstm121; use \WP_Error; use \Webmastery_MCP_Response; ' . substr( file_get_contents( $path ), 5 ) );
+		eval( 'namespace Wstm121; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Untrusted; ' . substr( file_get_contents( $path ), 5 ) );
 	}
 }
 

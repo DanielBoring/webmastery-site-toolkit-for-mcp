@@ -243,8 +243,11 @@ foreach ( array( 'bulk-trash-posts', 'bulk-publish-posts', 'delete-media', 'dele
 			$input = $case['input'] ?? array();
 			$value = $input['confirm'] ?? null;
 			$matches_input = 'missing' === $variant ? ! array_key_exists( 'confirm', $input )
-				: ( 'false' === $variant ? false === $value : ( 'string' === $variant ? is_string( $value ) : is_int( $value ) ) );
-			return $matches_input && 'failure' === $case['expect'] && 'ability_invalid_input' === ( $case['expect_error_reason'] ?? '' )
+				: ( 'false' === $variant ? false === $value : ( 'string' === $variant ? 'true' === $value : 1 === $value ) );
+			return $matches_input && 'failure' === $case['expect']
+				&& 'ability_invalid_input' === ( $case['expect_error_reason'] ?? '' )
+				&& 'invalid_input' === ( $case['expect_error_code'] ?? '' )
+				&& 'canonical' === ( $case['expect_error_shape'] ?? '' )
 				&& true === ( $case['assert_unchanged'] ?? false );
 		} );
 		if ( ! $matches ) {

@@ -34,7 +34,7 @@ final class ErrorContractAssertionsTest extends TestCase {
 	public function test_disposable_guard_fails_closed_before_wordpress_or_credentials(): void {
 		$runner = dirname( __DIR__ ) . '/e2e/error-contract-runner.php';
 		foreach ( array( '', '0', 'true' ) as $value ) {
-			$process = proc_open( array( PHP_BINARY, $runner ), array( 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ), $pipes, null, array( 'WSTM118_DISPOSABLE' => $value ) );
+			$process = proc_open( array( PHP_BINARY, '-n', $runner ), array( 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ), $pipes, null, array( 'WSTM118_DISPOSABLE' => $value ) );
 			$this->assertIsResource( $process );
 			$output = stream_get_contents( $pipes[1] ) . stream_get_contents( $pipes[2] );
 			fclose( $pipes[1] );

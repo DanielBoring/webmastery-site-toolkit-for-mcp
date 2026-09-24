@@ -28,7 +28,7 @@ final class DestructiveProofTest extends TestCase {
 	}
 
 	public static function weakened_evidence(): array {
-		return array( array( 'confirmation' ), array( 'dry-run-state' ), array( 'missing-case' ) );
+		return array( array( 'confirmation' ), array( 'dry-run-state' ), array( 'missing-case' ), array( 'wrong-layer' ), array( 'changed-type' ), array( 'wrong-code' ) );
 	}
 
 	/** @dataProvider weakened_evidence */
@@ -43,6 +43,8 @@ final class DestructiveProofTest extends TestCase {
 		copy( $root . '/scripts/validate-security-qa.php', $validator );
 		copy( $root . '/tests/e2e/error-contract-assertions.php', $assertions );
 		$cases = json_decode( file_get_contents( $root . '/tests/e2e/abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
+		$original = $cases;
+		$native_targets = array();
 		foreach ( $cases as $index => &$case ) {
 			if ( 'webmastery-site-toolkit-for-mcp/bulk-publish-posts' !== $case['ability'] ) {
 				continue;
@@ -56,10 +58,26 @@ final class DestructiveProofTest extends TestCase {
 			if ( 'missing-case' === $mutation && ! array_key_exists( 'confirm', $case['input'] ) ) {
 				unset( $cases[ $index ] );
 			}
+			if ( 'true' === ( $case['input']['confirm'] ?? null ) ) {
+				$native_targets[] = array( $case['label'], $case['expect_error_code'], $case['expect_error_reason'] );
+				if ( 'wrong-layer' === $mutation ) {
+					$case['expect_error_code'] = 'precondition_failed';
+					$case['expect_error_reason'] = 'missing_confirmation';
+				} elseif ( 'changed-type' === $mutation ) {
+					$case['input']['confirm'] = true;
+				} elseif ( 'wrong-code' === $mutation ) {
+					$case['expect_error_code'] = 'precondition_failed';
+				}
+			}
 		}
 		unset( $case );
 		try {
 			file_put_contents( $manifest, json_encode( array_values( $cases ), JSON_THROW_ON_ERROR ) );
+			if ( in_array( $mutation, array( 'wrong-layer', 'changed-type', 'wrong-code' ), true ) ) {
+				self::assertCount( 1, $native_targets, 'Mutate exactly one native confirmation case.' );
+				self::assertSame( array( 'wstm116 bulk-publish-posts confirm string', 'invalid_input', 'ability_invalid_input' ), $native_targets[0] );
+			}
+			self::assertNotSame( $original, $cases, 'A weakened-evidence mutation must change the original manifest.' );
 			$process = proc_open( array( PHP_BINARY, $validator ), array( array( 'pipe', 'r' ), array( 'pipe', 'w' ), array( 'pipe', 'w' ) ), $pipes );
 			self::assertIsResource( $process );
 			fclose( $pipes[0] );
@@ -67,7 +85,7 @@ final class DestructiveProofTest extends TestCase {
 			fclose( $pipes[1] );
 			fclose( $pipes[2] );
 			self::assertSame( 1, proc_close( $process ), $output );
-			self::assertStringContainsString( 'bulk-publish-posts', $output );
+			self::assertStringContainsString( 'wrong-code' === $mutation ? 'Negative cases require canonical code, precise reason, and envelope shape.' : 'bulk-publish-posts', $output );
 		} finally {
 			unlink( $manifest );
 			unlink( $validator );

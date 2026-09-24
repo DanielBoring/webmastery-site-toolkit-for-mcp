@@ -5,16 +5,17 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once dirname( __DIR__ ) . '/e2e/bounded-list-assertions.php';
+require_once dirname( __DIR__ ) . '/e2e/bounded-list-plan.php';
 
 // Isolate WordPress function doubles from the shared unit bootstrap. Execute the
 // actual fixture functions, not a second implementation of cleanup.
 $cleanup_source = file_get_contents( dirname( __DIR__ ) . '/e2e/bounded-list-benchmark.php' );
 $cleanup_source = str_replace(
-	array( 'declare(strict_types=1);', "require_once __DIR__ . '/bounded-list-assertions.php';" ),
+	array( 'declare(strict_types=1);', "require_once __DIR__ . '/bounded-list-assertions.php';", "require_once __DIR__ . '/bounded-list-plan.php';" ),
 	'',
 	substr( $cleanup_source, 5 )
 );
-eval( 'namespace Wstm121CleanupOracle; use \RuntimeException; use \Throwable; use \ReflectionClass;
+eval( 'namespace Wstm121CleanupOracle; use \RuntimeException; use \Throwable; use \ReflectionClass; use \Wstm121Plan;
 function username_exists( $name ) { return $GLOBALS["wpdb"]->find_actor( $name ); }
 function delete_option( $name ) { return $GLOBALS["wpdb"]->remove_control( $name ); }
 ' . $cleanup_source );

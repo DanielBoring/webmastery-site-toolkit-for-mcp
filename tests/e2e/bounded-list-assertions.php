@@ -15,6 +15,11 @@ function wstm121_allowed( string $mode, int $rank ): bool {
 	return 'dense' === $mode || ( 'sparse' === $mode && 0 === intdiv( $rank, 100 ) % 2 && 0 === $rank % 3 );
 }
 
+function wstm121_large_content(): string {
+	$prefix = "<!-- wp:paragraph -->\n<p>\"Quoted\" \\\\server\\share\\file; <strong>stored &amp; exact</strong>.</p>\n<!-- /wp:paragraph -->\n";
+	return str_pad( $prefix, 55 * 1024, 'x' );
+}
+
 /**
  * On PHP 8.1 an old process peak cannot be reset. Subtract CURRENT start usage,
  * never the historical start peak: the result is a conservative upper bound,

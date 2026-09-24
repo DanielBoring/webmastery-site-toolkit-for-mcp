@@ -158,6 +158,9 @@ final class BoundedListTest extends TestCase {
 		$full = $this->posts( 1, 1, 'full' )['items'][0];
 		self::assertArrayNotHasKey( 'content', $summary );
 		self::assertSame( Probe::$content, $full['content'] );
+		self::assertSame( array( 'title', 'content', 'excerpt', 'slug', 'url', 'author_name' ), $full['untrusted_fields'] );
+		self::assertSame( array( 'title', 'excerpt', 'slug', 'url', 'author_name' ), $summary['untrusted_fields'] );
+		$full['untrusted_fields'] = $summary['untrusted_fields'];
 		unset( $full['content'] );
 		self::assertSame( $full, $summary );
 		self::assertSame( 'Stored \\excerpt "value"', $summary['excerpt'] );
@@ -276,6 +279,9 @@ final class BoundedListTest extends TestCase {
 		$summary = $execute( array( 'post_id' => 1 ) );
 		$full = $execute( array( 'post_id' => 1, 'fields' => 'full' ) );
 		self::assertSame( Probe::$content, $full['data']['revisions'][0]['content'] );
+		self::assertSame( array( 'author_name', 'title', 'content', 'excerpt' ), $full['data']['revisions'][0]['untrusted_fields'] );
+		self::assertSame( array( 'author_name', 'title', 'excerpt' ), $summary['data']['revisions'][0]['untrusted_fields'] );
+		$full['data']['revisions'][0]['untrusted_fields'] = $summary['data']['revisions'][0]['untrusted_fields'];
 		unset( $full['data']['revisions'][0]['content'] );
 		self::assertSame( $full, $summary );
 		self::assertSame( array( 'post_id', 'type', 'revisions' ), array_keys( $summary['data'] ) );
@@ -293,6 +299,9 @@ final class BoundedListTest extends TestCase {
 		$get->setAccessible( true );
 		self::assertSame( $get->invoke( null, 1 ), $full['items'][0] );
 		self::assertSame( Probe::$content, $full['items'][0]['content'] );
+		self::assertSame( array( 'title', 'content', 'excerpt', 'slug', 'url', 'author_name' ), $full['items'][0]['untrusted_fields'] );
+		self::assertSame( array( 'title', 'excerpt', 'slug', 'url', 'author_name' ), $summary['items'][0]['untrusted_fields'] );
+		$full['items'][0]['untrusted_fields'] = $summary['items'][0]['untrusted_fields'];
 		unset( $full['items'][0]['content'] );
 		self::assertSame( $full, $summary );
 		self::assertSame( array( 'ID' => 'ASC' ), Probe::$queries[0]['orderby'] );
@@ -325,6 +334,26 @@ final class BoundedListTest extends TestCase {
 		$plain = $marked;
 		unset( $plain['untrusted_fields'] );
 		self::assertArrayNotHasKey( 'untrusted_fields', \Wstm121\Webmastery_MCP_List_Query::project( $plain, 'summary' ) );
+	}
+
+	public function test_projection_recomputes_unique_present_markers_without_rewriting_stored_maps(): void {
+		$stored = array( 'untrusted_fields' => array( 'keep', 'keep' ), 'success' => false );
+		$record = array(
+			'title' => null, 'content' => Probe::$content, 'excerpt' => $stored, 'slug' => false,
+			'untrusted_fields' => array( 'missing', 'title', 'content', 'title', 'excerpt', 'slug' ),
+		);
+		foreach ( array( 'summary', 'full' ) as $fields ) {
+			$result = \Wstm121\Webmastery_MCP_List_Query::project( $record, $fields );
+			$expected = $record;
+			$expected['untrusted_fields'] = array( 'title', 'content', 'excerpt', 'slug' );
+			if ( 'summary' === $fields ) {
+				unset( $expected['content'] );
+				$expected['untrusted_fields'] = array( 'title', 'excerpt', 'slug' );
+			}
+			self::assertSame( $expected, $result );
+			self::assertSame( $stored, $result['excerpt'] );
+		}
+		self::assertSame( array( 'missing', 'title', 'content', 'title', 'excerpt', 'slug' ), $record['untrusted_fields'] );
 	}
 
 	public function test_batched_references_preserve_per_attachment_hits_and_prepared_literal_escaping(): void {

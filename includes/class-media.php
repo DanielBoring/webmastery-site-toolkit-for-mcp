@@ -43,7 +43,7 @@ class Webmastery_MCP_Media {
 			}
 		}
 
-		return $data;
+		return Webmastery_MCP_Untrusted::mark( $data, [ 'title', 'caption', 'alt_text', 'url', 'filename' ] );
 	}
 
 	private static function permission( $cap ) {

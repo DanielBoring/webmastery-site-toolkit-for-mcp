@@ -1,0 +1,50 @@
+{
+  "source_sha": "6a47b52c86f50d42cfe3235c1395bf139ac09d0b",
+  "tested_merge_sha": "22e30ea467b04be12db03163c84beb56e88a5377",
+  "contract_run": 35666138942,
+  "package_run": 35666138916,
+  "manifest_count": 563,
+  "unchanged_cases": 547,
+  "integration": {
+    "source_sha": "db041ce338634ebf829ca01c69056b08fe6397d1",
+    "manifest_count": 570,
+    "insertion_index": 372,
+    "source_insertion_index": 327,
+    "cases": [
+      {"label":"database-health default private table labels","sha256":"de67e37bb2fa5681ad70215921597cc4c490cd4213ee6654da311eafca47a6e6"},
+      {"label":"database-health explicit false private table labels","sha256":"8fbfaeaaf84dbfea23dee412daa389c19188bf57071e2e1f2fe626ec7c551513"},
+      {"label":"database-health admin raw table opt-in","sha256":"1932fae9b257a9d2ee2167848f85820bcb00ad45206be025d9ce7a0e7b1c46b4"},
+      {"label":"database-health subscriber raw table opt-in denied","sha256":"958d0ff4617a3389a8689adec1937ddc2d703eeb3700cd3d1255b26108e994ad"},
+      {"label":"database-health string flag rejected","sha256":"2a5324892d27db64aa9f0583b32cad72f6755c054cf8b9b0eb30b6b981dd1bd5"},
+      {"label":"database-health numeric flag rejected","sha256":"3dd5701eebdf6888d5ecbd3772e961936cb753025995522f05110aa7ae73925c"},
+      {"label":"database-health null flag rejected","sha256":"5992bd278526097586220348bb42bd46e9ad5c08b3ed4c48fd8bb14a18056fd5"}
+    ]
+  },
+  "fingerprint_encoding": "PHP json_decode associative=false; retain original array keys and property order; json_encode JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION; SHA-256. Goldens regenerated from source_sha, not the corrected working manifest.",
+  "unchanged_cases_sha256": "ec2873ed7f4ee32e2d4f8486d58e09aa998b9ee4eda928cbcc6b8860eaaba0de",
+  "all_non_oracle_fields_sha256": "2c10a9826b0c613499685252ca3544ed333c76733b07737009eb06fbd8eb01a9",
+  "before": {"expect_error_code":"invalid_input","expect_error_reason":"ability_invalid_input"},
+  "core_sources": {
+    "7.1.1": {"rest-api.php":"9c4af1341e37de253323cf7c28da1424f41decc2154904e2b71a4e71c9cdd70c","class-wp-ability.php":"0c0aa1db27f284cb9942865e6fbed0610178439430e2ac9a9f6a7dd209df049e"},
+    "6.9": {"rest-api.php":"092f3f02204adaf9f8d49d52e1ae61da166d334843816675ff8eca3d8b68e2f6","class-wp-ability.php":"d7c867aad5c6a3019db18c8d0f440c6272527c6d113d89cbce07b3ad4da9f250"},
+    "6.9.4": {"rest-api.php":"092f3f02204adaf9f8d49d52e1ae61da166d334843816675ff8eca3d8b68e2f6","class-wp-ability.php":"d7c867aad5c6a3019db18c8d0f440c6272527c6d113d89cbce07b3ad4da9f250"}
+  },
+  "cases": [
+    {"index":2,"label":"wstm116 bulk-trash-posts confirm string","flag":"confirm","value":"true","after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":3,"label":"wstm116 bulk-trash-posts confirm number","flag":"confirm","value":1,"after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":5,"label":"wstm116 bulk-trash-posts dry_run string","flag":"dry_run","value":"true","after":{"expect_error_code":"invalid_input","expect_error_reason":"invalid_input"}},
+    {"index":6,"label":"wstm116 bulk-trash-posts dry_run number","flag":"dry_run","value":1,"after":{"expect_error_code":"invalid_input","expect_error_reason":"invalid_input"}},
+    {"index":15,"label":"wstm116 bulk-publish-posts confirm string","flag":"confirm","value":"true","after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":16,"label":"wstm116 bulk-publish-posts confirm number","flag":"confirm","value":1,"after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":18,"label":"wstm116 bulk-publish-posts dry_run string","flag":"dry_run","value":"true","after":{"expect_error_code":"invalid_input","expect_error_reason":"invalid_input"}},
+    {"index":19,"label":"wstm116 bulk-publish-posts dry_run number","flag":"dry_run","value":1,"after":{"expect_error_code":"invalid_input","expect_error_reason":"invalid_input"}},
+    {"index":28,"label":"wstm116 delete-media confirm string","flag":"confirm","value":"true","after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":29,"label":"wstm116 delete-media confirm number","flag":"confirm","value":1,"after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":31,"label":"wstm116 delete-media force string","flag":"force","value":"true","after":{"expect_error_code":"invalid_input","expect_error_reason":"invalid_input"}},
+    {"index":32,"label":"wstm116 delete-media force number","flag":"force","value":1,"after":{"expect_error_code":"invalid_input","expect_error_reason":"invalid_input"}},
+    {"index":36,"label":"wstm116 delete-category confirm string","flag":"confirm","value":"true","after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":37,"label":"wstm116 delete-category confirm number","flag":"confirm","value":1,"after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":41,"label":"wstm116 delete-tag confirm string","flag":"confirm","value":"true","after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}},
+    {"index":42,"label":"wstm116 delete-tag confirm number","flag":"confirm","value":1,"after":{"expect_error_code":"precondition_failed","expect_error_reason":"missing_confirmation"}}
+  ]
+}

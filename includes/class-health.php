@@ -10,12 +10,7 @@ class Webmastery_MCP_Health {
 			'description'         => 'Run WordPress site health tests and return results grouped by severity.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'execute_callback'    => [ self::class, 'execute' ],
-			'permission_callback' => function () {
-				if ( ! current_user_can( 'manage_options' ) ) {
-					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
-				}
-				return true;
-			},
+			'permission_callback' => Webmastery_MCP_Permissions::admin(),
 			'meta' => [
 				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => false ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],

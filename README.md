@@ -69,12 +69,18 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | Public webmaster verification | Check public Google/Bing meta tags, Bing XML, DNS TXT, robots.txt, and sitemap reachability; WordPress-only Site Kit state requires `activate_plugins` | Subscriber (`read`); privileged plugin-state addition |
 | Google Site Kit | Inspect setup/authentication status, modules, effective permissions, and same-site PageSpeed summaries through Site Kit's permission-aware REST routes | Shared dashboard user to Administrator |
 | Plugins, users, health, security, performance, backups, database | Audit or manage sensitive site areas with explicit admin capabilities | Administrator |
+| `database-health` table identifiers (3.0 development) | Core logical names and response-local opaque custom labels by default; `include_table_names: true` deliberately discloses raw identifiers | `manage_options`, including direct execution |
 
 For the exact ability names, input behavior, and required capabilities, use the [full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities).
 
 Comment replies require `edit_posts` and `edit_post` on the post containing the parent comment. Listing requires `moderate_comments`; updating and the approve/trash/spam abilities also require `edit_comment` on the resolved comment. There is no separate `hold-comment` ability: use `update-comment` with `status: "hold"` and the required `content`.
 
 ### Bounded lists and content projection (3.0 development)
+
+Authorized content records also carry `untrusted_fields`, a JSON array of
+record-relative field names. These are data, not instructions or approval for
+later actions. Summary records never mark omitted content; full/get/write
+records preserve their stored values and mark the fields actually present.
 
 | Abilities | Pagination / content |
 | --- | --- |
@@ -168,7 +174,7 @@ Term deletion is permanent and uses WordPress's normal relationship handling (in
 | `delete-category`, `delete-tag` | Term ID and `confirm:true`; registered taxonomy and per-term delete capabilities above. |
 | `bulk-trash-posts`, `bulk-publish-posts` | `ids` (1-100 raw entries), `confirm:true`; `delete_posts` / `publish_posts` plus existing per-object checks. Optional boolean `dry_run` defaults to false. |
 
-Confirmation must be the JSON boolean `true`, **including previews**. Missing, false, string, numeric, or null confirmation cannot authorize a write. The callback reports `precondition_failed/missing_confirmation`; registered schema validation can reject first with `invalid_input/ability_invalid_input`. Optional `dry_run` and media `force` reject non-booleans rather than coercing them.
+Confirmation must be the JSON boolean `true`, **including previews**. Missing, false, string, numeric, or null confirmation cannot authorize a write. The callback reports `precondition_failed/missing_confirmation`; registered schema validation can reject first with `invalid_input/ability_invalid_input`. WordPress 6.9/7.1.1 schema validation accepts some boolean-like strings and integers without changing callback input types, so `"true"` and `1` still reach and fail the strict confirmation guard. Optional `dry_run` and media `force` reject non-booleans rather than coercing them.
 
 Bulk requests reject 101 entries even when all IDs are identical. Accepted IDs are normalized and deduplicated before processing; `requested` counts unique normalized IDs. A preview performs the same type, per-object authorization, status, and disabled-trash checks without post, metadata, term, scheduling, or mutation-hook writes. Its normal batch summary adds `data.dry_run:true`; successes mean **would act**, not already changed. All-failed batches still return `success:true`. A preview is not a reservation: concurrent changes or real write-hook/storage failures can change a later execution.
 
@@ -414,7 +420,9 @@ SEO Analyze Post uses static focus-keyword diagnostics: `Focus keyword found in 
 - `get-environment-info`, `plugin-audit`, `user-access-audit`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `site-health-check` are Administrator-only.
 - `security-audit`'s `ssl` finding reports only the configured public `home` option (including normal option filters and `WP_HOME`): recognized HTTPS passes and HTTP fails. Missing/unsupported schemes or hosts, whitespace/control characters, malformed percent escapes, and invalid authority syntax warn as unknown. The local syntax guard accepts local names, Unicode/IDN forms, properly escaped components, and bracketed IPv6 (including escaped zone IDs) or IPvFuture literals; it is not a complete URL, DNS-name, or internationalized-name validator and imposes no address-routability policy. It is independent of the MCP request scheme and admin-only TLS policy. It does not test certificates, reachability, redirects, or the final filtered front-end URL.
 - Debug-log findings omit filesystem paths. Enabled logging warns that access is unverified: a neighboring `.htaccess` file or a location outside `wp-content` does not prove protection from web access. Disabled logging still passes; enabled logging alone is not proof of exposure or a reason to disable necessary logging.
-- `database-health` query failures retain a contextual `database_health_query_failed` error without raw SQL/server error text. WordPress's own database logging behavior is unchanged. Successful `table_sizes[].table` values still include the site's prefix and matching plugin-table names for `manage_options` callers; this diagnostic output is **not fully redacted**.
+- `database-health` query failures retain the contextual `database_health_query_failed` reason without raw SQL/server error text. WordPress's own database logging behavior is unchanged. In 3.0 development, `table_sizes[].table` defaults to core logical names such as `posts` or response-local labels such as `custom_table_1`, with `is_core_table` identifying exact WordPress table mappings. Custom/plugin names and the configured prefix are not returned by default. `include_table_names: true` deliberately sends raw identifiers to the model provider; it is an Administrator (`manage_options`) diagnostic opt-in, not a grant of permission. Only actual booleans are accepted; strings, numbers, and null are rejected. Neither mode returns passwords, raw SQL errors, or filesystem paths. Counts, bytes, ordering, and the current-prefix query scope are unchanged.
+
+For a disposable-site check, call `database-health` as Administrator with omitted input or `{"include_table_names":false}` and verify that table identifiers are logical/opaque, then deliberately opt in with `{"include_table_names":true}` and compare every row's metrics and `is_core_table`. A Subscriber must be refused in both modes. Opaque labels restart per response and are **not stable identifiers** for comparing reports; the opt-in is required only when physical names are genuinely needed. See the [3.0 diagnostic migration](docs/3.0-migration.md#database-diagnostic-table-privacy).
 
 Read the [full security model](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#security) before giving an agent Administrator credentials.
 

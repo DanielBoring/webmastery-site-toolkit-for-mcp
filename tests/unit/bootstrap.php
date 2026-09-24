@@ -48,6 +48,8 @@ function wp_json_encode( $value, $flags = 0 ) {
 }
 
 require_once dirname(__DIR__, 2) . '/includes/class-response.php';
+require_once dirname(__DIR__, 2) . '/includes/class-untrusted.php';
+require_once dirname(__DIR__, 2) . '/includes/class-permissions.php';
 
 function sanitize_key( $key ): string {
 	$key = strtolower( (string) $key );

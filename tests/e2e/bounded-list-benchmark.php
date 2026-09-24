@@ -10,14 +10,11 @@
  *
  * In that disposable installation's wp-config.php explicitly define:
  *   define( 'WSTM_BOUNDED_BENCHMARK', true );
- * Then, in the leased environment (PowerShell example, paths are examples):
- *   $env:WSTM_BOUNDED_BENCHMARK='1'
- *   $env:WSTM_BOUNDED_WP_LOAD='C:\disposable-wordpress\wp-load.php'
- *   $env:WSTM_BOUNDED_NAMESPACE='w121_'+[guid]::NewGuid().ToString('N').Substring(0,12)
- *   $env:WSTM_BOUNDED_SOURCE_SHA=(git rev-parse HEAD)
- *   php tests\e2e\bounded-list-benchmark.php run
+ * The separately granted Linux/Python 3.11 controller invokes these phases.
+ * Its environment document binds existing runtime/source/private storage.
+ * See bounded-list-controller.py and README.md; no monolithic run mode exists.
  *
- * run creates a NEW e2e-artifacts/<namespace> directory (refuses collisions),
+ * seed creates a NEW private <artifact-root>/<namespace> (refuses collisions),
  * a random control option, and an owned non-login fixture user. It seeds 20,000
  * posts (EXACTLY 100 with 55 KiB content), 10,000 fileless attachments, 205 pages,
  * 205 CPT entries, and literal-reference probes. SQL setup deliberately avoids
@@ -48,8 +45,9 @@
  * explicit WSTM_BOUNDED_SOURCE_SHA (40 hex) is mandatory; actual loaded-file
  * hashes remain authoritative and git-diff availability is recorded honestly.
  * Normal completion/failure cleans owned DB resources; artifacts remain.
- * After a killed run, with the SAME opt-ins and namespace, use:
- *   php tests\e2e\bounded-list-benchmark.php cleanup
+ * After a killed run, the SAME opt-ins and namespace are required by a
+ * separately approved bounded cleanup/recovery launcher, never an unbounded
+ * direct invocation. Preserve previous cleanup outputs before any retry.
  * Cleanup validates the random control token and every ownership marker.
  * A retry permits the journaled actor to be absent after partial cleanup, but
  * refuses a different actor at that ID or another actor using its namespace.
@@ -60,9 +58,31 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/bounded-list-assertions.php';
+require_once __DIR__ . '/bounded-list-plan.php';
 
 function wstm121_json_write( string $path, array $data ): void {
-	$json = json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR );
+	$json = json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR );
+	wstm121_require( strlen( $json ) <= Wstm121Plan::JSON_BYTES, 'Artifact exceeds its 32-MiB limit.' );
+	if ( isset( $GLOBALS['wstm121_write_journal'] ) ) {
+		$journal = fopen( $GLOBALS['wstm121_write_journal'], 'a+b' );
+		wstm121_require( is_resource( $journal ), 'Cannot open artifact byte journal.' );
+		try {
+			wstm121_require( flock( $journal, LOCK_EX | LOCK_NB ), 'Concurrent artifact writer.' );
+			rewind( $journal );
+			$total = 0;
+			while ( false !== ( $line = fgets( $journal, 1024 ) ) ) {
+				wstm121_require( str_ends_with( $line, "\n" ) && ctype_digit( trim( $line ) ), 'Incomplete artifact byte journal; refusing to reset it.' );
+				$total += (int) trim( $line );
+			}
+			$entry = strlen( $json ) . "\n";
+			$ceiling = (string) getenv( 'WSTM_BOUNDED_PHP_BYTE_CEILING' );
+			wstm121_require( ctype_digit( $ceiling ) && strlen( $ceiling ) <= 10 && (int) $ceiling <= Wstm121Plan::NAMESPACE_BYTES, 'Missing controller-reserved artifact ceiling.' );
+			wstm121_require( $total + ftell( $journal ) + strlen( $json ) + strlen( $entry ) <= (int) $ceiling, 'Artifact write quota exhausted.' );
+			wstm121_require( strlen( $entry ) === fwrite( $journal, $entry ) && fflush( $journal ), 'Cannot reserve artifact bytes.' );
+		} finally {
+			fclose( $journal );
+		}
+	}
 	$pending = $path . '.pending';
 	wstm121_require( strlen( $json ) === file_put_contents( $pending, $json, LOCK_EX ), "Cannot write artifact: {$path}" );
 	wstm121_require( rename( $pending, $path ), "Cannot publish artifact: {$path}" );
@@ -89,7 +109,7 @@ function wstm121_lock( string $path, int $mode ) {
 function wstm121_sources(): array {
 	$files = array_merge(
 		glob( dirname( __DIR__, 2 ) . '/includes/*.php' ),
-		array( dirname( __DIR__, 2 ) . '/webmastery-site-toolkit-for-mcp.php', __FILE__, __DIR__ . '/bounded-list-assertions.php' )
+		array( dirname( __DIR__, 2 ) . '/webmastery-site-toolkit-for-mcp.php', __FILE__, __DIR__ . '/bounded-list-assertions.php', __DIR__ . '/bounded-list-plan.php', __DIR__ . '/bounded-list-verifier.php', __DIR__ . '/bounded-list-controller.py' )
 	);
 	$hashes = array();
 	foreach ( $files as $file ) {
@@ -152,7 +172,7 @@ function wstm121_seed( array &$state, string $directory ): void {
 			for ( $n = $offset; $n < min( $count, $offset + 100 ); ++$n ) {
 				$slug = $state['namespace'] . '-' . $type . '-' . $n;
 				// Put the large bodies at the FRONT of the default descending list.
-				$content = 'post' === $type && $n >= $count - 100 ? str_repeat( 'x', 55 * 1024 ) : 'Controlled short body.';
+				$content = 'post' === $type && $n >= $count - 100 ? wstm121_large_content() : 'Controlled short body.';
 				$guid = 'https://example.invalid/' . $slug . ".guid_%'\\literal";
 				$rows[] = array( $state['user'], '2020-01-02 03:04:05', '2020-01-02 03:04:05', '2020-01-02 03:04:05', '2020-01-02 03:04:05', 'Controlled tied title', $content, 'Controlled unchanged excerpt.', 'attachment' === $type ? 'inherit' : 'publish', $type, $slug, $state['token'], $guid, 'attachment' === $type ? 'image/jpeg' : '', '', '' );
 			}
@@ -207,6 +227,11 @@ function wstm121_seed( array &$state, string $directory ): void {
 	wstm121_json_write( $directory . '/state.json', $state );
 	$large = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type='post' AND OCTET_LENGTH(post_content)=%d", 55 * 1024 ) );
 	wstm121_db_ok();
+	wstm121_json_write( $directory . '/seed-measurements.json', array(
+		'catalog_counts' => array_map( 'count', $state['catalog'] ),
+		'large_posts' => $large, 'large_body_bytes' => 55 * 1024, 'large_count_sql' => $wpdb->last_query,
+		'method' => 'Catalog IDs read from token-owned rows after setup; large-body count from real OCTET_LENGTH SQL. Excluded from operation counters.',
+	) );
 	wstm121_require( 100 === $large, 'Fixture must contain exactly 100 large 55 KiB posts.' );
 }
 
@@ -294,42 +319,190 @@ function wstm121_parity( array $state, string $directory ): void {
 	global $wpdb;
 	$ids = array_slice( $state['catalog']['attachment'], 0, 100 );
 	$before = wstm121_snapshot();
-	$expected = array();
-	foreach ( $ids as $id ) {
-		$expected[ $id ] = wstm121_legacy_reference( $id );
-		wstm121_require( $expected[ $id ] === in_array( $id, $state['referenced'], true ), 'Frozen reference oracle disagrees with seeded literal/escaped/featured fixtures.' );
-		wstm121_require( $expected[ $id ] === Webmastery_MCP_Content_Hygiene::is_attachment_referenced( $id ), 'Public single-item reference parity failed.' );
-	}
-	$actual = Webmastery_MCP_Content_Hygiene::attachments_referenced( $ids );
-	wstm121_require( ! is_wp_error( $actual ), 'Batch reference check failed.' );
-	foreach ( $expected as $id => $referenced ) {
-		wstm121_require( isset( $actual[ $id ] ) && $actual[ $id ] === $referenced, 'Batch reference parity failed.' );
-	}
-	// Inject READ failures only. Never rename/drop tables or suppress the error.
-	$failures = array();
-	foreach ( array( 'thumbnail', 'content' ) as $phase ) {
-		$injected = 0;
-		$filter = static function ( $sql ) use ( $wpdb, $phase, &$injected ) {
-			$match = 'thumbnail' === $phase ? str_contains( $sql, '_thumbnail_id' ) : ( str_contains( $sql, 'post_content' ) && str_contains( strtoupper( $sql ), 'LIKE' ) );
-			if ( $match && preg_match( '/^\\s*SELECT\\b/i', $sql ) ) {
-				++$injected;
-				return 'SELECT wstm121_deliberate_missing_column FROM ' . $wpdb->posts . ' LIMIT 1';
-			}
-			return $sql;
-		};
-		add_filter( 'query', $filter, PHP_INT_MAX );
-		$previous = $wpdb->suppress_errors( true );
-		try {
-			$result = Webmastery_MCP_Content_Hygiene::attachments_referenced( array( $ids[6] ) );
-		} finally {
-			$wpdb->suppress_errors( $previous );
-			remove_filter( 'query', $filter, PHP_INT_MAX );
+	$evidence = array( 'ids' => $ids, 'before' => $before, 'legacy' => array(), 'single' => array(), 'batch' => null,
+		'read_failures' => array(), 'sql' => array(), 'mutations' => array() );
+	$queries = static function ( $sql ) use ( &$evidence ) {
+		$evidence['sql'][] = $sql;
+		if ( ! preg_match( '/^\\s*(SELECT|SHOW|DESCRIBE|EXPLAIN)\\b/i', $sql ) ) {
+			$evidence['mutations'][] = $sql;
 		}
-		$failures[ $phase ] = array( 'injected_reads' => $injected, 'wp_error' => is_wp_error( $result ) );
-		wstm121_require( $injected > 0 && is_wp_error( $result ), 'Reference query failure did not fail closed.' );
+		return $sql;
+	};
+	$mutation = static function ( $value = null ) use ( &$evidence ) {
+		$evidence['mutations'][] = current_filter();
+		return $value;
+	};
+	add_filter( 'query', $queries, PHP_INT_MIN );
+	foreach ( wstm121_mutation_hooks() as $name ) {
+		add_filter( $name, $mutation, PHP_INT_MIN );
 	}
-	wstm121_require( $before === wstm121_snapshot(), 'Reference parity probes mutated persisted state.' );
-	wstm121_json_write( $directory . '/reference-parity.json', array( 'expected' => $expected, 'actual' => $actual, 'read_failures' => $failures ) );
+	try {
+		foreach ( $ids as $id ) {
+			$evidence['legacy'][ $id ] = wstm121_legacy_reference( $id );
+			$evidence['single'][ $id ] = Webmastery_MCP_Content_Hygiene::is_attachment_referenced( $id );
+			wstm121_require( $evidence['legacy'][ $id ] === in_array( $id, $state['referenced'], true ), 'Frozen reference oracle disagrees with seeded literal/escaped/featured fixtures.' );
+			wstm121_require( $evidence['legacy'][ $id ] === $evidence['single'][ $id ], 'Public single-item reference parity failed.' );
+		}
+		$actual = Webmastery_MCP_Content_Hygiene::attachments_referenced( $ids );
+		$evidence['batch'] = $actual;
+		wstm121_require( ! is_wp_error( $actual ) && $actual === $evidence['legacy'], 'Batch reference parity failed.' );
+		$delete = wp_get_ability( 'webmastery-site-toolkit-for-mcp/delete-media' );
+		wstm121_require( null !== $delete, 'Missing real delete-media ability.' );
+		foreach ( array( 'thumbnail', 'content' ) as $phase ) {
+			$injected = array();
+			$filter = static function ( $sql ) use ( $wpdb, $phase, &$injected ) {
+				$match = 'thumbnail' === $phase ? str_contains( $sql, '_thumbnail_id' ) : ( str_contains( $sql, 'post_content' ) && str_contains( strtoupper( $sql ), 'LIKE' ) );
+				if ( $match && preg_match( '/^\\s*SELECT\\b/i', $sql ) ) {
+					$replacement = 'SELECT wstm121_deliberate_missing_column FROM ' . $wpdb->posts . ' LIMIT 1';
+					$injected[] = array( 'original' => $sql, 'replacement' => $replacement );
+					return $replacement;
+				}
+				return $sql;
+			};
+			add_filter( 'query', $filter, PHP_INT_MAX );
+			$previous = $wpdb->suppress_errors( true );
+			try {
+				$result = Webmastery_MCP_Content_Hygiene::attachments_referenced( array( $ids[6] ) );
+				$evidence['read_failures'][ $phase ] = array(
+					'helper' => is_wp_error( $result ) ? array( 'code' => $result->get_error_code(), 'message' => $result->get_error_message(), 'data' => $result->get_error_data() ) : $result,
+					'forced_input' => array( 'media_id' => $ids[6], 'confirm' => true, 'force' => true ),
+				);
+				wstm121_require( is_wp_error( $result ), 'Reference query failure did not fail closed.' );
+				$forced = $delete->execute( $evidence['read_failures'][ $phase ]['forced_input'] );
+				$evidence['read_failures'][ $phase ]['forced_response'] = $forced;
+				wstm121_require( is_array( $forced ) && false === ( $forced['success'] ?? null )
+					&& 'upstream_failed' === ( $forced['error']['code'] ?? null )
+					&& 'content_hygiene_query_failed' === ( $forced['error']['reason'] ?? null ), 'Force bypassed the failed reference scan.' );
+				wstm121_require( ! str_contains( wp_json_encode( $forced ), 'wstm121_deliberate_missing_column' )
+					&& ! str_contains( wp_json_encode( $forced ), $wpdb->posts ), 'Forced-deletion error disclosed SQL diagnostics.' );
+			} finally {
+				$evidence['read_failures'][ $phase ]['injected'] = $injected;
+				$wpdb->suppress_errors( $previous );
+				remove_filter( 'query', $filter, PHP_INT_MAX );
+			}
+			wstm121_require( 2 === count( $injected ), 'Both helper and forced-deletion failures must execute real failing SQL.' );
+		}
+		$evidence['after'] = wstm121_snapshot();
+		wstm121_require( $before === $evidence['after'] && array() === $evidence['mutations'], 'Reference probes mutated persisted state or reached write hooks.' );
+	} catch ( Throwable $error ) {
+		$evidence['failure'] = get_class( $error ) . ': ' . $error->getMessage();
+		throw $error;
+	} finally {
+		remove_filter( 'query', $queries, PHP_INT_MIN );
+		foreach ( wstm121_mutation_hooks() as $name ) {
+			remove_filter( $name, $mutation, PHP_INT_MIN );
+		}
+		wstm121_json_write( $directory . '/reference-parity.json', $evidence );
+	}
+}
+
+function wstm121_window_faults( array $state, string $directory ): void {
+	global $wpdb;
+	$before = wstm121_snapshot();
+	$ability = wp_get_ability( 'webmastery-site-toolkit-for-mcp/list-posts' );
+	wstm121_require( null !== $ability, 'Missing real list-posts ability.' );
+	$input = array( 'page' => 1, 'per_page' => 2, 'orderby' => 'id', 'order' => 'DESC' );
+	$expected = array_slice( $state['catalog']['post'], 0, 2 );
+	$evidence = array( 'input' => $input, 'expected_ids' => $expected, 'phases' => array(), 'before' => $before );
+	try {
+		foreach ( array( 'candidate', 'priming' ) as $phase ) {
+			foreach ( array_slice( $state['catalog']['post'], 0, 3 ) as $id ) {
+				wp_cache_delete( $id, 'posts' );
+			}
+			// Isolated request-local setup only; never invalidate between failure and retry.
+			wp_cache_set_posts_last_changed();
+			$request = null;
+			$injected = 0;
+			$sql_seen = array();
+			$capture = static function ( $sql, $query ) use ( &$request ) {
+				if ( 'ids' === $query->get( 'fields' ) && 3 === $query->get( 'posts_per_page' ) ) {
+					$request = $sql;
+				}
+				return $sql;
+			};
+			$inject = static function ( $sql ) use ( $phase, &$request, &$injected, &$sql_seen, $wpdb ) {
+				$sql_seen[] = $sql;
+				$table = preg_quote( $wpdb->posts, '~' );
+				$prime = 1 === preg_match( '~^\\s*SELECT\\s+(?:' . $table . '\\.)?\\*\\s+FROM\\s+' . $table . '\\s+WHERE\\s+(?:' . $table . '\\.)?ID\\s+IN\\s*\\(~i', $sql );
+				if ( 0 === $injected && ( 'candidate' === $phase ? $sql === $request : $prime ) ) {
+					++$injected;
+					return 'SELECT wstm121_deliberate_missing_column FROM ' . $wpdb->posts . ' LIMIT 1';
+				}
+				return $sql;
+			};
+			add_filter( 'posts_request', $capture, PHP_INT_MAX, 2 );
+			add_filter( 'query', $inject, PHP_INT_MAX );
+			$suppressed = $wpdb->suppress_errors( true );
+			$start = $wpdb->num_queries;
+			$generation = wp_cache_get_last_changed( 'posts' );
+			try {
+				$failed = $ability->execute( $input );
+			} finally {
+				$wpdb->suppress_errors( $suppressed );
+				remove_filter( 'query', $inject, PHP_INT_MAX );
+				remove_filter( 'posts_request', $capture, PHP_INT_MAX );
+			}
+			$record = array(
+				'injected' => $injected, 'request' => $request, 'sql' => $sql_seen,
+				'query_start' => $start, 'query_end' => $wpdb->num_queries,
+				'generation_before' => $generation, 'generation_after' => wp_cache_get_last_changed( 'posts' ),
+				'failed_response' => $failed, 'private_database_error' => $wpdb->last_error,
+			);
+			$evidence['phases'][ $phase ] = $record;
+			wstm121_require( 1 === $injected && $record['query_end'] > $start, 'Intended real database failure was not exercised.' );
+			wstm121_require( is_array( $failed ) && false === ( $failed['success'] ?? null )
+				&& 'upstream_failed' === ( $failed['error']['code'] ?? null )
+				&& 'The list query could not be completed.' === ( $failed['error']['message'] ?? null ), 'Query failure masqueraded as EOF or exposed a different error.' );
+			wstm121_require( ! str_contains( wp_json_encode( $failed ), 'wstm121_deliberate_missing_column' )
+				&& ! str_contains( wp_json_encode( $failed ), $wpdb->posts ), 'SQL diagnostics escaped into the public response.' );
+			wstm121_require( $record['generation_before'] !== $record['generation_after'], 'Fresh failure did not invalidate the failed query generation.' );
+			$retry_start = $wpdb->num_queries;
+			$retry = $ability->execute( $input );
+			$evidence['phases'][ $phase ]['retry'] = array( 'query_start' => $retry_start, 'query_end' => $wpdb->num_queries, 'response' => $retry );
+			wstm121_require( true === ( $retry['success'] ?? null ) && $wpdb->num_queries > $retry_start
+				&& $expected === array_column( $retry['data']['items'], 'id' )
+				&& 2 === $retry['data']['next_page'], 'Retry reused a failed empty cache entry instead of recovering the same window.' );
+			$previous_error = $wpdb->last_error;
+			$wpdb->last_error = 'wstm121_stale_error_without_new_sql';
+			$warm_start = $wpdb->num_queries;
+			try {
+				$warm = $ability->execute( $input );
+				$evidence['phases'][ $phase ]['warm_stale'] = array( 'query_start' => $warm_start, 'query_end' => $wpdb->num_queries, 'response' => $warm, 'last_error' => $wpdb->last_error );
+				wstm121_require( $warm_start === $wpdb->num_queries && 'wstm121_stale_error_without_new_sql' === $wpdb->last_error
+					&& true === ( $warm['success'] ?? null ) && $expected === array_column( $warm['data']['items'], 'id' ), 'SQL-free warm cache treated an unrelated stale error as failure.' );
+			} finally {
+				$wpdb->last_error = $previous_error;
+			}
+		}
+		$evidence['after'] = wstm121_snapshot();
+		wstm121_require( $before === $evidence['after'], 'Fault/cache probes changed persisted state.' );
+	} catch ( Throwable $error ) {
+		$evidence['failure'] = $error->getMessage();
+		throw $error;
+	} finally {
+		wstm121_json_write( $directory . '/window-cache-faults.json', $evidence );
+	}
+}
+
+function wstm121_cleanup_readback( array $state, string $directory ): void {
+	global $wpdb;
+	$checks = array(
+		'posts' => $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_content_filtered=%s", $state['token'] ),
+		'actor' => $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->users} WHERE ID=%d OR user_login=%s", $state['user'] ?? 0, $state['namespace'] ),
+		'actor_meta' => $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->usermeta} WHERE user_id=%d", $state['user'] ?? 0 ),
+		'control' => $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name=%s", $state['namespace'] . '_control' ),
+	);
+	$remaining = array();
+	foreach ( $checks as $name => $sql ) {
+		$count = $wpdb->get_var( $sql );
+		wstm121_db_ok();
+		wstm121_require( null !== $count && is_numeric( $count ), 'Missing cleanup readback count.' );
+		$remaining[ $name ] = (int) $count;
+	}
+	$snapshot = wstm121_snapshot();
+	wstm121_json_write( $directory . '/cleanup-readback.json', array( 'remaining' => $remaining, 'snapshot' => $snapshot ) );
+	wstm121_require( array_fill_keys( array_keys( $checks ), 0 ) === $remaining, 'Owned fixture resources remain after cleanup.' );
+	wstm121_require( $snapshot === wstm121_json_read( $directory . '/setup-before.json' ), 'Cleanup did not restore the pre-seed persisted state.' );
 }
 
 function wstm121_mutation_hooks(): array {
@@ -345,7 +518,7 @@ function wstm121_mutation_hooks(): array {
 
 function wstm121_projection_probes( array $state, string $directory ): void {
 	$before = wstm121_snapshot();
-	$evidence = array( 'method' => 'Unmeasured read-only compatibility probes; not candidate-window numeric acceptance.', 'sql' => array(), 'mutations' => array(), 'responses' => array() );
+	$evidence = array( 'method' => 'Unmeasured read-only compatibility probes; not candidate-window numeric acceptance.', 'before' => $before, 'sql' => array(), 'mutations' => array(), 'responses' => array(), 'stored_content' => array() );
 	$queries = static function ( $sql ) use ( &$evidence ) {
 		$evidence['sql'][] = $sql;
 		if ( ! preg_match( '/^\\s*(SELECT|SHOW|DESCRIBE|EXPLAIN)\\b/i', $sql ) ) {
@@ -371,11 +544,13 @@ function wstm121_projection_probes( array $state, string $directory ): void {
 			wstm121_require( null !== $ability, 'Missing get compatibility ability.' );
 			$response = $ability->execute( $case[1] );
 			$evidence['responses'][ $case[0] ] = $response;
+			$evidence['stored_content'][ $case[0] ] = get_post( $case[2] )->post_content;
 			wstm121_require( is_array( $response ) && true === ( $response['success'] ?? null ), 'Get compatibility probe failed.' );
 			wstm121_require( get_post( $case[2] )->post_content === ( $response['data']['content'] ?? null ), 'Get no longer returns unchanged full content.' );
 		}
 		$ability = wp_get_ability( 'webmastery-site-toolkit-for-mcp/list-revisions' );
 		wstm121_require( null !== $ability, 'Missing revisions ability.' );
+		$evidence['stored_content']['revision'] = get_post( $state['revision'] )->post_content;
 		foreach ( array( 'default', 'summary', 'full' ) as $projection ) {
 			$input = array( 'post_id' => $state['catalog']['post'][0] );
 			if ( 'default' !== $projection ) {
@@ -394,6 +569,11 @@ function wstm121_projection_probes( array $state, string $directory ): void {
 			}
 		}
 		wstm121_require( array() === $evidence['mutations'], 'Read-only compatibility probe reached mutation hooks/SQL.' );
+		$evidence['after'] = wstm121_snapshot();
+		wstm121_require( $before === $evidence['after'], 'Read-only compatibility probes changed persisted state.' );
+	} catch ( Throwable $error ) {
+		$evidence['failure'] = get_class( $error ) . ': ' . $error->getMessage();
+		throw $error;
 	} finally {
 		remove_filter( 'query', $queries, PHP_INT_MAX );
 		foreach ( wstm121_mutation_hooks() as $name ) {
@@ -401,7 +581,6 @@ function wstm121_projection_probes( array $state, string $directory ): void {
 		}
 		wstm121_json_write( $directory . '/projection-probes.json', $evidence );
 	}
-	wstm121_require( $before === wstm121_snapshot(), 'Read-only compatibility probes changed persisted state.' );
 }
 
 function wstm121_worker( array $state, array $job, string $directory ): void {
@@ -475,8 +654,13 @@ function wstm121_worker( array $state, array $job, string $directory ): void {
 	foreach ( wstm121_mutation_hooks() as $hook ) {
 		add_filter( $hook, $mutation_observer, PHP_INT_MIN );
 	}
-	$record['operation_start'] = array( 'time_ns' => hrtime( true ), 'current_allocated_bytes' => memory_get_usage( true ), 'historical_peak_bytes' => memory_get_peak_usage( true ), 'wpdb_num_queries' => $wpdb->num_queries );
+	$record['operation_start'] = array( 'time_ns' => 0, 'current_allocated_bytes' => 0, 'historical_peak_bytes' => 0, 'wpdb_num_queries' => 0 );
+	$record['operation_end'] = array( 'time_ns' => 0, 'peak_allocated_bytes' => 0, 'current_allocated_bytes' => 0, 'wpdb_num_queries' => 0 );
 	$start_usage = memory_get_usage( true );
+	$record['operation_start']['current_allocated_bytes'] = $start_usage;
+	$record['operation_start']['historical_peak_bytes'] = memory_get_peak_usage( true );
+	$record['operation_start']['wpdb_num_queries'] = $wpdb->num_queries;
+	$record['operation_start']['time_ns'] = hrtime( true );
 	$exception = null;
 	try {
 		$response = $ability->execute( $job['input'] );
@@ -486,7 +670,10 @@ function wstm121_worker( array $state, array $job, string $directory ): void {
 		$exception = $error;
 	} finally {
 		$peak = memory_get_peak_usage( true );
-		$record['operation_end'] = array( 'time_ns' => hrtime( true ), 'peak_allocated_bytes' => $peak, 'current_allocated_bytes' => memory_get_usage( true ), 'wpdb_num_queries' => $wpdb->num_queries );
+		$record['operation_end']['time_ns'] = hrtime( true );
+		$record['operation_end']['peak_allocated_bytes'] = $peak;
+		$record['operation_end']['current_allocated_bytes'] = memory_get_usage( true );
+		$record['operation_end']['wpdb_num_queries'] = $wpdb->num_queries;
 		remove_action( 'pre_get_posts', $query_observer, PHP_INT_MAX );
 		remove_filter( 'query', $sql_observer, PHP_INT_MAX );
 		remove_filter( 'user_has_cap', $cap_observer, PHP_INT_MAX );
@@ -543,96 +730,13 @@ function wstm121_worker( array $state, array $job, string $directory ): void {
 	wstm121_require( $record['assertions_passed'], $record['failure'] ?? 'Operation assertion failed.' );
 }
 
-function wstm121_subprocess( array $job, string $directory ): array {
-	wstm121_json_write( $directory . '/job.json', $job );
-	$process = proc_open(
-		array( PHP_BINARY, __FILE__, 'worker', $directory ),
-		array( 0 => array( 'pipe', 'r' ), 1 => array( 'file', $directory . '/stdout.log', 'w' ), 2 => array( 'file', $directory . '/stderr.log', 'w' ) ),
-		$pipes,
-		dirname( __DIR__, 2 )
-	);
-	wstm121_require( is_resource( $process ), 'Cannot start fresh PHP subprocess.' );
-	fclose( $pipes[0] );
-	$status = proc_close( $process );
-	wstm121_require( is_file( $directory . '/result.json' ), "Worker exited {$status} without evidence: {$directory}" );
-	$result = wstm121_json_read( $directory . '/result.json' );
-	wstm121_require( 0 === $status && true === $result['assertions_passed'], 'Worker failed: ' . ( $result['failure'] ?? $directory ) );
-	return $result;
-}
-
-function wstm121_suite( array $state, string $directory ): void {
-	$collections = array(
-		'list-posts' => 'post', 'list-pages' => 'page', 'list-cpt-' . str_replace( '_', '-', $state['cpt'] ) => $state['cpt'],
-		'list-media' => 'attachment', 'get-seo-scores' => 'post', 'get-readability-scores' => 'post', 'list-orphaned-media' => 'attachment',
-	);
-	$summary = array();
-	$sequence = 0;
-	foreach ( $collections as $ability => $type ) {
-		foreach ( array( 'cold', 'warm' ) as $cache ) {
-			foreach ( array( 'dense', 'sparse', 'all-denied' ) as $mode ) {
-				$seen = array();
-				$count = count( $state['catalog'][ $type ] );
-				$last_page = (int) ceil( $count / 100 ) + 1;
-				for ( $page = 1; $page <= $last_page; ++$page ) {
-					$input = array( 'page' => $page, 'per_page' => 100 );
-					if ( str_contains( $ability, 'scores' ) ) {
-						$input['post_type'] = 'post';
-					}
-					$job = array( 'ability' => $ability, 'type' => $type, 'cache' => $cache, 'mode' => $mode, 'input' => $input, 'page' => $page, 'per_page' => 100, 'orphan' => 'list-orphaned-media' === $ability, 'controlled_default_summary' => false );
-					$path = $directory . '/operation-' . ++$sequence;
-					wstm121_require( mkdir( $path, 0700 ), 'Cannot create operation artifact directory.' );
-					$result = wstm121_subprocess( $job, $path );
-					foreach ( $result['item_ids'] as $id ) {
-						wstm121_require( ! isset( $seen[ $id ] ), 'Duplicate across immutable candidate pages.' );
-						$seen[ $id ] = true;
-					}
-					unset( $result );
-				}
-				$expected = array();
-				foreach ( $state['catalog'][ $type ] as $rank => $id ) {
-					if ( wstm121_allowed( $mode, $rank ) && ( 'list-orphaned-media' !== $ability || ! in_array( $id, $state['referenced'], true ) ) ) {
-						$expected[] = $id;
-					}
-				}
-				wstm121_require( array_keys( $seen ) === $expected, 'Traversal skipped/reordered eligible IDs.' );
-				$summary[] = array( 'ability' => $ability, 'cache' => $cache, 'mode' => $mode, 'pages_with_eof_probe' => $last_page, 'eligible_count' => count( $expected ), 'ordered_ids_sha256' => hash( 'sha256', json_encode( array_keys( $seen ) ) ) );
-				wstm121_json_write( $directory . '/traversals.json', $summary );
-			}
-		}
-		// Defaults and explicitly requested full projection; tied alternate sorts.
-		$cases = array( array( 'per_page' => 1 ), array() );
-		if ( in_array( $type, array( 'post', 'page', $state['cpt'] ), true ) && ! str_contains( $ability, 'scores' ) ) {
-			$cases[] = array( 'fields' => 'full', 'per_page' => 100 );
-			foreach ( array( 'date', 'title', 'modified', 'id' ) as $sort ) {
-				foreach ( array( 'ASC', 'DESC' ) as $order ) {
-					$cases[] = array( 'orderby' => $sort, 'order' => $order, 'page' => 2, 'per_page' => 100 );
-				}
-			}
-		}
-		foreach ( $cases as $input ) {
-			if ( str_contains( $ability, 'scores' ) ) {
-				$input['post_type'] = 'post';
-			}
-			$p = $input['per_page'] ?? ( str_contains( $ability, 'scores' ) ? 10 : 20 );
-			$controlled = empty( $input ) && in_array( $type, array( 'post', 'page', $state['cpt'] ), true );
-			foreach ( array( 'cold', 'warm' ) as $cache ) {
-				$job = array( 'ability' => $ability, 'type' => $type, 'cache' => $cache, 'mode' => 'dense', 'input' => $input, 'page' => $input['page'] ?? 1, 'per_page' => $p, 'orphan' => 'list-orphaned-media' === $ability, 'controlled_default_summary' => $controlled );
-				$path = $directory . '/operation-' . ++$sequence;
-				wstm121_require( mkdir( $path, 0700 ), 'Cannot create operation artifact directory.' );
-				wstm121_subprocess( $job, $path );
-			}
-		}
-	}
-	wstm121_json_write( $directory . '/suite.json', array( 'passed' => true, 'operations' => $sequence, 'traversals' => count( $summary ) ) );
-}
-
 function wstm121_main( array $argv ): int {
-	wstm121_require( 'cli' === PHP_SAPI && PHP_VERSION_ID >= 80100, 'CLI PHP >=8.1 required.' );
+	wstm121_require( 'cli' === PHP_SAPI && PHP_VERSION_ID >= 80100 && 8 === PHP_INT_SIZE, '64-bit CLI PHP >=8.1 required.' );
 	wstm121_require( '1' === getenv( 'WSTM_BOUNDED_BENCHMARK' ), 'Explicit WSTM_BOUNDED_BENCHMARK=1 CLI opt-in required.' );
 	$namespace = (string) getenv( 'WSTM_BOUNDED_NAMESPACE' );
 	wstm121_require( 1 === preg_match( '/\\Aw121_[a-f0-9]{12}\\z/D', $namespace ), 'Supply a unique WSTM_BOUNDED_NAMESPACE=w121_<12 lowercase hex>.' );
 	$mode = $argv[1] ?? '';
-	wstm121_require( in_array( $mode, array( 'run', 'worker', 'cleanup' ), true ), 'Usage: php bounded-list-benchmark.php run|cleanup (worker is internal).' );
+	wstm121_require( in_array( $mode, array( 'seed', 'worker', 'reference', 'projection', 'cache-faults', 'snapshot-before', 'snapshot-after', 'cleanup', 'cleanup-readback' ), true ), 'Use the bounded Linux controller; an unbounded run mode is not supported.' );
 	$load = (string) getenv( 'WSTM_BOUNDED_WP_LOAD' );
 	wstm121_require( is_file( $load ) && 'wp-load.php' === basename( $load ), 'Supply explicit WSTM_BOUNDED_WP_LOAD path.' );
 	wstm121_require( ! defined( 'ABSPATH' ), 'Run standalone, not from an already bootstrapped WordPress process.' );
@@ -659,7 +763,18 @@ function wstm121_main( array $argv ): int {
 	$cpt = $namespace;
 	// Initialize the real catalog outside all operation counters.
 	wp_get_abilities();
-	$directory = dirname( __DIR__, 2 ) . '/e2e-artifacts/' . $namespace;
+	$artifact_root = realpath( (string) getenv( 'WSTM_BOUNDED_ARTIFACT_ROOT' ) );
+	$wp_root = realpath( dirname( $load ) );
+	wstm121_require( false !== $artifact_root && is_dir( $artifact_root ) && ! is_link( $artifact_root )
+		&& $artifact_root !== $wp_root && ! str_starts_with( $artifact_root . DIRECTORY_SEPARATOR, $wp_root . DIRECTORY_SEPARATOR ), 'Explicit private artifact root outside WordPress is required.' );
+	$directory = $artifact_root . '/' . $namespace;
+	$controller = $directory . '.controller';
+	wstm121_require( is_dir( $controller ) && ! is_link( $controller ), 'Bounded controller ownership directory is missing.' );
+	$environment = wstm121_json_read( $controller . '/environment.json' );
+	wstm121_require( $environment['namespace'] === $namespace && $environment['source_sha'] === getenv( 'WSTM_BOUNDED_SOURCE_SHA' )
+		&& $environment['shard'] === getenv( 'WSTM_BOUNDED_SHARD' ), 'Controller/runtime identity mismatch.' );
+	$GLOBALS['wstm121_write_journal'] = $controller . '/php-write-bytes.log';
+	$GLOBALS['wstm121_cleanup_phase'] = in_array( $mode, array( 'cleanup', 'cleanup-readback' ), true );
 	if ( 'worker' === $mode ) {
 		$operation = realpath( $argv[2] ?? '' );
 		wstm121_require( false !== $operation && dirname( $operation ) === realpath( $directory ) && 1 === preg_match( '/\\Aoperation-[0-9]+\\z/', basename( $operation ) ), 'Worker artifact path is outside this run.' );
@@ -670,13 +785,36 @@ function wstm121_main( array $argv ): int {
 		wstm121_worker( $state, wstm121_json_read( $operation . '/job.json' ), $operation );
 		return 0;
 	}
-	if ( 'cleanup' === $mode ) {
+	if ( 'seed' !== $mode ) {
 		$run_lock = wstm121_lock( $directory . '/run.lock', LOCK_EX );
 		$worker_lock = wstm121_lock( $directory . '/workers.lock', LOCK_EX );
 		$state = wstm121_json_read( $directory . '/state.json' );
 		wstm121_require( $state['namespace'] === $namespace, 'State namespace mismatch.' );
-		wstm121_cleanup( $state );
-		wstm121_json_write( $directory . '/cleanup.json', array( 'passed' => true ) );
+		wstm121_require( $state['sources'] === wstm121_sources(), 'Source changed during immutable benchmark.' );
+		if ( 'cleanup' === $mode ) {
+			wstm121_cleanup( $state );
+			wstm121_json_write( $directory . '/cleanup.json', array( 'passed' => true ) );
+			return 0;
+		}
+		if ( 'cleanup-readback' === $mode ) {
+			wstm121_cleanup_readback( $state, $directory );
+			return 0;
+		}
+		wstm121_control( $state );
+		wp_set_current_user( $state['user'] );
+		if ( 'reference' === $mode ) {
+			wstm121_parity( $state, $directory );
+		} elseif ( 'projection' === $mode ) {
+			wstm121_projection_probes( $state, $directory );
+		} elseif ( 'cache-faults' === $mode ) {
+			wstm121_window_faults( $state, $directory );
+		} else {
+			$snapshot = wstm121_snapshot();
+			wstm121_json_write( $directory . ( 'snapshot-before' === $mode ? '/before.json' : '/after.json' ), $snapshot );
+			if ( 'snapshot-after' === $mode ) {
+				wstm121_require( $snapshot === wstm121_json_read( $directory . '/before.json' ), 'Read-only workers changed persisted state.' );
+			}
+		}
 		return 0;
 	}
 	wstm121_require( ! file_exists( $directory ), 'Artifact namespace collision; choose a fresh namespace (or cleanup the previous run).' );
@@ -684,8 +822,6 @@ function wstm121_main( array $argv ): int {
 	wstm121_require( mkdir( $directory, 0700 ), 'Cannot exclusively create artifact namespace.' );
 	$run_lock = wstm121_lock( $directory . '/run.lock', LOCK_EX );
 	$state = array( 'namespace' => $namespace, 'token' => bin2hex( random_bytes( 32 ) ), 'cpt' => $cpt, 'sources' => wstm121_sources() );
-	$failed = false;
-	$before = null;
 	try {
 		$git_head = array();
 		$git_diff = array();
@@ -699,39 +835,16 @@ function wstm121_main( array $argv ): int {
 			wstm121_require( 0 === $diff_status, 'Cannot record source diff.' );
 		}
 		wstm121_json_write( $directory . '/provenance.json', array( 'source_sha' => $source_sha, 'source_sha_method' => 0 === $git_status ? 'git HEAD; uncommitted state also hashed' : 'explicit operator-provided SHA; actual loaded-file hashes retained', 'git_head' => $git_head, 'git_diff' => $git_diff, 'git_diff_available' => 0 === $diff_status, 'sources' => $state['sources'], 'php' => PHP_VERSION, 'wordpress' => $GLOBALS['wp_version'], 'yoast' => WPSEO_VERSION, 'seed' => array( 'posts' => 20000, 'attachments' => 10000, 'large_posts' => 100, 'large_body_bytes' => 55 * 1024 ), 'memory_method' => 'conservative fresh-process PHP allocator peak minus current usage at operation start; not RSS; see source header' ) );
+		wstm121_require( $source_sha === $environment['source_sha'], 'Runtime source commit differs from granted source.' );
+		wstm121_json_write( $directory . '/setup-before.json', wstm121_snapshot() );
 		wstm121_seed( $state, $directory );
-		wp_set_current_user( $state['user'] );
-		wstm121_parity( $state, $directory );
-		wstm121_projection_probes( $state, $directory );
-		$before = wstm121_snapshot();
-		wstm121_json_write( $directory . '/before.json', $before );
-		wstm121_suite( $state, $directory );
+		$shard = (string) getenv( 'WSTM_BOUNDED_SHARD' );
+		wstm121_json_write( $directory . '/plan.json', array( 'shard' => $shard, 'jobs' => Wstm121Plan::jobs( $state, $shard ) ) );
 	} catch ( Throwable $error ) {
-		$failed = true;
 		wstm121_json_write( $directory . '/failure.json', array( 'class' => get_class( $error ), 'message' => $error->getMessage(), 'trace' => $error->getTraceAsString() ) );
-		fwrite( STDERR, $error->getMessage() . PHP_EOL );
-	} finally {
-		try {
-			if ( null !== $before ) {
-				$after = wstm121_snapshot();
-				wstm121_json_write( $directory . '/after.json', $after );
-				wstm121_require( $before === $after, 'Benchmark changed database state, including cron/options/hooks side effects.' );
-			}
-		} catch ( Throwable $error ) {
-			$failed = true;
-			wstm121_json_write( $directory . '/mutation-failure.json', array( 'message' => $error->getMessage() ) );
-		}
-		try {
-			wstm121_cleanup( $state );
-			wstm121_json_write( $directory . '/cleanup.json', array( 'passed' => true ) );
-		} catch ( Throwable $error ) {
-			$failed = true;
-			wstm121_json_write( $directory . '/cleanup-failure.json', array( 'message' => $error->getMessage(), 'recovery' => 'With the same opt-ins and namespace: php tests/e2e/bounded-list-benchmark.php cleanup' ) );
-		}
-		wstm121_json_write( $directory . '/outcome.json', array( 'passed' => ! $failed, 'real_runtime_executed' => true ) );
+		throw $error;
 	}
-	fwrite( STDOUT, ( $failed ? 'FAILED: ' : 'PASSED: ' ) . $directory . PHP_EOL );
-	return $failed ? 1 : 0;
+	return 0;
 }
 
 if ( realpath( $_SERVER['SCRIPT_FILENAME'] ?? '' ) === __FILE__ ) {

@@ -52,7 +52,7 @@ class Webmastery_MCP_Posts {
 			$data['tags']       = wp_get_post_tags( $post->ID, [ 'fields' => 'ids' ] );
 		}
 
-		return $data;
+		return Webmastery_MCP_Untrusted::mark( $data, [ 'title', 'content', 'excerpt', 'slug', 'url', 'author_name' ] );
 	}
 
 	private static function can_read_full_post( $post ) {
@@ -799,7 +799,7 @@ class Webmastery_MCP_Posts {
 	}
 
 	private static function normalize_block( $block, $path ) {
-		return [
+		return Webmastery_MCP_Untrusted::mark( [
 			'path'              => $path,
 			'block_name'        => $block['blockName'] ?? null,
 			'text'              => self::block_text( $block ),
@@ -807,7 +807,7 @@ class Webmastery_MCP_Posts {
 			'attrs'             => $block['attrs'] ?? [],
 			'inner_block_count' => count( $block['innerBlocks'] ?? [] ),
 			'hash'              => self::block_hash( $block ),
-		];
+		], [ 'block_name', 'text', 'html', 'attrs' ] );
 	}
 
 	private static function flatten_blocks( $blocks, $prefix = '' ) {
@@ -1063,7 +1063,7 @@ class Webmastery_MCP_Posts {
 
 				return [
 					'success' => true,
-					'data'    => [
+					'data'    => Webmastery_MCP_Untrusted::mark( [
 						'id'                  => $post->ID,
 						'type'                => $post->post_type,
 						'target'              => [
@@ -1075,7 +1075,7 @@ class Webmastery_MCP_Posts {
 						'content_hash_before' => $before_hash,
 						'content_hash_after'  => self::content_hash( $updated_post->post_content ),
 						'content'             => $updated_post->post_content,
-					],
+					], [ 'content' ] ),
 				];
 			},
 			'permission_callback' => self::content_permission(),
@@ -1259,7 +1259,7 @@ class Webmastery_MCP_Posts {
 					'data'    => [
 						'id'                  => $id,
 						'type'                => $post->post_type,
-						'target'              => $patch['target'],
+						'target'              => Webmastery_MCP_Untrusted::mark( $patch['target'], [ 'heading_text' ] ),
 						'replaced_blocks'     => $patch['replaced_blocks'],
 						'content_hash_before' => $before_hash,
 						'content_hash_after'  => $after_hash,
@@ -1358,7 +1358,7 @@ class Webmastery_MCP_Posts {
 			return null;
 		}
 
-		return [
+		return Webmastery_MCP_Untrusted::mark( [
 			'id'            => (int) $revision->ID,
 			'post_id'       => (int) $revision->post_parent,
 			'author'        => (int) $revision->post_author,
@@ -1368,7 +1368,7 @@ class Webmastery_MCP_Posts {
 			'excerpt'       => $revision->post_excerpt,
 			'date_created'  => $revision->post_date,
 			'date_modified' => $revision->post_modified,
-		];
+		], [ 'author_name', 'title', 'content', 'excerpt' ] );
 	}
 
 	private static function register_list_revisions() {
@@ -1537,10 +1537,10 @@ class Webmastery_MCP_Posts {
 
 				return [
 					'success' => true,
-					'data'    => [
+					'data'    => Webmastery_MCP_Untrusted::mark( [
 						'post_id' => $post_id,
 						'meta'    => $meta,
-					],
+					], [ 'meta' ] ),
 				];
 			},
 			'permission_callback' => self::post_meta_permission(),
@@ -1603,13 +1603,13 @@ class Webmastery_MCP_Posts {
 
 				return [
 					'success' => true,
-					'data'    => [
+					'data'    => Webmastery_MCP_Untrusted::mark( [
 						'post_id'        => $post_id,
 						'meta_key'       => $key,
 						'updated'        => (bool) $updated,
 						'previous_value' => $previous_value,
 						'current_value'  => $current_value,
-					],
+					], [ 'meta_key', 'previous_value', 'current_value' ] ),
 				];
 			},
 			'permission_callback' => self::post_meta_permission(),
@@ -1663,11 +1663,11 @@ class Webmastery_MCP_Posts {
 
 				return [
 					'success' => true,
-					'data'    => [
+					'data'    => Webmastery_MCP_Untrusted::mark( [
 						'post_id'       => $post_id,
 						'meta_key'      => $key,
 						'deleted_count' => $deleted_count,
-					],
+					], [ 'meta_key' ] ),
 				];
 			},
 			'permission_callback' => self::post_meta_permission(),

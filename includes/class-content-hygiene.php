@@ -113,13 +113,13 @@ class Webmastery_MCP_Content_Hygiene {
 		$attachment = get_post( $attachment );
 		$file       = get_attached_file( $attachment->ID );
 
-		return [
+		return Webmastery_MCP_Untrusted::mark( [
 			'id'        => (int) $attachment->ID,
 			'title'     => $attachment->post_title,
 			'url'       => wp_get_attachment_url( $attachment->ID ),
 			'mime_type' => $attachment->post_mime_type,
 			'file_size' => $file ? (int) wp_filesize( $file ) : 0,
-		];
+		], [ 'title', 'url' ] );
 	}
 
 	public static function is_attachment_referenced( $attachment ) {
@@ -283,13 +283,13 @@ class Webmastery_MCP_Content_Hygiene {
 	private static function normalize_post_summary( $post ) {
 		$post = get_post( $post );
 
-		return [
+		return Webmastery_MCP_Untrusted::mark( [
 			'id'             => (int) $post->ID,
 			'title'          => $post->post_title,
 			'url'            => get_permalink( $post->ID ),
 			'post_type'      => $post->post_type,
 			'published_date' => $post->post_date,
-		];
+		], [ 'title', 'url' ] );
 	}
 
 	private static function register_list_stuck_scheduled() {
@@ -346,7 +346,7 @@ class Webmastery_MCP_Content_Hygiene {
 	private static function normalize_stuck_scheduled_post( $post ) {
 		$post = get_post( $post );
 
-		return [
+		return Webmastery_MCP_Untrusted::mark( [
 			'id'                 => (int) $post->ID,
 			'title'              => $post->post_title,
 			'url'                => get_permalink( $post->ID ),
@@ -354,6 +354,6 @@ class Webmastery_MCP_Content_Hygiene {
 			'scheduled_date_gmt' => $post->post_date_gmt,
 			'author'             => (int) $post->post_author,
 			'author_name'        => get_the_author_meta( 'display_name', (int) $post->post_author ),
-		];
+		], [ 'title', 'url', 'author_name' ] );
 	}
 }

@@ -144,7 +144,7 @@ class Webmastery_MCP_Custom_Post_Types {
 			}
 		}
 
-		return [
+		return Webmastery_MCP_Untrusted::mark( [
 			'id'                => $post->ID,
 			'title'             => $post->post_title,
 			'content'           => $post->post_content,
@@ -159,7 +159,7 @@ class Webmastery_MCP_Custom_Post_Types {
 			'type'              => $post->post_type,
 			'featured_image_id' => (int) get_post_thumbnail_id( $post->ID ),
 			'taxonomy_terms'    => $taxonomy_terms,
-		];
+		], [ 'title', 'content', 'excerpt', 'slug', 'url', 'author_name' ] );
 	}
 
 	private static function can_read_full_post( $post_type_object, $post ) {

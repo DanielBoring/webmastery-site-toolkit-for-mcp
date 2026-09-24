@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/fixtures/bounded-manifest-projection.php';
+
 final class BoundedListManifestTest extends TestCase {
 	private static function canonical( $value ) {
 		if ( is_object( $value ) ) {
@@ -21,6 +23,7 @@ final class BoundedListManifestTest extends TestCase {
 	public function test_all_base_cases_preserved_or_explicitly_migrated(): void {
 		$root = dirname( __DIR__ );
 		$manifest = json_decode( file_get_contents( $root . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		$manifest = BoundedManifestProjection::bounded_source( $manifest );
 		$ledger = json_decode( file_get_contents( $root . '/fixtures/bounded-list-manifest-migration.json' ), false, 512, JSON_THROW_ON_ERROR );
 		$cases = array();
 		foreach ( $manifest as $case ) {

@@ -30,7 +30,7 @@ class Webmastery_MCP_Users {
 			$data['email'] = $user->user_email;
 		}
 
-		return $data;
+		return Webmastery_MCP_Untrusted::mark( $data, [ 'display_name', 'nicename', 'url', 'login', 'email' ] );
 	}
 
 	public static function permission() {
@@ -55,13 +55,13 @@ class Webmastery_MCP_Users {
 			return null;
 		}
 
-		return [
+		return Webmastery_MCP_Untrusted::mark( [
 			'id'         => (int) $user->ID,
 			'login'      => $user->user_login,
 			'email'      => $user->user_email,
 			'registered' => $user->user_registered,
 			'last_login' => self::get_last_login( (int) $user->ID ),
-		];
+		], [ 'login', 'email', 'last_login' ] );
 	}
 
 	private static function get_last_login( $user_id ) {
@@ -89,12 +89,12 @@ class Webmastery_MCP_Users {
 			$last_used = gmdate( 'c', (int) $last_used );
 		}
 
-		return [
+		return Webmastery_MCP_Untrusted::mark( [
 			'user_id'    => (int) $user->ID,
 			'user_login' => $user->user_login,
 			'app_name'   => (string) ( $password['name'] ?? '' ),
 			'last_used'  => $last_used ? (string) $last_used : null,
-		];
+		], [ 'user_login', 'app_name' ] );
 	}
 
 	private static function register_list() {

@@ -11,6 +11,17 @@ class Webmastery_MCP_Database_Health {
 			'label'               => 'Database Health',
 			'description'         => 'Audit WordPress database bloat indicators including revisions, orphaned post meta, expired transients, autoloaded options, and table sizes.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => [
+				'type'       => 'object',
+				'default'    => [],
+				'properties' => [
+					'include_table_names' => [
+						'type'        => 'boolean',
+						'default'     => false,
+						'description' => 'Deliberately send raw database table identifiers, including the configured prefix and plugin/custom names, to the model provider. Administrator diagnostics only; omitted or false uses private labels.',
+					],
+				],
+			],
 			'execute_callback'    => [ self::class, 'execute' ],
 			'permission_callback' => [ self::class, 'permission' ],
 			'meta'                => [
@@ -29,6 +40,15 @@ class Webmastery_MCP_Database_Health {
 	}
 
 	public static function execute( $input = [] ) {
+		$permission = self::permission();
+		if ( is_wp_error( $permission ) ) {
+			return $permission;
+		}
+		if ( ! is_array( $input ) || ( array_key_exists( 'include_table_names', $input ) && ! is_bool( $input['include_table_names'] ) ) ) {
+			return Webmastery_MCP_Response::local_error( 'invalid_input', 'include_table_names must be a boolean.' );
+		}
+		$include_table_names = $input['include_table_names'] ?? false;
+
 		$revisions = self::get_revision_report();
 		if ( is_wp_error( $revisions ) ) {
 			return $revisions;
@@ -49,7 +69,7 @@ class Webmastery_MCP_Database_Health {
 			return $autoloaded_options;
 		}
 
-		$table_sizes = self::get_table_sizes();
+		$table_sizes = self::get_table_sizes( $include_table_names );
 		if ( is_wp_error( $table_sizes ) ) {
 			return $table_sizes;
 		}
@@ -179,7 +199,7 @@ class Webmastery_MCP_Database_Health {
 		];
 	}
 
-	private static function get_table_sizes() {
+	private static function get_table_sizes( bool $include_table_names ) {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Reads table metadata for administrator diagnostics.
@@ -203,10 +223,38 @@ class Webmastery_MCP_Database_Health {
 			return self::database_error( 'table sizes' );
 		}
 
+		// Only core logical labels are public; match wpdb's physical mapping, not a suffix.
+		$core_labels  = array_fill_keys( [
+			'posts',
+			'comments',
+			'links',
+			'options',
+			'postmeta',
+			'terms',
+			'term_taxonomy',
+			'term_relationships',
+			'termmeta',
+			'commentmeta',
+			'users',
+			'usermeta',
+			'blogs',
+			'blogmeta',
+			'signups',
+			'site',
+			'sitemeta',
+			'registration_log',
+		], true );
+		$core_tables  = array_flip( array_intersect_key( $wpdb->tables( 'all', true ), $core_labels ) );
+		$custom_index = 0;
+
 		return array_map(
-			static function ( $row ) {
+			static function ( $row ) use ( $include_table_names, $core_tables, &$custom_index ) {
+				$name    = (string) $row['table_name'];
+				$is_core = isset( $core_tables[ $name ] );
+				$label   = $is_core ? $core_tables[ $name ] : 'custom_table_' . ( ++$custom_index );
 				return [
-					'table'       => (string) $row['table_name'],
+					'table'       => $include_table_names ? $name : $label,
+					'is_core_table' => $is_core,
 					'rows'        => absint( $row['row_count'] ),
 					'data_bytes'  => absint( $row['data_bytes'] ),
 					'index_bytes' => absint( $row['index_bytes'] ),
