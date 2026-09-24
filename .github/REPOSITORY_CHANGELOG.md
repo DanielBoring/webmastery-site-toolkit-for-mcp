@@ -6,6 +6,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Initialize the schema runner's lazy native abilities registry through the public API before verifying loaded production classes. Preserve source-identity checks, fixture and ownership guards, the 152-case requirement and cleanup policy; add isolated actual-preflight regressions for the old initialization order, unavailable API or class, and foreign class sources. These doubles do not establish genuine WordPress runtime acceptance.
+
 - Check schema-stage probe collisions with the public ability-presence API available since WordPress 6.9, avoiding diagnostics from deliberate missing-ability lookups. Preserve all four collision checks and the strict quiet-bootstrap guard; add isolated CLI-entry regressions for absent probes, each registered collision and an unavailable presence API. Attribution of the retained CI bootstrap failure remains provisional until genuine runtime validation.
 
 - Restore PHP 8.0 compatibility in the scheduling calibration fixture by explicitly enabling access to both private registration methods before reflective invocation. Preserve production visibility, historical ledgers, test assertions and case counts.

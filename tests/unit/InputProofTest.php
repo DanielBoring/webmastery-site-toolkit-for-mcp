@@ -7,6 +7,80 @@ use PHPUnit\Framework\TestCase;
 require_once dirname( __DIR__, 2 ) . '/includes/class-input.php';
 
 final class InputProofTest extends TestCase {
+	public static function registry_initialization_cases(): array {
+		return array(
+			'lazy registration' => array( 'lazy', 'ready', '', 1 ),
+			'old order mutant' => array( 'old-order', ReflectionException::class, 'Class "Webmastery_MCP_Ability" does not exist', 0 ),
+			'missing API' => array( 'missing-api', RuntimeException::class, 'Required native abilities runtime unavailable.', 0 ),
+			'missing ability class' => array( 'missing-class', ReflectionException::class, 'Class "Webmastery_MCP_Ability" does not exist', 1 ),
+			'foreign ability source' => array( 'foreign-ability', RuntimeException::class, 'Mixed loaded production sources.', 1 ),
+			'foreign input source' => array( 'foreign-input', RuntimeException::class, 'Mixed loaded production sources.', 1 ),
+			'foreign response source' => array( 'foreign-response', RuntimeException::class, 'Mixed loaded production sources.', 1 ),
+		);
+	}
+
+	/** @dataProvider registry_initialization_cases */
+	public function test_runner_initializes_lazy_registry_before_source_reflection( string $variant, string $expected_type, string $expected_message, int $expected_initializations ): void {
+		$root = dirname( __DIR__, 2 );
+		$runner = dirname( __DIR__ ) . '/e2e/input-schema-runner.php';
+		$source = str_replace( "\r\n", "\n", file_get_contents( $runner ) );
+		$start_marker = "if ( ! defined( 'WSTM126_DISPOSABLE_RUNTIME' )";
+		$end_marker = "\$summary['source_hashes'] =";
+		self::assertSame( 1, substr_count( $source, $start_marker ) );
+		self::assertSame( 1, substr_count( $source, $end_marker ) );
+		$start = strpos( $source, $start_marker );
+		$end = strpos( $source, $end_marker );
+		self::assertGreaterThan( $start, $end );
+		$preflight = substr( $source, $start, $end - $start );
+		if ( 'old-order' === $variant ) {
+			$preflight = str_replace(
+				"wstm126_require( function_exists( 'wp_get_abilities' ), 'Required native abilities runtime unavailable.' );\nwp_get_abilities();\n",
+				'',
+				$preflight,
+				$count
+			);
+			self::assertSame( 1, $count, 'Restore exactly the original pre-initialization order.' );
+		}
+		// Evaluate the actual preflight without bootstrapping WordPress or seeding fixtures.
+		$preflight = str_replace( '__DIR__', var_export( dirname( $runner ), true ), $preflight );
+		$code = 'define("ABSPATH",' . var_export( $root . '/', true ) . ');'
+			. 'define("WSTM126_DISPOSABLE_RUNTIME",true);define("WSTM126_STAGE_TOKEN",str_repeat("a",32));'
+			. '$stage_token=WSTM126_STAGE_TOKEN;$source_sha=str_repeat("b",40);$project="registry-test";$boundary="direct";'
+			. '$GLOBALS["initializations"]=0;$GLOBALS["observations"]=0;class WP_Ability{}class WP_Error{}'
+			. 'function wstm126_begin(){}'
+			. 'function wstm126_require($valid,$message){if(!$valid){throw new RuntimeException($message);}}'
+			. 'function get_option($name,$default){$GLOBALS["observations"]++;return false;}'
+			. 'function get_bloginfo($name){return "isolated-double";}';
+		foreach ( array( 'input', 'response' ) as $name ) {
+			$code .= 'foreign-' . $name === $variant
+				? 'class Webmastery_MCP_' . ucfirst( $name ) . '{}'
+				: 'require ' . var_export( $root . '/includes/class-' . $name . '.php', true ) . ';';
+		}
+		if ( 'missing-api' !== $variant ) {
+			$initialize = 'missing-class' === $variant ? '' : (
+				'foreign-ability' === $variant ? 'class Webmastery_MCP_Ability{}' : 'require ' . var_export( $root . '/includes/class-ability.php', true ) . ';'
+			);
+			$code .= 'function wp_get_abilities(){$GLOBALS["initializations"]++;' . $initialize . 'return [];}';
+		}
+		$code .= '$before=class_exists("Webmastery_MCP_Ability",false);$type="ready";$message="";$verified=false;'
+			. 'try{eval(' . var_export( $preflight, true ) . ');$verified=true;}'
+			. 'catch(Throwable $error){$type=get_class($error);$message=$error->getMessage();}'
+			. 'echo json_encode([$type,$message,$GLOBALS["initializations"],$GLOBALS["observations"],$before,$verified,$summary["expected_cases"]],JSON_THROW_ON_ERROR);';
+		$process = proc_open( array( PHP_BINARY, '-d', 'display_errors=stderr', '-d', 'error_reporting=-1', '-r', $code ), array( 0 => array( 'pipe', 'r' ), 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ), $pipes, $root );
+		self::assertIsResource( $process );
+		fclose( $pipes[0] );
+		$output = stream_get_contents( $pipes[1] );
+		$error = stream_get_contents( $pipes[2] );
+		fclose( $pipes[1] );
+		fclose( $pipes[2] );
+		self::assertSame( 0, proc_close( $process ), $error );
+		self::assertSame( '', $error );
+		self::assertSame(
+			array( $expected_type, $expected_message, $expected_initializations, 1, false, 'ready' === $expected_type, 152 ),
+			json_decode( $output, true, 32, JSON_THROW_ON_ERROR )
+		);
+	}
+
 	public function test_runtime_adds_exact_typed_destructive_matrix_and_hashes_native_validator(): void {
 		$source = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__ ) . '/e2e/input-schema-runner.php' ) );
 		self::assertStringContainsString( "__DIR__ . '/../../includes/class-ability.php'", $source );

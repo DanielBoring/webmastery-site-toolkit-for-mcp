@@ -47,6 +47,8 @@ $summary = array(
 	'source_sha' => $source_sha,
 	'passed' => 0, 'failed' => 0, 'cases' => array(), 'cleanup' => array(),
 );
+wstm126_require( function_exists( 'wp_get_abilities' ), 'Required native abilities runtime unavailable.' );
+wp_get_abilities();
 $plugin_root = dirname( ( new ReflectionClass( Webmastery_MCP_Ability::class ) )->getFileName(), 2 );
 foreach ( array( Webmastery_MCP_Ability::class => 'class-ability.php', Webmastery_MCP_Input::class => 'class-input.php', Webmastery_MCP_Response::class => 'class-response.php' ) as $class => $filename ) {
 	wstm126_require( realpath( $plugin_root . '/includes/' . $filename ) === realpath( ( new ReflectionClass( $class ) )->getFileName() ), 'Mixed loaded production sources.' );
