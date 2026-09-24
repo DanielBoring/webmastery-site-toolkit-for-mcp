@@ -6,6 +6,9 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Retain finite, private-safe failure classifications for the first positive synthetic package-runtime fixture, without changing its original exit, production admission guards, publication channels or three-file export. Cover allowlist drift, malformed/private diagnostics, checked I/O failures and copied-source/outer-exit behavior; synthetic observations are not real daemon, WordPress or durable custody acceptance.
+- Make the two private resource-helper reflection tests accessible on PHP 8.0 without changing production visibility, assertions or test cases.
+
 - Bind test-custody origin to a dedicated server-context receipt carrying the exact executed workflow commit/ref, separate from event/PR/run heads and checkout. Fetch reviewed workflow bytes at that commit; reject missing/substituted receipts and retain completed-run/job checks. Exercise the receipt CLI with mock context inputs without claiming real GitHub provenance or resolving durable producer/receiver-ack custody.
 - Represent an intentionally absent PR head with a nonempty environment sentinel so receipt CLI checks work across Windows process boundaries. Preserve JSON null in non-PR receipts, reject missing/empty fields and PR-event sentinels, and cover push/dispatch plus rejection cases without skipping platform checks.
 - Keep the compatibility dependency-policy ordering test offline by mocking the untrusted-content stage alongside the existing stage mocks. Require cron isolation and exactly one call in each contract, E2E and combined mode without invoking or weakening the real host-authority and custody checks.

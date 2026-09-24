@@ -202,7 +202,43 @@ expect_failure() {
 )
 COMPOSE_PROJECT_NAME='invalid name' expect_failure 'Invalid disposable Compose project name.' bash scripts/release-qa.sh
 test ! -s "$TRACE"
-bash scripts/release-qa.sh > "$WORK/success.log" 2>&1
+mkdir -m 700 -- "$WORK/first-package-diagnostic"
+package_status=0
+WSTM108_MOCK_DIAGNOSTIC=1 bash scripts/release-qa.sh > "$WORK/success.log" 2>&1 || package_status=$?
+if (( package_status != 0 )); then
+	diagnostic_status=0
+	(
+		umask 077
+		set -o noclobber
+		exec "$WSTM108_MOCK_PHP" "$REPO_ROOT/tests/unit/fixtures/untrusted-runtime-diagnostic.php" \
+			read "$WORK/first-package-diagnostic" "$package_status" \
+			> "$WORK/first-package-diagnostic/readback.stdout.private" \
+			2> "$WORK/first-package-diagnostic/readback.stderr.private"
+	) || diagnostic_status=$?
+	diagnostic_code=''
+	if ! {
+		if [[ "$diagnostic_status" == 0 && ! -s "$WORK/first-package-diagnostic/readback.stderr.private" \
+			&& -f "$WORK/first-package-diagnostic/readback.stdout.private" \
+			&& ! -L "$WORK/first-package-diagnostic/readback.stdout.private" ]] \
+			&& (( $(wc -c < "$WORK/first-package-diagnostic/readback.stdout.private") <= 3 )) \
+			&& IFS= read -r -n 3 diagnostic_code < "$WORK/first-package-diagnostic/readback.stdout.private" \
+			&& [[ "$diagnostic_code" =~ ^(0|[1-9]|[12][0-9]|3[0-6])$ ]] \
+			&& (( $(wc -c < "$WORK/first-package-diagnostic/readback.stdout.private") == ${#diagnostic_code} + 1 )); then
+			if [[ "$diagnostic_code" == 0 ]]; then
+				printf 'WSTM108 synthetic diagnostic: unmapped; original_exit=%s\n' "$package_status"
+			else
+				printf 'WSTM108 synthetic diagnostic: topology_code=%s; original_exit=%s\n' "$diagnostic_code" "$package_status"
+			fi
+		elif [[ "$diagnostic_status" == 2 ]]; then
+			printf 'WSTM108 synthetic diagnostic: not-observed; original_exit=%s\n' "$package_status"
+		else
+			printf 'WSTM108 synthetic diagnostic: refused; reader_exit=%s; original_exit=%s\n' "$diagnostic_status" "$package_status"
+		fi
+	} 2>/dev/null; then
+		printf '%s\n' 'WSTM108 synthetic diagnostic reporting failed; original exit retained.' >&2 2>/dev/null || :
+	fi
+	exit "$package_status"
+fi
 [[ "$(sha256sum "$RELEASE_ZIP")" == "$IDENTITY" ]]
 for runner in ability-runner media-download-runner scheduling-runner trash-safety-runner mcp-crud-runner site-kit-mcp-runner parent-assignment-runner post-meta-authorization-runner error-contract-runner metadata-batch-runner seo-metadata-runner destructive-safety-runner database-table-privacy-runner; do
 	grep -F "/tests/e2e/${runner}.php" "$TRACE" > /dev/null

@@ -84,12 +84,37 @@ SH;
 			&& ( "\n" === $ending || false === strpos( $without_pairs, "\n" ) ), 'uniform exact source line endings required' );
 		$before = str_replace( "\n", $ending, str_replace( "\r\n", "\n", $before ) );
 		$after = str_replace( "\n", $ending, str_replace( "\r\n", "\n", $after ) );
-		self::require( 1 === substr_count( $source, $before ), 'exact source substitution must match once' );
+		self::require( $before !== $after && 1 === substr_count( $source, $before ), 'exact non-noop source substitution must match once' );
 		$result = str_replace( $before, $after, $source );
 		self::require( 1 === substr_count( $result, $after ) && str_replace( $after, $before, $result ) === $source, 'unchanged remainder and reversible exact site' );
 		self::$substitutions[] = array( 'site' => $site, 'before_sha256' => hash( 'sha256', $before ), 'after_sha256' => hash( 'sha256', $after ),
 			'unchanged_remainder_sha256' => hash( 'sha256', str_replace( $before, '', $source ) ), 'count' => 1 );
 		return $result;
+	}
+
+	private static function diagnostic_terminal( string $source, string $root ): string {
+		$terminal_catch = <<<'PHP'
+	} catch ( Throwable $error ) {
+		fwrite( STDERR, "WSTM108 controller refused; private diagnostic channel retained; terminal release outcome must not be inferred.\n" );
+		exit( $error->getCode() > 0 && $error->getCode() <= 255 ? $error->getCode() : 1 );
+	}
+PHP;
+		$diagnostic_catch = <<<'PHP'
+	} catch ( Throwable $error ) {
+		if ( '1' === getenv( 'WSTM108_MOCK_DIAGNOSTIC' ) ) {
+			try {
+				require_once __DIR__ . '/../tests/unit/fixtures/untrusted-runtime-diagnostic.php';
+				Wstm108_SyntheticDiagnostic::record( $error, @DIAGNOSTIC_DIRECTORY@ );
+			} catch ( Throwable $diagnostic_error ) {
+				fwrite( STDERR, "WSTM108 synthetic diagnostic write failed; original exit retained.\n" );
+			}
+		}
+		fwrite( STDERR, "WSTM108 controller refused; private diagnostic channel retained; terminal release outcome must not be inferred.\n" );
+		exit( $error->getCode() > 0 && $error->getCode() <= 255 ? $error->getCode() : 1 );
+	}
+PHP;
+		$diagnostic_catch = str_replace( '@DIAGNOSTIC_DIRECTORY@', var_export( $root . '/first-package-diagnostic', true ), $diagnostic_catch );
+		return self::replace( $source, $terminal_catch, $diagnostic_catch, 'scripts/untrusted-host-controller.php::synthetic-terminal-diagnostic' );
 	}
 
 	public static function install(): void {
@@ -184,6 +209,7 @@ PHP;
 		return 0;
 PHP;
 		$updates['untrusted-host-controller.php'] = self::replace( $source, $terminal, $mock_terminal, 'scripts/untrusted-host-controller.php::named-precommit-postcommit-interruptions' );
+		$updates['untrusted-host-controller.php'] = self::diagnostic_terminal( $updates['untrusted-host-controller.php'], $root );
 		$source = $files['untrusted-host-bootstrap.sh']['bytes'];
 		$source = self::replace( $source, 'php_binary="$(readlink -e -- "$(command -v php)")"', 'php_binary="$(readlink -e -- "${WSTM108_MOCK_PHP:?}")"',
 			'scripts/untrusted-host-bootstrap.sh::native-php-executable' );
@@ -193,6 +219,7 @@ PHP;
 		WSTM108_MOCK_ONLY=1 WSTM108_MOCK_ROOT="${WSTM108_MOCK_ROOT:?}" WSTM108_MOCK_CHECKOUT="${WSTM108_MOCK_CHECKOUT:?}" \
 		WSTM108_MOCK_PHP="${WSTM108_MOCK_PHP:?}" WSTM108_MOCK_BASH="${WSTM108_MOCK_BASH:?}" \
 		WSTM108_MOCK_MATRIX_PHP="${WSTM108_MOCK_MATRIX_PHP:?}" \
+		WSTM108_MOCK_DIAGNOSTIC="${WSTM108_MOCK_DIAGNOSTIC:-0}" \
 		WSTM108_MOCK_LIVE="${WSTM108_MOCK_LIVE:?}" TRACE="${TRACE:?}" \
 		WSTM108_MOCK_FAULT="${WSTM108_MOCK_FAULT:-}" WSTM108_RELEASE_FAULT="${WSTM108_RELEASE_FAULT:-}" \
 		FAIL_STAGE="${FAIL_STAGE:-}" FAIL_RESTORE="${FAIL_RESTORE:-}" FAIL_FINALIZE="${FAIL_FINALIZE:-}" \

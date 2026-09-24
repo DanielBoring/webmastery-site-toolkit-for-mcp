@@ -696,6 +696,45 @@ transport, malformed JSON, valid-JSON semantic, partial journal/spool, pending
 parser and unexpected process-output failures must prevent finalization and
 outer teardown. Only the fully validated synthetic success path retires.
 
+The first positive package-runtime invocation has a **test-only failure
+diagnostic**, installed only in the copied controller's outer terminal catch.
+An explicit per-invocation opt-in writes a separate `0700`
+`WORK/first-package-diagnostic` sibling, never the authority directory,
+`GITHUB_OUTPUT`, or production's three-file export. Its exclusively created
+`0600` single-link `terminal.json` has the closed shape
+`{"version":1,"scope":"synthetic-only","reason_code":17,"exception_exit":78}`.
+The 36 exact codes in `tests/unit/fixtures/untrusted-runtime-diagnostic.php`
+map only static topology reason strings; a source characterization requires
+coverage to match the actual topology reasons. Code `0` means unmapped within
+eight exception-chain nodes, not an inferred cause. No original exception
+text, stack, path, environment or site payload enters this record.
+
+The writer checks writes, flush, builtin `fsync`, bounded readback and close;
+the reader checks close as well as canonical JSON, enum/types, original exit,
+ownership/mode, regular-file/link and before/after identities. Record output
+is capped at 1 KiB; readback refuses files over 4 KiB and reads at most 4097
+bytes. Reader stdout/stderr are captured privately. Only an exact bounded
+integer can become a public `topology_code`; other public states are
+`unmapped`, `not-observed` or `refused`. The original package exit remains
+authoritative even when diagnosis or public reporting fails. Reporting errors
+attempt only a fixed safe stderr notice; failure of that notice is also guarded,
+and neither can replace the original package exit. Internal returns/native failures
+may bypass the outer catch; a missing record does not distinguish that from
+a writer failure before creation. These states are not QA success or origin
+proof, and no actual failure cause is inferred without its observation.
+
+`UntrustedRuntimeDiagnosticTest` separates pure projection/source checks from
+real Linux filesystem/process controls, including synthetic I/O fault seams.
+Its 37-control native inventory retains the existing 36 controls in order and
+appends a real `/dev/full` diagnostic-stdout failure with private stderr capture,
+requiring the original exit `78` rather than the reporting command's failure.
+The native cases require a real Linux PHP 8.1+ interpreter (the fixed
+`/usr/bin/php8.4` companion already verified by the Unit workflow in the PHP
+8.0 matrix, with no PATH fallback); a non-Linux skip is **not** positive
+coverage. No startup-stream hard quota, whole-host attestation, artifact
+upload, or survival after hosted-runner teardown is claimed. Existing private
+failure retention and successful-path assertions remain unchanged.
+
 Retain the following evidence independently of static registration/manifest
 coverage:
 

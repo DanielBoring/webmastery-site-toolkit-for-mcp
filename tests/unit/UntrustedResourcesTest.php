@@ -297,6 +297,7 @@ final class UntrustedResourcesTest extends TestCase {
 		$run = 'wstm108-0123456789abcdef';
 		$resources = new Wstm108_Resources( $this->directory . DIRECTORY_SEPARATOR . 'resources.json', $this->proof_binding(), $run );
 		$check = new ReflectionMethod( Wstm108_Resources::class, 'owned_slug' );
+		$check->setAccessible( true );
 		foreach ( array( $run . '-title', $run . '-auto-%e9%9b%aa-%f0%9f%98%80', $run . '-auto-%e9%9b%aa-2' ) as $slug ) {
 			self::assertTrue( $check->invoke( $resources, $slug ) );
 		}
@@ -869,6 +870,7 @@ PHP;
 
 	public function test_posix_owned_child_link_delta_preserves_every_other_parent_identity_field(): void {
 		$check = new ReflectionMethod( Wstm108_Resources::class, 'owned_upload_parent' );
+		$check->setAccessible( true );
 		$before = array( 'dev' => 17, 'ino' => 123456, 'uid' => 1000, 'gid' => 1000, 'mode' => 0040755, 'nlink' => 2 );
 		$owned_child = $before;
 		++$owned_child['nlink'];
