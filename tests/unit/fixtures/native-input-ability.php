@@ -160,7 +160,7 @@ class WP_Ability {
 	}
 
 	private static function matches( $value, array $schema ): bool {
-		$known = array( 'type', 'properties', 'required', 'additionalProperties', 'items', 'enum', 'default', 'description', 'minimum', 'maximum', 'format', 'oneOf', 'anyOf' );
+		$known = array( 'type', 'properties', 'required', 'additionalProperties', 'items', 'minItems', 'maxItems', 'enum', 'default', 'description', 'minimum', 'maximum', 'format', 'oneOf', 'anyOf' );
 		if ( array_diff( array_keys( $schema ), $known ) ) {
 			throw new LogicException( 'Schema keyword outside the lifecycle double boundary.' );
 		}
@@ -240,10 +240,16 @@ class WP_Ability {
 				}
 			}
 		}
-		if ( 'array' === ( $schema['type'] ?? null ) && isset( $schema['items'] ) ) {
-			foreach ( $value as $item ) {
-				if ( ! self::matches( $item, $schema['items'] ) ) {
-					return false;
+		if ( 'array' === ( $schema['type'] ?? null ) ) {
+			if ( ( isset( $schema['minItems'] ) && count( $value ) < $schema['minItems'] )
+				|| ( isset( $schema['maxItems'] ) && count( $value ) > $schema['maxItems'] ) ) {
+				return false;
+			}
+			if ( isset( $schema['items'] ) ) {
+				foreach ( $value as $item ) {
+					if ( ! self::matches( $item, $schema['items'] ) ) {
+						return false;
+					}
 				}
 			}
 		}

@@ -63,6 +63,7 @@ reasons, exact schema bounds, canonical per-ID failures, query failure with forc
 and unchanged capability/trash behavior. Existing error-contract, taxonomy, and
 trash runners retain all earlier assertions.
 
+**Historical parent contract, not the current strict native boundary:**
 `destructive-safety-boolean-ledger.json` records the reviewed correction from
 head `6a47b52` (tested synthetic merge `22e30ea`): 547 manifest cases remain
 unchanged and 16 change only expected error code/reason, with all 563 typed
@@ -74,8 +75,9 @@ confirmation `"true"`/`1` fails the strict callback with
 fails there with `invalid_input/invalid_input`. Missing/false/null confirmation,
 null/array optional flags and 101 IDs still fail registered schema validation.
 Direct-callback expectations and independent permission-denial checks do not
-change. Recalibrate explicitly if a future input wrapper changes that ordering;
-do not broadly accept multiple reasons or coerce test inputs to make them pass.
+change. The strict-input candidate supersedes these 16 native expectations
+with the exact calibration below; it does not rewrite this historical ledger.
+Do not broadly accept multiple reasons or coerce test inputs to make them pass.
 Preservation fingerprints decode JSON as objects and encode with
 `JSON_PRESERVE_ZERO_FRACTION`, retaining property order and sparse case indexes.
 Their goldens come from exact `6a47b52`, not the corrected working manifest.
@@ -342,6 +344,20 @@ and privacy cases are limited to the indicated native error fields.
 | Confirmation string `"true"` / integer `1` across five destructive abilities | 10 | `precondition_failed` / `missing_confirmation` | `invalid_input` / `ability_invalid_input` |
 | Optional dry-run/force string `"true"` / integer `1` | 6 | `invalid_input` / `invalid_input` | `invalid_input` / `ability_invalid_input` |
 | Database table-name flag string `"true"` / integer `1` | 2 | Direct method `invalid_input` / `invalid_input` | `invalid_input` / `ability_invalid_input` |
+
+`DestructiveNativeBoundaryTest` executes the exact 16 malformed manifest inputs
+through the real plugin Input/Response/Ability classes and production callback
+bodies, using the explicitly limited `WP_Ability` lifecycle double and
+namespace-local read/capability/query/write spies. It compares registered native,
+raw permission, wrapped direct, and original direct paths without changing flag
+types or stripping schema constraints. Native rejection must precede permission
+and execution; direct paths retain their interlock diagnostics. Valid previews
+and denied-capability controls distinguish working observers from inert stubs.
+The double now supports the actual bulk schema's `minItems`/`maxItems`; it still
+rejects unsupported keywords. This is not actual-core, Adapter, HTTP or package
+acceptance. `DestructiveBooleanLedgerTest` reconstructs the historical parent
+first: its 563/547/16 preservation result alone does not exercise the current
+subclass or prove those old oracles remain valid for native execution.
 
 The privacy null row is unchanged. The original privacy hash/index goldens
 are unchanged; the ledger explicitly reverses only the two authorized reason
