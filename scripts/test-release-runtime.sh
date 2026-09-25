@@ -279,6 +279,9 @@ php scripts/release-tools.php runtime-package build/release-check/webmastery-sit
 # shellcheck disable=SC2030,SC2031 # Each fault injection is intentionally isolated to its subprocess.
 for outer in package source; do
 	for failure in restoration attachment missing-proof ordinary combined success teardown ordinary-teardown; do
+		php tests/unit/fixtures/untrusted-release-proof.php isolate
+		export WSTM108_MOCK_LIVE="$WORK/retention-$outer-$failure"
+		mkdir -m 700 "$WSTM108_MOCK_LIVE"
 		rm -f build/wstm116-retention-release-runtime-fixture
 		: > "$TRACE"
 		status=0
@@ -307,7 +310,11 @@ for outer in package source; do
 			ordinary|combined|ordinary-teardown) expected=44 ;;
 			success) expected=0 ;;
 		esac
-		[[ "$status" == "$expected" ]] || { cat "$WORK/retention-$outer-$failure.log" >&2; exit 1; }
+		[[ "$status" == "$expected" ]] || {
+			printf 'FAIL legacy retention outer=%s case=%s expected_status=%s actual_status=%s\n' "$outer" "$failure" "$expected" "$status" >&2
+			cat "$WORK/retention-$outer-$failure.log" >&2
+			exit 1
+		}
 		if [[ "$failure" == ordinary || "$failure" == success || "$failure" == teardown || "$failure" == ordinary-teardown ]]; then
 			[[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]]
 			test ! -e build/wstm116-retention-release-runtime-fixture
