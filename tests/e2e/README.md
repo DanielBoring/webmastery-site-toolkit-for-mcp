@@ -161,7 +161,13 @@ from a successful local test. Each receipt is limited to 1 MiB and its exact
 original bytes are retained inside controller custody for offline review.
 Artifacts must be outside the web root.
 
-The controller takes exactly that granted JSON document as its argument.
+The controller takes exactly one argument: the path to that granted JSON file,
+not inline JSON. Through an approved bounded launcher:
+
+```sh
+python3 tests/e2e/bounded-list-controller.py "$GRANTED_ENVIRONMENT_JSON"
+```
+
 It invokes fresh PHP phases and workers; the former unbounded PHP `run` mode
 is deliberately unavailable. Do not invoke individual application phases with
 an unbounded shell command as a substitute for this controller.
@@ -218,12 +224,30 @@ real-runtime recovery evidence remains lease-gated.
 
 The controller prints the final custody SHA-256 only after publication. Pin it
 outside the artifact set; a self-reported hash alone is not attestation.
-The independent verifier takes a JSON object with `shards` and `custody_sha256`
-maps in canonical `posts`, `pages`, `cpt`, `media`, `seo`, `readability`, `orphans`
-order, followed by an exclusive output-file path. Each shard value is its
-original data-directory path and each custody value is the independently pinned
-hash. Invoke `php tests/e2e/bounded-list-verifier.php` with those two arguments
-only through an approved bounded launcher.
+The independent verifier takes a shard-map JSON file path followed by an
+exclusive output-file path. Its input is a direct object in canonical
+`posts`, `pages`, `cpt`, `media`, `seo`, `readability`, `orphans` order,
+with `directory` and `custody_sha256` in each entry, not top-level maps:
+
+```json
+{
+  "posts": {"directory": "<posts-data-directory>", "custody_sha256": "<sha256>"},
+  "pages": {"directory": "<pages-data-directory>", "custody_sha256": "<sha256>"},
+  "cpt": {"directory": "<cpt-data-directory>", "custody_sha256": "<sha256>"},
+  "media": {"directory": "<media-data-directory>", "custody_sha256": "<sha256>"},
+  "seo": {"directory": "<seo-data-directory>", "custody_sha256": "<sha256>"},
+  "readability": {"directory": "<readability-data-directory>", "custody_sha256": "<sha256>"},
+  "orphans": {"directory": "<orphans-data-directory>", "custody_sha256": "<sha256>"}
+}
+```
+
+Replace the placeholders with approved original data-directory paths and
+independently pinned 64-digit SHA-256 hashes. Both JSON arguments are file paths.
+Through an approved bounded launcher:
+
+```sh
+php tests/e2e/bounded-list-verifier.php "$SHARD_MAP_JSON" "$EXCLUSIVE_RESULT_JSON"
+```
 
 Verification rechecks the complete inventory and byte hashes, original JSON
 array shapes, all 4,960 operation records, 42 full traversals, actual seed/body
