@@ -109,7 +109,7 @@ try {
 					[ 'existing-future-empty', [ 'scheduled_date' => '' ], 'missing_scheduled_date', 'future' ],
 					[ 'existing-future-near', [], 'scheduled_date_too_soon', 'near' ],
 					[ 'existing-future-overdue', [], 'scheduled_date_too_soon', 'overdue' ],
-					[ 'direct-invalid-status-overdue', [ 'status' => 'not-a-status' ], 'scheduled_date_too_soon', 'overdue' ],
+					[ 'direct-invalid-status-overdue', [ 'status' => 'not-a-status' ], 'ability_invalid_input', 'overdue' ],
 					[ 'existing-future-invalid', [], 'invalid_scheduled_date', 'invalid' ],
 					[ 'existing-timezone-change', [], null, 'timezone-change' ],
 					[ 'explicit-unschedule', [ 'status' => 'draft' ], null, 'future' ],
@@ -155,15 +155,29 @@ try {
 				$before_post = $id ? get_post( $id, ARRAY_A ) : null;
 				$before = wstm113_snapshot();
 				$observed = [];
+				$layers = null;
 				foreach ( $hooks as $hook ) {
 					add_filter( $hook, $observer, PHP_INT_MAX );
 				}
 				if ( 'direct-invalid-status-overdue' === $label ) {
-					// The API schema rejects this enum; also verify callback defense.
+					// The registered callback still validates input; test the helper separately without unwrapping it.
 					$property = new ReflectionProperty( $ability, 'execute_callback' );
 					$property->setAccessible( true );
 					$callback = $property->getValue( $ability );
 					$result = $callback( $input );
+					$layers = [
+						'registered_callback' => [
+							'input' => $input, 'result' => $result,
+							'expected_code' => 'invalid_input', 'expected_reason' => 'ability_invalid_input',
+							'after' => wstm113_snapshot(), 'hooks' => $observed,
+						],
+					];
+					$helper_result = Webmastery_MCP_Post_Scheduling::prepare( $input, (object) $before_post );
+					$layers['scheduling_helper'] = [
+						'input' => $input, 'post' => $before_post,
+						'result' => is_wp_error( $helper_result ) ? Webmastery_MCP_Response::from_wp_error( $helper_result ) : $helper_result,
+						'expected_code' => 'invalid_input', 'expected_reason' => 'scheduled_date_too_soon',
+					];
 				} else {
 					$result = $ability->execute( $input );
 				}
@@ -171,11 +185,33 @@ try {
 					remove_filter( $hook, $observer, PHP_INT_MAX );
 				}
 				$after = wstm113_snapshot();
-				$result_id = $result['data']['id'] ?? $id;
+				$result_id = null !== $layers ? $id : ( $result['data']['id'] ?? $id );
 				$post = $result_id ? get_post( $result_id ) : null;
 				$initial_cron = $post ? wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) : null;
-				$code = wstm118_error_reason( $result );
+				if ( null === $layers ) {
+					$code = wstm118_error_reason( $result );
+				} else {
+					foreach ( $layers as &$layer ) {
+						$layer['actual_reason'] = null;
+						$layer['error_matches'] = false;
+						$layer['oracle_failure'] = null;
+						try {
+							$envelope = wstm118_error_envelope( $layer['result'] );
+							$layer['actual_reason'] = $envelope['error']['reason'];
+							$layer['error_matches'] = $layer['expected_code'] === $envelope['error']['code']
+								&& $layer['expected_reason'] === $envelope['error']['reason'];
+						} catch ( RuntimeException $oracle_error ) {
+							$layer['oracle_failure'] = $oracle_error->getMessage();
+						}
+					}
+					unset( $layer );
+					$code = $layers['registered_callback']['actual_reason'];
+				}
 				$passed = $error ? $code === $error && $before === $after && [] === $observed : true === ( $result['success'] ?? false ) && ! empty( $observed['save_post'] );
+				if ( null !== $layers ) {
+					$passed = $passed && $layers['registered_callback']['error_matches'] && $layers['scheduling_helper']['error_matches']
+						&& $before === $layers['registered_callback']['after'] && [] === $layers['registered_callback']['hooks'];
+				}
 				if ( $id ) {
 					$passed = $passed && 'Scheduling metadata sentinel' === get_post_meta( $id, '_yoast_wpseo_metadesc', true );
 				}
@@ -200,7 +236,11 @@ try {
 					}
 				}
 				$summary[ $passed ? 'passed' : 'failed' ]++;
-				$summary['cases'][] = [ 'ability' => $operation . '-' . $base, 'label' => $label, 'passed' => $passed, 'expected_error' => $error, 'result' => $result, 'before' => $before, 'after' => $after, 'hooks' => $observed, 'expected_date' => $expected, 'stored' => $post ? [ 'id' => $post->ID, 'status' => $post->post_status, 'local' => $post->post_date, 'gmt' => $post->post_date_gmt, 'initial_cron' => $initial_cron, 'cron_after_early_guard' => wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) ] : null ];
+				$entry = [ 'ability' => $operation . '-' . $base, 'label' => $label, 'passed' => $passed, 'expected_error' => $error, 'result' => $result, 'before' => $before, 'after' => $after, 'hooks' => $observed, 'expected_date' => $expected, 'stored' => $post ? [ 'id' => $post->ID, 'status' => $post->post_status, 'local' => $post->post_date, 'gmt' => $post->post_date_gmt, 'initial_cron' => $initial_cron, 'cron_after_early_guard' => wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) ] : null ];
+				if ( null !== $layers ) {
+					$entry['layers'] = $layers;
+				}
+				$summary['cases'][] = $entry;
 				if ( 'timezone-change' === $fixture ) {
 					update_option( 'timezone_string', 'America/New_York' );
 				}
