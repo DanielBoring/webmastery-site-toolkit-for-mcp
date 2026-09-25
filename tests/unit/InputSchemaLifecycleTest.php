@@ -20,8 +20,10 @@ final class InputSchemaLifecycleTest extends TestCase {
 	private Wstm126_Lifecycle $lifecycle;
 	private InputSchemaJournalFake $journal;
 	private array $http_calls = array();
+	private array $diagnostics = array();
 
 	protected function setUp(): void {
+		$this->diagnostics = array();
 		$this->base = dirname( __DIR__, 2 ) . '/.input-schema-unit-' . bin2hex( random_bytes( 8 ) );
 		$this->root = $this->base . '/site';
 		$this->plugin = $this->root . '/plugin';
@@ -70,13 +72,15 @@ final class InputSchemaLifecycleTest extends TestCase {
 		$remove( $this->base );
 	}
 
-	private function instance( ?string $token = null, ?string $root = null, ?array $boundaries = null, ?callable $filesystem = null ): Wstm126_Lifecycle {
+	private function instance( ?string $token = null, ?string $root = null, ?array $boundaries = null, ?callable $filesystem = null, ?callable $diagnostic = null ): Wstm126_Lifecycle {
 		$journal = $this->journal;
 		$adapter = static function ( string $operation, string $path, ?int $mode, array $context ) use ( $journal, $filesystem ) {
 			$next = static fn() => $journal( $operation, $path, $mode, $context );
 			return null === $filesystem ? $next() : $filesystem( $operation, $path, $mode, array_merge( $context, array( 'native' => $next ) ) );
 		};
-		return new Wstm126_Lifecycle( $root ?? $this->root, $this->plugin, $this->lock, $token ?? $this->token, $this->source, 'fake-project', $this->artifacts, $boundaries ?? array( 'direct', 'http' ), $adapter );
+		return new Wstm126_Lifecycle( $root ?? $this->root, $this->plugin, $this->lock, $token ?? $this->token, $this->source, 'fake-project', $this->artifacts, $boundaries ?? array( 'direct', 'http' ), $adapter, $diagnostic ?? function ( string $line ): void {
+			$this->diagnostics[] = $line;
+		} );
 	}
 
 	private static function filesystem( string $operation, string $path, ?int $mode, array $context ) {
@@ -1000,7 +1004,108 @@ final class InputSchemaLifecycleTest extends TestCase {
 		$this->assertSame( $probe, file_get_contents( $this->probe() ) );
 		$this->assertSame( $wire, file_get_contents( $wire_path ) );
 		$this->assertDirectoryExists( $this->lock );
+		$this->assertCount( 1, $this->diagnostics );
+		$this->assertSame( array( array( 'dimension' => 'observation_absent', 'expected_sha256' => hash( 'sha256', serialize( true ) ), 'observed_sha256' => hash( 'sha256', serialize( false ) ) ) ), json_decode( $this->diagnostics[0], true, 16, JSON_THROW_ON_ERROR )['differences'] );
 		$this->unchanged();
+	}
+
+	public static function runtime_diagnostic_cases(): array {
+		$changes = array(
+			'flags.EMPTY_TRASH_DAYS' => array( 'defined' => true, 'value' => 8 ),
+			'flags.WSTM116_DISPOSABLE_RUNTIME' => array( 'defined' => true, 'value' => true ),
+			'flags.WSTM116_STAGE_TOKEN' => array( 'defined' => true, 'value' => str_repeat( 'd', 64 ) ),
+			'flags.WSTM126_DISPOSABLE_RUNTIME' => array( 'defined' => true, 'value' => true ),
+			'flags.WSTM126_STAGE_TOKEN' => array( 'defined' => true, 'value' => str_repeat( 'e', 64 ) ),
+			'functions' => array( 'wstm126_private_function' ),
+			'constants' => array( 'WSTM126_PRIVATE_CONSTANT' ),
+			'classes' => array( 'Wstm126_Private_Class' ),
+			'loaded.schema' => true,
+			'loaded.error' => true,
+			'loaded.foreign' => true,
+			'observation_absent' => false,
+		);
+		$cases = array();
+		foreach ( $changes as $dimension => $value ) { $cases[ $dimension ] = array( array( $dimension => $value ), false, false ); }
+		$cases['multiple dimensions'] = array( $changes, false, false );
+		$cases['unknown dimension'] = array( array( 'never-emit-environment' => 'private-secret' ), true, false );
+		$cases['unknown flag'] = array( array( 'flags.NEVER_EMIT_CREDENTIAL' => array( 'defined' => true, 'value' => 'private-secret' ) ), true, false );
+		$cases['malformed flag value'] = array( array( 'flags.EMPTY_TRASH_DAYS' => array( 'defined' => true, 'value' => 'private-secret' ) ), true, false );
+		$cases['malformed observation type'] = array( array( 'observation_absent' => array( 'private-secret' ) ), true, false );
+		$cases['diagnostic sink throws'] = array( array( 'observation_absent' => false ), false, true );
+		return $cases;
+	}
+
+	/** @dataProvider runtime_diagnostic_cases */
+	public function test_runtime_diagnostics_use_captured_sample_and_never_advance_failed_restore( array $changes, bool $rejected, bool $sink_throws ): void {
+		$this->lifecycle = $this->instance( null, null, null, null, function ( string $line ) use ( $sink_throws ): void {
+			$this->diagnostics[] = $line;
+			if ( $sink_throws ) { throw new RuntimeException( 'private-secret-sink-failure' ); }
+		} );
+		$this->lifecycle->acquire( $this->cli() );
+		$this->lifecycle->prepare( $this->cli(), $this->http() );
+		$this->assertSame( array(), $this->diagnostics );
+		$http_calls = count( $this->http_calls );
+		$cli_calls = 0;
+		$normal = $this->cli();
+		$sample = static function ( bool $baseline ) use ( $normal, $changes, &$cli_calls ): array {
+			++$cli_calls;
+			$body = $normal( $baseline );
+			foreach ( $changes as $dimension => $value ) {
+				$parts = explode( '.', $dimension );
+				if ( 2 === count( $parts ) ) { $body['runtime'][ $parts[0] ][ $parts[1] ] = $value; }
+				else { $body['runtime'][ $dimension ] = $value; }
+			}
+			return $body;
+		};
+		try {
+			$this->lifecycle->restore( $sample, $this->http() );
+			$this->fail( 'Failed runtime comparison returned successfully.' );
+		} catch ( RuntimeException $error ) {
+			$this->assertSame( 'Fresh CLI runtime differs from expected state.', $error->getMessage() );
+		}
+		$this->assertSame( 1, $cli_calls );
+		$this->assertCount( $http_calls, $this->http_calls );
+		$this->assertCount( 1, $this->diagnostics );
+		$this->assertLessThanOrEqual( 4096, strlen( $this->diagnostics[0] ) );
+		$this->assertStringNotContainsString( 'private-secret', $this->diagnostics[0] );
+		$this->assertStringNotContainsString( 'never-emit', $this->diagnostics[0] );
+		$record = json_decode( $this->diagnostics[0], true, 16, JSON_THROW_ON_ERROR );
+		$this->assertSame( array( 'diagnostic', 'kind', 'authoritative', 'status', 'differences' ), array_keys( $record ) );
+		$this->assertSame( 'wstm126', $record['diagnostic'] );
+		$this->assertSame( 'cli_runtime', $record['kind'] );
+		$this->assertFalse( $record['authoritative'] );
+		$this->assertSame( $rejected ? 'rejected_invalid_input' : 'comparison_failed', $record['status'] );
+		$differences = array();
+		if ( ! $rejected ) {
+			foreach ( $changes as $dimension => $value ) {
+				$parts = explode( '.', $dimension );
+				$original = 2 === count( $parts ) ? $this->original[ $parts[0] ][ $parts[1] ] : $this->original[ $dimension ];
+				$differences[] = array( 'dimension' => $dimension, 'expected_sha256' => hash( 'sha256', serialize( $original ) ), 'observed_sha256' => hash( 'sha256', serialize( $value ) ) );
+			}
+		}
+		$this->assertSame( $differences, $record['differences'] );
+		$state = $this->sealed_payload( $this->journal->node( $this->lock . '/state.json' ) );
+		$this->assertSame( 'active', $state['phase'] );
+		$this->assertArrayNotHasKey( 'restored_http', $state );
+		$validations = 0;
+		try {
+			$this->lifecycle->finalize( $sample, $this->http(), static function () use ( &$validations ): void { $validations++; }, $this->hashes() );
+			$this->fail( 'Diagnostic record authorized finalization.' );
+		} catch ( RuntimeException $error ) {
+			$this->assertSame( 'Verified restored runtime is required before finalization.', $error->getMessage() );
+		}
+		$this->assertSame( 0, $validations );
+		$this->assertSame( 1, $cli_calls );
+		$this->assertCount( $http_calls, $this->http_calls );
+		$this->assertCount( 1, $this->diagnostics );
+		$this->assertDirectoryExists( $this->lock );
+		$this->assertFileExists( $this->probe() );
+		$this->unchanged();
+	}
+
+	public function test_successful_transitions_keep_output_free_of_diagnostics(): void {
+		$this->restored();
+		$this->assertSame( array(), $this->diagnostics );
 	}
 
 	public function test_preexisting_nested_mu_prerequisites_are_preserved_through_every_phase(): void {

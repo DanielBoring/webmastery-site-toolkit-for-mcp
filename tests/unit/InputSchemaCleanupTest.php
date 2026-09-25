@@ -14,6 +14,7 @@ final class InputSchemaCleanupTest extends TestCase {
 	private Wstm126_Cleanup_Fake $fake;
 	private Wstm126_Cleanup $journal;
 	private array $filesystem_fault = array();
+	private array $diagnostics = array();
 
 	protected function setUp(): void {
 		$this->directory = getcwd() . DIRECTORY_SEPARATOR . '.wstm126-test-' . bin2hex( random_bytes( 8 ) );
@@ -22,6 +23,7 @@ final class InputSchemaCleanupTest extends TestCase {
 		mkdir( $this->directory . '/private/invocations', 0700 );
 		$this->owner = str_repeat( 'a', 32 );
 		$this->filesystem_fault = array();
+		$this->diagnostics = array();
 		$this->fake = new Wstm126_Cleanup_Fake();
 		$this->journal = $this->create();
 	}
@@ -40,9 +42,11 @@ final class InputSchemaCleanupTest extends TestCase {
 		return $this->directory . '/private/invocations/' . $this->owner . '-http.json';
 	}
 
-	private function create( ?string $directory = null ): Wstm126_Cleanup {
+	private function create( ?string $directory = null, ?callable $diagnostic = null ): Wstm126_Cleanup {
 		return new Wstm126_Cleanup( $directory ?? $this->directory . '/private/invocations', $this->directory . '/web', $this->directory . '/artifacts', $this->owner, 'http', $this->fake->run, array( $this->fake, 'read' ), array( $this->fake, 'delete' ), function ( string $path ): array {
 			return array( 'linked' => is_link( $path ) || ( $this->filesystem_fault['linked'] ?? false ), 'stat' => array_replace( lstat( $path ), $this->filesystem_fault['stat'] ?? array() ) );
+		}, $diagnostic ?? function ( string $line ): void {
+			$this->diagnostics[] = $line;
 		} );
 	}
 
@@ -56,6 +60,93 @@ final class InputSchemaCleanupTest extends TestCase {
 		self::assertNotContains( false, $result['proof'] );
 		self::assertGreaterThanOrEqual( 6, $this->fake->reads );
 		self::assertFileDoesNotExist( $this->path() );
+		self::assertSame( array(), $this->diagnostics );
+		self::assertSame( array( 'proof', 'error', 'raw_evidence' ), array_keys( $result ) );
+	}
+
+	public static function scope_changes(): array {
+		return array(
+			'posts' => array( 'posts', array( 'ID' => '999', 'post_author' => '999', 'post_type' => 'page', 'post_parent' => '0', 'private' => 'never-emit-row' ) ),
+			'postmeta' => array( 'postmeta', array( 'post_id' => '999', 'meta_key' => 'never-emit-row' ) ),
+			'users' => array( 'users', array( 'ID' => '999', 'user_email' => 'never-emit-row' ) ),
+			'usermeta' => array( 'usermeta', array( 'user_id' => '999', 'meta_key' => 'never-emit-row' ) ),
+			'terms' => array( 'terms', array( 'term_id' => '999', 'name' => 'never-emit-row' ) ),
+			'term_taxonomy' => array( 'term_taxonomy', array( 'term_taxonomy_id' => '999', 'taxonomy' => 'never-emit-row' ) ),
+			'term_relationships' => array( 'term_relationships', array( 'object_id' => '999', 'term_taxonomy_id' => '999' ) ),
+			'comments' => array( 'comments', array( 'comment_ID' => '999', 'comment_content' => 'never-emit-row' ) ),
+			'commentmeta' => array( 'commentmeta', array( 'comment_id' => '999', 'meta_key' => 'never-emit-row' ) ),
+			'links' => array( 'links', array( 'link_id' => '999', 'link_owner' => '999', 'link_url' => 'never-emit-row' ) ),
+			'credentials' => array( 'credentials', array( 'actor' => 999, 'verifier_sha256' => 'never-emit-verifier' ) ),
+			'cron' => array( 'cron', array( 'private_schedule' => 'never-emit-row' ) ),
+		);
+	}
+
+	/** @dataProvider scope_changes */
+	public function test_scope_diagnostic_uses_existing_snapshot_and_preserves_zero_cleanup_writes( string $section, array $row ): void {
+		$this->fake->seed( $this->journal );
+		$this->fake->rows[ $section ][] = $row;
+		$before = $this->fake->rows;
+		$journal = file_get_contents( $this->path() );
+		$baseline = json_decode( $journal, true, 512, JSON_THROW_ON_ERROR )['baseline'];
+		$reads = $this->fake->reads;
+		$closed = 0;
+		$result = $this->journal->finish( static function () use ( &$closed ): void { $closed++; }, true );
+		self::assertSame( 'Preexisting state or cron changed.', $result['error'] );
+		self::assertSame( array( 'proof', 'error', 'raw_evidence' ), array_keys( $result ) );
+		self::assertNotContains( true, $result['proof'] );
+		self::assertSame( 0, $closed );
+		self::assertSame( array(), $this->fake->deleted );
+		self::assertSame( $reads + 1, $this->fake->reads );
+		self::assertSame( $before, $this->fake->rows );
+		self::assertSame( $journal, file_get_contents( $this->path() ) );
+		self::assertCount( 1, $this->diagnostics );
+		$record = json_decode( $this->diagnostics[0], true, 16, JSON_THROW_ON_ERROR );
+		self::assertSame( array(
+			'diagnostic' => 'wstm126', 'kind' => 'cleanup_scope', 'authoritative' => false, 'status' => 'comparison_failed',
+			'differences' => array( array( 'dimension' => $section, 'expected_sha256' => $baseline[ $section ], 'observed_sha256' => hash( 'sha256', serialize( 'cron' === $section ? $before['cron'] : array( $row ) ) ) ) ),
+		), $record );
+		self::assertStringNotContainsString( 'never-emit', $this->diagnostics[0] );
+	}
+
+	public function test_multiple_scope_mismatches_preserve_all_original_state_and_original_error_when_sink_throws(): void {
+		$this->fake->seed( $this->journal );
+		$this->fake->rows['terms'][] = array( 'term_id' => '999' );
+		$this->fake->rows['cron'][] = 'never-emit-schedule';
+		$before = $this->fake->rows;
+		$journal = file_get_contents( $this->path() );
+		$reads = $this->fake->reads;
+		$diagnostic = new ReflectionProperty( Wstm126_Cleanup::class, 'diagnostic' );
+		$diagnostic->setAccessible( true );
+		$diagnostic->setValue( $this->journal, function ( string $line ): void {
+			$this->diagnostics[] = $line;
+			throw new RuntimeException( 'never-emit-sink-error' );
+		} );
+		$result = $this->journal->finish( static function (): void { self::fail( 'Session close after scope mismatch.' ); }, true );
+		self::assertSame( 'Preexisting state or cron changed.', $result['error'] );
+		self::assertSame( array(), $this->fake->deleted );
+		self::assertSame( $reads + 1, $this->fake->reads );
+		self::assertSame( $before, $this->fake->rows );
+		self::assertSame( $journal, file_get_contents( $this->path() ) );
+		self::assertNotContains( true, $result['proof'] );
+		self::assertCount( 1, $this->diagnostics );
+		self::assertSame( array( 'terms', 'cron' ), array_column( json_decode( $this->diagnostics[0], true, 16, JSON_THROW_ON_ERROR )['differences'], 'dimension' ) );
+	}
+
+	public function test_unknown_scope_section_is_reported_without_disclosing_its_name_or_advancing_cleanup(): void {
+		$this->fake->seed( $this->journal );
+		$this->fake->rows['private_prefix_secret_table'] = array( 'never-emit-row' );
+		$before = $this->fake->rows;
+		$journal = file_get_contents( $this->path() );
+		$reads = $this->fake->reads;
+		$result = $this->journal->finish( static function (): void { self::fail( 'Session close after malformed diagnostic input.' ); }, true );
+		self::assertSame( 'Preexisting state or cron changed.', $result['error'] );
+		self::assertSame( array(), $this->fake->deleted );
+		self::assertSame( $before, $this->fake->rows );
+		self::assertSame( $journal, file_get_contents( $this->path() ) );
+		self::assertSame( $reads + 1, $this->fake->reads );
+		self::assertNotContains( true, $result['proof'] );
+		self::assertCount( 1, $this->diagnostics );
+		self::assertSame( array( 'diagnostic' => 'wstm126', 'kind' => 'cleanup_scope', 'authoritative' => false, 'status' => 'rejected_invalid_input', 'differences' => array() ), json_decode( $this->diagnostics[0], true, 16, JSON_THROW_ON_ERROR ) );
 	}
 
 	public static function identity_mutations(): array {
@@ -83,6 +174,7 @@ final class InputSchemaCleanupTest extends TestCase {
 		self::assertSame( array(), $this->fake->deleted );
 		self::assertSame( $before, $this->fake->rows );
 		self::assertFileExists( $this->path() );
+		if ( ! in_array( $mutation, array( 'cron', 'baseline' ), true ) ) { self::assertSame( array(), $this->diagnostics ); }
 	}
 
 	public static function retained_rows(): array {
@@ -114,6 +206,7 @@ final class InputSchemaCleanupTest extends TestCase {
 		self::assertSame( array(), $this->fake->deleted );
 		self::assertSame( $before, $this->fake->rows );
 		self::assertSame( $journal, file_get_contents( $this->path() ) );
+		self::assertSame( array(), $this->diagnostics );
 	}
 
 	/** @dataProvider retained_rows */

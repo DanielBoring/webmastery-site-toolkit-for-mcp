@@ -5,6 +5,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/input-schema-boot.php';
+
 final class Wstm126_Cleanup {
 	private string $path;
 	private array $file_identity;
@@ -13,12 +15,13 @@ final class Wstm126_Cleanup {
 	private Closure $read;
 	private Closure $delete;
 	private Closure $inspect;
+	private ?Closure $diagnostic;
 	private ?array $raw_identity = null;
 	private string $raw_digest = '';
 	private int $raw_size = 0;
 	private int $raw_count = 0;
 
-	public function __construct( string $directory, string $webroot, string $artifact_directory, string $owner, string $boundary, string $run, callable $read, callable $delete, ?callable $inspect = null ) {
+	public function __construct( string $directory, string $webroot, string $artifact_directory, string $owner, string $boundary, string $run, callable $read, callable $delete, ?callable $inspect = null, ?callable $diagnostic = null ) {
 		self::check( 1 === preg_match( '/^[a-f0-9]{32}$/D', $owner ) && in_array( $boundary, array( 'direct', 'permission', 'ability', 'http', 'individual' ), true ), 'Invalid journal identity.' );
 		$directory = self::directory( $directory );
 		foreach ( array( $webroot, $artifact_directory ) as $excluded ) {
@@ -31,6 +34,7 @@ final class Wstm126_Cleanup {
 		$this->read = Closure::fromCallable( $read );
 		$this->delete = Closure::fromCallable( $delete );
 		$this->inspect = null === $inspect ? static fn( string $path ): array => array( 'linked' => is_link( $path ), 'stat' => lstat( $path ) ) : Closure::fromCallable( $inspect );
+		$this->diagnostic = null === $diagnostic ? null : Closure::fromCallable( $diagnostic );
 		$this->path = $directory . '/' . $owner . '-' . $boundary . '.json';
 		self::check( ! is_link( $this->path ) && ! file_exists( $this->path ), 'Journal ownership collision.' );
 		$mask = umask( 0077 );
@@ -283,7 +287,10 @@ final class Wstm126_Cleanup {
 	private function validate_scope( array $snapshot ): void {
 		$projection = $this->without_owned( $snapshot );
 		$projection['credentials'] = array_diff_key( $snapshot['credentials'], $this->state['credentials'] );
-		self::check( $this->state['baseline'] === self::digest( $projection ), 'Preexisting state or cron changed.' );
+		$observed = self::digest( $projection );
+		if ( $this->state['baseline'] !== $observed ) {
+			Wstm126_Boot::fail_with_diagnostic( 'Preexisting state or cron changed.', 'cleanup_scope', $this->state['baseline'], $observed, $this->diagnostic );
+		}
 	}
 
 	private function owned_credentials( array $snapshot ): array {

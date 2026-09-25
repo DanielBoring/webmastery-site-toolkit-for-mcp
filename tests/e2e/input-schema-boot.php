@@ -5,6 +5,91 @@
 declare(strict_types=1);
 
 final class Wstm126_Boot {
+	private const DIAGNOSTIC_SECTIONS = array(
+		'posts', 'postmeta', 'users', 'usermeta', 'terms', 'term_taxonomy', 'term_relationships',
+		'comments', 'commentmeta', 'links', 'credentials', 'observation', 'cron',
+	);
+	private const DIAGNOSTIC_FLAGS = array(
+		'EMPTY_TRASH_DAYS', 'WSTM116_DISPOSABLE_RUNTIME', 'WSTM116_STAGE_TOKEN',
+		'WSTM126_DISPOSABLE_RUNTIME', 'WSTM126_STAGE_TOKEN',
+	);
+
+	private static function diagnostic_digests( $digests ): bool {
+		if ( ! is_array( $digests ) || array_keys( $digests ) !== self::DIAGNOSTIC_SECTIONS ) { return false; }
+		foreach ( $digests as $digest ) {
+			if ( ! is_string( $digest ) || 1 !== preg_match( '/^[a-f0-9]{64}$/D', $digest ) ) { return false; }
+		}
+		return true;
+	}
+
+	private static function diagnostic_runtime( $runtime ): ?array {
+		if ( ! is_array( $runtime ) || array_keys( $runtime ) !== array( 'flags', 'functions', 'constants', 'classes', 'loaded', 'observation_absent' )
+			|| ! is_array( $runtime['flags'] ) || array_keys( $runtime['flags'] ) !== self::DIAGNOSTIC_FLAGS
+			|| ! is_array( $runtime['loaded'] ) || array_keys( $runtime['loaded'] ) !== array( 'schema', 'error', 'foreign' )
+			|| ! is_bool( $runtime['observation_absent'] ) ) { return null; }
+		$dimensions = array();
+		foreach ( self::DIAGNOSTIC_FLAGS as $name ) {
+			$flag = $runtime['flags'][ $name ];
+			if ( ! is_array( $flag ) || array_keys( $flag ) !== array( 'defined', 'value' ) || ! is_bool( $flag['defined'] ) ) { return null; }
+			if ( ! $flag['defined'] ) {
+				if ( null !== $flag['value'] ) { return null; }
+			} elseif ( 'EMPTY_TRASH_DAYS' === $name ) {
+				if ( ! is_int( $flag['value'] ) ) { return null; }
+			} elseif ( false !== strpos( $name, 'TOKEN' ) ) {
+				if ( ! is_string( $flag['value'] ) || 1 !== preg_match( '/^[a-f0-9]{64}$/D', $flag['value'] ) ) { return null; }
+			} elseif ( ! is_bool( $flag['value'] ) ) { return null; }
+			$dimensions[ 'flags.' . $name ] = hash( 'sha256', serialize( $flag ) );
+		}
+		foreach ( array( 'functions', 'constants', 'classes' ) as $name ) {
+			$list = $runtime[ $name ];
+			if ( ! is_array( $list ) || array_values( $list ) !== $list || count( $list ) > 64 ) { return null; }
+			foreach ( $list as $item ) {
+				if ( ! is_string( $item ) || strlen( $item ) > 128 || 1 !== preg_match( '/^(?:wstm126|wstm118)[a-z0-9_\\\\]*$/iD', $item ) ) { return null; }
+			}
+			$dimensions[ $name ] = hash( 'sha256', serialize( $list ) );
+		}
+		foreach ( array( 'schema', 'error', 'foreign' ) as $name ) {
+			if ( ! is_bool( $runtime['loaded'][ $name ] ) ) { return null; }
+			$dimensions[ 'loaded.' . $name ] = hash( 'sha256', serialize( $runtime['loaded'][ $name ] ) );
+		}
+		$dimensions['observation_absent'] = hash( 'sha256', serialize( $runtime['observation_absent'] ) );
+		return $dimensions;
+	}
+
+	public static function diagnostic( $kind, $expected, $observed ): array {
+		$record = array(
+			'diagnostic' => 'wstm126', 'kind' => in_array( $kind, array( 'cleanup_scope', 'cli_runtime' ), true ) ? $kind : 'invalid',
+			'authoritative' => false, 'status' => 'rejected_invalid_input', 'differences' => array(),
+		);
+		if ( 'cleanup_scope' === $kind ) {
+			if ( ! self::diagnostic_digests( $expected ) || ! self::diagnostic_digests( $observed ) ) { return $record; }
+		} elseif ( 'cli_runtime' === $kind ) {
+			$expected = self::diagnostic_runtime( $expected );
+			$observed = self::diagnostic_runtime( $observed );
+			if ( null === $expected || null === $observed ) { return $record; }
+		} else { return $record; }
+		$record['status'] = 'comparison_failed';
+		foreach ( $expected as $dimension => $digest ) {
+			if ( $digest !== $observed[ $dimension ] ) {
+				$record['differences'][] = array( 'dimension' => $dimension, 'expected_sha256' => $digest, 'observed_sha256' => $observed[ $dimension ] );
+			}
+		}
+		return $record;
+	}
+
+	public static function fail_with_diagnostic( string $message, string $kind, $expected, $observed, ?callable $write = null ): void {
+		try {
+			$line = json_encode( self::diagnostic( $kind, $expected, $observed ), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES ) . "\n";
+			self::check( strlen( $line ) <= 4096, 'Non-authoritative diagnostic exceeds its bound.' );
+			if ( null === $write ) {
+				self::check( strlen( $line ) === fwrite( STDERR, $line ), 'Cannot write non-authoritative diagnostic.' );
+			} else { $write( $line ); }
+		} finally {
+			// Diagnostics cannot replace the failed comparison, including when their sink fails.
+			throw new RuntimeException( $message );
+		}
+	}
+
 	public static function owner( string $token ): string {
 		return $token;
 	}

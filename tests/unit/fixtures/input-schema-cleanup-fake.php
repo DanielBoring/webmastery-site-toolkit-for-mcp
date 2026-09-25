@@ -6,6 +6,8 @@ declare(strict_types=1);
 final class Wstm126_Cleanup_Fake {
 	public array $rows = array(
 		'posts' => array(), 'postmeta' => array(), 'users' => array(), 'usermeta' => array(),
+		'terms' => array(), 'term_taxonomy' => array(), 'term_relationships' => array(),
+		'comments' => array(), 'commentmeta' => array(), 'links' => array(),
 		'credentials' => array(), 'observation' => array(), 'cron' => array( 'original schedule' ),
 	);
 	public array $deleted = array();

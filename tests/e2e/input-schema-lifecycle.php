@@ -16,8 +16,9 @@ final class Wstm126_Lifecycle {
 	private string $artifacts;
 	private array $boundaries;
 	private ?Closure $filesystem;
+	private ?Closure $diagnostic;
 
-	public function __construct( string $root, string $plugin, string $lock, string $token, string $source, string $project, string $artifacts, array $boundaries, ?callable $filesystem = null ) {
+	public function __construct( string $root, string $plugin, string $lock, string $token, string $source, string $project, string $artifacts, array $boundaries, ?callable $filesystem = null, ?callable $diagnostic = null ) {
 		Wstm126_Boot::check( 1 === preg_match( '/^[a-f0-9]{32,64}$/D', $token ), 'Invalid owner token.' );
 		Wstm126_Boot::check( 1 === preg_match( '/^[a-f0-9]{40,64}$/D', $source ), 'Invalid source identity.' );
 		Wstm126_Boot::check( 1 === preg_match( '/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$/D', $project ), 'Invalid project identity.' );
@@ -34,6 +35,7 @@ final class Wstm126_Lifecycle {
 		$this->artifacts = $artifacts;
 		$this->boundaries = $boundaries;
 		$this->filesystem = null === $filesystem ? null : Closure::fromCallable( $filesystem );
+		$this->diagnostic = null === $diagnostic ? null : Closure::fromCallable( $diagnostic );
 	}
 
 	private function filesystem( string $operation, string $path, ?int $mode = null, array $context = array() ) {
@@ -373,7 +375,9 @@ final class Wstm126_Lifecycle {
 		$this->invariant( $state );
 		$sample = $cli( false );
 		Wstm126_Boot::validate( $sample, $this->identity( $state, $state['cli_uid'] ), true );
-		Wstm126_Boot::check( $expected === $sample['runtime'], 'Fresh CLI runtime differs from expected state.' );
+		if ( $expected !== $sample['runtime'] ) {
+			Wstm126_Boot::fail_with_diagnostic( 'Fresh CLI runtime differs from expected state.', 'cli_runtime', $expected, $sample['runtime'], $this->diagnostic );
+		}
 		$identity = $this->identity( $state, $state['http_uid'] ?? null );
 		$boot = $http( $identity, $expected, $stale );
 		$latest = $this->state();

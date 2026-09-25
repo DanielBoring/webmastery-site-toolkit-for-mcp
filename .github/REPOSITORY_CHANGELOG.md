@@ -6,6 +6,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add bounded, failure-only schema cleanup/runtime diagnostics using closed logical dimensions and digest pairs from already-captured state. Preserve the original errors, strict proof shapes, immutable ownership, zero-cleanup-write refusals and retention gates; reject malformed diagnostic inputs without disclosing their contents. Add targeted regressions without changing state projections or claiming the cause of historical mismatches or genuine runtime acceptance.
+
 - Seed schema-proof drafts with verified fixed local/GMT dates before recording immutable ownership, and read positive parent controls from fresh bounded SQL rather than a stale HTTP caller cache. Preserve all 152 cases, strict parent semantics, ownership fields and restoration/retention guards; add isolated cache, malformed-row, immutable-identity and retained-observation regressions. Source-level diagnosis does not establish historical database values or genuine runtime acceptance.
 
 - Initialize the schema runner's lazy native abilities registry through the public API before verifying loaded production classes. Preserve source-identity checks, fixture and ownership guards, the 152-case requirement and cleanup policy; add isolated actual-preflight regressions for the old initialization order, unavailable API or class, and foreign class sources. These doubles do not establish genuine WordPress runtime acceptance.

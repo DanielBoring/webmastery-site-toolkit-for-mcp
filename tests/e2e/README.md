@@ -524,6 +524,21 @@ deletion. Independent absence and original scoped-state/cron checks, not
 deletion return values, determine cleanup success. Keep failed artifacts and
 private recovery journals as well as later passes.
 
+Failed preexisting-state or fresh-CLI runtime comparisons emit one
+**non-authoritative diagnostic** JSON line on stderr, bounded to 4,096 bytes.
+Cleanup diagnostics allow only the 13 logical snapshot section names and
+expected/observed SHA-256 digests. Runtime diagnostics allow only the five
+flag dimensions, three namespace-list dimensions, three loader dimensions and
+`observation_absent`, also represented by digests. They reuse the already-read
+snapshots/samples: no extra database queries or raw rows, credentials, journals,
+wire, paths or environment values are emitted. Unknown, missing, reordered or
+malformed diagnostic inputs produce a content-free `rejected_invalid_input`
+record. Namespace lists are bounded to 64 entries of at most 128 characters.
+These records never authorize cleanup or prove restoration; the original
+comparison error, strict proof shape, retention behavior and successful output
+are unchanged, including when diagnostic emission fails. A historical generic
+mismatch alone does not identify the affected section, runtime field or cause.
+
 `input-schema-proof.php` validates complete owner/project/source/boundary-bound
 evidence, all 152 labels/outcomes, exact callback/error/no-work controls and
 cleanup attestations. Production/package hashes are distinct from the read-only
