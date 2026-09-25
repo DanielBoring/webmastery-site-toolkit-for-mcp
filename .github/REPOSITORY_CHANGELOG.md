@@ -6,6 +6,7 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Isolate the disposable host-boundary fixture from ambient mount tables with a closed synthetic namespace bound to its owned WORK identity and actual filesystem device. Keep production topology parsing, native identity/device checks, physical non-overlap, capture/export shapes and negative controls unchanged; add copied-source inversion, namespace-boundary and code-6 predicate regressions. Modeled namespace/type acceptance is not real host, daemon, WordPress or durable custody evidence.
 - Retain finite, private-safe failure classifications for the first positive synthetic package-runtime fixture, without changing its original exit, production admission guards, publication channels or three-file export. Cover allowlist drift, malformed/private diagnostics, checked I/O failures and copied-source/outer-exit behavior; synthetic observations are not real daemon, WordPress or durable custody acceptance.
 - Make the two private resource-helper reflection tests accessible on PHP 8.0 without changing production visibility, assertions or test cases.
 

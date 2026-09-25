@@ -46,6 +46,22 @@ final class UntrustedHostTopologyTest extends TestCase {
 		);
 	}
 
+	public static function ambiguous_mount_predicates(): array {
+		return array(
+			'nonpositive cast ID' => array( "0 0 8:1 / / rw - ext4 synthetic rw\n" ),
+			'duplicate ID' => array( self::table() . "2 1 0:42 / /different rw - tmpfs synthetic rw\n" ),
+			'duplicate canonical point' => array( self::table() . "3 1 0:42 / /private/ rw - tmpfs synthetic rw\n" ),
+		);
+	}
+
+	/** @dataProvider ambiguous_mount_predicates */
+	public function test_each_code_six_predicate_refuses_independently( string $bytes ): void {
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionCode( 78 );
+		$this->expectExceptionMessage( 'WSTM108 BLOCKED topology: ambiguous-stacked-mount' );
+		Wstm108_HostTopology::mounts( $bytes );
+	}
+
 	/** @dataProvider unsupported_tables */
 	public function test_unknown_or_ambiguous_topology_is_blocked( string $bytes ): void {
 		$this->expectException( RuntimeException::class );

@@ -677,8 +677,8 @@ input is sent by this stage.
 `tests/untrusted-stage-test.sh` and `scripts/test-release-runtime.sh` use the one
 `untrusted-host-boundaries.php` fixture to install exact, reversible substitutions
 only in their disposable copied checkout, before its future fixture commit.
-Endpoint/peer/executable identity and named interruption boundaries are
-**synthetic**; replacement counts and exact preimages must match, the real
+Endpoint/peer/filesystem-namespace/type/executable identity and named interruption
+boundaries are **synthetic**; replacement counts and exact preimages must match, the real
 checkout must have no bypass, and a substitution/unchanged-remainder ledger is
 retained. These controls retain the real source
 provenance producer, native host stdout/stderr capture, exact output framing,
@@ -696,6 +696,33 @@ transport, malformed JSON, valid-JSON semantic, partial journal/spool, pending
 parser and unexpected process-output failures must prevent finalization and
 outer teardown. Only the fully validated synthetic success path retires.
 
+The copied admission method uses a closed two-record mount-table **model**,
+not `/proc/self/mountinfo`: an unsupported namespace-root sentinel refuses
+coordinates outside canonical owned `WORK`, and a modeled `tmpfs` record maps
+`WORK` to itself using its actual native filesystem device number. `tmpfs`
+describes the model, not the observed host filesystem. The installer embeds
+the table and original root identity; there is no production environment seam
+or external mount-table override. Mount escapes follow the unchanged production
+parser policy, including spaces and literal backslashes. Encoded table bytes
+stay LF-only even when the copied PHP source uses CRLF.
+
+Admission rechecks the root's device, inode, owner, group and mode before and
+after unchanged native coordinate checks. It does not bind mutable timestamps
+or the root link count changed by legitimate child creation. The production
+parser, coordinate selection, native device/identity checks, physical
+non-overlap algorithm, repeated admissions and output/export shapes remain
+unchanged. This isolates unrelated ambient mount records from synthetic
+orchestration; it does **not** certify actual host mount aliases, daemon
+admission or private custody. Existing production alias/unsupported-topology
+negatives and the separate 37 diagnostic controls remain required.
+
+`UntrustedSyntheticTopologyTest` covers LF/CRLF exact-one substitution and
+inverse/core preservation, rejected source drift, closed/escaped model inputs,
+Windows refusal and separate native Linux identity/device/overlap controls.
+Native positives must not be inferred from source models or non-Linux skips.
+The complete-installer controls require the existing Linux PHP 8.1+ host
+capabilities; unsupported hosts assert refusal before fixture creation.
+
 The first positive package-runtime invocation has a **test-only failure
 diagnostic**, installed only in the copied controller's outer terminal catch.
 An explicit per-invocation opt-in writes a separate `0700`
@@ -708,6 +735,10 @@ map only static topology reason strings; a source characterization requires
 coverage to match the actual topology reasons. Code `0` means unmapped within
 eight exception-chain nodes, not an inferred cause. No original exception
 text, stack, path, environment or site payload enters this record.
+Code `6` means `ambiguous-stacked-mount`: the cast mount ID was nonpositive,
+the ID was repeated, or the decoded canonical mountpoint was repeated.
+Separate parser controls cover all three predicates. A historical code-6
+record alone does not identify which predicate or mount record failed.
 
 The writer checks writes, flush, builtin `fsync`, bounded readback and close;
 the reader checks close as well as canonical JSON, enum/types, original exit,

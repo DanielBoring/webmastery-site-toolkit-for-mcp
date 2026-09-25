@@ -117,28 +117,25 @@ PHP;
 		return self::replace( $source, $terminal_catch, $diagnostic_catch, 'scripts/untrusted-host-controller.php::synthetic-terminal-diagnostic' );
 	}
 
-	public static function install(): void {
-		Wstm108_Export::require_host();
-		self::require( '1' === getenv( 'WSTM108_MOCK_ONLY' ) && 'Linux' === PHP_OS_FAMILY, 'explicit Linux copy-only mock required' );
-		$root = realpath( getenv( 'WSTM108_MOCK_ROOT' ) ?: '' );
-		$copy = realpath( getenv( 'WSTM108_MOCK_CHECKOUT' ) ?: '' );
-		$origin = realpath( getenv( 'WSTM108_MOCK_ORIGIN' ) ?: '' );
-		self::require( is_string( $root ) && is_string( $copy ) && is_string( $origin ) && $copy !== $origin
-			&& 0 === strpos( $copy, $root . '/' ) && 0 === strpos( $root, $origin . '/build/' ), 'not an independently named disposable copy' );
-		$files = array();
-		$core = array();
-		foreach ( array( 'scripts/untrusted-export.php', 'scripts/untrusted-release.php', 'scripts/destructive-retention.sh',
-			'tests/e2e/untrusted-content-files.php', 'tests/e2e/untrusted-content-private-wire.php' ) as $path ) {
-			$file = Wstm108_Files::file( $copy . '/' . $path );
-			self::require( $file['bytes'] === Wstm108_Files::file( $origin . '/' . $path )['bytes'], 'byte-identical retained core' );
-			$core[ $path ] = array( 'sha256' => $file['sha256'], 'mode' => $file['identity']['mode'] );
-		}
-		foreach ( array( 'untrusted-host-topology.php', 'untrusted-authority.php', 'untrusted-host-controller.php', 'untrusted-host-bootstrap.sh' ) as $name ) {
-			$files[ $name ] = Wstm108_Files::file( $copy . '/scripts/' . $name );
-			self::require( $files[ $name ]['bytes'] === Wstm108_Files::file( $origin . '/scripts/' . $name )['bytes']
-				&& false === strpos( $files[ $name ]['bytes'], 'WSTM108_MOCK_' ), 'unaltered source copy and no real-checkout test bypass' );
-		}
-		$source = $files['untrusted-host-topology.php']['bytes'];
+	private static function topology_mountinfo( string $root, array $identity ): string {
+		Wstm108_HostTopology::stable_identity( $identity );
+		self::require( PHP_INT_SIZE >= 8 && $identity['dev'] >= 0 && 0040000 === ( $identity['mode'] & 0170000 )
+			&& '/' !== $root, 'synthetic namespace requires a directory device and a non-root WORK' );
+		$device = $identity['dev'];
+		$major = ( ( $device >> 8 ) & 0xfff ) | ( ( $device >> 32 ) & 0xfffff000 );
+		$minor = ( $device & 0xff ) | ( ( $device >> 12 ) & 0xffffff00 );
+		$escaped = strtr( $root, array( '\\' => '\\134', ' ' => '\\040' ) );
+		// tmpfs is a modeled supported type, not an observation about the host.
+		$table = "1 0 0:0 / / rw - wstm108-synthetic-outside synthetic rw\n"
+			. "2 1 {$major}:{$minor} {$escaped} {$escaped} rw - tmpfs synthetic rw\n";
+		$mounts = Wstm108_HostTopology::mounts( $table );
+		self::require( $root === $mounts[1]['point'], 'synthetic WORK must follow the unchanged canonical path policy' );
+		return $table;
+	}
+
+	private static function topology_admission( string $source, string $root, array $identity ): string {
+		$table = self::topology_mountinfo( $root, $identity );
+		$identity = Wstm108_HostTopology::stable_identity( $identity );
 		$original = <<<'PHP'
 	public static function admit( string $endpoint ): array {
 		self::require( 'Linux' === PHP_OS_FAMILY && function_exists( 'posix_geteuid' ), 'native-linux-prerequisite' );
@@ -164,13 +161,56 @@ PHP;
 PHP;
 		$mock = <<<'PHP'
 	public static function admit( string $endpoint ): array {
-		if ('1' !== getenv('WSTM108_MOCK_ONLY') || 'Linux' !== PHP_OS_FAMILY) { throw new RuntimeException('Explicit synthetic peer only.'); }
-		$mounts = self::mounts(file_get_contents('/proc/self/mountinfo'));
-		self::coordinate((string) getenv('WSTM108_HOST_AUTHORITY_ROOT'), $mounts);
+		if ('1' !== getenv('WSTM108_MOCK_ONLY') || 'Linux' !== PHP_OS_FAMILY || ! function_exists('posix_geteuid')) {
+			throw new RuntimeException('Explicit native Linux synthetic namespace only.');
+		}
+		$root = @SYNTHETIC_ROOT@;
+		$identity = @SYNTHETIC_IDENTITY@;
+		$assert_root = static function () use ($root, $identity): void {
+			if (getenv('WSTM108_MOCK_ROOT') !== $root || realpath($root) !== $root || posix_geteuid() !== $identity['uid']
+				|| self::stable_identity(Wstm108_Files::directory($root)) !== $identity) {
+				throw new RuntimeException('Synthetic namespace WORK identity changed.');
+			}
+		};
+		$assert_root();
+		// Closed synthetic namespace/type model, never real host or daemon evidence.
+		$mounts = self::mounts(base64_decode(@SYNTHETIC_TABLE@, true));
+		$authority = (string) getenv('WSTM108_HOST_AUTHORITY_ROOT');
+		self::coordinate($authority, $mounts);
+		self::native_coordinates(array($root, $authority), $mounts);
+		$assert_root();
 		return array('endpoint' => $endpoint, 'synthetic_peer_only' => true, 'mounts' => $mounts);
 	}
 PHP;
-		$updates = array( 'untrusted-host-topology.php' => self::replace( $source, $original, $mock, 'scripts/untrusted-host-topology.php::admit' ) );
+		$mock = strtr( $mock, array( '@SYNTHETIC_ROOT@' => var_export( $root, true ),
+			'@SYNTHETIC_IDENTITY@' => var_export( $identity, true ), '@SYNTHETIC_TABLE@' => var_export( base64_encode( $table ), true ) ) );
+		return self::replace( $source, $original, $mock, 'scripts/untrusted-host-topology.php::admit' );
+	}
+
+	public static function install(): void {
+		Wstm108_Export::require_host();
+		self::require( '1' === getenv( 'WSTM108_MOCK_ONLY' ) && 'Linux' === PHP_OS_FAMILY, 'explicit Linux copy-only mock required' );
+		$root = realpath( getenv( 'WSTM108_MOCK_ROOT' ) ?: '' );
+		$copy = realpath( getenv( 'WSTM108_MOCK_CHECKOUT' ) ?: '' );
+		$origin = realpath( getenv( 'WSTM108_MOCK_ORIGIN' ) ?: '' );
+		self::require( is_string( $root ) && is_string( $copy ) && is_string( $origin ) && $copy !== $origin
+			&& 0 === strpos( $copy, $root . '/' ) && 0 === strpos( $root, $origin . '/build/' ), 'not an independently named disposable copy' );
+		$identity = Wstm108_Files::directory( $root );
+		self::require( posix_geteuid() === $identity['uid'], 'synthetic WORK must belong to the invoking user' );
+		$files = array();
+		$core = array();
+		foreach ( array( 'scripts/untrusted-export.php', 'scripts/untrusted-release.php', 'scripts/destructive-retention.sh',
+			'tests/e2e/untrusted-content-files.php', 'tests/e2e/untrusted-content-private-wire.php' ) as $path ) {
+			$file = Wstm108_Files::file( $copy . '/' . $path );
+			self::require( $file['bytes'] === Wstm108_Files::file( $origin . '/' . $path )['bytes'], 'byte-identical retained core' );
+			$core[ $path ] = array( 'sha256' => $file['sha256'], 'mode' => $file['identity']['mode'] );
+		}
+		foreach ( array( 'untrusted-host-topology.php', 'untrusted-authority.php', 'untrusted-host-controller.php', 'untrusted-host-bootstrap.sh' ) as $name ) {
+			$files[ $name ] = Wstm108_Files::file( $copy . '/scripts/' . $name );
+			self::require( $files[ $name ]['bytes'] === Wstm108_Files::file( $origin . '/scripts/' . $name )['bytes']
+				&& false === strpos( $files[ $name ]['bytes'], 'WSTM108_MOCK_' ), 'unaltered source copy and no real-checkout test bypass' );
+		}
+		$updates = array( 'untrusted-host-topology.php' => self::topology_admission( $files['untrusted-host-topology.php']['bytes'], $root, $identity ) );
 		$source = $files['untrusted-authority.php']['bytes'];
 		$original = <<<'PHP'
 	public static function docker_binary(): array {
@@ -233,7 +273,7 @@ SH;
 			self::require( $record === array( 'sha256' => $file['sha256'], 'mode' => $file['identity']['mode'] ), 'core changed during boundary installation' );
 		}
 		Wstm108_Files::create( $root . '/synthetic-host-boundaries.private.json', json_encode( array(
-			'claim' => 'synthetic endpoint/peer/executable/interruption only; not genuine daemon admission',
+			'claim' => 'synthetic endpoint/peer/filesystem-namespace/type/executable/interruption only; not real host, daemon or custody evidence',
 			'before' => array_map( static fn( $file ) => $file['sha256'], $files ),
 			'after' => array_map( static fn( $bytes ) => hash( 'sha256', $bytes ), $updates ),
 			'exact_sites' => self::$substitutions,
