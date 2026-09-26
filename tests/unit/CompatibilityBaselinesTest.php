@@ -23,7 +23,7 @@ final class CompatibilityBaselinesTest extends TestCase {
 	}
 
 	protected function tearDown(): void {
-		foreach ( array( '/.github/compatibility-versions.json', '/docker-compose.yml', '/readme.txt', '/scripts/update-compatibility-baselines.php', '/scripts/compatibility-baselines.php', '/candidate-runtime.json' ) as $file ) {
+		foreach ( array( '/.github/compatibility-versions.json', '/docker-compose.yml', '/readme.txt', '/scripts/update-compatibility-baselines.php', '/scripts/compatibility-baselines.php', '/candidate-runtime.json', '/candidate-server-observer.php', '/candidate-server-trace.json' ) as $file ) {
 			if ( file_exists( $this->root . $file ) ) {
 				unlink( $this->root . $file );
 			}
@@ -378,6 +378,89 @@ final class CompatibilityBaselinesTest extends TestCase {
 		webmastery_mcp_verify_candidate_floor( $runtime, $this->baseline );
 	}
 
+	/** @dataProvider candidateServerObservationProvider */
+	public function testCandidateServerObserverQueriesWordPressAndPreservesOutputOrFailsPrivately( $value, string $error, bool $success ): void {
+		$workflow = file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/compatibility-qa.yml' );
+		$command  = 'capture mysql-server docker compose exec -T wordpress wp --allow-root eval \\' . "\n";
+		self::assertSame( 1, preg_match( '/' . preg_quote( $command, '/' ) . " +'([^']+)'/", $workflow, $match ) );
+		$script = $this->root . '/candidate-server-observer.php';
+		$trace  = $this->root . '/candidate-server-trace.json';
+		$before = $this->snapshot();
+		$fixture = <<<'PHP'
+<?php
+$input = json_decode( $argv[1], false, 512, JSON_THROW_ON_ERROR );
+$GLOBALS['wpdb'] = new class( $input->value, $input->error, $input->suppressed ) {
+	public string $last_error = '';
+	public array $queries = array();
+	public array $suppressions = array();
+	public bool $suppressed;
+	private $value;
+	private string $error;
+	public function __construct( $value, string $error, bool $suppressed ) {
+		$this->value = $value;
+		$this->error = $error;
+		$this->suppressed = $suppressed;
+	}
+	public function suppress_errors( bool $suppress ): bool {
+		$previous = $this->suppressed;
+		$this->suppressions[] = $suppress;
+		$this->suppressed = $suppress;
+		return $previous;
+	}
+	public function get_var( string $query ) {
+		$this->queries[] = $query;
+		$this->last_error = $this->error;
+		if ( ! $this->suppressed && '' !== $this->error ) {
+			echo $this->error;
+		}
+		return $this->value;
+	}
+};
+register_shutdown_function( static function () use ( $argv ): void {
+	$db = $GLOBALS['wpdb'];
+	file_put_contents( $argv[2], json_encode( array(
+		'queries' => $db->queries,
+		'suppressions' => $db->suppressions,
+		'suppressed' => $db->suppressed,
+	), JSON_THROW_ON_ERROR ) );
+} );
+PHP;
+		// WP-CLI evaluates its code in a function scope, so the observer must import the real global connection.
+		file_put_contents( $script, $fixture . "\n(static function (): void {\n" . $match[1] . "\n})();\n" );
+		foreach ( array( false, true ) as $suppressed ) {
+			$input = json_encode( array( 'value' => $value, 'error' => $error, 'suppressed' => $suppressed ), JSON_THROW_ON_ERROR );
+			$result = $this->runPhpEntryPoint( $script, array( $input, $trace ) );
+			self::assertSame( $success ? 0 : 1, $result[0] );
+			self::assertSame( $success ? $value : '', $result[1] );
+			self::assertSame( $success ? '' : "ERROR Could not observe MySQL server version.\n", $result[2] );
+			self::assertSame(
+				array( 'queries' => array( 'SELECT VERSION()' ), 'suppressions' => array( true, $suppressed ), 'suppressed' => $suppressed ),
+				json_decode( file_get_contents( $trace ), true, 512, JSON_THROW_ON_ERROR )
+			);
+			self::assertSame( $before, $this->snapshot() );
+			unlink( $trace );
+		}
+	}
+
+	public static function candidateServerObservationProvider(): array {
+		return array(
+			'pinned server' => array( '8.0.36', '', true ),
+			'wrong server preserved for verifier' => array( '8.0.35', '', true ),
+			'untrimmed output preserved for verifier' => array( ' 8.0.36', '', true ),
+			'extra row preserved for verifier' => array( "8.0.36\nunexpected", '', true ),
+			'query error without result' => array( null, 'PRIVATE database error', false ),
+			'query error despite result' => array( '8.0.36', 'PRIVATE database error', false ),
+			'null result without error' => array( null, '', false ),
+			'empty result' => array( '', '', false ),
+			'whitespace result' => array( " \t\n", '', false ),
+			'integer result' => array( 8036, '', false ),
+			'float result' => array( 8.036, '', false ),
+			'boolean result' => array( false, '', false ),
+			'array result' => array( array( '8.0.36' ), '', false ),
+			'object result' => array( (object) array( 'version' => '8.0.36' ), '', false ),
+		);
+	}
+
 	/** @dataProvider invalidCandidateRuntimeProvider */
 	public function testCandidateFloorRejectsMissingWrongOrNonpassingEvidence( string $key, $value ): void {
 		$runtime         = $this->candidateRuntime();
@@ -480,9 +563,10 @@ final class CompatibilityBaselinesTest extends TestCase {
 		self::assertStringContainsString( 'compatibility-artifacts/runtime.json compatibility-artifacts/candidate-pins.json', $candidate );
 		self::assertStringContainsString( 'run: bash scripts/destructive-retention.sh cleanup', $candidate );
 		self::assertStringContainsString( 'capture checkout git diff --exit-code HEAD', $candidate );
-		self::assertStringContainsString( 'capture mysql-server docker compose exec -T wordpress wp --allow-root db query', $candidate );
+		self::assertStringContainsString( 'capture mysql-server docker compose exec -T wordpress wp --allow-root eval', $candidate );
+		self::assertStringNotContainsString( 'wp --allow-root db query', $candidate );
 		self::assertStringContainsString( '.["mysql-image"] == "mysql:8.0.36"', $candidate );
-		self::assertStringContainsString( "'SELECT VERSION();' --skip-column-names --batch --raw", $candidate );
+		self::assertStringContainsString( '$wpdb->get_var( "SELECT VERSION()" )', $candidate );
 		self::assertStringContainsString( '--rawfile mysql_server compatibility-artifacts/mysql-server.stdout', $candidate );
 		self::assertStringContainsString( 'mysql_server:($mysql_server|line)', $candidate );
 		self::assertStringContainsString( 'capture mysql docker compose exec -T mysql mysql --version', $candidate );

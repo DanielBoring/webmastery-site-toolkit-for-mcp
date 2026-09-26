@@ -128,8 +128,19 @@ jobs:
           capture wordpress docker compose exec -T wordpress wp --allow-root core version
           capture php docker compose exec -T wordpress php -r 'echo PHP_VERSION;'
           capture mysql docker compose exec -T mysql mysql --version
-          capture mysql-server docker compose exec -T wordpress wp --allow-root db query \
-            'SELECT VERSION();' --skip-column-names --batch --raw
+          # PHP, not Bash, must expand the database variables.
+          # shellcheck disable=SC2016
+          capture mysql-server docker compose exec -T wordpress wp --allow-root eval \
+            'global $wpdb;
+            $previous = $wpdb->suppress_errors( true );
+            $version = $wpdb->get_var( "SELECT VERSION()" );
+            $query_error = $wpdb->last_error;
+            $wpdb->suppress_errors( $previous );
+            if ( "" !== $query_error || ! is_string( $version ) || "" === trim( $version ) ) {
+              fwrite( STDERR, "ERROR Could not observe MySQL server version.\n" );
+              exit( 1 );
+            }
+            echo $version;'
           capture wp-cli docker compose exec -T wordpress wp --allow-root cli version
           capture plugins docker compose exec -T wordpress wp --allow-root plugin list --fields=name,version,status --format=json
           capture loaded-source docker compose exec -T wordpress wp --allow-root eval \
