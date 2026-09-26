@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 
 require_once dirname( __DIR__, 2 ) . '/scripts/update-compatibility-baselines.php';
 require_once dirname( __DIR__, 2 ) . '/scripts/compatibility-matrix.php';
+require_once dirname( __DIR__, 2 ) . '/scripts/verify-candidate-floor.php';
 
 final class CompatibilityBaselinesTest extends TestCase {
 	private string $root;
@@ -22,7 +23,7 @@ final class CompatibilityBaselinesTest extends TestCase {
 	}
 
 	protected function tearDown(): void {
-		foreach ( array( '/.github/compatibility-versions.json', '/docker-compose.yml', '/readme.txt', '/scripts/update-compatibility-baselines.php', '/scripts/compatibility-baselines.php' ) as $file ) {
+		foreach ( array( '/.github/compatibility-versions.json', '/docker-compose.yml', '/readme.txt', '/scripts/update-compatibility-baselines.php', '/scripts/compatibility-baselines.php', '/candidate-runtime.json' ) as $file ) {
 			if ( file_exists( $this->root . $file ) ) {
 				unlink( $this->root . $file );
 			}
@@ -50,8 +51,12 @@ final class CompatibilityBaselinesTest extends TestCase {
 			}
 		}
 		// Execute the real entry point with argv; its own location selects the disposable root.
+		return $this->runPhpEntryPoint( $this->root . '/scripts/update-compatibility-baselines.php', $arguments );
+	}
+
+	private function runPhpEntryPoint( string $script, array $arguments ): array {
 		$process = proc_open(
-			array_merge( array( PHP_BINARY, $this->root . '/scripts/update-compatibility-baselines.php' ), $arguments ),
+			array_merge( array( PHP_BINARY, $script ), $arguments ),
 			array( 0 => array( 'pipe', 'r' ), 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ),
 			$pipes,
 			$this->root
@@ -275,6 +280,7 @@ final class CompatibilityBaselinesTest extends TestCase {
 		self::assertCount( 8, $lanes );
 		self::assertCount( 8, array_unique( array_column( $lanes, 'label' ) ) );
 		self::assertSame( 'wordpress:6.9-php8.1-apache', $lanes[0]['wordpress-image'] );
+		self::assertSame( 'mysql:8.0.36', $lanes[0]['mysql-image'] );
 		foreach ( $lanes as $lane ) {
 			$expected = str_contains( $lane['mcp-adapter-zip'], '/v99.2.3/' ) ? $latest['mcp_adapter_sha256'] : $this->baseline['mcp_adapter_sha256'];
 			self::assertSame( $expected, $lane['mcp-adapter-sha256'] );
@@ -299,5 +305,198 @@ final class CompatibilityBaselinesTest extends TestCase {
 		self::assertNotFalse( $update );
 		self::assertNotFalse( $check );
 		self::assertLessThan( $check, $update );
+	}
+
+	private function candidateRuntime(): array {
+		return array(
+			'requested_source'    => str_repeat( 'a', 40 ),
+			'actual_source'       => str_repeat( 'a', 40 ),
+			'mounted_source_exit' => 0,
+			'checkout_diff_exit'  => 0,
+			'loaded_source'       => array(
+				'entrypoint_included' => true,
+				'response_file'       => '/var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/includes/class-response.php',
+			),
+			'wordpress'          => '6.9.4',
+			'php'                => '8.1.34',
+			'mysql_server'       => '8.0.36',
+			'dependency_policy'  => 'pinned',
+			'wp_cli'             => 'WP-CLI ' . $this->baseline['wp_cli'],
+			'qa_result'          => 'success',
+			'plugins'            => array(
+				array( 'name' => 'webmastery-site-toolkit-for-mcp', 'version' => '2.6.0', 'status' => 'active' ),
+				array( 'name' => 'mcp-adapter', 'version' => $this->baseline['mcp_adapter'], 'status' => 'active' ),
+				array( 'name' => 'wordpress-seo', 'version' => $this->baseline['yoast'], 'status' => 'active' ),
+				array( 'name' => 'wp-seopress', 'version' => $this->baseline['seopress'], 'status' => 'active' ),
+			),
+		);
+	}
+
+	public function testCandidateFloorAcceptsExactSourceAndObservedPinnedVersionsWithoutWrites(): void {
+		$before  = $this->snapshot();
+		$runtime = $this->candidateRuntime();
+		webmastery_mcp_verify_candidate_floor( $runtime, $this->baseline );
+		$runtime['wordpress'] = '6.9';
+		webmastery_mcp_verify_candidate_floor( $runtime, $this->baseline );
+		self::assertSame( $before, $this->snapshot() );
+	}
+
+	public function testCandidateFloorCliRetainsEvidenceAndReportsRealFailure(): void {
+		$script    = dirname( __DIR__, 2 ) . '/scripts/verify-candidate-floor.php';
+		$path      = $this->root . '/candidate-runtime.json';
+		$arguments = array( $path, $this->root . '/.github/compatibility-versions.json' );
+		$before    = $this->snapshot();
+		foreach ( array( 'success', 'failure' ) as $outcome ) {
+			$runtime              = $this->candidateRuntime();
+			$runtime['qa_result'] = $outcome;
+			$original             = json_encode( $runtime, JSON_THROW_ON_ERROR );
+			file_put_contents( $path, $original );
+			$result = $this->runPhpEntryPoint( $script, $arguments );
+			self::assertSame( 'success' === $outcome ? 0 : 1, $result[0] );
+			if ( 'success' === $outcome ) {
+				self::assertStringContainsString( 'cleanup outcome remains separate', $result[1] );
+				self::assertSame( '', $result[2] );
+			} else {
+				self::assertSame( '', $result[1] );
+				self::assertStringContainsString( 'ERROR Full candidate E2E did not succeed', $result[2] );
+			}
+			self::assertSame( $original, file_get_contents( $path ) );
+			self::assertSame( $before, $this->snapshot() );
+		}
+		file_put_contents( $path, '[]' );
+		$result = $this->runPhpEntryPoint( $script, $arguments );
+		self::assertSame( 1, $result[0] );
+		self::assertStringContainsString( 'Runtime evidence must be a JSON object', $result[2] );
+	}
+
+	public function testCandidateFloorRequiresServerObservationEvenWithExpectedClient(): void {
+		$runtime                 = $this->candidateRuntime();
+		$runtime['mysql_client'] = 'mysql  Ver 8.0.36 for Linux on x86_64 (MySQL Community Server - GPL)';
+		unset( $runtime['mysql_server'] );
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'Observed runtime is not the supported floor: mysql_server' );
+		webmastery_mcp_verify_candidate_floor( $runtime, $this->baseline );
+	}
+
+	/** @dataProvider invalidCandidateRuntimeProvider */
+	public function testCandidateFloorRejectsMissingWrongOrNonpassingEvidence( string $key, $value ): void {
+		$runtime         = $this->candidateRuntime();
+		$runtime[ $key ] = $value;
+		$this->expectException( RuntimeException::class );
+		webmastery_mcp_verify_candidate_floor( $runtime, $this->baseline );
+	}
+
+	public static function invalidCandidateRuntimeProvider(): array {
+		return array(
+			'abbreviated source' => array( 'requested_source', 'aaaaaaa' ),
+			'uppercase source' => array( 'requested_source', str_repeat( 'A', 40 ) ),
+			'source newline' => array( 'requested_source', str_repeat( 'a', 40 ) . "\n" ),
+			'wrong checked out source' => array( 'actual_source', str_repeat( 'b', 40 ) ),
+			'missing source observation' => array( 'actual_source', null ),
+			'changed mounted source' => array( 'mounted_source_exit', 1 ),
+			'missing mounted observation' => array( 'mounted_source_exit', null ),
+			'string exit is not success' => array( 'mounted_source_exit', '0' ),
+			'changed tracked checkout' => array( 'checkout_diff_exit', 1 ),
+			'missing loaded source' => array( 'loaded_source', null ),
+			'entrypoint not loaded' => array( 'loaded_source', array( 'entrypoint_included' => false, 'response_file' => '/var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/includes/class-response.php' ) ),
+			'wrong loaded source' => array( 'loaded_source', array( 'entrypoint_included' => true, 'response_file' => '/other/includes/class-response.php' ) ),
+			'baseline WordPress is not floor' => array( 'wordpress', '7.1.1' ),
+			'WordPress prerelease is not floor' => array( 'wordpress', '6.9-RC1' ),
+			'WordPress prefix is not version' => array( 'wordpress', '6.90' ),
+			'baseline PHP is not floor' => array( 'php', '8.2.33' ),
+			'PHP prerelease is not floor' => array( 'php', '8.1.34-dev' ),
+			'missing PHP observation' => array( 'php', null ),
+			'null MySQL server observation' => array( 'mysql_server', null ),
+			'wrong MySQL server patch' => array( 'mysql_server', '8.0.35' ),
+			'wrong MySQL server line' => array( 'mysql_server', '8.4.0' ),
+			'MySQL client banner is not server version' => array( 'mysql_server', 'mysql  Ver 8.0.36 for Linux' ),
+			'empty MySQL server observation' => array( 'mysql_server', '' ),
+			'numeric MySQL server observation' => array( 'mysql_server', 8036 ),
+			'array MySQL server observation' => array( 'mysql_server', array( '8.0.36' ) ),
+			'boolean MySQL server observation' => array( 'mysql_server', true ),
+			'MySQL server suffix' => array( 'mysql_server', '8.0.36-unexpected' ),
+			'MySQL server extra row' => array( 'mysql_server', "8.0.36\n8.0.36" ),
+			'MySQL server trailing newline' => array( 'mysql_server', "8.0.36\n" ),
+			'floating dependencies' => array( 'dependency_policy', 'latest-seo' ),
+			'wrong CLI' => array( 'wp_cli', 'WP-CLI 99.0.0' ),
+			'missing plugin inventory' => array( 'plugins', null ),
+			'empty plugin inventory' => array( 'plugins', array() ),
+			'failed E2E' => array( 'qa_result', 'failure' ),
+			'skipped E2E' => array( 'qa_result', 'skipped' ),
+			'cancelled E2E' => array( 'qa_result', 'cancelled' ),
+			'missing E2E observation' => array( 'qa_result', null ),
+		);
+	}
+
+	/** @dataProvider candidatePluginMismatchProvider */
+	public function testCandidateFloorRejectsDependencyMismatch( int $index, string $mutation ): void {
+		$runtime = $this->candidateRuntime();
+		if ( 'missing' === $mutation ) {
+			array_splice( $runtime['plugins'], $index, 1 );
+		} elseif ( 'duplicate' === $mutation ) {
+			$runtime['plugins'][] = $runtime['plugins'][ $index ];
+		} elseif ( 'inactive' === $mutation ) {
+			$runtime['plugins'][ $index ]['status'] = 'inactive';
+		} else {
+			$runtime['plugins'][ $index ]['version'] = '99.0.0';
+		}
+		$this->expectException( RuntimeException::class );
+		webmastery_mcp_verify_candidate_floor( $runtime, $this->baseline );
+	}
+
+	public static function candidatePluginMismatchProvider(): array {
+		$cases = array();
+		foreach ( array( 'toolkit', 'adapter', 'yoast', 'seopress' ) as $index => $name ) {
+			foreach ( array( 'missing', 'duplicate', 'inactive', 'wrong-version' ) as $mutation ) {
+				if ( 0 === $index && 'wrong-version' === $mutation ) {
+					continue;
+				}
+				$cases[ $name . '-' . $mutation ] = array( $index, $mutation );
+			}
+		}
+		return $cases;
+	}
+
+	public function testCandidateWorkflowIsIsolatedFromDiscoveryAndPromotion(): void {
+		$workflow = file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/compatibility-qa.yml' );
+		$jobs     = array();
+		foreach ( array( 'candidate-floor', 'discover-versions', 'open-update-pr', 'report' ) as $name ) {
+			self::assertSame( 1, preg_match( '/^  ' . preg_quote( $name, '/' ) . ':\n(.*?)(?=^  [a-z-]+:|\z)/ms', $workflow, $match ) );
+			$jobs[ $name ] = $match[1];
+		}
+		$candidate = $jobs['candidate-floor'];
+		self::assertStringContainsString( "if: github.event_name == 'workflow_dispatch' && inputs.candidate_sha != ''", $candidate );
+		self::assertStringContainsString( '[[ ! "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]] || [[ "$OPEN_UPDATE_PR" != false ]]', $candidate );
+		self::assertLessThan( strpos( $candidate, 'uses: actions/checkout@' ), strpos( $candidate, '[[ ! "$CANDIDATE_SHA"' ) );
+		self::assertStringContainsString( 'ref: ${{ github.workflow_sha }}' . "\n          path: candidate-floor-tools", $candidate );
+		self::assertStringContainsString( 'ref: ${{ inputs.candidate_sha }}' . "\n          path: candidate", $candidate );
+		self::assertStringContainsString( 'test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"', $candidate );
+		self::assertStringContainsString( 'test "$(git -C ../candidate-floor-tools rev-parse HEAD)" = "$WORKFLOW_SHA"', $candidate );
+		self::assertStringContainsString( 'php scripts/compatibility-matrix.php .github/compatibility-versions.json .github/compatibility-versions.json', $candidate );
+		self::assertStringContainsString( 'run: bash scripts/e2e-test.sh all', $candidate );
+		self::assertStringContainsString( 'wordpress sha256sum --check --strict < compatibility-artifacts/source.sha256', $candidate );
+		self::assertStringContainsString( 'new ReflectionClass("Webmastery_MCP_Response")', $candidate );
+		self::assertStringContainsString( 'php ../candidate-floor-tools/scripts/verify-candidate-floor.php', $candidate );
+		self::assertStringContainsString( 'compatibility-artifacts/runtime.json compatibility-artifacts/candidate-pins.json', $candidate );
+		self::assertStringContainsString( 'run: bash scripts/destructive-retention.sh cleanup', $candidate );
+		self::assertStringContainsString( 'capture checkout git diff --exit-code HEAD', $candidate );
+		self::assertStringContainsString( 'capture mysql-server docker compose exec -T wordpress wp --allow-root db query', $candidate );
+		self::assertStringContainsString( '.["mysql-image"] == "mysql:8.0.36"', $candidate );
+		self::assertStringContainsString( "'SELECT VERSION();' --skip-column-names --batch --raw", $candidate );
+		self::assertStringContainsString( '--rawfile mysql_server compatibility-artifacts/mysql-server.stdout', $candidate );
+		self::assertStringContainsString( 'mysql_server:($mysql_server|line)', $candidate );
+		self::assertStringContainsString( 'capture mysql docker compose exec -T mysql mysql --version', $candidate );
+		self::assertStringContainsString( 'mcp-candidate-floor-${{ github.run_id }}-${{ github.run_attempt }}', $candidate );
+		self::assertStringContainsString( 'candidate/e2e-artifacts/', $candidate );
+		foreach ( array( 'contents: write', 'issues: write', 'pull-requests: write', 'gh ', 'git push', 'update-compatibility-baselines.php', 'discover-compatibility.sh', 'download-artifact@', 'bounded-list-controller.py', 'continue-on-error:' ) as $forbidden ) {
+			self::assertStringNotContainsString( $forbidden, $candidate );
+		}
+		foreach ( array( 'discover-versions', 'open-update-pr', 'report' ) as $normal ) {
+			self::assertStringContainsString( "inputs.candidate_sha == ''", $jobs[ $normal ] );
+		}
+		self::assertStringContainsString( 'test "$SOURCE_REF" = "refs/heads/$DEFAULT_BRANCH"', $jobs['discover-versions'] );
+		self::assertStringContainsString( 'test "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)"', $jobs['discover-versions'] );
+		self::assertStringContainsString( "needs.current-plugin-check.result == 'success'", $jobs['open-update-pr'] );
+		self::assertStringContainsString( "if: always() && inputs.candidate_sha == ''", $jobs['report'] );
 	}
 }

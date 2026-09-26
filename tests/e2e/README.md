@@ -1221,6 +1221,23 @@ The runner fails early if either dependency is not active. Coexistence assertion
 
 Routine QA uses reviewed WP-CLI, MCP Adapter, SEO-plugin, and Plugin Check pins from `.github/compatibility-versions.json`. WP-CLI and adapter downloads must pass digest verification before execution/installation. Candidate overrides must supply the matching digest; do not reuse the baseline digest for a different release. The scheduled compatibility workflow explicitly opts into floating dependencies and records the versions it actually tests.
 
+### Exact-candidate supported-floor CI
+
+The existing `6 - Compatibility QA` workflow also accepts an optional `candidate_sha`: a full lowercase 40-character commit SHA in this repository. With that input, only the isolated candidate-floor job runs on GitHub-hosted Ubuntu/Docker, using the existing supported-floor matrix entry (WordPress 6.9 / PHP 8.1, MySQL 8.0.36) and `bash scripts/e2e-test.sh all`. It uses that candidate's reviewed dependency configuration, including verified WP-CLI/adapter downloads and pinned SEO versions, without discovery or configuration overlays. `open_update_pr` must be `false`; candidate mode cannot generate a baseline update, open a PR, publish, or deploy.
+
+After publication/review of the workflow implementation, a separately authorized dispatch can use a reviewed branch/tag containing this candidate path:
+
+```bash
+gh workflow run compatibility-qa.yml \
+  --ref "${WORKFLOW_REF:?Set the reviewed workflow branch or tag}" \
+  -f candidate_sha="${CANDIDATE_SHA:?Set the exact reviewed candidate commit}" \
+  -f open_update_pr=false
+```
+
+The workflow ref selects CI logic, **not the plugin under test**. Evidence tools are checked out separately at `github.workflow_sha`; the candidate is checked out at `candidate_sha`, which must equal its actual HEAD. This permits testing an older frozen candidate that does not contain the new evidence verifier. **Final acceptance must target the eventual frozen head intended for merge, after normal publication**; an older-head run is only preliminary evidence and cannot accept a later workflow/source commit. The candidate's existing Compose configuration mounts only that candidate checkout. Recorded identities/trees for both checkouts, hashes of tracked candidate files, mounted-file verification, the loaded plugin entrypoint/class path, actual WordPress/PHP/MySQL-server/WP-CLI/plugin versions, image details, and original observation stdout/stderr/exit codes identify what actually ran. A read-only `SELECT VERSION()` through WP-CLI observes the database server used by WordPress; its typed `mysql_server` value must be exactly `8.0.36`, consistent with the selected floor image. The separate MySQL client banner remains diagnostic only and cannot substitute for this server observation. Floor tags can resolve newer 6.9.x/8.1.x patch releases: evidence covers the observed versions, not untested earlier patches. Floor/version/pin/source mismatches fail the job; a missing observation is never replaced with a passing default. All E2E assertions remain unchanged.
+
+The unique run/attempt Compose project uses existing retention-aware cleanup. Outcomes and ordinary runtime artifacts are retained for 30 days on success or failure after source preparation; preparation/checkout failures remain visible in the Actions job log. Review the original outcomes, cleanup result and run conclusion, not just configured image tags. This dispatch does not satisfy required PR-event checks or establish original-package acceptance. It does **not** run the large-library benchmark, relax any numerical budget, or satisfy its separate private-custody/receiver-acknowledgement requirements. Leaving `candidate_sha` empty preserves the normal default-branch discovery, compatibility matrix, checker and guarded promotion pipeline.
+
 Set `MCP_CRUD_ENDPOINT` only when you need the secondary CRUD runner to target a non-default MCP Adapter endpoint. By default it uses `http://localhost/wp-json/mcp/mcp-adapter-default-server` from inside the WordPress container.
 
 PowerShell users can run:
