@@ -301,7 +301,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Upgrade Notice ==
 
 = Unreleased =
-3.0 development rejects unknown input keys, coercible types and invalid enum values; omit parent on posts/nonhierarchical types. Metadata requires separate calls: create a draft, write authorized keys, then publish; this is not atomic. SEO reads omit denied keys, generated Yoast head output is unavailable, and overview counts describe an authorized sample.
+3.0 rejects unknown keys, coercible types, invalid enums. Omit parent on posts/nonhierarchical types. Create draft, write authorized metadata, publish: separate calls, not atomic. SEO omits denied keys; generated Yoast head unavailable; overview counts use authorized samples.
 
 = 2.6.0 =
 Standalone metadata, comment and taxonomy permissions are tighter. Create/update metadata, SEO aliases and separate SEO reads retain authorization gaps (see FAQ). Clients using custom role/key policies must review denials. Image upload limits and PHP 8.0 minimum are unchanged.

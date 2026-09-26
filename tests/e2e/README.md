@@ -535,6 +535,23 @@ snapshot, covering successful cleanup, deletion veto and private-wire retention.
 These lifetime changes still require comparative old/new memory measurements and
 real runtime evidence; they do not establish the historical OOM allocation root.
 
+**Recorded package evidence (2026-09-26).** Subsequent evidence supplements the
+historical pending statements and failed captures above. Release Package run
+`36215557641`, attempt 1, tested head
+`5fe92e62ca9571139ba910baff33806d71f05086` through producer
+`960dcb9bcbe9259aab3e8850f7ce6abe748362fd` with the same Git tree, on WordPress
+**7.1.1 / PHP 8.2.33**. All **760/760 case results** passed across direct, raw
+permission, native ability, gateway HTTP and individual-tool boundaries. All
+five invocations completed with all **40 cleanup proof flags** true; restoration,
+finalization and retention retirement returned zero.
+
+Recorded DIRECT cleanup peak was **86,511,616 bytes (82.5 MiB)**; the largest
+recorded boundary peak was **88,608,768 bytes (84.5 MiB)**. Effective
+`ini memory_limit` was not sampled: these peaks do not measure the configured
+limit. This is exact-tree package recovery, not integrated 3.0, supported-floor
+or benchmark acceptance. Original failed evidence remains unchanged, and no
+historical allocation root is inferred.
+
 The fixture counts only SQL and capability hooks inside registered callbacks,
 not bootstrap/HTTP authentication work. Malformed cases also require unchanged
 posts/meta/terms/relationships/cron snapshots, zero mutation hooks, and the

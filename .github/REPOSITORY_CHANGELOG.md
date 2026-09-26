@@ -6,6 +6,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Shorten the Unreleased upgrade notice to Plugin Check's 300-character limit while retaining its migration guidance. Record exact-tree schema package results with cleanup, memory-measurement and pending integration/floor caveats; preserve prior failure records. Documentation only; no runtime or version change.
+
 - Release obsolete schema-cleanup snapshots and table aliases before subsequent reads, including the runner's setup map on failure paths. Preserve ownership checks, deletion order, case evidence and retention semantics; add isolated 128 MiB regressions with independently allocated snapshots. Historical OOM causation and runtime recovery still require comparative evidence.
 
 - Stream bounded, non-authoritative schema-runner setup/case/cleanup progress with stable case indices and current/peak memory, reusing the existing source sampler for actual runner/cleanup hashes before fixture setup. Preserve all 152 cases, memory limits, native failures, artifact and retention semantics; add isolated output/ordering/failure regressions. Missing markers narrow an unfinished interval but do not establish a memory-allocation root cause or runtime acceptance.
