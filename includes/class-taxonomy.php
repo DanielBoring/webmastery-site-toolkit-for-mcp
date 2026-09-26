@@ -278,6 +278,13 @@ class Webmastery_MCP_Taxonomy {
 		] );
 	}
 
+	public static function delete_input_error( array $input ): ?array {
+		if ( true !== ( $input['confirm'] ?? null ) ) {
+			return Webmastery_MCP_Response::legacy_error( 'missing_confirmation', 'Set confirm to true to acknowledge permanent deletion.' );
+		}
+		return null;
+	}
+
 	private static function register_delete( $taxonomy ) {
 		$is_category = 'category' === $taxonomy;
 		$label       = $is_category ? 'Category' : 'Tag';
@@ -296,8 +303,9 @@ class Webmastery_MCP_Taxonomy {
 				'required'   => [ "{$ability}_id", 'confirm' ],
 			],
 			'execute_callback'    => function ( $input ) use ( $taxonomy, $label, $ability ) {
-				if ( true !== ( $input['confirm'] ?? null ) ) {
-					return Webmastery_MCP_Response::legacy_error( 'missing_confirmation', 'Set confirm to true to acknowledge permanent deletion.' );
+				$error = self::delete_input_error( $input );
+				if ( null !== $error ) {
+					return $error;
 				}
 				$id   = absint( $input[ "{$ability}_id" ] );
 				$term = get_term( $id, $taxonomy );

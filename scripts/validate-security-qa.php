@@ -241,10 +241,9 @@ foreach ( array( 'bulk-trash-posts', 'bulk-publish-posts', 'delete-media', 'dele
 			$value = $input['confirm'] ?? null;
 			$matches_input = 'missing' === $variant ? ! array_key_exists( 'confirm', $input )
 				: ( 'false' === $variant ? false === $value : ( 'string' === $variant ? 'true' === $value : 1 === $value ) );
-			$callback_guard = in_array( $variant, array( 'string', 'number' ), true );
 			return $matches_input && 'failure' === $case['expect']
-				&& ( $callback_guard ? 'missing_confirmation' : 'ability_invalid_input' ) === ( $case['expect_error_reason'] ?? '' )
-				&& ( $callback_guard ? 'precondition_failed' : 'invalid_input' ) === ( $case['expect_error_code'] ?? '' )
+				&& 'ability_invalid_input' === ( $case['expect_error_reason'] ?? '' )
+				&& 'invalid_input' === ( $case['expect_error_code'] ?? '' )
 				&& 'canonical' === ( $case['expect_error_shape'] ?? '' )
 				&& true === ( $case['assert_unchanged'] ?? false );
 		} );

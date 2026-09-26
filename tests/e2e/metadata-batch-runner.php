@@ -162,7 +162,9 @@ try {
 					wstm110_batch_assert_unchanged( $before, $after, $events );
 					wstm110_batch_require( false === ( $result['success'] ?? null ), 'Combined request did not fail.' );
 					wstm110_batch_require( 'invalid_input' === ( $result['error']['code'] ?? null ), 'Combined request did not have canonical invalid_input code.' );
-					wstm110_batch_require( 'metadata_requires_separate_call' === ( $result['error']['reason'] ?? null ), 'Wrong combined-request reason.' );
+					$reason = 'ability' === $boundary ? 'ability_invalid_input' : 'metadata_requires_separate_call';
+					$record['expected_reason'] = $reason;
+					wstm110_batch_require( $reason === ( $result['error']['reason'] ?? null ), 'Wrong combined-request reason for this boundary.' );
 					$record['passed'] = true;
 					$summary['passed']++;
 				} catch ( Throwable $error ) {

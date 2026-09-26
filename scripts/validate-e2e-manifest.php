@@ -95,7 +95,7 @@ foreach ( $manifest as $index => $case ) {
 		$errors[] = "case {$case_number} capture_post_id requires a successful post/page creation and unique wstm110_created_ fixture name.";
 	}
 	if ( isset( $case['assert_metadata_boundary'] ) && ( true !== $case['assert_metadata_boundary']
-		|| 'failure' !== $expect || 'metadata_requires_separate_call' !== ( $case['expect_error_reason'] ?? null ) ) ) {
+		|| 'failure' !== $expect || 'ability_invalid_input' !== ( $case['expect_error_reason'] ?? null ) ) ) {
 		$errors[] = "case {$case_number} assert_metadata_boundary requires combined-input rejection.";
 	}
 	if ( '' !== $expect && ! in_array( $expect, array( 'success', 'failure' ), true ) ) {
@@ -146,8 +146,8 @@ foreach ( $manifest as $index => $case ) {
 	if ( isset( $case['assert_changed'] ) && ( isset( $case['assert_unchanged'] ) || 'success' !== $expect ) ) {
 		$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_changed' ) . ' requires success without assert_unchanged.';
 	}
-	if ( array_key_exists( 'assert_permission', $case ) && ! in_array( $case['assert_permission'], array( true, 'forbidden' ), true ) ) {
-		$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_permission' ) . ' must be true or forbidden.';
+	if ( array_key_exists( 'assert_permission', $case ) && ! in_array( $case['assert_permission'], array( true, 'forbidden', 'invalid_input' ), true ) ) {
+		$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_permission' ) . ' must be true, forbidden, or invalid_input.';
 	}
 	if ( array_key_exists( 'assert_capabilities', $case ) ) {
 		$assertions = $case['assert_capabilities'];

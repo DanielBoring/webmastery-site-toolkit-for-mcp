@@ -8,6 +8,10 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Changed
 
+- Preserve empty database health requests at Adapter permission preflight by applying the explicitly declared object-root default to omitted/null root input. Retain Administrator authorization, table-name redaction, strict raw callback checks and core normalization-filter ordering.
+- Validate strict input types after core schema checks and before registered permission checks, so numeric-string IDs and boolean-like flags report input errors rather than permission denials. Preserve core lifecycle behavior, direct destructive preflight diagnostics, and real authorization failures.
+- Breaking development change for 3.0: close fixed-property ability input objects and reject unknown fields, invalid explicit nulls, coerced scalar types, and non-exact enum values before raw permission or execute callbacks. Preserve omitted defaults, intentional metadata/extension maps, and existing capability decisions.
+- Reject any supplied parent field on built-in posts and nonhierarchical custom post types, including zero; retain hierarchical detach-to-zero, omission, and the existing parent authorization/type/cycle safeguards.
 - Breaking development change for 3.0: require explicit boolean confirmation for permanent media/category/tag deletion and both bulk post operations, including previews. Bound bulk inputs to 100 raw entries and process normalized duplicate IDs once.
 - Add non-mutating bulk eligibility previews with would-act successes, unchanged authorization/status/trash safeguards, and an explicit preview marker; retain non-atomic per-item failure summaries.
 - Refuse media deletion with known featured-image or literal content URL/GUID references unless explicitly forced. Reuse orphan-media reference checks, fail closed on scan errors even with force, and report known usage on successful deletion. Confirmation and force do not grant capabilities or prove human approval.

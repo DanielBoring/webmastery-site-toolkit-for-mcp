@@ -28,6 +28,49 @@ function wstm117_term_snapshot() {
 	return $snapshot;
 }
 
+function wstm117_delete_missing_pair( $ability, $execute, $input, $taxonomy, $slug, $scenario, $path, $before, $record ) {
+	global $wpdb;
+	$actor = get_current_user_id();
+	$capability = get_taxonomy( $taxonomy )->cap->delete_terms;
+	$can_delete = current_user_can( $capability );
+	$minimal = $input;
+	unset( $minimal['name'] );
+	foreach ( array( 'original' => $input, 'minimal' => $minimal ) as $kind => $payload ) {
+		$cap_calls = 0;
+		$observe_cap = static function ( $caps ) use ( &$cap_calls ) {
+			$cap_calls++;
+			return $caps;
+		};
+		add_filter( 'map_meta_cap', $observe_cap, -10000 );
+		try {
+			$queries = $wpdb->num_queries;
+			$result = 'wrapped' === $path ? $ability->execute( $payload ) : $execute( $payload );
+			$query_calls = $wpdb->num_queries - $queries;
+		} finally {
+			remove_filter( 'map_meta_cap', $observe_cap, -10000 );
+		}
+		$after = wstm117_term_snapshot();
+		$schema_negative = 'original' === $kind;
+		$reason = $schema_negative ? 'ability_invalid_input' : 'not_found';
+		$message = $schema_negative ? 'Ability input does not match its schema.' : ( 'category' === $taxonomy ? 'Category' : 'Tag' ) . ' not found.';
+		$passed = $reason === wstm118_error_reason( $result )
+			&& ( $schema_negative ? 'invalid_input' : 'not_found' ) === $result['error']['code']
+			&& $message === $result['error']['message'] && '{}' === wp_json_encode( $result['error']['details'] )
+			&& $before === $after && $actor === get_current_user_id()
+			&& true === $can_delete && true === current_user_can( $capability )
+			&& ( ! $schema_negative || ( 0 === $cap_calls && 0 === $query_calls ) );
+		$label = "delete-{$slug}: {$scenario} {$path}";
+		$record( $label . ( $schema_negative ? '' : ' minimal counterpart' ), $passed, array(
+			'input' => $payload, 'actor' => $actor, 'capability' => $capability, 'can_delete' => $can_delete,
+			'result' => $result, 'persisted_unchanged' => $before === $after,
+			'before_sha256' => hash( 'sha256', wp_json_encode( $before ) ),
+			'after_sha256' => hash( 'sha256', wp_json_encode( $after ) ),
+			'capability_calls' => $cap_calls, 'query_calls' => $query_calls,
+		) );
+		$before = $after;
+	}
+}
+
 function wstm117_run_taxonomy_tests() {
 	global $wp_version;
 
@@ -199,6 +242,10 @@ function wstm117_run_taxonomy_tests() {
 								$input['confirm'] = true;
 							}
 							$before = wstm117_term_snapshot();
+							if ( 'delete' === $action ) {
+								wstm117_delete_missing_pair( $ability, $execute, $input, $taxonomy, $slug, $scenario, $path, $before, $record );
+								continue;
+							}
 							$result = 'wrapped' === $path ? $ability->execute( $input ) : $execute( $input );
 							$expected = ( 'category' === $taxonomy ? 'Category' : 'Tag' ) . ' not found.';
 							$record( "{$action}-{$slug}: {$scenario} {$path}", 'not_found' === wstm118_error_reason( $result )

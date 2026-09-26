@@ -91,7 +91,16 @@ add_action( 'wp_abilities_api_init', static function () {
 		$property->setAccessible( true );
 		$property->setValue( $probe, 'wstm118_nonexistent_callback' );
 	}
-	wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-missing-schema', array_replace( $args, array( 'description' => 'Controlled missing schema.', 'input_schema' => array() ) ) );
+	$probe = wp_register_ability( 'webmastery-site-toolkit-for-mcp/wstm118-missing-schema', array_replace( $args, array( 'description' => 'Controlled missing schema.', 'input_schema' => array() ) ) );
+	if ( ! $probe instanceof Webmastery_MCP_Ability ) {
+		throw new RuntimeException( 'Error-contract missing-schema fixture registration failed.' );
+	}
+	// Fault only this probe after registration: the raw permission wrapper captured an empty closed schema.
+	foreach ( array( 'input_schema' => array(), 'permission_callback' => $args['permission_callback'] ) as $field => $value ) {
+		$property = new ReflectionProperty( WP_Ability::class, $field );
+		$property->setAccessible( true );
+		$property->setValue( $probe, $value );
+	}
 	wp_register_ability( 'wstm118-foreign/probe', array_replace( $args, array( 'description' => 'Controlled foreign namespace.', 'execute_callback' => 'wstm118_foreign_result', 'permission_callback' => '__return_true' ) ) );
 }, 100 );
 

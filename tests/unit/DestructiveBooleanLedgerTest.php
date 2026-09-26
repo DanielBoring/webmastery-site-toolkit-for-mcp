@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/fixtures/schema-integration-ledger.php';
+
 final class DestructiveBooleanLedgerTest extends TestCase {
 	private static function fingerprint( array $cases, bool $without_oracles = false ): string {
 		$copy = json_decode( json_encode( $cases, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION ), false, 512, JSON_THROW_ON_ERROR );
@@ -36,6 +38,7 @@ final class DestructiveBooleanLedgerTest extends TestCase {
 		$directory = dirname( __DIR__ ) . '/e2e/';
 		$ledger = json_decode( file_get_contents( $directory . 'destructive-safety-boolean-ledger.json' ), true, 512, JSON_THROW_ON_ERROR );
 		$manifest = json_decode( file_get_contents( $directory . 'abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		$manifest = wstm126_parent_manifest( $manifest );
 		$manifest = self::baseline_projection( $manifest, $ledger['integration'] );
 		self::assertCount( 563, $manifest );
 		self::assertCount( 16, $ledger['cases'] );
@@ -67,6 +70,7 @@ final class DestructiveBooleanLedgerTest extends TestCase {
 		$directory = dirname( __DIR__ ) . '/e2e/';
 		$ledger = json_decode( file_get_contents( $directory . 'destructive-safety-boolean-ledger.json' ), true, 512, JSON_THROW_ON_ERROR );
 		$manifest = json_decode( file_get_contents( $directory . 'abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		$manifest = wstm126_parent_manifest( $manifest );
 		if ( 'privacy-role' === $mutation ) { $manifest[372]->role = 'subscriber'; }
 		if ( 'privacy-integer-float' === $mutation ) { $manifest[377]->input->include_table_names = 1.0; }
 		if ( 'privacy-order' === $mutation ) { [ $manifest[372], $manifest[373] ] = array( $manifest[373], $manifest[372] ); }
@@ -95,8 +99,10 @@ final class DestructiveBooleanLedgerTest extends TestCase {
 
 	public function test_runtime_matrix_changes_only_the_calibrated_non_direct_values(): void {
 		$source = file_get_contents( dirname( __DIR__ ) . '/e2e/destructive-safety-runner.php' );
-		self::assertStringContainsString( "'direct' === \$boundary || in_array( \$label, array( 'string', 'number' ), true ) ? 'missing_confirmation' : 'ability_invalid_input'", $source );
-		self::assertStringContainsString( "'direct' === \$boundary || \$index < 4 ? 'invalid_input' : 'ability_invalid_input'", $source );
+		self::assertStringContainsString( "'direct' === \$boundary ? 'missing_confirmation' : 'ability_invalid_input'", $source );
+		self::assertStringContainsString( "'direct' === \$boundary ? 'invalid_input' : 'ability_invalid_input'", $source );
+		self::assertStringContainsString( "'invalid_input' === \$raw['error']['code'] && 'ability_invalid_input' === \$raw['error']['reason']", $source );
+		self::assertStringContainsString( "true === \$entry['permission_is_wp_error']", $source );
 		self::assertStringContainsString( "array( 'true', 'false', 0, 1, null, array() )", $source );
 		self::assertStringContainsString( "'direct' === \$boundary ? 'too_many_ids' : 'ability_invalid_input'", $source );
 		self::assertStringContainsString( "'ability' === \$boundary ? 'ability_invalid_permissions' : 'forbidden'", $source );

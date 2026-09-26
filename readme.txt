@@ -135,7 +135,17 @@ A positive parent must exist, have the same hierarchical post type, and be edita
 
 Set parent to 0 to detach an item. Omit parent to leave it unchanged on update. Reassigning the same parent still requires permission to edit that parent, but not every ancestor. Custom post types use their registered edit capability and WordPress capability filters.
 
-Positive parent values on nonhierarchical custom post types are rejected; older versions persisted this unsupported extra field. Zero and omitted parents remain accepted. Built-in post abilities still ignore an extra parent field.
+In 3.0 development, built-in posts and nonhierarchical custom post types reject any supplied parent field, including zero or null. Omit it on those types. Pages and hierarchical custom post types retain detach-to-zero and omitted-parent behavior, with the existing authorization and cycle checks.
+
+= Are ability inputs strict? =
+
+3.0 development closes fixed-property input objects and validates types, exact enums, required fields, numeric bounds, and array items before raw permission or execute callbacks. Unknown keys, numeric strings used as IDs, coerced booleans, and unadvertised null values are refused. Omit optional values to retain defaults. Input-free abilities accept omitted input or an empty object.
+
+Registered execution retains core input validation and then applies strict types before permissions, so numeric-string IDs and boolean-like flags report invalid_input rather than permission denial. Direct destructive preflight reasons and real capability denials are unchanged. Core normalization and lifecycle hooks remain active.
+
+Registered permission preflight honors a declared object-root default for omitted or null input, including empty database-health requests normalized by the Adapter. It does not replay normalization filters, grant capabilities, expose table names, coerce non-null inputs, or default nested null values. Directly invoked raw callbacks keep their existing strict checks.
+
+Standalone metadata JSON values and dynamic registered-taxonomy maps remain open where intended; existing metadata and taxonomy authorization still applies. WordPress handles other schema keywords such as URI formats. Output schemas are deferred to avoid constraining legitimate provider/error response shapes. No capabilities or external services are added.
 
 = How are image URL uploads limited? =
 
@@ -210,6 +220,10 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 
+* Close fixed-property input schemas and reject malformed types/enums before raw permission checks or execute callbacks; preserve explicit open maps and omitted defaults.
+* Validate strict types during registered input validation after core checks, preventing malformed scalar inputs from being misclassified as permission denials.
+* Preserve empty database-health requests at Adapter permission preflight by honoring the declared object-root default, without changing Administrator authorization, table-name privacy, or strict raw callback validation.
+* Reject unadvertised parent fields on posts and nonhierarchical custom post types, including zero, while retaining hierarchical detach and parent authorization.
 * Require exact confirmation for permanent media/term deletion and both bulk post operations; bound raw bulk requests to 100 IDs and add non-mutating eligibility previews.
 * Guard media deletion with shared known-reference checks; require explicit force for known usage, fail closed on scan errors, and report in_use on success without changing capabilities.
 * Reject combined metadata and SEO inputs in post/page/custom-post-type create and update before any mutation; migrate to draft creation, separate authorized key writes, then publication.
@@ -287,7 +301,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Upgrade Notice ==
 
 = Unreleased =
-3.0 development requires separate metadata calls. Create a draft, write authorized keys, then publish; this is not atomic. SEO reads omit denied keys, generated Yoast head output is unavailable, and overview counts describe an authorized sample.
+3.0 rejects unknown keys, coercible types, invalid enums. Omit parent on posts/nonhierarchical types. Create draft, write authorized metadata, publish: separate calls, not atomic. SEO omits denied keys; generated Yoast head unavailable; overview counts use authorized samples.
 
 = 2.6.0 =
 Standalone metadata, comment and taxonomy permissions are tighter. Create/update metadata, SEO aliases and separate SEO reads retain authorization gaps (see FAQ). Clients using custom role/key policies must review denials. Image upload limits and PHP 8.0 minimum are unchanged.

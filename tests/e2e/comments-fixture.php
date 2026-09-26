@@ -84,6 +84,55 @@ function wstm105_finalize_proof( array $cleanup, array &$summary, string $artifa
 	wstm105_assert( strlen( $json ) === file_put_contents( $artifact, $json ), 'Cannot write complete comment evidence.' );
 }
 
+function wstm105_assert_schema_error( $result, $permission = false ) {
+	if ( $permission ) {
+		wstm105_assert( is_wp_error( $result ) && 'invalid_input' === $result->get_error_code(), 'Registered permission must return native invalid_input.' );
+		$decoded = json_decode( $result->get_error_message() );
+		wstm105_assert( $decoded instanceof stdClass && ( $decoded->error ?? null ) instanceof stdClass, 'Permission error must carry canonical JSON.' );
+		$envelope = (array) $decoded;
+		$envelope['error'] = (array) $decoded->error;
+		wstm105_assert( wp_json_encode( $envelope ) === $result->get_error_message(), 'Permission error JSON changed.' );
+		$result = $envelope;
+	}
+	wstm105_assert( 'ability_invalid_input' === wstm118_error_reason( $result )
+		&& 'invalid_input' === $result['error']['code']
+		&& 'Ability input does not match its schema.' === $result['error']['message']
+		&& '{}' === wp_json_encode( $result['error']['details'] ), 'Registered schema error contract changed.' );
+}
+
+function wstm105_schema_negative( $permission, $execute, $input, $comment_id ) {
+	global $wpdb;
+	$before = wstm105_comment_state( $comment_id );
+	$cap_calls = 0;
+	$record_cap = static function ( $caps ) use ( &$cap_calls ) {
+		$cap_calls++;
+		return $caps;
+	};
+	add_filter( 'map_meta_cap', $record_cap, -10000 );
+	try {
+		foreach ( array( true, false ) as $is_permission ) {
+			$queries = $wpdb->num_queries;
+			$result = $is_permission ? $permission( $input ) : $execute( $input );
+			// Both original callbacks begin with a capability check; neither may run.
+			wstm105_assert( 0 === $cap_calls && $queries === $wpdb->num_queries, 'Schema rejection reached original capability/query work.' );
+			wstm105_assert_schema_error( $result, $is_permission );
+		}
+	} finally {
+		remove_filter( 'map_meta_cap', $record_cap, -10000 );
+	}
+	wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Schema rejection changed persisted content/status.' );
+}
+
+function wstm105_status_counterpart( $action, $permission, $execute, $input, $comment_id, &$checks ) {
+	if ( 'update' === $action ) {
+		return $input;
+	}
+	// Retain the original typed payload as a negative control before its counterpart.
+	wstm105_schema_negative( $permission, $execute, $input, $comment_id );
+	$checks++;
+	return array( 'comment_id' => $input['comment_id'] );
+}
+
 function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 	$checks = 0;
 	foreach ( array( 'update', 'approve', 'trash', 'spam' ) as $action ) {
@@ -114,6 +163,7 @@ function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 			wstm105_assert( $moderate === current_user_can( 'moderate_comments' ) && $edit === current_user_can( 'edit_comment', $comment_id ), "{$role}/{$scope} fixture capability mismatch." );
 			$allowed = $moderate && $edit;
 			$before = wstm105_comment_state( $comment_id );
+			$input = wstm105_status_counterpart( $action, $permission, $execute, $input, $comment_id, $checks );
 			$result = $permission( $input );
 			wstm105_assert( $allowed ? true === $result : is_wp_error( $result ) && 'forbidden' === $result->get_error_code(), "{$action} permission callback mismatch for {$role}/{$scope}." );
 			wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Permission callback mutated a comment.' );
@@ -134,6 +184,7 @@ function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 
 		wp_set_current_user( $roles['editor'] );
 		$input = array( 'comment_id' => $fixtures['missing_comment_id'], 'content' => 'Missing.' );
+		$input = wstm105_status_counterpart( $action, $permission, $execute, $input, $fixtures[ "wstm105_{$action}_other" ], $checks );
 		$result = $permission( $input );
 		wstm105_assert( true === $result, "{$action} missing comment must reach the existing execute error." );
 		$result = $execute( $input );
@@ -146,6 +197,7 @@ function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 		$GLOBALS['comment'] = get_comment( $comment_id );
 		try {
 			$input = array( 'comment_id' => 0, 'content' => 'Must not target the global comment.', 'status' => 'spam' );
+			$input = wstm105_status_counterpart( $action, $permission, $execute, $input, $comment_id, $checks );
 			wstm105_assert( true === $permission( $input ), "{$action} zero ID must defer to the missing-comment execution error." );
 			wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Zero-ID permission callback changed the global comment.' );
 			$result = $execute( $input );
@@ -158,9 +210,14 @@ function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 		}
 		$invalid_inputs = array( null, false, 7, 'invalid', new stdClass(), array(), array( 'comment_id' => array( $comment_id ) ), array( 'comment_id' => new stdClass() ), array( 'comment_id' => true ), array( 'comment_id' => -$comment_id ), array( 'comment_id' => 1.5 ) );
 		foreach ( $invalid_inputs as $input ) {
-			wstm105_assert( true === $permission( $input ), "{$action} malformed input must be deferred to guarded execution." );
-			$result = $execute( $input );
-			wstm105_assert( false === $result['success'] && ! empty( $result['error'] ), "{$action} direct malformed input must fail explicitly." );
+			if ( 'update' !== $action && is_array( $input ) && is_int( $input['comment_id'] ?? null ) && $input['comment_id'] < 0 ) {
+				wstm105_assert( true === $permission( $input ), "{$action} negative integer ID must defer to guarded execution." );
+				$result = $execute( $input );
+				wstm105_assert( 'not_found' === wstm118_error_reason( $result ) && 'Comment not found.' === $result['error']['message']
+					&& '{}' === wp_json_encode( $result['error']['details'] ), 'Negative integer ID response changed.' );
+			} else {
+				wstm105_schema_negative( $permission, $execute, $input, $comment_id );
+			}
 			wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Malformed input changed persisted state.' );
 			$checks++;
 		}
@@ -171,6 +228,7 @@ function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 		add_filter( 'map_meta_cap', $deny, 10, 4 );
 		try {
 			$input = array( 'comment_id' => $comment_id, 'content' => 'Filtered out.', 'status' => 'trash' );
+			$input = wstm105_status_counterpart( $action, $permission, $execute, $input, $comment_id, $checks );
 			$result = $permission( $input );
 			wstm105_assert( is_wp_error( $result ) && 'forbidden' === $result->get_error_code(), 'Custom edit_comment mapping bypassed by permission callback.' );
 			wstm105_assert( false === $execute( $input )['success'], 'Custom edit_comment mapping bypassed by execution.' );
@@ -190,5 +248,6 @@ function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 			}
 		}
 	}
+	wstm105_assert( 141 === $checks, 'Direct callback inventory changed.' );
 	echo "PASS WSTM105 {$checks} direct callback authorization checks\n";
 }

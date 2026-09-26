@@ -224,6 +224,10 @@ final class CoverageManifestTest extends TestCase {
 			array( 'disabled-state', 'e2e', 1 ),
 			array( 'invalid-capability', 'e2e', 1 ),
 			array( 'invalid-stored-post', 'e2e', 1 ),
+			array( 'metadata-old-reason', 'e2e', 1 ),
+			array( 'permission-reason-as-code', 'e2e', 1 ),
+			array( 'permission-unknown-code', 'e2e', 1 ),
+			array( 'permission-invalid-type', 'e2e', 1 ),
 		);
 	}
 
@@ -240,6 +244,14 @@ final class CoverageManifestTest extends TestCase {
 		copy( $root . '/tests/e2e/error-contract-assertions.php', $tmp . '/tests/e2e/error-contract-assertions.php' );
 		$cases = json_decode( file_get_contents( $root . '/tests/e2e/abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
 		foreach ( $cases as &$case ) {
+			if ( 'invalid_input' === ( $case['assert_permission'] ?? null ) ) {
+				if ( 'permission-reason-as-code' === $mutation ) { $case['assert_permission'] = 'metadata_requires_separate_call'; }
+				if ( 'permission-unknown-code' === $mutation ) { $case['assert_permission'] = 'unknown'; }
+				if ( 'permission-invalid-type' === $mutation ) { $case['assert_permission'] = array( 'invalid_input' ); }
+			}
+			if ( 'metadata-old-reason' === $mutation && ! empty( $case['assert_metadata_boundary'] ) ) {
+				$case['expect_error_reason'] = 'metadata_requires_separate_call';
+			}
 			if ( 'webmastery-site-toolkit-for-mcp/delete-media' === $case['ability'] && 'failure' === $case['expect'] ) {
 				if ( 'denial-code' === $mutation ) { $case['expect_error_code'] = 'not_found'; }
 				if ( 'callback-code' === $mutation ) { $case['assert_permission'] = 'not_found'; }

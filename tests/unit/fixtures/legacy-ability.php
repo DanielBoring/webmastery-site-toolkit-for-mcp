@@ -5,6 +5,10 @@ class WP_Ability {
 	public int $calls = 0;
 	public $callback;
 
+	public function get_input_schema(): array {
+		return array();
+	}
+
 	protected function invoke_callback( callable $callback, $input = null ) {
 		++$this->calls;
 		return $callback( $input );
