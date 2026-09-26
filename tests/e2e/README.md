@@ -24,8 +24,9 @@ review and bind that driver and the authenticated bounded GitHub API/job-log
 drivers, their exact source, arguments, output limits, original native status,
 EOF/capture behavior and private destinations. A fabricated capture record is
 not evidence. No keys, binaries, secrets, encrypted transfers or custody jobs
-are supplied or executed by importing this library. The existing unit workflow
-has only a separate nonsecret executed-workflow context receipt step.
+are supplied or executed by importing this library. The Unit, Ability Contract,
+Full MCP E2E and Release Package QA jobs have only a separate nonsecret
+executed-workflow context receipt step, not an encrypted transport.
 
 | Boundary | Required behavior |
 | --- | --- |
@@ -57,6 +58,15 @@ fields to `tests/support/private-custody-context.php`. It records those separate
 from `github.sha`, the PR head, the REST run head and the tested checkout. It does
 not inspect the mutable checked-out workflow file or print the entire GitHub
 context. The receipt is enabled only in this repository, not other fork repositories.
+Each of those four jobs invokes the same existing receipt CLI after checkout
+and its existing PHP setup, before dependency/runtime work. The two Docker QA
+jobs retain host PHP 8.4, package QA retains PHP 8.2, and Unit retains its matrix
+interpreter; no controller interpreter or runtime selector changes. Runtime
+jobs supply their own fixed workflow path, with the same explicit server fields
+and PR-head-or-`none` sentinel. Actual authenticated job logs must still prove
+successful execution and exact workflow/run/attempt binding. These source
+bindings are not real daemon admission, WordPress proof or durable private
+custody, and do not expand compatibility or tag-release policy.
 
 For non-PR events, `WSTM_CUSTODY_PULL_REQUEST_HEAD_SHA` must carry the explicit
 nonempty sentinel `none`, because empty environment values can disappear across

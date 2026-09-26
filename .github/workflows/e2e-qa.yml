@@ -123,6 +123,21 @@ jobs:
           test "${binary##*/}" = php8.4
           printf 'WSTM108_HOST_PHP=%s\n' "$binary" >> "$GITHUB_ENV"
 
+      - name: Record executed workflow identity
+        if: github.repository == 'DanielBoring/webmastery-site-toolkit-for-mcp'
+        env:
+          WSTM_CUSTODY_REPOSITORY: ${{ github.repository }}
+          WSTM_CUSTODY_REPOSITORY_ID: ${{ github.repository_id }}
+          WSTM_CUSTODY_RUN_ID: ${{ github.run_id }}
+          WSTM_CUSTODY_ATTEMPT: ${{ github.run_attempt }}
+          WSTM_CUSTODY_EVENT: ${{ github.event_name }}
+          WSTM_CUSTODY_EVENT_SHA: ${{ github.sha }}
+          WSTM_CUSTODY_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha || 'none' }}
+          WSTM_CUSTODY_WORKFLOW_COMMIT: ${{ github.workflow_sha }}
+          WSTM_CUSTODY_WORKFLOW_PATH: .github/workflows/e2e-qa.yml
+          WSTM_CUSTODY_WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: php tests/support/private-custody-context.php
+
       - name: Set up Docker Compose
         run: docker compose version
 
@@ -405,6 +420,21 @@ jobs:
           binary="$(readlink -e /usr/bin/php8.4)"
           test "${binary##*/}" = php8.4
           printf 'WSTM108_HOST_PHP=%s\n' "$binary" >> "$GITHUB_ENV"
+
+      - name: Record executed workflow identity
+        if: github.repository == 'DanielBoring/webmastery-site-toolkit-for-mcp'
+        env:
+          WSTM_CUSTODY_REPOSITORY: ${{ github.repository }}
+          WSTM_CUSTODY_REPOSITORY_ID: ${{ github.repository_id }}
+          WSTM_CUSTODY_RUN_ID: ${{ github.run_id }}
+          WSTM_CUSTODY_ATTEMPT: ${{ github.run_attempt }}
+          WSTM_CUSTODY_EVENT: ${{ github.event_name }}
+          WSTM_CUSTODY_EVENT_SHA: ${{ github.sha }}
+          WSTM_CUSTODY_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha || 'none' }}
+          WSTM_CUSTODY_WORKFLOW_COMMIT: ${{ github.workflow_sha }}
+          WSTM_CUSTODY_WORKFLOW_PATH: .github/workflows/e2e-qa.yml
+          WSTM_CUSTODY_WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: php tests/support/private-custody-context.php
 
       - name: Set up Docker Compose
         run: docker compose version

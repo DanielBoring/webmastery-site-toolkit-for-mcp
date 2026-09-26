@@ -159,31 +159,94 @@ final class PrivateCustodyTest extends TestCase {
 		$this->receive(static function (): array { self::fail('Workflow origin must fail before age.'); });
 	}
 
-	public function test_receipt_step_uses_only_explicit_server_context_environment_fields(): void {
-		$workflow = file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/unit-tests.yml');
-		foreach (array(
-			'WSTM_CUSTODY_WORKFLOW_COMMIT: ${{ github.workflow_sha }}',
-			'WSTM_CUSTODY_WORKFLOW_REF: ${{ github.workflow_ref }}',
-			'WSTM_CUSTODY_EVENT_SHA: ${{ github.sha }}',
-			'WSTM_CUSTODY_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha || \'none\' }}',
-			'run: php tests/support/private-custody-context.php',
-		) as $binding) { self::assertStringContainsString($binding, $workflow); }
+	private static function receiptStep(string $workflow): string {
+		return implode("\n", array(
+			'      - name: Record executed workflow identity',
+			'        if: github.repository == \'DanielBoring/webmastery-site-toolkit-for-mcp\'',
+			'        env:',
+			'          WSTM_CUSTODY_REPOSITORY: ${{ github.repository }}',
+			'          WSTM_CUSTODY_REPOSITORY_ID: ${{ github.repository_id }}',
+			'          WSTM_CUSTODY_RUN_ID: ${{ github.run_id }}',
+			'          WSTM_CUSTODY_ATTEMPT: ${{ github.run_attempt }}',
+			'          WSTM_CUSTODY_EVENT: ${{ github.event_name }}',
+			'          WSTM_CUSTODY_EVENT_SHA: ${{ github.sha }}',
+			'          WSTM_CUSTODY_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha || \'none\' }}',
+			'          WSTM_CUSTODY_WORKFLOW_COMMIT: ${{ github.workflow_sha }}',
+			'          WSTM_CUSTODY_WORKFLOW_PATH: .github/workflows/' . $workflow,
+			'          WSTM_CUSTODY_WORKFLOW_REF: ${{ github.workflow_ref }}',
+			'        run: php tests/support/private-custody-context.php',
+			'', '',
+		));
+	}
+
+	public static function receiptWorkflowJobs(): array {
+		return array(
+			'unit' => array('unit-tests.yml', 'unit-tests', array('Checkout code', 'Set up PHP',
+				'Verify restored matrix PHP and unchanged companion', 'Record executed workflow identity', 'Get Composer cache directory')),
+			'contract' => array('e2e-qa.yml', 'ability-contract-qa', array('Checkout code', 'Set up host QA PHP',
+				'Bind canonical host QA interpreter', 'Record executed workflow identity', 'Set up Docker Compose', 'Run Ability Contract QA')),
+			'http' => array('e2e-qa.yml', 'full-mcp-e2e-qa', array('Checkout code', 'Set up host QA PHP',
+				'Bind canonical host QA interpreter', 'Record executed workflow identity', 'Set up Docker Compose', 'Run Full MCP E2E QA')),
+			'package' => array('release-package-qa.yml', 'release-package-qa', array('Checkout code', 'Set up PHP',
+				'Record executed workflow identity', 'Test release safeguard regressions', 'Run Release Package QA')),
+		);
+	}
+
+	/** @dataProvider receiptWorkflowJobs */
+	public function test_receipt_step_uses_only_explicit_server_context_environment_fields(string $file, string $job, array $order): void {
+		$workflow = str_replace("\r\n", "\n", file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/' . $file));
+		$pattern = '/^  ' . preg_quote($job, '/') . ':\n.*?(?=^  [a-zA-Z0-9_-]+:|\z)/ms';
+		self::assertSame(1, preg_match_all($pattern, $workflow, $jobs), 'The actual runtime job must be unique.');
+		$source = $jobs[0][0];
+		$pattern = '/^      - name: Record executed workflow identity\n.*?(?=^      - |\z)/ms';
+		self::assertSame(1, preg_match_all($pattern, $source, $steps), 'Exactly one receipt belongs to this job.');
+		self::assertSame(self::receiptStep($file), $steps[0][0], 'Only the explicit server fields and fixed helper invocation are permitted.');
+		$previous = -1;
+		foreach ($order as $name) {
+			$needle = '      - name: ' . $name . "\n";
+			self::assertSame(1, substr_count($source, $needle), 'Required step must be unique: ' . $name);
+			$position = strpos($source, $needle);
+			self::assertNotFalse($position);
+			self::assertTrue($position > $previous, 'Checkout and PHP readiness must precede receipt, then runtime: ' . $name);
+			$previous = $position;
+		}
 		$helper = file_get_contents(dirname(__DIR__) . '/support/private-custody-context.php');
 		self::assertStringNotContainsString('file_get_contents', $helper);
 		self::assertStringNotContainsString('shell_exec', $helper);
 		self::assertStringContainsString('Wstm_Test_Custody::workflow_context($context)', $helper);
 	}
 
+	public static function runtimeReceiptWorkflows(): array {
+		return array(
+			array('e2e-qa.yml', 2, 'ebba5699845902d3b844677186c1c66b0224d30100fee805c149f571c07454b0'),
+			array('release-package-qa.yml', 1, 'dae903274394edb1e7bc86b564793c337dd6cdd94283b00986d71df3bfa85884'),
+		);
+	}
+
+	/** @dataProvider runtimeReceiptWorkflows */
+	public function test_runtime_receipts_preserve_all_other_published_53d_workflow_bytes(string $file, int $expected, string $hash): void {
+		$workflow = str_replace("\r\n", "\n", file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/' . $file));
+		$original = str_replace(self::receiptStep($file), '', $workflow, $count);
+		self::assertSame($expected, $count);
+		self::assertSame($hash, hash('sha256', $original), 'Triggers, selectors, PHP, runtime commands, gates and evidence policies must remain unchanged.');
+	}
+
 	public static function contextCliCases(): array {
 		return array(
 			array('pull-request'), array('push'), array('missing-commit'), array('invalid-reference'),
 			array('dispatch'), array('push-missing-pr-head'), array('push-empty-pr-head'), array('pr-sentinel'),
+			'e2e-pr' => array('pull-request', 'e2e-qa.yml'),
+			'e2e-dispatch' => array('dispatch', 'e2e-qa.yml'),
+			'package-pr' => array('pull-request', 'release-package-qa.yml'),
+			'package-dispatch' => array('dispatch', 'release-package-qa.yml'),
 		);
 	}
 
 	/** @dataProvider contextCliCases */
-	public function test_actual_receipt_cli_with_mock_server_environment(string $mode): void {
+	public function test_actual_receipt_cli_with_mock_server_environment(string $mode, string $workflow = 'unit-tests.yml'): void {
 		$context = $this->context();
+		$context['workflow_path'] = '.github/workflows/' . $workflow;
+		$context['workflow_ref'] = str_replace('unit-tests.yml', $workflow, $context['workflow_ref']);
 		if (in_array($mode, array('push', 'dispatch', 'push-missing-pr-head', 'push-empty-pr-head'), true)) {
 			$context['event'] = 'dispatch' === $mode ? 'workflow_dispatch' : 'push';
 			$context['pull_request_head_sha'] = null;
