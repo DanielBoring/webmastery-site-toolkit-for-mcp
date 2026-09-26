@@ -20,12 +20,14 @@ final class Probe {
 	public static array $originals = array();
 	public static array $events = array();
 	public static bool $allowed = true;
+	public static string $post_type = 'page';
 	public static array $classes = array();
 
 	public static function reset(): void {
 		$GLOBALS['wpdb'] = (object) array( 'num_queries' => 0, 'last_error' => '' );
 		self::$abilities = self::$originals = self::$events = array();
 		self::$allowed = true;
+		self::$post_type = 'page';
 		foreach ( self::$classes as $class ) {
 			if ( __NAMESPACE__ . '\\Webmastery_MCP_Plugins' === $class ) {
 				foreach ( array( 'register_list', 'register_audit', 'register_activate', 'register_deactivate' ) as $method ) {
@@ -81,7 +83,7 @@ function current_user_can( $cap, ...$args ) {
 function get_current_user_id() { return 7; }
 function get_post( $id ) {
 	Probe::$events[] = 'get_post';
-	return (object) array( 'ID' => $id, 'post_type' => 'page', 'post_status' => 'draft', 'post_parent' => 0 );
+	return (object) array( 'ID' => $id, 'post_type' => Probe::$post_type, 'post_status' => 'draft', 'post_parent' => 0 );
 }
 function wp_kses_post( $value ) { return $value; }
 function wp_insert_post( ...$args ) { Probe::reach( 'write:insert' ); }

@@ -449,6 +449,106 @@ run_destructive_safety_qa() (
 	exit "$first_failure"
 )
 
+run_input_schema_qa() (
+	: "${COMPOSE_PROJECT_NAME:?Schema QA requires an explicitly owned disposable Compose project}"
+	[[ "$COMPOSE_PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ && "$E2E_ARTIFACTS_DIR" =~ ^[a-zA-Z0-9_-]+$ ]] || {
+		echo "Invalid schema project or artifact directory identity." >&2; exit 1
+	}
+	[[ -d "$E2E_ARTIFACTS_DIR" && ! -L "$E2E_ARTIFACTS_DIR" ]] || {
+		echo "Schema artifacts require an existing, unlinked output directory." >&2; exit 1
+	}
+	local token source_sha directory container_directory root production_root selected acquired=0 cleanup_verified=0
+	local first_failure=0 status boundary response optin
+	local boundaries=()
+	case "$QA_MODE" in
+		contract) boundaries=( direct permission ability ) ;;
+		e2e) boundaries=( http individual ) ;;
+		all) boundaries=( direct permission ability http individual ) ;;
+		*) echo "Unknown schema QA mode." >&2; exit 1 ;;
+	esac
+	selected="$(IFS=,; echo "${boundaries[*]}")"
+	root="$(cd "$E2E_SCRIPT_ROOT/.." && pwd)"
+	production_root="${E2E_PACKAGE_ROOT:-$root}"
+	token="$(host_php -r 'echo bin2hex(random_bytes(16));')"
+	source_sha="$(cd "$root" && git rev-parse HEAD)"
+	[[ "$token" =~ ^[a-f0-9]{32}$ && "$source_sha" =~ ^[a-f0-9]{40}$ ]] || {
+		echo "Invalid schema owner or source identity." >&2; exit 1
+	}
+	directory="${E2E_ARTIFACTS_DIR}/input-schema-${token}"
+	container_directory="${CONTAINER_PLUGIN_ROOT}/${directory}"
+	mkdir "$directory" || exit $?
+	( set -o noclobber; : > "$directory/stage.log" ) || exit $?
+	schema_stage() {
+		compose exec -T -e WSTM126_STAGE_DISPOSABLE=1 wordpress php \
+			"${CONTAINER_PLUGIN_ROOT}/tests/e2e/input-schema-stage.php" "$1" "$token" "$source_sha" \
+			"$COMPOSE_PROJECT_NAME" "$container_directory" "$selected"
+	}
+	# shellcheck disable=SC2329 # This subshell owns its EXIT trap, not its caller's.
+	schema_finish() {
+		local original=$? restoration=0 finalization=1 retirement=1
+		trap - EXIT
+		if [[ "$acquired" == 1 ]]; then
+			schema_stage restore 2>&1 | tee -a "$directory/stage.log" || restoration=$?
+			if [[ "$restoration" == 0 && "$cleanup_verified" == 1 ]]; then
+				finalization=0
+				schema_stage finalize 2>&1 | tee -a "$directory/stage.log" || finalization=$?
+				if [[ "$finalization" == 0 ]]; then
+					wstm116_clear_retention "$token" "$source_sha" 2>&1 | tee -a "$directory/stage.log" && retirement=0
+				fi
+			fi
+		fi
+		printf 'schema source=%s original_status=%s restoration_status=%s finalization_status=%s retention_status=%s owner=%s project=%s\n' \
+			"$source_sha" "$original" "$restoration" "$finalization" "$retirement" "$token" "$COMPOSE_PROJECT_NAME" | tee -a "$directory/stage.log"
+		if [[ "$original" != 0 ]]; then exit "$original"; fi
+		if [[ "$restoration" != 0 ]]; then exit "$restoration"; fi
+		if [[ "$finalization" != 0 ]]; then exit "$finalization"; fi
+		exit "$retirement"
+	}
+	wstm116_arm_retention "$token" "$source_sha" 2>&1 | tee -a "$directory/stage.log" || exit $?
+	trap schema_finish EXIT
+	schema_stage acquire 2>&1 | tee -a "$directory/stage.log" || exit $?
+	acquired=1
+	# These refusals run before installing the schema opt-in or creating credentials.
+	for optin in '' true; do
+		if compose exec -T -e WSTM126_DISPOSABLE="$optin" wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/input-schema-runner.php" \
+			> "$directory/cli-refusal-${optin:-missing}.log" 2>&1; then
+			echo "Schema runner accepted missing or invalid disposable opt-in." >&2; exit 1
+		fi
+		grep -Fq 'Set WSTM126_DISPOSABLE=1' "$directory/cli-refusal-${optin:-missing}.log" || exit 1
+	done
+	response="$(compose exec -T wordpress curl --max-time 2 --silent --show-error --write-out $'\n%{http_code}' \
+		"http://localhost/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/input-schema-runner.php")" || exit $?
+	if [[ "$response" != $'CLI only.\n403' ]]; then
+		printf '%s' "$response" | host_php -r 'echo "Unexpected schema refusal body SHA256: ",hash("sha256",stream_get_contents(STDIN)),PHP_EOL;' >> "$directory/stage.log"
+		echo "Schema runner did not refuse HTTP before bootstrap." >&2; exit 1
+	fi
+	printf 'HTTP runner refusal: 403 CLI only; before schema opt-in and credentials.\n' >> "$directory/stage.log"
+	schema_stage prepare 2>&1 | tee -a "$directory/stage.log" || exit $?
+	for boundary in "${boundaries[@]}"; do
+		status=0
+		cleanup_verified=0
+		compose exec -T -e WSTM126_DISPOSABLE=1 -e WSTM126_BOUNDARY="$boundary" \
+			-e WSTM126_STAGE_TOKEN="$token" -e WSTM126_PROJECT="$COMPOSE_PROJECT_NAME" \
+			-e WSTM126_JOURNAL_DIR=/tmp/wstm126-stage/invocations \
+			-e WSTM126_SOURCE_SHA="$source_sha" -e WSTM126_ARTIFACT="$container_directory/$boundary.json" \
+			wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/input-schema-runner.php" \
+			2>&1 | tee -a "$directory/stage.log" || status=$?
+		if [[ "$first_failure" == 0 && "$status" != 0 ]]; then first_failure="$status"; fi
+		if host_php "$E2E_SCRIPT_ROOT/input-schema-proof.php" cleanup "$directory/$boundary.json" "$token" "$source_sha" \
+			"$COMPOSE_PROJECT_NAME" "$boundary" "$production_root" "$root" 2>&1 | tee -a "$directory/stage.log"; then
+			cleanup_verified=1
+		else
+			if [[ "$first_failure" != 0 ]]; then exit "$first_failure"; fi
+			exit 1
+		fi
+		if ! host_php "$E2E_SCRIPT_ROOT/input-schema-proof.php" outcome "$directory/$boundary.json" "$token" "$source_sha" \
+			"$COMPOSE_PROJECT_NAME" "$boundary" "$production_root" "$root" 2>&1 | tee -a "$directory/stage.log"; then
+			if [[ "$first_failure" == 0 ]]; then first_failure=1; fi
+		fi
+	done
+	exit "$first_failure"
+)
+
 run_debug_log_check() {
 	echo "Checking WordPress debug log..."
 	if ! compose exec -T wordpress test -f /var/www/html/wp-content/debug.log; then
@@ -531,6 +631,7 @@ main() {
 	run_post_meta_authorization_qa
 	run_error_contract_qa
 	run_metadata_boundary_qa
+	run_input_schema_qa
 	run_debug_log_check
 
 	echo "Docker QA (${QA_MODE}) completed successfully"

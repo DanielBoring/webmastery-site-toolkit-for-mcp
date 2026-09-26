@@ -380,6 +380,7 @@ reasons, exact schema bounds, canonical per-ID failures, query failure with forc
 and unchanged capability/trash behavior. Existing error-contract, taxonomy, and
 trash runners retain all earlier assertions.
 
+**Historical parent contract, not the current strict native boundary:**
 `destructive-safety-boolean-ledger.json` records the reviewed correction from
 head `6a47b52` (tested synthetic merge `22e30ea`): 547 manifest cases remain
 unchanged and 16 change only expected error code/reason, with all 563 typed
@@ -602,6 +603,139 @@ documents all changed user-facing contracts.
 
 ## Strict input-schema coverage and acceptance ledger (3.0)
 
+### Native validation phase and frozen safety integration
+
+The historical schema candidate integrated frozen safety source
+`f93b7d11bec24620f5dd51202db3e6cb1df020d9` (tree
+`c402e4a33a166c02d45f3ca831dfa11504ea55c2`). Its source acceptance is not
+runtime acceptance of this integrated candidate. Shared startup, lifecycle,
+retention, cleanup, and workflow orchestration are inherited unchanged.
+
+The public owned `validate_input($input = null)` override delegates to core
+once, returns core errors unchanged, preserves empty-schema behavior, and
+then runs the existing strict helper before permissions. WordPress 6.9,
+6.9.4 and 7.1.1 expose this public signature and ordering. Coordinator's
+unchanged-core 18-row probes on each version established the earlier masking:
+core accepts ten boolean-like invalid inputs, then the raw wrapper rejects
+them, and core execution masks that rejection as a permission failure.
+Those probes are the historical red evidence, not a new runtime pass.
+Official core hashes remain in `destructive-safety-boolean-ledger.json`.
+
+`NativeInputValidationTest` covers the new phase using an explicit lifecycle
+double, not a substitute for core or HTTP acceptance. Parent error identity,
+ordering, default normalization, validation filters, formats/combinators,
+empty schemas, success/denial/output/exception behavior and a strict-check
+mutation are separately tested. The source proof runner now hashes
+`class-ability.php` as well as the input helper. Its numeric-string ID input
+is identical, but native expected reason changes from
+`ability_invalid_permissions` to `ability_invalid_input`, and observed
+permission-wrapper calls change from one to zero. The added destructive
+typed matrix rejects before resolving target IDs. Direct preflight and raw
+metadata presence precedence are unchanged. Zero-work assertions concern
+original callbacks/capability/query/mutation boundaries, **not all core
+hooks**; normal core invocation, normalization, validation filters and
+pre-execution short circuits retain their semantics.
+
+### Standalone permission defaults
+
+Adapter 0.6.1 converts an empty object to null for a declared empty root default,
+then invokes target permission checks without native execution's normalization.
+The owned permission boundary now materializes a declared default only when
+input is null and the schema's type is exactly `object`, before calling the
+parent once. It does not call `normalize_input()` or `validate_input()`, broaden
+scalar/nullable/untyped schemas, or change raw callback validation.
+
+The immutable `436191f` source reproduced eight default-preflight failures and
+14 unchanged controls on each of official WordPress 6.9, 6.9.4 and 7.1.1 with
+actual Adapter 0.6.1 normalizer/gateway/individual preflight methods. Distinct
+candidate snapshots pass the same 22-case contract on all three versions.
+These are PHP 8.4 isolated-library observations, not PHP-floor, bootstrapped
+WordPress, database or HTTP acceptance: inert platform functions provide the
+outer environment, real database registration/permission code runs, and a
+counter replaces database execution. Exact upstream Git blobs, file hashes,
+baseline/candidate hashes and raw RED/GREEN output are retained with that proof.
+
+`PermissionDefaultTest` separately uses the explicitly labeled lifecycle double
+and real plugin registration/wrappers/permission/database callbacks against a
+controlled database. It covers unchanged redaction and raw-name opt-in, genuine
+denials, malformed flags/defaults, required fields, raw null rejection, foreign
+namespaces, metadata precedence, no normalization replay, native errors,
+filter order, reentrancy and actual-source mutations. The double accepts the
+schema `description` annotation but still throws for unmodeled constraints.
+Neither evidence layer changes privacy-runner oracles or the 78 canonical-error
+cases, and neither claims new real runtime acceptance.
+
+### Preserved typed manifest
+
+The independently derived `input-schema-integration-ledger.json` pins all
+**589 ordered typed cases**, including full before/after content for exactly
+52 changed parent cases and the 19 previously reviewed additions. Its source
+is frozen `1bf2eb2` plus the exact seven privacy rows from `f93b7d1`, not a
+regeneration of expectations from the working manifest. It reconstructs all
+570 parent cases exactly before applying the unchanged historical
+563-case/547-unchanged and seven-privacy-row goldens. Empty objects, integers
+versus floats, case/property order, roles, unchanged-state evidence and
+metadata sentinels are preserved. Unexpected extras, omissions, reordering,
+type drift, altered reasons, changed no-write fields or modified additions
+fail projection controls.
+
+The accepted schema-only view has **589 cases / 85 abilities / 307 negatives**;
+the bounded composition retains **601 cases** and the separate projections above.
+The earlier 34 migrations include four already-approved nonhierarchical-parent zero
+success-to-failure corrections and their replacement state oracles; they are
+not represented as new reason-only edits. Only the 18 newly approved safety
+and privacy cases are limited to the indicated native error fields.
+
+| Calibration relative to frozen f93 | Cases | Direct result retained | Native/raw-permission/gateway/individual strict result |
+| --- | ---: | --- | --- |
+| Confirmation string `"true"` / integer `1` across five destructive abilities | 10 | `precondition_failed` / `missing_confirmation` | `invalid_input` / `ability_invalid_input` |
+| Optional dry-run/force string `"true"` / integer `1` | 6 | `invalid_input` / `invalid_input` | `invalid_input` / `ability_invalid_input` |
+| Database table-name flag string `"true"` / integer `1` | 2 | Direct method `invalid_input` / `invalid_input` | `invalid_input` / `ability_invalid_input` |
+
+`DestructiveNativeBoundaryTest` executes the exact 16 malformed manifest inputs
+through the real plugin Input/Response/Ability classes and production callback
+bodies, using the explicitly limited `WP_Ability` lifecycle double and
+namespace-local read/capability/query/write spies. It compares registered native,
+raw permission, wrapped direct, and original direct paths without changing flag
+types or stripping schema constraints. Native rejection must precede permission
+and execution; direct paths retain their interlock diagnostics. Valid previews
+and denied-capability controls distinguish working observers from inert stubs.
+The double now supports the actual bulk schema's `minItems`/`maxItems`; it still
+rejects unsupported keywords. This is not actual-core, Adapter, HTTP or package
+acceptance. `DestructiveBooleanLedgerTest` reconstructs the historical parent
+first: its 563/547/16 preservation result alone does not exercise the current
+subclass or prove those old oracles remain valid for native execution.
+
+The privacy null row is unchanged. The original privacy hash/index goldens
+are unchanged; the ledger explicitly reverses only the two authorized reason
+changes before checking those hashes. The prior 34 native migrations, four
+overlapping raw-permission migrations, six combined-metadata corrections and
+three plain authorization controls from `1bf2eb2` remain intact. No new schema
+manifest cases are added beyond its 19 and the parent's seven privacy cases;
+the combined candidate additionally retains the 12 bounded-list controls.
+All 45 original safety inputs persist; only the exact 16 native error fields
+above change relative to f93.
+
+The schema-only safety runtime retains 124 invocations per boundary per trash
+boot; the bounded integration preserves those and adds six content-query faults
+for 130, as documented above.
+Exactly **86 independent raw permission observations** now require native
+`WP_Error`, code `invalid_input`, reason `ability_invalid_input`: 60 invalid
+confirmations (50 actor checks plus ten previews), 18 optional flags, and
+eight 101-ID calls. Previously these raw permissions returned true. Direct
+operation diagnostics are unchanged; native/gateway/individual result reasons
+change for 24 string/number confirmation calls and 12 string/number flag calls.
+The remaining 50 strict-invalid result oracles are unchanged. Valid-input actor
+denials remain distinct native `forbidden` permission errors. Snapshots,
+mutation hooks, cron, references, files, deletion truthfulness and ownership
+checks are not relaxed. Full old/new boundary mappings are in the JSON ledger.
+
+No local Docker, WordPress boot, HTTP, floor or package execution was claimed
+for that source integration. All 78 canonical error cases, actual core lifecycle,
+five schema boundaries, metadata/parent/safety suites and original-package
+identity/cleanup require exact-candidate runtime acceptance. The historical
+package result recorded below does not establish acceptance of this merge.
+
 `InputBoundaryTest` registers the production abilities in an isolated namespace,
 compares all 85 registered names against the manifest, and tests raw permission
 and execute callbacks with malformed types/enums/nulls/unknown properties.
@@ -613,7 +747,25 @@ source mutants and requires them to reach the sentinel callback. State,
 mutation-hook, query/capability, and missing-evidence negative controls validate
 the no-work oracle separately.
 
-This schema checkpoint retains all 563 preexisting manifest labels and inputs:
+The corrected schema manifest retains all 563 preexisting labels and inputs.
+Checkpoint `1c460f1` did not fully preserve input identity: associative JSON
+decoding hid two unintended empty-object-to-array changes. The correction below
+restores the original objects from approved parent `ad26b21`; it changes no
+expected error, label, role, or other assertion.
+
+| Original case label | Field | Parent `ad26b21` | Source `1c460f1` | Corrected |
+| --- | --- | --- | --- | --- |
+| `wstm110 update-post rejects empty metadata presence` | `input.meta` | `{}` | `[]` | `{}` |
+| `wstm110 create-cpt-mcp-case-study rejects metadata input` | `input.meta_input` | `{}` | `[]` | `{}` |
+
+Both cases retain `invalid_input` / `ability_invalid_input`. The focused
+`MetadataMigrationTest` regression uses non-associative JSON decoding, asserts
+empty `stdClass` values and the complete original inputs, and distinguishes
+an empty-array mutation. It failed on both source inputs before correction.
+The earlier unqualified input-preservation claim and associative-decoded
+migration artifact did not detect these container changes; retain that failed
+evidence rather than presenting the source checkpoint as already corrected.
+The authorized schema expectation changes and additions remain:
 
 | Acceptance change | Cases | Exact new expectation |
 | --- | ---: | --- |
@@ -667,6 +819,17 @@ or schema reasons substituted for canonical permission codes, unknown codes,
 and arrays. These isolated source seams do not establish actual core/HTTP
 execution; all affected runtime boundaries must be rerun on the frozen source.
 
+At the historical `1bf2eb2` freeze, totals were **582 cases / 85 abilities / 303 negatives**: original
+563 inputs preserved, original 31 native migrations plus three additional
+native migrations, four overlapping raw-permission migrations, and original
+16 additions plus three plain controls. Isolated production-wrapper probes
+require zero original permission-callback invocations and zero capability,
+read, query or write events for combined inputs, and exercise the original
+object-permission callback after removing metadata. The validator admits only
+`true`, `forbidden`, or canonical `invalid_input`; mutations reject a reason
+used as a code, an unknown code, and an array value. These are local proofs,
+not completed native WordPress/runtime acceptance.
+
 Historical labels mentioning allowed zero-parent behavior intentionally remain
 unchanged for provenance; their assertions now reject that closed property.
 The existing 151-case parent matrix is retained. Metadata runtime coverage
@@ -675,11 +838,13 @@ is now exactly `ability_invalid_input`, while direct/gateway/individual
 presence rejection stays exactly `metadata_requires_separate_call`.
 The manifest validator and its mutation test enforce that distinction.
 
-`input-schema-runner.php` and `input-schema-fixture.php` are **unexecuted,
-opt-in runtime scaffolding**, not completed WordPress or wire acceptance.
+`input-schema-runner.php` and `input-schema-fixture.php` have an isolated,
+opt-in stage, but **actual integrated runtime execution remains pending**;
+stage mocks are not completed WordPress or wire acceptance.
 Do not start Docker or local WordPress without the coordinator's explicit
-exclusive runtime lease. Shared orchestration and the error-contract runner
-are intentionally untouched. Final integration must preserve the newer error
+exclusive runtime lease. The accepted safety lifecycle and error-contract runner
+are untouched; schema orchestration is a separate serial call after metadata
+QA and before the final debug-log check. Final integration must preserve the newer error
 floor, metadata authorization, destructive guards, and performance projections.
 The synthetic missing-schema error fixture clears its schema after registration
 and restores only that probe's original permission callback: clearing the
@@ -689,19 +854,68 @@ schema-only negative control, untouched execute wrapping, and continued
 rejection by ordinary input-free abilities. The error runner's 78 oracles are
 unchanged; their integrated real-runtime rerun remains pending.
 
-Inside that later owned disposable runtime, install an MU **loader requiring
-the repository's** `input-schema-fixture.php` (do not copy it away from its
-relative includes), enable `WSTM126_DISPOSABLE_RUNTIME` with literal `true`
-in both CLI/HTTP configuration, and load the normal CPT fixture plus the
-existing individual-tool server fixture. Before bootstrap the runner requires
-exact `WSTM126_DISPOSABLE=1`, `WSTM126_BOUNDARY` set to each of `direct`,
-`permission`, `ability`, `http`, and `individual`, and `WSTM126_ARTIFACT`
-pointing to a new file in an existing writable artifact directory. Set
-`WSTM126_SOURCE_SHA` to the exact tested commit. Invoke the standalone runner:
+The stage exclusively owns a temporary MU **loader requiring the original**
+`input-schema-fixture.php` and individual-tool fixture; copying the schema
+fixture into another directory would break its relative includes. The loader
+defines the schema opt-in for CLI and HTTP. **No `wp-config.php` writes** are
+needed or permitted. Configuration bytes, permissions and ownership must remain
+original, and an authenticated GET-only probe attests original, active and
+restored HTTP/CLI state. The normal harness supplies the CPT/Site Kit fixtures.
 
-```bash
-php /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/input-schema-runner.php
-```
+Runner identity is mandatory before bootstrap: exact `WSTM126_DISPOSABLE=1`,
+the selected `WSTM126_BOUNDARY`, stage token, project, exact source SHA, and a
+new boundary artifact path. The stage proves CLI opt-in refusal and HTTP 403
+before installing its opt-in or creating actors/credentials. Do not manually
+invoke the runner outside its stage and then claim cleanup/retention acceptance.
+Contract QA selects `direct`, `permission`, `ability`; transport QA selects
+`http`, `individual`; `all` runs all five serially with no additional trash
+boots. Every invocation has exactly **152 ordered cases**, or **760** for `all`.
+
+The runner streams non-authoritative `wstm126-progress` JSON lines into the
+existing `stage.log`: fixed bootstrap, preflight, journal, setup, case, cleanup
+and artifact begin/end markers, the selected boundary, a 1-based case index
+only for the 152 ordered cases, and current/peak allocated PHP memory bytes.
+Each line is bounded to 1,024 bytes by its closed fields; a complete invocation
+emits 316 records without retaining a progress array. Preflight-end reuses the
+existing source sampler's actual runner and cleanup SHA-256 hashes. It does not
+extend or weaken the strict HTTP boot-probe response or independently prove
+loaded opcode identity. No inputs, labels, state, SQL, credentials, owner tokens,
+URLs, stack traces or exception messages enter progress records.
+
+An end marker means control reached that checkpoint, not that a case passed or
+cleanup succeeded. A missing end identifies an unfinished interval only: the
+last begun case is not proof of the allocation root, and interrupted output can
+also leave incomplete markers. The final case artifact and independent cleanup
+proof remain authoritative. Progress neither catches fatal errors nor installs
+an OOM handler, reserves emergency memory, raises limits, changes exit codes,
+skips cases or authorizes retirement. The existing orchestration already captures
+both streams; no new capture or workflow wiring is required.
+
+Cleanup releases full snapshots and derived table/row aliases after their last
+required check, before the next fresh read. The runner also releases its setup
+post map on success and on date-validation or journaling failure. Compact
+identities, case evidence, query/deletion order and retention guards remain intact.
+Isolated subprocess regressions use exactly 128 MiB and fresh 32 MiB payloads per
+snapshot, covering successful cleanup, deletion veto and private-wire retention.
+These lifetime changes still require comparative old/new memory measurements and
+real runtime evidence; they do not establish the historical OOM allocation root.
+
+**Recorded package evidence (2026-09-26).** Subsequent evidence supplements the
+historical pending statements and failed captures above. Release Package run
+`36215557641`, attempt 1, tested head
+`5fe92e62ca9571139ba910baff33806d71f05086` through producer
+`960dcb9bcbe9259aab3e8850f7ce6abe748362fd` with the same Git tree, on WordPress
+**7.1.1 / PHP 8.2.33**. All **760/760 case results** passed across direct, raw
+permission, native ability, gateway HTTP and individual-tool boundaries. All
+five invocations completed with all **40 cleanup proof flags** true; restoration,
+finalization and retention retirement returned zero.
+
+Recorded DIRECT cleanup peak was **86,511,616 bytes (82.5 MiB)**; the largest
+recorded boundary peak was **88,608,768 bytes (84.5 MiB)**. Effective
+`ini memory_limit` was not sampled: these peaks do not measure the configured
+limit. This is exact-tree package recovery, not integrated 3.0, supported-floor
+or benchmark acceptance. Original failed evidence remains unchanged, and no
+historical allocation root is inferred.
 
 The fixture counts only SQL and capability hooks inside registered callbacks,
 not bootstrap/HTTP authentication work. Malformed cases also require unchanged
@@ -710,15 +924,117 @@ exact callback observation count for that boundary; missing evidence fails.
 Valid denied-role and hierarchical detach/omission controls calibrate real
 authorization and writes. The runner uses unique owned actors/posts, refuses
 an existing observation option, retains raw inputs/results/wire/state/counters,
-records cleanup failures, and removes its own actors, credentials, objects,
-and option. Keep failed artifacts as well as later passes. Remove the MU
-loader and runtime opt-in when retiring the leased runtime.
+records cleanup failures, and journals only its own actors, credentials,
+sessions, objects and observation option. Cleanup first validates ownership.
+The stage supplies the exclusive private container journal directory
+`/tmp/wstm126-stage/invocations` through `WSTM126_JOURNAL_DIR`, never a public
+artifact directory. The stage refuses finalization while any journal remains.
+Foreign replacements or deletion vetoes retain the affected objects and their
+actor/credential evidence rather than allowing implicit `wp_delete_user()`
+deletion. Independent absence and original scoped-state/cron checks, not
+deletion return values, determine cleanup success. Keep failed artifacts and
+private recovery journals as well as later passes.
+
+The schema cleanup projection excludes term relationships only for live,
+identity-validated journal-owned posts and revisions. Relationships belonging
+to foreign objects remain in the preexisting-state comparison; terms, taxonomy
+rows and cron remain protected without normalization. After each post deletion,
+fresh reads must prove that relationships for every already-deleted owned object
+are absent, before deleting another object or advancing to sessions, credentials,
+actors and the observation marker. The complete content-absence check repeats
+that relationship proof. Retained or reappearing rows keep recovery evidence
+and block retirement. Isolated regressions do not establish genuine runtime
+acceptance or identify the exact rows behind a historical digest mismatch.
+
+Failed preexisting-state or fresh-CLI runtime comparisons emit one
+**non-authoritative diagnostic** JSON line on stderr, bounded to 4,096 bytes.
+Cleanup diagnostics allow only the 13 logical snapshot section names and
+expected/observed SHA-256 digests. Runtime diagnostics allow only the five
+flag dimensions, three namespace-list dimensions, three loader dimensions and
+`observation_absent`, also represented by digests. They reuse the already-read
+snapshots/samples: no extra database queries or raw rows, credentials, journals,
+wire, paths or environment values are emitted. Unknown, missing, reordered or
+malformed diagnostic inputs produce a content-free `rejected_invalid_input`
+record. Namespace lists are bounded to 64 entries of at most 128 characters.
+These records never authorize cleanup or prove restoration; the original
+comparison error, strict proof shape, retention behavior and successful output
+are unchanged, including when diagnostic emission fails. A historical generic
+mismatch alone does not identify the affected section, runtime field or cause.
+
+`input-schema-proof.php` validates complete owner/project/source/boundary-bound
+evidence, all 152 labels/outcomes, exact callback/error/no-work controls and
+cleanup attestations. Production/package hashes are distinct from the read-only
+test harness overlay. A failed test with complete proven cleanup retains its
+nonzero exit but may retire the retention marker; missing, partial, malformed
+or foreign proof may not. The unchanged project retention functions block
+outer source/package/workflow teardown until cleanup and original actual HTTP
+restoration are proven. The read-only probe/private stage lock retire last.
+HTTP convergence is bounded and retries only recognized owned stale state,
+never mutations or global OPcache/configuration changes.
+
+Source and original-ZIP workflows upload `e2e-artifacts/input-schema-*/`
+including failed stage/boot/boundary evidence. Configuration backups,
+credentials, Authorization headers and session secrets do not belong in public
+artifacts. Package QA uses the existing verified original ZIP production mount
+and read-only test overlay, without a checkout-production fallback.
+Malformed or denied HTTP bytes are captured privately before decoding; public
+diagnostics expose only safe evidence and byte-count/hash references. Retained
+private failure evidence keeps an invocation ownership marker, so successful
+database cleanup alone cannot authorize container teardown that would destroy
+that evidence. Preserve it through coordinator-controlled recovery; never copy
+private response archives into the public artifact upload directories.
+
+Journal fault-injection tests use a coherent in-memory model of only
+`state.json` and `next.json`; other paths retain their normal filesystem
+behavior. Successful model replacement transfers the complete node and removes
+the source, while false/throw controls preserve both nodes. Acquire and
+finalize-proof-save failures must retain ownership and pending state; finalize
+failures must also retain every private wire file and the probe. A separate
+no-adapter control exercises native replacement. The default remains exactly
+one native atomic `rename()`, with no retry, suppression, destination deletion,
+copy fallback, runtime flag or platform skip.
+
+This is deterministic testability coverage, not a native Windows repair.
+Full Windows QA at `8061e62` and `3f6e8e0` reported access-denied journal
+replacements in acquire and finalize, respectively. Their cause is unproven;
+both failed logs remain evidence. A focused pass, a later full pass or the
+in-memory model does not explain or waive those failures. The owner ran the
+second QA without parallel safeguards, but parent comments-only tests overlapped
+part of its interval; neither host-wide isolation nor interference is established.
 
 Local unit/static results do not establish the source-derived HTTP expectations.
 Actual direct/native/raw-permission/gateway/individual proof, runtime coverage
 audit, and integration with concurrent changes remain pending. Optional output
 schemas are explicitly deferred; the [migration guide](../../docs/3.0-migration.md#strict-input-schemas-and-raw-permissions)
 documents open maps, validation scope, and exact failure-layer differences.
+
+### Historical frozen-parent integration and remaining runtime gates
+
+The historical schema candidate integrated the existing destructive-safety parent
+`1a8e76dae6183d99a48ff4c0a7ae34c1cdd17e18` (tree
+`0b7806574d279e40351d7675386e70266ca0a2bf`), which includes accepted main
+`90a2740` and the metadata, error, plugin-inventory, coverage, and release
+safeguards. This is source integration, **not** acceptance of the parent's
+destructive-operation runtime proof or permission to merge/publish. The
+45 `wstm116` manifest cases, raw 100-ID bound, exact boolean confirmation,
+force/preview semantics, and original metadata object corrections are retained.
+No list-performance or other pending PR implementation was imported at that
+historical checkpoint; the current merge also retains the bounded implementation
+and its independent evidence gates.
+
+That source freeze deliberately had no shared schema wiring. The later
+`5b39f6a` integration accepted exact safety parent `f93b7d1`, and the separately
+authorized schema stage above adds only its isolated callsite, new helpers and
+artifact uploads without redesigning the accepted safety lifecycle.
+`InputSchemaProofTest`, lifecycle/cleanup/boot units and
+`tests/input-schema-stage-test.sh` exercise local fake filesystem/HTTP/clock and
+outer orchestration failures. They do not grant a runtime lease or replace
+source/floor/original-package evidence. Retain failed artifacts rather than
+replacing a failed run with a later pass.
+The integrated 78 error oracles, metadata/SEO suites, parent matrix and
+destructive proof must also be rerun on the supported WordPress floor and
+pinned version. These are pending runtime/package gates, not claims made by
+local Composer QA, safeguard mocks, or workflow linters.
 
 ## Comment moderation regression coverage
 
@@ -730,7 +1046,47 @@ The contract runner also invokes both registered callbacks directly for authoriz
 
 The CLI-only `comments-runner.php` adds 308 cases across direct execution (104), the actual WordPress ability wrapper (104), and authenticated MCP HTTP (100). It retains raw HTTP tool results, exact error messages/codes, effective capabilities, per-comment content/status, and before/after hashes of all comment and commentmeta rows. Failed calls must leave both tables unchanged. Global-comment controls cover both direct execution and the ability wrapper; the contract fixture also calls the permission callback with a populated global comment and a zero ID. Negative-existing-ID controls cover all three boundaries. HTTP fixture application passwords are revoked. The runner refuses web access before WordPress bootstrap; artifact write failures are fatal.
 
-Contract and HTTP lanes run their respective boundaries via `WSTM105_BOUNDARY` and retain `comments-direct.json`, `comments-ability.json`, and `comments-http.json` for seven days, including failed runs. For baseline comparison, use this identical runner with `WSTM105_MODE=baseline` against the old registered callbacks on a disposable site, and a separate `WSTM105_ARTIFACT` path. Baseline mode records the old authorization/global-comment bugs rather than asserting the fix; malformed direct calls without a stable historical contract are fixed-only. Compare the 152 cases marked `compatibility` without normalizing away raw envelopes or error codes. Never install old callbacks on a shared/live site, and preserve baseline/failed calibration artifacts outside `e2e-artifacts` before a fresh suite clears it.
+Contract and HTTP lanes run their respective boundaries via `WSTM105_BOUNDARY` and retain `comments-direct.json`, `comments-ability.json`, and `comments-http.json` for seven days, including failed runs. For baseline comparison, use this identical runner with `WSTM105_MODE=baseline` against the old registered callbacks on a disposable site, and a separate `WSTM105_ARTIFACT` path. Baseline mode records the old authorization/global-comment bugs rather than asserting the fix; malformed direct calls without a stable historical contract are fixed-only. The calibrated fixed mode marks 136 cases as `compatibility` (24 direct, 64 ability, 48 HTTP); unchanged baseline mode retains 276 cases and its historical 152 compatibility flags. Compare only the shared compatibility-marked cases without normalizing away raw envelopes or error codes. Never install old callbacks on a shared/live site, and preserve baseline/failed calibration artifacts outside `e2e-artifacts` before a fresh suite clears it.
+
+The strict-input integration calibrates exactly 16 HTTP Subscriber malformed-ID
+cases and 32 direct Editor/Subscriber malformed-ID cases across update, approve,
+trash and spam. They now require `invalid_input` / `ability_invalid_input`, the
+exact schema message, and object details, before original callbacks or
+capability/query work. The 16 HTTP failures were observed in genuine frozen
+`5b39f6a` CI; the 32 direct changes are source-derived and verified against the
+actual registered production wrappers in isolated tests. The corresponding 32
+native-ability cases already expected schema rejection and are unchanged.
+Changed cases are not legacy compatibility claims. All typed runner inputs,
+ordering, capability facts and no-write snapshots remain intact; the integrated
+real-runtime rerun is still pending.
+
+Raw fixture coverage grows from 102 to 141 checks without dropping inputs:
+all 44 malformed payloads remain (41 schema rejections and three
+negative-integer-ID permission deferrals), and all 39 original approve/trash/spam
+payloads containing irrelevant content/status remain explicit schema-negative
+controls before 39 additive minimal-ID counterparts. The counterparts preserve
+the original role, CPT, orphan, state and content assertions. Valid authorization,
+missing-object, zero/global-comment, capability-filter and six update
+content/status controls remain; no minimum-ID restriction or blanket schema
+error mapping is added. Private unwrapped moderation-helper deferral remains
+correct and unchanged. The typed
+[calibration ledger](../unit/fixtures/comments-calibration-ledger.json) pins
+`2feed8d` and `5b39f6a` before/after cases; mutation tests reject error-envelope,
+input, original-payload, authorization and no-write regressions.
+
+The sealed historical ledger is not regenerated for the later permission-default
+fix. Its current-production check has one explicit test-local transition:
+verify the LF-normalized current Ability SHA-256 and Git blob, reverse exactly
+one anchored four-line permission-default addition, and require both the
+historical source hash and unchanged ledger head pin. All other production
+hash checks stay unchanged. Missing, reordered, modified or duplicated guards,
+unrelated source drift and forged historical bindings must fail; this is not
+an alternate-hash allowlist or a skipped provenance check.
+
+The separate callback-only legacy double exposes its faithful empty schema.
+`AbilityCallbackTest` still checks once-only `RuntimeException`/`Error`
+handling, exact safe permission errors and unchanged native return values.
+It is not a production fallback or a replacement for actual-core evidence.
 
 HTTP session-close and application-password revocation failures are recorded individually under `cleanup_errors`, increment the failed count, and do not prevent subsequent cleanup or evidence writing. Existing case failures remain intact and the runner exits nonzero. Unit regressions inject both transport-close and credential-revocation failures to verify this behavior.
 
@@ -952,7 +1308,7 @@ HTTPS request variables in these tests are simulations, not actual TLS, certific
 
 `DatabaseTablePrivacyTest` covers custom prefixes, current-blog versus global mappings, custom user-table mappings, core-looking custom names, plugin-extended mapping labels, unchanged SQL scope/order, response-local label resets, exact metric parity, and query-free direct denials/malformed-input failures. These controlled unit mappings do not replace real WordPress evidence.
 
-Seven additional manifest cases preserve the earlier diagnostic cases and add default/false/private and true/raw modes, Subscriber raw-opt-in denial, and string/numeric/null rejection. `setup.diagnostics.table_privacy` replaces only the table-size metadata SELECT with deterministic core/custom/core-lookalike rows. Assertions compare every projected field; the opt-in case uses actual-prefix fixture placeholders. WordPress accepts boolean-like strings/numbers at schema validation, so the direct strict-boolean guard rejects them with reason `invalid_input`; null fails schema validation with `ability_invalid_input`.
+Seven additional manifest cases preserve the earlier diagnostic cases and add default/false/private and true/raw modes, Subscriber raw-opt-in denial, and string/numeric/null rejection. `setup.diagnostics.table_privacy` replaces only the table-size metadata SELECT with deterministic core/custom/core-lookalike rows. Assertions compare every projected field; the opt-in case uses actual-prefix fixture placeholders. The direct method rejects boolean-like strings/numbers with reason `invalid_input`. In this strict-input candidate, registered validation rejects them before permissions with `ability_invalid_input`, as it already does for null. The exact two native reason corrections are separately recorded in the integration ledger above.
 
 Run `WSTM111_DISPOSABLE_SITE=1 php tests/e2e/database-table-privacy-runner.php` inside the owned disposable installation. The explicit environment opt-in is mandatory: the runner fails closed before WordPress bootstrap, loading fixtures, writing tables, or creating credentials when absent or not exactly `1`. It creates unique owned Administrator/Subscriber actors and plugin/core-lookalike tables, refuses preexisting table names, and verifies each DROP and actor deletion in `finally`. It checks omitted input, default/explicit-false/raw responses, exact logical/opaque labels and actual `wpdb` classifications per row, full-payload physical-name/custom-fingerprint absence, exact counts/bytes/order/other-field parity, and direct/registered denial/query evidence. JSON is retained in `e2e-artifacts/database-table-privacy.json`, including failures and cleanup predicates. Set `WSTM111_PRIVACY_ARTIFACT` to retain separate runs. Use a custom-prefix installation beginning `wstm111_private_` for an additional full-payload sentinel-prefix assertion and repeat on a real multisite subsite; the scope must not expand to out-of-prefix global tables. Arbitrary prefix substrings are not privacy evidence: `wp_` occurs in unchanged `wp_post_revisions_*` keys, and short prefixes or `custom_` can coincide with public labels.
 
@@ -1030,11 +1386,56 @@ owned runtime removes its remaining test sessions and data.
 
 The contract phase also runs the CLI-only `scheduling-runner.php`. It exercises post/page create and update plus both fixture CPT capability maps, including malformed/missing/past/near-now dates, calendar overflow, valid offsets and relative dates, draft/pending zero-GMT scheduling, existing schedules, explicit status changes, DST folds/gaps, and site timezone changes. The manifest separately includes allowed and denied scheduling cases for all eight affected abilities.
 
+The dedicated runner retains all 264 original cases in order and adds four direct
+counterparts, for 268 cases. The original `direct-invalid-status-overdue` inputs
+still contain the string `status: "not-a-status"` and now require the registered
+callback's exact `invalid_input` / `ability_invalid_input` envelope. Each is
+immediately followed by `direct-existing-future-overdue`, using the same fixture
+and fully constructed payload with only `status` removed. These schema-valid
+direct calls retain the exact `invalid_input` / `scheduled_date_too_soon` purpose.
+Both require the canonical message, empty object details, unchanged state,
+zero observed mutation hooks and the unchanged metadata sentinel. The other
+260 cases keep their original inputs, boundaries and expectations.
+
+`SchedulingCalibrationTest` and its sealed typed ledger derive the whole actual
+input construction from frozen `735d31d` and the current runner, including the
+initializer, actor, fixture and boundary choices. They protect original/counterpart
+ordering, source bindings, exact errors and no-write predicates against mutations.
+The unwrapped scheduling helper's invalid-status fallback, fixed-clock boundary
+and timezone tests remain separate and unchanged. These isolated proofs do not
+replace real WordPress execution: the retained `735d31d` CI artifact showed the
+four old expectation mismatches and 260 passing controls; runtime acceptance of
+the 268-case correction requires a new genuine run.
+
 For rejected calls, the runner compares post/revision, metadata, term-relationship, and cron snapshots and asserts that relevant pre-write/save/publication/term/meta/cron hooks did not run. Successful controls exercise those observers. It checks stored local/GMT dates and actual future status, and calls core's future-publication guard early to verify that ambiguous local cron conversions do not publish before authoritative GMT. Existing stored local/GMT strings survive a site timezone change without a new pair-equality restriction or cron override.
 
-All **264 case identities** remain present. The four `direct-invalid-status-overdue` update cases exercise two distinct layers: the registered callback must return canonical `invalid_input` / `ability_invalid_input`, and `Webmastery_MCP_Post_Scheduling::prepare` must independently return canonical `invalid_input` / `scheduled_date_too_soon` for the **same input and pre-call overdue post**. Reflecting the registered callback does not bypass its input guard; the fixture never unwraps that guard. Both calls run inside one before/after snapshot and hook-observation window, with an additional snapshot after the registered callback. Both exact errors, the combined and intermediate no-write/no-hook conditions, and the existing metadata sentinel must pass.
+The composed runner covers schema-denial and overdue-date scenarios through
+actual registered callbacks, not an additional helper-only call. Each unchanged
+invalid-status payload proves strict schema rejection; its minimal companion
+removes only `status` and reaches the actual scheduling callback's overdue-date
+rejection against the same fixture. Neither callback is unwrapped or its input
+guard bypassed. The earlier nested `layers.registered_callback` /
+`layers.scheduling_helper` trace is historical evidence, not the current report
+shape or an extra current runtime observation.
 
-The original top-level `result` remains the registered callback response. These four records additionally contain `layers.registered_callback` and `layers.scheduling_helper`, with inputs, expected code/reason, actual reason, and strict `error_matches` / `oracle_failure` evidence. The registered response is unchanged; the helper's native error uses the existing canonical response conversion, and its pre-call post is also recorded. These denial probes inspect only the original fixture ID, never an ID supplied by a malformed response; objects, native callback errors and object-valued `data` therefore reach the strict oracle without escaping evidence recording or redirecting post inspection. The other 260 cases retain their existing result-ID lookup. `error_matches` describes only the error oracle, not side-effect acceptance: the top-level `passed`, `before`, `after`, and `hooks` remain authoritative for the combined case. Malformed error envelopes fail explicitly while retaining both results and captured state. `SchedulingCalibrationTest` evaluates the actual runner sections with controlled state doubles, the production input validator and scheduling helper, and independent wrong-reason, malformed-response, write, cron and hook faults at each layer. It is not real WordPress or package acceptance.
+The sealed 264-to-268 calibration protects the original and minimal typed inputs,
+exact canonical envelopes, capability observations and unchanged state, hooks
+and metadata sentinels. Malformed or wrong-error responses cannot substitute
+for the required error, and no-write evidence is independently required.
+`SchedulingCalibrationTest` uses the accepted Probe/ledger construction and
+actual production scheduling callback with state/hook/sentinel mutation controls;
+it does not replace real WordPress or package acceptance.
+
+Supplemental **offline** `dual_layer` controls in `SchedulingCalibrationTest`
+and `scheduling-calibration.php` retain the distinct original-input purpose:
+call the real registered callback, then the real scheduling helper with the
+identical invalid-status input and pre-call post, inside one observation window.
+Intermediate and combined snapshots/hooks, original-fixture-ID-only reads and
+raw malformed-response evidence remain required. The controls exercise all
+25 layer/fault combinations across four object types, separately from the sealed
+268-case proof. The omission companion alone is not evidence for that same-input
+helper path. These offline controls do not add nested trace fields to the
+runtime report, change its sealed inventory, or establish runtime acceptance.
 
 Exact -1/0/+1/+59/+60/+61-second boundaries use a fixed clock in unit tests. Real WordPress success cases are comfortably in the future: core's later clock sample can cross the cutoff even after an exactly +60-second preflight. These tests establish preflight behavior, not an atomic guarantee against clock ticks, process delays, or arbitrary third-party hooks.
 
@@ -1051,14 +1452,23 @@ The supplemental runner exercises wrapped abilities and their direct execute cal
 The eight historical missing/wrong-taxonomy **delete** payloads also contain
 `name:"Must not write"`, an undeclared delete property. They remain intact as
 explicit closed-schema denials with exact `invalid_input/ability_invalid_input`,
-message/object details, zero operation-local capability/query calls and unchanged
-state/hooks. Eight additive typed counterparts remove only `name`, retaining
+canonical message/empty object details, zero operation-local capability/query
+calls and unchanged state/hooks. Eight additive typed counterparts remove only `name`, retaining
 the same ID, `confirm:true`, actor, capability and wrapped/direct path to reach
-the intended exact not-found result. Thus 148 other controls plus these eight
-originals and eight counterparts make 164 cases. After-state hashes and hook
-evidence are captured before evaluating either oracle; an original mutation
+the intended exact not-found result with its original message, ID and state checks.
+Thus 148 unchanged other controls plus these eight originals and eight counterparts
+expand the separate runner from 156 to 164 cases, independently of the manifest.
+After-state hashes and hook evidence are captured before evaluating either oracle; an original mutation
 cannot become the next counterpart's baseline. This fixture migration does not
 change production deletion or permission behavior.
+
+`TaxonomyCalibrationTest` and the sealed `taxonomy-calibration-ledger.json`
+derive the actual runner's typed construction from frozen `3f6e8e0`/`436191f`
+source. They verify the retained originals, additive counterparts, order and
+unrelated rows, and reject provenance, input-type, error, authorization and
+no-write mutations. Isolated real production callbacks reproduce eight old
+schema mismatches and pass the 16 calibrated paths with original-work counters;
+that source proof does not replace execution on a disposable WordPress site.
 
 Core's `delete_term` mapping denies the default category with `do_not_allow`. Separately, real `wp_delete_term()` returns integer `0` and leaves that category stored. The runner tests both, then temporarily overrides the meta-cap denial to reach the real zero-return guard. This last case is a **forced permission policy on real core**, not a normal configuration. Unit `TaxonomyWriteTest` uses **stubbed** zero, false, and `WP_Error` returns to cover otherwise rare deletion branches; these are not evidence of a real database failure.
 
@@ -1222,6 +1632,11 @@ The runner fails early if either dependency is not active. Coexistence assertion
 Routine QA uses reviewed WP-CLI, MCP Adapter, SEO-plugin, and Plugin Check pins from `.github/compatibility-versions.json`. WP-CLI and adapter downloads must pass digest verification before execution/installation. Candidate overrides must supply the matching digest; do not reuse the baseline digest for a different release. The scheduled compatibility workflow explicitly opts into floating dependencies and records the versions it actually tests.
 
 ### Exact-candidate supported-floor CI
+
+The existing floor pass for `de28e09122f885c28742bff27188b3d7d6615954`
+is historical old-head evidence only. It does not accept the subsequent merge
+with `8ea870beb03076c4d118e8d8bccb3304947bf03a`, establish new runtime or
+benchmark acceptance, or replace any final-source verifier requirement below.
 
 The existing `6 - Compatibility QA` workflow also accepts an optional `candidate_sha`: a full lowercase 40-character commit SHA in this repository. With that input, only the isolated candidate-floor job runs on GitHub-hosted Ubuntu/Docker, using the existing supported-floor matrix entry (WordPress 6.9 / PHP 8.1, MySQL 8.0.36) and `bash scripts/e2e-test.sh all`. It uses that candidate's reviewed dependency configuration, including verified WP-CLI/adapter downloads and pinned SEO versions, without discovery or configuration overlays. `open_update_pr` must be `false`; candidate mode cannot generate a baseline update, open a PR, publish, or deploy.
 

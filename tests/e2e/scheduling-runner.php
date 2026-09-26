@@ -152,95 +152,74 @@ try {
 				if ( 'mcp_book' === $type ) {
 					$input['taxonomy_terms'] = [ 'mcp_genre' => array_map( 'intval', $terms ) ];
 				}
-				$before_post = $id ? get_post( $id, ARRAY_A ) : null;
-				$before = wstm113_snapshot();
-				$observed = [];
-				$layers = null;
-				foreach ( $hooks as $hook ) {
-					add_filter( $hook, $observer, PHP_INT_MAX );
+				$direct = 'direct-invalid-status-overdue' === $label;
+				$attempts = [ [ $label, $input, $error ] ];
+				if ( $direct ) {
+					$minimal = $input;
+					unset( $minimal['status'] );
+					$attempts[] = [ 'direct-existing-future-overdue', $minimal, 'scheduled_date_too_soon' ];
 				}
-				if ( 'direct-invalid-status-overdue' === $label ) {
-					// The registered callback still validates input; test the helper separately without unwrapping it.
-					$property = new ReflectionProperty( $ability, 'execute_callback' );
-					$property->setAccessible( true );
-					$callback = $property->getValue( $ability );
-					$result = $callback( $input );
-					$layers = [
-						'registered_callback' => [
-							'input' => $input, 'result' => $result,
-							'expected_code' => 'invalid_input', 'expected_reason' => 'ability_invalid_input',
-							'after' => wstm113_snapshot(), 'hooks' => $observed,
-						],
-					];
-					$helper_result = Webmastery_MCP_Post_Scheduling::prepare( $input, (object) $before_post );
-					$layers['scheduling_helper'] = [
-						'input' => $input, 'post' => $before_post,
-						'result' => is_wp_error( $helper_result ) ? Webmastery_MCP_Response::from_wp_error( $helper_result ) : $helper_result,
-						'expected_code' => 'invalid_input', 'expected_reason' => 'scheduled_date_too_soon',
-					];
-				} else {
-					$result = $ability->execute( $input );
-				}
-				foreach ( $hooks as $hook ) {
-					remove_filter( $hook, $observer, PHP_INT_MAX );
-				}
-				$after = wstm113_snapshot();
-				$result_id = null !== $layers ? $id : ( $result['data']['id'] ?? $id );
-				$post = $result_id ? get_post( $result_id ) : null;
-				$initial_cron = $post ? wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) : null;
-				if ( null === $layers ) {
-					$code = wstm118_error_reason( $result );
-				} else {
-					foreach ( $layers as &$layer ) {
-						$layer['actual_reason'] = null;
-						$layer['error_matches'] = false;
-						$layer['oracle_failure'] = null;
-						try {
-							$envelope = wstm118_error_envelope( $layer['result'] );
-							$layer['actual_reason'] = $envelope['error']['reason'];
-							$layer['error_matches'] = $layer['expected_code'] === $envelope['error']['code']
-								&& $layer['expected_reason'] === $envelope['error']['reason'];
-						} catch ( RuntimeException $oracle_error ) {
-							$layer['oracle_failure'] = $oracle_error->getMessage();
-						}
+				foreach ( $attempts as [ $label, $input, $error ] ) {
+					$before_post = $id ? get_post( $id, ARRAY_A ) : null;
+					$before = wstm113_snapshot();
+					$observed = [];
+					foreach ( $hooks as $hook ) {
+						add_filter( $hook, $observer, PHP_INT_MAX );
 					}
-					unset( $layer );
-					$code = $layers['registered_callback']['actual_reason'];
-				}
-				$passed = $error ? $code === $error && $before === $after && [] === $observed : true === ( $result['success'] ?? false ) && ! empty( $observed['save_post'] );
-				if ( null !== $layers ) {
-					$passed = $passed && $layers['registered_callback']['error_matches'] && $layers['scheduling_helper']['error_matches']
-						&& $before === $layers['registered_callback']['after'] && [] === $layers['registered_callback']['hooks'];
-				}
-				if ( $id ) {
-					$passed = $passed && 'Scheduling metadata sentinel' === get_post_meta( $id, '_yoast_wpseo_metadesc', true );
-				}
-				$expected = [];
-				if ( ! $error && $post ) {
-					$effective = $input['status'] ?? ( $before_post['post_status'] ?? 'draft' );
-					if ( 'future' === $effective ) {
-						$timestamp = isset( $input['scheduled_date'] ) ? strtotime( $input['scheduled_date'] ) : strtotime( $before_post['post_date_gmt'] . ' GMT' );
-						$expected = [ 'status' => 'future', 'gmt' => gmdate( 'Y-m-d H:i:s', $timestamp ), 'local' => isset( $input['scheduled_date'] ) ? wp_date( 'Y-m-d H:i:s', $timestamp ) : $before_post['post_date'] ];
-						$passed = $passed && $post->post_status === $expected['status'] && $post->post_date_gmt === $expected['gmt'] && $post->post_date === $expected['local'];
-						// An early fold/timezone event must not publish ahead of authoritative GMT.
-						check_and_publish_future_post( $post->ID );
-						$passed = $passed && 'future' === get_post_status( $post->ID ) && wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) >= $timestamp;
+					if ( $direct ) {
+						// Exercise the registered guard, then the schema-valid scheduling path.
+						$property = new ReflectionProperty( $ability, 'execute_callback' );
+						$property->setAccessible( true );
+						$callback = $property->getValue( $ability );
+						$result = $callback( $input );
 					} else {
-						$passed = $passed && $post->post_status === $effective;
-						if ( 'create' === $operation && isset( $input['scheduled_date'] ) ) {
-							$passed = $passed && $post->post_date === wp_date( 'Y-m-d H:i:s', strtotime( $input['scheduled_date'] ) );
-						}
-						if ( in_array( $label, [ 'nonfuture-date', 'nonfuture-zero-gmt', 'nonfuture-omitted-status-date' ], true ) && 'update' === $operation ) {
-							$passed = $passed && '0000-00-00 00:00:00' === $post->post_date_gmt && str_starts_with( $post->post_date, wp_date( 'Y-m-d' ) );
+						$result = $ability->execute( $input );
+					}
+					foreach ( $hooks as $hook ) {
+						remove_filter( $hook, $observer, PHP_INT_MAX );
+					}
+					$after = wstm113_snapshot();
+					$result_id = $result['data']['id'] ?? $id;
+					$post = $result_id ? get_post( $result_id ) : null;
+					$initial_cron = $post ? wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) : null;
+					$code = wstm118_error_reason( $result );
+					$passed = $error ? $code === $error && $before === $after && [] === $observed : true === ( $result['success'] ?? false ) && ! empty( $observed['save_post'] );
+					if ( $direct ) {
+						$envelope = wstm118_error_envelope( $result );
+						$expected_message = 'ability_invalid_input' === $error
+							? 'Ability input does not match its schema.'
+							: 'The scheduled date must be at least 60 seconds in the future when validated.';
+						$passed = $passed && 'invalid_input' === $envelope['error']['code']
+							&& $error === $envelope['error']['reason']
+							&& $expected_message === $envelope['error']['message']
+							&& [] === get_object_vars( $envelope['error']['details'] );
+					}
+					if ( $id ) {
+						$passed = $passed && 'Scheduling metadata sentinel' === get_post_meta( $id, '_yoast_wpseo_metadesc', true );
+					}
+					$expected = [];
+					if ( ! $error && $post ) {
+						$effective = $input['status'] ?? ( $before_post['post_status'] ?? 'draft' );
+						if ( 'future' === $effective ) {
+							$timestamp = isset( $input['scheduled_date'] ) ? strtotime( $input['scheduled_date'] ) : strtotime( $before_post['post_date_gmt'] . ' GMT' );
+							$expected = [ 'status' => 'future', 'gmt' => gmdate( 'Y-m-d H:i:s', $timestamp ), 'local' => isset( $input['scheduled_date'] ) ? wp_date( 'Y-m-d H:i:s', $timestamp ) : $before_post['post_date'] ];
+							$passed = $passed && $post->post_status === $expected['status'] && $post->post_date_gmt === $expected['gmt'] && $post->post_date === $expected['local'];
+							// An early fold/timezone event must not publish ahead of authoritative GMT.
+							check_and_publish_future_post( $post->ID );
+							$passed = $passed && 'future' === get_post_status( $post->ID ) && wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) >= $timestamp;
+						} else {
+							$passed = $passed && $post->post_status === $effective;
+							if ( 'create' === $operation && isset( $input['scheduled_date'] ) ) {
+								$passed = $passed && $post->post_date === wp_date( 'Y-m-d H:i:s', strtotime( $input['scheduled_date'] ) );
+							}
+							if ( in_array( $label, [ 'nonfuture-date', 'nonfuture-zero-gmt', 'nonfuture-omitted-status-date' ], true ) && 'update' === $operation ) {
+								$passed = $passed && '0000-00-00 00:00:00' === $post->post_date_gmt && str_starts_with( $post->post_date, wp_date( 'Y-m-d' ) );
+							}
 						}
 					}
+					$summary[ $passed ? 'passed' : 'failed' ]++;
+					$summary['cases'][] = [ 'ability' => $operation . '-' . $base, 'label' => $label, 'passed' => $passed, 'expected_error' => $error, 'result' => $result, 'before' => $before, 'after' => $after, 'hooks' => $observed, 'expected_date' => $expected, 'stored' => $post ? [ 'id' => $post->ID, 'status' => $post->post_status, 'local' => $post->post_date, 'gmt' => $post->post_date_gmt, 'initial_cron' => $initial_cron, 'cron_after_early_guard' => wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) ] : null ];
 				}
-				$summary[ $passed ? 'passed' : 'failed' ]++;
-				$entry = [ 'ability' => $operation . '-' . $base, 'label' => $label, 'passed' => $passed, 'expected_error' => $error, 'result' => $result, 'before' => $before, 'after' => $after, 'hooks' => $observed, 'expected_date' => $expected, 'stored' => $post ? [ 'id' => $post->ID, 'status' => $post->post_status, 'local' => $post->post_date, 'gmt' => $post->post_date_gmt, 'initial_cron' => $initial_cron, 'cron_after_early_guard' => wp_next_scheduled( 'publish_future_post', [ $post->ID ] ) ] : null ];
-				if ( null !== $layers ) {
-					$entry['layers'] = $layers;
-				}
-				$summary['cases'][] = $entry;
 				if ( 'timezone-change' === $fixture ) {
 					update_option( 'timezone_string', 'America/New_York' );
 				}

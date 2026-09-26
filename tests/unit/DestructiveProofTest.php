@@ -28,11 +28,19 @@ final class DestructiveProofTest extends TestCase {
 	}
 
 	public static function weakened_evidence(): array {
-		return array( array( 'confirmation' ), array( 'dry-run-state' ), array( 'missing-case' ), array( 'wrong-layer' ), array( 'changed-type' ), array( 'wrong-code' ) );
+		$cases = array( array( 'confirmation' ), array( 'dry-run-state' ), array( 'missing-case' ), array( 'changed-type' ) );
+		foreach ( array( 'bulk-publish-posts', 'bulk-trash-posts', 'delete-media', 'delete-category', 'delete-tag' ) as $slug ) {
+			foreach ( array( 'true', 1 ) as $confirm ) {
+				foreach ( array( 'wrong-layer', 'wrong-code', 'wrong-reason' ) as $mutation ) {
+					$cases[] = array( $mutation, $slug, $confirm );
+				}
+			}
+		}
+		return $cases;
 	}
 
 	/** @dataProvider weakened_evidence */
-	public function test_security_policy_rejects_weakened_safety_cases( string $mutation ): void {
+	public function test_security_policy_rejects_weakened_safety_cases( string $mutation, string $slug = 'bulk-publish-posts', $confirm = 'true' ): void {
 		$root = dirname( __DIR__, 2 );
 		$directory = sys_get_temp_dir() . '/wstm116-' . bin2hex( random_bytes( 8 ) );
 		mkdir( $directory . '/scripts', 0777, true );
@@ -46,7 +54,7 @@ final class DestructiveProofTest extends TestCase {
 		$original = $cases;
 		$native_targets = array();
 		foreach ( $cases as $index => &$case ) {
-			if ( 'webmastery-site-toolkit-for-mcp/bulk-publish-posts' !== $case['ability'] ) {
+			if ( 'webmastery-site-toolkit-for-mcp/' . $slug !== $case['ability'] ) {
 				continue;
 			}
 			if ( 'confirmation' === $mutation && 'success' === $case['expect'] ) {
@@ -58,7 +66,7 @@ final class DestructiveProofTest extends TestCase {
 			if ( 'missing-case' === $mutation && ! array_key_exists( 'confirm', $case['input'] ) ) {
 				unset( $cases[ $index ] );
 			}
-			if ( 'true' === ( $case['input']['confirm'] ?? null ) ) {
+			if ( $confirm === ( $case['input']['confirm'] ?? null ) ) {
 				$native_targets[] = array( $case['label'], $case['expect_error_code'], $case['expect_error_reason'] );
 				if ( 'wrong-layer' === $mutation ) {
 					$case['expect_error_code'] = 'precondition_failed';
@@ -67,15 +75,17 @@ final class DestructiveProofTest extends TestCase {
 					$case['input']['confirm'] = true;
 				} elseif ( 'wrong-code' === $mutation ) {
 					$case['expect_error_code'] = 'precondition_failed';
+				} elseif ( 'wrong-reason' === $mutation ) {
+					$case['expect_error_reason'] = 'missing_confirmation';
 				}
 			}
 		}
 		unset( $case );
 		try {
 			file_put_contents( $manifest, json_encode( array_values( $cases ), JSON_THROW_ON_ERROR ) );
-			if ( in_array( $mutation, array( 'wrong-layer', 'changed-type', 'wrong-code' ), true ) ) {
+			if ( in_array( $mutation, array( 'wrong-layer', 'changed-type', 'wrong-code', 'wrong-reason' ), true ) ) {
 				self::assertCount( 1, $native_targets, 'Mutate exactly one native confirmation case.' );
-				self::assertSame( array( 'wstm116 bulk-publish-posts confirm string', 'invalid_input', 'ability_invalid_input' ), $native_targets[0] );
+				self::assertSame( array( 'wstm116 ' . $slug . ' confirm ' . ( is_string( $confirm ) ? 'string' : 'number' ), 'invalid_input', 'ability_invalid_input' ), $native_targets[0] );
 			}
 			self::assertNotSame( $original, $cases, 'A weakened-evidence mutation must change the original manifest.' );
 			$process = proc_open( array( PHP_BINARY, $validator ), array( array( 'pipe', 'r' ), array( 'pipe', 'w' ), array( 'pipe', 'w' ) ), $pipes );
@@ -85,7 +95,7 @@ final class DestructiveProofTest extends TestCase {
 			fclose( $pipes[1] );
 			fclose( $pipes[2] );
 			self::assertSame( 1, proc_close( $process ), $output );
-			self::assertStringContainsString( 'wrong-code' === $mutation ? 'Negative cases require canonical code, precise reason, and envelope shape.' : 'bulk-publish-posts', $output );
+			self::assertStringContainsString( in_array( $mutation, array( 'wrong-code', 'wrong-reason' ), true ) ? 'Negative cases require canonical code, precise reason, and envelope shape.' : $slug, $output );
 		} finally {
 			unlink( $manifest );
 			unlink( $validator );

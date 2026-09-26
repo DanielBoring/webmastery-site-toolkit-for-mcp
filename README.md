@@ -174,7 +174,7 @@ Term deletion is permanent and uses WordPress's normal relationship handling (in
 | `delete-category`, `delete-tag` | Term ID and `confirm:true`; registered taxonomy and per-term delete capabilities above. |
 | `bulk-trash-posts`, `bulk-publish-posts` | `ids` (1-100 raw entries), `confirm:true`; `delete_posts` / `publish_posts` plus existing per-object checks. Optional boolean `dry_run` defaults to false. |
 
-Confirmation must be the JSON boolean `true`, **including previews**. Missing, false, string, numeric, or null confirmation cannot authorize a write. The callback reports `precondition_failed/missing_confirmation`; registered schema validation can reject first with `invalid_input/ability_invalid_input`. WordPress 6.9/7.1.1 schema validation accepts some boolean-like strings and integers without changing callback input types, so `"true"` and `1` still reach and fail the strict confirmation guard. Optional `dry_run` and media `force` reject non-booleans rather than coercing them.
+Confirmation must be the JSON boolean `true`, **including previews**. Missing, false, string, numeric, or null confirmation cannot authorize a write. Direct callbacks retain `precondition_failed/missing_confirmation`. In the strict-input 3.0 candidate, registered input validation also rejects boolean-like strings and integers with `invalid_input/ability_invalid_input` before permissions, even when WordPress's schema validator accepts them. Optional `dry_run` and media `force` reject non-booleans rather than coercing them.
 
 Bulk requests reject 101 entries even when all IDs are identical. Accepted IDs are normalized and deduplicated before processing; `requested` counts unique normalized IDs. A preview performs the same type, per-object authorization, status, and disabled-trash checks without post, metadata, term, scheduling, or mutation-hook writes. Its normal batch summary adds `data.dry_run:true`; successes mean **would act**, not already changed. All-failed batches still return `success:true`. A preview is not a reservation: concurrent changes or real write-hook/storage failures can change a later execution.
 
@@ -361,12 +361,27 @@ permissions before normal core input validation, so these checks must not rely
 on `WP_Ability::execute()` having run. Invalid requests cannot enter the
 operation's capability, query, or write branches.
 
+Registered execution calls core input validation once, then the same strict
+helper in the input-validation phase, before permissions. Numeric-string IDs
+and boolean-like strings/integers therefore report `invalid_input` rather than
+being masked as permission denials. Core validation errors, formats/combinators,
+normalization and lifecycle hooks remain intact; genuine authorization failures
+still follow core permission redaction. Core invocation/validation hooks can
+run even when no original operation callback or capability/query work occurs.
+
 Use exact enum values (`"DESC"`, not `"desc"` or `"DESC!"`), JSON integers for
 IDs, and JSON booleans for flags. Optional fields retain existing defaults when
 omitted; explicit `null` is invalid unless advertised. Input-free abilities
 accept an empty object or omitted input (native null normalizes to the empty
 default), not arbitrary properties. No text sanitization can turn an invalid
 enum into a valid one.
+
+Registered permission preflight also honors an explicitly declared root default
+when the root type is exactly `object` and input is omitted or null. This keeps
+Adapter-normalized empty database-health requests working without replaying
+WordPress normalization filters. Administrator checks and default table-name
+redaction remain unchanged. This is not coercion of non-null input, a default
+for nested null values, or a relaxation of directly invoked raw callbacks.
 
 Standalone `meta_value` remains a polymorphic JSON value, and CPT
 `taxonomy_terms` remains an extensible map of taxonomy names to integer arrays;

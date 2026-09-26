@@ -117,4 +117,17 @@ final class DestructiveBooleanLedgerTest extends TestCase {
 			self::assertSame( $additional, array_values( array_diff( $actual, $original ) ) );
 		}
 	}
+
+	public function test_runtime_preserves_native_validation_and_permission_evidence(): void {
+		$source = file_get_contents( dirname( __DIR__ ) . '/e2e/destructive-safety-runner.php' );
+		self::assertStringContainsString( "'direct' === \$boundary ? 'missing_confirmation' : 'ability_invalid_input'", $source );
+		self::assertStringContainsString( "'direct' === \$boundary ? 'invalid_input' : 'ability_invalid_input'", $source );
+		self::assertStringContainsString( "'invalid_input' === \$raw['error']['code'] && 'ability_invalid_input' === \$raw['error']['reason']", $source );
+		self::assertStringContainsString( "true === \$entry['permission_is_wp_error']", $source );
+		self::assertStringContainsString( "array( 'true', 'false', 0, 1, null, array() )", $source );
+		self::assertStringContainsString( "'direct' === \$boundary ? 'too_many_ids' : 'ability_invalid_input'", $source );
+		self::assertStringContainsString( "'ability' === \$boundary ? 'ability_invalid_permissions' : 'forbidden'", $source );
+		self::assertStringContainsString( "\$entry['before'] === \$entry['after']", $source );
+		self::assertStringContainsString( 'array() === $events', $source );
+	}
 }

@@ -40,6 +40,7 @@ docker() {
 	case "$*" in
 		*" down -v --remove-orphans")
 			rm -f "$WORK/private-backup" "$WORK/readonly-probe" "$WORK/retained-attachment" "$WORK/retained-file" "$WORK/retained-marker"
+			rm -f "$WORK/schema-journal" "$WORK/schema-probe" "$WORK/schema-post" "$WORK/schema-actor" "$WORK/schema-credential"
 			if [[ "${FAIL_CLEANUP:-0}" == 1 && "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]]; then
 				echo "Fixture cleanup failure." >&2
 				return 47
@@ -91,6 +92,46 @@ docker() {
 			fi
 			[[ "${FAIL_RUNNER:-0}" != 1 ]] || return 44
 			[[ "${FAIL_RUNNER_CLEANUP:-0}" == 0 ]] || return 45
+			;;
+		*"input-schema-stage.php acquire "*)
+			printf 'schema-owner-journal\n' > "$WORK/schema-journal"
+			printf 'schema-owned-probe\n' > "$WORK/schema-probe"
+			;;
+		*"input-schema-stage.php restore "*)
+			[[ "${FAIL_SCHEMA_RESTORE:-0}" != 1 ]] || return 57
+			;;
+		*"input-schema-stage.php finalize "*)
+			[[ "${FAIL_SCHEMA_FINALIZE:-0}" != 1 ]] || return 58
+			rm -f "$WORK/schema-journal" "$WORK/schema-probe"
+			;;
+		*"WSTM126_DISPOSABLE= wordpress php "*|*"WSTM126_DISPOSABLE=true wordpress php "*)
+			echo 'Set WSTM126_DISPOSABLE=1 only in an owned disposable runtime.'
+			return 1
+			;;
+		*"curl --max-time 2"*"/tests/e2e/input-schema-runner.php")
+			printf 'CLI only.\n403'
+			;;
+		*"input-schema-runner.php")
+			local arg artifact owner source boundary mutation=none package=source
+			for arg in "$@"; do
+				case "$arg" in
+					WSTM126_ARTIFACT=*) artifact="${arg#*=}"; artifact="${artifact#*/webmastery-site-toolkit-for-mcp/}" ;;
+					WSTM126_STAGE_TOKEN=*) owner="${arg#*=}" ;;
+					WSTM126_SOURCE_SHA=*) source="${arg#*=}" ;;
+					WSTM126_BOUNDARY=*) boundary="${arg#*=}" ;;
+				esac
+			done
+			[[ "${SOURCE_MODE:-0}" == 1 ]] || package=package
+			[[ "${FAIL_SCHEMA_RUNNER:-0}" != 1 ]] || mutation=case
+			if [[ "${FAIL_SCHEMA_CLEANUP:-0}" == 1 ]]; then
+				mutation=cleanup
+				printf 'retained-owned-post\n' > "$WORK/schema-post"
+				printf 'retained-owned-actor\n' > "$WORK/schema-actor"
+				printf 'retained-owned-credential\n' > "$WORK/schema-credential"
+			fi
+			( unset MSYS_NO_PATHCONV; php tests/input-schema-report.php "$artifact" "$owner" "$source" "$boundary" "$mutation" "$package" ) || return $?
+			[[ "${FAIL_SCHEMA_RUNNER:-0}" != 1 ]] || return 53
+			[[ "${FAIL_SCHEMA_CLEANUP:-0}" != 1 ]] || return 54
 			;;
 		*"compatibility-baselines.php "*)
 			php scripts/compatibility-baselines.php "${@: -1}"
@@ -156,6 +197,13 @@ for runner in ability-runner media-download-runner scheduling-runner trash-safet
 	grep -F "/tests/e2e/${runner}.php" "$TRACE" > /dev/null
 done
 [[ "$(grep -c 'destructive-safety-runner.php$' "$TRACE")" == 8 ]]
+[[ "$(grep -c 'WSTM126_DISPOSABLE=1 .*input-schema-runner.php$' "$TRACE")" == 5 ]]
+for boundary in direct permission ability http individual; do
+	grep -E "WSTM126_DISPOSABLE=1 -e WSTM126_BOUNDARY=${boundary} .*WSTM126_PROJECT=release-runtime-fixture .*WSTM126_ARTIFACT=.*${boundary}.json .*input-schema-runner.php$" "$TRACE" >/dev/null
+done
+grep -F 'WSTM126_DISPOSABLE= wordpress php ' "$TRACE" >/dev/null
+grep -F 'WSTM126_DISPOSABLE=true wordpress php ' "$TRACE" >/dev/null
+grep -F 'input-schema-stage.php finalize ' "$TRACE" >/dev/null
 for days in 30 0; do
 	for boundary in direct ability http individual; do
 		grep -E "WSTM116_DISPOSABLE=1 -e WSTM116_BOUNDARY=${boundary} -e WSTM116_EXPECT_TRASH_DAYS=${days} .*WSTM116_ARTIFACT=.* wordpress php /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/destructive-safety-runner.php$" "$TRACE" > /dev/null
@@ -258,6 +306,52 @@ grep -Fx 'foreign-invalid-marker' build/wstm116-retention-foreign
 rm build/wstm116-retention-foreign
 echo 'PASS full package/managed-source retention, private evidence survival, no teardown, re-entry refusal and original statuses'
 
+# Additive schema-stage failures use the same real outer source/package wrappers.
+# shellcheck disable=SC2030,SC2031 # Each fault runs in an independent subprocess.
+for outer in package source; do
+	for failure in restoration finalize cleanup combined ordinary; do
+		rm -f build/wstm116-retention-release-runtime-fixture
+		: > "$TRACE"
+		status=0
+		(
+			export FAIL_SCHEMA_RESTORE=0 FAIL_SCHEMA_FINALIZE=0 FAIL_SCHEMA_CLEANUP=0 FAIL_SCHEMA_RUNNER=0
+			case "$failure" in
+				restoration) export FAIL_SCHEMA_RESTORE=1 ;;
+				finalize) export FAIL_SCHEMA_FINALIZE=1 ;;
+				cleanup) export FAIL_SCHEMA_CLEANUP=1 ;;
+				combined) export FAIL_SCHEMA_RUNNER=1 FAIL_SCHEMA_RESTORE=1 ;;
+				ordinary) export FAIL_SCHEMA_RUNNER=1 ;;
+			esac
+			if [[ "$outer" == source ]]; then
+				unset E2E_PACKAGE_ROOT E2E_PACKAGE_ZIP
+				export SOURCE_MODE=1 E2E_KEEP_COMPOSE=0
+				bash scripts/e2e-test.sh all
+			else
+				bash scripts/release-qa.sh
+			fi
+		) > "$WORK/schema-retention-$outer-$failure.log" 2>&1 || status=$?
+		case "$failure" in restoration) expected=57 ;; finalize) expected=58 ;; cleanup) expected=54 ;; combined|ordinary) expected=53 ;; esac
+		[[ "$status" == "$expected" ]] || { cat "$WORK/schema-retention-$outer-$failure.log" >&2; exit 1; }
+		if [[ "$failure" == ordinary ]]; then
+			test ! -e build/wstm116-retention-release-runtime-fixture
+			test ! -e "$WORK/schema-journal"
+			[[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]]
+		else
+			test -f build/wstm116-retention-release-runtime-fixture
+			grep -Fx 'schema-owner-journal' "$WORK/schema-journal" >/dev/null
+			grep -Fx 'schema-owned-probe' "$WORK/schema-probe" >/dev/null
+			[[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 1 ]]
+			if [[ "$failure" == cleanup ]]; then
+				grep -Fx 'retained-owned-post' "$WORK/schema-post" >/dev/null
+				grep -Fx 'retained-owned-actor' "$WORK/schema-actor" >/dev/null
+				grep -Fx 'retained-owned-credential' "$WORK/schema-credential" >/dev/null
+			fi
+		fi
+	done
+done
+rm -f build/wstm116-retention-release-runtime-fixture
+echo 'PASS schema source/package cleanup and HTTP restoration retention with original failure status'
+
 # Negative controls restore unconditional outer teardown only in this copied fixture.
 # The identical injected restoration failure must now lose its private evidence.
 # shellcheck disable=SC2030,SC2031 # Fault flags never leak between independent subprocesses.
@@ -289,6 +383,34 @@ for outer in package source; do
 done
 
 # Negative control: restoring the old checkout-mode selection must fail this test.
+# shellcheck disable=SC2030,SC2031 # Each fault runs in an independent subprocess.
+for outer in package source; do
+	script=scripts/release-qa.sh
+	[[ "$outer" != source ]] || script=scripts/e2e-test.sh
+	cp "$script" "$WORK/fixed-schema-retention-$outer.sh"
+	sed 's/if ! wstm116_require_no_retention; then/if false; then/' "$WORK/fixed-schema-retention-$outer.sh" > "$script"
+	: > "$TRACE"
+	status=0
+	(
+		export FAIL_SCHEMA_RESTORE=1 FAIL_SCHEMA_RUNNER=1
+		if [[ "$outer" == source ]]; then
+			unset E2E_PACKAGE_ROOT E2E_PACKAGE_ZIP
+			export SOURCE_MODE=1 E2E_KEEP_COMPOSE=0
+			bash scripts/e2e-test.sh all
+		else
+			bash scripts/release-qa.sh
+		fi
+	) > "$WORK/legacy-schema-retention-$outer.log" 2>&1 || status=$?
+	[[ "$status" == 53 ]]
+	[[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]]
+	test ! -e "$WORK/schema-journal"
+	test ! -e "$WORK/schema-probe"
+	test -f build/wstm116-retention-release-runtime-fixture
+	cp "$WORK/fixed-schema-retention-$outer.sh" "$script"
+	rm build/wstm116-retention-release-runtime-fixture
+	echo "RED control confirmed: legacy $outer teardown destroyed schema evidence while retaining first failure 53"
+done
+
 cp scripts/release-qa.sh "$WORK/fixed-release-qa.sh"
 sed '/^export E2E_PACKAGE_ROOT=/d; /^export E2E_PACKAGE_ZIP=/d' "$WORK/fixed-release-qa.sh" > scripts/release-qa.sh
 expect_failure 'Release runtime attempted checkout Compose configuration.' bash scripts/release-qa.sh

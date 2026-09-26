@@ -145,6 +145,55 @@ final class InputBoundaryTest extends TestCase {
 		}
 	}
 
+	public static function combined_manifest_inputs(): array {
+		$cases = array();
+		$manifest = json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
+		foreach ( $manifest as $case ) {
+			if ( preg_match( '~/(create|update)-(post|page|cpt-.+)$~', $case['ability'] )
+				&& preg_grep( '/^(meta$|meta_input$|yoast_|seopress_|_yoast|_seopress)/', array_keys( $case['input'] ?? array() ) ) ) {
+				$cases[ $case['label'] ] = array( $case );
+			}
+		}
+		return $cases;
+	}
+
+	/** @dataProvider combined_manifest_inputs */
+	public function test_combined_manifest_permission_stops_before_original_callback_and_native_schema_rejects( array $case ): void {
+		$args = Probe::$originals[ $case['ability'] ];
+		$original = $args['permission_callback'];
+		$calls = 0;
+		$args['permission_callback'] = static function ( $input ) use ( $original, &$calls ) {
+			++$calls;
+			return $original( $input );
+		};
+		$args = Webmastery_MCP_Input::register_args( $args, $case['ability'] );
+		$input = $case['input'];
+		array_walk_recursive( $input, static function ( &$value ) {
+			if ( is_string( $value ) && preg_match( '/^__.+__$/', $value ) ) { $value = 42; }
+		} );
+		Probe::$allowed = false;
+		$error = $args['permission_callback']( $input );
+		self::assertInstanceOf( WP_Error::class, $error );
+		self::assertSame( 'invalid_input', $error->get_error_code() );
+		$this->rejected( $error, true, 'metadata_requires_separate_call' );
+		self::assertSame( 0, $calls );
+		self::assertSame( 'ability_invalid_input', Webmastery_MCP_Input::validate( $input, $args['input_schema'] )->get_error_code() );
+		self::assertSame( 'invalid_input', $case['expect_error_code'] );
+		self::assertSame( 'ability_invalid_input', $case['expect_error_reason'] );
+		if ( array_key_exists( 'assert_permission', $case ) ) {
+			self::assertSame( 'invalid_input', $case['assert_permission'] );
+		}
+
+		if ( in_array( $case['ability'], array( 'webmastery-site-toolkit-for-mcp/update-post', 'webmastery-site-toolkit-for-mcp/update-page' ), true ) ) {
+			$plain = array_diff_key( $input, array_flip( preg_grep( '/^(meta$|meta_input$|yoast_|seopress_|_yoast|_seopress)/', array_keys( $input ) ) ) );
+			Probe::$post_type = str_ends_with( $case['ability'], 'update-post' ) ? 'post' : 'page';
+			$error = $args['permission_callback']( $plain );
+			self::assertSame( 'forbidden', $error->get_error_code() );
+			self::assertSame( 1, $calls, 'Plain input must still reach real object authorization.' );
+			self::assertSame( array( 'get_post', 'capability:edit_post' ), Probe::$events );
+		}
+	}
+
 	public function test_open_maps_and_polymorphic_values_are_not_closed_or_rewritten(): void {
 		$meta = $this->definition( 'update-post-meta' )['input_schema']['properties']['meta_value'];
 		self::assertArrayNotHasKey( 'additionalProperties', $meta );
