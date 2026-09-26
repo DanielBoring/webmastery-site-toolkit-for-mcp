@@ -6,6 +6,147 @@ use PHPUnit\Framework\TestCase;
 require_once dirname( __DIR__ ) . '/e2e/input-schema-boot.php';
 
 final class InputSchemaDiagnosticsTest extends TestCase {
+	private function runner_fragment( string $start_marker, string $end_marker ): string {
+		$source = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__ ) . '/e2e/input-schema-runner.php' ) );
+		self::assertSame( 1, substr_count( $source, $start_marker ) );
+		self::assertSame( 1, substr_count( $source, $end_marker ) );
+		$start = strpos( $source, $start_marker );
+		$end = strpos( $source, $end_marker );
+		self::assertGreaterThan( $start, $end );
+		return substr( $source, $start, $end - $start );
+	}
+
+	private function progress_source(): string {
+		return $this->runner_fragment( '$progress = static function', "\n\$progress( 'bootstrap', 'begin' );" );
+	}
+
+	public function test_progress_is_closed_bounded_streamed_and_uses_existing_source_hashes(): void {
+		require_once dirname( __DIR__ ) . '/e2e/input-schema-proof.php';
+		$boundary = 'direct';
+		eval( $this->progress_source() );
+		$hashes = wstm126_source_hashes( dirname( __DIR__, 2 ) );
+		$sources = array_intersect_key( $hashes['harness'], array(
+			'tests/e2e/input-schema-runner.php' => true, 'tests/e2e/input-schema-cleanup.php' => true,
+		) );
+		$events = 0;
+		$emit = static function ( string $phase, string $event, int $case = 0, array $source_hashes = array() ) use ( $progress, &$events ): array {
+			ob_start();
+			try { $progress( $phase, $event, $case, $source_hashes ); $line = ob_get_contents(); } finally { ob_end_clean(); }
+			self::assertSame( 1, substr_count( $line, "\n" ) );
+			self::assertLessThanOrEqual( 1024, strlen( $line ) );
+			$record = json_decode( $line, true, 8, JSON_THROW_ON_ERROR );
+			self::assertSame( array( 'diagnostic', 'authoritative', 'status', 'boundary', 'phase', 'event', 'case_index', 'memory_bytes', 'peak_memory_bytes', 'source_hashes' ), array_keys( $record ) );
+			self::assertSame( 'wstm126-progress', $record['diagnostic'] );
+			self::assertFalse( $record['authoritative'] );
+			self::assertSame( 'observed', $record['status'] );
+			self::assertSame( 'direct', $record['boundary'] );
+			self::assertSame( $phase, $record['phase'] );
+			self::assertSame( $event, $record['event'] );
+			self::assertSame( 'case' === $phase ? $case : null, $record['case_index'] );
+			self::assertIsInt( $record['memory_bytes'] );
+			self::assertGreaterThan( 0, $record['memory_bytes'] );
+			self::assertIsInt( $record['peak_memory_bytes'] );
+			self::assertGreaterThanOrEqual( $record['memory_bytes'], $record['peak_memory_bytes'] );
+			self::assertSame( $source_hashes, $record['source_hashes'] );
+			$events++;
+			return $record;
+		};
+		foreach ( array( 'bootstrap', 'preflight', 'journal', 'setup' ) as $phase ) {
+			$emit( $phase, 'begin' );
+			$emit( $phase, 'end', 0, 'preflight' === $phase ? $sources : array() );
+		}
+		foreach ( wstm126_expected_labels() as $index => $label ) {
+			$emit( 'case', 'begin', $index + 1 );
+			$emit( 'case', 'end', $index + 1 );
+		}
+		foreach ( array( 'cleanup', 'artifact' ) as $phase ) { $emit( $phase, 'begin' ); $emit( $phase, 'end' ); }
+		self::assertSame( 316, $events );
+		self::assertSame( array( 'boundary' ), array_keys( ( new ReflectionFunction( $progress ) )->getStaticVariables() ) );
+		$runner = file_get_contents( dirname( __DIR__ ) . '/e2e/input-schema-runner.php' );
+		self::assertStringContainsString( "\$progress( 'preflight', 'end', 0, array_intersect_key( \$summary['source_hashes']['harness']", $runner );
+		self::assertStringNotContainsString( 'register_shutdown_function', $runner );
+		self::assertStringNotContainsString( 'memory_limit', $runner );
+	}
+
+	public function test_malformed_progress_cannot_disclose_supplied_content(): void {
+		$boundary = 'permission';
+		eval( $this->progress_source() );
+		$private = 'PRIVATE_INPUT_SQL_TOKEN';
+		foreach ( array(
+			array( $private, 'begin' ), array( 'case', $private, 1 ),
+			array( 'case', 'begin', 0 ), array( 'case', 'end', 153 ),
+			array( 'cleanup', 'begin', 1 ), array( 'preflight', 'end' ),
+			array( 'setup', 'begin', 0, array( $private => $private ) ),
+			array( 'preflight', 'end', 0, array( 'tests/e2e/input-schema-runner.php' => $private, 'tests/e2e/input-schema-cleanup.php' => str_repeat( 'b', 64 ) ) ),
+		) as $arguments ) {
+			ob_start();
+			try { $progress( ...$arguments ); $line = ob_get_contents(); } finally { ob_end_clean(); }
+			self::assertSame( array( 'diagnostic' => 'wstm126-progress', 'authoritative' => false, 'status' => 'rejected_invalid_input' ), json_decode( $line, true, 8, JSON_THROW_ON_ERROR ) );
+			self::assertStringNotContainsString( $private, $line );
+		}
+	}
+
+	public function test_actual_case_wrapper_preserves_failures_and_emits_indices_not_case_data(): void {
+		require_once dirname( __DIR__ ) . '/e2e/input-schema-cleanup.php';
+		$boundary = 'direct';
+		eval( $this->progress_source() );
+		$summary = array( 'passed' => 0, 'failed' => 0, 'cases' => array() );
+		$http_secrets = array( 'PRIVATE_SECRET' );
+		eval( $this->runner_fragment( '$record = static function', "\n\$progress( 'setup', 'begin' );" ) );
+		ob_start();
+		try {
+			$record( 'PRIVATE_LABEL', static function ( array &$entry ): void { $entry['input'] = 'PRIVATE_INPUT'; } );
+			$record( 'PRIVATE_FAILED_LABEL', static function (): void { throw new RuntimeException( 'Original case failure.' ); } );
+			$output = ob_get_contents();
+		} finally { ob_end_clean(); }
+		$records = array_map( static fn( string $line ): array => json_decode( $line, true, 8, JSON_THROW_ON_ERROR ), explode( "\n", trim( $output ) ) );
+		self::assertSame( array( 'begin', 'end', 'begin', 'end' ), array_column( $records, 'event' ) );
+		self::assertSame( array( 1, 1, 2, 2 ), array_column( $records, 'case_index' ) );
+		self::assertSame( 1, $summary['passed'] );
+		self::assertSame( 1, $summary['failed'] );
+		self::assertSame( 'PRIVATE_INPUT', $summary['cases'][0]['input'] );
+		self::assertSame( 'Original case failure.', $summary['cases'][1]['error'] );
+		self::assertFalse( $summary['cases'][1]['passed'] );
+		self::assertStringNotContainsString( 'PRIVATE', $output );
+		self::assertStringNotContainsString( 'Original case failure.', $output );
+	}
+
+	public function test_native_early_exit_is_not_replaced_and_has_no_fabricated_end_marker(): void {
+		foreach ( array( 0, 23, 255 ) as $status ) {
+			$code = '$boundary="direct";' . $this->progress_source()
+				. '$progress("setup","begin");$progress("setup","end");$progress("case","begin",1);'
+				. ( 0 === $status ? '$progress("case","end",1);' : '' ) . 'exit(' . $status . ');';
+			$process = proc_open( array( PHP_BINARY, '-r', $code ), array( 0 => array( 'pipe', 'r' ), 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ), $pipes );
+			self::assertIsResource( $process );
+			fclose( $pipes[0] );
+			$output = stream_get_contents( $pipes[1] );
+			$error = stream_get_contents( $pipes[2] );
+			fclose( $pipes[1] );
+			fclose( $pipes[2] );
+			self::assertSame( $status, proc_close( $process ) );
+			self::assertSame( '', $error );
+			$records = array_map( static fn( string $line ): array => json_decode( $line, true, 8, JSON_THROW_ON_ERROR ), explode( "\n", trim( $output ) ) );
+			self::assertSame( 0 === $status ? array( 'begin', 'end', 'begin', 'end' ) : array( 'begin', 'end', 'begin' ), array_column( $records, 'event' ) );
+			self::assertSame( 0 === $status ? array( null, null, 1, 1 ) : array( null, null, 1 ), array_column( $records, 'case_index' ) );
+		}
+	}
+
+	public function test_noncase_markers_follow_actual_runner_phase_order(): void {
+		$source = file_get_contents( dirname( __DIR__ ) . '/e2e/input-schema-runner.php' );
+		$previous = 0;
+		foreach ( array( 'bootstrap', 'preflight', 'journal', 'setup', 'cleanup', 'artifact' ) as $phase ) {
+			foreach ( array( 'begin', 'end' ) as $event ) {
+				$marker = "\$progress( '{$phase}', '{$event}'";
+				self::assertSame( 1, substr_count( $source, $marker ) );
+				$position = strpos( $source, $marker );
+				self::assertGreaterThan( $previous, $position );
+				$previous = $position;
+			}
+		}
+		self::assertLessThan( strpos( $source, '$_SERVER' ), strpos( $source, "\$progress( 'bootstrap', 'begin' );" ) );
+		self::assertGreaterThan( strpos( $source, '$cases = array();' ), strpos( $source, "\$progress( 'cleanup', 'begin' );" ) );
+	}
+
 	private static function sections(): array {
 		return array( 'posts', 'postmeta', 'users', 'usermeta', 'terms', 'term_taxonomy', 'term_relationships', 'comments', 'commentmeta', 'links', 'credentials', 'observation', 'cron' );
 	}

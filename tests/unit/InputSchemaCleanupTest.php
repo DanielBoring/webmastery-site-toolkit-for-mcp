@@ -66,6 +66,54 @@ final class InputSchemaCleanupTest extends TestCase {
 		self::assertSame( array(), $this->fake->rows['term_relationships'] );
 	}
 
+	public static function progress_cleanup_cases(): array {
+		return array( 'proven cleanup after failed case' => array( false ), 'vetoed cleanup after failed case' => array( true ) );
+	}
+
+	/** @dataProvider progress_cleanup_cases */
+	public function test_runner_progress_preserves_actual_cleanup_results_and_failed_case( bool $veto ): void {
+		$this->fake->seed( $this->journal );
+		$this->fake->retain = $veto ? 'post' : '';
+		$source = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__ ) . '/e2e/input-schema-runner.php' ) );
+		$boundary = 'http';
+		$journal = $this->journal;
+		$transports = $users = array();
+		$http_actor = 0;
+		$http_plan = '';
+		$summary = array( 'failed' => 1 );
+		$flow_complete = true;
+		$fragments = array(
+			array( '$progress = static function', "\n\$progress( 'bootstrap', 'begin' );" ),
+			array( "\$progress( 'cleanup', 'begin' );", "\$summary['cleanup_proof'] =" ),
+		);
+		ob_start();
+		try {
+			foreach ( $fragments as [ $start_marker, $end_marker ] ) {
+				self::assertSame( 1, substr_count( $source, $start_marker ) );
+				self::assertSame( 1, substr_count( $source, $end_marker ) );
+				$start = strpos( $source, $start_marker );
+				$end = strpos( $source, $end_marker );
+				self::assertGreaterThan( $start, $end );
+				eval( substr( $source, $start, $end - $start ) );
+			}
+			$output = ob_get_contents();
+		} finally { ob_end_clean(); }
+		$records = array_map( static fn( string $line ): array => json_decode( $line, true, 8, JSON_THROW_ON_ERROR ), explode( "\n", trim( $output ) ) );
+		self::assertSame( array( 'cleanup', 'cleanup' ), array_column( $records, 'phase' ) );
+		self::assertSame( array( 'begin', 'end' ), array_column( $records, 'event' ) );
+		self::assertSame( array( null, null ), array_column( $records, 'case_index' ) );
+		self::assertSame( 1, $summary['failed'] );
+		self::assertSame( $veto ? 'Post deletion vetoed; remaining ownership preserved.' : null, $cleaned['error'] );
+		self::assertSame( ! $veto, $cleaned['proof']['journal_retired'] );
+		self::assertSame( $veto, is_file( $this->path() ) );
+		if ( $veto ) {
+			self::assertNotEmpty( $this->fake->rows['users'] );
+			self::assertNotEmpty( $this->fake->rows['observation'] );
+		} else {
+			self::assertNotContains( false, $cleaned['proof'] );
+		}
+	}
+
 	private function seed_foreign_relationship_baseline(): array {
 		$foreign = array( 'object_id' => '900', 'term_taxonomy_id' => '5', 'term_order' => '0' );
 		$this->fake->rows['term_relationships'] = array( $foreign );

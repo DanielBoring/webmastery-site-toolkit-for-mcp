@@ -506,6 +506,26 @@ Contract QA selects `direct`, `permission`, `ability`; transport QA selects
 `http`, `individual`; `all` runs all five serially with no additional trash
 boots. Every invocation has exactly **152 ordered cases**, or **760** for `all`.
 
+The runner streams non-authoritative `wstm126-progress` JSON lines into the
+existing `stage.log`: fixed bootstrap, preflight, journal, setup, case, cleanup
+and artifact begin/end markers, the selected boundary, a 1-based case index
+only for the 152 ordered cases, and current/peak allocated PHP memory bytes.
+Each line is bounded to 1,024 bytes by its closed fields; a complete invocation
+emits 316 records without retaining a progress array. Preflight-end reuses the
+existing source sampler's actual runner and cleanup SHA-256 hashes. It does not
+extend or weaken the strict HTTP boot-probe response or independently prove
+loaded opcode identity. No inputs, labels, state, SQL, credentials, owner tokens,
+URLs, stack traces or exception messages enter progress records.
+
+An end marker means control reached that checkpoint, not that a case passed or
+cleanup succeeded. A missing end identifies an unfinished interval only: the
+last begun case is not proof of the allocation root, and interrupted output can
+also leave incomplete markers. The final case artifact and independent cleanup
+proof remain authoritative. Progress neither catches fatal errors nor installs
+an OOM handler, reserves emergency memory, raises limits, changes exit codes,
+skips cases or authorizes retirement. The existing orchestration already captures
+both streams; no new capture or workflow wiring is required.
+
 The fixture counts only SQL and capability hooks inside registered callbacks,
 not bootstrap/HTTP authentication work. Malformed cases also require unchanged
 posts/meta/terms/relationships/cron snapshots, zero mutation hooks, and the

@@ -28,13 +28,38 @@ $artifact = getenv( 'WSTM126_ARTIFACT' );
 if ( ! is_string( $artifact ) || '' === $artifact || is_link( $artifact ) || file_exists( $artifact ) || ! is_writable( dirname( $artifact ) ) ) {
 	throw new RuntimeException( 'WSTM126_ARTIFACT must name a new file in an existing writable directory.' );
 }
+$progress = static function ( string $phase, string $event, int $case = 0, array $sources = array() ) use ( $boundary ): void {
+	$valid = in_array( $phase, array( 'bootstrap', 'preflight', 'journal', 'setup', 'case', 'cleanup', 'artifact' ), true )
+		&& in_array( $event, array( 'begin', 'end' ), true )
+		&& ( 'case' === $phase ? $case >= 1 && $case <= 152 : 0 === $case );
+	if ( 'preflight' === $phase && 'end' === $event ) {
+		$valid = $valid && array_keys( $sources ) === array( 'tests/e2e/input-schema-runner.php', 'tests/e2e/input-schema-cleanup.php' );
+		foreach ( $sources as $digest ) {
+			$valid = $valid && is_string( $digest ) && 1 === preg_match( '/^[a-f0-9]{64}$/D', $digest );
+		}
+	} else { $valid = $valid && array() === $sources; }
+	if ( ! $valid ) {
+		echo "{\"diagnostic\":\"wstm126-progress\",\"authoritative\":false,\"status\":\"rejected_invalid_input\"}\n";
+		return;
+	}
+	echo json_encode( array(
+		'diagnostic' => 'wstm126-progress', 'authoritative' => false, 'status' => 'observed',
+		'boundary' => $boundary, 'phase' => $phase, 'event' => $event,
+		'case_index' => 'case' === $phase ? $case : null,
+		'memory_bytes' => memory_get_usage( true ), 'peak_memory_bytes' => memory_get_peak_usage( true ),
+		'source_hashes' => $sources,
+	), JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR ) . "\n";
+};
+$progress( 'bootstrap', 'begin' );
 $_SERVER['HTTP_HOST'] = 'localhost';
 require_once '/var/www/html/wp-load.php';
 require_once __DIR__ . '/error-contract-assertions.php';
 require_once __DIR__ . '/metadata-transport.php';
 require_once __DIR__ . '/input-schema-cleanup.php';
 require_once __DIR__ . '/input-schema-proof.php';
+$progress( 'bootstrap', 'end' );
 
+$progress( 'preflight', 'begin' );
 if ( ! defined( 'WSTM126_DISPOSABLE_RUNTIME' ) || true !== WSTM126_DISPOSABLE_RUNTIME || ! function_exists( 'wstm126_begin' )
 	|| ! defined( 'WSTM126_STAGE_TOKEN' ) || WSTM126_STAGE_TOKEN !== $stage_token ) {
 	throw new RuntimeException( 'Install the opt-in input-schema MU fixture before bootstrap.' );
@@ -55,6 +80,9 @@ foreach ( array( Webmastery_MCP_Ability::class => 'class-ability.php', Webmaster
 }
 wstm126_require( realpath( dirname( __DIR__, 2 ) ) === realpath( $plugin_root ), 'Runner is not in the loaded production mount.' );
 $summary['source_hashes'] = wstm126_source_hashes( $plugin_root );
+$progress( 'preflight', 'end', 0, array_intersect_key( $summary['source_hashes']['harness'], array(
+	'tests/e2e/input-schema-runner.php' => true, 'tests/e2e/input-schema-cleanup.php' => true,
+) ) );
 foreach ( array( __FILE__, __DIR__ . '/input-schema-fixture.php', __DIR__ . '/../../includes/class-input.php', __DIR__ . '/../../includes/class-ability.php' ) as $source ) {
 	$summary['hashes'][ basename( $source ) ] = hash_file( 'sha256', $source );
 }
@@ -63,6 +91,7 @@ $users = $posts = $transports = array();
 $owns_option = false;
 $run = 'wstm126-' . wp_generate_uuid4();
 $token = bin2hex( random_bytes( 32 ) );
+$progress( 'journal', 'begin' );
 $journal = new Wstm126_Cleanup(
 	(string) getenv( 'WSTM126_JOURNAL_DIR' ), ABSPATH, dirname( $artifact ), $stage_token, $boundary, $run,
 	'wstm126_cleanup_snapshot',
@@ -73,6 +102,7 @@ $journal = new Wstm126_Cleanup(
 		else { delete_option( 'wstm126_http' ); }
 	}
 );
+$progress( 'journal', 'end' );
 $http_actor = 0;
 $http_plan = '';
 $http_capture = array();
@@ -93,7 +123,9 @@ $http_pre = static function ( $pre, $args, $url ) use ( $http_debug ) {
 	return $pre;
 };
 add_filter( 'pre_http_request', $http_pre, PHP_INT_MAX, 3 );
-$record = static function ( string $label, callable $test ) use ( &$summary, &$http_secrets ): void {
+$record = static function ( string $label, callable $test ) use ( &$summary, &$http_secrets, $progress ): void {
+	$case = count( $summary['cases'] ) + 1;
+	$progress( 'case', 'begin', $case );
 	$entry = array( 'label' => $label );
 	try {
 		$test( $entry );
@@ -105,7 +137,9 @@ $record = static function ( string $label, callable $test ) use ( &$summary, &$h
 		$summary['failed']++;
 	}
 	$summary['cases'][] = $entry;
+	$progress( 'case', 'end', $case );
 };
+$progress( 'setup', 'begin' );
 try {
 	require_once ABSPATH . 'wp-admin/includes/user.php';
 	$journal->plan( 'observation', array( 'owner' => $run ) );
@@ -201,6 +235,7 @@ try {
 		$entry['result'] = is_wp_error( $result ) ? Webmastery_MCP_Response::from_wp_error( $result ) : $result;
 		return true === $result ? array( 'success' => true ) : $entry['result'];
 	};
+	$progress( 'setup', 'end' );
 	$cases = array();
 	foreach ( array(
 		'list-posts' => 'status', 'list-pages' => 'order', 'list-cpt-mcp-book' => 'orderby',
@@ -295,6 +330,7 @@ try {
 	wp_set_current_user( $users['administrator'] ?? $old_user );
 	$flow_complete = ! isset( $summary['fatal'] ) && 152 === count( $summary['cases'] )
 		&& wstm126_expected_labels() === array_column( $summary['cases'], 'label' );
+	$progress( 'cleanup', 'begin' );
 	$cleaned = $journal->finish( static function () use ( $transports, $users, &$http_actor, &$http_plan ): void {
 		foreach ( $transports as $role => $transport ) {
 			$http_actor = (int) $users[ $role ];
@@ -303,6 +339,7 @@ try {
 		}
 		$http_actor = 0;
 	}, $flow_complete, $summary['failed'] > 0 );
+	$progress( 'cleanup', 'end' );
 	$summary['cleanup_proof'] = $cleaned['proof'];
 	$summary['cleanup'] = $cleaned['proof'];
 	$summary['cleanup_complete'] = ! in_array( false, $cleaned['proof'], true );
@@ -312,10 +349,12 @@ try {
 	remove_action( 'http_api_debug', $http_debug, PHP_INT_MIN );
 	remove_filter( 'pre_http_request', $http_pre, PHP_INT_MAX );
 	wp_set_current_user( $old_user );
+	$progress( 'artifact', 'begin' );
 	$json = wp_json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR ) . "\n";
 	$file = fopen( $artifact, 'x' );
 	wstm126_require( false !== $file, 'Cannot exclusively create proof artifact.' );
 	try { wstm126_require( strlen( $json ) === fwrite( $file, $json ) && fflush( $file ), 'Cannot persist complete raw proof.' ); } finally { fclose( $file ); }
+	$progress( 'artifact', 'end' );
 }
 echo "Input schema {$boundary}: {$summary['passed']} passed, {$summary['failed']} failed.\n";
 exit( $summary['failed'] || ! $summary['completed'] ? 1 : 0 );
