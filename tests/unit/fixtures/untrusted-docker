@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+: "${WSTM108_MOCK_CHECKOUT:?Explicit synthetic checkout required}"
+status=0
+command php "$WSTM108_MOCK_CHECKOUT/tests/unit/fixtures/untrusted-docker.php" "$@" || status=$?
+if [[ "$status" != 125 ]]; then exit "$status"; fi
+# Only the existing exported outer-test function may handle unrelated calls.
+# Never fall through to a real Docker executable.
+declare -F docker >/dev/null || { echo 'No owned synthetic Docker fallback.' >&2; exit 95; }
+docker "$@"

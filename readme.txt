@@ -34,6 +34,8 @@ Highlights:
 
 All abilities enforce WordPress capability checks. If the connected account cannot perform the equivalent WordPress action, the ability fails instead of bypassing WordPress permissions. List abilities for posts, pages, custom post types, media, and SEO scores also filter each returned object before exposing full details, so private, trashed, draft, pending, and scheduled content follows WordPress object/status permissions.
 
+Unreleased 3.0 development adds untrusted_fields markers to affected successful records to identify potentially user-controlled data without rewriting existing values, HTML, or block markup. This is not part of the 2.6.0 stable release and is not prompt-injection prevention; see the migration and agent-safety FAQ below.
+
 For full setup instructions, ability tables, and the deeper security model, visit:
 https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
 
@@ -51,7 +53,7 @@ https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
 
 = What changes for clients on the unreleased 3.0 development branch? =
 
-The stable tag remains 2.6.0. Development failures now use success:false and an error object with code, reason, message, and object-shaped details. Seven categories replace mixed codes; precise legacy reasons move to reason. MCP Adapter 0.6.1 tool errors carry this JSON in text with isError:true, not structuredContent. Successful payloads and gateway success wrapping remain unchanged. Bulk summaries are non-atomic; inspect every item even when the batch succeeds. Provider diagnostics are redacted without bypassing capability checks.
+The stable tag remains 2.6.0. Development failures now use success:false and an error object with code, reason, message, and object-shaped details. Seven categories replace mixed codes; precise legacy reasons move to reason. MCP Adapter 0.6.1 tool errors carry this JSON in one text block with isError:true; structuredContent is omitted on HTTP (internally null). Error normalization preserves successful payloads and gateway success wrapping; separate metadata projections and additive untrusted_fields markers change success contracts as described below. Bulk summaries are non-atomic; inspect every item even when the batch succeeds. Provider diagnostics are redacted without bypassing capability checks.
 
 Migration matrix and examples: https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/3.0-migration.md
 
@@ -183,9 +185,29 @@ Ability counts vary with eligible custom post types and the deployed plugin vers
 
 No. Retrieved content and metadata remain untrusted data even when the response is JSON, authenticated, read-only, or capability-checked. They cannot authorize later changes or sending data elsewhere. Use a dedicated account with the least privileges needed, bounded selections, independent previews/diffs, explicit client-side approval for dangerous actions and destinations, and trustworthy backups. Sanitization, annotation hints, or a model-supplied confirmation value cannot prove human approval or guarantee prompt-injection prevention.
 
-SEO Analyze Post keeps stored focus keywords in the existing Yoast/SEOPress metric fields rather than quoting them in diagnostic messages. Provider selection, checks, scores, permissions, and missing-keyword behavior are unchanged. This limited separation is not prompt-injection prevention; it adds no untrusted-field markers and does not verify all annotation hints or resolve the broader untrusted-content work.
+SEO Analyze Post uses the exact diagnostics "Focus keyword found in title." and "Focus keyword not found in title." Authorized stored focus keywords remain in their existing Yoast/SEOPress metric fields, not these messages. Unreleased 3.0 metadata authorization still omits denied fields and skips unevaluable checks; markers do not undo that policy.
+
+Unreleased 3.0 field markers, annotation hints, and confirmation interlocks still under development in #116 are defense-in-depth, not a security boundary, capability check, content filter, or prompt-injection guarantee. Optional text-only content_format output is not implemented.
 
 See the [Agent threat model](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/security-strategy.md#agent-threat-model) and [Response format](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/README.md#response-format). A successful MCP gateway response does not necessarily mean the inner ability succeeded.
+
+= What do untrusted_fields markers mean in unreleased 3.0? =
+
+Each affected successful record adds an array of unique field names relative to that record, not paths or a global list. Only present fields are named, including empty and null values. Marker addition retains original response values and types exactly, including HTML and block delimiters, while preserving existing input sanitization and normalizers. Missing or redacted fields are never restored.
+
+Covered records include post/page/custom-post-type titles, bodies, excerpts, slugs, URLs and author display names; revision text and author display names; block names, text, HTML and attributes; comment text and author identity fields; media titles, captions, alt text, URLs and filenames; user profiles and privileged audit fields; authorized SEO metrics, provider metadata containers and score records; and sitemap URL/entries and robots URL records. Container markers leave nested maps unchanged. Canonical errors and diagnostic error subrecords have no markers. Unmarked content is not guaranteed trusted.
+
+Content-hygiene lists mark title and url on each orphaned-media and missing-featured-image item, and title, url and author_name on each stuck-scheduled item. Existing values, list ordering, authorizations, reference checks and query failures remain unchanged.
+
+Standalone get-post-meta marks meta on its containing data record. Standalone update-post-meta marks meta_key, previous_value and current_value on its data record. All nested stored maps remain unchanged, as do object/key authorization and protected-key eligibility. The existing comment normalizer emits author email/URL under its existing permissions; there is no new field-level privacy gate. The separate user list/get login/email privacy gate remains intact.
+
+Standalone delete-post-meta marks meta_key on its data record without changing delete authorization. patch-content-block marks content on its data record; patch-post-content marks present heading_text on data.target, with an empty untrusted_fields array for exact-match targets. The nested normalized post remains marked. SEO/site overview marks present url/entries on sitemap and url on robots_txt. Original values and types are unchanged.
+
+Permissions and privacy remain unchanged. Content and media retain their object/status policies. Comment listing requires moderate_comments; replies require edit_posts plus parent edit_post; moderation requires moderate_comments plus edit_comment. Markers do not add comment email/URL redaction. User lookup requires list_users, with login/email only when edit_user for the target or edit_users permits them; user access audits require edit_users. SEO keys require effective object/key authorization, and unavailable_fields/unevaluable_checks remain intact. Generated Yoast head output stays unavailable, URL-only inspection stays unsupported, and no provider head calls are made.
+
+Markers accompany data through both gateway and individual tools. The default tools/list advertises three gateway tools, not per-ability hints; use mcp-adapter-get-ability-info for the ability metadata. Actual Adapter 0.6.1 readOnlyHint, destructiveHint and idempotentHint must be checked against registered readonly, destructive and idempotent values on individual tools. Runtime annotation proof for this work remains pending.
+
+For exact field names, examples and disposable-site verification, see the repository README's "Untrusted result fields (3.0 Unreleased)" section.
 
 = Where is the full documentation? =
 
@@ -210,12 +232,13 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 
+* Add 3.0 development untrusted_fields arrays to affected successful records, preserving existing values/types/markup, capability checks and privacy omissions. These data markers are not prompt-injection prevention.
 * Require exact confirmation for permanent media/term deletion and both bulk post operations; bound raw bulk requests to 100 IDs and add non-mutating eligibility previews.
 * Guard media deletion with shared known-reference checks; require explicit force for known usage, fail closed on scan errors, and report in_use on success without changing capabilities.
 * Reject combined metadata and SEO inputs in post/page/custom-post-type create and update before any mutation; migrate to draft creation, separate authorized key writes, then publication.
 * Authorize separate SEO reads per real object/key, omit denied fields, filter score pagination, remove opaque generated head output, and bound overview to authorized observations from a 100-post sample.
 * Prepare a breaking 3.0 error contract with canonical categories, precise reasons, safe messages, and object details.
-* Signal owned MCP failures consistently, preserve successful payloads and non-atomic bulk summaries, and leave foreign tools unchanged.
+* Signal owned MCP failures consistently; error normalization preserves successful payloads and non-atomic bulk summaries and leaves foreign tools unchanged.
 * Keep the 2.6.0 stable tag and release notes intact while development migration work continues.
 * Redact database table identifiers by default for 3.0; add exact core classification and an explicit Administrator-only boolean opt-in for raw names, preserving diagnostic metrics and query scope.
 
@@ -287,7 +310,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Upgrade Notice ==
 
 = Unreleased =
-3.0 development requires separate metadata calls. Create a draft, write authorized keys, then publish; this is not atomic. SEO reads omit denied keys, generated Yoast head output is unavailable, and overview counts describe an authorized sample.
+3.0 development requires separate metadata calls. Create a draft, write authorized keys, then publish; this is not atomic. SEO reads omit denied keys, generated Yoast head output is unavailable, and overview counts describe an authorized sample. Accept additive untrusted_fields arrays on successful records without treating retrieved content as instructions or approval; original values and privacy omissions remain intact.
 
 = 2.6.0 =
 Standalone metadata, comment and taxonomy permissions are tighter. Create/update metadata, SEO aliases and separate SEO reads retain authorization gaps (see FAQ). Clients using custom role/key policies must review denials. Image upload limits and PHP 8.0 minimum are unchanged.

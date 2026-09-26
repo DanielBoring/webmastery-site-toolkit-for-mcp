@@ -7,6 +7,94 @@ The Docker QA suite has two layers:
 1. Ability Contract QA is ability-driven. Every registered `webmastery-site-toolkit-for-mcp/*` ability must be represented in `tests/e2e/abilities-manifest.json`.
 2. Full MCP E2E QA uses real MCP Adapter HTTP JSON-RPC requests against `/wp-json/mcp/mcp-adapter-default-server` to prove a remote MCP client can create, read, update, and delete content through the adapter transport.
 
+## Separate private test-custody source
+
+`tests/support/private-custody.php` implements a **test-only library**, not a
+production export, new workflow, automatic upload, or ready-to-run encrypted
+transport. `PrivateCustodyTest` uses mocked age/API boundaries and real local
+ZIP operations, plus the actual receipt CLI with a mock server environment.
+Its success is not real cryptography, GitHub-origin, WordPress,
+Docker-issuer or release acceptance.
+
+The library uses only ordinary standard age CLI argument arrays with one native
+X25519 recipient. It requires an explicitly pinned, separately vetted official
+executable and an injected trusted bounded binary-capture driver; it has no
+floating PATH fallback or default process launcher. Before any actual use,
+review and bind that driver and the authenticated bounded GitHub API/job-log
+drivers, their exact source, arguments, output limits, original native status,
+EOF/capture behavior and private destinations. A fabricated capture record is
+not evidence. No keys, binaries, secrets, encrypted transfers or custody jobs
+are supplied or executed by importing this library. The Unit, Ability Contract,
+Full MCP E2E and Release Package QA jobs have only a separate nonsecret
+executed-workflow context receipt step, not an encrypted transport.
+
+| Boundary | Required behavior |
+| --- | --- |
+| Independent origin | Exact repository/head-repository IDs, workflow ID/path, executed workflow commit/ref and reviewed workflow bytes, run/attempt, job ID/name, separate event/PR/run heads and actual checkout commit/tree, nonce, deadline and immutable artifact ID. Require successful context/upload steps and one receipt of each kind in that exact authenticated job's original log; correlate run membership and upload time, then revalidate after decryption. |
+| Public receipt | Approved origin/recipient, artifact digest and ciphertext size/hash only. Individual file names, stream hashes, detailed original observations and the content manifest stay inside ciphertext. Artifact ID is bound after upload, not included in the pre-upload content manifest. |
+| Artifact | Retain original downloaded ZIP and metadata; require the API SHA-256 digest, exact size, unexpired state and only `private-test-custody.age`. Digest mismatch is fatal, never just a downloader warning or a reason to select another artifact. |
+| Decryption | Retain stdout in a new protected quarantine file and original private stderr/status. Require actual native zero, complete bounded capture and both EOFs before parsing even a valid-looking ZIP. A missing final authenticated age chunk is failure. |
+| Readback | Closed manifest, at most 10,000 regular files, 32 MiB each, 256 MiB total expanded content including the at-most-1-MiB manifest, and 258 MiB transfer/archive caps. Reject links, special members, traversal, duplicate/case-colliding names, nonportable Windows paths, altered bytes and existing destinations. Use synthetic flat output names; original names and nonregular fixture observations remain metadata, never recreated links. |
+| Retention | Retain originals and failure/partial files. No automatic cleanup, retry, plaintext fallback or replacement encryption. Existing test/production cleanup and authority predicates remain unchanged. |
+
+Successful recipient decryption authenticates ciphertext integrity, **not the
+sender**: anyone knowing the recipient can encrypt a new message. The separately
+authenticated exact job/upload receipt binds the ciphertext and hence its private
+content manifest; an encrypted self-asserted origin alone is rejected. Relevant
+format requirements are in the [standard age specification](https://c2sp.org/age).
+
+Real local identity generation remains gated on verified official binary
+provenance and verified native Windows ACL behavior. The approved policy is a
+**new owned directory** under the existing private session destination, accessible
+only to the current user and SYSTEM, with inheritance disabled on that directory
+only. Do not change parent/profile ACLs, rely on readonly as confidentiality, or
+archive/log a private identity. The library does not establish those ACLs or
+generate/read key contents; the trusted supervisor must establish this boundary
+before allowing any output or passing the identity path to age.
+
+The `Record executed workflow identity` step passes GitHub's server
+`github.workflow_sha` and `github.workflow_ref` through explicit environment
+fields to `tests/support/private-custody-context.php`. It records those separately
+from `github.sha`, the PR head, the REST run head and the tested checkout. It does
+not inspect the mutable checked-out workflow file or print the entire GitHub
+context. The receipt is enabled only in this repository, not other fork repositories.
+Each of those four jobs invokes the same existing receipt CLI after checkout
+and its existing PHP setup, before dependency/runtime work. The two Docker QA
+jobs retain host PHP 8.4, package QA retains PHP 8.2, and Unit retains its matrix
+interpreter; no controller interpreter or runtime selector changes. Runtime
+jobs supply their own fixed workflow path, with the same explicit server fields
+and PR-head-or-`none` sentinel. Actual authenticated job logs must still prove
+successful execution and exact workflow/run/attempt binding. These source
+bindings are not real daemon admission, WordPress proof or durable private
+custody, and do not expand compatibility or tag-release policy.
+
+For non-PR events, `WSTM_CUSTODY_PULL_REQUEST_HEAD_SHA` must carry the explicit
+nonempty sentinel `none`, because empty environment values can disappear across
+Windows process boundaries. Only that field's exact sentinel decodes to JSON
+`null`; PR events still require a real SHA. Missing or empty environment fields
+remain errors, and the public receipt's fields and null meaning are unchanged.
+
+The verifier requires the exact approved workflow commit/ref in both the grant
+and the independently authenticated job-log context receipt. It fetches reviewed
+workflow bytes at that workflow commit, never at an inferred head/checkout,
+and rejects missing, duplicate, failed-step and substituted context evidence.
+This direct-workflow receipt is not a reusable-workflow provenance protocol.
+Mocked contexts and API responses do not establish the relationship in a real
+GitHub run; vetted live API/capture drivers and actual platform evidence remain
+prerequisites.
+
+Custody is limited to private byte copies plus recorded original Linux
+observations. It is not preservation of original inodes, whole-host attestation,
+test success or producer survival until receiver acknowledgment. That stronger
+survival gate remains explicitly **unresolved** where required. Both run and job
+must still be completed before origin acceptance; those checks are not weakened
+to let a hosted job wait for receiver acknowledgment. A durable producer/private
+spool must survive job completion and retain originals until an independently
+authenticated, exact readback-bound acknowledgment. Hosted runner teardown and
+ciphertext upload alone cannot satisfy it. The production untrusted
+export still contains exactly its original three safe files; none of these
+private paths, ciphertext files or receipts is added to that contract.
+
 ## Unreleased canonical error coverage
 
 All manifest failures require `expect_error_shape:"canonical"`, a seven-category
@@ -255,6 +343,467 @@ Execution and permission exceptions are both covered, including native 403
 authorization denials and default 502 callback failures, no execution after
 permission failure, and unchanged action counts.
 
+## Untrusted-content coverage (3.0 Unreleased, #108)
+
+The current manifest has exactly 199 marker assertions on 189 stored-content
+cases. Five compact post/page/CPT trash responses contain only `id` and
+`status:"trash"`; their complete `data` maps are asserted exactly, with no
+phantom stored fields or marker. Standalone metadata deletion still marks
+`meta_key`.
+
+The historical 190-case/200-marker test-only inventory in
+`tests/unit/fixtures/untrusted-manifest-inventory.json`
+was derived from reviewed marker source
+`2ef8c40b7d0ac3cc8b15a9292a4ec987b55854e6` and accepted baseline
+`2feed8d18d0721a4c7ca2e0187005c8cfae76322`, not regenerated from the working
+manifest. Its pinned inventory checks exact case indices, labels, paths and
+ordered field lists before removing only those direct `assert_values`
+properties. It restores an absent `assert_values` only where the frozen
+baseline lacked it; arbitrary stored maps are never traversed.
+
+First, a separate closed hygiene projection requires the four exact
+`data.items.0.untrusted_fields` assertions on orphaned media, posts/pages
+without featured images, and stuck scheduled posts (indices 332, 334, 335,
+337). It removes only those four assertions and requires the complete
+pre-hygiene manifest fingerprint to match the existing compact-delete
+ledger's after-manifest golden. Every original value, type, role, input and
+privacy assertion remains intact; Subscriber denials at indices 333, 336
+and 338 remain unmarked. Dedicated mutations reject missing/weakened markers,
+wrong record ownership, private-field additions and changes to original data.
+
+Then, before the historical marker projection, the separate
+`untrusted-compact-delete-calibration.json` ledger validates and reverses only
+the five exact strengthened cases (indices 69, 79, 202, 219, 509). It pins full
+typed before/after rows to source `18a8716e469778819b1c92a3d6720df19c1d029b`,
+accepted `2feed8d`, and the genuine compact responses from package run
+`35680977162`. Every role, input, permission, state and metadata assertion is
+preserved; any other change to those five rows fails. After the explicit
+four-marker hygiene projection, all other 565 rows remain unchanged.
+Historical marker validation still checks all original 190 cases
+and 200 paths, using explicit full-row historical handling only for those five.
+
+The resulting complete, ordered, typed 570-case baseline must retain SHA-256
+`da4395a6a9d6532c10423e25d02c710c2ed150d226dfa87a988b5594ede8fa4a`.
+Only then do the unchanged historical 547-case, 16-error-correction and
+seven-privacy-row checks run. Object/array and integer/float distinctions,
+original properties, all 52 imported cases, and historical ledger goldens
+remain protected. Mutation tests exercise the same strict projection.
+The separately pinned `untrusted-import-inventory.json` binds all 52 new
+rows to those same immutable sources: indices 0-43, 187, and 372-378. An
+executable provenance check requires the mutation provider to match that
+entire ordered inventory, rejecting omissions, duplicates and extra indices.
+
+`scripts/untrusted-stage.sh` runs one separate serial stage after the existing
+destructive-safety stage has fully restored, before the later metadata/error
+fixtures. Source `contract`, `e2e`, and `all` selections each require both
+actual gateway and individual HTTP boundaries. Original-ZIP and compatibility
+lanes use that same stage; they do not rebuild the archive or overlay checkout
+production. The complete ordered plan is 90 individual annotation/get-info
+comparisons (85 native abilities plus five owned CPT abilities), followed by
+98 semantic cases per HTTP boundary: 286 cases, not a minimum-pass threshold.
+Actual advertised tool names come from the catalog rather than a guessed
+sanitizer. Bulk publish retains `destructiveHint:true`.
+
+Run only within an explicitly authorized **owned disposable** project.
+The proof additionally requires `WSTM108_HOST_AUTHORITY_ROOT` to name an
+existing native POSIX host directory owned by the invoking user. CI supplies
+`RUNNER_TEMP` explicitly. There is no checkout, `.git`, `build`, artifact,
+temporary-directory or receipt-adoption fallback. The entire source checkout
+is container-writable in source mode, so it cannot hold independent authority.
+Before acquisition, the host checks this project's effective Compose binds,
+live container mounts and named-volume configuration, including all configured
+services available to planned one-offs. Remote daemons, external/bind-backed
+volumes, unknown mappings and noncanonical paths fail closed. The owned stage
+itself launches only `exec`, not one-offs with additional mounts.
+Native Windows PHP mode/UID/GID values are not an NTFS ACL proof; Docker
+Desktop/WSL aliases are not guessed. Positive native-Windows authority and
+local current/floor/ZIP feasibility remain **blocked**. Genuine Ubuntu
+execution must establish the positive path; synthetic fixtures and actual
+Windows refusal controls do not substitute for it.
+`WSTM108_STAGE_DISPOSABLE=1` guards the stage entrypoint;
+`WSTM108_ALLOW_DISPOSABLE=1`, `WSTM108_STAGE_CONTEXT`, and the exact
+`WSTM108_ARTIFACT` identify its runner. These flags are not a Docker lease or
+permission to change another session's stack. The stage verifies actual
+missing-opt-in CLI exit 2 and actual HTTP 403 `CLI only.` for both entrypoints
+before credentials. Do not copy MU fixtures manually or edit `wp-config.php`.
+Exclusively owned loaders reference the original fixture files and expose
+`/wp-json/wstm118/tools` only for the disposable proof.
+
+Quarantined stage evidence lives in `e2e-artifacts/untrusted-<owner>/`: source/tree/project/owner
+and original-ZIP digest binding, actual production/harness file hashes, active
+provider version digests, native/enabled/restored runtime digests, validated actual
+catalog names/boolean annotation hints, schema/capability digests, case
+verdicts, cleanup and finalization. Both files for every report are exclusively reserved
+before bootstrap or credentials; an existing summary **or** `.http.jsonl`
+journal fails closed, including racing creators. Partial reservations remain.
+These paths are not artifact upload sources: a refused collision can contain
+foreign bytes even when its basename normally denotes a safe report. No existing
+directory is created recursively or chmodded. Original status,
+headers and body bytes are persisted **privately before parsing** in exclusive
+0600 opaque event files under the owned 0700 lock. Serialization preserves
+invalid UTF-8, object/list and integer/float distinctions without executing or
+deserializing frames in production. The journal durably binds creation intent,
+committed length/hash/identity, parser verdict and case/scope verdict. Known-secret
+redaction is not evidence that an arbitrary body is safe to publish. Public
+`.http.jsonl` files contain safe hash/length/status/verdict witnesses, never
+unvalidated bodies, headers, session tokens or provider messages. A passing
+case does not publish its entire response.
+The complete public runner journal digest and private inventory are checked
+before retirement. All six actor/boundary catalogs, including every pagination
+page, must match captured descriptor witnesses. Registration records must match
+the enabled runtime's schema digests, not just its names.
+
+After the unchanged primary arm, #108 records private creation intent outside
+every project bind and exclusively creates
+`build/wstm116-retention-<project>-wstm108-<owner>` before acquisition or
+credentials. Its original build identity, file identity and bytes remain
+independently bound. A partial creation is retained, never adopted or repaired.
+The existing f93 scan already recognizes this companion; neither its helper nor
+the outer gates are modified. This distinction matters because the unchanged
+primary clear unlinks its marker **before** its final echo.
+
+The companion stays present while that exact clear runs under private
+stdout/stderr capture. Complete exact stdout, empty stderr, zero child exit,
+primary absence and unchanged companion ownership are mandatory. An echo,
+capture, framing, controller or receipt failure before commit retains the
+companion; the primary may already be absent and must not be reported as present.
+All producers finish, the public evidence inventory is closed, source/harness
+and original-ZIP bytes are rechecked, and the exclusive outside-bind
+`untrusted-content-release-authorization.receipt.json` is persisted before the
+terminal operation. This receipt remains private; its filename alone does not
+authorize publication. Independently constructed exports contain typed source
+binding/digests and **precommit observations only**, never private authority
+paths, identities, transcripts or credentials.
+
+Successful final companion unlink is the irreversible **RELEASE COMMIT**.
+There is no post-unlink output/frame check or further success prerequisite.
+Subsequent controller death or acknowledgment failure does not recreate
+protection: release may have committed while acknowledgment is unknown.
+Preserve every observed nonzero/unknown result; neither the authorization
+receipt nor guard absence establishes successful QA, publication or merge
+readiness. If unlink's outcome cannot be established, report unknown rather
+than claiming a guard remains.
+
+The source and original-ZIP outer mocks cover partial-companion collision,
+actual unchanged-helper echo failure, failed/truncated clear output, precommit
+controller interruption, authorization collision, evidence drift, same-byte
+companion replacement, successful commit and postcommit failed acknowledgment.
+Real native POSIX controls separately inject partial creation/capture writes
+and check retained originals, mode/identity refusal and postcommit fault
+classification. Docker/site payloads remain synthetic; those expected fault
+cases are contract coverage, **not** successful real runtime runs. Native-Windows
+positive paths remain BLOCKED rather than passed/skipped.
+
+Host verification accepts the two exact report basenames or their exact absolute
+paths only under the explicitly supplied, source-bound owned artifact directory.
+It does not resolve against ambient working directories or alternate roots;
+traversal, foreign roots/identities, symlinks and multiply linked files fail closed.
+
+The independently retained host handle binds original lock and state identities
+across processes: device/inode, UID/GID, mode and link count, plus owner, source,
+project, paths and context. Reads verify the opened handle before and after
+reading; same-byte replacements and partial writes are not adopted. The
+receipt originals are kept outside every bind source for recovery. They are not
+artifact upload candidates or an automatic authority
+fallback after host-memory loss. Existing receipts are never overwritten or
+removed by success/failure cleanup.
+
+Before any owned PHP helper, a finite native Bash bootstrap exclusively reserves
+and holds separate original stdout/stderr descriptors, its creation-intent
+descriptor and the controller's publication descriptor. Failures before both
+diagnostic descriptors exist have no transcript guarantee and launch no PHP or
+runtime helper. The narrowly bounded pre-custody interval routes native and
+redirection diagnostics away from public output; only a fixed refusal enum and
+nonzero status are public. It does not claim to preserve those original bytes.
+Until physical outside-bind admission succeeds, these are
+quarantined nonsecret admission captures, not independent authority or exportable
+evidence. The controller captures helpers themselves, including startup/fatal
+output; inner stage captures cannot retroactively capture their parent helper.
+Children receive neither GitHub command-file environment variables nor the
+publication descriptor. The controller preserves actual native exits, original
+binary streams and partial evidence; it never extracts a frame from mixed output.
+
+Native admission is deliberately narrow: Linux, supported ext4/tmpfs coordinates,
+an owned root with its original stable identity, and the exact link-count
+transition caused by each exclusively owned child creation. Regular-file
+hardlink checks remain unchanged. Mount filesystem-root coordinates, device
+identities and nested mounts must prove the authority outside all actual bind
+exposures. Canonical text paths alone do not establish that property. A
+root-owned `/run/docker.pid` is only a discovery hint: selected listener/socket,
+that PID's descriptors, process/start identity and matching mount namespace/table
+must corroborate it before and after admission. Inaccessible evidence, unknown
+filesystems/mappings and races are `BLOCKED`, without escalation, namespace
+entry, process-wide scanning or a claim that hosted CI meets these prerequisites.
+Conflicting `DOCKER_CONTEXT`/`DOCKER_HOST` selectors refuse before any daemon
+query; all owned discovery/execution uses the verified endpoint and original
+executable. Genuine native alias/daemon admission remains independently pending.
+
+Every owned stage/runner/proof process reserves exclusive private stdout and
+stderr captures before launch. Both streams are drained and checked for complete
+persistence, preserving the actual child exit independently of capture/parser
+failure. Public process evidence names only fixed actions and records safe
+witnesses. Exit zero with unexpected output or stderr is still failure.
+Acquire accepts exactly one successful anchor frame, never a last-line or
+success-prefix fallback.
+
+Only the controller constructs the independent flat export, seals and syncs
+its three files, verifies readback/original custody, and writes readiness to
+its original GitHub output descriptor. The exact upload inventory is
+`untrusted-proof.json`, `untrusted-failure-witnesses.json`, and
+`untrusted-export-manifest.json`. A verify-only workflow step checks source,
+project, run/attempt/job, original directory/file custody, schema and hashes
+before those exact files may be selected. Raw stage directories, receipt globs
+and broad-upload flat/nested `untrusted-*` paths have no fallback.
+Structural publication safety is separate from semantic success: a constructed
+safe failure witness may upload, but failed QA, missing readiness, non-passed
+proof, verification failure or upload failure blocks promotion. Export and
+required capture writes precede terminal companion unlink; later workflow
+verification is an artifact/job gate, not rollback or a new release prerequisite.
+
+The tag-release `release-qa` job is the seventh closed-export consumer, alongside
+the two E2E jobs, package QA and three compatibility jobs. Its existing PHP 8.2
+package run receives the explicit `runner.temp` authority root; source, project,
+run/attempt/job and original custody must match before the three safe files upload.
+Sealing the original ZIP bundle, uploading that release bundle and announcing
+production approval each explicitly require both overall success and successful
+required-evidence gating. Safe failure witnesses cannot advance those steps.
+This adds no root executor or native-host feasibility claim, changes no terminal
+unlink prerequisite, and leaves the original release artifact, publication
+approval and historical recovery eligibility unchanged.
+
+The private stage/resource/wire journals and process transcripts never enter
+public artifacts. Creation
+intents, owned actors/IDs, application-password UUIDs and MCP sessions support
+narrow recovery after a lost response. Returned user IDs are enrolled before
+capability changes, then validated after the reader's `list_users` grant.
+Cleanup must prevalidate the complete ownership inventory before mutation and
+prove resource and metadata
+absence; attachment reference failures or deletion vetoes retain the associated
+file and actor, never bypassed through user deletion. The unchanged host
+retention guard is armed before runtime alteration. Missing, partial or foreign
+proof, unknown lock entries, changed source/configuration, or failed restoration
+blocks teardown and re-entry. Resource cleanup success never permits retirement
+of failed HTTP, malformed, unparsed or semantically failed evidence. Expected
+canonical denials pass only through their exact existing case oracles.
+Original config bytes/hash/mode/UID/GID and actual
+native schema/server/observer state must match again before retiring the probe,
+private journals and guard. Finalization first prepares without deleting targets;
+the host validates its complete captured outcome, then authorizes that specific
+generation and target-inventory digest. Retire rejects stale, substituted or
+replayed preparation and rechecks ownership before mutations. Late failure
+reports partial retirement truthfully, retains remaining evidence and leaves
+the host guard armed. The private wire journal persists an exact
+`removal_pending_id` before each unlink; this is intent, not proof of removal.
+Only a successful remover return, guarded predecessor reread, complete remaining
+inventory validation and successful journal persistence confirm `removed: true`.
+A failed postcheck, veto or interrupted write leaves the target unconfirmed (or
+the journal partial), never a claim that every original still exists. Fresh
+resume refuses partial or complete retirement rather than adopting missing files.
+Only fully validated retirement and the final host proof
+allow guard clearing; independent host receipts/transcripts are not retirement
+targets. Only known-owned stale GET observations may retry:
+five requests of at most two seconds, four one-second sleeps, 14 seconds total.
+Mutations, wrong identities, malformed responses and authorization denials do
+not retry.
+Application-password ownership binds the exact pre-creation adversarial name,
+owned actor and returned UUID; it does not replace the stored name with a test
+label. The owner token in public evidence is a run identity, not an authentication
+secret. Its keyed digest cannot authenticate evidence against an operator who
+can rewrite public files: exact private-journal equality and fresh live absence
+remain mandatory for retirement. The separately private probe secret authenticates
+GET observations. Only the exclusively created upload child receives public
+traversal permissions; existing upload-parent permissions are never changed.
+
+The actual Adapter must be 0.6.1. Both real SEO providers must already be active;
+pinned lanes require the selected Yoast/SEOPress versions, and candidate lanes
+retain their actual versions. The wire decoder preserves original JSON types
+and strips only the single marker owned by the compared record. Exactly two
+legacy expected diagnostic `details:[]` literals are corrected to canonical
+`details:{}` through a source-pinned ledger; legitimate empty lists remain lists.
+No production serializer or existing value/authorization oracle changes.
+
+Dedicated runtime acceptance remains pending. Keep validation categories distinct:
+synthetic policy/process fixtures, actual native-Windows refusal controls, and
+genuine Ubuntu positive authority plus outer source/original-ZIP execution.
+The unit method
+`test_opted_in_native_capture_export_and_interruption_controls` supplies
+`WSTM108_BOUNDARY_OPT_IN=1` itself; Linux PHP 8.1+ unit execution automatically
+runs its filesystem/process component fixture, without an external opt-in.
+Missing POSIX or builtin `fsync` fails that required-positive branch. On
+PHP 8.0 or non-Linux hosts the method instead asserts the actual constructor's
+capability refusal before creating its fixture directory: **refusal-only**,
+not a new skip or positive native coverage. Linux positive coverage remains
+blocked/unexecuted on those hosts. The older StageProof conditional is unchanged.
+Neither branch establishes daemon/alias, Docker or WordPress proof.
+
+The QA host requires Linux PHP 8.1+, POSIX and checked builtin `fsync`; there
+is no `fflush`-only durability fallback. `WSTM108_HOST_PHP`, when present,
+must identify an existing canonical trusted PHP executable; empty, relative,
+missing or invalid explicit values refuse rather than falling back to PATH.
+Both outer mock entrypoints apply the native canonical-path, regular/executable,
+PHP-name, root-owner and non-group/world-writable checks **before invoking the
+selected target even for a capability probe**. Explicit paths are not
+canonicalized into acceptable replacements. They first use native platform
+classification to preserve non-Linux/Windows `BLOCKED` exit 78, without invoking
+PHP or creating fixture directories. The admitted host and matrix paths remain
+separate and pinned through the subsequent mock controls. The additive rejection
+and ordering cases are source-pinned models, not native shell observations.
+Without an override the already selected native PHP is resolved canonically
+and must satisfy the same capability checks. The finite Bash nonsecret
+quarantine descriptor reservation necessarily precedes PHP capability refusal.
+Authority/export/helper/runtime/credential mutations do not.
+
+The PHP 8.0/8.4 unit matrix and Composer platform 8.0 are unchanged.
+Composer install, `qa:unit`, ordinary safeguards and package/checker utilities
+retain matrix PHP. The existing pinned setup action provisions a separate
+canonical version-specific PHP 8.4 companion before restoring matrix PHP;
+its path, identity and hash are checked again afterward. Only the host-specific
+untrusted source/ZIP mock fixtures and controller helpers select that companion.
+Those positives are not PHP 8.0 coverage. The two E2E and three compatibility
+runtime jobs explicitly select host 8.4; package/release keep host 8.2.
+Host paths are never substituted for container `php`. The container stage
+separately refuses absent builtin `fsync` before fixture mutation, without
+changing the plugin or container PHP floor; unsupported floor-runtime proof
+therefore remains blocked, not silently skipped.
+
+The original controller descriptors and their birth identities remain held
+through terminal release. Every verification rejects active output buffering,
+flushes actual STDOUT/STDERR writers and held duplicates, checks `fsync`,
+bound-path identity, empty bytes and original writer position. The last
+in-memory strict-success guard runs after release prerequisites immediately
+before the unchanged terminal unlink. Same-byte replacement, unexpected
+precommit bytes and observed append/truncate refuse; an external writer that
+appends and truncates between observations without moving the original writer
+position is not claimed observable. No postcommit diagnostic becomes a new
+release prerequisite, and a replaced/unlinked path does not mean all originals
+remain at their names. Readiness already written stays immutable; subsequent
+nonzero QA cannot promote.
+Local/fake-stage tests and green
+CI on a predecessor without this stage do not establish provider/catalog/HTTP,
+floor, or original-ZIP proof. Later summary/full response-selection composition
+also requires separate integration and actual proof; no speculative selection
+input is sent by this stage.
+
+`tests/untrusted-stage-test.sh` and `scripts/test-release-runtime.sh` use the one
+`untrusted-host-boundaries.php` fixture to install exact, reversible substitutions
+only in their disposable copied checkout, before its future fixture commit.
+Endpoint/peer/filesystem-namespace/type/executable identity and named interruption
+boundaries are **synthetic**; replacement counts and exact preimages must match, the real
+checkout must have no bypass, and a substitution/unchanged-remainder ledger is
+retained. These controls retain the real source
+provenance producer, native host stdout/stderr capture, exact output framing,
+public-proof parsers and outer retention helpers. Their topology/site records
+are synthetic, including prepared-target and resource-absence records: passing
+them does not prove native daemon admission, a real provider, container journal
+or WordPress cleanup. A ZIP built after fixture construction remains bound to
+that synthetic source, never relabeled as a genuine candidate ZIP; its original
+bytes must remain unchanged throughout each lane.
+Both scripts report native-Windows positive execution as `BLOCKED` with
+nonzero exit 78, rather than skipping assertions or claiming a positive result.
+Cases preserve the first failing exit, private original bytes, ordered 286-case
+inventory and all inherited destructive-stage outer assertions. Expected
+transport, malformed JSON, valid-JSON semantic, partial journal/spool, pending
+parser and unexpected process-output failures must prevent finalization and
+outer teardown. Only the fully validated synthetic success path retires.
+
+The copied admission method uses a closed two-record mount-table **model**,
+not `/proc/self/mountinfo`: an unsupported namespace-root sentinel refuses
+coordinates outside canonical owned `WORK`, and a modeled `tmpfs` record maps
+`WORK` to itself using its actual native filesystem device number. `tmpfs`
+describes the model, not the observed host filesystem. The installer embeds
+the table and original root identity; there is no production environment seam
+or external mount-table override. Mount escapes follow the unchanged production
+parser policy, including spaces and literal backslashes. Encoded table bytes
+stay LF-only even when the copied PHP source uses CRLF.
+
+Admission rechecks the root's device, inode, owner, group and mode before and
+after unchanged native coordinate checks. It does not bind mutable timestamps
+or the root link count changed by legitimate child creation. The production
+parser, coordinate selection, native device/identity checks, physical
+non-overlap algorithm, repeated admissions and output/export shapes remain
+unchanged. This isolates unrelated ambient mount records from synthetic
+orchestration; it does **not** certify actual host mount aliases, daemon
+admission or private custody. Existing production alias/unsupported-topology
+negatives and the separate 37 diagnostic controls remain required.
+
+`UntrustedSyntheticTopologyTest` covers LF/CRLF exact-one substitution and
+inverse/core preservation, rejected source drift, closed/escaped model inputs,
+Windows refusal and separate native Linux identity/device/overlap controls.
+Native positives must not be inferred from source models or non-Linux skips.
+The complete-installer controls require the existing Linux PHP 8.1+ host
+capabilities; unsupported hosts assert refusal before fixture creation.
+
+The first positive package-runtime invocation has a **test-only failure
+diagnostic**, installed only in the copied controller's outer terminal catch.
+An explicit per-invocation opt-in writes a separate `0700`
+`WORK/first-package-diagnostic` sibling, never the authority directory,
+`GITHUB_OUTPUT`, or production's three-file export. Its exclusively created
+`0600` single-link `terminal.json` has the closed shape
+`{"version":1,"scope":"synthetic-only","reason_code":17,"exception_exit":78}`.
+The 36 exact codes in `tests/unit/fixtures/untrusted-runtime-diagnostic.php`
+map only static topology reason strings; a source characterization requires
+coverage to match the actual topology reasons. Code `0` means unmapped within
+eight exception-chain nodes, not an inferred cause. No original exception
+text, stack, path, environment or site payload enters this record.
+Code `6` means `ambiguous-stacked-mount`: the cast mount ID was nonpositive,
+the ID was repeated, or the decoded canonical mountpoint was repeated.
+Separate parser controls cover all three predicates. A historical code-6
+record alone does not identify which predicate or mount record failed.
+
+The writer checks writes, flush, builtin `fsync`, bounded readback and close;
+the reader checks close as well as canonical JSON, enum/types, original exit,
+ownership/mode, regular-file/link and before/after identities. Record output
+is capped at 1 KiB; readback refuses files over 4 KiB and reads at most 4097
+bytes. Reader stdout/stderr are captured privately. Only an exact bounded
+integer can become a public `topology_code`; other public states are
+`unmapped`, `not-observed` or `refused`. The original package exit remains
+authoritative even when diagnosis or public reporting fails. Reporting errors
+attempt only a fixed safe stderr notice; failure of that notice is also guarded,
+and neither can replace the original package exit. Internal returns/native failures
+may bypass the outer catch; a missing record does not distinguish that from
+a writer failure before creation. These states are not QA success or origin
+proof, and no actual failure cause is inferred without its observation.
+
+`UntrustedRuntimeDiagnosticTest` separates pure projection/source checks from
+real Linux filesystem/process controls, including synthetic I/O fault seams.
+Its 37-control native inventory retains the existing 36 controls in order and
+appends a real `/dev/full` diagnostic-stdout failure with private stderr capture,
+requiring the original exit `78` rather than the reporting command's failure.
+The native cases require a real Linux PHP 8.1+ interpreter (the fixed
+`/usr/bin/php8.4` companion already verified by the Unit workflow in the PHP
+8.0 matrix, with no PATH fallback); a non-Linux skip is **not** positive
+coverage. No startup-stream hard quota, whole-host attestation, artifact
+upload, or survival after hosted-runner teardown is claimed. Existing private
+failure retention and successful-path assertions remain unchanged.
+
+Retain the following evidence independently of static registration/manifest
+coverage:
+
+| Contract | Required verification |
+| --- | --- |
+| Record-local markers | Each affected successful record has unique relative names for only present fields; null/empty values count, absent keys do not. Compare against the [field table](../../README.md#untrusted-result-fields-30-unreleased), not a global list or dotted paths. |
+| Value/type preservation | Remove only the newly added record marker for comparison with the original normalized response; retain exact HTML, Gutenberg delimiters, attributes, quotes, backslashes, arrays/objects, empty values and null. Do not strip content or coerce types to make a test pass. |
+| Container values | Provider `metadata`/`raw_meta`, block `attrs`, and sitemap `entries` retain their original maps/values; markers belong on containing records. |
+| Standalone metadata | `get-post-meta` marks `meta` on the containing data record; `update-post-meta` marks `meta_key`, `previous_value`, `current_value`; `delete-post-meta` marks `meta_key`. Nested stored maps and existing object/key authorization remain unchanged. |
+| Content patch results | `patch-content-block` marks data `content`. `patch-post-content` marks present `heading_text` on `data.target`, or an empty array for an exact-match target. Retain the nested post markers and exact original patch result values. |
+| SEO/site overview records | Check present `url`/`entries` on `sitemap`, and `url` on `robots_txt`; no paths or global marker replacement. |
+| Permissions and omissions | Keep allowed and denied role/object cases. Lower-privilege user lookup must omit both restricted values and their marker names. SEO-denied keys stay absent; preserve `unavailable_fields` and `unevaluable_checks`. Markers add no comment privacy policy. |
+| Diagnostics | Require exactly `Focus keyword found in title.` / `Focus keyword not found in title.` for those branches; exact authorized keyword values remain in metric fields. No markers in canonical errors or diagnostic error subrecords. |
+| Removed head output | Assert `generated_head.available:false`, unsupported URL-only inspection and no provider head calls. Do not restore opaque HTML/JSON as an injection fixture. |
+| Gateway result data | Actual HTTP success retains Adapter's existing wrapper and record markers; errors remain `isError:true` with one canonical JSON text block and no wire `structuredContent` (internally null). |
+| Discovery and individual tools | Default `tools/list` exposes the three gateways; use get-info for each ability's metadata. Capture actual individually exposed Adapter 0.6.1 `readOnlyHint`/`destructiveHint`/`idempotentHint` and compare with registered `readonly`/`destructive`/`idempotent`. |
+
+Retain original responses privately while validation or recovery is unresolved,
+and retain public version digests, context, hashes and verdicts for both failures and
+successes. Fully validated retirement removes the owned container wire spool,
+not independent host receipts/transcripts. Hosted-runner disposal still limits
+private recovery lifetime; public artifacts are not copies of private originals.
+Marker/annotation checks do
+not prove model resistance to prompt injection. The five destructive-operation
+confirmation interlocks are a separate unreleased 3.0 layer, and optional text-only output
+is not implemented. Existing #110/#118 no-write, key-authorization, and error
+transport assertions must not be relaxed for marker addition.
+
 ## Comment moderation regression coverage
 
 `comments-fixture.php` adds `wstm105_*` fixtures and comment-specific checks. Its `wstm105_moderator` actor has the actual `comment_moderator` role with only `read` and `moderate_comments`. Cases cover all four writes, optional update statuses, Author moderation-floor denials, mapped-CPT allowed/denied controls, own-draft moderation, Administrator access, orphan comments, and missing/nonpositive IDs. Existing Editor cases and every landed main manifest case remain unchanged; runtime registrations remain the coverage authority.
@@ -271,17 +820,38 @@ HTTP session-close and application-password revocation failures are recorded ind
 
 ## Shared runtime and coverage
 
-### SEO keyword data/message separation (partial #108)
+### SEO keyword data/message separation (existing partial #108 coverage)
 
 `tests/fixtures/seo-analysis.php` supplies five inert-marker scenarios to the unit tests, ability manifest fixtures, and existing MCP HTTP CRUD runner: Yoast found/missing with a competing SEOPress value, SEOPress found/missing after empty-Yoast fallback, and no keyword. Contract cases compare the complete `good` and `issues` arrays (including check IDs, severity, and every diagnostic message), exact keyword/title metrics, provider source, and score through existing `assert_values` placeholders. All earlier cases, including permission negatives, remain intact.
 
-The HTTP runner creates a separate owned SEO post, updates plain content and each authorized metadata key in separate calls, confirms stored metadata, executes SEO analysis through the actual MCP gateway, and retains each response in `mcp-crud-summary.json` under `seo_analysis`. It also rejects inert markers in every diagnostic message. The original CRUD post remains scheduled for its existing future-post deletion scenario; an extra read verifies its state before deletion. Dedicated SEO cleanup runs even after a case failure, records its response, and fails the summary for unsuccessful cleanup, wrong IDs/statuses, or exceptions. Unit tests additionally cover exact markup, quote, and backslash retention for both providers and both branches, plus unchanged response keys for fully authorized analysis. Run `composer qa:unit -- --filter SeoAnalysisTest`, then managed `scripts/e2e-test.sh all` for actual WordPress and transport evidence.
+The HTTP runner creates a separate owned SEO post, updates plain content and each authorized metadata key in separate calls, confirms stored metadata, executes SEO analysis through the actual MCP gateway, and retains each response in `mcp-crud-summary.json` under `seo_analysis`. It also rejects inert markers in every diagnostic message. The original CRUD post remains scheduled for its existing future-post deletion scenario; an extra read verifies its state before deletion. Dedicated SEO cleanup runs even after a case failure, records its response, and fails the summary for unsuccessful cleanup, wrong IDs/statuses, or exceptions. Unit tests additionally cover exact markup, quote, and backslash retention for both providers and both branches. Preserve those assertions while accepting the 3.0 additive metrics marker; all original authorized metric keys remain. Run `composer qa:unit -- --filter SeoAnalysisTest`, then managed `scripts/e2e-test.sh all` for actual WordPress and transport evidence.
 
-This only covers separating focus-keyword data from diagnostics. It adds no field markers, does not verify all annotations or resolve #108, and is not a prompt-injection prevention test.
+This existing suite covers separating focus-keyword data from diagnostics,
+not the complete field-marker or emitted-annotation contract. Use the separate
+unreleased 3.0 coverage above for #108; neither is a prompt-injection prevention
+test. Inert fixture text is distinct from the `untrusted_fields` metadata key.
 
 The harness disables request-triggered WordPress cron before installation and fixture setup in its disposable QA installation. Otherwise, HTTP health checks can start background tasks such as enclosure cleanup while a regression compares whole-database snapshots. Scheduled events and explicit calls to core's future-publication guard remain enabled and asserted; no production plugin setting or no-write predicate is changed. Use a fresh owned runtime, since setting `DISABLE_WP_CRON` does not stop a cron process that is already running.
 
 Compatibility lane artifacts retain both runtime metadata and the detailed `e2e-artifacts/` reports for 30 days, including failed scheduling cases. A failed or unavailable lane still blocks promotion.
+
+Before source-bound QA, each compatibility runtime lane records its generated
+baseline JSON in an ordinary local-only commit. The current-checker job does the
+same for its baseline JSON, Compose image and `Tested up to` metadata. Unexpected
+tracked changes, staged inputs and untracked inputs outside the artifact directory
+fail before staging; no source-proof exception permits dirty harness or production
+files. A no-change proposal retains the original HEAD and records `changed: false`.
+`compatibility-artifacts/tested-source.json` separates the discovery base SHA from
+the actual tested commit/tree, and export verification uses the latter. These
+disposable commits are not published or reused as the final update-PR candidate,
+which still requires its own exact-commit QA and existing promotion safeguards.
+`tests/compatibility-candidate-test.sh` extracts and executes those actual workflow
+steps in fresh local Git fixtures, including unchanged inputs, dirty baseline-only
+harness data, a real `Tested up to` delta and rejected foreign/staged/untracked
+inputs or receipt collisions. It checks the real provenance entrypoint before and
+after candidate creation and retains its native outputs and fixtures under a fresh
+temporary directory. It runs through the existing compatibility dependency-policy
+CI safeguard; these local shell/provenance cases are not WordPress runtime proof.
 
 Release QA opts into extracted-package execution with `E2E_PACKAGE_ROOT` and `E2E_PACKAGE_ZIP`. Both must be supplied together, with managed Compose and the standard `e2e-artifacts` output directory. Before touching Docker, the harness requires the root to match the original ZIP exactly and the ZIP to match the source allowlist. `scripts/release-qa.sh` creates this fresh runtime extraction automatically, selects `docker-compose.release.yml` in addition to the base file, and keeps Plugin Check's extraction separate. The override exposes only the extracted production root, read-only `tests/`, compatibility helper files and baseline JSON, plus writable report output. No `vendor/` or whole-checkout bind is present. Default source E2E does not opt in and is unchanged. Use a unique disposable Compose project; do not point package mode at an existing development stack.
 

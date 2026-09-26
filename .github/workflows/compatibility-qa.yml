@@ -90,6 +90,19 @@ jobs:
         with:
           ref: ${{ needs.discover-versions.outputs.source-sha }}
           persist-credentials: false
+      - name: Set up host QA PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.4'
+          extensions: zip, posix
+          coverage: none
+      - name: Bind canonical host QA interpreter
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="$(readlink -e /usr/bin/php8.4)"
+          test "${binary##*/}" = php8.4
+          printf 'WSTM108_HOST_PHP=%s\n' "$binary" >> "$GITHUB_ENV"
       - name: Download proposed tool and plugin pins
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -103,6 +116,47 @@ jobs:
             .github/compatibility-versions.json compatibility-artifacts/proposed-versions.json \
             > compatibility-artifacts/lane-versions.json
           cp compatibility-artifacts/lane-versions.json .github/compatibility-versions.json
+      - name: Commit exact generated inputs for source-bound QA
+        id: tested-source
+        env:
+          BASE_SOURCE_SHA: ${{ needs.discover-versions.outputs.source-sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$BASE_SOURCE_SHA" ||
+            { echo "::error::Discovery source changed before candidate creation."; exit 1; }
+          if [[ -e compatibility-artifacts/tested-source.json || -L compatibility-artifacts/tested-source.json ]]; then
+            echo "::error::Preexisting source receipt; candidate unchanged."
+            exit 1
+          fi
+          git diff --cached --quiet || { status=$?; echo "::error::Unexpected staged inputs."; exit "$status"; }
+          git diff --quiet -- . ':(exclude).github/compatibility-versions.json' ||
+            { status=$?; echo "::error::Unexpected generated path."; exit "$status"; }
+          untracked="$(git ls-files --others --exclude-standard -- . ':(exclude)compatibility-artifacts/**')"
+          test -z "$untracked" || { echo "::error::Unexpected untracked input."; exit 1; }
+          git add -- .github/compatibility-versions.json
+          if git diff --cached --quiet; then
+            changed=false
+          else
+            status=$?
+            test "$status" = 1 || exit "$status"
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m 'Record disposable compatibility QA inputs' \
+              -m 'Co-authored-by: Copilot App <223556219+Copilot@users.noreply.github.com>'
+            changed=true
+          fi
+          git diff --exit-code HEAD
+          tested="$(git rev-parse HEAD)"
+          tree="$(git rev-parse 'HEAD^{tree}')"
+          set -o noclobber
+          jq -n --arg base "$BASE_SOURCE_SHA" --arg tested "$tested" --arg tree "$tree" --argjson changed "$changed" \
+            '{base_source:$base,tested_source:$tested,tested_tree:$tree,changed:$changed}' \
+            > compatibility-artifacts/tested-source.json
+          {
+            printf 'base-source-sha=%s\n' "$BASE_SOURCE_SHA"
+            printf 'source-sha=%s\n' "$tested"
+            printf 'source-tree=%s\n' "$tree"
+            printf 'source-changed=%s\n' "$changed"
+          } >> "$GITHUB_OUTPUT"
       - name: Pull images with bounded retries
         id: images
         run: |
@@ -118,12 +172,61 @@ jobs:
         env:
           E2E_MANAGE_COMPOSE: 1
           E2E_KEEP_COMPOSE: 1
+          WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
         run: bash scripts/e2e-test.sh all
+      - name: Verify independently published untrusted export
+        id: untrusted-export-check
+        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
+        env:
+          WSTM108_EXPORT_ROOT: ${{ steps.qa.outputs.untrusted_export_root }}
+          WSTM108_EXPORT_SHA256: ${{ steps.qa.outputs.untrusted_export_manifest_sha256 }}
+          WSTM108_EXPORT_CUSTODY: ${{ steps.qa.outputs.untrusted_export_custody }}
+          WSTM108_EXPECTED_EXPORT_PARENT: ${{ runner.temp }}
+          WSTM108_EXPECTED_SOURCE: ${{ steps.tested-source.outputs.source-sha }}
+          WSTM108_EXPECTED_PROJECT: ${{ env.COMPOSE_PROJECT_NAME }}
+          WSTM108_EXPECTED_RUN: ${{ github.run_id }}
+          WSTM108_EXPECTED_ATTEMPT: ${{ github.run_attempt }}
+          WSTM108_EXPECTED_JOB: ${{ github.job }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$WSTM108_EXPECTED_SOURCE"
+          "${WSTM108_HOST_PHP-php}" scripts/untrusted-export.php verify-published
+      - name: Upload only the closed safe untrusted export
+        id: untrusted-export-upload
+        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' && steps.untrusted-export-check.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: untrusted-${{ matrix.label }}-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-proof.json
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-failure-witnesses.json
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-export-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Require QA and safe evidence success
+        id: untrusted-required-evidence
+        if: always()
+        env:
+          QA_OUTCOME: ${{ steps.qa.outcome }}
+          EXPORT_READY: ${{ steps.qa.outputs.untrusted_export_ready }}
+          EXPORT_STATUS: ${{ steps.qa.outputs.untrusted_export_status }}
+          PROOF_STATUS: ${{ steps.qa.outputs.untrusted_proof_status }}
+          EXPORT_CHECK: ${{ steps.untrusted-export-check.outcome }}
+          EXPORT_UPLOAD: ${{ steps.untrusted-export-upload.outcome }}
+        run: |
+          set -euo pipefail
+          test "$QA_OUTCOME" = success
+          test "$EXPORT_READY" = true
+          test "$EXPORT_STATUS" = published
+          test "$PROOF_STATUS" = passed
+          test "$EXPORT_CHECK" = success
+          test "$EXPORT_UPLOAD" = success
       - name: Record every lane outcome and runtime
         if: always()
         env:
           LANE: ${{ matrix.label }}
-          SOURCE_SHA: ${{ needs.discover-versions.outputs.source-sha }}
+          BASE_SOURCE_SHA: ${{ needs.discover-versions.outputs.source-sha }}
+          SOURCE_SHA: ${{ steps.tested-source.outputs.source-sha }}
           IMAGE_RESULT: ${{ steps.images.outcome }}
           QA_RESULT: ${{ steps.qa.outcome }}
         run: |
@@ -133,16 +236,16 @@ jobs:
           php_version="$(docker compose exec -T wordpress php -r 'echo PHP_VERSION;' 2>/dev/null || echo unavailable)"
           cli_version="$(docker compose exec -T wordpress wp --allow-root cli version 2>/dev/null || echo unavailable)"
           mysql_version="$(docker compose exec -T mysql mysql --version 2>/dev/null || echo unavailable)"
-          jq -n --arg lane "$LANE" --arg source "$SOURCE_SHA" --arg image "$IMAGE_RESULT" --arg qa "$QA_RESULT" \
+          jq -n --arg lane "$LANE" --arg source "$SOURCE_SHA" --arg base_source "$BASE_SOURCE_SHA" --arg image "$IMAGE_RESULT" --arg qa "$QA_RESULT" \
             --arg wp "$wp_version" --arg php "$php_version" --arg mysql "$mysql_version" \
             --arg cli "$cli_version" \
             --arg policy "$DEPENDENCY_POLICY" --arg adapter_digest "$MCP_ADAPTER_SHA256" \
             --argjson plugins "$runtime" \
-            '{lane:$lane,source:$source,image_result:$image,qa_result:$qa,wordpress:$wp,php:$php,mysql:$mysql,wp_cli:$cli,dependency_policy:$policy,adapter_sha256:$adapter_digest,plugins:$plugins}' \
+            '{lane:$lane,source:$source,base_source:$base_source,image_result:$image,qa_result:$qa,wordpress:$wp,php:$php,mysql:$mysql,wp_cli:$cli,dependency_policy:$policy,adapter_sha256:$adapter_digest,plugins:$plugins}' \
             > "compatibility-artifacts/$LANE.json"
           {
             echo "## $LANE"
-            echo "Source: $SOURCE_SHA; image pull: $IMAGE_RESULT; QA: $QA_RESULT"
+            echo "Base source: $BASE_SOURCE_SHA; tested source: $SOURCE_SHA; image pull: $IMAGE_RESULT; QA: $QA_RESULT"
             echo "WordPress: $wp_version; PHP: $php_version; MySQL: $mysql_version; policy: $DEPENDENCY_POLICY"
             echo "WP-CLI: $cli_version. Proposed auxiliary pins exercised on this source; see lane-versions.json."
             echo '```json'
@@ -166,6 +269,8 @@ jobs:
           path: |
             compatibility-artifacts/
             e2e-artifacts/
+            !e2e-artifacts/untrusted-*
+            !e2e-artifacts/untrusted-*/**
           if-no-files-found: error
           retention-days: 30
 
@@ -187,6 +292,19 @@ jobs:
         with:
           ref: ${{ needs.discover-versions.outputs.source-sha }}
           persist-credentials: false
+      - name: Set up host QA PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.4'
+          extensions: zip, posix
+          coverage: none
+      - name: Bind canonical host QA interpreter
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="$(readlink -e /usr/bin/php8.4)"
+          test "${binary##*/}" = php8.4
+          printf 'WSTM108_HOST_PHP=%s\n' "$binary" >> "$GITHUB_ENV"
       - name: Download runtime-tested proposal
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -213,16 +331,108 @@ jobs:
             echo "These changes exist only in this disposable checkout. Baseline promotion still requires checker success, proposed-commit QA, and manual PR review."
             sha256sum compatibility-artifacts/tested-candidate-versions.json
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Commit exact generated inputs for source-bound QA
+        id: tested-source
+        env:
+          BASE_SOURCE_SHA: ${{ needs.discover-versions.outputs.source-sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$BASE_SOURCE_SHA" ||
+            { echo "::error::Discovery source changed before candidate creation."; exit 1; }
+          if [[ -e compatibility-artifacts/tested-source.json || -L compatibility-artifacts/tested-source.json ]]; then
+            echo "::error::Preexisting source receipt; candidate unchanged."
+            exit 1
+          fi
+          git diff --cached --quiet || { status=$?; echo "::error::Unexpected staged inputs."; exit "$status"; }
+          git diff --quiet -- . ':(exclude).github/compatibility-versions.json' ':(exclude)docker-compose.yml' ':(exclude)readme.txt' ||
+            { status=$?; echo "::error::Unexpected generated path."; exit "$status"; }
+          untracked="$(git ls-files --others --exclude-standard -- . ':(exclude)compatibility-artifacts/**')"
+          test -z "$untracked" || { echo "::error::Unexpected untracked input."; exit 1; }
+          git add -- .github/compatibility-versions.json docker-compose.yml readme.txt
+          if git diff --cached --quiet; then
+            changed=false
+          else
+            status=$?
+            test "$status" = 1 || exit "$status"
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m 'Record disposable compatibility QA inputs' \
+              -m 'Co-authored-by: Copilot App <223556219+Copilot@users.noreply.github.com>'
+            changed=true
+          fi
+          git diff --exit-code HEAD
+          tested="$(git rev-parse HEAD)"
+          tree="$(git rev-parse 'HEAD^{tree}')"
+          set -o noclobber
+          jq -n --arg base "$BASE_SOURCE_SHA" --arg tested "$tested" --arg tree "$tree" --argjson changed "$changed" \
+            '{base_source:$base,tested_source:$tested,tested_tree:$tree,changed:$changed}' \
+            > compatibility-artifacts/tested-source.json
+          {
+            printf 'base-source-sha=%s\n' "$BASE_SOURCE_SHA"
+            printf 'source-sha=%s\n' "$tested"
+            printf 'source-tree=%s\n' "$tree"
+            printf 'source-changed=%s\n' "$changed"
+          } >> "$GITHUB_OUTPUT"
       - name: Run candidate package with current Plugin Check
+        id: qa
+        env:
+          WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
         run: bash scripts/release-qa.sh
+      - name: Verify independently published untrusted export
+        id: untrusted-export-check
+        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
+        env:
+          WSTM108_EXPORT_ROOT: ${{ steps.qa.outputs.untrusted_export_root }}
+          WSTM108_EXPORT_SHA256: ${{ steps.qa.outputs.untrusted_export_manifest_sha256 }}
+          WSTM108_EXPORT_CUSTODY: ${{ steps.qa.outputs.untrusted_export_custody }}
+          WSTM108_EXPECTED_EXPORT_PARENT: ${{ runner.temp }}
+          WSTM108_EXPECTED_SOURCE: ${{ steps.tested-source.outputs.source-sha }}
+          WSTM108_EXPECTED_PROJECT: ${{ env.COMPOSE_PROJECT_NAME }}
+          WSTM108_EXPECTED_RUN: ${{ github.run_id }}
+          WSTM108_EXPECTED_ATTEMPT: ${{ github.run_attempt }}
+          WSTM108_EXPECTED_JOB: ${{ github.job }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$WSTM108_EXPECTED_SOURCE"
+          "${WSTM108_HOST_PHP-php}" scripts/untrusted-export.php verify-published
+      - name: Upload only the closed safe untrusted export
+        id: untrusted-export-upload
+        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' && steps.untrusted-export-check.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: untrusted-current-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-proof.json
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-failure-witnesses.json
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-export-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Require QA and safe evidence success
+        id: untrusted-required-evidence
+        if: always()
+        env:
+          QA_OUTCOME: ${{ steps.qa.outcome }}
+          EXPORT_READY: ${{ steps.qa.outputs.untrusted_export_ready }}
+          EXPORT_STATUS: ${{ steps.qa.outputs.untrusted_export_status }}
+          PROOF_STATUS: ${{ steps.qa.outputs.untrusted_proof_status }}
+          EXPORT_CHECK: ${{ steps.untrusted-export-check.outcome }}
+          EXPORT_UPLOAD: ${{ steps.untrusted-export-upload.outcome }}
+        run: |
+          set -euo pipefail
+          test "$QA_OUTCOME" = success
+          test "$EXPORT_READY" = true
+          test "$EXPORT_STATUS" = published
+          test "$PROOF_STATUS" = passed
+          test "$EXPORT_CHECK" = success
+          test "$EXPORT_UPLOAD" = success
       - name: Record checker outcome
         if: always()
         env:
           RESULT: ${{ job.status }}
           SOURCE_SHA: ${{ needs.discover-versions.outputs.source-sha }}
+          TESTED_SOURCE_SHA: ${{ steps.tested-source.outputs.source-sha }}
         run: |
           echo "## Current Plugin Check package: $RESULT" >> "$GITHUB_STEP_SUMMARY"
-          echo "Base source: $SOURCE_SHA; runtime-backed generated candidate; PLUGIN_CHECK_VERSION=latest. Resolved checker and candidate configuration are retained in artifacts." >> "$GITHUB_STEP_SUMMARY"
+          echo "Base source: $SOURCE_SHA; tested source: $TESTED_SOURCE_SHA; PLUGIN_CHECK_VERSION=latest. Exact local candidate identity and configuration are retained in artifacts." >> "$GITHUB_STEP_SUMMARY"
       - name: Upload package evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -231,6 +441,8 @@ jobs:
           path: |
             build/*.json
             e2e-artifacts/
+            !e2e-artifacts/untrusted-*
+            !e2e-artifacts/untrusted-*/**
             compatibility-artifacts/
           if-no-files-found: warn
           retention-days: 30
@@ -261,6 +473,19 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.discover-versions.outputs.source-sha }}
           persist-credentials: false
+      - name: Set up host QA PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.4'
+          extensions: zip, posix
+          coverage: none
+      - name: Bind canonical host QA interpreter
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="$(readlink -e /usr/bin/php8.4)"
+          test "${binary##*/}" = php8.4
+          printf 'WSTM108_HOST_PHP=%s\n' "$binary" >> "$GITHUB_ENV"
       - name: Download this run's proposal
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -313,8 +538,59 @@ jobs:
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
           echo "candidate-sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Test the actual proposed commit with pinned dependencies and package checker
+        id: qa
+        env:
+          WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
         run: bash scripts/release-qa.sh
+      - name: Verify independently published untrusted export
+        id: untrusted-export-check
+        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
+        env:
+          WSTM108_EXPORT_ROOT: ${{ steps.qa.outputs.untrusted_export_root }}
+          WSTM108_EXPORT_SHA256: ${{ steps.qa.outputs.untrusted_export_manifest_sha256 }}
+          WSTM108_EXPORT_CUSTODY: ${{ steps.qa.outputs.untrusted_export_custody }}
+          WSTM108_EXPECTED_EXPORT_PARENT: ${{ runner.temp }}
+          WSTM108_EXPECTED_SOURCE: ${{ steps.candidate.outputs.candidate-sha }}
+          WSTM108_EXPECTED_PROJECT: ${{ env.COMPOSE_PROJECT_NAME }}
+          WSTM108_EXPECTED_RUN: ${{ github.run_id }}
+          WSTM108_EXPECTED_ATTEMPT: ${{ github.run_attempt }}
+          WSTM108_EXPECTED_JOB: ${{ github.job }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$WSTM108_EXPECTED_SOURCE"
+          "${WSTM108_HOST_PHP-php}" scripts/untrusted-export.php verify-published
+      - name: Upload only the closed safe untrusted export
+        id: untrusted-export-upload
+        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' && steps.untrusted-export-check.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: untrusted-proposed-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-proof.json
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-failure-witnesses.json
+            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-export-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Require QA and safe evidence success
+        id: untrusted-required-evidence
+        if: always()
+        env:
+          QA_OUTCOME: ${{ steps.qa.outcome }}
+          EXPORT_READY: ${{ steps.qa.outputs.untrusted_export_ready }}
+          EXPORT_STATUS: ${{ steps.qa.outputs.untrusted_export_status }}
+          PROOF_STATUS: ${{ steps.qa.outputs.untrusted_proof_status }}
+          EXPORT_CHECK: ${{ steps.untrusted-export-check.outcome }}
+          EXPORT_UPLOAD: ${{ steps.untrusted-export-upload.outcome }}
+        run: |
+          set -euo pipefail
+          test "$QA_OUTCOME" = success
+          test "$EXPORT_READY" = true
+          test "$EXPORT_STATUS" = published
+          test "$PROOF_STATUS" = passed
+          test "$EXPORT_CHECK" = success
+          test "$EXPORT_UPLOAD" = success
       - name: Push tested commit and request real PR-event checks
+        if: ${{ success() && steps.qa.outcome == 'success' && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' && steps.qa.outputs.untrusted_proof_status == 'passed' && steps.untrusted-export-check.outcome == 'success' && steps.untrusted-export-upload.outcome == 'success' && steps.untrusted-required-evidence.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ github.token }}
           BRANCH: ${{ steps.candidate.outputs.branch }}

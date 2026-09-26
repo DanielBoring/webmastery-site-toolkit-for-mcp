@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/fixtures/untrusted-manifest-projection.php';
+
 final class DestructiveBooleanLedgerTest extends TestCase {
 	private static function fingerprint( array $cases, bool $without_oracles = false ): string {
 		$copy = json_decode( json_encode( $cases, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION ), false, 512, JSON_THROW_ON_ERROR );
@@ -16,6 +18,7 @@ final class DestructiveBooleanLedgerTest extends TestCase {
 	}
 
 	private static function baseline_projection( array $manifest, array $integration ): array {
+		$manifest = Wstm108_Manifest_Projection::project( $manifest );
 		self::assertSame( 'db041ce338634ebf829ca01c69056b08fe6397d1', $integration['source_sha'] );
 		self::assertSame( 570, $integration['manifest_count'] );
 		self::assertSame( 372, $integration['insertion_index'] );

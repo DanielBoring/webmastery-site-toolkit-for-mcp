@@ -33,7 +33,8 @@ final class SeoAnalysisTest extends TestCase {
 		$this->assertTrue( $result['success'] );
 		$this->assertSame( array( 'post_id', 'metrics', 'issues', 'good', 'score' ), array_keys( $result['data'] ) );
 		$this->assertSame( 42, $result['data']['post_id'] );
-		$this->assertSame( array( 'title', 'url', 'word_count', 'title_length', 'yoast_meta_description', 'seopress_meta_description', 'seo_provider_meta_source', 'seo_plugins', 'yoast_focus_keyword', 'seopress_focus_keywords', 'seo_provider_focus_source', 'images_without_alt', 'internal_links', 'external_links', 'slug' ), array_keys( $result['data']['metrics'] ) );
+		$this->assertSame( array( 'title', 'url', 'word_count', 'title_length', 'yoast_meta_description', 'seopress_meta_description', 'seo_provider_meta_source', 'seo_plugins', 'yoast_focus_keyword', 'seopress_focus_keywords', 'seo_provider_focus_source', 'images_without_alt', 'internal_links', 'external_links', 'slug', 'untrusted_fields' ), array_keys( $result['data']['metrics'] ) );
+		$this->assertSame( array( 'title', 'url', 'slug', 'yoast_meta_description', 'seopress_meta_description', 'yoast_focus_keyword', 'seopress_focus_keywords' ), $result['data']['metrics']['untrusted_fields'] );
 		foreach ( $case['expected'] as $path => $expected ) {
 			$actual = $result;
 			foreach ( explode( '.', $path ) as $key ) {

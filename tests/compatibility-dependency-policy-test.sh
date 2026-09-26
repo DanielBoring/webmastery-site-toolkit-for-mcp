@@ -2,6 +2,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+bash "$root/tests/compatibility-candidate-test.sh"
 # shellcheck source=scripts/e2e-test.sh
 source "$root/scripts/e2e-test.sh"
 
@@ -100,11 +101,16 @@ run_destructive_safety_qa() {
 	assert_cron_isolated
 	destructive_stage_calls=$(( destructive_stage_calls + 1 ))
 }
+run_untrusted_content_qa() {
+	assert_cron_isolated
+	untrusted_stage_calls=$(( untrusted_stage_calls + 1 ))
+}
 run_debug_log_check() { assert_cron_isolated; }
 for QA_MODE in contract e2e all; do
 	cron_configured=0
 	metadata_stage_calls=0
 	destructive_stage_calls=0
+	untrusted_stage_calls=0
 	main >/dev/null
 	assert_cron_isolated
 	if [ "$metadata_stage_calls" != 1 ]; then
@@ -113,6 +119,10 @@ for QA_MODE in contract e2e all; do
 	fi
 	if [ "$destructive_stage_calls" != 1 ]; then
 		echo "Destructive safety QA must run exactly once in ${QA_MODE} mode." >&2
+		exit 1
+	fi
+	if [ "$untrusted_stage_calls" != 1 ]; then
+		echo "Untrusted-content QA must run exactly once in ${QA_MODE} mode." >&2
 		exit 1
 	fi
 done
