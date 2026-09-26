@@ -526,6 +526,15 @@ an OOM handler, reserves emergency memory, raises limits, changes exit codes,
 skips cases or authorizes retirement. The existing orchestration already captures
 both streams; no new capture or workflow wiring is required.
 
+Cleanup releases full snapshots and derived table/row aliases after their last
+required check, before the next fresh read. The runner also releases its setup
+post map on success and on date-validation or journaling failure. Compact
+identities, case evidence, query/deletion order and retention guards remain intact.
+Isolated subprocess regressions use exactly 128 MiB and fresh 32 MiB payloads per
+snapshot, covering successful cleanup, deletion veto and private-wire retention.
+These lifetime changes still require comparative old/new memory measurements and
+real runtime evidence; they do not establish the historical OOM allocation root.
+
 The fixture counts only SQL and capability hooks inside registered callbacks,
 not bootstrap/HTTP authentication work. Malformed cases also require unchanged
 posts/meta/terms/relationships/cron snapshots, zero mutation hooks, and the

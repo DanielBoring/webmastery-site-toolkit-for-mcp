@@ -346,6 +346,7 @@ final class Wstm126_Cleanup {
 			$proof['identity_validated'] = true;
 			$post_ids = $this->owned_posts( $before );
 			$this->state['deletion_posts'] = array_map( array( self::class, 'post_identity' ), array_values( array_filter( $before['posts'], static fn( $row ) => in_array( (int) $row['ID'], $post_ids, true ) ) ) );
+			unset( $before );
 			$this->save();
 			$identities = array_column( $this->state['deletion_posts'], null, 'ID' );
 			$deleted_post_ids = array();
@@ -355,18 +356,21 @@ final class Wstm126_Cleanup {
 				$this->validate_scope( $live );
 				$rows = array_column( $live['posts'], null, 'ID' );
 				self::check( isset( $rows[ $id ] ) && $identities[ $id ] === self::post_identity( $rows[ $id ] ), 'Post changed during cleanup.' );
+				unset( $rows, $live );
 				( $this->delete )( 'post', $id );
 				$check = ( $this->read )();
 				foreach ( $check['posts'] as $row ) { self::check( (int) $row['ID'] !== $id, 'Post deletion vetoed; remaining ownership preserved.' ); }
 				foreach ( $check['postmeta'] as $row ) { self::check( (int) $row['post_id'] !== $id, 'Post metadata retained; remaining ownership preserved.' ); }
 				$deleted_post_ids[] = $id;
 				$this->validate_relationships_absent( $check, $deleted_post_ids );
+				unset( $row, $check );
 			}
 			$after = ( $this->read )();
 			$this->validate_content_absent( $after, $post_ids );
 			$proof['posts_absent'] = true;
 			$this->validate_actors( $after );
 			$this->validate_scope( $after );
+			unset( $after );
 			$close_sessions();
 			foreach ( $this->state['sessions'] as $session ) { self::check( true === $session['closed'], 'HTTP session has no observed successful DELETE.' ); }
 			$proof['sessions_closed'] = true;
@@ -374,6 +378,7 @@ final class Wstm126_Cleanup {
 			$this->validate_actors( $after );
 			$this->validate_scope( $after );
 			$this->validate_content_absent( $after, $post_ids );
+			unset( $after );
 			foreach ( $this->state['credentials'] as $uuid => $credential ) {
 				$live = ( $this->read )();
 				$this->validate_scope( $live );
@@ -384,12 +389,15 @@ final class Wstm126_Cleanup {
 				$actor = $credential['actor'];
 				self::check( isset( $actors[ $actor ] ) && $this->state['actors'][ $actor ] === self::actor_identity( $actors[ $actor ] ), 'Actor replaced before credential revocation.' );
 				foreach ( $live['posts'] as $row ) { self::check( ! isset( $this->state['actors'][ $row['post_author'] ] ), 'Actor content appeared before credential revocation.' ); }
+				unset( $actors, $row, $live );
 				( $this->delete )( 'credential', (int) $actor, (string) $uuid );
 				$live = ( $this->read )();
 				self::check( ! isset( $live['credentials'][ $uuid ] ), 'Credential revocation vetoed; actor and markers preserved.' );
+				unset( $live );
 			}
 			$after = ( $this->read )();
 			self::check( array() === $this->owned_credentials( $after ), 'Credentials remain; actor deletion refused.' );
+			unset( $after );
 			$proof['credentials_absent'] = true;
 			$this->state['credentials_revoked'] = true;
 			$this->save();
@@ -403,11 +411,13 @@ final class Wstm126_Cleanup {
 				foreach ( $live['links'] ?? array() as $row ) { self::check( (int) $row['link_owner'] !== (int) $id, 'Actor acquired links before deletion.' ); }
 				self::check( array() === $this->owned_credentials( $live ), 'Actor credential reappeared before deletion.' );
 				self::check( array( array( 'owner' => $this->state['run'] ) ) === $live['observation'], 'Observation changed before actor deletion.' );
+				unset( $actors, $row, $live );
 				( $this->delete )( 'actor', (int) $id );
 				$live = ( $this->read )();
 				foreach ( $live['users'] as $row ) { self::check( (int) $row['ID'] !== (int) $id, 'Actor deletion vetoed.' ); }
 				foreach ( $live['usermeta'] as $row ) { self::check( (int) $row['user_id'] !== (int) $id, 'Actor metadata retained.' ); }
 				foreach ( $live['credentials'] as $row ) { self::check( (int) $row['actor'] !== (int) $id, 'Actor credential retained.' ); }
+				unset( $row, $live );
 			}
 			$after = ( $this->read )();
 			foreach ( $after['users'] as $row ) { self::check( ! isset( $this->state['actors'][ $row['ID'] ] ), 'Actor remains.' ); }
@@ -419,11 +429,13 @@ final class Wstm126_Cleanup {
 			$projected = $after;
 			$projected['observation'] = array();
 			self::check( $this->state['baseline'] === self::digest( $projected ), 'Baseline changed during cleanup.' );
+			unset( $row, $projected, $after );
 			( $this->delete )( 'observation', 0 );
 			$after = ( $this->read )();
 			self::check( array() === $after['observation'], 'Observation option remains.' );
 			$proof['observation_absent'] = true;
 			self::check( $this->state['baseline'] === self::digest( $after ), 'Baseline or scheduled fixture events remain.' );
+			unset( $after );
 			$proof['baseline_restored'] = true;
 			$this->state['proof'] = $proof;
 			$this->save();

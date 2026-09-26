@@ -6,6 +6,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Release obsolete schema-cleanup snapshots and table aliases before subsequent reads, including the runner's setup map on failure paths. Preserve ownership checks, deletion order, case evidence and retention semantics; add isolated 128 MiB regressions with independently allocated snapshots. Historical OOM causation and runtime recovery still require comparative evidence.
+
 - Stream bounded, non-authoritative schema-runner setup/case/cleanup progress with stable case indices and current/peak memory, reusing the existing source sampler for actual runner/cleanup hashes before fixture setup. Preserve all 152 cases, memory limits, native failures, artifact and retention semantics; add isolated output/ordering/failure regressions. Missing markers narrow an unfinished interval but do not establish a memory-allocation root cause or runtime acceptance.
 
 - Correct the schema harness's preexisting-state projection to exclude only relationships of live, identity-validated journal-owned posts and revisions. Independently check relationship absence after each post deletion and before later cleanup advances; retain foreign relationship, taxonomy, cron, runtime and retirement guards. Extend isolated fixtures and regressions for owned relationships, foreign insert/update/delete interference and dangling or reappearing rows. This test-harness change does not prove historical row identities or genuine runtime acceptance.

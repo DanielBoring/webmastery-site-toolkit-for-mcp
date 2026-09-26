@@ -190,8 +190,10 @@ try {
 		wstm126_require( ! is_wp_error( $id ) && $id > 0, 'Cannot seed proof target.' );
 		$posts[ $type ] = $id;
 		$created = array_column( wstm126_cleanup_snapshot()['posts'], null, 'ID' );
-		wstm126_require( isset( $created[ $id ] ) && $seed_date === ( $created[ $id ]['post_date'] ?? null ) && $seed_gmt === ( $created[ $id ]['post_date_gmt'] ?? null ), 'Fixture dates differ from the fixed ownership plan.' );
-		$journal->created( 'post:' . $type, 'posts', (string) $id, Wstm126_Cleanup::post_identity( $created[ $id ] ) );
+		try {
+			wstm126_require( isset( $created[ $id ] ) && $seed_date === ( $created[ $id ]['post_date'] ?? null ) && $seed_gmt === ( $created[ $id ]['post_date_gmt'] ?? null ), 'Fixture dates differ from the fixed ownership plan.' );
+			$journal->created( 'post:' . $type, 'posts', (string) $id, Wstm126_Cleanup::post_identity( $created[ $id ] ) );
+		} finally { unset( $created ); }
 	}
 	$invoke = static function ( string $slug, array $input, string $role, array &$entry ) use ( $boundary, $users, $transports, $token, $run, &$http_actor, &$http_plan, &$http_capture ): array {
 		wp_set_current_user( $users[ $role ] );

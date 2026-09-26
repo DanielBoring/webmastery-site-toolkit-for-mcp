@@ -123,6 +123,81 @@ final class InputSchemaCleanupTest extends TestCase {
 		return $foreign;
 	}
 
+	private function isolated_lifetime( string $mode ): array {
+		$output = $this->directory . '/artifacts/' . $mode . '.stdout';
+		$error = $this->directory . '/artifacts/' . $mode . '.stderr';
+		$helper = dirname( __DIR__ ) . '/e2e/input-schema-cleanup.php';
+		$process = proc_open(
+			array( PHP_BINARY, '-d', 'memory_limit=128M', '-d', 'display_errors=stderr', '-d', 'log_errors=0', __DIR__ . '/fixtures/input-schema-cleanup-fake.php', $mode, $this->directory, $helper ),
+			array( 1 => array( 'file', $output, 'w' ), 2 => array( 'file', $error, 'w' ) ),
+			$pipes
+		);
+		self::assertIsResource( $process );
+		$status = proc_close( $process );
+		$stdout = file_get_contents( $output );
+		$stderr = file_get_contents( $error );
+		self::assertSame( 0, $status, $stderr );
+		self::assertSame( '', $stderr );
+		self::assertLessThan( 32768, strlen( $stdout ) );
+		self::assertStringNotContainsString( 'synthetic-denied-body', $stdout );
+		$records = array_map( static fn( string $line ): array => json_decode( $line, true, 16, JSON_THROW_ON_ERROR ), explode( "\n", trim( $stdout ) ) );
+		self::assertSame( 'start', $records[0]['phase'] );
+		self::assertSame( 134217728, $records[0]['memory_limit_bytes'] );
+		self::assertSame( hash_file( 'sha256', $helper ), $records[0]['helper_sha256'] );
+		foreach ( $records as $record ) {
+			self::assertLessThan( 134217728, $record['peak_bytes'] );
+			self::assertLessThanOrEqual( $record['peak_bytes'], $record['memory_bytes'] );
+		}
+		return $records;
+	}
+
+	public static function large_snapshot_modes(): array {
+		return array( array( 'memory-success' ), array( 'memory-veto' ), array( 'memory-wire' ) );
+	}
+
+	/** @dataProvider large_snapshot_modes */
+	public function test_large_independent_snapshots_preserve_cleanup_and_retention_at_128_mib( string $mode ): void {
+		$records = $this->isolated_lifetime( $mode );
+		self::assertSame( 'independent-reads', $records[1]['phase'] );
+		self::assertSame( 33554432, $records[1]['payload_bytes'] );
+		self::assertGreaterThanOrEqual( 33554432, $records[1]['second_read_growth_bytes'] );
+		$begun = array_values( array_filter( $records, static fn( array $row ): bool => 'read-begin' === $row['phase'] ) );
+		$ended = array_values( array_filter( $records, static fn( array $row ): bool => 'read-end' === $row['phase'] ) );
+		self::assertNotEmpty( $begun );
+		self::assertSame( array_column( $begun, 'read_index' ), array_column( $ended, 'read_index' ) );
+		$result = $records[ count( $records ) - 1 ];
+		$veto = 'memory-veto' === $mode;
+		$wire = 'memory-wire' === $mode;
+		self::assertSame( 'result', $result['phase'] );
+		self::assertSame( $veto || $wire, $result['error_present'] );
+		self::assertSame( $veto ? array( 'post' ) : array( 'post', 'post', 'credential', 'actor', 'observation' ), $result['deletion_kinds'] );
+		self::assertSame( ! $veto, $result['sessions_closed'] );
+		self::assertSame( $veto || $wire, $result['journal_retained'] );
+		self::assertSame( $wire, $result['wire_retained'] );
+		foreach ( array( 'actors_remaining', 'credentials_remaining', 'observation_remaining' ) as $key ) {
+			self::assertSame( $veto ? 1 : 0, $result[ $key ] );
+		}
+		self::assertCount( 8, $result['proof'] );
+		foreach ( $result['proof'] as $key => $value ) {
+			self::assertSame( $veto ? 'identity_validated' === $key : ( ! $wire || 'journal_retired' !== $key ), $value, $key );
+		}
+	}
+
+	public static function setup_snapshot_outcomes(): array {
+		return array( array( 'setup-success', false, true ), array( 'setup-date-failure', true, false ), array( 'setup-record-failure', true, true ) );
+	}
+
+	/** @dataProvider setup_snapshot_outcomes */
+	public function test_actual_runner_setup_releases_created_map_even_when_validation_or_journaling_fails( string $mode, bool $failed, bool $recorded ): void {
+		$records = $this->isolated_lifetime( $mode );
+		self::assertCount( 2, $records );
+		self::assertSame( 'setup-result', $records[1]['phase'] );
+		self::assertSame( $failed, $records[1]['failed'] );
+		self::assertSame( $recorded, $records[1]['journal_called'] );
+		self::assertFalse( $records[1]['created_retained'] );
+		self::assertSame( 12, $records[1]['queries'] );
+	}
+
 	public function test_owned_relationship_cleanup_preserves_unchanged_foreign_relationship(): void {
 		$foreign = $this->seed_foreign_relationship_baseline();
 		$this->fake->revision();

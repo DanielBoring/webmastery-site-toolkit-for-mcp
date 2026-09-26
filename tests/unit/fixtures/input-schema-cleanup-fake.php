@@ -13,11 +13,23 @@ final class Wstm126_Cleanup_Fake {
 	public array $deleted = array();
 	public string $retain = '';
 	public int $reads = 0;
+	public int $fresh_snapshot_bytes = 0;
 	public ?Closure $during_delete = null;
 	public string $run = 'wstm126-synthetic';
 
 	public function read(): array {
 		++$this->reads;
+		if ( $this->fresh_snapshot_bytes > 0 ) {
+			$snapshot = $this->rows;
+			// Allocate on every read, rather than sharing a stored payload through COW.
+			$snapshot['posts'][] = array(
+				'ID' => '900', 'post_author' => '900', 'post_type' => 'page',
+				'post_name' => 'foreign-baseline', 'post_date' => '2000-01-01 00:00:00',
+				'guid' => 'https://example.test/?p=900', 'post_parent' => '0',
+				'post_content' => str_repeat( 'x', $this->fresh_snapshot_bytes ),
+			);
+			return $snapshot;
+		}
 		return $this->rows;
 	}
 
@@ -108,4 +120,91 @@ final class Wstm126_Cleanup_Fake_DB {
 		}
 		throw new RuntimeException( 'Unexpected fake SQL.' );
 	}
+}
+
+if ( 'cli' === PHP_SAPI && realpath( $argv[0] ?? '' ) === __FILE__ ) {
+	$mode = $argv[1] ?? '';
+	$directory = $argv[2] ?? '';
+	$helper = realpath( $argv[3] ?? dirname( __DIR__, 2 ) . '/e2e/input-schema-cleanup.php' );
+	if ( ! in_array( $mode, array( 'memory-success', 'memory-veto', 'memory-wire', 'setup-success', 'setup-date-failure', 'setup-record-failure' ), true )
+		|| false === $helper || ! is_file( $helper ) || '128M' !== ini_get( 'memory_limit' ) ) {
+		throw new RuntimeException( 'Invalid isolated cleanup fixture invocation.' );
+	}
+	require_once $helper;
+	$emit = static function ( array $record ): void {
+		echo json_encode( $record + array( 'memory_bytes' => memory_get_usage( true ), 'peak_bytes' => memory_get_peak_usage( true ) ), JSON_THROW_ON_ERROR ) . "\n";
+	};
+	$emit( array( 'phase' => 'start', 'mode' => $mode, 'memory_limit_bytes' => 134217728, 'helper_sha256' => hash_file( 'sha256', $helper ) ) );
+	if ( str_starts_with( $mode, 'setup-' ) ) {
+		function wstm126_require( bool $condition, string $message ): void {
+			if ( ! $condition ) { throw new RuntimeException( $message ); }
+		}
+		if ( ! defined( 'ARRAY_A' ) ) { define( 'ARRAY_A', 'ARRAY_A' ); }
+		$GLOBALS['wpdb'] = new Wstm126_Cleanup_Fake_DB();
+		$id = 70;
+		$type = 'page';
+		$seed_date = $seed_gmt = '2000-01-01 00:00:00';
+		$GLOBALS['wpdb']->tables['posts'] = array( array(
+			'ID' => '70', 'post_author' => '40', 'post_type' => 'page',
+			'post_name' => 'synthetic-marker', 'guid' => 'https://example.test/?p=70',
+			'post_date' => $seed_date, 'post_date_gmt' => 'setup-date-failure' === $mode ? 'wrong-date' : $seed_gmt,
+		) );
+		$journal = new class( 'setup-record-failure' === $mode ) {
+			public bool $called = false;
+			private bool $fail;
+			public function __construct( bool $fail ) { $this->fail = $fail; }
+			public function created( string $plan, string $kind, string $id, array $identity ): void {
+				$this->called = true;
+				if ( $this->fail ) { throw new RuntimeException( 'Synthetic journal failure.' ); }
+			}
+		};
+		$source = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/e2e/input-schema-runner.php' ) );
+		$start_marker = "\$created = array_column( wstm126_cleanup_snapshot()['posts'], null, 'ID' );";
+		$end_marker = "\n\t}\n\t\$invoke = static function";
+		if ( 1 !== substr_count( $source, $start_marker ) || 1 !== substr_count( $source, $end_marker ) ) {
+			throw new RuntimeException( 'Runner setup fragment changed.' );
+		}
+		$start = strpos( $source, $start_marker );
+		$end = strpos( $source, $end_marker );
+		if ( $end <= $start ) { throw new RuntimeException( 'Runner setup fragment order changed.' ); }
+		$failed = false;
+		try { eval( substr( $source, $start, $end - $start ) ); } catch ( RuntimeException $error ) { $failed = true; }
+		$emit( array( 'phase' => 'setup-result', 'failed' => $failed, 'created_retained' => isset( $created ), 'journal_called' => $journal->called, 'queries' => count( $GLOBALS['wpdb']->queries ) ) );
+		exit( 0 );
+	}
+	$fake = new Wstm126_Cleanup_Fake();
+	$fake->fresh_snapshot_bytes = 33554432;
+	$first = $fake->read();
+	$allocated = memory_get_usage( false );
+	$second = $fake->read();
+	$growth = memory_get_usage( false ) - $allocated;
+	unset( $first, $second );
+	$emit( array( 'phase' => 'independent-reads', 'payload_bytes' => $fake->fresh_snapshot_bytes, 'second_read_growth_bytes' => $growth ) );
+	$read = static function () use ( $fake, $emit ): array {
+		$emit( array( 'phase' => 'read-begin', 'read_index' => $fake->reads + 1 ) );
+		$snapshot = $fake->read();
+		$emit( array( 'phase' => 'read-end', 'read_index' => $fake->reads ) );
+		return $snapshot;
+	};
+	$owner = str_repeat( 'c', 32 );
+	$journal = new Wstm126_Cleanup( $directory . '/private/invocations', $directory . '/web', $directory . '/artifacts', $owner, 'http', $fake->run, $read, array( $fake, 'delete' ) );
+	$fake->seed( $journal );
+	$fake->revision();
+	$journal->plan( 'session', array( 'actor' => 40 ) );
+	$journal->observed_session( 'session', 40, 'synthetic-session', 'http://localhost/owned' );
+	$fake->retain = 'memory-veto' === $mode ? 'post' : '';
+	if ( 'memory-wire' === $mode ) { $journal->raw_response( 403, 'synthetic-denied-body' ); }
+	$closed = false;
+	$result = $journal->finish( static function () use ( $journal, &$closed ): void {
+		$journal->observed_session( 'session', 40, 'synthetic-session', 'http://localhost/owned', true );
+		$closed = true;
+	}, true, 'memory-wire' === $mode );
+	$path = $directory . '/private/invocations/' . $owner . '-http.json';
+	$emit( array(
+		'phase' => 'result', 'proof' => $result['proof'], 'error_present' => null !== $result['error'],
+		'deletion_kinds' => array_column( $fake->deleted, 0 ), 'sessions_closed' => $closed,
+		'journal_retained' => is_file( $path ), 'wire_retained' => is_file( $path . '.wire.jsonl' ),
+		'actors_remaining' => count( $fake->rows['users'] ), 'credentials_remaining' => count( $fake->rows['credentials'] ),
+		'observation_remaining' => count( $fake->rows['observation'] ),
+	) );
 }
