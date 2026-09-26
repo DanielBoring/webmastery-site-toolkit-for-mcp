@@ -147,14 +147,6 @@ docker() {
 		*"compatibility-baselines.php "*)
 			php scripts/compatibility-baselines.php "${@: -1}"
 			;;
-		*"/tests/e2e/ability-runner.php")
-			case "${TAMPER_RUNTIME:-}" in
-				production) printf 'changed' >> "$E2E_PACKAGE_ROOT/webmastery-site-toolkit-for-mcp.php" ;;
-				file) printf 'unexpected' > "$E2E_PACKAGE_ROOT/tests/injected.php" ;;
-				directory) mkdir "$E2E_PACKAGE_ROOT/vendor" ;;
-				placeholder) printf 'changed' > "$E2E_PACKAGE_ROOT/scripts/compatibility-baselines.php" ;;
-			esac
-			;;
 		*"plugin get plugin-check"*) printf '{"name":"plugin-check","version":"2.1.0","status":"active"}\n' ;;
 		*"plugin check "*)
 			if [[ "${CHECKER_FAILURE:-0}" == 1 ]]; then
@@ -168,7 +160,16 @@ docker() {
 				{ echo "Plugin Check did not copy the pristine extraction." >&2; return 93; }
 			php scripts/release-tools.php runtime-package build/release-check/webmastery-site-toolkit-for-mcp "$RELEASE_ZIP"
 			;;
-		*"test -f /var/www/html/wp-content/debug.log") return 1 ;;
+		*"test -f /var/www/html/wp-content/debug.log")
+			# Tamper after untrusted provenance so the final package guard owns this check.
+			case "${TAMPER_RUNTIME:-}" in
+				production) printf 'changed' >> "$E2E_PACKAGE_ROOT/webmastery-site-toolkit-for-mcp.php" ;;
+				file) printf 'unexpected' > "$E2E_PACKAGE_ROOT/tests/injected.php" ;;
+				directory) mkdir "$E2E_PACKAGE_ROOT/vendor" ;;
+				placeholder) printf 'changed' > "$E2E_PACKAGE_ROOT/scripts/compatibility-baselines.php" ;;
+			esac
+			return 1
+			;;
 		*"wp --allow-root core is-installed") return 1 ;;
 		*"application-password create"*) printf 'fixture-password\n' ;;
 		*"--write-out"*"/tests/e2e/parent-assignment-runner.php"|*"--write-out"*"/tests/e2e/post-meta-authorization-runner.php"|*"--write-out"*"/tests/e2e/error-contract-runner.php"|*"--write-out"*"/tests/e2e/metadata-batch-runner.php"|*"--write-out"*"/tests/e2e/seo-metadata-runner.php"|*"--write-out"*"/tests/e2e/database-table-privacy-runner.php") printf '403' ;;
@@ -182,10 +183,14 @@ expect_failure() {
 	local status=0
 	"$@" > "$WORK/failure.log" 2>&1 || status=$?
 	if [[ "$status" == 0 ]]; then
-		echo "Expected failure: $*" >&2
+		printf 'FAIL expected nonzero child exit; child_exit=%s\n' "$status" >&2
 		exit 1
 	fi
-	grep -F "$expected" "$WORK/failure.log"
+	grep -F "$expected" "$WORK/failure.log" || {
+		local oracle_status=$?
+		printf 'FAIL missing expected failure diagnostic; child_exit=%s\n' "$status" >&2
+		exit "$oracle_status"
+	}
 	FAILURE_STATUS="$status"
 }
 
@@ -273,7 +278,7 @@ for operation in ' up -d' ' exec ' ' cp ' ' down -v --remove-orphans'; do
 	grep -F "compose --project-name release-runtime-fixture -f docker-compose.yml -f docker-compose.release.yml${operation}" "$TRACE" >/dev/null
 done
 test -f e2e-artifacts/plugin-check-latest-verdict.json
-php scripts/release-tools.php runtime-package build/release-check/webmastery-site-toolkit-for-mcp "$RELEASE_ZIP"
+command php scripts/release-tools.php runtime-package build/release-check/webmastery-site-toolkit-for-mcp "$RELEASE_ZIP"
 
 # Exercise both complete outer paths; simulated down really destroys the private fixtures.
 # shellcheck disable=SC2030,SC2031 # Each fault injection is intentionally isolated to its subprocess.
@@ -441,7 +446,7 @@ for outer in package source; do
 			expect_failure 'RECOVERY REQUIRED' bash scripts/release-qa.sh
 			expect_failure 'RECOVERY REQUIRED' bash scripts/e2e-test.sh all
 			[[ "$(wc -l < "$TRACE")" == "$lines" ]]
-			php tests/unit/fixtures/untrusted-release-proof.php "$fault" > "$WORK/release-$outer-$fault-reentry-assertions.log"
+			command php tests/unit/fixtures/untrusted-release-proof.php "$fault" > "$WORK/release-$outer-$fault-reentry-assertions.log"
 		fi
 	done
 done
@@ -488,7 +493,7 @@ export E2E_PACKAGE_ROOT="./build/release-runtime/webmastery-site-toolkit-for-mcp
 export E2E_PACKAGE_ZIP="$RELEASE_ZIP"
 for bad in missing-root missing changed extra checkout absent-zip mismatched-zip; do
 	rm -rf build/release-runtime
-	php scripts/release-tools.php extract "$RELEASE_ZIP" build/release-runtime
+	command php scripts/release-tools.php extract "$RELEASE_ZIP" build/release-runtime
 	: > "$TRACE"
 	case "$bad" in
 		missing-root) rm -rf build/release-runtime ;;
@@ -537,7 +542,10 @@ export -f php
 export WSTM108_MOCK_LIVE="$WORK/native-checker-php-failure"
 mkdir -m 700 "$WSTM108_MOCK_LIVE"
 expect_failure 'Fixture native host PHP failure.' bash scripts/release-qa.sh
-[[ "$FAILURE_STATUS" == 23 ]]
+[[ "$FAILURE_STATUS" == 23 ]] || {
+	printf 'FAIL native checker exit: expected=23 actual=%s\n' "$FAILURE_STATUS" >&2
+	exit 1
+}
 unset -f php
 for tamper in production file directory placeholder; do
 	export WSTM108_MOCK_LIVE="$WORK/tamper-$tamper"
