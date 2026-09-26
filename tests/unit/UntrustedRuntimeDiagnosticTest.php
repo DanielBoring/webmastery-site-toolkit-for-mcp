@@ -199,6 +199,7 @@ final class UntrustedRuntimeDiagnosticTest extends TestCase {
 			'outer-mapped', 'outer-unmapped', 'outer-not-observed', 'outer-write-collision', 'outer-reader-failed',
 			'outer-reader-stdout', 'outer-reader-stderr', 'outer-reader-range', 'outer-mapped-exit43', 'outer-success',
 			'outer-diagnostic-stdout-full',
+			'native-authority-exit-0', 'native-authority-exit-23', 'native-authority-exit-47', 'native-authority-exit-255',
 		), $result['passed'] );
 	}
 }

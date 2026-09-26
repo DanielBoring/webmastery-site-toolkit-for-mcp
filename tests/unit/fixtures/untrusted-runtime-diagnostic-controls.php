@@ -186,6 +186,56 @@ PHP;
 		}
 	}
 
+	private static function native_authority_boundary( string $root, int $exit ): void {
+		$case = self::directory( $root, 'native-authority-exit-' . $exit, false );
+		$work = $case . '/work';
+		foreach ( array( $work, $work . '/bin', $work . '/checkout', $work . '/checkout/tests',
+			$work . '/checkout/tests/unit', $work . '/checkout/tests/unit/fixtures' ) as $path ) {
+			self::require( mkdir( $path, 0700 ) );
+		}
+		$out = "private-native-stdout\x1b[31m\0\xff\"\\\n";
+		$err = "private-native-stderr\x1b[32m\0\xfe\"\\\n";
+		$child = '<?php if (2 !== $argc || $argv[1] !== getenv("WORK")) { exit(99); }'
+			. 'fwrite(STDOUT, base64_decode(' . var_export( base64_encode( $out ), true ) . '));'
+			. 'fwrite(STDERR, base64_decode(' . var_export( base64_encode( $err ), true ) . '));exit(' . $exit . ');';
+		self::create( $work . '/checkout/tests/unit/fixtures/untrusted-authority-controls.php', $child );
+		self::create( $work . '/bin/php', str_replace( "\r\n", "\n", file_get_contents( __DIR__ . '/untrusted-host-process' ) ) );
+		self::require( chmod( $work . '/bin/php', 0700 ) );
+		$source = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/untrusted-stage-test.sh' ) );
+		$start = "native_controls_status=0\n";
+		$end = 'export COMPOSE_PROJECT_NAME=owned-untrusted-stage-fixture';
+		self::require( 1 === substr_count( $source, $start ) && 1 === substr_count( $source, $end )
+			&& 1 === preg_match_all( "/^trap '.*' EXIT$/m", $source, $traps ) );
+		$offset = strpos( $source, $start );
+		$after = strpos( $source, $end, $offset );
+		self::require( false !== $after );
+		$block = substr( $source, $offset, $after - $offset );
+		self::require( 1 === substr_count( $block,
+			'php "$WORK/checkout/tests/unit/fixtures/untrusted-authority-controls.php" "$WORK" > "$WORK/native-authority-controls.log" 2>&1' ) );
+		self::create( $case . '/outer.sh', "#!/usr/bin/env bash\nset -Eeuo pipefail\numask 077\n"
+			. $traps[0][0] . "\n" . $block
+			. 'cp "$WORK/native-authority-controls.log" "$WSTM108_BOUNDARY_COPY"' . "\n" );
+		$environment = getenv();
+		$environment['WORK'] = $work;
+		$environment['PATH'] = $work . '/bin:' . $environment['PATH'];
+		$environment['WSTM108_MOCK_ONLY'] = '1';
+		$environment['WSTM108_MOCK_PHP'] = PHP_BINARY;
+		$environment['WSTM108_MOCK_MATRIX_PHP'] = PHP_BINARY;
+		$environment['WSTM108_MOCK_BASH'] = '/bin/bash';
+		$environment['WSTM108_RELEASE_FAULT'] = '';
+		$environment['WSTM108_BOUNDARY_COPY'] = $case . '/before-cleanup.private';
+		$result = self::run( array( '/bin/bash', $case . '/outer.sh' ), $case, $environment, $case . '/outer' );
+		$expected_out = 0 === $exit ? "PASS native-authority-controls child_exit=0\n" : '';
+		$expected_err = 0 === $exit ? '' : 'FAIL native-authority-controls child_exit=' . $exit
+			. "\nFailed untrusted mock evidence retained at " . $work . "\n";
+		self::require( $exit === $result['exit'] && $expected_out === $result['stdout'] && $expected_err === $result['stderr'] );
+		clearstatcache();
+		self::require( is_dir( $work ) === ( 0 !== $exit )
+			&& file_exists( $environment['WSTM108_BOUNDARY_COPY'] ) === ( 0 === $exit ) );
+		$private = 0 === $exit ? $environment['WSTM108_BOUNDARY_COPY'] : $work . '/native-authority-controls.log';
+		self::require( $out . $err === file_get_contents( $private ) );
+	}
+
 	public static function execute( string $root ): array {
 		self::require( 'Linux' === PHP_OS_FAMILY && PHP_VERSION_ID >= 80100
 			&& function_exists( 'posix_geteuid' ) && function_exists( 'fsync' )
@@ -294,6 +344,10 @@ PHP;
 			'outer-diagnostic-stdout-full' ) as $name ) {
 			self::outer( $root, $name );
 			$passed[] = $name;
+		}
+		foreach ( array( 0, 23, 47, 255 ) as $exit ) {
+			self::native_authority_boundary( $root, $exit );
+			$passed[] = 'native-authority-exit-' . $exit;
 		}
 		return array( 'scope' => 'real-linux-filesystem-processes-with-synthetic-faults-no-daemon-or-wordpress', 'passed' => $passed );
 	}

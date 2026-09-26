@@ -41,7 +41,13 @@ WSTM108_MOCK_BASH="$(command -v bash)"
 export WSTM108_MOCK_PHP WSTM108_MOCK_MATRIX_PHP WSTM108_MOCK_BASH
 export WSTM108_HOST_AUTHORITY_ROOT="$WORK/authority" PATH="$WORK/bin:$PATH"
 php tests/unit/fixtures/untrusted-host-boundaries.php install-mock
-php "$WORK/checkout/tests/unit/fixtures/untrusted-authority-controls.php" "$WORK" > "$WORK/native-authority-controls.log" 2>&1
+native_controls_status=0
+php "$WORK/checkout/tests/unit/fixtures/untrusted-authority-controls.php" "$WORK" > "$WORK/native-authority-controls.log" 2>&1 || native_controls_status=$?
+if [[ "$native_controls_status" != 0 ]]; then
+	printf 'FAIL native-authority-controls child_exit=%d\n' "$native_controls_status" >&2 || exit "$native_controls_status"
+	exit "$native_controls_status"
+fi
+printf 'PASS native-authority-controls child_exit=0\n'
 export COMPOSE_PROJECT_NAME=owned-untrusted-stage-fixture
 export E2E_ARTIFACTS_DIR=e2e-artifacts
 export TRACE="$WORK/trace"
