@@ -515,8 +515,13 @@ export E2E_PACKAGE_ZIP="$RELEASE_ZIP"
 expect_failure 'requires E2E_PACKAGE_ROOT' bash scripts/e2e-test.sh all
 unset E2E_PACKAGE_ZIP
 
+# Completed cases retain context-path.private; never reuse their live roots.
+export WSTM108_MOCK_LIVE="$WORK/checker-failure"
+mkdir -m 700 "$WSTM108_MOCK_LIVE"
 CHECKER_FAILURE=1 expect_failure 'Plugin Check reported 1 ERROR' bash scripts/release-qa.sh
 : > "$TRACE"
+export WSTM108_MOCK_LIVE="$WORK/cleanup-failure"
+mkdir -m 700 "$WSTM108_MOCK_LIVE"
 FAIL_CLEANUP=1 expect_failure 'Fixture cleanup failure.' bash scripts/release-qa.sh
 [[ "$FAILURE_STATUS" == 47 ]]
 # shellcheck disable=SC2329 # Exported into the real checker subprocess.
@@ -529,14 +534,20 @@ php() {
 	command php "$@"
 }
 export -f php
+export WSTM108_MOCK_LIVE="$WORK/native-checker-php-failure"
+mkdir -m 700 "$WSTM108_MOCK_LIVE"
 expect_failure 'Fixture native host PHP failure.' bash scripts/release-qa.sh
 [[ "$FAILURE_STATUS" == 23 ]]
 unset -f php
 for tamper in production file directory placeholder; do
+	export WSTM108_MOCK_LIVE="$WORK/tamper-$tamper"
+	mkdir -m 700 "$WSTM108_MOCK_LIVE"
 	TAMPER_RUNTIME="$tamper" expect_failure 'ERROR ' bash scripts/release-qa.sh
 	[[ "$(sha256sum "$RELEASE_ZIP")" == "$IDENTITY" ]]
 	php scripts/release-tools.php runtime-package build/release-check/webmastery-site-toolkit-for-mcp "$RELEASE_ZIP"
 done
+export WSTM108_MOCK_LIVE="$WORK/zip-mutation"
+mkdir -m 700 "$WSTM108_MOCK_LIVE"
 MUTATE_ZIP=1 expect_failure 'Original release ZIP identity changed during QA.' bash scripts/release-qa.sh
 
 # Source-mode commands stay unchanged, including caller-supplied Compose settings.
