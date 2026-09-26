@@ -208,7 +208,8 @@ try {
 		$entry['role'] = $role;
 		$entry['mode'] = $fault;
 		$events = array();
-		$undo = wstm116_faults( $fault );
+		$permission_queries = $fault_queries = array();
+		$undo = wstm116_faults( $fault, $permission_queries );
 		try {
 			$permission = $ability->check_permissions( $input );
 			$entry['permission_is_wp_error'] = is_wp_error( $permission );
@@ -216,6 +217,7 @@ try {
 			$entry['permission'] = true === $permission ? true : Webmastery_MCP_Response::from_wp_error( $permission );
 		} finally {
 			$undo();
+			$entry['permission_fault_queries'] = $permission_queries;
 		}
 		$before = wstm116_snapshot( $files );
 		$entry['before'] = $before;
@@ -238,9 +240,12 @@ try {
 			wstm116_require( EMPTY_TRASH_DAYS === ( $control['trash_days'] ?? null ) && WSTM116_STAGE_TOKEN === ( $control['stage_owner'] ?? null ), 'HTTP boot changed during safety proof.' );
 			$events = $control['events'];
 			$entry['http_file_operations'] = $control['file_operations'] ?? null;
+			wstm116_require( isset( $control['fault_queries'], $control['fault_query_hits'] ) && is_array( $control['fault_queries'] )
+				&& count( $control['fault_queries'] ) === $control['fault_query_hits'], 'HTTP fault observer did not attest its query count.' );
+			$fault_queries = $control['fault_queries'];
 		} else {
 			$observer = wstm116_observe( static function ( $hook ) use ( &$events ): void { $events[] = $hook; } );
-			$undo = wstm116_faults( $fault );
+			$undo = wstm116_faults( $fault, $fault_queries );
 			try {
 				if ( 'direct' === $boundary ) {
 					$property = new ReflectionProperty( WP_Ability::class, 'execute_callback' );
@@ -261,7 +266,14 @@ try {
 		$entry['before'] = $before;
 		$entry['after'] = wstm116_snapshot( $files );
 		$entry['hooks'] = $events;
+		$entry['fault_queries'] = $fault_queries;
+		$entry['fault_query_hits'] = count( $fault_queries );
 		$evidence->append( array( 'phase' => 'invocation', 'ability' => $slug, 'evidence' => $entry ) );
+		if ( 'query_failure' === ( $fault['mode'] ?? '' ) ) {
+			wstm116_require( array() === $permission_queries && 1 === count( $fault_queries ), 'Reference fault must hit exactly one execution query, never a permission query.' );
+			wstm116_require( $fault['phase'] === $fault_queries[0]['phase'] && $fault['id'] === $fault_queries[0]['candidate_id']
+				&& $fault_queries[0]['original'] !== $fault_queries[0]['replacement'], 'Reference fault did not attest the intended phase/candidate and changed SQL.' );
+		}
 		if ( $unchanged ) {
 			wstm116_require( $entry['before'] === $entry['after'], 'Guard/preview changed persisted state or owned files.' );
 			wstm116_require( array() === $events, 'Guard/preview reached a mutation hook.' );
@@ -285,10 +297,13 @@ try {
 			$envelope = wstm118_error_envelope( $result );
 			wstm116_require( $reason === $envelope['error']['reason'], 'Wrong failure layer/reason: ' . $envelope['error']['reason'] );
 			if ( 'invalid_input' === $permission ) {
-				wstm116_require( true === $entry['permission_is_wp_error'], 'Strict permission rejection must be a native WP_Error.' );
-				wstm116_require( 'invalid_input' === $entry['permission_error_code'], 'Strict permission rejection must retain its canonical native code.' );
+				wstm116_require( true === $entry['permission_is_wp_error'] && 'invalid_input' === $entry['permission_error_code'], 'Strict permission rejection must be a canonical native WP_Error.' );
 				$raw = wstm118_error_envelope( $entry['permission'] );
-				wstm116_require( 'invalid_input' === $raw['error']['code'] && 'ability_invalid_input' === $raw['error']['reason'], 'Wrong strict raw permission code/reason.' );
+				wstm116_require( 'invalid_input' === $raw['error']['code'] && 'ability_invalid_input' === $raw['error']['reason']
+					&& 'Ability input does not match its schema.' === $raw['error']['message'] && '{}' === wp_json_encode( $raw['error']['details'] ), 'Wrong strict raw permission envelope.' );
+				if ( 'ability_invalid_input' === $reason ) {
+					wstm116_require( wp_json_encode( $raw ) === wp_json_encode( $envelope ), 'Native schema rejection must retain the exact raw schema envelope.' );
+				}
 			} else {
 				wstm116_require( $permission === ( true === $entry['permission'] ), 'Permission callback result did not match the expected independent boundary.' );
 				if ( false === $permission ) {
@@ -379,7 +394,10 @@ try {
 		}
 		$error_case( "media {$reference} force cannot bypass object denial", 'delete-media', array( 'media_id' => $id, 'confirm' => true, 'force' => true ), 'author', 'ability' === $boundary ? 'ability_invalid_permissions' : 'forbidden', false, array( 'mode' => 'deny_object', 'id' => $id ) );
 		foreach ( array( false, true ) as $force ) {
-			$error_case( "media {$reference} scan failure force " . (int) $force, 'delete-media', array( 'media_id' => $id, 'confirm' => true, 'force' => $force ), 'author', 'content_hygiene_query_failed', true, array( 'mode' => 'query_failure' ) );
+			$error_case( "media {$reference} scan failure force " . (int) $force, 'delete-media', array( 'media_id' => $id, 'confirm' => true, 'force' => $force ), 'author', 'content_hygiene_query_failed', true, array( 'mode' => 'query_failure', 'phase' => 'thumbnail', 'id' => $id, 'owner' => $run ) );
+			if ( 'featured' !== $reference ) {
+				$error_case( "media {$reference} content scan failure force " . (int) $force, 'delete-media', array( 'media_id' => $id, 'confirm' => true, 'force' => $force ), 'author', 'content_hygiene_query_failed', true, array( 'mode' => 'query_failure', 'phase' => 'content', 'id' => $id, 'owner' => $run ) );
+			}
 		}
 		$record( "media {$reference} truthful deletion", static function ( &$entry ) use ( $invoke, $id, $known ): void {
 			$file = get_attached_file( $id );

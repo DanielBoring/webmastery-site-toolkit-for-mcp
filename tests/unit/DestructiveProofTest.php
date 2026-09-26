@@ -51,6 +51,8 @@ final class DestructiveProofTest extends TestCase {
 		copy( $root . '/scripts/validate-security-qa.php', $validator );
 		copy( $root . '/tests/e2e/error-contract-assertions.php', $assertions );
 		$cases = json_decode( file_get_contents( $root . '/tests/e2e/abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
+		$original = $cases;
+		$native_targets = array();
 		foreach ( $cases as $index => &$case ) {
 			if ( 'webmastery-site-toolkit-for-mcp/' . $slug !== $case['ability'] ) {
 				continue;
@@ -65,6 +67,7 @@ final class DestructiveProofTest extends TestCase {
 				unset( $cases[ $index ] );
 			}
 			if ( $confirm === ( $case['input']['confirm'] ?? null ) ) {
+				$native_targets[] = array( $case['label'], $case['expect_error_code'], $case['expect_error_reason'] );
 				if ( 'wrong-layer' === $mutation ) {
 					$case['expect_error_code'] = 'precondition_failed';
 					$case['expect_error_reason'] = 'missing_confirmation';
@@ -80,6 +83,11 @@ final class DestructiveProofTest extends TestCase {
 		unset( $case );
 		try {
 			file_put_contents( $manifest, json_encode( array_values( $cases ), JSON_THROW_ON_ERROR ) );
+			if ( in_array( $mutation, array( 'wrong-layer', 'changed-type', 'wrong-code', 'wrong-reason' ), true ) ) {
+				self::assertCount( 1, $native_targets, 'Mutate exactly one native confirmation case.' );
+				self::assertSame( array( 'wstm116 ' . $slug . ' confirm ' . ( is_string( $confirm ) ? 'string' : 'number' ), 'invalid_input', 'ability_invalid_input' ), $native_targets[0] );
+			}
+			self::assertNotSame( $original, $cases, 'A weakened-evidence mutation must change the original manifest.' );
 			$process = proc_open( array( PHP_BINARY, $validator ), array( array( 'pipe', 'r' ), array( 'pipe', 'w' ), array( 'pipe', 'w' ) ), $pipes );
 			self::assertIsResource( $process );
 			fclose( $pipes[0] );

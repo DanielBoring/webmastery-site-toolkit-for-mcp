@@ -35,6 +35,29 @@ final class SchedulingCalibrationTest extends TestCase {
 		self::fail( 'Mutation was accepted: ' . $message );
 	}
 
+	public function test_bounded_source_bridge_preserves_sealed_history_and_rejects_source_or_binding_drift(): void {
+		$ledger = $this->ledger();
+		$historical = array(
+			'includes/class-posts.php' => array( '698c1dace3460fd49332a94d85313780fd4b26195410ef8979056609e1609976', '32cb16faee498e28d130820128f130f56aa70a35' ),
+			'includes/class-custom-post-types.php' => array( '84f5ec24a7a5faf472b9735acbdc13bdfdcca70d896aefbd0fc5d6139648cdfb', 'c025ffdca479c87d89d84b69f36f8e39995bf469' ),
+		);
+		foreach ( $historical as $path => [ $sha256, $blob ] ) {
+			self::assertSame( $sha256, $ledger->production->$path->baseline_sha256 );
+			self::assertSame( $sha256, $ledger->production->$path->current_sha256 );
+			self::assertSame( $blob, $ledger->production->$path->git_blob );
+		}
+		foreach ( Wstm113Calibration\bounded_source_bindings() as $path => $binding ) {
+			$source = Wstm113Calibration\normalized( file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) );
+			Wstm113Calibration\assert_source_binding( $path, $source, $binding );
+			Wstm113Calibration\assert_source_binding( $path, str_replace( "\n", "\r\n", $source ), $binding );
+			$message = 'Scheduling production source binding changed: ' . $path;
+			$this->reject( static fn() => Wstm113Calibration\assert_source_binding( $path, $source . "\n", $binding ), $message );
+			$this->reject( static fn() => Wstm113Calibration\assert_source_binding( $path, $source, array( str_repeat( 'a', 64 ), $binding[1] ) ), $message );
+			$this->reject( static fn() => Wstm113Calibration\assert_source_binding( $path, $source, array( $binding[0], str_repeat( 'a', 40 ) ) ), $message );
+		}
+		Wstm113Calibration\assert_sources( $ledger );
+	}
+
 	public function test_sealed_whole_source_derives_264_to_268_offline_with_exact_typed_pairs(): void {
 		$ledger = $this->ledger();
 		self::assertSame( $this->typed( $ledger ), $this->typed( Wstm113Calibration\derive( $ledger ) ) );
@@ -128,6 +151,105 @@ final class SchedulingCalibrationTest extends TestCase {
 			}
 		}
 		self::assertSame( array_merge( ...array_fill( 0, 4, array( 'direct-invalid-status-overdue', 'direct-existing-future-overdue' ) ) ), $records );
+	}
+
+	private function assert_same_input_dual_layer_trace( stdClass $row, array $record ): void {
+		self::assertSame( array( 'registered_callback', 'scheduling_helper' ), array_keys( $record['layers'] ) );
+		self::assertSame( array( 'snapshot', 'registered_callback', 'snapshot', 'scheduling_helper', 'snapshot' ), $record['phases'] );
+		self::assertSame( array( array( 'query', $row->id ), array( 'schedule', $row->id ), array( 'query', $row->id ) ), $record['events'] );
+		self::assertSame( $row->id, $record['post']['ID'] );
+		self::assertSame( array(), Probe::$hooks, 'Both calls share one observation window, then remove every observer.' );
+		foreach ( $record['layers'] as $layer ) {
+			self::assertSame( $this->typed( $row->input ), $this->typed( $layer['input'] ) );
+			self::assertSame( $this->typed( $row->post ), $this->typed( $layer['precall_post'] ) );
+			self::assertSame( $record['before'], $layer['before'] );
+			self::assertTrue( $layer['observing'] );
+		}
+		$native = $record['layers']['scheduling_helper']['native_result'];
+		self::assertInstanceOf( WP_Error::class, $native );
+		self::assertSame( 'scheduled_date_too_soon', wstm118_error_reason( Webmastery_MCP_Response::from_wp_error( $native ) ) );
+		self::assertSame( $record['after'], $record['layers']['scheduling_helper']['after'] );
+		self::assertSame( $record['hooks'], $record['layers']['scheduling_helper']['hooks'] );
+	}
+
+	public function test_original_invalid_input_and_precall_post_also_reach_internal_helper_in_one_observation_window(): void {
+		$ledger = $this->ledger();
+		Probe::load( $ledger );
+		foreach ( $ledger->pairs as $pair ) {
+			$record = Wstm113Calibration\dual_layer( $this->source(), $pair->new );
+			$this->assert_same_input_dual_layer_trace( $pair->new, $record );
+			self::assertTrue( $record['passed'] );
+			self::assertSame( $this->typed( $pair->new_oracle ), $this->typed( $record['layers']['registered_callback']['result'] ) );
+			self::assertSame( $this->typed( $pair->minimal_oracle ), $this->typed( $record['layers']['scheduling_helper']['result'] ) );
+			foreach ( $record['layers'] as $layer ) {
+				self::assertTrue( $layer['passed'] );
+				self::assertTrue( $layer['error_matches'] );
+				self::assertNull( $layer['oracle_failure'] );
+				self::assertSame( $record['before'], $layer['after'] );
+				self::assertSame( array(), $layer['hooks'] );
+			}
+			$before = json_decode( $record['before'], true, 512, JSON_THROW_ON_ERROR );
+			self::assertSame( array( 7 ), $before['terms'] );
+			self::assertSame( array( 1906545600 ), $before['cron'] );
+		}
+	}
+
+	public static function dual_layer_faults(): array {
+		$cases = array();
+		foreach ( array( 'registered_callback', 'scheduling_helper' ) as $layer ) {
+			$faults = array( 'wrong-reason', 'wrong-code', 'success', 'raw-object', 'object-data', 'redirect-id', 'post', 'metadata', 'sentinel-read', 'terms', 'cron', 'hook' );
+			if ( 'registered_callback' === $layer ) {
+				$faults[] = 'native-error';
+			}
+			foreach ( $faults as $fault ) {
+				$cases[ $layer . ':' . $fault ] = array( $layer, $fault );
+			}
+		}
+		return $cases;
+	}
+
+	/** @dataProvider dual_layer_faults */
+	public function test_same_input_dual_layer_faults_remain_red_without_skipping_helper_or_retargeting_inspection( string $layer, string $fault ): void {
+		$ledger = $this->ledger();
+		Probe::load( $ledger );
+		foreach ( $ledger->pairs as $pair ) {
+			$record = Wstm113Calibration\dual_layer( $this->source(), $pair->new, $layer, $fault );
+			$this->assert_same_input_dual_layer_trace( $pair->new, $record );
+			self::assertFalse( $record['passed'] );
+			$evidence = $record['layers'][ $layer ];
+			self::assertFalse( $evidence['passed'] );
+			if ( in_array( $fault, array( 'wrong-reason', 'wrong-code', 'success', 'raw-object', 'object-data', 'redirect-id', 'native-error' ), true ) ) {
+				self::assertFalse( $evidence['error_matches'] );
+				self::assertSame( $record['before'], $record['after'] );
+				self::assertSame( array(), $record['hooks'] );
+				if ( 'wrong-reason' === $fault ) {
+					self::assertNull( $evidence['oracle_failure'] );
+				} else {
+					self::assertStringContainsString( 'Noncanonical error envelope:', $evidence['oracle_failure'] );
+				}
+				if ( 'raw-object' === $fault ) {
+					self::assertInstanceOf( stdClass::class, $evidence['result'] );
+					self::assertSame( 999, $evidence['result']->data->id );
+				} elseif ( 'object-data' === $fault ) {
+					self::assertInstanceOf( stdClass::class, $evidence['result']['data'] );
+					self::assertSame( 999, $evidence['result']['data']->id );
+				} elseif ( 'redirect-id' === $fault ) {
+					self::assertSame( 999, $evidence['result']['data']['id'] );
+				} elseif ( 'native-error' === $fault ) {
+					self::assertInstanceOf( WP_Error::class, $evidence['result'] );
+				}
+			} elseif ( in_array( $fault, array( 'hook', 'sentinel-read' ), true ) ) {
+				self::assertSame( $record['before'], $record['after'] );
+				self::assertSame( 'hook' === $fault ? array( 'save_post' => 1 ) : array(), $record['hooks'] );
+			} else {
+				self::assertNotSame( $record['before'], $record['after'] );
+				self::assertNotSame( $record['before'], $evidence['after'] );
+			}
+			if ( 'scheduling_helper' === $layer ) {
+				self::assertTrue( $record['layers']['registered_callback']['passed'] );
+				self::assertSame( $record['before'], $record['layers']['registered_callback']['after'] );
+			}
+		}
 	}
 
 	public function test_historical_four_red_oracles_remain_red_with_actual_schema_errors(): void {

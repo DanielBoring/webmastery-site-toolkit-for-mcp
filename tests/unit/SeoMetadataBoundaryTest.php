@@ -153,21 +153,30 @@ final class SeoMetadataBoundaryTest extends TestCase {
 	/**
 	 * @dataProvider score_keys
 	 */
-	public function test_scores_filter_key_permissions_before_total_and_pagination( string $slug, string $key ): void {
+	public function test_scores_filter_key_permissions_within_candidate_windows( string $slug, string $key ): void {
 		$this->seed_overview();
 		for ( $id = 1; $id <= 101; $id++ ) {
 			Probe::$metadata[ $id ][ $key ] = (string) $id;
 			Probe::$denied_by_id[ $id ] = array( $key );
 		}
 		Probe::$denied_by_id[2] = Probe::$denied_by_id[4] = array();
-		$result = $this->execute( $slug, array( 'per_page' => 1, 'page' => 2 ) );
-		self::assertTrue( $result['success'] );
-		self::assertSame( 2, $result['data']['total'] );
-		self::assertSame( 2, $result['data']['total_pages'] );
-		self::assertCount( 1, $result['data']['items'] );
-		self::assertSame( 4, $result['data']['items'][0]['post_id'] );
-		self::assertSame( 4, $result['data']['items'][0]['score'] );
-		self::assertSame( array( array( 4, $key ) ), Probe::$reads );
+		$seen = array();
+		for ( $page = 1; $page <= 101; ++$page ) {
+			$result = $this->execute( $slug, array( 'per_page' => 1, 'page' => $page ) );
+			self::assertTrue( $result['success'] );
+			self::assertArrayNotHasKey( 'total', $result['data'] );
+			self::assertArrayNotHasKey( 'total_pages', $result['data'] );
+			self::assertSame( 101 === $page ? null : $page + 1, $result['data']['next_page'] );
+			$items = $result['data']['items'];
+			self::assertCount( in_array( $page, array( 2, 4 ), true ) ? 1 : 0, $items );
+			foreach ( $items as $item ) {
+				self::assertSame( $item['post_id'], $item['score'] );
+				$seen[] = $item['post_id'];
+			}
+		}
+		self::assertSame( array( 2, 4 ), $seen );
+		self::assertSame( array( array( 2, $key ), array( 4, $key ) ), Probe::$reads );
+		self::assertSame( array_fill( 0, 101, 2 ), array_column( Probe::$queries, 'posts_per_page' ) );
 	}
 
 	public static function read_abilities(): array {

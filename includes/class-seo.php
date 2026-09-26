@@ -178,7 +178,7 @@ class Webmastery_MCP_SEO {
 
 		$analysis           = [
 			'post_id' => $id,
-			'metrics' => $data,
+			'metrics' => Webmastery_MCP_Untrusted::mark( $data, [ 'title', 'url', 'slug', 'yoast_meta_description', 'seopress_meta_description', 'yoast_focus_keyword', 'seopress_focus_keywords' ] ),
 			'issues'  => $issues,
 			'good'    => $good,
 			'score'   => count( $good ) . '/' . ( count( $good ) + count( $issues ) ) . ' checks passed',
@@ -444,7 +444,7 @@ class Webmastery_MCP_SEO {
 
 		return [
 			'success' => true,
-			'data'    => [
+			'data'    => Webmastery_MCP_Untrusted::mark( [
 				'yoast_active'   => true,
 				'post_id'        => $id,
 				'post_type'      => $post->post_type,
@@ -462,7 +462,7 @@ class Webmastery_MCP_SEO {
 						'key_authorization_unavailable'
 					)['error'],
 				],
-			],
+			], [ 'title', 'url', 'metadata', 'raw_meta' ] ),
 		];
 	}
 
@@ -522,7 +522,7 @@ class Webmastery_MCP_SEO {
 
 		return [
 			'success' => true,
-			'data'    => [
+			'data'    => Webmastery_MCP_Untrusted::mark( [
 				'seopress_active' => true,
 				'post_id'         => $id,
 				'post_type'       => $post->post_type,
@@ -531,7 +531,7 @@ class Webmastery_MCP_SEO {
 				'metadata'        => $meta,
 				'raw_meta'        => $raw_meta,
 				'unavailable_fields' => $read['unavailable_fields'],
-			],
+			], [ 'title', 'url', 'metadata', 'raw_meta' ] ),
 		];
 	}
 
@@ -568,7 +568,7 @@ class Webmastery_MCP_SEO {
 	private static function register_score_ability( $slug, $label, $meta_key, $description ) {
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/{$slug}", [
 			'label'               => "SEO: {$label}",
-			'description'         => $description . ' Only objects with effective permission for this score key are included in items and pagination totals.',
+			'description'         => $description . ' Only authorized score keys in this bounded candidate window are returned. Follow next_page even for empty items; no exact totals.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => self::score_input_schema(),
 			'execute_callback'    => function ( $input ) use ( $meta_key ) {
@@ -597,13 +597,16 @@ class Webmastery_MCP_SEO {
 		if ( is_wp_error( $permission ) ) {
 			return Webmastery_MCP_Response::from_wp_error( $permission );
 		}
+		$per_page = min( max( 1, (int) ( $input['per_page'] ?? 10 ) ), 100 );
+		$page     = max( 1, (int) ( $input['page'] ?? 1 ) );
 		if ( ! self::is_yoast_active() ) {
 			return [
 				'success' => true,
 				'data'    => [
 					'items'        => [],
-					'total'        => 0,
-					'total_pages'  => 0,
+					'page'         => $page,
+					'per_page'     => $per_page,
+					'next_page'    => null,
 					'yoast_active' => false,
 					'note'         => 'Yoast SEO is not active, so no Yoast scores are available.',
 				],
@@ -620,17 +623,11 @@ class Webmastery_MCP_SEO {
 			return Webmastery_MCP_Response::legacy_error( 'invalid_status', 'status is invalid.' );
 		}
 
-		$per_page = min( max( 1, (int) ( $input['per_page'] ?? 10 ) ), 100 );
-		$page     = max( 1, (int) ( $input['page'] ?? 1 ) );
-		$args     = [
+		$args = [
 			'post_type'      => $post_type,
 			'post_status'    => $status,
-			'posts_per_page' => -1,
-			'paged'          => 1,
 			'orderby'        => 'modified',
 			'order'          => 'DESC',
-			'fields'         => 'ids',
-			'no_found_rows'  => true,
 		];
 
 		if ( is_array( $post_type ) && ! current_user_can( 'edit_pages' ) ) {
@@ -660,42 +657,34 @@ class Webmastery_MCP_SEO {
 			];
 		}
 
-		$query        = new WP_Query( $args );
-		$readable_ids = [];
-
-		foreach ( $query->posts as $post_id ) {
-			if ( Webmastery_MCP_Posts::can_read_post_meta_key( (int) $post_id, $meta_key ) ) {
-				$readable_ids[] = (int) $post_id;
-			}
+		$window = Webmastery_MCP_List_Query::window( $args, $page, $per_page );
+		if ( is_wp_error( $window ) ) {
+			return Webmastery_MCP_Response::from_wp_error( $window );
 		}
-
-		$total    = count( $readable_ids );
-		$page_ids = array_slice( $readable_ids, ( $page - 1 ) * $per_page, $per_page );
-		$items    = [];
-
-		foreach ( $page_ids as $post_id ) {
+		$items = [];
+		foreach ( $window['ids'] as $post_id ) {
+			if ( ! Webmastery_MCP_Posts::can_read_post_meta_key( $post_id, $meta_key ) ) {
+				continue;
+			}
 			$post = get_post( $post_id );
 			if ( ! $post ) {
 				continue;
 			}
 
 			$raw_score = get_post_meta( $post->ID, $meta_key, true );
-			$items[]   = [
+			$items[]   = Webmastery_MCP_Untrusted::mark( [
 				'post_id'      => (int) $post->ID,
 				'title'        => $post->post_title,
 				'url'          => get_permalink( $post->ID ),
 				'post_type'    => $post->post_type,
 				'modified_gmt' => $post->post_modified_gmt,
 				'score'        => '' === $raw_score ? null : (int) $raw_score,
-			];
+			], [ 'title', 'url', 'score' ] );
 		}
 
 		return [
 			'success' => true,
-			'data'    => [
-				'items'        => $items,
-				'total'        => $total,
-				'total_pages'  => $per_page > 0 ? (int) ceil( $total / $per_page ) : 1,
+			'data'    => Webmastery_MCP_List_Query::result( $window, $items ) + [
 				'yoast_active' => true,
 				'seopress_active' => self::is_seopress_active(),
 			],
@@ -732,6 +721,8 @@ class Webmastery_MCP_SEO {
 		$robots_response    = wp_remote_head( $robots_url, [ 'timeout' => 5 ] );
 		$robots_ok          = ! is_wp_error( $robots_response ) && wp_remote_retrieve_response_code( $robots_response ) === 200;
 		$data['robots_txt'] = [ 'url' => $robots_url, 'accessible' => $robots_ok ];
+		$data['sitemap']    = Webmastery_MCP_Untrusted::mark( $data['sitemap'], [ 'url', 'entries' ] );
+		$data['robots_txt'] = Webmastery_MCP_Untrusted::mark( $data['robots_txt'], [ 'url' ] );
 
 		$data['providers'] = [
 			'yoast_active'    => self::is_yoast_active(),

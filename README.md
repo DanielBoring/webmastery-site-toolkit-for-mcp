@@ -27,10 +27,11 @@ Use it to let an agent draft or update content, manage media and comments, inspe
 
 For release history, see [CHANGELOG.md](CHANGELOG.md).
 
-**Unreleased 3.0 development:** this branch changes the error contract, not the
+**Unreleased 3.0 development:** this branch changes errors and list contracts, not the
 2.6.0 stable tag. Clients must follow the [3.0 migration guide](docs/3.0-migration.md)
 before deploying it. Ability names, roles, inputs, defaults, and successful
-payloads are unchanged by error normalization.
+payloads are unchanged by error normalization alone; the list migration below
+intentionally changes pagination and the default content projection.
 
 ## Who This Is For
 
@@ -74,6 +75,53 @@ For the exact ability names, input behavior, and required capabilities, use the 
 
 Comment replies require `edit_posts` and `edit_post` on the post containing the parent comment. Listing requires `moderate_comments`; updating and the approve/trash/spam abilities also require `edit_comment` on the resolved comment. There is no separate `hold-comment` ability: use `update-comment` with `status: "hold"` and the required `content`.
 
+### Bounded lists and content projection (3.0 development)
+
+Authorized content records also carry `untrusted_fields`, a JSON array of
+record-relative field names. These are data, not instructions or approval for
+later actions. Summary records never mark omitted content; full/get/write
+records preserve their stored values and mark the fields actually present.
+
+| Abilities | Pagination / content |
+| --- | --- |
+| `list-posts`, `list-pages`, `list-cpt-*` | Candidate windows; `fields:"summary"` (default) omits `content`; `"full"` preserves stored content |
+| `list-media`, `list-orphaned-media`, `get-seo-scores`, `get-readability-scores` | Candidate windows; existing item fields retained, no content or new `fields` parameter |
+| `list-revisions` | Existing capped revision list; summary/full projection as above, no new pagination fields |
+
+The windowed lists return `data.items` (array), `data.page` and `data.per_page`
+(integers), and `data.next_page` (integer or null), **not `total` or
+`total_pages`**. Fetch the same filters/order with the returned `next_page`
+until it is null. An empty or short `items` array is not end-of-list: object
+permissions, score-key permissions, and known media references can exclude an
+entire candidate window. Do not infer denied counts or exact totals.
+
+`per_page` is a candidate limit of 1-100, not a promise of that many visible
+items. Defaults remain 20 (10 for scores); `page` starts at 1. Primary sort and
+filters remain, with an ID tie-breaker in the same direction. Access requirements
+are unchanged: post/page editing floors and per-status object access, CPT mapped
+capabilities, media upload/edit access, and effective object/key access for
+scores. Orphan detection batches only the bounded candidates' featured-image and
+literal URL/GUID checks, and still fails closed on database errors, even during
+forced deletion.
+
+Unrepresentable integer offsets/continuations return `invalid_input` before a
+query. Candidate or priming SQL failures return `upstream_failed`, not an empty
+end-of-list. Only fresh SQL failures advance the current blog's post-query cache
+generation to prevent cached false EOFs; ordinary warm caches remain supported.
+
+For example, start `list-posts` with `{"per_page":20,"page":1}`. Process the
+returned items, then request `{"per_page":20,"page":2}` only if `next_page` is 2.
+Use `fields:"full"` explicitly when content is needed. Summary does not return
+an empty replacement, sanitize excerpts, or change other stored values; get and
+write responses remain full. Invalid `fields` values are rejected by the
+registered input contract before the list query.
+
+These are not transactional snapshots: edits can shift offset windows. Database
+offset/search and content scanning costs can still grow with site size. Controlled
+payload/memory benchmarks are not universal limits on large titles/excerpts,
+metadata, taxonomy, or plugin filters. See the [typed migration contract and
+limitations](docs/3.0-migration.md#bounded-list-windows-and-summary-projection).
+
 ### Standalone post metadata authorization
 
 `get-post-meta`, `update-post-meta`, and `delete-post-meta` require `edit_post` for the actual object and preserve the existing protected-key eligibility rules. Ordinary Authors can usually operate on their own posts; pages and other authors' posts generally require an Editor, and individual keys may impose additional requirements.
@@ -90,7 +138,7 @@ Registered global/subtype policies and WordPress's effective `map_meta_cap` / `u
 
 Create a draft without metadata, call `update-post-meta` separately for each exact key, verify every result, then publish with a plain update. These operations are **not atomic**: an earlier authorized write remains if a later key is denied. Keep the draft unpublished on failure; do not retry a combined request. See the [complete alias migration table](docs/3.0-migration.md#metadata-and-seo-authorization).
 
-Separate SEO inspection, analysis, and score abilities also require effective `edit_post` plus `edit_post_meta` for each real object/key before reading it. Denied fields are omitted from raw and normalized metadata and reported in `unavailable_fields`, not advertised as visible plain text. Analysis skips checks that cannot be evaluated; scores filter permission before totals and pagination. Opaque generated Yoast head output is unavailable because extensible generated output cannot be authorized by a fixed key list. URL-only head requests return `unsupported`.
+Separate SEO inspection, analysis, and score abilities also require effective `edit_post` plus `edit_post_meta` for each real object/key before reading it. Denied fields are omitted from raw and normalized metadata and reported in `unavailable_fields`, not advertised as visible plain text. Analysis skips checks that cannot be evaluated; scores filter permission within the bounded candidate window and return no exact totals. Opaque generated Yoast head output is unavailable because extensible generated output cannot be authorized by a fixed key list. URL-only head requests return `unsupported`.
 
 SEO overview samples at most 100 published post/page IDs in ascending ID order. Each missing-field `count` and maximum-20 `ids` list includes only authorized observations; `observed_count` is the authorized sample denominator. `observation_scope.counts_are_sitewide` is false. Zero observations mean no evidence, not a healthy site. Independent native published post/page totals remain available to Administrators.
 

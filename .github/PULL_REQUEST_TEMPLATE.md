@@ -15,6 +15,8 @@
 - [ ] Capability checks use the narrowest relevant WordPress capability and return/surface `WP_Error` on failure
 - [ ] Delegated permissions retain a local WordPress floor plus upstream authorization in both entry paths, fail closed on missing/non-callable upstream checks, and distinguish fixture evidence from version-specific real-provider inspection
 - [ ] List/query abilities filter returned objects with object/status-aware checks and do not leak unauthorized totals or sensitive identity fields
+- [ ] Bounded list changes retain candidate/query/capability budgets, empty-window continuation, stable ID ties, summary omission versus exact full values, and effective object/key authorization; document pagination/projection migrations, preserve prior oracles in a ledger, and distinguish leased runtime/package evidence from unit/static checks
+- [ ] Direct SQL follows the diagnostic policy or the narrow shared attachment-reference exception: existing caller/object authorization, prepared candidate-ID/literal-pattern batches, unchanged reference scope, no referring-content/ID/count disclosure, and fail-closed query errors even with force; retain permission, parity, escaping, budget, and no-write/failure tests
 - [ ] Security-sensitive abilities include allowed and denied E2E manifest cases, plus `assert_missing_paths` for fields hidden from lower-privilege callers
 - [ ] Metadata changes preserve pre-mutation combined-input rejection, real-object effective key authorization, and direct/ability/gateway/individual-tool no-write/no-forbidden-read proof, with plain-content and draft/write/publish migration controls
 - [ ] Destructive changes retain exact confirmation, raw bulk bounds, strict optional flags, unchanged-state/hook/cron preview and denial proof, distinct callback/per-item permission evidence, and fail-closed media reference scans even with force; migrated callers retain their original assertions
@@ -34,6 +36,7 @@
 - [ ] PHPStan level 5 passes without new baseline debt; resolved entries/counts are removed or lowered, and baseline changes follow the ratchet policy in `docs/qa-strategy.md`
 - [ ] Compatibility QA was considered for release candidates, dependency-sensitive changes, or WordPress/PHP support changes
 - [ ] Workflow/shell changes pass the dedicated workflow linters; required PR checks do not rely on manually dispatched runs or failure-induced skips
+- [ ] Controller CI preserves operational Linux pidfd/P_PIDFD checks, exactly ten started/finished/passing component IDs without skips/expected failures, separate harness regressions, and scoped always-retained private synthetic outputs with non-dereferenced symlink metadata; synthetic evidence does not replace WordPress/benchmark/private-custody/floor/package acceptance
 - [ ] Dependency updates preserve the declared PHP support floor, verified download digests, and baseline metadata; unavailable candidate lanes cannot promote versions
 - [ ] CI/CD, security, or release process changes update the matching strategy document when policy changes
 - [ ] Release-impacting changes account for GitHub tag `vX.Y.Z`, WordPress.org SVN tag `X.Y.Z`, protected `wordpress-org` GitHub production approval (not WordPress.org staff review), and package/readme/version alignment

@@ -106,6 +106,8 @@ Scheduled jobs should detect drift that a PR did not cause:
 - Scheduled failures should create maintainer follow-up work only after triage confirms the failure is not transient infrastructure noise.
 - Compatibility failures are release blockers only when they affect the supported floor, current WordPress line, or another supported version combination.
 
+For an independently reviewed frozen source, the same registered compatibility workflow has an explicit `candidate_sha` dispatch path. It runs only pinned WordPress 6.9/PHP 8.1 full E2E on that exact commit, with read-only repository permissions and separately pinned workflow/evidence tools; it never substitutes current main or discovered dependency pins. Candidate mode rejects `open_update_pr=true` and excludes discovery, the ordinary matrix/checker/promotion chain, and the issue-writing reporter. Empty `candidate_sha` retains the existing scheduled/manual pipeline and its default-branch freshness guards. See [exact-candidate floor execution](../tests/e2e/README.md#exact-candidate-supported-floor-ci) for inputs and retained source/runtime/cleanup evidence. This ordinary hosted QA needs no private evidence infrastructure; it does not replace PR checks, original-package QA, or the large-library benchmark's unchanged numerical and private-custody requirements.
+
 ## Artifact and reporting policy
 
 Docker jobs retain available contract/MCP summary JSON on success and failure, with bounded retention, and write readable job summaries.

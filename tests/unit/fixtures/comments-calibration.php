@@ -29,7 +29,7 @@ final class Probe {
 			return;
 		}
 		$source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-comments.php' );
-		eval( 'namespace ' . __NAMESPACE__ . '; use \\Webmastery_MCP_Response; ' . substr( $source, 5 ) );
+		eval( 'namespace ' . __NAMESPACE__ . '; use \\Webmastery_MCP_Response; use \\Webmastery_MCP_Untrusted; ' . substr( $source, 5 ) );
 		Webmastery_MCP_Comments::register();
 	}
 

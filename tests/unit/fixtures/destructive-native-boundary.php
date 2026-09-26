@@ -57,7 +57,7 @@ final class Probe {
 
 foreach ( array( 'permissions', 'posts', 'media', 'taxonomy' ) as $class ) {
 	$source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-' . $class . '.php' );
-	eval( 'namespace Wstm126Destructive; use \Closure; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Post_Parent; use \Webmastery_MCP_Post_Scheduling; ' . substr( $source, 5 ) );
+	eval( 'namespace Wstm126Destructive; use \Closure; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Untrusted; use \Webmastery_MCP_Post_Parent; use \Webmastery_MCP_Post_Scheduling; ' . substr( $source, 5 ) );
 }
 
 function wp_register_ability( $name, $args ) {

@@ -57,6 +57,14 @@ Migration matrix and examples: https://github.com/DanielBoring/webmastery-site-t
 
 Permanent media/category/tag deletion and both bulk post operations now require the exact JSON boolean confirm:true, including bulk previews. Bulk requests accept at most 100 raw IDs and process duplicates once; dry_run:true reports would-act successes without mutation. These explicitly documented changes add a preview marker and media in_use boolean to successful responses.
 
+Post/page/custom-post-type, media, orphan-media, and score lists now return candidate windows with items, page, per_page, and next_page instead of exact total/total_pages. Continue until next_page is null, including after empty or short windows. Existing roles and object/key permissions still apply; per_page caps candidates at 100, not visible results.
+
+Post/page/custom-post-type and revision lists default to fields:"summary", which omits content only. Request fields:"full" for unchanged stored content. Excerpts and other values are unchanged; get/write responses stay full. These are not transactional snapshots or constant-time database queries, and summary payloads have no universal byte limit. Orphan-reference queries are batched over bounded candidates; scan errors still block forced media deletion.
+
+Authorized records include untrusted_fields, an array of field names relative to that record. Summary output never marks omitted content. Markers preserve stored values and nested maps; they do not sanitize data, grant capabilities, prove human approval, or guarantee prompt-injection prevention. Compact trash results and errors remain unmarked.
+
+Pagination whose offset or successor cannot fit a PHP integer is rejected before querying. Candidate/priming SQL failures return an error, not an empty end-of-list. Fresh SQL failures invalidate the current site's post-query cache generation to prevent cached false empty results; normal successful-query caching is unchanged.
+
 = Which AI clients and MCP hosts work with this? =
 
 Any MCP client that can reach your site through the MCP Adapter works. This includes Claude (Desktop and Code), ChatGPT, GitHub Copilot, Gemini CLI, Windsurf, and Codex. Most local clients connect through the `@automattic/mcp-wordpress-remote` bridge.
@@ -220,6 +228,9 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 
+* Replace unbounded list materialization with candidate windows and next_page continuation, including empty windows; remove exact filtered totals for content, media, orphan-media, and score lists.
+* Default content and revision lists to summary projection; explicit fields:"full" preserves stored content. Batch known media references without relaxing permission or database-failure safeguards.
+* Mark present untrusted fields on authorized records without changing stored values; summary projections never mark omitted content.
 * Close fixed-property input schemas and reject malformed types/enums before raw permission checks or execute callbacks; preserve explicit open maps and omitted defaults.
 * Validate strict types during registered input validation after core checks, preventing malformed scalar inputs from being misclassified as permission denials.
 * Preserve empty database-health requests at Adapter permission preflight by honoring the declared object-root default, without changing Administrator authorization, table-name privacy, or strict raw callback validation.
@@ -301,7 +312,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Upgrade Notice ==
 
 = Unreleased =
-3.0 rejects unknown keys, coercible types, invalid enums. Omit parent on posts/nonhierarchical types. Create draft, write authorized metadata, publish: separate calls, not atomic. SEO omits denied keys; generated Yoast head unavailable; overview counts use authorized samples.
+3.0: use next_page, not totals; continue empty windows. Content/revisions default to summary; use fields:"full". Inputs are strict; omit parent on nonhierarchical types. Draft, metadata, publish calls are non-atomic. Errors, confirmation and SEO change: read the migration guide.
 
 = 2.6.0 =
 Standalone metadata, comment and taxonomy permissions are tighter. Create/update metadata, SEO aliases and separate SEO reads retain authorization gaps (see FAQ). Clients using custom role/key policies must review denials. Image upload limits and PHP 8.0 minimum are unchanged.

@@ -99,6 +99,31 @@ final class GithubSafeguardsTest extends TestCase {
 		self::assertStringNotContainsString('gh pr list --state all', $workflow);
 	}
 
+	public function test_controller_component_job_is_explicit_bounded_and_required(): void {
+		$workflow = file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/unit-tests.yml');
+		self::assertDoesNotMatchRegularExpression('/^      COMPONENT_ROOT:/m', $workflow);
+		$expected_root = '${{ runner.temp }}/wstm-controller-${{ github.run_id }}-${{ github.run_attempt }}';
+		foreach (array(
+			'Run exactly ten synthetic controller components',
+			'Retain scoped synthetic originals and symlink metadata',
+			'Upload synthetic component evidence only',
+		) as $name) {
+			self::assertSame(1, preg_match('/^      - name: ' . preg_quote($name, '/') . '\r?\n([\s\S]*?)(?=^      - name:|^  [a-z][a-z-]*:|\z)/m', $workflow, $step_matches));
+			self::assertSame(1, preg_match('/^        env:\r?\n          COMPONENT_ROOT: ([^\r\n]+)\r?$/m', $step_matches[1], $root_matches));
+			self::assertSame($expected_root, $root_matches[1], $name . ' must resolve the same private absolute root at step scope.');
+		}
+		self::assertMatchesRegularExpression('/controller-components:\s+name: Synthetic controller components \/ Linux\s+runs-on: ubuntu-24\.04\s+timeout-minutes: 10/', $workflow);
+		self::assertMatchesRegularExpression('/unit-tests-gate:\s+name: 2 - Unit Tests\s+needs: \[unit-tests, controller-components\]\s+if: \$\{\{ always\(\) \}\}/', $workflow);
+		self::assertStringContainsString('needs.controller-components.result', $workflow);
+		self::assertStringContainsString('test "$CONTROLLER_RESULT" = success', $workflow);
+		self::assertStringContainsString('python3 -B scripts/test-controller-components.py run --root "$COMPONENT_ROOT"', $workflow);
+		self::assertStringContainsString('python3 -B -m unittest discover -s tests/unit -p test_controller_ci_harness.py -v', $workflow);
+		self::assertMatchesRegularExpression('/name: Retain scoped synthetic originals and symlink metadata\s+if: \$\{\{ always\(\) \}\}\s+run: python3 -B scripts\/test-controller-components.py retain --root "\$COMPONENT_ROOT"/', $workflow);
+		self::assertMatchesRegularExpression('/name: Upload synthetic component evidence only\s+if: \$\{\{ always\(\) \}\}[\s\S]*?path: \$\{\{ env.COMPONENT_ROOT \}\}\/upload\/\s+if-no-files-found: error\s+retention-days: 7/', $workflow);
+		self::assertStringNotContainsString('continue-on-error', $workflow);
+		self::assertStringNotContainsString('bounded-list-controller.py ', $workflow, 'The benchmark entrypoint must not run in ordinary unit CI.');
+	}
+
 	public function test_release_compose_only_adds_explicit_harness_mounts(): void {
 		$root = dirname(__DIR__, 2);
 		$compose = file_get_contents($root . '/docker-compose.release.yml');

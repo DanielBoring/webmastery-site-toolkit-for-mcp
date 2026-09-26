@@ -48,6 +48,7 @@ function wp_json_encode( $value, $flags = 0 ) {
 }
 
 require_once dirname(__DIR__, 2) . '/includes/class-response.php';
+require_once dirname(__DIR__, 2) . '/includes/class-untrusted.php';
 require_once dirname(__DIR__, 2) . '/includes/class-permissions.php';
 
 function sanitize_key( $key ): string {
@@ -146,6 +147,9 @@ function current_user_can( $capability, ...$args ) {
 }
 
 function get_post( $id ) {
+	if ( is_object( $id ) ) {
+		return $id;
+	}
 	return $GLOBALS['wstm_test_posts'][ $id ] ?? null;
 }
 
@@ -170,6 +174,7 @@ function wp_delete_term( $id, $taxonomy ) {
 }
 
 require_once dirname(__DIR__, 2) . '/includes/class-post-scheduling.php';
+require_once dirname(__DIR__, 2) . '/includes/class-list-query.php';
 require_once dirname(__DIR__, 2) . '/includes/class-posts.php';
 require_once dirname(__DIR__, 2) . '/includes/class-custom-post-types.php';
 require_once dirname(__DIR__, 2) . '/includes/class-taxonomy.php';

@@ -1,0 +1,1619 @@
+{
+    "baseline_sha": "3f6226bb947687d48f7ec5412290dfca6fd76574",
+    "source_sha": "1c460f1e4468d73103e2ec55a21f990f1da94ef5",
+    "changed": [
+        {
+            "label": "create-post writes Yoast meta rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-post",
+                "label": "create-post writes Yoast meta rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "title": "MCP E2E Created SEO Post",
+                    "content": "Created by E2E manifest with SEO meta.",
+                    "status": "draft",
+                    "meta": {
+                        "_yoast_wpseo_focuskw": "e2e focus keyphrase",
+                        "_yoast_wpseo_metadesc": "E2E created meta description.",
+                        "_yoast_wpseo_title": "E2E Created SEO Title"
+                    }
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-post",
+                "label": "create-post writes Yoast meta rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "title": "MCP E2E Created SEO Post",
+                    "content": "Created by E2E manifest with SEO meta.",
+                    "status": "draft",
+                    "meta": {
+                        "_yoast_wpseo_focuskw": "e2e focus keyphrase",
+                        "_yoast_wpseo_metadesc": "E2E created meta description.",
+                        "_yoast_wpseo_title": "E2E Created SEO Title"
+                    }
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            }
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-post",
+                "label": "create-post writes Yoast free metadata fields rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "title": "MCP E2E Created Full Yoast Post",
+                    "content": "Created by E2E manifest with expanded Yoast metadata.",
+                    "status": "draft",
+                    "category_ids": [
+                        "__category_id__"
+                    ],
+                    "yoast_canonical_url": "https://example.test/e2e-canonical/",
+                    "yoast_breadcrumb_title": "E2E Breadcrumb",
+                    "yoast_schema_page_type": "WebPage",
+                    "yoast_schema_article_type": "Article",
+                    "yoast_opengraph_title": "E2E Open Graph Title",
+                    "yoast_opengraph_description": "E2E Open Graph description.",
+                    "yoast_opengraph_image": "https://example.test/e2e-og.jpg",
+                    "yoast_twitter_title": "E2E Twitter Title",
+                    "yoast_twitter_description": "E2E Twitter description.",
+                    "yoast_twitter_image": "https://example.test/e2e-twitter.jpg",
+                    "yoast_primary_category": "__category_id__",
+                    "yoast_robots_noindex": true,
+                    "yoast_robots_nofollow": true,
+                    "yoast_robots_advanced": "noarchive,nosnippet"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-post",
+                "label": "create-post writes Yoast free metadata fields rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "title": "MCP E2E Created Full Yoast Post",
+                    "content": "Created by E2E manifest with expanded Yoast metadata.",
+                    "status": "draft",
+                    "category_ids": [
+                        "__category_id__"
+                    ],
+                    "yoast_canonical_url": "https://example.test/e2e-canonical/",
+                    "yoast_breadcrumb_title": "E2E Breadcrumb",
+                    "yoast_schema_page_type": "WebPage",
+                    "yoast_schema_article_type": "Article",
+                    "yoast_opengraph_title": "E2E Open Graph Title",
+                    "yoast_opengraph_description": "E2E Open Graph description.",
+                    "yoast_opengraph_image": "https://example.test/e2e-og.jpg",
+                    "yoast_twitter_title": "E2E Twitter Title",
+                    "yoast_twitter_description": "E2E Twitter description.",
+                    "yoast_twitter_image": "https://example.test/e2e-twitter.jpg",
+                    "yoast_primary_category": "__category_id__",
+                    "yoast_robots_noindex": true,
+                    "yoast_robots_nofollow": true,
+                    "yoast_robots_advanced": "noarchive,nosnippet"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            }
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-post",
+                "label": "create-post writes SEOPress free metadata fields rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "title": "MCP E2E Created Full SEOPress Post",
+                    "content": "Created by E2E manifest with SEOPress metadata.",
+                    "status": "draft",
+                    "category_ids": [
+                        "__category_id__"
+                    ],
+                    "seopress_seo_title": "E2E SEOPress SEO Title",
+                    "seopress_meta_description": "E2E SEOPress meta description.",
+                    "seopress_focus_keywords": "seopress,e2e",
+                    "seopress_canonical_url": "https://example.test/seopress-canonical/",
+                    "seopress_opengraph_title": "E2E SEOPress Open Graph",
+                    "seopress_opengraph_description": "E2E SEOPress Open Graph description.",
+                    "seopress_opengraph_image": "https://example.test/seopress-og.jpg",
+                    "seopress_twitter_title": "E2E SEOPress Twitter",
+                    "seopress_twitter_description": "E2E SEOPress Twitter description.",
+                    "seopress_twitter_image": "https://example.test/seopress-twitter.jpg",
+                    "seopress_primary_category": "__category_id__",
+                    "seopress_robots_noindex": true,
+                    "seopress_robots_nofollow": true,
+                    "seopress_robots_noarchive": true,
+                    "seopress_breadcrumb_title": "E2E SEOPress Breadcrumb"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-post",
+                "label": "create-post writes SEOPress free metadata fields rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "title": "MCP E2E Created Full SEOPress Post",
+                    "content": "Created by E2E manifest with SEOPress metadata.",
+                    "status": "draft",
+                    "category_ids": [
+                        "__category_id__"
+                    ],
+                    "seopress_seo_title": "E2E SEOPress SEO Title",
+                    "seopress_meta_description": "E2E SEOPress meta description.",
+                    "seopress_focus_keywords": "seopress,e2e",
+                    "seopress_canonical_url": "https://example.test/seopress-canonical/",
+                    "seopress_opengraph_title": "E2E SEOPress Open Graph",
+                    "seopress_opengraph_description": "E2E SEOPress Open Graph description.",
+                    "seopress_opengraph_image": "https://example.test/seopress-og.jpg",
+                    "seopress_twitter_title": "E2E SEOPress Twitter",
+                    "seopress_twitter_description": "E2E SEOPress Twitter description.",
+                    "seopress_twitter_image": "https://example.test/seopress-twitter.jpg",
+                    "seopress_primary_category": "__category_id__",
+                    "seopress_robots_noindex": true,
+                    "seopress_robots_nofollow": true,
+                    "seopress_robots_noarchive": true,
+                    "seopress_breadcrumb_title": "E2E SEOPress Breadcrumb"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            }
+        },
+        {
+            "label": "update-post rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "update-post rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "post_id": "__post_id__",
+                    "title": "MCP E2E Post Updated",
+                    "yoast_meta_description": "E2E meta description for post.",
+                    "yoast_focus_keyword": "E2E",
+                    "yoast_seo_title": "E2E SEO title for post",
+                    "yoast_canonical_url": "https://example.test/update-canonical/",
+                    "yoast_opengraph_title": "E2E Updated Open Graph",
+                    "yoast_twitter_title": "E2E Updated Twitter",
+                    "yoast_robots_noindex": true
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "update-post rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "post_id": "__post_id__",
+                    "title": "MCP E2E Post Updated",
+                    "yoast_meta_description": "E2E meta description for post.",
+                    "yoast_focus_keyword": "E2E",
+                    "yoast_seo_title": "E2E SEO title for post",
+                    "yoast_canonical_url": "https://example.test/update-canonical/",
+                    "yoast_opengraph_title": "E2E Updated Open Graph",
+                    "yoast_twitter_title": "E2E Updated Twitter",
+                    "yoast_robots_noindex": true
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            }
+        },
+        {
+            "label": "update-post writes SEOPress metadata fields rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "update-post writes SEOPress metadata fields rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "post_id": "__post_id__",
+                    "seopress_seo_title": "E2E Updated SEOPress Title",
+                    "seopress_meta_description": "E2E updated SEOPress description.",
+                    "seopress_focus_keywords": "updated,seopress",
+                    "seopress_canonical_url": "https://example.test/updated-seopress-canonical/",
+                    "seopress_robots_nosnippet": true
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "update-post writes SEOPress metadata fields rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "post_id": "__post_id__",
+                    "seopress_seo_title": "E2E Updated SEOPress Title",
+                    "seopress_meta_description": "E2E updated SEOPress description.",
+                    "seopress_focus_keywords": "updated,seopress",
+                    "seopress_canonical_url": "https://example.test/updated-seopress-canonical/",
+                    "seopress_robots_nosnippet": true
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            }
+        },
+        {
+            "label": "update-post reports unsupported protected meta rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "update-post reports unsupported protected meta rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "post_id": "__post_id__",
+                    "meta": {
+                        "_mcp_e2e_unregistered_protected": "should fail loudly"
+                    }
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "update-post reports unsupported protected meta rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "post_id": "__post_id__",
+                    "meta": {
+                        "_mcp_e2e_unregistered_protected": "should fail loudly"
+                    }
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            }
+        },
+        {
+            "label": "update-page rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-page",
+                "label": "update-page rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "page_id": "__page_id__",
+                    "title": "MCP E2E Page Updated",
+                    "yoast_meta_description": "E2E meta description for page.",
+                    "yoast_focus_keyword": "E2E"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-page",
+                "label": "update-page rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "page_id": "__page_id__",
+                    "title": "MCP E2E Page Updated",
+                    "yoast_meta_description": "E2E meta description for page.",
+                    "yoast_focus_keyword": "E2E"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            }
+        },
+        {
+            "label": "wstm106 page mixed update with inaccessible parent rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-page",
+                "label": "wstm106 page mixed update with inaccessible parent rejects original combined payload",
+                "role": "wstm106_page_editor",
+                "input": {
+                    "page_id": "__wstm106_page_id__",
+                    "title": "Denied",
+                    "content": "Denied.",
+                    "slug": "denied-parent",
+                    "status": "publish",
+                    "yoast_meta_description": "Denied metadata.",
+                    "parent": "__wstm106_denied_parent_id__"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-page",
+                "label": "wstm106 page mixed update with inaccessible parent rejects original combined payload",
+                "role": "wstm106_page_editor",
+                "input": {
+                    "page_id": "__wstm106_page_id__",
+                    "title": "Denied",
+                    "content": "Denied.",
+                    "slug": "denied-parent",
+                    "status": "publish",
+                    "yoast_meta_description": "Denied metadata.",
+                    "parent": "__wstm106_denied_parent_id__"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            }
+        },
+        {
+            "label": "wstm106 nonhierarchical book positive parent rejected",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-book",
+                "label": "wstm106 nonhierarchical book positive parent rejected",
+                "role": "book_manager",
+                "input": {
+                    "title": "Denied",
+                    "content": "Denied.",
+                    "status": "draft",
+                    "parent": "__wstm106_book_id__"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "invalid_parent",
+                "expect_error_shape": "canonical"
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-book",
+                "label": "wstm106 nonhierarchical book positive parent rejected",
+                "role": "book_manager",
+                "input": {
+                    "title": "Denied",
+                    "content": "Denied.",
+                    "status": "draft",
+                    "parent": "__wstm106_book_id__"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true
+            }
+        },
+        {
+            "label": "wstm106 nonhierarchical book mixed update rejected",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-book",
+                "label": "wstm106 nonhierarchical book mixed update rejected",
+                "role": "book_manager",
+                "input": {
+                    "id": "__wstm106_book_id__",
+                    "title": "Denied",
+                    "content": "Denied.",
+                    "status": "publish",
+                    "slug": "denied-book",
+                    "parent": "__book_id__",
+                    "taxonomy_terms": {
+                        "mcp_genre": [
+                            "__genre_id__"
+                        ]
+                    }
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "invalid_parent",
+                "expect_error_shape": "canonical"
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-book",
+                "label": "wstm106 nonhierarchical book mixed update rejected",
+                "role": "book_manager",
+                "input": {
+                    "id": "__wstm106_book_id__",
+                    "title": "Denied",
+                    "content": "Denied.",
+                    "status": "publish",
+                    "slug": "denied-book",
+                    "parent": "__book_id__",
+                    "taxonomy_terms": {
+                        "mcp_genre": [
+                            "__genre_id__"
+                        ]
+                    }
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true
+            }
+        },
+        {
+            "label": "wstm106 nonhierarchical book zero parent allowed",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-book",
+                "label": "wstm106 nonhierarchical book zero parent allowed",
+                "role": "book_manager",
+                "input": {
+                    "title": "WSTM106 Zero Book",
+                    "content": "Ordinary draft.",
+                    "status": "draft",
+                    "parent": 0
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.status": "draft"
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-book",
+                "label": "wstm106 nonhierarchical book zero parent allowed",
+                "role": "book_manager",
+                "input": {
+                    "title": "WSTM106 Zero Book",
+                    "content": "Ordinary draft.",
+                    "status": "draft",
+                    "parent": 0
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true
+            }
+        },
+        {
+            "label": "wstm106 nonhierarchical draft book zero parent allowed",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-book",
+                "label": "wstm106 nonhierarchical draft book zero parent allowed",
+                "role": "book_manager",
+                "input": {
+                    "id": "__wstm106_book_id__",
+                    "status": "draft",
+                    "parent": 0
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.status": "draft"
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-book",
+                "label": "wstm106 nonhierarchical draft book zero parent allowed",
+                "role": "book_manager",
+                "input": {
+                    "id": "__wstm106_book_id__",
+                    "status": "draft",
+                    "parent": 0
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true
+            }
+        },
+        {
+            "label": "wstm106 nonhierarchical explicit map positive parent rejected",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study",
+                "label": "wstm106 nonhierarchical explicit map positive parent rejected",
+                "role": "case_manager",
+                "input": {
+                    "title": "Denied",
+                    "content": "Denied.",
+                    "status": "draft",
+                    "parent": "__wstm106_case_id__"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "invalid_parent",
+                "expect_error_shape": "canonical"
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study",
+                "label": "wstm106 nonhierarchical explicit map positive parent rejected",
+                "role": "case_manager",
+                "input": {
+                    "title": "Denied",
+                    "content": "Denied.",
+                    "status": "draft",
+                    "parent": "__wstm106_case_id__"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true
+            }
+        },
+        {
+            "label": "wstm106 explicit map parent update rejected",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study",
+                "label": "wstm106 explicit map parent update rejected",
+                "role": "case_manager",
+                "input": {
+                    "id": "__wstm106_case_id__",
+                    "title": "Denied",
+                    "parent": "__case_id__"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "invalid_parent",
+                "expect_error_shape": "canonical"
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study",
+                "label": "wstm106 explicit map parent update rejected",
+                "role": "case_manager",
+                "input": {
+                    "id": "__wstm106_case_id__",
+                    "title": "Denied",
+                    "parent": "__case_id__"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true
+            }
+        },
+        {
+            "label": "wstm106 explicit map zero parent allowed",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study",
+                "label": "wstm106 explicit map zero parent allowed",
+                "role": "case_manager",
+                "input": {
+                    "title": "WSTM106 Zero Case",
+                    "content": "Ordinary draft.",
+                    "status": "draft",
+                    "parent": 0
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.status": "draft"
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study",
+                "label": "wstm106 explicit map zero parent allowed",
+                "role": "case_manager",
+                "input": {
+                    "title": "WSTM106 Zero Case",
+                    "content": "Ordinary draft.",
+                    "status": "draft",
+                    "parent": 0
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true
+            }
+        },
+        {
+            "label": "wstm106 explicit map draft zero parent allowed",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study",
+                "label": "wstm106 explicit map draft zero parent allowed",
+                "role": "case_manager",
+                "input": {
+                    "id": "__wstm106_case_id__",
+                    "status": "draft",
+                    "parent": 0
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.status": "draft"
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study",
+                "label": "wstm106 explicit map draft zero parent allowed",
+                "role": "case_manager",
+                "input": {
+                    "id": "__wstm106_case_id__",
+                    "status": "draft",
+                    "parent": 0
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true
+            }
+        },
+        {
+            "label": "wstm122 create-post preserves sanitized SEO backslashes rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-post",
+                "label": "wstm122 create-post preserves sanitized SEO backslashes rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "title": "Backslash metadata post",
+                    "content": "Metadata fixture.",
+                    "status": "draft",
+                    "yoast_meta_description": "<b>C:\\path\\</b>",
+                    "seopress_meta_description": "C:\\path\\"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-post",
+                "label": "wstm122 create-post preserves sanitized SEO backslashes rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "title": "Backslash metadata post",
+                    "content": "Metadata fixture.",
+                    "status": "draft",
+                    "yoast_meta_description": "<b>C:\\path\\</b>",
+                    "seopress_meta_description": "C:\\path\\"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            }
+        },
+        {
+            "label": "wstm122 create-page preserves quoted metadata rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-page",
+                "label": "wstm122 create-page preserves quoted metadata rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "title": "Backslash metadata page",
+                    "content": "Metadata fixture.",
+                    "status": "draft",
+                    "yoast_meta_description": "A \\\"quoted\\\" value",
+                    "seopress_meta_description": "A \\\"quoted\\\" value"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-page",
+                "label": "wstm122 create-page preserves quoted metadata rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "title": "Backslash metadata page",
+                    "content": "Metadata fixture.",
+                    "status": "draft",
+                    "yoast_meta_description": "A \\\"quoted\\\" value",
+                    "seopress_meta_description": "A \\\"quoted\\\" value"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            }
+        },
+        {
+            "label": "wstm122 update-post preserves repeated and trailing metadata backslashes rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "wstm122 update-post preserves repeated and trailing metadata backslashes rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "post_id": "__post_id__",
+                    "yoast_meta_description": "\\\\server\\share\\",
+                    "seopress_meta_description": "\\\\server\\share\\"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "wstm122 update-post preserves repeated and trailing metadata backslashes rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "post_id": "__post_id__",
+                    "yoast_meta_description": "\\\\server\\share\\",
+                    "seopress_meta_description": "\\\\server\\share\\"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            }
+        },
+        {
+            "label": "wstm122 update-page preserves JSON metadata backslashes rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-page",
+                "label": "wstm122 update-page preserves JSON metadata backslashes rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "page_id": "__page_id__",
+                    "yoast_meta_description": "{\"regex\":\"\\\\d+\\w\"}",
+                    "seopress_meta_description": "{\"regex\":\"\\\\d+\\w\"}"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-page",
+                "label": "wstm122 update-page preserves JSON metadata backslashes rejects original combined payload",
+                "role": "editor",
+                "input": {
+                    "page_id": "__page_id__",
+                    "yoast_meta_description": "{\"regex\":\"\\\\d+\\w\"}",
+                    "seopress_meta_description": "{\"regex\":\"\\\\d+\\w\"}"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ]
+            }
+        },
+        {
+            "label": "wstm120 contributor cannot transition draft to publish rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "wstm120 contributor cannot transition draft to publish rejects original combined payload",
+                "role": "contributor",
+                "input": {
+                    "post_id": "__wstm120_contributor_draft_id__",
+                    "title": "Must not change",
+                    "content": "Must not change",
+                    "status": "publish",
+                    "slug": "wstm120-denied-publish",
+                    "category_ids": [
+                        "__category_id__"
+                    ],
+                    "yoast_meta_description": "Must not change"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ],
+                "assert_permission": true
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "wstm120 contributor cannot transition draft to publish rejects original combined payload",
+                "role": "contributor",
+                "input": {
+                    "post_id": "__wstm120_contributor_draft_id__",
+                    "title": "Must not change",
+                    "content": "Must not change",
+                    "status": "publish",
+                    "slug": "wstm120-denied-publish",
+                    "category_ids": [
+                        "__category_id__"
+                    ],
+                    "yoast_meta_description": "Must not change"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ],
+                "assert_permission": true
+            }
+        },
+        {
+            "label": "wstm120 contributor cannot transition draft to private rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "wstm120 contributor cannot transition draft to private rejects original combined payload",
+                "role": "contributor",
+                "input": {
+                    "post_id": "__wstm120_contributor_draft_id__",
+                    "title": "Must not change",
+                    "content": "Must not change",
+                    "status": "private",
+                    "slug": "wstm120-denied-private",
+                    "category_ids": [
+                        "__category_id__"
+                    ],
+                    "yoast_meta_description": "Must not change"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ],
+                "assert_permission": true
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "wstm120 contributor cannot transition draft to private rejects original combined payload",
+                "role": "contributor",
+                "input": {
+                    "post_id": "__wstm120_contributor_draft_id__",
+                    "title": "Must not change",
+                    "content": "Must not change",
+                    "status": "private",
+                    "slug": "wstm120-denied-private",
+                    "category_ids": [
+                        "__category_id__"
+                    ],
+                    "yoast_meta_description": "Must not change"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ],
+                "assert_permission": true
+            }
+        },
+        {
+            "label": "wstm120 contributor cannot transition draft to future rejects original combined payload",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "wstm120 contributor cannot transition draft to future rejects original combined payload",
+                "role": "contributor",
+                "input": {
+                    "post_id": "__wstm120_contributor_draft_id__",
+                    "title": "Must not change",
+                    "content": "Must not change",
+                    "status": "future",
+                    "scheduled_date": "+2 days",
+                    "slug": "wstm120-denied-future",
+                    "category_ids": [
+                        "__category_id__"
+                    ],
+                    "yoast_meta_description": "Must not change"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ],
+                "assert_permission": true
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "wstm120 contributor cannot transition draft to future rejects original combined payload",
+                "role": "contributor",
+                "input": {
+                    "post_id": "__wstm120_contributor_draft_id__",
+                    "title": "Must not change",
+                    "content": "Must not change",
+                    "status": "future",
+                    "scheduled_date": "+2 days",
+                    "slug": "wstm120-denied-future",
+                    "category_ids": [
+                        "__category_id__"
+                    ],
+                    "yoast_meta_description": "Must not change"
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_unchanged": true,
+                "assert_metadata_boundary": true,
+                "assert_missing_paths": [
+                    "data"
+                ],
+                "assert_permission": true
+            }
+        },
+        {
+            "label": "wstm110 create-post rejects null metadata presence",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-post",
+                "label": "wstm110 create-post rejects null metadata presence",
+                "role": "editor",
+                "input": {
+                    "title": "Must not exist",
+                    "content": "Must not persist",
+                    "meta": null
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-post",
+                "label": "wstm110 create-post rejects null metadata presence",
+                "role": "editor",
+                "input": {
+                    "title": "Must not exist",
+                    "content": "Must not persist",
+                    "meta": null
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            }
+        },
+        {
+            "label": "wstm110 update-post rejects empty metadata presence",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "wstm110 update-post rejects empty metadata presence",
+                "role": "editor",
+                "input": {
+                    "post_id": "__post_id__",
+                    "title": "Must not persist",
+                    "meta": {}
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "wstm110 update-post rejects empty metadata presence",
+                "role": "editor",
+                "input": {
+                    "post_id": "__post_id__",
+                    "title": "Must not persist",
+                    "meta": []
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            }
+        },
+        {
+            "label": "wstm110 create-page rejects null SEO alias",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-page",
+                "label": "wstm110 create-page rejects null SEO alias",
+                "role": "editor",
+                "input": {
+                    "title": "Must not exist",
+                    "content": "Must not persist",
+                    "yoast_meta_description": null
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-page",
+                "label": "wstm110 create-page rejects null SEO alias",
+                "role": "editor",
+                "input": {
+                    "title": "Must not exist",
+                    "content": "Must not persist",
+                    "yoast_meta_description": null
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            }
+        },
+        {
+            "label": "wstm110 update-page rejects empty SEO alias",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-page",
+                "label": "wstm110 update-page rejects empty SEO alias",
+                "role": "editor",
+                "input": {
+                    "page_id": "__page_id__",
+                    "title": "Must not persist",
+                    "seopress_meta_description": []
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-page",
+                "label": "wstm110 update-page rejects empty SEO alias",
+                "role": "editor",
+                "input": {
+                    "page_id": "__page_id__",
+                    "title": "Must not persist",
+                    "seopress_meta_description": []
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            }
+        },
+        {
+            "label": "wstm110 create-cpt-mcp-book rejects metadata",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-book",
+                "label": "wstm110 create-cpt-mcp-book rejects metadata",
+                "role": "book_manager",
+                "input": {
+                    "title": "Must not exist",
+                    "content": "Must not persist",
+                    "meta": null
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-book",
+                "label": "wstm110 create-cpt-mcp-book rejects metadata",
+                "role": "book_manager",
+                "input": {
+                    "title": "Must not exist",
+                    "content": "Must not persist",
+                    "meta": null
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            }
+        },
+        {
+            "label": "wstm110 update-cpt-mcp-book rejects raw SEO key",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-book",
+                "label": "wstm110 update-cpt-mcp-book rejects raw SEO key",
+                "role": "book_manager",
+                "input": {
+                    "id": "__book_id__",
+                    "title": "Must not persist",
+                    "_yoast_wpseo_title": ""
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-book",
+                "label": "wstm110 update-cpt-mcp-book rejects raw SEO key",
+                "role": "book_manager",
+                "input": {
+                    "id": "__book_id__",
+                    "title": "Must not persist",
+                    "_yoast_wpseo_title": ""
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            }
+        },
+        {
+            "label": "wstm110 create-cpt-mcp-case-study rejects metadata input",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study",
+                "label": "wstm110 create-cpt-mcp-case-study rejects metadata input",
+                "role": "case_manager",
+                "input": {
+                    "title": "Must not exist",
+                    "content": "Must not persist",
+                    "meta_input": {}
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study",
+                "label": "wstm110 create-cpt-mcp-case-study rejects metadata input",
+                "role": "case_manager",
+                "input": {
+                    "title": "Must not exist",
+                    "content": "Must not persist",
+                    "meta_input": []
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            }
+        },
+        {
+            "label": "wstm110 update-cpt-mcp-case-study rejects unknown SEO alias",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study",
+                "label": "wstm110 update-cpt-mcp-case-study rejects unknown SEO alias",
+                "role": "case_manager",
+                "input": {
+                    "id": "__case_id__",
+                    "title": "Must not persist",
+                    "seopress_unknown_field": null
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "metadata_requires_separate_call",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study",
+                "label": "wstm110 update-cpt-mcp-case-study rejects unknown SEO alias",
+                "role": "case_manager",
+                "input": {
+                    "id": "__case_id__",
+                    "title": "Must not persist",
+                    "seopress_unknown_field": null
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            }
+        }
+    ],
+    "added": [
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/create-post",
+            "label": "wstm126 post rejects unadvertised parent zero",
+            "role": "editor",
+            "input": {
+                "title": "Must not persist",
+                "content": "Rejected",
+                "parent": 0
+            },
+            "expect": "failure",
+            "expect_error_code": "invalid_input",
+            "expect_error_reason": "ability_invalid_input",
+            "expect_error_shape": "canonical",
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/update-post",
+            "label": "wstm126 update post rejects parent before title write",
+            "role": "editor",
+            "input": {
+                "post_id": "__post_id__",
+                "title": "Must not persist",
+                "parent": 0
+            },
+            "expect": "failure",
+            "expect_error_code": "invalid_input",
+            "expect_error_reason": "ability_invalid_input",
+            "expect_error_shape": "canonical",
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/update-page",
+            "label": "wstm126 update page rejects unknown field before parent write",
+            "role": "editor",
+            "input": {
+                "page_id": "__page_id__",
+                "parent": 0,
+                "typo": true
+            },
+            "expect": "failure",
+            "expect_error_code": "invalid_input",
+            "expect_error_reason": "ability_invalid_input",
+            "expect_error_shape": "canonical",
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/list-posts",
+            "label": "wstm126 exact enum rejects sanitized status",
+            "role": "editor",
+            "input": {
+                "status": "publish!"
+            },
+            "expect": "failure",
+            "expect_error_code": "invalid_input",
+            "expect_error_reason": "ability_invalid_input",
+            "expect_error_shape": "canonical",
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/list-pages",
+            "label": "wstm126 exact enum rejects lowercase order",
+            "role": "editor",
+            "input": {
+                "order": "desc"
+            },
+            "expect": "failure",
+            "expect_error_code": "invalid_input",
+            "expect_error_reason": "ability_invalid_input",
+            "expect_error_shape": "canonical",
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/list-cpt-mcp-book",
+            "label": "wstm126 CPT rejects object enum",
+            "role": "book_manager",
+            "input": {
+                "orderby": {}
+            },
+            "expect": "failure",
+            "expect_error_code": "invalid_input",
+            "expect_error_reason": "ability_invalid_input",
+            "expect_error_shape": "canonical",
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/list-comments",
+            "label": "wstm126 comments rejects array status",
+            "role": "editor",
+            "input": {
+                "status": [
+                    "approve"
+                ]
+            },
+            "expect": "failure",
+            "expect_error_code": "invalid_input",
+            "expect_error_reason": "ability_invalid_input",
+            "expect_error_shape": "canonical",
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/list-users",
+            "label": "wstm126 users rejects numeric enum",
+            "role": "admin",
+            "input": {
+                "orderby": 1
+            },
+            "expect": "failure",
+            "expect_error_code": "invalid_input",
+            "expect_error_reason": "ability_invalid_input",
+            "expect_error_shape": "canonical",
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/get-post",
+            "label": "wstm126 raw permission rejects boolean ID",
+            "role": "editor",
+            "input": {
+                "post_id": true
+            },
+            "expect": "failure",
+            "expect_error_code": "invalid_input",
+            "expect_error_reason": "ability_invalid_input",
+            "expect_error_shape": "canonical",
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/create-post",
+            "label": "wstm126 raw permission rejects object status",
+            "role": "editor",
+            "input": {
+                "title": "Rejected",
+                "content": "Rejected",
+                "status": {}
+            },
+            "expect": "failure",
+            "expect_error_code": "invalid_input",
+            "expect_error_reason": "ability_invalid_input",
+            "expect_error_shape": "canonical",
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/list-posts",
+            "label": "wstm126 explicit null does not default",
+            "role": "editor",
+            "input": {
+                "status": null
+            },
+            "expect": "failure",
+            "expect_error_code": "invalid_input",
+            "expect_error_reason": "ability_invalid_input",
+            "expect_error_shape": "canonical",
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/list-posts",
+            "label": "wstm126 omitted filters retain allowed permission",
+            "role": "editor",
+            "input": {},
+            "expect": "success",
+            "assert_permission": true,
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/list-posts",
+            "label": "wstm126 valid enum does not grant subscriber permission",
+            "role": "subscriber",
+            "input": {
+                "status": "publish",
+                "order": "DESC"
+            },
+            "expect": "failure",
+            "expect_error_code": "forbidden",
+            "expect_error_reason": "ability_invalid_permissions",
+            "expect_error_shape": "canonical",
+            "assert_permission": "forbidden",
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-book",
+            "label": "wstm126 taxonomy map rejects string item",
+            "role": "book_manager",
+            "input": {
+                "title": "Rejected",
+                "content": "Rejected",
+                "taxonomy_terms": {
+                    "mcp_genre": [
+                        "invalid"
+                    ]
+                }
+            },
+            "expect": "failure",
+            "expect_error_code": "invalid_input",
+            "expect_error_reason": "ability_invalid_input",
+            "expect_error_shape": "canonical",
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/get-site-info",
+            "label": "wstm126 input-free ability rejects unknown property",
+            "role": "admin",
+            "input": {
+                "unused": true
+            },
+            "expect": "failure",
+            "expect_error_code": "invalid_input",
+            "expect_error_reason": "ability_invalid_input",
+            "expect_error_shape": "canonical",
+            "assert_unchanged": true
+        },
+        {
+            "ability": "webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed",
+            "label": "wstm126 pagespeed rejects boolean strategy before provider lookup",
+            "role": "admin",
+            "input": {
+                "strategy": true
+            },
+            "expect": "failure",
+            "expect_error_code": "invalid_input",
+            "expect_error_reason": "ability_invalid_input",
+            "expect_error_shape": "canonical",
+            "assert_unchanged": true
+        }
+    ],
+    "integration_corrections": [
+        {
+            "label": "wstm110 update-post rejects empty metadata presence",
+            "source_after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "wstm110 update-post rejects empty metadata presence",
+                "role": "editor",
+                "input": {
+                    "post_id": "__post_id__",
+                    "title": "Must not persist",
+                    "meta": []
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            },
+            "corrected_after": {
+                "ability": "webmastery-site-toolkit-for-mcp/update-post",
+                "label": "wstm110 update-post rejects empty metadata presence",
+                "role": "editor",
+                "input": {
+                    "post_id": "__post_id__",
+                    "title": "Must not persist",
+                    "meta": {}
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            }
+        },
+        {
+            "label": "wstm110 create-cpt-mcp-case-study rejects metadata input",
+            "source_after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study",
+                "label": "wstm110 create-cpt-mcp-case-study rejects metadata input",
+                "role": "case_manager",
+                "input": {
+                    "title": "Must not exist",
+                    "content": "Must not persist",
+                    "meta_input": []
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            },
+            "corrected_after": {
+                "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study",
+                "label": "wstm110 create-cpt-mcp-case-study rejects metadata input",
+                "role": "case_manager",
+                "input": {
+                    "title": "Must not exist",
+                    "content": "Must not persist",
+                    "meta_input": {}
+                },
+                "expect": "failure",
+                "expect_error_code": "invalid_input",
+                "expect_error_reason": "ability_invalid_input",
+                "expect_error_shape": "canonical",
+                "assert_metadata_boundary": true
+            }
+        }
+    ]
+}

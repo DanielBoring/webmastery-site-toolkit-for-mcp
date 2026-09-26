@@ -62,14 +62,51 @@ jobs:
       - name: Run CI safeguards regression tests
         run: composer test:ci-safeguards
 
+  controller-components:
+    name: Synthetic controller components / Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Run exactly ten synthetic controller components
+        run: python3 -B scripts/test-controller-components.py run --root "$COMPONENT_ROOT"
+        env:
+          COMPONENT_ROOT: ${{ runner.temp }}/wstm-controller-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Check CI harness guards without child processes
+        run: python3 -B -m unittest discover -s tests/unit -p test_controller_ci_harness.py -v
+      - name: Retain scoped synthetic originals and symlink metadata
+        if: ${{ always() }}
+        run: python3 -B scripts/test-controller-components.py retain --root "$COMPONENT_ROOT"
+        env:
+          COMPONENT_ROOT: ${{ runner.temp }}/wstm-controller-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Upload synthetic component evidence only
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: synthetic-controller-components
+          path: ${{ env.COMPONENT_ROOT }}/upload/
+          if-no-files-found: error
+          retention-days: 7
+        env:
+          COMPONENT_ROOT: ${{ runner.temp }}/wstm-controller-${{ github.run_id }}-${{ github.run_attempt }}
+
   unit-tests-gate:
     name: 2 - Unit Tests
-    needs: unit-tests
+    needs: [unit-tests, controller-components]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Require every PHP unit check
+      - name: Require every PHP unit and controller component check
         env:
           RESULT: ${{ needs.unit-tests.result }}
-        run: test "$RESULT" = success
+          CONTROLLER_RESULT: ${{ needs.controller-components.result }}
+        run: test "$RESULT" = success && test "$CONTROLLER_RESULT" = success

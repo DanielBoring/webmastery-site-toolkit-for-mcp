@@ -21,6 +21,8 @@ final class CommentsCalibrationTest extends TestCase {
 		. "\t\tif ( null === \$input && 'object' === ( \$schema['type'] ?? null ) && array_key_exists( 'default', \$schema ) ) {\n"
 		. "\t\t\t\$input = \$schema['default'];\n"
 		. "\t\t}\n";
+	private const COMMENTS_MARKER_OPEN = "\t\treturn Webmastery_MCP_Untrusted::mark( [\n";
+	private const COMMENTS_MARKER_CLOSE = "\t\t], [ 'author', 'author_email', 'author_url', 'content' ] );\n";
 
 	private function ledger(): stdClass {
 		return Wstm105Calibration\load_ledger();
@@ -196,6 +198,52 @@ final class CommentsCalibrationTest extends TestCase {
 		$this->assert_ability_provenance_bridge( $source, $historical_hash );
 	}
 
+	private function assert_comments_provenance_bridge( string $source, string $historical_hash ): void {
+		$source = str_replace( "\r\n", "\n", $source );
+		self::assertSame( '3db21ccc0fc980d2d0b6e13d7ee7d2da8b53c3eee31580c715e8c1e35604bc81', hash( 'sha256', $source ), 'Current Comments source drift.' );
+		self::assertSame( '3f5ede301f3a6a2308b17aff6f498ce07d9b2990', hash( 'sha1', 'blob ' . strlen( $source ) . "\0" . $source ), 'Current Comments Git blob drift.' );
+		$restored = str_replace( self::COMMENTS_MARKER_OPEN, "\t\treturn [\n", $source, $openings );
+		self::assertSame( 1, $openings, 'Reverse exactly one approved marker opening.' );
+		$restored = str_replace( self::COMMENTS_MARKER_CLOSE, "\t\t];\n", $restored, $closings );
+		self::assertSame( 1, $closings, 'Reverse exactly one approved marker allowlist and closing.' );
+		self::assertSame( 'a5cc75ef65c0cb2b7b5e7c9173fc3f857f8181c9270c6f201483db73cde9bb4f', hash( 'sha256', $restored ), 'Restored historical Comments source drift.' );
+		self::assertSame( $historical_hash, hash( 'sha256', $restored ), 'Restored Comments must match the unchanged sealed ledger binding.' );
+	}
+
+	public function test_comments_provenance_bridge_accepts_only_approved_source_in_lf_or_crlf(): void {
+		$source = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/includes/class-comments.php' ) );
+		$ledger = $this->ledger();
+		$historical_hash = $ledger->source_hashes->{$ledger->head}->{'includes/class-comments.php'};
+		$this->assert_comments_provenance_bridge( $source, $historical_hash );
+		$this->assert_comments_provenance_bridge( str_replace( "\n", "\r\n", $source ), $historical_hash );
+	}
+
+	public static function comments_bridge_mutants(): array {
+		return array(
+			'missing marker opening' => array( self::COMMENTS_MARKER_OPEN, "\t\treturn [\n" ),
+			'missing marker closing' => array( self::COMMENTS_MARKER_CLOSE, "\t\t];\n" ),
+			'duplicated marker opening' => array( self::COMMENTS_MARKER_OPEN, self::COMMENTS_MARKER_OPEN . self::COMMENTS_MARKER_OPEN ),
+			'modified allowlist' => array( self::COMMENTS_MARKER_CLOSE, "\t\t], [ 'author', 'author_email', 'author_url' ] );\n" ),
+			'unrelated Comments drift' => array( 'self::register_reply();', 'self::register_reply( null );' ),
+			'forged historical binding' => array( null, null ),
+		);
+	}
+
+	/** @dataProvider comments_bridge_mutants */
+	public function test_comments_provenance_bridge_rejects_mutants( ?string $from, ?string $to ): void {
+		$source = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/includes/class-comments.php' ) );
+		$ledger = $this->ledger();
+		$historical_hash = $ledger->source_hashes->{$ledger->head}->{'includes/class-comments.php'};
+		if ( null === $from ) {
+			$historical_hash = str_repeat( 'a', 64 );
+		} else {
+			$source = str_replace( $from, $to, $source, $replacements );
+			self::assertSame( 1, $replacements, 'Mutate exactly one source location.' );
+		}
+		$this->expectException( AssertionFailedError::class );
+		$this->assert_comments_provenance_bridge( $source, $historical_hash );
+	}
+
 	public function test_ledger_is_exact_pinned_typed_source_derivation(): void {
 		$ledger = $this->ledger();
 		self::assertSame( $this->typed( $ledger ), $this->typed( Wstm105Calibration\derive( $ledger ) ) );
@@ -206,6 +254,8 @@ final class CommentsCalibrationTest extends TestCase {
 			if ( str_starts_with( $path, 'includes/' ) ) {
 				if ( 'includes/class-ability.php' === $path ) {
 					$this->assert_ability_provenance_bridge( file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ), $hash );
+				} elseif ( 'includes/class-comments.php' === $path ) {
+					$this->assert_comments_provenance_bridge( file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ), $hash );
 				} else {
 					self::assertSame( $hash, hash( 'sha256', str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) ) ), 'Production drift: ' . $path );
 				}

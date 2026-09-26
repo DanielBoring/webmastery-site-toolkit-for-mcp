@@ -7,6 +7,323 @@ The Docker QA suite has two layers:
 1. Ability Contract QA is ability-driven. Every registered `webmastery-site-toolkit-for-mcp/*` ability must be represented in `tests/e2e/abilities-manifest.json`.
 2. Full MCP E2E QA uses real MCP Adapter HTTP JSON-RPC requests against `/wp-json/mcp/mcp-adapter-default-server` to prove a remote MCP client can create, read, update, and delete content through the adapter transport.
 
+## Bounded-list coverage and oracle migration (3.0)
+
+The windowed content/media/score/orphan lists return `items`, `page`, `per_page`,
+and `next_page`; they no longer compute exact filtered totals. Empty candidate
+windows can continue. Post/page/CPT/revision lists default to summary and require
+`fields:"full"` for content. See the [typed migration
+contract](../../docs/3.0-migration.md#bounded-list-windows-and-summary-projection).
+
+`BoundedListTest` proves the old 20,000-candidate path exceeds the 100-object
+authorization bound, then covers every changed list surface, sparse/empty
+continuation, EOF, same-direction ID ties, full stored bytes, revision shape,
+and batched reference hit/failure mapping. These are isolated unit probes, not
+WordPress database or runtime performance measurements.
+
+Reliability regressions exercise the exact integer offset/successor thresholds,
+all seven windowed surfaces' error paths, fresh SQL failures during lookup and
+priming, and stale database errors on SQL-free warm caches. A failed cached-ID
+query must invalidate its post-query generation and execute SQL again on retry,
+not masquerade as an empty EOF. These fault probes do not replace leased
+WordPress database-failure evidence.
+
+`tests/fixtures/bounded-list-manifest-migration.json` records the approved
+`ad26b21` baseline (563 exact case hashes) and all 18 before/after cases. The
+unit guard preserves every original label/role/outcome and unchanged assertion;
+future intentional migrations must explicitly update the relevant ledger.
+
+The approved schema dependency has a separate
+`tests/fixtures/input-schema-manifest-migration.json` recording its exact
+`3f6226b` to `1c460f1` changes: 31 before/after cases and 16 additions.
+The preservation guard composes these disjoint changes with the 18 bounded-list
+migrations, still checks all 563 original case hashes, and verifies all added
+schema controls. Neither migration ledger replaces the other's assertions.
+Two dependency-preservation corrections are recorded separately with source-after
+and corrected-after cases: the empty `meta` object in
+`wstm110 update-post rejects empty metadata presence` and empty `meta_input`
+object in `wstm110 create-cpt-mcp-case-study rejects metadata input` remain `{}`,
+not `[]`. Their approved `invalid_input` / `ability_invalid_input` expectations
+are unchanged; the guard preserves the original JSON types.
+
+The frozen-parent integration also retains
+`tests/fixtures/bounded-integration-manifest-migration.json`. Its six complete
+before/after cases correct source-derived boundary expectations without
+rewriting the earlier ledgers. Four raw permission assertions become canonical
+`invalid_input`; three additional native errors become
+`invalid_input` / `ability_invalid_input`. Three of those six cases already
+belong to the earlier 31 schema migrations, so they are not counted twice.
+Three added plain-input controls preserve the separate permission purposes.
+
+Against parent `1a8e76dae6183d99a48ff4c0a7ae34c1cdd17e18`, all 563 labels remain:
+511 cases are typed-semantically identical, 18 have the reviewed bounded-list
+migrations, 31 have the reviewed schema migrations, and three have the additional
+native corrections. That frozen `1dadee17` manifest has 594 cases: the original 563 plus
+12 bounded controls, 16 schema controls, and three plain permission controls.
+All original inputs retain their JSON types and values except the two previously
+approved revision cases adding `fields:"full"`; the six new corrections do not
+alter their original inputs. Capability, unchanged-state, and exact slash/JSON
+metadata assertions remain present.
+
+The subsequent normal integration of accepted main `2feed8d` has 601 cases:
+all 594 frozen cases, with only the 16 accepted destructive boolean error
+corrections applied, plus the seven exact database-privacy cases. No original
+input changes in this integration. `bounded-list-manifest-additions.json` pins
+the 12 existing bounded controls to `1dadee17`; it does not introduce new cases.
+The shared unit projection checks each complete owned addition and migration
+before reconstructing the accepted 570-case main view. In the other direction,
+it checks the 16 incoming code/reason pairs and seven typed privacy fingerprints
+before reconstructing the earlier 594-case bounded view. Both original ledger
+guards then run with their unchanged historical goldens, including main's
+privacy insertion order and sparse-index fingerprints.
+
+Mutation controls reject changes to input types, object-preservation corrections,
+roles, summary omissions, raw permission expectations, imported error reasons,
+privacy rows, baseline order, missing cases, duplicates, and unknown additions.
+The input-boundary seam evaluates the actual shared capability helper in its
+existing probe namespace; it does not replace that helper or bypass capability
+observation. These are mock/source preservation checks, not proof that the
+combined strict-input wrapper matches the accepted native boolean ordering.
+The later strict-wrapper composition still has **601 cases**. It applies the
+remaining 18 changes from the independently approved 52-change schema ledger:
+16 destructive native errors and two privacy native reasons become
+`invalid_input / ability_invalid_input`. All 34 other changes and all 19 schema
+additions were already present. No new reason relaxation, input migration, or
+case duplication is introduced. Historical direct-callback destructive reasons
+remain unchanged in their original ledger.
+
+`bounded-schema-composition.json` pins the original 601-case order and six exact
+**root-property-order-only** bridges (three metadata negatives and three plain
+permission controls). These bridges apply only to the projected schema view;
+live inputs, nested object/array ordering, values, and types remain unchanged.
+The first rejected strict-order guard and pre-composition source are retained in
+the integration evidence. After reversing the 18 bounded migrations and removing
+their 12 additions, the canonical schema helper checks every typed case and
+position in its 589-case view and reconstructs the exact 570-case parent. That
+parent must also equal the existing historical projection. Mutation controls
+add live order, root/input property order, and plain-capability corruption.
+Fresh composed QA, real native WordPress calibration, and runtime/package
+acceptance remain separate gates; earlier five-class results are not results
+for this new source.
+
+| Changed oracle | Replacement and retained purpose |
+| --- | --- |
+| Six post/page/CPT private/trash zero-total cases | Empty `items`, explicit EOF, absent totals; same actors/filters and object denial |
+| Two Contributor/Editor positive post/page total/page cases | Same exact ID, capabilities and author-login absence; `page`, `per_page`, EOF and absent second item/totals |
+| Two existing revision full-content cases | Explicit `fields:"full"` preserves the original content/id/parent/type oracles; additional default-summary cases prove content omission and excerpt presence |
+| Eight other successful list cases | Add window field types/values and absent totals without removing membership, author, score, MIME, URL or taxonomy assertions |
+| SEO key authorization unit and standalone runner | Same authorized IDs/scores, no denied-key reads; traverse candidate windows or compare the same window minus the denied object, with unchanged continuation |
+| Destructive known-reference unit checker | Same featured/URL/GUID truth, force/permission/no-write/fail-closed assertions; URL/GUID pattern columns now share one query rather than requiring separate COUNT queries |
+| Security manifest policy | Require private empty-window/EOF/no-total proof; mutation tests reject deleting any part of the new oracle |
+
+No baseline case is deleted. Other manifest totals (for example Site Kit) are
+unchanged. Existing stored-content getter/writer, metadata unknown/unevaluable,
+and destructive state/hook/cron assertions remain mandatory.
+
+`tests/fixtures/bounded-marker-composition.json` records the reviewed marker
+composition separately. The M1 normalizer tests retain every original method
+and value/permission/error purpose; bounded list and default-summary oracles are
+explicitly migrated, with additional full-response checks. A closed four-case
+hygiene-marker layer strips only the approved record-relative assertions before
+the existing 594/589/570 historical projections. Typed input/role/value and
+missing/extra/wrong-record marker mutations cannot be hidden by that layer.
+
+The opt-in benchmark, controller, plan, verifier, and shared assertions prepare
+large-library evidence independently of shared orchestration. Do not run this
+fixture, Docker, or local WordPress without an explicit disposable-runtime lease.
+The fixture targets at least 20,000 posts and 10,000 attachments, only 100 large
+55-KiB bodies, and operation-local counters excluding seed/catalog setup.
+Acceptance budgets are: candidate IDs at most `P+1`, distinct authorized
+candidates at most `P`, capability calls at most `5P+10`, ordinary SQL at most
+`3P+12`, orphan SQL at most `3P+12+ceil(2P/50)`, controlled default-20 summary
+logical payload at most 64 KiB, and incremental peak at most 64 MiB for `P=100`.
+Retain raw measurement methods/counters and failed artifacts; do not weaken
+budgets to obtain a pass. PHP 8.1 has no peak reset, so the runner must use a
+fresh process and an explicitly conservative memory bound, not claim the
+previous global peak is an incremental operation peak. Runtime/package and
+shared-validator/source-marker integration evidence remain separate gates.
+
+### Running the owned benchmark after lease approval
+
+Preparation and unit checks do not constitute numeric acceptance. Run only in a
+leased, isolated single-site WordPress 6.9-or-newer installation with empty
+posts/postmeta tables, the toolkit and real Yoast active, and no external object
+cache. Add `define( 'WSTM_BOUNDED_BENCHMARK', true );` to that disposable
+installation's `wp-config.php`. The controller is **Linux/Python 3.11+ only**,
+using pidfd exit notification and bounded, event-driven pipe capture. It does
+not provision WordPress, Docker, storage, or credentials. Its required environment
+JSON binds `php`/`php_sha256`, `wp_load`/`wp_load_sha256`, `source_sha`, a unique
+`w121_<12 lowercase hex>` namespace, `shard`, private `artifact_root`, disjoint
+`owned_storage_roots`, `whole_job_bytes`, `cleanup_reserve_bytes`, and independently
+approved `storage_receipt`/`private_durability_receipt` originals (`path`, `sha256`).
+Those receipts and actual paths are not supplied by the repository or inferred
+from a successful local test. Each receipt is limited to 1 MiB and its exact
+original bytes are retained inside controller custody for offline review.
+Artifacts must be outside the web root.
+
+The controller takes exactly one argument: the path to that granted JSON file,
+not inline JSON. Through an approved bounded launcher:
+
+```sh
+python3 tests/e2e/bounded-list-controller.py "$GRANTED_ENVIRONMENT_JSON"
+```
+
+It invokes fresh PHP phases and workers; the former unbounded PHP `run` mode
+is deliberately unavailable. Do not invoke individual application phases with
+an unbounded shell command as a substitute for this controller.
+
+Each platform lane has seven exhaustive collection shards:
+
+| Shard | Fresh workers |
+| --- | ---: |
+| posts | 1,228 |
+| pages | 46 |
+| CPT | 46 |
+| media | 610 |
+| SEO | 1,210 |
+| readability | 1,210 |
+| orphans | 610 |
+
+Every shard seeds the complete 20,000/10,000 fixture, including exactly 100
+55-KiB bodies containing stored HTML, block comments, quotes, and backslashes.
+Across seven shards there are **4,960 workers: 4,878 traversal workers plus
+82 edge cases, covering 42 whole traversals**. No traversal or stateful
+failure/retry/cleanup sequence is sampled or divided between shards.
+Budgets are 60 seconds per worker, four hours per traversal phase, five hours
+per native shard, and a proposed 345-minute hosted-job envelope, below GitHub's
+six-hour hosted-job limit. Seed/probe/snapshot/cleanup phases have separate
+limits in `Wstm121Plan::PHASE_SECONDS`.
+
+Each pipe retains at most 4 MiB plus a 64-KiB overflow diagnostic; overflow is
+a failure, never a passing truncated record. A namespace has an 8-GiB
+retained/cumulative-write bound, 32-MiB PHP JSON limit, and reserved cleanup
+capacity. PHP journals write reservations (including overwritten JSON);
+controller capture/record writes and journal bytes are included. Final
+outcome/execution/custody publication reserves 34 MiB; ordinary controller JSON
+records are limited to 1 MiB and custody to 32 MiB. Filesystem
+checks are cooperative: blocking filesystem latency is not a hard-time guarantee.
+The independently declared whole-job storage bound must also include fixture
+database/storage roots, not just report files.
+
+Retain the exit code and both private namespace/controller directories, including failures.
+Artifacts record source/file hashes, available Git diff, per-operation
+SQL/capability/query observations, memory markers, responses, assertions,
+traversals, immutable-state snapshots, and cleanup outcomes. The full traversal
+uses thousands of fresh subprocesses. Interrupted runs can retry owned cleanup
+only under a separately bounded recovery invocation using the **same identity,
+namespace, ownership state, and byte-reservation journal**. Preserve the original
+failure/captures; do not relabel an interrupted run as a successful shard.
+
+Cleanup can resume after the journaled actor was already deleted, including
+when control-option deletion failed or the process stopped between those
+steps. It still requires the matching live control token and journaled IDs and
+markers. A different existing actor at the original ID or using the namespace,
+a foreign post marker, or a lookup error remains a refusal, not permission for
+broader deletion. Isolated crash-phase tests cover partial cleanup and retry;
+real-runtime recovery evidence remains lease-gated.
+
+The controller prints the final custody SHA-256 only after publication. Pin it
+outside the artifact set; a self-reported hash alone is not attestation.
+The independent verifier takes a shard-map JSON file path followed by an
+exclusive output-file path. Its input is a direct object in canonical
+`posts`, `pages`, `cpt`, `media`, `seo`, `readability`, `orphans` order,
+with `directory` and `custody_sha256` in each entry, not top-level maps:
+
+```json
+{
+  "posts": {"directory": "<posts-data-directory>", "custody_sha256": "<sha256>"},
+  "pages": {"directory": "<pages-data-directory>", "custody_sha256": "<sha256>"},
+  "cpt": {"directory": "<cpt-data-directory>", "custody_sha256": "<sha256>"},
+  "media": {"directory": "<media-data-directory>", "custody_sha256": "<sha256>"},
+  "seo": {"directory": "<seo-data-directory>", "custody_sha256": "<sha256>"},
+  "readability": {"directory": "<readability-data-directory>", "custody_sha256": "<sha256>"},
+  "orphans": {"directory": "<orphans-data-directory>", "custody_sha256": "<sha256>"}
+}
+```
+
+Replace the placeholders with approved original data-directory paths and
+independently pinned 64-digit SHA-256 hashes. Both JSON arguments are file paths.
+Through an approved bounded launcher:
+
+```sh
+php tests/e2e/bounded-list-verifier.php "$SHARD_MAP_JSON" "$EXCLUSIVE_RESULT_JSON"
+```
+
+Verification rechecks the complete inventory and byte hashes, original JSON
+array shapes, all 4,960 operation records, 42 full traversals, actual seed/body
+measurements, reference parity, forced-delete failure, cache retry, projection,
+write/hook/state invariance and cleanup readback. Storage accounting is
+recomputed from originals and the reservation journal, including final custody
+bytes. Failed evidence is retained, not passed by a summary flag. This does
+not attest storage ownership/private durability, platform identity, the original
+packaged ZIP, HTTP/MCP behavior, or genuine PR CI: those remain separate gates.
+No dedicated recovery launcher is supplied yet; before any real lease, the
+execution owner must approve a separately bounded recovery procedure that
+preserves earlier cleanup outputs as well as failure/capture originals.
+
+The PHP 8.1-compatible memory bound is the final global allocated peak minus
+current allocated memory immediately before the operation, in a fresh process.
+It is an upper bound, not an exact incremental peak: a bootstrap peak can cause
+a conservative failure. No historical-peak subtraction or peak-reset API is
+used. This measures PHP allocation, not RSS or database memory. Cold/warm refers
+to request-local object caches, not database buffer caches; the payload budget
+applies only to the controlled default-20 summary fixture. Actual WordPress/PHP
+floor execution and numeric acceptance remain pending until leased runs supply
+the raw evidence.
+
+The verifier's final-source target requires #166's record-relative
+`untrusted_fields` JSON arrays, not optional annotations or an envelope marker.
+It checks exact unique string sets intersected with **present** fields, including
+null/empty/false values; marker ordering is not a client contract. Posts/pages/CPT
+use their normalized-record allowlist, media uses its media allowlist, SEO uses
+its metric-record allowlist, readability uses `title/url/score`, and orphan
+records use `title/url`. Revisions use their separate `data.revisions[i]`
+`author_name/title/content/excerpt` contract. Summary must omit `content` and its
+marker while retaining all other applicable markers. Actual marker JSON bytes
+count toward payload measurements. These assertions deliberately gate an
+uncomposed candidate: neither the pending #166 hygiene wrappers nor their real
+runtime acceptance are implied by this verifier source.
+
+### Proposed large-fixture stage (not wired or executed)
+
+Ordinary unit CI separately runs the ten existing synthetic process/receipt
+components through `scripts/test-controller-components.py`, plus eight
+in-process harness regressions. The component job requires Python 3.11+ and an
+actual Linux pidfd/P_PIDFD precheck; exactly ten discovered, started, finished
+and passing IDs must match, with no skipped or expected-failure outcomes.
+It uses fresh private runner-temporary storage and always retains a scoped
+synthetic ZIP and result/hash ledger for seven days. Deliberate symlinks are
+recorded only as metadata, never dereferenced or archived as live links.
+No WordPress, benchmark entrypoint or private producer directory is used.
+Passing these components does **not** satisfy any large-fixture, private-custody,
+receiver, platform-floor, transport or package requirement below.
+
+The shared harness and workflows do not yet invoke the bounded benchmark.
+After an explicit coordinator lease, a separate disposable large-fixture stage
+should run the commands above, including a WordPress 6.9 / PHP 8.1 measurement
+lane and the pinned-current lane. Provision a dedicated empty posts/postmeta
+database; do not repurpose or clear the populated contract/HTTP fixture database.
+Perform the normal registration/manifest audit separately, then record the
+tested source and actual loaded-file hashes before seeding the 20,000/10,000
+fixture with exactly 100 large 55-KiB post bodies.
+
+The proposed stage must retain every fresh-worker report, raw operation-local
+counter and memory marker, cold/warm traversal, dense/sparse/all-denied window,
+empty intermediate continuation, tied-sort/EOF result, reference-parity result,
+unchanged state/hook/cron observation, and owned cleanup/recovery outcome.
+Use the exact budgets above, not a reduced fixture or relaxed thresholds.
+Archive failed evidence before retrying; cleanup uses only the same journaled
+namespace/token and must not hide the original failure.
+
+Additional actual-WordPress fault/cache cases remain required: candidate-query
+and cache-priming SQL failure must return the safe error, stale database errors
+on a no-SQL cache hit must not fail, and a failed cached empty query must retry
+uncached and return the eligible IDs. Unit seams and the benchmark's reference
+fault probes do not establish that real cache/retry behavior. Final MCP,
+original-package, and source-marker combination proofs are separate acceptance
+gates. This proposal does not authorize runtime execution or change shared
+stage wiring, release controls, or the existing accepted metadata/error lanes.
+
 ## Unreleased canonical error coverage
 
 All manifest failures require `expect_error_shape:"canonical"`, a seven-category
@@ -75,8 +392,9 @@ confirmation `"true"`/`1` fails the strict callback with
 fails there with `invalid_input/invalid_input`. Missing/false/null confirmation,
 null/array optional flags and 101 IDs still fail registered schema validation.
 Direct-callback expectations and independent permission-denial checks do not
-change. The strict-input candidate supersedes these 16 native expectations
-with the exact calibration below; it does not rewrite this historical ledger.
+change in that historical baseline. The composed strict input wrapper now
+rejects these malformed native inputs earlier; the exact current calibration
+below supersedes only the boundary expectations, not these historical goldens.
 Do not broadly accept multiple reasons or coerce test inputs to make them pass.
 Preservation fingerprints decode JSON as objects and encode with
 `JSON_PRESERVE_ZERO_FRACTION`, retaining property order and sparse case indexes.
@@ -88,6 +406,34 @@ inherited privacy cases. Each imported row has an object/type-preserving hash
 derived from exact `db041ce`; tests require its exact insertion position/order
 before removing only those seven rows to verify the original 563-case goldens.
 Unknown extra cases, altered privacy rows, and reordered baseline rows fail.
+In the 601-case bounded integration, the exact owned-delta projection described
+above runs first; the 570/563-case historical counts and hashes remain unchanged.
+
+The existing `input-schema-integration-ledger.json` defines the current runtime
+calibration: all 60 confirmation, 18 optional-flag and 8 oversized-array raw
+permission observations become native `WP_Error` with canonical
+`invalid_input/ability_invalid_input`. Of those 86 calls, exactly 36 native
+results change (24 string/number confirmations and 12 string/integer flags).
+The other 50 native reasons and all direct interlocks remain unchanged.
+The runner checks the exact raw error code, envelope and native result separately
+from valid-input actor denials. `RuntimeCalibrationTest` evaluates actual case
+construction and production callbacks with scoped doubles; it is not HTTP or
+WordPress acceptance.
+
+All 124 original destructive controls and labels remain in relative order.
+Their eight reference-scan fault cases now target the actual bounded thumbnail
+query, not the obsolete `SELECT COUNT(1)` shape. Six additive cases independently
+fail the content query for URL, GUID and unused attachments, with both force
+values, making **130 cases per boundary/trash invocation**. Featured-image hits
+correctly skip content queries and therefore are not claimed as content-fault
+coverage. Each fault is scoped to an owned candidate and exact prepared SQL;
+native and HTTP evidence records its phase, candidate, original/replacement SQL
+and hit count. Exactly one execution hit and zero permission hits are required.
+A zero-hit claim fails even if an envelope happens to look right. Existing
+snapshot, hook, file, reference, permission and truthful-deletion controls remain.
+The earlier failed CI's 16 premature fixture deletions across four HTTP lanes
+remain failed evidence, not a successful error-path demonstration. Genuine
+SQL-failure fail-closed behavior needs a fresh separately authorized runtime run.
 
 `run_destructive_safety_qa` in the shared harness runs serially in a subshell:
 `contract` selects direct callbacks and registered abilities, `e2e` selects
@@ -249,7 +595,7 @@ keep their original permission purpose using plain payloads; scheduling keeps
 metadata sentinels instead of injecting aliases into every request.
 
 SEO unit probes reject reads of each of 40 denied keys before they occur,
-check authorized score pagination and total counts, prohibit opaque head
+check authorized score membership across bounded windows without totals, prohibit opaque head
 requests, and enforce the overview's single 100-ID query / at most 400 reads.
 Unit observations are not substitutes for actual WordPress/provider/HTTP QA.
 The [migration guide](../../docs/3.0-migration.md#metadata-and-seo-authorization)
@@ -259,7 +605,7 @@ documents all changed user-facing contracts.
 
 ### Native validation phase and frozen safety integration
 
-The schema candidate normally integrates frozen safety source
+The historical schema candidate integrated frozen safety source
 `f93b7d11bec24620f5dd51202db3e6cb1df020d9` (tree
 `c402e4a33a166c02d45f3ca831dfa11504ea55c2`). Its source acceptance is not
 runtime acceptance of this integrated candidate. Shared startup, lifecycle,
@@ -333,8 +679,9 @@ metadata sentinels are preserved. Unexpected extras, omissions, reordering,
 type drift, altered reasons, changed no-write fields or modified additions
 fail projection controls.
 
-Current coverage is **589 cases / 85 abilities / 307 negatives**. The earlier
-34 migrations include four already-approved nonhierarchical-parent zero
+The accepted schema-only view has **589 cases / 85 abilities / 307 negatives**;
+the bounded composition retains **601 cases** and the separate projections above.
+The earlier 34 migrations include four already-approved nonhierarchical-parent zero
 success-to-failure corrections and their replacement state oracles; they are
 not represented as new reason-only edits. Only the 18 newly approved safety
 and privacy cases are limited to the indicated native error fields.
@@ -363,12 +710,15 @@ The privacy null row is unchanged. The original privacy hash/index goldens
 are unchanged; the ledger explicitly reverses only the two authorized reason
 changes before checking those hashes. The prior 34 native migrations, four
 overlapping raw-permission migrations, six combined-metadata corrections and
-three plain authorization controls from `1bf2eb2` remain intact. No new
-manifest cases are added beyond its 19 and the parent's seven privacy cases.
+three plain authorization controls from `1bf2eb2` remain intact. No new schema
+manifest cases are added beyond its 19 and the parent's seven privacy cases;
+the combined candidate additionally retains the 12 bounded-list controls.
 All 45 original safety inputs persist; only the exact 16 native error fields
 above change relative to f93.
 
-The safety runtime still has 124 invocations per boundary per trash boot.
+The schema-only safety runtime retains 124 invocations per boundary per trash
+boot; the bounded integration preserves those and adds six content-query faults
+for 130, as documented above.
 Exactly **86 independent raw permission observations** now require native
 `WP_Error`, code `invalid_input`, reason `ability_invalid_input`: 60 invalid
 confirmations (50 actor checks plus ten previews), 18 optional flags, and
@@ -380,10 +730,11 @@ denials remain distinct native `forbidden` permission errors. Snapshots,
 mutation hooks, cron, references, files, deletion truthfulness and ownership
 checks are not relaxed. Full old/new boundary mappings are in the JSON ledger.
 
-No local Docker, WordPress boot, HTTP, floor or package execution is claimed
-for this integration. All 78 canonical error cases, actual core lifecycle,
+No local Docker, WordPress boot, HTTP, floor or package execution was claimed
+for that source integration. All 78 canonical error cases, actual core lifecycle,
 five schema boundaries, metadata/parent/safety suites and original-package
-identity/cleanup still require the coordinator's later runtime acceptance.
+identity/cleanup require exact-candidate runtime acceptance. The historical
+package result recorded below does not establish acceptance of this merge.
 
 `InputBoundaryTest` registers the production abilities in an isolated namespace,
 compares all 85 registered names against the manifest, and tests raw permission
@@ -421,38 +772,52 @@ The authorized schema expectation changes and additions remain:
 | Combined metadata cases | 23 | Native `invalid_input` / `ability_invalid_input`; all existing state/metadata assertions retained |
 | Nonhierarchical CPT parent presence | 8 | Native `invalid_input` / `ability_invalid_input`, including zero and Administrator cases; no persisted change |
 | New enum/type/unknown-key and denied-role controls | 16 | Exact canonical errors, never sanitizer-coerced success |
-| Total at this checkpoint | 579 | 85 abilities; 300 negatives; every registered ability represented |
+| Schema-only checkpoint (historical) | 579 | 85 abilities; 300 negatives; every registered ability represented |
+| Combined bounded-list/schema checkpoint | 591 | 85 abilities; 306 negatives; both independent migration ledgers retained |
+| Frozen-parent integration plus explicit permission corrections | 594 | 85 abilities; 309 negatives; six corrected cases and three separate plain permission controls |
+| Accepted-main integration at `2feed8d` | 601 | 85 abilities; 313 negatives; seven exact privacy additions and 16 accepted boolean error corrections, composed without replacing historical goldens |
 
-The frozen-parent integration subsequently audited all raw permission assertions
-and all 26 combined-metadata inputs. Six cases had stale layer-specific
-expectations. These corrections are additional to the historical ledger above;
-they do not change any original input or remove its state/metadata assertions.
-`assert_permission` compares `WP_Error::get_error_code()`, **not** the envelope
-reason: the raw code is `invalid_input`, the raw envelope reason is
-`metadata_requires_separate_call`, and native schema rejection is
-`invalid_input` / `ability_invalid_input`.
+The additional source-derived corrections are:
 
-| Original label | Raw permission correction | Additional native correction |
-| --- | --- | --- |
-| `wstm120 contributor cannot transition draft to publish rejects original combined payload` | `true` to `invalid_input` | None; original 31 already include this |
-| `wstm120 contributor cannot transition draft to private rejects original combined payload` | `true` to `invalid_input` | None; original 31 already include this |
-| `wstm120 contributor cannot transition draft to future rejects original combined payload` | `true` to `invalid_input` | None; original 31 already include this |
-| `wstm120 contributor cannot update unrelated draft` | `forbidden` to `invalid_input` | `forbidden` / `ability_invalid_permissions` to `invalid_input` / `ability_invalid_input` |
-| `wstm122 denied post write preserves metadata` | No existing raw assertion | Same native correction |
-| `wstm122 denied page write preserves metadata` | No existing raw assertion | Same native correction |
+| Original case | Corrected boundary and preserved purpose |
+| --- | --- |
+| `wstm120 contributor cannot transition draft to publish rejects original combined payload` | Raw permission `true` becomes canonical `invalid_input`; original combined payload and no-write proof remain |
+| `wstm120 contributor cannot transition draft to private rejects original combined payload` | Same raw permission correction; original private-transition payload retained |
+| `wstm120 contributor cannot transition draft to future rejects original combined payload` | Same raw permission correction; original scheduling payload retained |
+| `wstm120 contributor cannot update unrelated draft` | Raw permission `forbidden` becomes `invalid_input`; native `ability_invalid_permissions` becomes `ability_invalid_input`; original input and allowed `edit_posts` / denied `edit_post` facts remain |
+| `wstm122 denied post write preserves metadata` | Native input rejection, unchanged-state and metadata-boundary evidence; exact original alias value and backslash sentinel retained |
+| `wstm122 denied page write preserves metadata` | Native input rejection with the exact original alias value and JSON/backslash sentinel retained |
 
-The original three plain Contributor transition cases retain raw `true`,
-the exact publication-denial message, `forbidden`, and unchanged-state checks.
-Three additional plain-input authorization controls retain raw `forbidden`,
-native `forbidden` / `ability_invalid_permissions`, unchanged-state evidence,
-and actual `edit_post` denial facts: `wstm120 contributor cannot update
-unrelated draft with plain input`, `wstm122 denied post write with plain input
-preserves metadata`, and `wstm122 denied page write with plain input preserves
-metadata`. The unrelated-draft pair also retains `edit_posts:true`; the two
-subscriber pairs preserve their original exact backslash/JSON metadata
-sentinels. Combined cases retain the original payload, including `Denied\meta`,
-and add full metadata-boundary/no-write evidence rather than claiming to reach
-object authorization.
+The three existing plain Contributor publish/private/future cases still require
+raw permission `true`, execution `forbidden`, the exact publication-denial
+message, and unchanged state. New `wstm120 contributor cannot update unrelated
+draft with plain input` retains object-capability denial without the alias.
+New `wstm122 denied post write with plain input preserves metadata` and its page
+counterpart submit only the original ID and a valid title update; both require
+denied `edit_post`, raw `forbidden`, native `ability_invalid_permissions`,
+unchanged state, absent data, and the same exact stored metadata sentinels.
+
+These expectations follow the integrated registration path, not a failed-run
+fallback: the priority-20 `Webmastery_MCP_Input::register_args` filter closes
+declared object properties with `additionalProperties:false`. All eight
+post/page/fixture-CPT create/update schemas omit `meta`, `meta_input`, the 34
+removed SEO aliases, and unknown reserved provider keys. WordPress
+`WP_Ability::execute()` validates that schema before invoking permission or
+execution callbacks, producing native `ability_invalid_input`. The plugin's
+raw permission/execute wrappers instead check combined metadata first; raw
+permission returns a `WP_Error` whose canonical code is `invalid_input` and
+decoded reason is `metadata_requires_separate_call`. Direct, gateway, and
+individual-tool metadata reason oracles remain `metadata_requires_separate_call`.
+The shared ability runner is unchanged: `assert_permission` compares the
+canonical `get_error_code()`, not the decoded reason.
+
+`BoundedIntegrationTest` checks all 26 combined manifest cases against the
+current schemas, all 1,176 batch variants against eight actual registration
+definitions, zero original callback invocations/events on raw rejection, and
+the separate plain permission purposes. Validator mutations reject metadata
+or schema reasons substituted for canonical permission codes, unknown codes,
+and arrays. These isolated source seams do not establish actual core/HTTP
+execution; all affected runtime boundaries must be rerun on the frozen source.
 
 At the historical `1bf2eb2` freeze, totals were **582 cases / 85 abilities / 303 negatives**: original
 563 inputs preserved, original 31 native migrations plus three additional
@@ -645,7 +1010,7 @@ documents open maps, validation scope, and exact failure-layer differences.
 
 ### Historical frozen-parent integration and remaining runtime gates
 
-The schema candidate integrates the existing destructive-safety parent
+The historical schema candidate integrated the existing destructive-safety parent
 `1a8e76dae6183d99a48ff4c0a7ae34c1cdd17e18` (tree
 `0b7806574d279e40351d7675386e70266ca0a2bf`), which includes accepted main
 `90a2740` and the metadata, error, plugin-inventory, coverage, and release
@@ -653,7 +1018,9 @@ safeguards. This is source integration, **not** acceptance of the parent's
 destructive-operation runtime proof or permission to merge/publish. The
 45 `wstm116` manifest cases, raw 100-ID bound, exact boolean confirmation,
 force/preview semantics, and original metadata object corrections are retained.
-No list-performance or other pending PR implementation is imported.
+No list-performance or other pending PR implementation was imported at that
+historical checkpoint; the current merge also retains the bounded implementation
+and its independent evidence gates.
 
 That source freeze deliberately had no shared schema wiring. The later
 `5b39f6a` integration accepted exact safety parent `f93b7d1`, and the separately
@@ -744,6 +1111,13 @@ Current coverage is 75 base registered abilities plus 5 generated abilities per 
 `update-cpt-mcp-book` regression coverage (issue #107) proves taxonomy assignment is pre-validated before `wp_update_post()` writes anything: each denial case (a nonexistent taxonomy, a registered taxonomy the actor lacks `assign_terms` capability for, and a mixed payload combining one allowed and one forbidden *registered* taxonomy alongside the existing allowed-plus-nonexistent case) submits a full `title`/`content`/`status`/`slug`/`taxonomy_terms` payload, and the paired read confirms the fixture's title, content, status, slug, and taxonomy terms are all unchanged. A second fixture taxonomy, `wstm107_restricted_shelf`, is registered only for `mcp_book` and granted to no role, so it is always forbidden and exercises the mixed allowed/forbidden registered-taxonomy path independently of the nonexistent-taxonomy case. The fixture post used for these cases (`wstm107_book_id`) is created with an explicit, deterministic slug so the unchanged-slug assertions are stable.
 
 ## Ranked coverage reconciliation (#120)
+
+For this integrated candidate, the three explicit migration ledgers above
+supersede historical post/page filtered-total and native combined-metadata
+oracles below. They retain the allowed/denied, capability, stored-value and
+no-write purposes; the inherited ranked unit guards are executed against the
+current manifest. The accepted parent runtime reports remain historical,
+source-bound evidence, not runtime acceptance of this candidate.
 
 This ledger reconciles all ten groups in
 [`ISSUES/19-close-test-coverage-gaps-ranked-by-blast-radius.md`](../../ISSUES/19-close-test-coverage-gaps-ranked-by-blast-radius.md).
@@ -1035,6 +1409,34 @@ the 268-case correction requires a new genuine run.
 
 For rejected calls, the runner compares post/revision, metadata, term-relationship, and cron snapshots and asserts that relevant pre-write/save/publication/term/meta/cron hooks did not run. Successful controls exercise those observers. It checks stored local/GMT dates and actual future status, and calls core's future-publication guard early to verify that ambiguous local cron conversions do not publish before authoritative GMT. Existing stored local/GMT strings survive a site timezone change without a new pair-equality restriction or cron override.
 
+The composed runner covers schema-denial and overdue-date scenarios through
+actual registered callbacks, not an additional helper-only call. Each unchanged
+invalid-status payload proves strict schema rejection; its minimal companion
+removes only `status` and reaches the actual scheduling callback's overdue-date
+rejection against the same fixture. Neither callback is unwrapped or its input
+guard bypassed. The earlier nested `layers.registered_callback` /
+`layers.scheduling_helper` trace is historical evidence, not the current report
+shape or an extra current runtime observation.
+
+The sealed 264-to-268 calibration protects the original and minimal typed inputs,
+exact canonical envelopes, capability observations and unchanged state, hooks
+and metadata sentinels. Malformed or wrong-error responses cannot substitute
+for the required error, and no-write evidence is independently required.
+`SchedulingCalibrationTest` uses the accepted Probe/ledger construction and
+actual production scheduling callback with state/hook/sentinel mutation controls;
+it does not replace real WordPress or package acceptance.
+
+Supplemental **offline** `dual_layer` controls in `SchedulingCalibrationTest`
+and `scheduling-calibration.php` retain the distinct original-input purpose:
+call the real registered callback, then the real scheduling helper with the
+identical invalid-status input and pre-call post, inside one observation window.
+Intermediate and combined snapshots/hooks, original-fixture-ID-only reads and
+raw malformed-response evidence remain required. The controls exercise all
+25 layer/fault combinations across four object types, separately from the sealed
+268-case proof. The omission companion alone is not evidence for that same-input
+helper path. These offline controls do not add nested trace fields to the
+runtime report, change its sealed inventory, or establish runtime acceptance.
+
 Exact -1/0/+1/+59/+60/+61-second boundaries use a fixed clock in unit tests. Real WordPress success cases are comfortably in the future: core's later clock sample can cross the cutoff even after an exactly +60-second preflight. These tests establish preflight behavior, not an atomic guarantee against clock ticks, process delays, or arbitrary third-party hooks.
 
 The dedicated `e2e-artifacts/scheduling-regression.json` includes the runner hash, runtime versions, results, state hashes, observed hooks, stored dates, and cron timestamps. Artifact creation or incomplete writes fail explicitly. CI uploads this JSON on success or failure, requires its presence, and retains it for **7 days**. Full MCP E2E separately preserves actual tool-result envelopes for the three new scheduling errors in `mcp-crud-summary.json`, including the successful gateway wrapping a failed ability response.
@@ -1047,15 +1449,18 @@ The contract runner also executes `taxonomy-write-runner.php` on the disposable 
 
 The supplemental runner exercises wrapped abilities and their direct execute callbacks for default Administrators, Editors, and Subscribers; remapped edit-only/delete-only/manage-only capabilities; a global capability without the remapped grant; WordPress core aliases; final `user_has_cap` denial; and per-object `map_meta_cap` denials with otherwise sufficient capabilities. Denied calls must leave the persisted terms, taxonomy rows (including parents/counts), metadata, and relationships identical, with no watched write hooks. Successful calls verify persisted names/slugs/descriptions/parents or deleted-term absence and the legacy success envelope. Missing/wrong-taxonomy IDs retain their authorized not-found envelopes.
 
-The 3.0 strict-schema calibration expands this separate runner from **156 to
-164 cases**, not the 589-case manifest. Eight original delete payloads (category
-or tag, missing or wrong-taxonomy ID, wrapped or direct) retain their identical
-integer IDs, `name: "Must not write"` and `confirm: true`. Their unadvertised
-`name` field now has the exact `invalid_input` / `ability_invalid_input` schema
-expectation, empty object details and unchanged-state/write-hook assertions.
-Each original precedes a new counterpart removing only `name`; that counterpart
-retains the original authorized `not_found` purpose, message, ID and state
-checks. The other 148 original cases are unchanged.
+The eight historical missing/wrong-taxonomy **delete** payloads also contain
+`name:"Must not write"`, an undeclared delete property. They remain intact as
+explicit closed-schema denials with exact `invalid_input/ability_invalid_input`,
+canonical message/empty object details, zero operation-local capability/query
+calls and unchanged state/hooks. Eight additive typed counterparts remove only `name`, retaining
+the same ID, `confirm:true`, actor, capability and wrapped/direct path to reach
+the intended exact not-found result with its original message, ID and state checks.
+Thus 148 unchanged other controls plus these eight originals and eight counterparts
+expand the separate runner from 156 to 164 cases, independently of the manifest.
+After-state hashes and hook evidence are captured before evaluating either oracle; an original mutation
+cannot become the next counterpart's baseline. This fixture migration does not
+change production deletion or permission behavior.
 
 `TaxonomyCalibrationTest` and the sealed `taxonomy-calibration-ledger.json`
 derive the actual runner's typed construction from frozen `3f6e8e0`/`436191f`
@@ -1225,6 +1630,30 @@ Confirmed inspection: WordPress.org Site Kit **1.187.0**, WordPress **7.1**, PHP
 The runner fails early if either dependency is not active. Coexistence assertions seed SEOPress meta on a post that receives Yoast-backed updates and verify those Yoast paths do not mutate SEOPress meta; separate SEOPress assertions verify SEOPress-specific write and read paths.
 
 Routine QA uses reviewed WP-CLI, MCP Adapter, SEO-plugin, and Plugin Check pins from `.github/compatibility-versions.json`. WP-CLI and adapter downloads must pass digest verification before execution/installation. Candidate overrides must supply the matching digest; do not reuse the baseline digest for a different release. The scheduled compatibility workflow explicitly opts into floating dependencies and records the versions it actually tests.
+
+### Exact-candidate supported-floor CI
+
+The existing floor pass for `de28e09122f885c28742bff27188b3d7d6615954`
+is historical old-head evidence only. It does not accept the subsequent merge
+with `8ea870beb03076c4d118e8d8bccb3304947bf03a`, establish new runtime or
+benchmark acceptance, or replace any final-source verifier requirement below.
+
+The existing `6 - Compatibility QA` workflow also accepts an optional `candidate_sha`: a full lowercase 40-character commit SHA in this repository. With that input, only the isolated candidate-floor job runs on GitHub-hosted Ubuntu/Docker, using the existing supported-floor matrix entry (WordPress 6.9 / PHP 8.1, MySQL 8.0.36) and `bash scripts/e2e-test.sh all`. It uses that candidate's reviewed dependency configuration, including verified WP-CLI/adapter downloads and pinned SEO versions, without discovery or configuration overlays. `open_update_pr` must be `false`; candidate mode cannot generate a baseline update, open a PR, publish, or deploy.
+
+After publication/review of the workflow implementation, a separately authorized dispatch can use a reviewed branch/tag containing this candidate path:
+
+```bash
+gh workflow run compatibility-qa.yml \
+  --ref "${WORKFLOW_REF:?Set the reviewed workflow branch or tag}" \
+  -f candidate_sha="${CANDIDATE_SHA:?Set the exact reviewed candidate commit}" \
+  -f open_update_pr=false
+```
+
+The workflow ref selects CI logic, **not the plugin under test**. Evidence tools are checked out separately at `github.workflow_sha`; the candidate is checked out at `candidate_sha`, which must equal its actual HEAD. This permits testing an older frozen candidate that does not contain the new evidence verifier. **Final acceptance must target the eventual frozen head intended for merge, after normal publication**; an older-head run is only preliminary evidence and cannot accept a later workflow/source commit. The candidate's existing Compose configuration mounts only that candidate checkout. Recorded identities/trees for both checkouts, hashes of tracked candidate files, mounted-file verification, the loaded plugin entrypoint/class path, actual WordPress/PHP/MySQL-server/WP-CLI/plugin versions, image details, and original observation stdout/stderr/exit codes identify what actually ran. A read-only `SELECT VERSION()` through WP-CLI observes the database server used by WordPress; its typed `mysql_server` value must be exactly `8.0.36`, consistent with the selected floor image. The separate MySQL client banner remains diagnostic only and cannot substitute for this server observation. Floor tags can resolve newer 6.9.x/8.1.x patch releases: evidence covers the observed versions, not untested earlier patches. Floor/version/pin/source mismatches fail the job; a missing observation is never replaced with a passing default. All E2E assertions remain unchanged.
+
+The server observer uses `wp eval` to issue `SELECT VERSION()` through WordPress's loaded `$wpdb` connection; it does not require a MySQL client executable in the WordPress image. It temporarily suppresses database-error output and restores the prior setting. A query error, non-string result, or empty/whitespace-only result produces a fixed error on stderr and a nonzero exit, with no server value on stdout. Successful output is the unchanged server string only; unexpected versions still fail the existing exact-version verifier. Original stdout/stderr/exit capture and the blocking observation gate remain in place.
+
+The unique run/attempt Compose project uses existing retention-aware cleanup. Outcomes and ordinary runtime artifacts are retained for 30 days on success or failure after source preparation; preparation/checkout failures remain visible in the Actions job log. Review the original outcomes, cleanup result and run conclusion, not just configured image tags. A successful full harness does not override a failed server observation: that run remains failed and requires a separately authorized new-head run after correction. This dispatch does not satisfy required PR-event checks or establish original-package acceptance. It does **not** run the large-library benchmark, relax any numerical budget, or satisfy its separate private-custody/receiver-acknowledgement requirements. Leaving `candidate_sha` empty preserves the normal default-branch discovery, compatibility matrix, checker and guarded promotion pipeline.
 
 Set `MCP_CRUD_ENDPOINT` only when you need the secondary CRUD runner to target a non-default MCP Adapter endpoint. By default it uses `http://localhost/wp-json/mcp/mcp-adapter-default-server` from inside the WordPress container.
 

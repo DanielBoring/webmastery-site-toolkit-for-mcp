@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
-require_once __DIR__ . '/fixtures/schema-integration-ledger.php';
+require_once __DIR__ . '/fixtures/bounded-manifest-projection.php';
+require_once __DIR__ . '/fixtures/runtime-calibration.php';
 
 final class DestructiveBooleanLedgerTest extends TestCase {
 	private static function fingerprint( array $cases, bool $without_oracles = false ): string {
@@ -18,6 +19,7 @@ final class DestructiveBooleanLedgerTest extends TestCase {
 	}
 
 	private static function baseline_projection( array $manifest, array $integration ): array {
+		$manifest = BoundedManifestProjection::accepted_main( $manifest );
 		self::assertSame( 'db041ce338634ebf829ca01c69056b08fe6397d1', $integration['source_sha'] );
 		self::assertSame( 570, $integration['manifest_count'] );
 		self::assertSame( 372, $integration['insertion_index'] );
@@ -38,7 +40,6 @@ final class DestructiveBooleanLedgerTest extends TestCase {
 		$directory = dirname( __DIR__ ) . '/e2e/';
 		$ledger = json_decode( file_get_contents( $directory . 'destructive-safety-boolean-ledger.json' ), true, 512, JSON_THROW_ON_ERROR );
 		$manifest = json_decode( file_get_contents( $directory . 'abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
-		$manifest = wstm126_parent_manifest( $manifest );
 		$manifest = self::baseline_projection( $manifest, $ledger['integration'] );
 		self::assertCount( 563, $manifest );
 		self::assertCount( 16, $ledger['cases'] );
@@ -70,14 +71,19 @@ final class DestructiveBooleanLedgerTest extends TestCase {
 		$directory = dirname( __DIR__ ) . '/e2e/';
 		$ledger = json_decode( file_get_contents( $directory . 'destructive-safety-boolean-ledger.json' ), true, 512, JSON_THROW_ON_ERROR );
 		$manifest = json_decode( file_get_contents( $directory . 'abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
-		$manifest = wstm126_parent_manifest( $manifest );
-		if ( 'privacy-role' === $mutation ) { $manifest[372]->role = 'subscriber'; }
-		if ( 'privacy-integer-float' === $mutation ) { $manifest[377]->input->include_table_names = 1.0; }
-		if ( 'privacy-order' === $mutation ) { [ $manifest[372], $manifest[373] ] = array( $manifest[373], $manifest[372] ); }
-		if ( 'extra-case' === $mutation ) { $manifest[] = clone $manifest[372]; }
+		$labels = array_flip( array_column( $manifest, 'label' ) );
+		$privacy = $labels[ $ledger['integration']['cases'][0]['label'] ];
+		$numeric = $labels[ $ledger['integration']['cases'][5]['label'] ];
+		$base = json_decode( file_get_contents( dirname( __DIR__ ) . '/fixtures/bounded-list-manifest-migration.json' ), true, 512, JSON_THROW_ON_ERROR );
+		$first = $labels[ $base['baseline'][0]['label'] ];
+		$second = $labels[ $base['baseline'][1]['label'] ];
+		if ( 'privacy-role' === $mutation ) { $manifest[ $privacy ]->role = 'subscriber'; }
+		if ( 'privacy-integer-float' === $mutation ) { $manifest[ $numeric ]->input->include_table_names = 1.0; }
+		if ( 'privacy-order' === $mutation ) { [ $manifest[ $privacy ], $manifest[ $privacy + 1 ] ] = array( $manifest[ $privacy + 1 ], $manifest[ $privacy ] ); }
+		if ( 'extra-case' === $mutation ) { $manifest[] = clone $manifest[ $privacy ]; }
 		if ( 'missing-case' === $mutation ) { array_pop( $manifest ); }
-		if ( 'baseline-order' === $mutation ) { [ $manifest[0], $manifest[1] ] = array( $manifest[1], $manifest[0] ); }
-		if ( 'baseline-input' === $mutation ) { $manifest[0]->input->unapproved = true; }
+		if ( 'baseline-order' === $mutation ) { [ $manifest[ $first ], $manifest[ $second ] ] = array( $manifest[ $second ], $manifest[ $first ] ); }
+		if ( 'baseline-input' === $mutation ) { $manifest[ $first ]->input->unapproved = true; }
 		$this->expectException( PHPUnit\Framework\AssertionFailedError::class );
 		$baseline = self::baseline_projection( $manifest, $ledger['integration'] );
 		self::assertSame( $ledger['all_non_oracle_fields_sha256'], self::fingerprint( $baseline, true ) );
@@ -98,6 +104,21 @@ final class DestructiveBooleanLedgerTest extends TestCase {
 	}
 
 	public function test_runtime_matrix_changes_only_the_calibrated_non_direct_values(): void {
+		foreach ( array( 'direct', 'ability', 'http', 'individual' ) as $boundary ) {
+			$original = Wstm121Runtime\original_labels( $boundary );
+			$actual = array_keys( Wstm121Runtime\matrix( $boundary ) );
+			self::assertCount( 124, $original );
+			self::assertCount( 130, $actual );
+			self::assertSame( $original, array_values( array_intersect( $actual, $original ) ), 'All original controls and their relative order remain.' );
+			$additional = array();
+			foreach ( array( 'url', 'guid', 'unused' ) as $reference ) {
+				foreach ( array( 0, 1 ) as $force ) { $additional[] = "media $reference content scan failure force $force"; }
+			}
+			self::assertSame( $additional, array_values( array_diff( $actual, $original ) ) );
+		}
+	}
+
+	public function test_runtime_preserves_native_validation_and_permission_evidence(): void {
 		$source = file_get_contents( dirname( __DIR__ ) . '/e2e/destructive-safety-runner.php' );
 		self::assertStringContainsString( "'direct' === \$boundary ? 'missing_confirmation' : 'ability_invalid_input'", $source );
 		self::assertStringContainsString( "'direct' === \$boundary ? 'invalid_input' : 'ability_invalid_input'", $source );

@@ -3,6 +3,11 @@ name: 6 - Compatibility QA
 on:
   workflow_dispatch:
     inputs:
+      candidate_sha:
+        description: Optional full lowercase commit SHA for isolated pinned WP 6.9 / PHP 8.1 QA; disables discovery and promotion
+        required: false
+        default: ''
+        type: string
       open_update_pr:
         description: Open a baseline PR after all lanes and the proposed commit pass (requires maintainer approval of PR checks)
         required: false
@@ -18,8 +23,189 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  candidate-floor:
+    name: 6 - Exact candidate supported floor
+    if: github.event_name == 'workflow_dispatch' && inputs.candidate_sha != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+        working-directory: candidate
+    env:
+      CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+      WORKFLOW_SHA: ${{ github.workflow_sha }}
+      COMPOSE_PROJECT_NAME: mcp-candidate-floor-${{ github.run_id }}-${{ github.run_attempt }}
+      MYSQL_PORT: 0
+      WORDPRESS_PORT: 0
+    steps:
+      - name: Validate explicit candidate request before checkout
+        working-directory: ${{ github.workspace }}
+        env:
+          OPEN_UPDATE_PR: ${{ inputs.open_update_pr }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]] || [[ "$OPEN_UPDATE_PR" != false ]]; then
+            echo "::error::Candidate QA requires a full lowercase commit SHA and open_update_pr=false."
+            exit 1
+          fi
+      - name: Checkout workflow evidence tools separately
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: candidate-floor-tools
+          persist-credentials: false
+      - name: Checkout exact candidate without overlays
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.candidate_sha }}
+          path: candidate
+          persist-credentials: false
+      - name: Bind source and candidate-pinned supported floor
+        id: prepare
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git -C ../candidate-floor-tools rev-parse HEAD)" = "$WORKFLOW_SHA"
+          git diff --exit-code HEAD
+          mkdir -p compatibility-artifacts
+          cp .github/compatibility-versions.json compatibility-artifacts/candidate-pins.json
+          php scripts/compatibility-matrix.php .github/compatibility-versions.json .github/compatibility-versions.json |
+            jq -ce '.include | map(select(.label == "supported-floor")) |
+              if length == 1 then .[0] else error("Expected exactly one supported-floor lane") end' \
+            > compatibility-artifacts/floor.json
+          jq -e '.["wordpress-image"] == "wordpress:6.9-php8.1-apache" and
+            .["mysql-image"] == "mysql:8.0.36" and .["dependency-policy"] == "pinned"' \
+            compatibility-artifacts/floor.json
+          for binding in WORDPRESS_IMAGE:wordpress-image MYSQL_IMAGE:mysql-image \
+            MCP_ADAPTER_ZIP:mcp-adapter-zip MCP_ADAPTER_SHA256:mcp-adapter-sha256 DEPENDENCY_POLICY:dependency-policy; do
+            value="$(jq -er --arg key "${binding#*:}" '.[$key]' compatibility-artifacts/floor.json)"
+            printf '%s=%s\n' "${binding%%:*}" "$value" >> "$GITHUB_ENV"
+          done
+          git ls-files -z | xargs -0 sha256sum -- > compatibility-artifacts/source.sha256
+          test -s compatibility-artifacts/source.sha256
+          tree="$(git rev-parse 'HEAD^{tree}')"
+          workflow_tree="$(git -C ../candidate-floor-tools rev-parse 'HEAD^{tree}')"
+          jq -n --arg candidate "$CANDIDATE_SHA" --arg tree "$tree" \
+            --arg workflow "$WORKFLOW_SHA" --arg workflow_tree "$workflow_tree" \
+            '{requested_source:$candidate,source_tree:$tree,workflow_source:$workflow,workflow_tree:$workflow_tree}' \
+            > compatibility-artifacts/source.json
+      - name: Pull candidate floor images
+        id: images
+        run: docker compose pull
+      - name: Run unchanged full candidate E2E harness
+        id: qa
+        env:
+          E2E_MANAGE_COMPOSE: 1
+          E2E_KEEP_COMPOSE: 1
+        run: bash scripts/e2e-test.sh all
+      - name: Observe runtime and verify candidate floor
+        id: runtime
+        if: always() && steps.prepare.outcome == 'success'
+        env:
+          QA_RESULT: ${{ steps.qa.outcome }}
+        run: |
+          set -euo pipefail
+          failed=0
+          capture() {
+            local name="$1" status=0
+            shift
+            if "$@" > "compatibility-artifacts/$name.stdout" 2> "compatibility-artifacts/$name.stderr"; then
+              status=0
+            else
+              status=$?
+              failed=1
+              echo "::error::Runtime observation $name failed (exit $status); original output retained."
+            fi
+            printf '%s\n' "$status" > "compatibility-artifacts/$name.exit"
+          }
+          capture head git rev-parse HEAD
+          capture checkout git diff --exit-code HEAD
+          capture mounted-source docker compose exec -T -w /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp \
+            wordpress sha256sum --check --strict < compatibility-artifacts/source.sha256
+          capture wordpress docker compose exec -T wordpress wp --allow-root core version
+          capture php docker compose exec -T wordpress php -r 'echo PHP_VERSION;'
+          capture mysql docker compose exec -T mysql mysql --version
+          # PHP, not Bash, must expand the database variables.
+          # shellcheck disable=SC2016
+          capture mysql-server docker compose exec -T wordpress wp --allow-root eval \
+            'global $wpdb;
+            $previous = $wpdb->suppress_errors( true );
+            $version = $wpdb->get_var( "SELECT VERSION()" );
+            $query_error = $wpdb->last_error;
+            $wpdb->suppress_errors( $previous );
+            if ( "" !== $query_error || ! is_string( $version ) || "" === trim( $version ) ) {
+              fwrite( STDERR, "ERROR Could not observe MySQL server version.\n" );
+              exit( 1 );
+            }
+            echo $version;'
+          capture wp-cli docker compose exec -T wordpress wp --allow-root cli version
+          capture plugins docker compose exec -T wordpress wp --allow-root plugin list --fields=name,version,status --format=json
+          capture loaded-source docker compose exec -T wordpress wp --allow-root eval \
+            'echo json_encode(array("entrypoint_included" => in_array(WP_PLUGIN_DIR . "/webmastery-site-toolkit-for-mcp/webmastery-site-toolkit-for-mcp.php", get_included_files(), true), "response_file" => (new ReflectionClass("Webmastery_MCP_Response"))->getFileName()));'
+          capture images docker image inspect "$WORDPRESS_IMAGE" "$MYSQL_IMAGE"
+          capture container-images docker compose images --format json
+          test "$failed" = 0
+          jq -n --arg requested "$CANDIDATE_SHA" --rawfile actual compatibility-artifacts/head.stdout \
+            --arg qa "$QA_RESULT" --arg policy "$DEPENDENCY_POLICY" \
+            --rawfile wp compatibility-artifacts/wordpress.stdout --rawfile php compatibility-artifacts/php.stdout \
+            --rawfile mysql compatibility-artifacts/mysql.stdout --rawfile cli compatibility-artifacts/wp-cli.stdout \
+            --rawfile mysql_server compatibility-artifacts/mysql-server.stdout \
+            --slurpfile plugins compatibility-artifacts/plugins.stdout --slurpfile loaded compatibility-artifacts/loaded-source.stdout \
+            --slurpfile mounted compatibility-artifacts/mounted-source.exit --slurpfile checkout compatibility-artifacts/checkout.exit \
+            'def line: rtrimstr("\n");
+              if ([$plugins,$loaded,$mounted,$checkout] | all(length == 1)) then
+                {requested_source:$requested,actual_source:($actual|line),qa_result:$qa,dependency_policy:$policy,
+                  wordpress:($wp|line),php:($php|line),mysql_client:($mysql|line),mysql_server:($mysql_server|line),wp_cli:($cli|line),
+                  plugins:$plugins[0],loaded_source:$loaded[0],mounted_source_exit:$mounted[0],checkout_diff_exit:$checkout[0]}
+              else error("Expected one JSON value per runtime observation") end' \
+            > compatibility-artifacts/runtime.json
+          php ../candidate-floor-tools/scripts/verify-candidate-floor.php \
+            compatibility-artifacts/runtime.json compatibility-artifacts/candidate-pins.json
+      - name: Collect candidate failure logs
+        if: failure() && steps.prepare.outcome == 'success'
+        run: docker compose logs --no-color > compatibility-artifacts/docker-compose.log
+      - name: Clean up candidate with existing retention guard
+        id: cleanup
+        if: always() && steps.prepare.outcome == 'success'
+        run: bash scripts/destructive-retention.sh cleanup
+      - name: Record candidate step outcomes
+        if: always() && steps.prepare.outcome == 'success'
+        env:
+          IMAGE_RESULT: ${{ steps.images.outcome }}
+          QA_RESULT: ${{ steps.qa.outcome }}
+          RUNTIME_RESULT: ${{ steps.runtime.outcome }}
+          CLEANUP_RESULT: ${{ steps.cleanup.outcome }}
+        run: |
+          set -euo pipefail
+          jq -n --arg source "$CANDIDATE_SHA" --arg workflow "$WORKFLOW_SHA" --arg images "$IMAGE_RESULT" \
+            --arg qa "$QA_RESULT" --arg runtime "$RUNTIME_RESULT" --arg cleanup "$CLEANUP_RESULT" \
+            '{source:$source,workflow_source:$workflow,images:$images,qa:$qa,runtime_verification:$runtime,cleanup:$cleanup}' \
+            > compatibility-artifacts/outcomes.json
+          {
+            echo '## Exact candidate supported-floor QA'
+            echo '```json'
+            cat compatibility-artifacts/outcomes.json
+            echo '```'
+            echo 'Original observations include command exit codes. Missing/failed observations are not passing floor evidence.'
+            echo 'No baseline promotion, package acceptance, full benchmark or private-custody acceptance is established by this job.'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload candidate floor evidence
+        if: always() && steps.prepare.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: compatibility-candidate-floor-${{ github.run_attempt }}
+          path: |
+            candidate/compatibility-artifacts/
+            candidate/e2e-artifacts/
+          if-no-files-found: error
+          retention-days: 30
+
   discover-versions:
     name: Discover compatibility versions
+    if: inputs.candidate_sha == ''
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -239,6 +425,7 @@ jobs:
     name: Test proposed commit and open compatibility PR
     needs: [discover-versions, compatibility-qa, current-plugin-check]
     if: >-
+      inputs.candidate_sha == '' &&
       needs.compatibility-qa.result == 'success' &&
       needs.current-plugin-check.result == 'success' &&
       needs.discover-versions.outputs.update-needed == 'true' &&
@@ -355,7 +542,7 @@ jobs:
 
   report:
     name: 6 - Compatibility result report
-    if: always()
+    if: always() && inputs.candidate_sha == ''
     needs: [discover-versions, compatibility-qa, current-plugin-check, open-update-pr]
     runs-on: ubuntu-latest
     timeout-minutes: 10

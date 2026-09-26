@@ -211,7 +211,7 @@ final class CoverageManifestTest extends TestCase {
 	}
 
 	public static function mutations(): array {
-		return array(
+		$cases = array(
 			array( 'none', 'security', 0 ),
 			array( 'none', 'e2e', 0 ),
 			array( 'denial-code', 'security', 1 ),
@@ -220,19 +220,30 @@ final class CoverageManifestTest extends TestCase {
 			array( 'contributor-private', 'security', 1 ),
 			array( 'contributor-future-message', 'security', 1 ),
 			array( 'taxonomy-allowed', 'security', 1 ),
+			array( 'window-items', 'security', 1 ),
+			array( 'window-continuation', 'security', 1 ),
+			array( 'window-no-totals', 'security', 1 ),
 			array( 'unknown-role', 'e2e', 1 ),
 			array( 'disabled-state', 'e2e', 1 ),
 			array( 'invalid-capability', 'e2e', 1 ),
 			array( 'invalid-stored-post', 'e2e', 1 ),
 			array( 'metadata-old-reason', 'e2e', 1 ),
-			array( 'permission-reason-as-code', 'e2e', 1 ),
+			array( 'permission-metadata-reason', 'e2e', 1 ),
+			array( 'permission-schema-reason', 'e2e', 1 ),
 			array( 'permission-unknown-code', 'e2e', 1 ),
-			array( 'permission-invalid-type', 'e2e', 1 ),
+			array( 'permission-array-code', 'e2e', 1 ),
 		);
+		foreach ( array( 'bulk-trash-posts', 'bulk-publish-posts', 'delete-media', 'delete-category', 'delete-tag' ) as $slug ) {
+			foreach ( array( 'string', 'number' ) as $variant ) {
+				$cases["legacy {$slug} {$variant}"] = array( 'confirmation-legacy', 'security', 1,
+					"wstm116 {$slug} confirm {$variant}", "{$slug} must retain unchanged-state {$variant} confirmation rejection." );
+			}
+		}
+		return $cases;
 	}
 
 	/** @dataProvider mutations */
-	public function test_regression_policy_rejects_weakened_evidence( string $mutation, string $validator, int $expected ): void {
+	public function test_regression_policy_rejects_weakened_evidence( string $mutation, string $validator, int $expected, ?string $confirmation_label = null, ?string $confirmation_error = null ): void {
 		$root = dirname( __DIR__, 2 );
 		$tmp = sys_get_temp_dir() . '/wstm120-policy-' . bin2hex( random_bytes( 8 ) );
 		mkdir( $tmp . '/scripts', 0777, true );
@@ -243,14 +254,28 @@ final class CoverageManifestTest extends TestCase {
 		copy( $root . '/scripts/' . $name, $script );
 		copy( $root . '/tests/e2e/error-contract-assertions.php', $tmp . '/tests/e2e/error-contract-assertions.php' );
 		$cases = json_decode( file_get_contents( $root . '/tests/e2e/abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
+		$confirmation_changes = 0;
+		$confirmation_original = array();
 		foreach ( $cases as &$case ) {
-			if ( 'invalid_input' === ( $case['assert_permission'] ?? null ) ) {
-				if ( 'permission-reason-as-code' === $mutation ) { $case['assert_permission'] = 'metadata_requires_separate_call'; }
-				if ( 'permission-unknown-code' === $mutation ) { $case['assert_permission'] = 'unknown'; }
-				if ( 'permission-invalid-type' === $mutation ) { $case['assert_permission'] = array( 'invalid_input' ); }
+			if ( 'confirmation-legacy' === $mutation && $confirmation_label === $case['label'] ) {
+				$confirmation_original = array( $case['expect_error_code'], $case['expect_error_reason'] );
+				$case['expect_error_code'] = 'precondition_failed';
+				$case['expect_error_reason'] = 'missing_confirmation';
+				++$confirmation_changes;
+			}
+			if ( in_array( $case['ability'], array( 'webmastery-site-toolkit-for-mcp/list-posts', 'webmastery-site-toolkit-for-mcp/list-pages' ), true ) && 'private' === ( $case['input']['status'] ?? '' ) ) {
+				if ( 'window-items' === $mutation ) { unset( $case['assert_values']['data.items'] ); }
+				if ( 'window-continuation' === $mutation ) { unset( $case['assert_values']['data.next_page'] ); }
+				if ( 'window-no-totals' === $mutation ) { $case['assert_missing_paths'] = array(); }
 			}
 			if ( 'metadata-old-reason' === $mutation && ! empty( $case['assert_metadata_boundary'] ) ) {
 				$case['expect_error_reason'] = 'metadata_requires_separate_call';
+			}
+			if ( 'invalid_input' === ( $case['assert_permission'] ?? null ) ) {
+				if ( 'permission-metadata-reason' === $mutation ) { $case['assert_permission'] = 'metadata_requires_separate_call'; }
+				if ( 'permission-schema-reason' === $mutation ) { $case['assert_permission'] = 'ability_invalid_input'; }
+				if ( 'permission-unknown-code' === $mutation ) { $case['assert_permission'] = 'unknown'; }
+				if ( 'permission-array-code' === $mutation ) { $case['assert_permission'] = array( 'invalid_input' ); }
 			}
 			if ( 'webmastery-site-toolkit-for-mcp/delete-media' === $case['ability'] && 'failure' === $case['expect'] ) {
 				if ( 'denial-code' === $mutation ) { $case['expect_error_code'] = 'not_found'; }
@@ -271,6 +296,10 @@ final class CoverageManifestTest extends TestCase {
 		}
 		unset( $case );
 		try {
+			if ( 'confirmation-legacy' === $mutation ) {
+				$this->assertSame( 1, $confirmation_changes, 'Mutate exactly the named native confirmation case.' );
+				$this->assertSame( array( 'invalid_input', 'ability_invalid_input' ), $confirmation_original );
+			}
 			file_put_contents( $file, json_encode( $cases, JSON_THROW_ON_ERROR ) );
 			$process = proc_open( array( PHP_BINARY, $script ), array( 0 => array( 'pipe', 'r' ), 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ), $pipes );
 			$this->assertIsResource( $process );
@@ -279,6 +308,9 @@ final class CoverageManifestTest extends TestCase {
 			fclose( $pipes[1] );
 			fclose( $pipes[2] );
 			$this->assertSame( $expected, proc_close( $process ), $output );
+			if ( null !== $confirmation_error ) {
+				$this->assertStringContainsString( $confirmation_error, $output );
+			}
 		} finally {
 			if ( is_file( $file ) ) { unlink( $file ); }
 			unlink( $script );

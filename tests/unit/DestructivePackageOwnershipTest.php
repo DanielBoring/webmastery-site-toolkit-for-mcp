@@ -30,7 +30,12 @@ final class DestructivePackageOwnershipTest extends TestCase {
 		$source = file_get_contents( $root . 'e2e-qa.yml' );
 		$floor = file_get_contents( $root . 'compatibility-qa.yml' );
 		self::assertSame( 2, substr_count( $source, 'bash scripts/destructive-retention.sh cleanup' ) );
-		self::assertSame( 1, substr_count( $floor, 'bash scripts/destructive-retention.sh cleanup' ) );
+		self::assertSame( 2, substr_count( $floor, 'bash scripts/destructive-retention.sh cleanup' ) );
+		foreach ( array( 'candidate-floor' => "always() && steps.prepare.outcome == 'success'", 'compatibility-qa' => 'always()' ) as $job => $guard ) {
+			self::assertSame( 1, preg_match( '/^  ' . preg_quote( $job, '/' ) . ':\n(.*?)(?=^  [a-z-]+:|\z)/ms', $floor, $section ) );
+			self::assertSame( 1, substr_count( $section[1], 'bash scripts/destructive-retention.sh cleanup' ) );
+			self::assertStringContainsString( '        if: ' . $guard . "\n        run: bash scripts/destructive-retention.sh cleanup", $section[1] );
+		}
 		self::assertSame( 2, substr_count( $source, "bash scripts/destructive-retention.sh check\n          docker compose down -v --remove-orphans" ) );
 		self::assertSame( 2, substr_count( $source, 'docker compose down' ) );
 		self::assertStringNotContainsString( 'docker compose down', $floor );

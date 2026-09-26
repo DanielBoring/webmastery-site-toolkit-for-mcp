@@ -52,7 +52,7 @@ class Webmastery_MCP_Posts {
 			$data['tags']       = wp_get_post_tags( $post->ID, [ 'fields' => 'ids' ] );
 		}
 
-		return $data;
+		return Webmastery_MCP_Untrusted::mark( $data, [ 'title', 'content', 'excerpt', 'slug', 'url', 'author_name' ] );
 	}
 
 	private static function can_read_full_post( $post ) {
@@ -89,27 +89,19 @@ class Webmastery_MCP_Posts {
 		return $readable;
 	}
 
-	private static function query_readable_posts( $args, $page, $per_page ) {
-		$count_args = array_merge(
-			$args,
-			[
-				'fields'         => 'ids',
-				'posts_per_page' => -1,
-				'paged'          => 1,
-				'no_found_rows'  => true,
-			]
-		);
-
-		$query        = new WP_Query( $count_args );
-		$readable_ids = self::filter_readable_post_ids( $query->posts );
-		$total        = count( $readable_ids );
-		$page_ids     = array_slice( $readable_ids, ( max( 1, (int) $page ) - 1 ) * $per_page, $per_page );
-
-		return [
-			'items'       => array_values( array_filter( array_map( [ self::class, 'normalize' ], array_map( 'get_post', $page_ids ) ) ) ),
-			'total'       => $total,
-			'total_pages' => $per_page > 0 ? (int) ceil( $total / $per_page ) : 1,
-		];
+	private static function query_readable_posts( $args, $page, $per_page, $fields = 'summary' ) {
+		$window = Webmastery_MCP_List_Query::window( $args, $page, $per_page );
+		if ( is_wp_error( $window ) ) {
+			return $window;
+		}
+		$items = [];
+		foreach ( self::filter_readable_post_ids( $window['ids'] ) as $id ) {
+			$item = self::normalize( $id );
+			if ( null !== $item ) {
+				$items[] = Webmastery_MCP_List_Query::project( $item, $fields );
+			}
+		}
+		return Webmastery_MCP_List_Query::result( $window, $items );
 	}
 
 	private static function writable_protected_meta_keys() {
@@ -807,7 +799,7 @@ class Webmastery_MCP_Posts {
 	}
 
 	private static function normalize_block( $block, $path ) {
-		return [
+		return Webmastery_MCP_Untrusted::mark( [
 			'path'              => $path,
 			'block_name'        => $block['blockName'] ?? null,
 			'text'              => self::block_text( $block ),
@@ -815,7 +807,7 @@ class Webmastery_MCP_Posts {
 			'attrs'             => $block['attrs'] ?? [],
 			'inner_block_count' => count( $block['innerBlocks'] ?? [] ),
 			'hash'              => self::block_hash( $block ),
-		];
+		], [ 'block_name', 'text', 'html', 'attrs' ] );
 	}
 
 	private static function flatten_blocks( $blocks, $prefix = '' ) {
@@ -1071,7 +1063,7 @@ class Webmastery_MCP_Posts {
 
 				return [
 					'success' => true,
-					'data'    => [
+					'data'    => Webmastery_MCP_Untrusted::mark( [
 						'id'                  => $post->ID,
 						'type'                => $post->post_type,
 						'target'              => [
@@ -1083,7 +1075,7 @@ class Webmastery_MCP_Posts {
 						'content_hash_before' => $before_hash,
 						'content_hash_after'  => self::content_hash( $updated_post->post_content ),
 						'content'             => $updated_post->post_content,
-					],
+					], [ 'content' ] ),
 				];
 			},
 			'permission_callback' => self::content_permission(),
@@ -1267,7 +1259,7 @@ class Webmastery_MCP_Posts {
 					'data'    => [
 						'id'                  => $id,
 						'type'                => $post->post_type,
-						'target'              => $patch['target'],
+						'target'              => Webmastery_MCP_Untrusted::mark( $patch['target'], [ 'heading_text' ] ),
 						'replaced_blocks'     => $patch['replaced_blocks'],
 						'content_hash_before' => $before_hash,
 						'content_hash_after'  => $after_hash,
@@ -1366,7 +1358,7 @@ class Webmastery_MCP_Posts {
 			return null;
 		}
 
-		return [
+		return Webmastery_MCP_Untrusted::mark( [
 			'id'            => (int) $revision->ID,
 			'post_id'       => (int) $revision->post_parent,
 			'author'        => (int) $revision->post_author,
@@ -1376,19 +1368,20 @@ class Webmastery_MCP_Posts {
 			'excerpt'       => $revision->post_excerpt,
 			'date_created'  => $revision->post_date,
 			'date_modified' => $revision->post_modified,
-		];
+		], [ 'author_name', 'title', 'content', 'excerpt' ] );
 	}
 
 	private static function register_list_revisions() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-revisions', [
 			'label'               => 'List Revisions',
-			'description'         => 'List saved revisions for a WordPress post or page.',
+			'description'         => 'List saved revisions for a WordPress post or page. Summary omits content; use fields full for stored revision content.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
 					'post_id'  => [ 'type' => 'integer', 'description' => 'Post or page ID whose revisions should be listed.' ],
 					'per_page' => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 20 ],
+					'fields'   => Webmastery_MCP_List_Query::fields_schema(),
 				],
 				'required'   => [ 'post_id' ],
 			],
@@ -1411,7 +1404,7 @@ class Webmastery_MCP_Posts {
 					$post_id,
 					[
 						'posts_per_page' => $per_page,
-						'orderby'        => 'date',
+						'orderby'        => [ 'date' => 'DESC', 'ID' => 'DESC' ],
 						'order'          => 'DESC',
 					]
 				);
@@ -1421,7 +1414,10 @@ class Webmastery_MCP_Posts {
 					'data'    => [
 						'post_id'   => $post_id,
 						'type'      => $post->post_type,
-						'revisions' => array_values( array_filter( array_map( [ self::class, 'normalize_revision' ], $revisions ) ) ),
+						'revisions' => array_values( array_map(
+							static fn( $revision ) => Webmastery_MCP_List_Query::project( $revision, $input['fields'] ?? 'summary' ),
+							array_filter( array_map( [ self::class, 'normalize_revision' ], $revisions ) )
+						) ),
 					],
 				];
 			},
@@ -1541,10 +1537,10 @@ class Webmastery_MCP_Posts {
 
 				return [
 					'success' => true,
-					'data'    => [
+					'data'    => Webmastery_MCP_Untrusted::mark( [
 						'post_id' => $post_id,
 						'meta'    => $meta,
-					],
+					], [ 'meta' ] ),
 				];
 			},
 			'permission_callback' => self::post_meta_permission(),
@@ -1607,13 +1603,13 @@ class Webmastery_MCP_Posts {
 
 				return [
 					'success' => true,
-					'data'    => [
+					'data'    => Webmastery_MCP_Untrusted::mark( [
 						'post_id'        => $post_id,
 						'meta_key'       => $key,
 						'updated'        => (bool) $updated,
 						'previous_value' => $previous_value,
 						'current_value'  => $current_value,
-					],
+					], [ 'meta_key', 'previous_value', 'current_value' ] ),
 				];
 			},
 			'permission_callback' => self::post_meta_permission(),
@@ -1667,11 +1663,11 @@ class Webmastery_MCP_Posts {
 
 				return [
 					'success' => true,
-					'data'    => [
+					'data'    => Webmastery_MCP_Untrusted::mark( [
 						'post_id'       => $post_id,
 						'meta_key'      => $key,
 						'deleted_count' => $deleted_count,
-					],
+					], [ 'meta_key' ] ),
 				];
 			},
 			'permission_callback' => self::post_meta_permission(),
@@ -1698,6 +1694,7 @@ class Webmastery_MCP_Posts {
 				'author'   => [ 'type' => 'integer' ],
 				'orderby'  => [ 'type' => 'string', 'enum' => [ 'date', 'title', 'modified', 'id' ], 'default' => 'date' ],
 				'order'    => [ 'type' => 'string', 'enum' => [ 'ASC', 'DESC' ], 'default' => 'DESC' ],
+				'fields'   => Webmastery_MCP_List_Query::fields_schema(),
 			],
 		];
 
@@ -1707,7 +1704,7 @@ class Webmastery_MCP_Posts {
 
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/list-{$slug}", [
 			'label'               => "List {$label}s",
-			'description'         => "List WordPress {$slug} with optional filters.",
+			'description'         => "List WordPress {$slug} in bounded candidate windows. Follow next_page even for empty items; no exact totals. Summary omits content; fields full includes it.",
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => $list_input,
 			'execute_callback'    => function ( $input ) use ( $type, $slug ) {
@@ -1735,7 +1732,10 @@ class Webmastery_MCP_Posts {
 
 				$per_page = min( max( 1, (int) ( $input['per_page'] ?? 20 ) ), 100 );
 				$page     = max( 1, (int) ( $input['page'] ?? 1 ) );
-				$data     = self::query_readable_posts( $args, $page, $per_page );
+				$data     = self::query_readable_posts( $args, $page, $per_page, $input['fields'] ?? 'summary' );
+				if ( is_wp_error( $data ) ) {
+					return Webmastery_MCP_Response::from_wp_error( $data );
+				}
 
 				return [
 					'success' => true,

@@ -14,7 +14,7 @@ class Webmastery_MCP_Comments {
 	}
 
 	private static function normalize( $comment ) {
-		return [
+		return Webmastery_MCP_Untrusted::mark( [
 			'id'         => (int) $comment->comment_ID,
 			'post_id'    => (int) $comment->comment_post_ID,
 			'author'     => $comment->comment_author,
@@ -24,7 +24,7 @@ class Webmastery_MCP_Comments {
 			'status'     => wp_get_comment_status( $comment->comment_ID ),
 			'date'       => $comment->comment_date,
 			'parent'     => (int) $comment->comment_parent,
-		];
+		], [ 'author', 'author_email', 'author_url', 'content' ] );
 	}
 
 

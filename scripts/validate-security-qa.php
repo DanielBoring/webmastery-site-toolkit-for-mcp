@@ -70,7 +70,7 @@ function webmastery_mcp_security_qa_has_missing_path_case( array $cases, string 
 	return false;
 }
 
-function webmastery_mcp_security_qa_has_filtered_total_case( array $cases, string $ability, string $status ): bool {
+function webmastery_mcp_security_qa_has_filtered_window_case( array $cases, string $ability, string $status ): bool {
 	foreach ( $cases as $case ) {
 		if ( ! is_array( $case ) || $ability !== ( $case['ability'] ?? '' ) ) {
 			continue;
@@ -86,8 +86,11 @@ function webmastery_mcp_security_qa_has_filtered_total_case( array $cases, strin
 			is_array( $input )
 			&& $status === ( $input['status'] ?? '' )
 			&& is_array( $assert_values )
-			&& array_key_exists( 'data.total', $assert_values )
-			&& 0 === $assert_values['data.total']
+			&& array() === ( $assert_values['data.items'] ?? null )
+			&& array_key_exists( 'data.next_page', $assert_values )
+			&& null === $assert_values['data.next_page']
+			&& in_array( 'data.total', $case['assert_missing_paths'] ?? array(), true )
+			&& in_array( 'data.total_pages', $case['assert_missing_paths'] ?? array(), true )
 		) {
 			return true;
 		}
@@ -464,8 +467,8 @@ foreach ( array( 'list-site-kit-modules', 'get-site-kit-permissions', 'get-site-
 
 foreach ( array( 'list-posts', 'list-pages' ) as $ability_slug ) {
 	$ability = "webmastery-site-toolkit-for-mcp/{$ability_slug}";
-	if ( ! webmastery_mcp_security_qa_has_filtered_total_case( $manifest, $ability, 'private' ) ) {
-		$errors[] = "{$ability} must keep a private-status filtered-total manifest case.";
+	if ( ! webmastery_mcp_security_qa_has_filtered_window_case( $manifest, $ability, 'private' ) ) {
+		$errors[] = "{$ability} must keep a private-status empty candidate-window/continuation manifest case without totals.";
 	}
 	if ( ! webmastery_mcp_security_qa_has_missing_path_case( $manifest, $ability, array( 'data.items.0.author_login' ) ) ) {
 		$errors[] = "{$ability} must keep an author_login absence assertion.";

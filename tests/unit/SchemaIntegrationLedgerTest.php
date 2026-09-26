@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
-require_once __DIR__ . '/fixtures/schema-integration-ledger.php';
+require_once __DIR__ . '/fixtures/bounded-manifest-projection.php';
 
 final class SchemaIntegrationLedgerTest extends TestCase {
 	private function manifest(): array {
-		return json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		$manifest = json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		return BoundedManifestProjection::schema_source( $manifest );
 	}
 
 	public function test_exact_source_projection_and_all_approved_field_changes(): void {

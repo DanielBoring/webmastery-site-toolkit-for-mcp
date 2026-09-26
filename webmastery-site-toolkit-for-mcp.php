@@ -46,8 +46,10 @@ add_action( 'wp_abilities_api_categories_init', function () {
 // Register abilities — wp_register_ability() only works inside wp_abilities_api_init.
 add_action( 'wp_abilities_api_init', function () {
 	require_once __DIR__ . '/includes/class-ability.php';
+	require_once __DIR__ . '/includes/class-untrusted.php';
 	require_once __DIR__ . '/includes/class-post-parent.php';
 	require_once __DIR__ . '/includes/class-post-scheduling.php';
+	require_once __DIR__ . '/includes/class-list-query.php';
 	require_once __DIR__ . '/includes/class-posts.php';
 	require_once __DIR__ . '/includes/class-custom-post-types.php';
 	require_once __DIR__ . '/includes/class-taxonomy.php';

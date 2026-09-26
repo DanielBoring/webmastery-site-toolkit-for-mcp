@@ -19,6 +19,7 @@ final class Probe {
 	public static int $actor = 2;
 	public static bool $allowed = true;
 	public static array $calls = array();
+	public static string $hook = '';
 
 	public static function load(): void {
 		if ( class_exists( __NAMESPACE__ . '\\Webmastery_MCP_Taxonomy', false ) ) {
@@ -31,6 +32,7 @@ final class Probe {
 
 	public static function reset(): void {
 		self::$events = self::$filters = self::$calls = array();
+		self::$hook = '';
 		self::$terms = array(
 			'category' => array( 42 => (object) array( 'term_id' => 42, 'taxonomy' => 'category', 'metadata' => array( 'original' ), 'relationships' => array( 17 ) ) ),
 			'post_tag' => array( 84 => (object) array( 'term_id' => 84, 'taxonomy' => 'post_tag', 'metadata' => array( 'original' ), 'relationships' => array( 17 ) ) ),
@@ -90,6 +92,30 @@ function add_filter( $name, $callback, $priority = 10, $args = 1 ) {
 
 function remove_filter( $name, $callback, $priority = 10 ) {
 	unset( Probe::$filters[ $name ][ spl_object_id( $callback ) ] );
+}
+
+function add_action( $name, $callback, $priority = 10, $args = 1 ) {
+	add_filter( $name, $callback, $priority, $args );
+}
+
+function remove_action( $name, $callback, $priority = 10 ) {
+	remove_filter( $name, $callback, $priority );
+}
+
+function current_filter() {
+	return Probe::$hook;
+}
+
+function do_action( $name, ...$args ) {
+	$previous = Probe::$hook;
+	Probe::$hook = $name;
+	try {
+		foreach ( Probe::$filters[ $name ] ?? array() as $callback ) {
+			$callback( ...$args );
+		}
+	} finally {
+		Probe::$hook = $previous;
+	}
 }
 
 function wp_generate_uuid4() {
