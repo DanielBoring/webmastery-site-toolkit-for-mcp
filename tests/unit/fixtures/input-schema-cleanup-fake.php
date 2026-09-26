@@ -34,6 +34,7 @@ final class Wstm126_Cleanup_Fake {
 		$journal->plan( 'post', array( 'post_name' => $post['post_name'], 'post_author' => '40', 'post_type' => 'page' ) );
 		$this->rows['posts'][] = $post;
 		$this->rows['postmeta'][] = array( 'post_id' => '70', 'meta_key' => 'owned' );
+		$this->rows['term_relationships'][] = array( 'object_id' => '70', 'term_taxonomy_id' => '5', 'term_order' => '0' );
 		$journal->created( 'post', 'posts', '70', Wstm126_Cleanup::post_identity( $post ) );
 		$credential = array( 'actor' => 40, 'uuid' => 'synthetic-uuid', 'name' => $this->run, 'created' => 1234 );
 		$journal->plan( 'credential', array( 'actor' => 40, 'name' => $this->run ) );
@@ -50,6 +51,9 @@ final class Wstm126_Cleanup_Fake {
 			}
 			if ( 'postmeta' !== $this->retain ) {
 				$this->rows['postmeta'] = array_values( array_filter( $this->rows['postmeta'], static fn( $row ) => (int) $row['post_id'] !== $id ) );
+			}
+			if ( 'term_relationships' !== $this->retain ) {
+				$this->rows['term_relationships'] = array_values( array_filter( $this->rows['term_relationships'], static fn( $row ) => (int) $row['object_id'] !== $id ) );
 			}
 		} elseif ( 'credential' === $kind ) {
 			if ( 'credential' !== $this->retain ) { unset( $this->rows['credentials'][ $reference ] ); }
@@ -70,6 +74,7 @@ final class Wstm126_Cleanup_Fake {
 		$row['post_name'] = '70-revision-v1';
 		$this->rows['posts'][] = $row;
 		$this->rows['postmeta'][] = array( 'post_id' => '71', 'meta_key' => 'owned revision' );
+		$this->rows['term_relationships'][] = array( 'object_id' => '71', 'term_taxonomy_id' => '5', 'term_order' => '0' );
 	}
 }
 

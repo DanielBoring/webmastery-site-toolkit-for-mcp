@@ -53,6 +53,7 @@ final class InputSchemaCleanupTest extends TestCase {
 	public function test_success_independently_reads_all_absence_and_retires_exact_journal(): void {
 		$this->fake->seed( $this->journal );
 		$this->fake->revision();
+		self::assertCount( 2, $this->fake->rows['term_relationships'] );
 		$this->fake->rows['posts'][0]['post_title'] = 'Legitimate positive control';
 		$result = $this->journal->finish( static function (): void {}, true );
 		self::assertNull( $result['error'] );
@@ -62,6 +63,180 @@ final class InputSchemaCleanupTest extends TestCase {
 		self::assertFileDoesNotExist( $this->path() );
 		self::assertSame( array(), $this->diagnostics );
 		self::assertSame( array( 'proof', 'error', 'raw_evidence' ), array_keys( $result ) );
+		self::assertSame( array(), $this->fake->rows['term_relationships'] );
+	}
+
+	private function seed_foreign_relationship_baseline(): array {
+		$foreign = array( 'object_id' => '900', 'term_taxonomy_id' => '5', 'term_order' => '0' );
+		$this->fake->rows['term_relationships'] = array( $foreign );
+		$this->owner = str_repeat( 'b', 32 );
+		$this->journal = $this->create();
+		$this->fake->seed( $this->journal );
+		return $foreign;
+	}
+
+	public function test_owned_relationship_cleanup_preserves_unchanged_foreign_relationship(): void {
+		$foreign = $this->seed_foreign_relationship_baseline();
+		$this->fake->revision();
+		$result = $this->journal->finish( static function (): void {}, true );
+		self::assertNull( $result['error'] );
+		self::assertNotContains( false, $result['proof'] );
+		self::assertSame( array( $foreign ), $this->fake->rows['term_relationships'] );
+		self::assertSame( array(), $this->diagnostics );
+		self::assertFileDoesNotExist( $this->path() );
+	}
+
+	public static function foreign_relationship_changes(): array {
+		return array( array( 'insert' ), array( 'update' ), array( 'delete' ) );
+	}
+
+	private function mutate_foreign_relationship( string $change ): void {
+		if ( 'insert' === $change ) {
+			$this->fake->rows['term_relationships'][] = array( 'object_id' => '901', 'term_taxonomy_id' => '5', 'term_order' => '0' );
+		} elseif ( 'update' === $change ) {
+			$this->fake->rows['term_relationships'][0]['term_order'] = '1';
+		} else {
+			$this->fake->rows['term_relationships'] = array_values( array_filter( $this->fake->rows['term_relationships'], static fn( $row ) => '900' !== $row['object_id'] ) );
+		}
+	}
+
+	/** @dataProvider foreign_relationship_changes */
+	public function test_foreign_relationship_change_refuses_before_any_cleanup( string $change ): void {
+		$this->seed_foreign_relationship_baseline();
+		$this->mutate_foreign_relationship( $change );
+		$before = $this->fake->rows;
+		$journal = file_get_contents( $this->path() );
+		$result = $this->journal->finish( static function (): void { self::fail( 'Session close after foreign relationship change.' ); }, true );
+		self::assertSame( 'Preexisting state or cron changed.', $result['error'] );
+		self::assertNotContains( true, $result['proof'] );
+		self::assertSame( array(), $this->fake->deleted );
+		self::assertSame( $before, $this->fake->rows );
+		self::assertSame( $journal, file_get_contents( $this->path() ) );
+		self::assertCount( 1, $this->diagnostics );
+		self::assertSame( array( 'term_relationships' ), array_column( json_decode( $this->diagnostics[0], true, 16, JSON_THROW_ON_ERROR )['differences'], 'dimension' ) );
+	}
+
+	/** @dataProvider foreign_relationship_changes */
+	public function test_foreign_relationship_change_during_cleanup_blocks_later_deletions( string $change ): void {
+		$this->seed_foreign_relationship_baseline();
+		$this->fake->revision();
+		$this->fake->during_delete = function ( $fake, $kind ) use ( $change ): void {
+			if ( 'post' === $kind ) { $this->mutate_foreign_relationship( $change ); }
+		};
+		$result = $this->journal->finish( static function (): void { self::fail( 'Session close after foreign relationship interference.' ); }, true );
+		self::assertSame( 'Preexisting state or cron changed.', $result['error'] );
+		self::assertSame( array( array( 'post', 71 ) ), $this->fake->deleted );
+		self::assertFalse( $result['proof']['posts_absent'] );
+		self::assertFalse( $result['proof']['sessions_closed'] );
+		self::assertFalse( $result['proof']['journal_retired'] );
+		self::assertNotEmpty( $this->fake->rows['users'] );
+		self::assertNotEmpty( $this->fake->rows['credentials'] );
+		self::assertNotEmpty( $this->fake->rows['observation'] );
+		self::assertFileExists( $this->path() );
+	}
+
+	public function test_retained_revision_relationship_stops_before_the_next_post_delete(): void {
+		$this->fake->seed( $this->journal );
+		$this->fake->revision();
+		$this->fake->retain = 'term_relationships';
+		$result = $this->journal->finish( static function (): void { self::fail( 'Session close with retained relationships.' ); }, true );
+		self::assertSame( 'Post term relationships retained; actors and credentials preserved.', $result['error'] );
+		self::assertSame( array( array( 'post', 71 ) ), $this->fake->deleted );
+		self::assertSame( array( '70' ), array_column( $this->fake->rows['posts'], 'ID' ) );
+		self::assertCount( 2, $this->fake->rows['term_relationships'] );
+		self::assertFalse( $result['proof']['posts_absent'] );
+		self::assertFalse( $result['proof']['journal_retired'] );
+		self::assertNotEmpty( $this->fake->rows['users'] );
+		self::assertNotEmpty( $this->fake->rows['credentials'] );
+		self::assertNotEmpty( $this->fake->rows['observation'] );
+		self::assertFileExists( $this->path() );
+	}
+
+	public function test_new_revision_during_cleanup_cannot_expand_relationship_ownership(): void {
+		$this->fake->seed( $this->journal );
+		$post = $this->fake->rows['posts'][0];
+		$post['ID'] = '72';
+		$post['post_name'] = 'second-owned-marker';
+		$this->journal->plan( 'second-post', array( 'post_name' => $post['post_name'] ) );
+		$this->fake->rows['posts'][] = $post;
+		$this->journal->created( 'second-post', 'posts', '72', Wstm126_Cleanup::post_identity( $post ) );
+		$this->fake->during_delete = static function ( $fake, $kind, $id ): void {
+			if ( 'post' === $kind && 72 === $id ) { $fake->revision(); }
+		};
+		$result = $this->journal->finish( static function (): void { self::fail( 'Session close after ownership expansion.' ); }, true );
+		self::assertSame( 'Owned identity changed; no cleanup allowed.', $result['error'] );
+		self::assertSame( array( array( 'post', 72 ) ), $this->fake->deleted );
+		self::assertFalse( $result['proof']['posts_absent'] );
+		self::assertFalse( $result['proof']['journal_retired'] );
+		self::assertNotEmpty( $this->fake->rows['users'] );
+		self::assertNotEmpty( $this->fake->rows['credentials'] );
+		self::assertNotEmpty( $this->fake->rows['observation'] );
+		self::assertFileExists( $this->path() );
+	}
+
+	public function test_changed_revision_identity_during_cleanup_cannot_hide_its_relationships(): void {
+		$this->fake->seed( $this->journal );
+		$this->fake->revision();
+		$revision = $this->fake->rows['posts'][1];
+		$revision['ID'] = '73';
+		$this->fake->rows['posts'][] = $revision;
+		$this->fake->rows['term_relationships'][] = array( 'object_id' => '73', 'term_taxonomy_id' => '5', 'term_order' => '0' );
+		$this->fake->during_delete = static function ( $fake, $kind, $id ): void {
+			if ( 'post' === $kind && 73 === $id ) { $fake->rows['posts'][1]['guid'] = 'foreign-replacement'; }
+		};
+		$result = $this->journal->finish( static function (): void { self::fail( 'Session close after revision replacement.' ); }, true );
+		self::assertSame( 'Owned identity changed; no cleanup allowed.', $result['error'] );
+		self::assertSame( array( array( 'post', 73 ) ), $this->fake->deleted );
+		self::assertFalse( $result['proof']['posts_absent'] );
+		self::assertFalse( $result['proof']['journal_retired'] );
+		self::assertNotEmpty( $this->fake->rows['users'] );
+		self::assertNotEmpty( $this->fake->rows['credentials'] );
+		self::assertNotEmpty( $this->fake->rows['observation'] );
+		self::assertFileExists( $this->path() );
+	}
+
+	public function test_reappearing_deleted_revision_relationship_is_checked_after_each_delete(): void {
+		$this->fake->seed( $this->journal );
+		$this->fake->revision();
+		$this->fake->during_delete = static function ( $fake, $kind, $id ): void {
+			if ( 'post' === $kind && 70 === $id ) {
+				$fake->rows['term_relationships'][] = array( 'object_id' => '71', 'term_taxonomy_id' => '5', 'term_order' => '0' );
+			}
+		};
+		$result = $this->journal->finish( static function (): void { self::fail( 'Session close with reappearing relationships.' ); }, true );
+		self::assertSame( 'Post term relationships retained; actors and credentials preserved.', $result['error'] );
+		self::assertSame( array( array( 'post', 71 ), array( 'post', 70 ) ), $this->fake->deleted );
+		self::assertFalse( $result['proof']['posts_absent'] );
+		self::assertFalse( $result['proof']['journal_retired'] );
+		self::assertNotEmpty( $this->fake->rows['credentials'] );
+		self::assertNotEmpty( $this->fake->rows['observation'] );
+		self::assertFileExists( $this->path() );
+	}
+
+	public function test_content_absence_guard_rejects_dangling_owned_relationship_independently(): void {
+		$snapshot = $this->fake->rows;
+		$snapshot['term_relationships'][] = array( 'object_id' => '70', 'term_taxonomy_id' => '5', 'term_order' => '0' );
+		$method = new ReflectionMethod( Wstm126_Cleanup::class, 'validate_content_absent' );
+		$method->setAccessible( true );
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'Post term relationships retained; actors and credentials preserved.' );
+		$method->invoke( $this->journal, $snapshot, array( 70 ) );
+	}
+
+	public function test_relationship_reappearing_during_session_close_preserves_credentials(): void {
+		$this->fake->seed( $this->journal );
+		$result = $this->journal->finish( function (): void {
+			$this->fake->rows['term_relationships'][] = array( 'object_id' => '70', 'term_taxonomy_id' => '5', 'term_order' => '0' );
+		}, true );
+		self::assertSame( 'Preexisting state or cron changed.', $result['error'] );
+		self::assertSame( array( array( 'post', 70 ) ), $this->fake->deleted );
+		self::assertTrue( $result['proof']['posts_absent'] );
+		self::assertFalse( $result['proof']['credentials_absent'] );
+		self::assertFalse( $result['proof']['journal_retired'] );
+		self::assertNotEmpty( $this->fake->rows['users'] );
+		self::assertNotEmpty( $this->fake->rows['credentials'] );
+		self::assertNotEmpty( $this->fake->rows['observation'] );
+		self::assertFileExists( $this->path() );
 	}
 
 	public static function scope_changes(): array {
@@ -178,7 +353,7 @@ final class InputSchemaCleanupTest extends TestCase {
 	}
 
 	public static function retained_rows(): array {
-		return array_map( static fn( $v ) => array( $v ), array( 'post', 'revision', 'postmeta', 'actor', 'usermeta', 'credential', 'observation' ) );
+		return array_map( static fn( $v ) => array( $v ), array( 'post', 'revision', 'postmeta', 'term_relationships', 'actor', 'usermeta', 'credential', 'observation' ) );
 	}
 
 	public static function immutable_identity_fields(): array {
@@ -219,7 +394,7 @@ final class InputSchemaCleanupTest extends TestCase {
 		self::assertNotNull( $result['error'] );
 		self::assertFalse( $result['proof']['journal_retired'] );
 		self::assertFileExists( $this->path() );
-		if ( in_array( $kind, array( 'post', 'postmeta', 'revision' ), true ) ) {
+		if ( in_array( $kind, array( 'post', 'postmeta', 'revision', 'term_relationships' ), true ) ) {
 			self::assertFalse( $closed );
 			self::assertNotEmpty( $this->fake->rows['users'] );
 			self::assertNotEmpty( $this->fake->rows['credentials'] );

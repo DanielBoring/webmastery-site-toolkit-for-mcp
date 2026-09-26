@@ -6,6 +6,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Correct the schema harness's preexisting-state projection to exclude only relationships of live, identity-validated journal-owned posts and revisions. Independently check relationship absence after each post deletion and before later cleanup advances; retain foreign relationship, taxonomy, cron, runtime and retirement guards. Extend isolated fixtures and regressions for owned relationships, foreign insert/update/delete interference and dangling or reappearing rows. This test-harness change does not prove historical row identities or genuine runtime acceptance.
+
 - Add bounded, failure-only schema cleanup/runtime diagnostics using closed logical dimensions and digest pairs from already-captured state. Preserve the original errors, strict proof shapes, immutable ownership, zero-cleanup-write refusals and retention gates; reject malformed diagnostic inputs without disclosing their contents. Add targeted regressions without changing state projections or claiming the cause of historical mismatches or genuine runtime acceptance.
 
 - Seed schema-proof drafts with verified fixed local/GMT dates before recording immutable ownership, and read positive parent controls from fresh bounded SQL rather than a stale HTTP caller cache. Preserve all 152 cases, strict parent semantics, ownership fields and restoration/retention guards; add isolated cache, malformed-row, immutable-identity and retained-observation regressions. Source-level diagnosis does not establish historical database values or genuine runtime acceptance.

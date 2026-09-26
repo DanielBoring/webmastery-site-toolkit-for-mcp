@@ -524,6 +524,17 @@ deletion. Independent absence and original scoped-state/cron checks, not
 deletion return values, determine cleanup success. Keep failed artifacts and
 private recovery journals as well as later passes.
 
+The schema cleanup projection excludes term relationships only for live,
+identity-validated journal-owned posts and revisions. Relationships belonging
+to foreign objects remain in the preexisting-state comparison; terms, taxonomy
+rows and cron remain protected without normalization. After each post deletion,
+fresh reads must prove that relationships for every already-deleted owned object
+are absent, before deleting another object or advancing to sessions, credentials,
+actors and the observation marker. The complete content-absence check repeats
+that relationship proof. Retained or reappearing rows keep recovery evidence
+and block retirement. Isolated regressions do not establish genuine runtime
+acceptance or identify the exact rows behind a historical digest mismatch.
+
 Failed preexisting-state or fresh-CLI runtime comparisons emit one
 **non-authoritative diagnostic** JSON line on stderr, bounded to 4,096 bytes.
 Cleanup diagnostics allow only the 13 logical snapshot section names and

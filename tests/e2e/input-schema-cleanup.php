@@ -257,7 +257,16 @@ final class Wstm126_Cleanup {
 	private function without_owned( array $snapshot ): array {
 		$posts = $this->owned_posts( $snapshot );
 		$actors = array_map( 'intval', array_keys( $this->state['actors'] ) );
-		foreach ( array( 'posts' => array( 'ID', $posts ), 'postmeta' => array( 'post_id', $posts ), 'users' => array( 'ID', $actors ), 'usermeta' => array( 'user_id', $actors ) ) as $table => [ $key, $ids ] ) {
+		$identities = $this->state['posts'] + array_column( $this->state['deletion_posts'] ?? array(), null, 'ID' );
+		$relationship_posts = array();
+		foreach ( $snapshot['posts'] as $row ) {
+			if ( ! in_array( (int) $row['ID'], $posts, true ) ) { continue; }
+			$identity = self::post_identity( $row );
+			self::check( isset( $identities[ $row['ID'] ] ) ? $identities[ $row['ID'] ] === $identity : ! isset( $this->state['deletion_posts'] ), 'Owned identity changed; no cleanup allowed.' );
+			$relationship_posts[] = (int) $row['ID'];
+		}
+		// Only live, validated content can project out relationships; orphan rows remain visible.
+		foreach ( array( 'posts' => array( 'ID', $posts ), 'postmeta' => array( 'post_id', $posts ), 'users' => array( 'ID', $actors ), 'usermeta' => array( 'user_id', $actors ), 'term_relationships' => array( 'object_id', $relationship_posts ) ) as $table => [ $key, $ids ] ) {
 			$snapshot[ $table ] = array_values( array_filter( $snapshot[ $table ], static fn( $row ) => ! in_array( (int) $row[ $key ], $ids, true ) ) );
 		}
 		$snapshot['observation'] = array();
@@ -316,6 +325,13 @@ final class Wstm126_Cleanup {
 		foreach ( $snapshot['postmeta'] as $row ) {
 			self::check( ! in_array( (int) $row['post_id'], $post_ids, true ), 'Post metadata retained; actors preserved.' );
 		}
+		$this->validate_relationships_absent( $snapshot, $post_ids );
+	}
+
+	private function validate_relationships_absent( array $snapshot, array $post_ids ): void {
+		foreach ( $snapshot['term_relationships'] as $row ) {
+			self::check( ! in_array( (int) $row['object_id'], $post_ids, true ), 'Post term relationships retained; actors and credentials preserved.' );
+		}
 	}
 
 	public function finish( callable $close_sessions, bool $complete, bool $retain_wire = false ): array {
@@ -332,6 +348,7 @@ final class Wstm126_Cleanup {
 			$this->state['deletion_posts'] = array_map( array( self::class, 'post_identity' ), array_values( array_filter( $before['posts'], static fn( $row ) => in_array( (int) $row['ID'], $post_ids, true ) ) ) );
 			$this->save();
 			$identities = array_column( $this->state['deletion_posts'], null, 'ID' );
+			$deleted_post_ids = array();
 			foreach ( array_reverse( $post_ids ) as $id ) {
 				$live = ( $this->read )();
 				$this->validate_actors( $live );
@@ -342,6 +359,8 @@ final class Wstm126_Cleanup {
 				$check = ( $this->read )();
 				foreach ( $check['posts'] as $row ) { self::check( (int) $row['ID'] !== $id, 'Post deletion vetoed; remaining ownership preserved.' ); }
 				foreach ( $check['postmeta'] as $row ) { self::check( (int) $row['post_id'] !== $id, 'Post metadata retained; remaining ownership preserved.' ); }
+				$deleted_post_ids[] = $id;
+				$this->validate_relationships_absent( $check, $deleted_post_ids );
 			}
 			$after = ( $this->read )();
 			$this->validate_content_absent( $after, $post_ids );
