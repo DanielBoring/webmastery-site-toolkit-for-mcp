@@ -186,8 +186,8 @@ PHP;
 		}
 	}
 
-	private static function native_authority_boundary( string $root, int $exit ): void {
-		$case = self::directory( $root, 'native-authority-exit-' . $exit, false );
+	private static function native_authority_boundary( string $root, int $exit, string $fault = '' ): void {
+		$case = self::directory( $root, 'native-authority-exit-' . $exit . ( '' === $fault ? '' : '-' . $fault ), false );
 		$work = $case . '/work';
 		foreach ( array( $work, $work . '/bin', $work . '/checkout', $work . '/checkout/tests',
 			$work . '/checkout/tests/unit', $work . '/checkout/tests/unit/fixtures' ) as $path ) {
@@ -195,9 +195,42 @@ PHP;
 		}
 		$out = "private-native-stdout\x1b[31m\0\xff\"\\\n";
 		$err = "private-native-stderr\x1b[32m\0\xfe\"\\\n";
-		$child = '<?php if (2 !== $argc || $argv[1] !== getenv("WORK")) { exit(99); }'
+		$fixture = $work . '/checkout/tests/unit/fixtures';
+		$helper = str_replace( "\r\n", "\n", file_get_contents( __DIR__ . '/untrusted-runtime-diagnostic.php' ) );
+		$needle = "require_once dirname( __DIR__, 2 ) . '/e2e/untrusted-content-files.php';";
+		self::require( 1 === substr_count( $helper, $needle ) );
+		$helper = str_replace( $needle, 'require_once ' . var_export( dirname( __DIR__, 2 ) . '/e2e/untrusted-content-files.php', true ) . ';', $helper );
+		self::create( $fixture . '/untrusted-runtime-diagnostic.php', $helper );
+		$observer_source = str_replace( "\r\n", "\n", file_get_contents( __DIR__ . '/untrusted-authority-controls.php' ) );
+		$marker = 'set_exception_handler( static function ( Throwable $error ): void {';
+		self::require( 1 === substr_count( $observer_source, $marker ) );
+		$observer_start = strpos( $observer_source, $marker );
+		$observer_end = strpos( $observer_source, "\n} );\n", $observer_start );
+		self::require( false !== $observer_end );
+		$observer = substr( $observer_source, $observer_start, $observer_end + strlen( "\n} );\n" ) - $observer_start );
+		$load = 'require __DIR__ . "/untrusted-runtime-diagnostic.php";';
+		if ( 'writer-zero' === $fault ) {
+			$load = 'require ' . var_export( self::fault_helper( $case ), true )
+				. '; class_alias(\Wstm108_DiagnosticFault\Wstm108_SyntheticDiagnostic::class, "Wstm108_SyntheticDiagnostic");';
+		}
+		$child = '<?php ' . $load . "\n" . $observer
+			. 'if (2 !== $argc || $argv[1] !== getenv("WORK")) { exit(99); }'
 			. 'fwrite(STDOUT, base64_decode(' . var_export( base64_encode( $out ), true ) . '));'
-			. 'fwrite(STDERR, base64_decode(' . var_export( base64_encode( $err ), true ) . '));exit(' . $exit . ');';
+			. 'fwrite(STDERR, base64_decode(' . var_export( base64_encode( $err ), true ) . '));';
+		$throws = in_array( $fault, array( 'throw-0', 'throw-23', 'throw-47', 'throw-255', 'unknown-source', 'write-collision', 'writer-zero' ), true );
+		if ( $throws ) {
+			$code = 0 === strpos( $fault, 'throw-' ) ? (int) substr( $fault, 6 ) : 47;
+			$throw = 'throw new RuntimeException(' . var_export( "private-exception /private/secret argv SQL\x1b[31m\0\"\\\u{96ea}\n", true ) . ', ' . $code . ');';
+			if ( 'unknown-source' === $fault ) {
+				self::create( $case . '/private-source.php', '<?php ' . $throw );
+				$child .= 'require ' . var_export( $case . '/private-source.php', true ) . ';';
+			} else { $child .= $throw; }
+		} else { $child .= 'exit(' . $exit . ');'; }
+		if ( 'write-collision' === $fault ) {
+			self::require( mkdir( $work . '/first-package-diagnostic', 0700 ) );
+			self::create( $work . '/first-package-diagnostic/authority.json', 'private-collision-original' );
+		}
+		if ( 'reader-output-io' === $fault ) { self::require( mkdir( $work . '/native-location.stdout.private', 0700 ) ); }
 		self::create( $work . '/checkout/tests/unit/fixtures/untrusted-authority-controls.php', $child );
 		self::create( $work . '/bin/php', str_replace( "\r\n", "\n", file_get_contents( __DIR__ . '/untrusted-host-process' ) ) );
 		self::require( chmod( $work . '/bin/php', 0700 ) );
@@ -219,21 +252,90 @@ PHP;
 		$environment['WORK'] = $work;
 		$environment['PATH'] = $work . '/bin:' . $environment['PATH'];
 		$environment['WSTM108_MOCK_ONLY'] = '1';
+		$environment['WSTM108_MOCK_ROOT'] = $work;
 		$environment['WSTM108_MOCK_PHP'] = PHP_BINARY;
 		$environment['WSTM108_MOCK_MATRIX_PHP'] = PHP_BINARY;
 		$environment['WSTM108_MOCK_BASH'] = '/bin/bash';
 		$environment['WSTM108_RELEASE_FAULT'] = '';
 		$environment['WSTM108_BOUNDARY_COPY'] = $case . '/before-cleanup.private';
+		$environment['WSTM108_DIAGNOSTIC_IO_FAULT'] = 'writer-zero' === $fault ? 'write-zero' : '';
+		if ( 0 === strpos( $fault, 'reader-' ) && 'reader-output-io' !== $fault ) {
+			$reader = array(
+				'reader-noise' => "printf 'private-reader\\033[31m\\000\\n'\n",
+				'reader-nul' => "printf '1 1 0\\000 1 1\\n'\n",
+				'reader-extra' => "printf '1 1 0 1 1\\nprivate-tail'\n",
+				'reader-bounds' => "printf '1 1 0 10000 1\\n'\n",
+				'reader-stderr' => "printf '1 1 0 1 1\\n'; printf 'private-reader-error\\n' >&2\n",
+				'reader-exit' => "printf 'private-reader-error\\033[31m\\n' >&2\nexit 47\n",
+			);
+			$shim = file_get_contents( $work . '/bin/php' );
+			$needle = "case \"\${1:-}\" in\n";
+			self::require( isset( $reader[ $fault ] ) && 1 === substr_count( $shim, $needle ) );
+			$shim = str_replace( $needle, "if [[ \"\${2:-}\" == read-authority ]]; then\n" . $reader[ $fault ] . "exit 0\nfi\n" . $needle, $shim );
+			self::require( false !== file_put_contents( $work . '/bin/php', $shim ) );
+		}
 		$result = self::run( array( '/bin/bash', $case . '/outer.sh' ), $case, $environment, $case . '/outer' );
 		$expected_out = 0 === $exit ? "PASS native-authority-controls child_exit=0\n" : '';
+		$diagnostic = 'Native authority location unavailable; original_exit=' . $exit . "\n";
+		$reader_out = '';
+		$reader_err = '';
+		if ( $throws && ! in_array( $fault, array( 'write-collision', 'writer-zero' ), true ) ) {
+			$value = json_decode( file_get_contents( $work . '/first-package-diagnostic/authority.json' ), true, 8, JSON_THROW_ON_ERROR );
+			Wstm108_SyntheticDiagnostic::validate_authority( $value );
+			self::require( ( 'unknown-source' === $fault ? 0 : 1 ) === $value['source_id']
+				&& 1 === $value['control_id'] && 0 === $value['case_id'] && 1 === $value['class_id'] );
+			$fields = implode( ' ', array( $value['source_id'], $value['control_id'], $value['case_id'], $value['line'], $value['class_id'] ) );
+			$reader_out = $fields . "\n";
+			$diagnostic = ( 'unknown-source' === $fault ? 'Native authority location unavailable; checkpoint fields=' : 'Native authority location fields=' )
+				. $fields . '; original_exit=' . $exit . "\n";
+			putenv( 'WSTM108_MOCK_ROOT=' . $work );
+			foreach ( array( 23, 47 ) as $wrong_exit ) {
+				self::refused( static function () use ( $work, $wrong_exit ): void {
+					Wstm108_SyntheticDiagnostic::read_authority( $work . '/first-package-diagnostic', $wrong_exit );
+				} );
+			}
+		} elseif ( in_array( $fault, array( 'write-collision', 'writer-zero' ), true ) || 0 === strpos( $fault, 'reader-' ) ) {
+			$reader_exit = in_array( $fault, array( 'write-collision', 'writer-zero' ), true ) ? 3 : ( 'reader-exit' === $fault ? 47 : 0 );
+			if ( 'reader-output-io' === $fault ) { $reader_exit = 1; }
+			$diagnostic = 'Native authority location reader refused; reader_exit=' . $reader_exit . '; original_exit=' . $exit . "\n";
+			$reader_out = array(
+				'reader-noise' => "private-reader\x1b[31m\0\n", 'reader-nul' => "1 1 0\0 1 1\n",
+				'reader-extra' => "1 1 0 1 1\nprivate-tail", 'reader-bounds' => "1 1 0 10000 1\n",
+				'reader-stderr' => "1 1 0 1 1\n",
+			)[ $fault ] ?? '';
+			$reader_err = array(
+				'write-collision' => "Synthetic diagnostic readback refused.\n",
+				'writer-zero' => "Synthetic diagnostic readback refused.\n",
+				'reader-stderr' => "private-reader-error\n",
+				'reader-exit' => "private-reader-error\x1b[31m\n",
+			)[ $fault ] ?? '';
+		}
 		$expected_err = 0 === $exit ? '' : 'FAIL native-authority-controls child_exit=' . $exit
-			. "\nFailed untrusted mock evidence retained at " . $work . "\n";
+			. "\n" . $diagnostic . 'Failed untrusted mock evidence retained at ' . $work . "\n";
 		self::require( $exit === $result['exit'] && $expected_out === $result['stdout'] && $expected_err === $result['stderr'] );
 		clearstatcache();
 		self::require( is_dir( $work ) === ( 0 !== $exit )
 			&& file_exists( $environment['WSTM108_BOUNDARY_COPY'] ) === ( 0 === $exit ) );
 		$private = 0 === $exit ? $environment['WSTM108_BOUNDARY_COPY'] : $work . '/native-authority-controls.log';
-		self::require( $out . $err === file_get_contents( $private ) );
+		$bytes = file_get_contents( $private );
+		self::require( $throws || 'reader-output-io' === $fault ? 0 === strpos( $bytes, $out . $err ) : $out . $err === $bytes );
+		if ( 'write-collision' === $fault ) {
+			self::require( 'private-collision-original' === file_get_contents( $work . '/first-package-diagnostic/authority.json' )
+				&& false !== strpos( $bytes, 'Native authority location writer failed; original Throwable retained.' ) );
+		}
+		if ( 'writer-zero' === $fault ) {
+			self::require( '' === file_get_contents( $work . '/first-package-diagnostic/authority.json' )
+				&& false !== strpos( $bytes, 'Native authority location writer failed; original Throwable retained.' ) );
+		}
+		if ( 'reader-output-io' === $fault ) {
+			self::require( is_dir( $work . '/native-location.stdout.private' ) && ! file_exists( $work . '/native-location.stderr.private' )
+				&& strlen( $bytes ) > strlen( $out . $err ) );
+		} elseif ( 0 !== $exit ) {
+			self::require( 0100600 === lstat( $work . '/native-location.stdout.private' )['mode']
+				&& 0100600 === lstat( $work . '/native-location.stderr.private' )['mode']
+				&& $reader_out === file_get_contents( $work . '/native-location.stdout.private' )
+				&& $reader_err === file_get_contents( $work . '/native-location.stderr.private' ) );
+		}
 	}
 
 	public static function execute( string $root ): array {
@@ -349,6 +451,13 @@ PHP;
 			self::native_authority_boundary( $root, $exit );
 			$passed[] = 'native-authority-exit-' . $exit;
 		}
+		foreach ( array( 'throw-0', 'throw-23', 'throw-47', 'throw-255', 'unknown-source', 'write-collision', 'writer-zero',
+			'reader-noise', 'reader-nul', 'reader-extra', 'reader-bounds', 'reader-stderr', 'reader-exit', 'reader-output-io' ) as $fault ) {
+			self::native_authority_boundary( $root, 255, $fault );
+			$passed[] = 'native-authority-' . $fault;
+		}
+		self::native_authority_boundary( $root, 23, 'reader-exit' );
+		$passed[] = 'native-authority-reader-failure-original23';
 		return array( 'scope' => 'real-linux-filesystem-processes-with-synthetic-faults-no-daemon-or-wordpress', 'passed' => $passed );
 	}
 }

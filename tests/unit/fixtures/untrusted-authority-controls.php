@@ -2,6 +2,20 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/untrusted-runtime-diagnostic.php';
+set_exception_handler( static function ( Throwable $error ): void {
+	try {
+		try {
+			Wstm108_SyntheticDiagnostic::record_authority( $error, getenv( 'WSTM108_MOCK_ROOT' ) . '/first-package-diagnostic' );
+		} catch ( Throwable $diagnostic_error ) {
+			fwrite( STDERR, "Native authority location writer failed; original Throwable retained.\n" );
+		}
+	} finally {
+		restore_exception_handler();
+		throw $error;
+	}
+} );
+Wstm108_SyntheticDiagnostic::authority_checkpoint( 1 );
 require_once dirname( __DIR__, 3 ) . '/scripts/untrusted-authority.php';
 require_once __DIR__ . '/untrusted-host-boundaries.php';
 
@@ -15,6 +29,7 @@ $require = static function ( bool $condition, string $message ): void {
 	if ( ! $condition ) { throw new RuntimeException( 'Native authority control failed: ' . $message ); }
 };
 $root = $argv[1] ?? '';
+Wstm108_SyntheticDiagnostic::authority_checkpoint( 2 );
 Wstm108_Files::directory( $root );
 $base = $root . '/native-authority-controls';
 $require( mkdir( $base, 0700 ), 'exclusive control root' );
@@ -22,12 +37,14 @@ foreach ( array( 'checkout', 'authority', 'docker-data' ) as $name ) {
 	$require( mkdir( $base . '/' . $name, 0700 ), 'exclusive control child' );
 }
 $binding = array( 'owner' => str_repeat( 'a', 32 ), 'project' => 'native-capture-control', 'source_sha' => str_repeat( 'b', 40 ), 'tree_sha' => str_repeat( 'c', 40 ), 'package_sha256' => null );
+Wstm108_SyntheticDiagnostic::authority_checkpoint( 3 );
 $mounts = Wstm108_HostBoundaryFixture::mounts( $binding['project'], $base . '/checkout', $base . '/docker-data' );
 $authority = Wstm108_HostAuthority::create( $base . '/authority', $base . '/checkout', $binding, str_repeat( 'd', 64 ), $mounts );
 $handle = $authority->handle();
 $command = static fn( string $out, string $err, int $exit ) => array( PHP_BINARY, '-r',
 	'fwrite(STDOUT,base64_decode($argv[1]));fwrite(STDERR,base64_decode($argv[2]));exit((int)$argv[3]);',
 	base64_encode( $out ), base64_encode( $err ), (string) $exit );
+Wstm108_SyntheticDiagnostic::authority_checkpoint( 4 );
 $capture = $authority->capture( 'original', $command( "validated\n", '', 0 ), $base . '/checkout', getenv() );
 Wstm108_HostAuthority::frame( $capture, "validated\n" );
 $witness = Wstm108_HostAuthority::witness( $capture, true );
@@ -35,6 +52,7 @@ $receipt = $authority->receipt( 'original.process.receipt.json', $witness );
 $authority->verify_processes( array( array( 'witness' => $witness, 'receipt' => $receipt ) ) );
 $out = "unknown-before-handler\0\xff\n";
 $err = "unknown-provider-stderr\0\xff\n";
+Wstm108_SyntheticDiagnostic::authority_checkpoint( 5 );
 $capture = $authority->capture( 'enabled', $command( $out, $err, 73 ), $base . '/checkout', getenv() );
 $require( 73 === $capture['child_exit'] && $out === $capture['streams']['stdout']['bytes'] && $err === $capture['streams']['stderr']['bytes'], 'actual binary stdout/stderr and child exit' );
 try {
@@ -45,6 +63,7 @@ try {
 }
 
 // Fault only the source class's native fwrite call, not its file helper or child.
+Wstm108_SyntheticDiagnostic::authority_checkpoint( 6 );
 $source = file_get_contents( dirname( __DIR__, 3 ) . '/scripts/untrusted-authority.php' );
 $start = strpos( $source, 'final class Wstm108_HostAuthority' );
 $end = strpos( $source, "\nif ( realpath( ", $start );
@@ -63,6 +82,7 @@ function fwrite($stream, $bytes) {
 }
 ' . substr( $source, $start, $end - $start ) );
 $GLOBALS['wstm108_write_budget'] = 4;
+Wstm108_SyntheticDiagnostic::authority_checkpoint( 7 );
 $faulty = \Wstm108NativeWriteFault\Wstm108_HostAuthority::resume( $handle );
 try {
 	$faulty->capture( 'runner', $command( str_repeat( 'x', 131072 ), str_repeat( 'y', 131072 ), 73 ), $base . '/checkout', getenv() );
@@ -76,6 +96,7 @@ try {
 }
 unset( $GLOBALS['wstm108_write_budget'] );
 
+Wstm108_SyntheticDiagnostic::authority_checkpoint( 8 );
 $path = $handle['directory'] . '/reservation.receipt.json';
 $bytes = file_get_contents( $path );
 $require( rename( $path, $handle['directory'] . '/retained-original-receipt' ), 'retain original authority receipt' );
@@ -89,4 +110,5 @@ try {
 		&& $err === file_get_contents( $handle['directory'] . '/enabled.stderr.private' ), 'refusal never deletes original process evidence' );
 }
 echo "Native POSIX capture, dual-stream/first-exit preservation, injected partial-write refusal and replacement-anchor refusal passed; topology is synthetic, no Docker/WP proof.\n";
+Wstm108_SyntheticDiagnostic::authority_checkpoint( 9 );
 require __DIR__ . '/untrusted-release-controls.php';

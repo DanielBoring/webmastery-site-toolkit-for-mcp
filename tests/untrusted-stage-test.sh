@@ -45,6 +45,35 @@ native_controls_status=0
 php "$WORK/checkout/tests/unit/fixtures/untrusted-authority-controls.php" "$WORK" > "$WORK/native-authority-controls.log" 2>&1 || native_controls_status=$?
 if [[ "$native_controls_status" != 0 ]]; then
 	printf 'FAIL native-authority-controls child_exit=%d\n' "$native_controls_status" >&2 || exit "$native_controls_status"
+	location_reader_status=0
+	{
+		(
+			umask 077
+			php "$WORK/checkout/tests/unit/fixtures/untrusted-runtime-diagnostic.php" read-authority \
+				"$WORK/first-package-diagnostic" "$native_controls_status" \
+				> "$WORK/native-location.stdout.private" 2> "$WORK/native-location.stderr.private"
+		) 2>> "$WORK/native-authority-controls.log"
+	} 2>/dev/null || location_reader_status=$?
+	location=''
+	if [[ "$location_reader_status" == 0 && ! -s "$WORK/native-location.stderr.private" ]] \
+		&& location_size="$(wc -c 2>/dev/null < "$WORK/native-location.stdout.private")" \
+		&& [[ "$location_size" =~ ^[0-9]{1,2}$ && "$location_size" -le 64 ]] \
+		&& IFS= read -r location 2>/dev/null < "$WORK/native-location.stdout.private" \
+		&& [[ "$location" =~ ^([0-8])\ ([1-9]|1[0-8])\ (0|[1-9]|10)\ (0|[1-9][0-9]{0,3})\ ([0-5])$ ]] \
+		&& [[ "$location_size" -eq $((${#location} + 1)) ]] \
+		&& [[ ( "${BASH_REMATCH[1]}" == 0 && "${BASH_REMATCH[4]}" == 0 ) || ( "${BASH_REMATCH[1]}" != 0 && "${BASH_REMATCH[4]}" != 0 ) ]] \
+		&& [[ ( "${BASH_REMATCH[2]}" -le 9 && "${BASH_REMATCH[3]}" == 0 ) || ( "${BASH_REMATCH[2]}" -ge 10 && "${BASH_REMATCH[3]}" -ge 1 ) ]]; then
+		location_source="${BASH_REMATCH[1]}"
+		if [[ "$location_source" == 0 ]]; then
+			printf 'Native authority location unavailable; checkpoint fields=%s; original_exit=%d\n' "$location" "$native_controls_status" >&2 || exit "$native_controls_status"
+		else
+			printf 'Native authority location fields=%s; original_exit=%d\n' "$location" "$native_controls_status" >&2 || exit "$native_controls_status"
+		fi
+	elif [[ "$location_reader_status" == 2 && ! -s "$WORK/native-location.stdout.private" && ! -s "$WORK/native-location.stderr.private" ]]; then
+		printf 'Native authority location unavailable; original_exit=%d\n' "$native_controls_status" >&2 || exit "$native_controls_status"
+	else
+		printf 'Native authority location reader refused; reader_exit=%d; original_exit=%d\n' "$location_reader_status" "$native_controls_status" >&2 || exit "$native_controls_status"
+	fi
 	exit "$native_controls_status"
 fi
 printf 'PASS native-authority-controls child_exit=0\n'

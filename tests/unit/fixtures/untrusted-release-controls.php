@@ -38,6 +38,8 @@ final class Wstm108_Files {
 }
 use \Wstm108_HostAuthority; use \Wstm108_Provenance; use \RuntimeException; use \Throwable; ' . $release_class );
 foreach ( array( 'partial-companion', 'partial-clear-capture', 'replacement', 'mode', 'receipt-replacement', 'guard-false', 'guard-throws', 'prerequisite-noise', 'success', 'postcommit-fault' ) as $case ) {
+	$diagnostic_case = array_search( $case, Wstm108_SyntheticDiagnostic::AUTHORITY_CASES, true );
+	Wstm108_SyntheticDiagnostic::authority_checkpoint( 10, $diagnostic_case );
 	$case_root = $base . '/release-' . $case;
 	foreach ( array( $case_root, $case_root . '/checkout', $case_root . '/checkout/scripts', $case_root . '/checkout/build',
 		$case_root . '/checkout/e2e-artifacts', $case_root . '/checkout/e2e-artifacts/untrusted-control', $case_root . '/authority', $case_root . '/docker-data' ) as $path ) {
@@ -66,12 +68,14 @@ foreach ( array( 'partial-companion', 'partial-clear-capture', 'replacement', 'm
 	$h = $authority->handle();
 	$environment = getenv();
 	$environment['COMPOSE_PROJECT_NAME'] = $binding['project'];
+	Wstm108_SyntheticDiagnostic::authority_checkpoint( 11, $diagnostic_case );
 	$arm = $authority->capture( 'acquire', array( 'bash', '-c', 'set -e; source "$1"; wstm116_arm_retention "$2" "$3"',
 		'wstm108-control-arm', $checkout . '/scripts/destructive-retention.sh', $binding['owner'], $binding['source_sha'] ), $checkout, $environment );
 	$require( 0 === $arm['child_exit'] && '' === $arm['streams']['stderr']['bytes'], 'actual unchanged primary arm first' );
 	$guard = $checkout . '/build/wstm116-retention-' . $binding['project'] . '-wstm108-' . $binding['owner'];
 	$primary = $checkout . '/build/wstm116-retention-' . $binding['project'];
 	$release = new Wstm108_ReleaseGuard( $authority );
+	Wstm108_SyntheticDiagnostic::authority_checkpoint( 12, $diagnostic_case );
 	if ( 'partial-companion' === $case ) {
 		$GLOBALS['wstm108_companion_budget'] = 4;
 		try {
@@ -85,6 +89,7 @@ foreach ( array( 'partial-companion', 'partial-clear-capture', 'replacement', 'm
 		continue;
 	}
 	$companion = $release->arm();
+	Wstm108_SyntheticDiagnostic::authority_checkpoint( 13, $diagnostic_case );
 	$state = array( 'companion' => $companion, 'prepared' => array( 'synthetic' => true ), 'processes' => array() );
 	foreach ( array( 'acquire', 'original', 'enable', 'enabled', 'runner', 'runner-proof', 'restored', 'finalize', 'retire', 'final-proof' ) as $action ) {
 		$c = 'acquire' === $action ? $arm : $authority->capture( $action, $command( "synthetic validated\n", '', 0 ), $checkout, $environment );
@@ -92,6 +97,7 @@ foreach ( array( 'partial-companion', 'partial-clear-capture', 'replacement', 'm
 		$state['processes'][] = array( 'witness' => $w, 'receipt' => $authority->receipt( $action . '.process.receipt.json', $w ) );
 	}
 	$state['retirement_receipt'] = $authority->receipt( 'retirement.receipt.json', array( 'binding' => $binding, 'prepared' => $state['prepared'], 'processes' => $state['processes'] ) );
+	Wstm108_SyntheticDiagnostic::authority_checkpoint( 14, $diagnostic_case );
 	if ( 'partial-clear-capture' === $case ) {
 		$GLOBALS['wstm108_write_target'] = 'clear-primary.stdout.private';
 		$GLOBALS['wstm108_write_budget'] = 4;
@@ -109,7 +115,9 @@ foreach ( array( 'partial-companion', 'partial-clear-capture', 'replacement', 'm
 		continue;
 	}
 	$state['processes'][] = $release->clear_primary( $companion );
+	Wstm108_SyntheticDiagnostic::authority_checkpoint( 15, $diagnostic_case );
 	$state['release_authorization'] = $release->authorize( $state, $context );
+	Wstm108_SyntheticDiagnostic::authority_checkpoint( 16, $diagnostic_case );
 	if ( 'replacement' === $case ) {
 		$require( rename( $guard, $case_root . '/original-companion' ), 'retain original companion' );
 		Wstm108_Files::create( $guard, $companion['companion']['bytes'] );
@@ -127,6 +135,7 @@ foreach ( array( 'partial-companion', 'partial-clear-capture', 'replacement', 'm
 		$require( is_resource( $GLOBALS['wstm108_prerequisite_stream'] ), 'synthetic guard has a real private noise stream' );
 		$release = new \Wstm108PrerequisiteNoise\Wstm108_ReleaseGuard( $authority );
 	}
+	Wstm108_SyntheticDiagnostic::authority_checkpoint( 17, $diagnostic_case );
 	try {
 		$release->commit( $state, $context, static function () use ( $case ): bool {
 			if ( 'guard-throws' === $case ) { throw new RuntimeException( 'Synthetic original-stream guard veto.' ); }
@@ -148,6 +157,7 @@ foreach ( array( 'partial-companion', 'partial-clear-capture', 'replacement', 'm
 			fclose( $stream ); unset( $GLOBALS['wstm108_prerequisite_stream'] );
 		}
 	}
+	Wstm108_SyntheticDiagnostic::authority_checkpoint( 18, $diagnostic_case );
 	$r = json_decode( file_get_contents( $h['directory'] . '/' . Wstm108_ReleaseGuard::AUTHORIZATION ), true, 512, JSON_THROW_ON_ERROR );
 	$require( 'not_observed' === $r['commit_outcome'] && 'not_asserted' === $r['qa_outcome'], 'authorization is not a completion acknowledgment, including after commit' );
 }

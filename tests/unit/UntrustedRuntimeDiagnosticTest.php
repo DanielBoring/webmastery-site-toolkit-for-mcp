@@ -60,6 +60,114 @@ final class UntrustedRuntimeDiagnosticTest extends TestCase {
 		self::assertSame( $expected, $projected['exception_exit'] );
 	}
 
+	public function test_authority_source_and_checkpoint_ids_are_closed_and_bound_to_current_controls(): void {
+		self::assertSame( array(
+			1 => 'tests/unit/fixtures/untrusted-authority-controls.php',
+			2 => 'tests/unit/fixtures/untrusted-release-controls.php',
+			3 => 'scripts/untrusted-authority.php', 4 => 'scripts/untrusted-host-topology.php',
+			5 => 'tests/e2e/untrusted-content-files.php', 6 => 'scripts/untrusted-release.php',
+			7 => 'tests/e2e/untrusted-content-provenance.php', 8 => 'tests/unit/fixtures/untrusted-host-boundaries.php',
+		), Wstm108_SyntheticDiagnostic::AUTHORITY_SOURCES );
+		self::assertSame( array(
+			1 => 'bootstrap', 2 => 'directories', 3 => 'authority', 4 => 'successful-capture',
+			5 => 'failed-capture', 6 => 'partial-write-setup', 7 => 'partial-write-capture', 8 => 'anchor-replacement',
+			9 => 'release-setup', 10 => 'release-case-setup', 11 => 'primary-arm', 12 => 'companion-arm',
+			13 => 'process-chain', 14 => 'clear-primary', 15 => 'authorize', 16 => 'mutation',
+			17 => 'commit', 18 => 'authorization-readback',
+		), Wstm108_SyntheticDiagnostic::AUTHORITY_CONTROLS );
+		self::assertSame( array(
+			1 => 'partial-companion', 2 => 'partial-clear-capture', 3 => 'replacement', 4 => 'mode',
+			5 => 'receipt-replacement', 6 => 'guard-false', 7 => 'guard-throws',
+			8 => 'prerequisite-noise', 9 => 'success', 10 => 'postcommit-fault',
+		), Wstm108_SyntheticDiagnostic::AUTHORITY_CASES );
+		foreach ( array( 'untrusted-authority-controls.php' => range( 1, 9 ), 'untrusted-release-controls.php' => range( 10, 18 ) ) as $file => $ids ) {
+			$source = file_get_contents( __DIR__ . '/fixtures/' . $file );
+			preg_match_all( '/Wstm108_SyntheticDiagnostic::authority_checkpoint\( ([0-9]+)/', $source, $matches );
+			self::assertSame( $ids, array_map( 'intval', $matches[1] ) );
+		}
+		$release = file_get_contents( __DIR__ . '/fixtures/untrusted-release-controls.php' );
+		self::assertStringContainsString( "foreach ( array( '" . implode( "', '", Wstm108_SyntheticDiagnostic::AUTHORITY_CASES ) . "' ) as \$case )", $release );
+	}
+
+	public function test_authority_projection_has_only_known_ids_and_bounded_integer_locations(): void {
+		$classes = array( RuntimeException::class => 1, LogicException::class => 2, Error::class => 3, TypeError::class => 4, ParseError::class => 5 );
+		foreach ( Wstm108_SyntheticDiagnostic::AUTHORITY_CONTROLS as $control => $label ) {
+			foreach ( $control <= 9 ? array( 0 ) : array_keys( Wstm108_SyntheticDiagnostic::AUTHORITY_CASES ) as $case ) {
+				Wstm108_SyntheticDiagnostic::authority_checkpoint( $control, $case );
+				foreach ( Wstm108_SyntheticDiagnostic::AUTHORITY_SOURCES as $id => $relative ) {
+					foreach ( array( 1, 9999 ) as $line ) {
+						foreach ( $classes as $class => $class_id ) {
+							$expected = array( 'version' => 1, 'scope' => 'synthetic-authority-only', 'source_id' => $id,
+								'control_id' => $control, 'case_id' => $case, 'line' => $line, 'class_id' => $class_id );
+							$actual = Wstm108_SyntheticDiagnostic::authority_location( dirname( __DIR__, 2 ) . '/' . $relative, $line, $class );
+							self::assertSame( $expected, $actual );
+							self::assertSame( $expected, Wstm108_SyntheticDiagnostic::validate_authority( $actual ) );
+						}
+					}
+				}
+			}
+		}
+		Wstm108_SyntheticDiagnostic::authority_checkpoint( 1 );
+	}
+
+	public static function unavailable_authority_locations(): array {
+		$known = dirname( __DIR__, 2 ) . '/tests/unit/fixtures/untrusted-authority-controls.php';
+		return array(
+			'unknown' => array( '/private/secret.php', 23 ),
+			'basename only' => array( 'untrusted-authority-controls.php', 23 ),
+			'prefix' => array( '/private' . $known, 23 ),
+			'eval' => array( $known . "(23) : eval()'d code", 23 ),
+			'controls' => array( $known . "\x1b[31m\0\"\\\u{96ea}\n", 23 ),
+			'zero' => array( $known, 0 ), 'negative' => array( $known, -1 ),
+			'large' => array( $known, 10000 ), 'max' => array( $known, PHP_INT_MAX ),
+		);
+	}
+
+	/** @dataProvider unavailable_authority_locations */
+	public function test_unknown_or_out_of_bounds_locations_are_unavailable_not_guessed( string $file, int $line ): void {
+		Wstm108_SyntheticDiagnostic::authority_checkpoint( 1 );
+		$expected = array( 'version' => 1, 'scope' => 'synthetic-authority-only', 'source_id' => 0,
+			'control_id' => 1, 'case_id' => 0, 'line' => 0, 'class_id' => 0 );
+		self::assertSame( $expected, Wstm108_SyntheticDiagnostic::authority_location( $file, $line, "private-class\x1b[31m\0\n" ) );
+		self::assertSame( $expected, Wstm108_SyntheticDiagnostic::validate_authority( $expected ) );
+	}
+
+	public static function invalid_authority_records(): array {
+		$cases = array();
+		foreach ( array(
+			'version' => array( 0, '1' ), 'scope' => array( 'synthetic-only', "private\x1b\0" ),
+			'source_id' => array( -1, 9, '1', null, true ), 'control_id' => array( 0, 19, '1' ),
+			'case_id' => array( -1, 1, 11, '0' ), 'line' => array( -1, 0, 10000, '1' ),
+			'class_id' => array( -1, 6, '1' ), 'private' => array( "secret\x1b[31m\0" ),
+		) as $key => $values ) {
+			foreach ( $values as $value ) { $cases[] = array( array( $key => $value ) ); }
+		}
+		$cases[] = array( array( 'source_id' => 0, 'line' => 1 ) );
+		$cases[] = array( array( 'control_id' => 10, 'case_id' => 0 ) );
+		$cases[] = array( array( 'control_id' => 18, 'case_id' => 11 ) );
+		return $cases;
+	}
+
+	/** @dataProvider invalid_authority_records */
+	public function test_authority_reader_schema_refuses_unrecognized_fields_types_and_relations( array $changes ): void {
+		$value = array( 'version' => 1, 'scope' => 'synthetic-authority-only', 'source_id' => 1,
+			'control_id' => 1, 'case_id' => 0, 'line' => 1, 'class_id' => 1 );
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'Synthetic diagnostic refused.' );
+		Wstm108_SyntheticDiagnostic::validate_authority( array_replace( $value, $changes ) );
+	}
+
+	public static function invalid_authority_checkpoints(): array {
+		return array( array( 0, 0 ), array( 19, 0 ), array( 1, 1 ), array( 9, 10 ),
+			array( 10, 0 ), array( 18, 11 ), array( 18, -1 ) );
+	}
+
+	/** @dataProvider invalid_authority_checkpoints */
+	public function test_invalid_checkpoint_is_explicitly_refused( int $control, int $case ): void {
+		$this->expectException( RuntimeException::class );
+		Wstm108_SyntheticDiagnostic::authority_checkpoint( $control, $case );
+	}
+
 	private static function topology_reasons( string $source ): array {
 		$tokens = array_values( array_filter( token_get_all( $source ), static function ( $token ): bool {
 			return ! is_array( $token ) || ! in_array( $token[0], array( T_WHITESPACE, T_COMMENT, T_DOC_COMMENT ), true );
@@ -200,6 +308,11 @@ final class UntrustedRuntimeDiagnosticTest extends TestCase {
 			'outer-reader-stdout', 'outer-reader-stderr', 'outer-reader-range', 'outer-mapped-exit43', 'outer-success',
 			'outer-diagnostic-stdout-full',
 			'native-authority-exit-0', 'native-authority-exit-23', 'native-authority-exit-47', 'native-authority-exit-255',
+			'native-authority-throw-0', 'native-authority-throw-23', 'native-authority-throw-47', 'native-authority-throw-255',
+			'native-authority-unknown-source', 'native-authority-write-collision', 'native-authority-writer-zero',
+			'native-authority-reader-noise', 'native-authority-reader-nul', 'native-authority-reader-extra', 'native-authority-reader-bounds',
+			'native-authority-reader-stderr', 'native-authority-reader-exit', 'native-authority-reader-output-io',
+			'native-authority-reader-failure-original23',
 		), $result['passed'] );
 	}
 }
