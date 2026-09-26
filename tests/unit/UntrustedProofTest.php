@@ -106,11 +106,11 @@ final class UntrustedProofTest extends TestCase {
 	 * File descriptors avoid Windows pipe backpressure entirely. Poll a direct PHP
 	 * child with a deadline instead of waiting indefinitely in stream_get_contents.
 	 */
-	private function subprocess( string $code ): array {
+	private function subprocess( string $code, array $arguments = array() ): array {
 		$stdout = $this->path();
 		$stderr = $this->path();
 		$process = proc_open(
-			array( PHP_BINARY, '-r', $code ),
+			array_merge( array( PHP_BINARY, '-r', $code ), $arguments ),
 			array( 0 => array( 'pipe', 'r' ), 1 => array( 'file', $stdout, 'w' ), 2 => array( 'file', $stderr, 'w' ) ),
 			$pipes,
 			null,
@@ -405,6 +405,54 @@ final class UntrustedProofTest extends TestCase {
 		self::assertSame( 0, $exit );
 		self::assertSame( 1048576, strlen( $out ) );
 		self::assertSame( 1048576, strlen( $err ) );
+	}
+
+	private static function authority_fixture_commands( string $source ): array {
+		$source = str_replace( "\r\n", "\n", $source );
+		$start_marker = '$command = ';
+		$end_marker = "\nWstm108_SyntheticDiagnostic::authority_checkpoint( 4 );";
+		self::assertSame( 1, substr_count( $source, $start_marker ), 'The actual command factory must be unique.' );
+		self::assertSame( 1, substr_count( $source, $end_marker ), 'The factory boundary must be unique.' );
+		$start = strpos( $source, $start_marker ) + strlen( $start_marker );
+		$end = strpos( $source, $end_marker );
+		self::assertGreaterThan( $start, $end );
+		$command = eval( 'return ' . substr( $source, $start, $end - $start ) );
+		self::assertInstanceOf( \Closure::class, $command );
+		self::assertSame( 1, preg_match_all( '/^\t\$faulty->capture\( \'runner\', (\$command\( [^\n]+ \)), \$base \. \'\/checkout\', getenv\(\) \);$/m', $source, $matches ),
+			'The actual partial-write invocation must be unique.' );
+		return array( $command, eval( 'return ' . $matches[1][0] . ';' ) );
+	}
+
+	public function test_authority_partial_write_argv_is_bounded_and_child_emits_exact_large_streams(): void {
+		list( , $arguments ) = self::authority_fixture_commands( file_get_contents( __DIR__ . '/fixtures/untrusted-authority-controls.php' ) );
+		foreach ( $arguments as $argument ) {
+			self::assertLessThanOrEqual( 1024, strlen( $argument ), 'Generate large fixture streams inside the child, not in argv.' );
+		}
+		self::assertSame( array( PHP_BINARY, '-r' ), array_slice( $arguments, 0, 2 ) );
+		self::assertSame( array( 'eA==', 'eQ==', '73', '131072' ), array_slice( $arguments, 3 ) );
+		self::assertSame( 174764, strlen( base64_encode( str_repeat( 'x', 131072 ) ) ), 'The former encoded payload exceeds a 128-KiB per-argument limit.' );
+		list( $exit, $out, $err ) = $this->subprocess( $arguments[2], array_slice( $arguments, 3 ) );
+		self::assertSame( 73, $exit );
+		foreach ( array( 'x' => $out, 'y' => $err ) as $seed => $bytes ) {
+			self::assertSame( 131072, strlen( $bytes ) );
+			self::assertSame( hash( 'sha256', str_repeat( $seed, 131072 ) ), hash( 'sha256', $bytes ) );
+		}
+	}
+
+	public static function authority_default_streams(): array {
+		return array(
+			'original' => array( "validated\n", '', 0 ),
+			'binary-failure' => array( "unknown-before-handler\0\xff\n", "unknown-provider-stderr\0\xff\n", 73 ),
+		);
+	}
+
+	/** @dataProvider authority_default_streams */
+	public function test_authority_factory_default_repeat_preserves_original_binary_streams( string $out, string $err, int $exit ): void {
+		list( $command ) = self::authority_fixture_commands( file_get_contents( __DIR__ . '/fixtures/untrusted-authority-controls.php' ) );
+		$arguments = $command( $out, $err, $exit );
+		self::assertSame( array( PHP_BINARY, '-r' ), array_slice( $arguments, 0, 2 ) );
+		self::assertSame( array( base64_encode( $out ), base64_encode( $err ), (string) $exit, '1' ), array_slice( $arguments, 3 ) );
+		self::assertSame( array( $exit, $out, $err ), $this->subprocess( $arguments[2], array_slice( $arguments, 3 ) ) );
 	}
 
 	public function test_only_record_marker_is_removed_and_full_original_shape_is_required(): void {

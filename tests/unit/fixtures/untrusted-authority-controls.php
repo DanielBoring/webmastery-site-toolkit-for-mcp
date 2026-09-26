@@ -41,9 +41,9 @@ Wstm108_SyntheticDiagnostic::authority_checkpoint( 3 );
 $mounts = Wstm108_HostBoundaryFixture::mounts( $binding['project'], $base . '/checkout', $base . '/docker-data' );
 $authority = Wstm108_HostAuthority::create( $base . '/authority', $base . '/checkout', $binding, str_repeat( 'd', 64 ), $mounts );
 $handle = $authority->handle();
-$command = static fn( string $out, string $err, int $exit ) => array( PHP_BINARY, '-r',
-	'fwrite(STDOUT,base64_decode($argv[1]));fwrite(STDERR,base64_decode($argv[2]));exit((int)$argv[3]);',
-	base64_encode( $out ), base64_encode( $err ), (string) $exit );
+$command = static fn( string $out, string $err, int $exit, int $repeat = 1 ) => array( PHP_BINARY, '-r',
+	'fwrite(STDOUT,str_repeat(base64_decode($argv[1]),(int)$argv[4]));fwrite(STDERR,str_repeat(base64_decode($argv[2]),(int)$argv[4]));exit((int)$argv[3]);',
+	base64_encode( $out ), base64_encode( $err ), (string) $exit, (string) $repeat );
 Wstm108_SyntheticDiagnostic::authority_checkpoint( 4 );
 $capture = $authority->capture( 'original', $command( "validated\n", '', 0 ), $base . '/checkout', getenv() );
 Wstm108_HostAuthority::frame( $capture, "validated\n" );
@@ -85,7 +85,7 @@ $GLOBALS['wstm108_write_budget'] = 4;
 Wstm108_SyntheticDiagnostic::authority_checkpoint( 7 );
 $faulty = \Wstm108NativeWriteFault\Wstm108_HostAuthority::resume( $handle );
 try {
-	$faulty->capture( 'runner', $command( str_repeat( 'x', 131072 ), str_repeat( 'y', 131072 ), 73 ), $base . '/checkout', getenv() );
+	$faulty->capture( 'runner', $command( 'x', 'y', 73, 131072 ), $base . '/checkout', getenv() );
 	throw new LogicException( 'Partial original capture was accepted.' );
 } catch ( RuntimeException $expected ) {
 	$require( 73 === $expected->getCode(), 'partial-write failure preserves actual child exit' );
