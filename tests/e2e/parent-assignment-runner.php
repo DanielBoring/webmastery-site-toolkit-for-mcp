@@ -161,6 +161,7 @@ $summary = array(
 	'fixture_sha256' => hash_file( 'sha256', __DIR__ . '/parent-assignment-fixture.php' ),
 	'production_sha256' => array(
 		'posts' => hash_file( 'sha256', __DIR__ . '/../../includes/class-posts.php' ),
+		'access' => hash_file( 'sha256', __DIR__ . '/../../includes/class-post-access.php' ),
 		'cpt' => hash_file( 'sha256', __DIR__ . '/../../includes/class-custom-post-types.php' ),
 	),
 	'passed' => 0, 'failed' => 0, 'cases' => array(),

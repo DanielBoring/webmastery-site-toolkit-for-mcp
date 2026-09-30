@@ -9,3 +9,5 @@
 *.txt text eol=lf
 *.xml text eol=lf
 *.yml text eol=lf
+tests/e2e/bounded-list-recovery.py text eol=lf
+tests/unit/test_bounded_recovery.py text eol=lf

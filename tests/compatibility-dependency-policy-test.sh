@@ -2,6 +2,14 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+matrix="$(php "$root/scripts/compatibility-matrix.php" "$root/.github/compatibility-versions.json" "$root/.github/compatibility-versions.json")"
+grep -F '"label":"wp69-php81-compatibility","wordpress-image":"wordpress:6.9-php8.1-apache"' <<< "$matrix" >/dev/null
+if grep -Eq '"label":"supported-floor"|wordpress:6\.9-php8\.0-apache' <<< "$matrix"; then
+	echo 'PHP 8.1 compatibility must not masquerade as PHP 8.0 floor proof or invent an image tag.' >&2
+	exit 1
+fi
+grep -F 'compatibility-artifacts/runtime.json compatibility-artifacts/candidate-pins.json php81-compatibility' \
+	"$root/.github/workflows/compatibility-qa.yml" >/dev/null
 # shellcheck source=scripts/e2e-test.sh
 source "$root/scripts/e2e-test.sh"
 
@@ -105,12 +113,17 @@ run_input_schema_qa() {
 	schema_stage_calls=$(( schema_stage_calls + 1 ))
 	[[ "$destructive_stage_calls" == 1 && "$metadata_stage_calls" == 1 ]] || { echo 'Schema stage must follow safety and metadata authorization.' >&2; exit 1; }
 }
+run_untrusted_content_qa() {
+	assert_cron_isolated
+	untrusted_stage_calls=$(( untrusted_stage_calls + 1 ))
+}
 run_debug_log_check() { assert_cron_isolated; }
 for QA_MODE in contract e2e all; do
 	cron_configured=0
 	metadata_stage_calls=0
 	destructive_stage_calls=0
 	schema_stage_calls=0
+	untrusted_stage_calls=0
 	main >/dev/null
 	assert_cron_isolated
 	if [ "$metadata_stage_calls" != 1 ]; then
@@ -123,6 +136,10 @@ for QA_MODE in contract e2e all; do
 	fi
 	if [ "$schema_stage_calls" != 1 ]; then
 		echo "Schema QA must run exactly once in ${QA_MODE} mode." >&2
+		exit 1
+	fi
+	if [ "$untrusted_stage_calls" != 1 ]; then
+		echo "Untrusted-content QA must run exactly once in ${QA_MODE} mode." >&2
 		exit 1
 	fi
 done

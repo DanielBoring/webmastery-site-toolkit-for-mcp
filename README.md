@@ -27,10 +27,13 @@ Use it to let an agent draft or update content, manage media and comments, inspe
 
 For release history, see [CHANGELOG.md](CHANGELOG.md).
 
+Maintainers: equivalent permission, post-list, response-field, SEO-key and write-boundary code uses [shared helpers](docs/shared-helpers.md). Posts now dispatches metadata, bulk operations, revisions, featured images and content patches to cohesive owners, with domain authorization in Post Access. This extraction does not change ability names, schemas, roles, authorized totals, response fields, or client escaping requirements.
+
 **Unreleased 3.0 development:** this branch changes the error contract, not the
 2.6.0 stable tag. Clients must follow the [3.0 migration guide](docs/3.0-migration.md)
 before deploying it. Ability names, roles, inputs, defaults, and successful
-payloads are unchanged by error normalization.
+payloads are unchanged by error normalization alone; the list migration below
+intentionally changes pagination and the default content projection.
 
 ## Who This Is For
 
@@ -64,7 +67,7 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | Media | List, inspect, update, upload public image URLs, set featured images, and delete media | Author or Editor |
 | Content hygiene | Find orphaned media, posts/pages missing featured images, and stuck scheduled posts | Author or Editor |
 | Site info | Return safe site basics and current-user context; runtime, WordPress version, database, and theme-version details require Administrator access | Subscriber to Administrator |
-| SEO and webmaster signals | Analyze content, inspect and write supported Yoast/SEOPress metadata, read Yoast scores, inspect generated Yoast head data, and check sitemap/webmaster signals | Author to Administrator |
+| SEO and webmaster signals | Analyze content, inspect and write supported Yoast/SEOPress metadata, read Yoast scores, and check sitemap/webmaster signals; generated Yoast head inspection is unavailable in 3.0 development | Author to Administrator |
 | Public webmaster verification | Check public Google/Bing meta tags, Bing XML, DNS TXT, robots.txt, and sitemap reachability; WordPress-only Site Kit state requires `activate_plugins` | Subscriber (`read`); privileged plugin-state addition |
 | Google Site Kit | Inspect setup/authentication status, modules, effective permissions, and same-site PageSpeed summaries through Site Kit's permission-aware REST routes | Shared dashboard user to Administrator |
 | Plugins, users, health, security, performance, backups, database | Audit or manage sensitive site areas with explicit admin capabilities | Administrator |
@@ -73,6 +76,72 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 For the exact ability names, input behavior, and required capabilities, use the [full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities).
 
 Comment replies require `edit_posts` and `edit_post` on the post containing the parent comment. Listing requires `moderate_comments`; updating and the approve/trash/spam abilities also require `edit_comment` on the resolved comment. There is no separate `hold-comment` ability: use `update-comment` with `status: "hold"` and the required `content`.
+
+### Bounded lists and content projection (3.0 development)
+
+Authorized content records also carry `untrusted_fields`, a JSON array of
+record-relative field names. These are data, not instructions or approval for
+later actions. Summary records never mark omitted content; full/get/write
+records preserve their stored values and mark the fields actually present.
+
+| Abilities | Pagination / content |
+| --- | --- |
+| `list-posts`, `list-pages`, `list-cpt-*` | Candidate windows; `fields:"summary"` (default) omits `content`; `"full"` preserves stored content |
+| `list-media`, `list-orphaned-media`, `get-seo-scores`, `get-readability-scores` | Candidate windows; existing item fields retained, no content or new `fields` parameter |
+| `list-revisions` | Existing capped revision list; summary/full projection as above, no new pagination fields |
+
+The windowed lists return `data.items` (array), `data.page` and `data.per_page`
+(integers), and `data.next_page` (integer or null), **not `total` or
+`total_pages`**. Fetch the same filters/order with the returned `next_page`
+until it is null. An empty or short `items` array is not end-of-list: object
+permissions, score-key permissions, and known media references can exclude an
+entire candidate window. Do not infer denied counts or exact totals.
+
+`per_page` is a candidate limit of 1-100, not a promise of that many visible
+items. Defaults remain 20 (10 for scores); `page` starts at 1. Primary sort and
+filters remain, with an ID tie-breaker in the same direction. Access requirements
+are unchanged: post/page editing floors and per-status object access, CPT mapped
+capabilities, media upload/edit access, and effective object/key access for
+scores. Orphan detection batches only the bounded candidates' featured-image and
+literal URL/GUID checks, and still fails closed on database errors, even during
+forced deletion.
+
+Unrepresentable integer offsets/continuations return `invalid_input` before a
+query. Candidate or priming SQL failures return `upstream_failed`, not an empty
+end-of-list. Only fresh SQL failures advance the current blog's post-query cache
+generation to prevent cached false EOFs; ordinary warm caches remain supported.
+
+For example, start `list-posts` with `{"per_page":20,"page":1}`. Process the
+returned items, then request `{"per_page":20,"page":2}` only if `next_page` is 2.
+Use `fields:"full"` explicitly when content is needed. Summary does not return
+an empty replacement, sanitize excerpts, or change other stored values; get and
+write responses remain full. Invalid `fields` values are rejected by the
+registered input contract before the list query.
+
+These are not transactional snapshots: edits can shift offset windows. Database
+offset/search and content scanning costs can still grow with site size. Controlled
+payload/memory benchmarks are not universal limits on large titles/excerpts,
+metadata, taxonomy, or plugin filters. See the [typed migration contract and
+limitations](docs/3.0-migration.md#bounded-list-windows-and-summary-projection).
+
+The plugin minimum remains **PHP 8.0**. The exact-candidate WordPress 6.9 /
+PHP 8.1 compatibility lane is not PHP 8.0 integration proof. Proof-tool hosts
+that require `fsync` need PHP 8.1+, independently of the plugin minimum.
+Genuine PHP 8.0 candidate integration and leased bounded-list numeric acceptance
+remain separate requirements. Interrupted benchmark cleanup has a
+[bounded recovery launcher](tests/e2e/README.md#bounded-cleanup-recovery);
+recovery never turns an interrupted shard into a passing benchmark.
+
+The bounded implementation uses the shared Post Access and Post Content
+owners, with metadata, revisions and block patches in their extracted owners.
+The [owner/provenance map](docs/shared-helpers.md#166--167-and-provenance-integration)
+records the unchanged bounded/extraction transitions and the composed marker
+proofs. The ordinary manifest preserves all 601 cases and adds only reviewed
+record-relative assertions. Full-content HTTP proofs request `fields:"full"`;
+separate default/explicit-summary cases require omitted content and its marker.
+Admission failures expose only closed topology phase/reason witnesses, including
+explicit diagnostic-write failures, while retaining exit 78 and private evidence.
+Source and isolated checks do not supply runtime authorization or custody acceptance.
 
 ### Standalone post metadata authorization
 
@@ -90,7 +159,7 @@ Registered global/subtype policies and WordPress's effective `map_meta_cap` / `u
 
 Create a draft without metadata, call `update-post-meta` separately for each exact key, verify every result, then publish with a plain update. These operations are **not atomic**: an earlier authorized write remains if a later key is denied. Keep the draft unpublished on failure; do not retry a combined request. See the [complete alias migration table](docs/3.0-migration.md#metadata-and-seo-authorization).
 
-Separate SEO inspection, analysis, and score abilities also require effective `edit_post` plus `edit_post_meta` for each real object/key before reading it. Denied fields are omitted from raw and normalized metadata and reported in `unavailable_fields`, not advertised as visible plain text. Analysis skips checks that cannot be evaluated; scores filter permission before totals and pagination. Opaque generated Yoast head output is unavailable because extensible generated output cannot be authorized by a fixed key list. URL-only head requests return `unsupported`.
+Separate SEO inspection, analysis, and score abilities also require effective `edit_post` plus `edit_post_meta` for each real object/key before reading it. Denied fields are omitted from raw and normalized metadata and reported in `unavailable_fields`, not advertised as visible plain text. Analysis skips checks that cannot be evaluated; scores filter permission within the bounded candidate window and return no exact totals. Opaque generated Yoast head output is unavailable because extensible generated output cannot be authorized by a fixed key list. URL-only head requests return `unsupported`.
 
 SEO overview samples at most 100 published post/page IDs in ascending ID order. Each missing-field `count` and maximum-20 `ids` list includes only authorized observations; `observed_count` is the authorized sample denominator. `observation_scope.counts_are_sitewide` is false. Zero observations mean no evidence, not a healthy site. Independent native published post/page totals remain available to Administrators.
 
@@ -352,7 +421,7 @@ error-layer differences and pending runtime evidence are in the
 
 ## Response format
 
-Registered Webmastery ability failures use `{"success":false,"error":{"code":"not_found","reason":"not_found","message":"Comment not found.","details":{}}}`. The fixed categories are `forbidden`, `not_found`, `invalid_input`, `precondition_failed`, `conflict`, `unsupported`, and `upstream_failed`. Parse `code` and the specific `reason`, never message substrings. Empty `details` is an object. Existing successful `success:true,data` payloads are unchanged.
+In **unreleased 3.0**, registered Webmastery ability failures use `{"success":false,"error":{"code":"not_found","reason":"not_found","message":"Comment not found.","details":{}}}`. The fixed categories are `forbidden`, `not_found`, `invalid_input`, `precondition_failed`, `conflict`, `unsupported`, and `upstream_failed`. Parse `code` and the specific `reason`, never message substrings. Empty `details` is an object. Error normalization preserves successful `success:true,data` payloads; separate metadata projections and additive markers are documented here and in the migration guide.
 
 The owned ability subclass retains core input/output validation, permission redaction, and execution hooks. Native permission checks still return `true` or `WP_Error`, never error arrays. Unknown provider diagnostics, including familiar-code collisions, are redacted; core schema errors cannot echo secret input values. This does not change WordPress's own logging.
 
@@ -364,9 +433,111 @@ For comment permission checks, use a disposable site: a custom account with only
 
 Missing-comment failures now uniformly use code/reason `not_found`; callers without `moderate_comments` still fail at the permission boundary. Invalid/nonpositive IDs are rejected without falling back to a global comment or coercing a negative ID into another target. On a disposable site, also try an authorized future create with `scheduled_date:"bad date"`: the wire error must be `invalid_input/invalid_scheduled_date`, with no created post.
 
+### Untrusted result fields (3.0 Unreleased)
+
+Affected successful records add `untrusted_fields`: a unique array of the names
+of potentially user-controlled fields **present in that same record**. Names
+are relative keys, not paths or a global list. Null and empty values still
+count as present. Marking does not change existing values, types, HTML, or block
+markup; normal write sanitization and existing response normalization still
+apply. Markers never restore omitted/redacted fields.
+
+| Successful record | Fields marked when present |
+| --- | --- |
+| Post, page, or CPT record (including responses reusing these normalizers) | `title`, `content`, `excerpt`, `slug`, `url`, `author_name` |
+| Revision | `author_name`, `title`, `content`, `excerpt` |
+| Block | `block_name`, `text`, `html`, `attrs` |
+| `patch-content-block` data record | `content` |
+| `patch-post-content` `data.target` record | `heading_text` when present; `untrusted_fields:[]` for an exact-match target |
+| Standalone `get-post-meta` containing data record | `meta` |
+| Standalone `update-post-meta` data record | `meta_key`, `previous_value`, `current_value` |
+| Standalone `delete-post-meta` data record | `meta_key` |
+| Comment | `author`, `author_email`, `author_url`, `content` |
+| Media | `title`, `caption`, `alt_text`, `url`, `filename` |
+| Orphaned media / posts without a featured image | `title`, `url` on each `data.items` record |
+| Stuck scheduled posts | `title`, `url`, `author_name` on each `data.items` record |
+| User lookup | `display_name`, `nicename`, `url`, authorized `login` and `email` |
+| Administrator account audit | `login`, `email`, `last_login` |
+| Application-password audit | `user_login`, `app_name` |
+| SEO analysis `metrics` | `title`, `url`, `slug`, authorized `yoast_meta_description`, `seopress_meta_description`, `yoast_focus_keyword`, `seopress_focus_keywords` |
+| SEO provider containing record | `title`, `url`, `metadata`, `raw_meta` |
+| SEO/readability score record | `title`, `url`, `score` |
+| Sitemap containing record / robots record | Sitemap: `url`, `entries`; robots: `url` |
+
+Compact post/page/CPT trash results remain exactly `{"id":123,"status":"trash"}`:
+they contain no stored text and do not acquire a marker or extra content fields.
+This does not apply to `delete-post-meta`, which returns and marks `meta_key`.
+
+Container values such as `attrs`, `meta`, `metadata`, `raw_meta`, and `entries`
+are marked on their containing record; their nested maps are untouched.
+Standalone metadata updates likewise leave nested stored maps in
+`previous_value` and `current_value` unchanged. Content patch results retain
+markers on their nested normalized post as well as the patch-specific records
+above. In SEO/site overview, sitemap markers belong on the `sitemap` record
+and the robots URL marker belongs on `robots_txt`. Canonical
+errors and diagnostic error subrecords have no markers. This is scoped
+coverage, not a declaration that all unmarked values are trusted.
+
+For example, this illustrative successful block record preserves both the
+markup and the attribute types (the marker order is not a parsing contract):
+
+```json
+{"block_name":"core/paragraph","text":"Review this draft.","html":"<p>Review this draft.</p>","attrs":{"className":"review","example":null},"untrusted_fields":["block_name","text","html","attrs"]}
+```
+
+Existing capability/privacy requirements are unchanged:
+
+| Surface | Access and privacy requirement |
+| --- | --- |
+| Content, revisions, blocks | Existing object/status and mapped post-type capabilities; direct content getters and edits require `edit_post` on the target. |
+| Comments | Listing requires `moderate_comments`; replies require `edit_posts` plus parent `edit_post`; moderation requires `moderate_comments` plus `edit_comment`. The existing comment normalizer emits author email/URL under these permissions; markers introduce no additional privacy gate or redaction. |
+| Standalone post metadata | Existing `edit_post`, effective `edit_post_meta` for reads/updates, `delete_post_meta` for deletes, and protected-key eligibility remain unchanged; markers grant no key access. |
+| Media | Existing upload/object capabilities and list filtering; a marker does not grant attachment access. |
+| User lookup and audits | Lookup requires `list_users`; login/email additionally require `edit_user` on that user or `edit_users`. User access audit requires `edit_users`; role labels are guidance, not a replacement for capabilities. |
+| SEO | Existing object and exact-key authorization remains authoritative. Denied fields stay absent, with `unavailable_fields` / `unevaluable_checks` preserved. Overview requires `manage_options`. |
+
+Generated Yoast head data remains unavailable (`generated_head.available:false`);
+URL-only inspection remains `unsupported`, and no provider head calls are made.
+Field markers do not add head passthrough or a text-only `content_format` option.
+
+The default Adapter `tools/list` lists three gateway tools, not per-ability
+hints. Use `mcp-adapter-get-ability-info` to retrieve an ability's metadata.
+On individual tools, compare registered `readonly`, `destructive`, and
+`idempotent` with Adapter 0.6.1's actual emitted `readOnlyHint`,
+`destructiveHint`, and `idempotentHint`; runtime annotation proof for this work
+is pending. Markers travel with result data in both exposure modes.
+
+To verify on an owned disposable site, read a seeded draft as its authorized
+Author and compare marked values with the existing normalized response,
+including HTML and backslashes. Check each marked key exists exactly once,
+then repeat as a denied Subscriber: no content or markers may be added to its
+canonical error. Check lower-privilege user lookup omissions and denied SEO
+keys without reintroducing values or marker names. The
+[dedicated QA guidance](tests/e2e/README.md#untrusted-content-coverage-30-unreleased-108)
+requires explicit disposable-runtime opt-in; examples are not runtime proof.
+Its serial source/package stage uses exclusive MU loaders rather than config
+edits and retains source-bound catalog, typed-wire and cleanup evidence.
+Original wire/process bytes stay private; public reports contain validated
+catalog/hint projections and hash/length/verdict witnesses. Unexpected failed
+responses retain evidence even when resource cleanup succeeds. The proof
+requires an explicitly independent native POSIX host authority root and
+validated prepare/retire outcomes; native-Windows positive authority remains
+blocked. Missing or incomplete restoration proof retains the disposable runtime.
+An independently bound companion guard covers the unchanged primary guard's
+unlink/output interval. Its final unlink is the irreversible release commit,
+after all required checks and local receipt writes. The public release receipt
+records **precommit authorization**, not committed release or successful QA.
+A later failed/lost acknowledgment remains nonzero/unknown; it must not be
+reported as a retained guard or a green runtime run.
+
 ## Security Best Practices
 
-SEO Analyze Post uses static focus-keyword diagnostics: `Focus keyword found in title.` or `Focus keyword not found in title.` Stored values remain unchanged in `data.metrics.yoast_focus_keyword` and `data.metrics.seopress_focus_keywords`; `seo_provider_focus_source` retains Yoast-first selection with SEOPress fallback when the Yoast value is empty. Object `edit_post` access, response fields, checks, severity, scores, and missing-keyword behavior are unchanged. These metrics and the title remain untrusted data, not instructions. This partial #108 change adds no field markers, does not verify all annotations or resolve the broader issue, and is not prompt-injection prevention.
+SEO Analyze Post uses static focus-keyword diagnostics: `Focus keyword found in title.` or `Focus keyword not found in title.` Authorized stored values remain unchanged in `data.metrics.yoast_focus_keyword` and `data.metrics.seopress_focus_keywords`; `seo_provider_focus_source` retains authorized Yoast-first selection with SEOPress fallback. Metadata denials retain the separate 3.0 authorization behavior described above. The data/message separation and additive field markers do not make these values instructions.
+
+Unreleased 3.0 markers, annotation hints, and the confirmation interlocks still
+under development in #116 are defense-in-depth only: not a security boundary,
+capability check, content filter, or prompt-injection guarantee. Model-supplied
+confirmation is not independent human approval.
 
 - Use a dedicated service account, not your personal account.
 - Use **Editor** for routine content work and a separate **Administrator** account only for sensitive audits or plugin management.

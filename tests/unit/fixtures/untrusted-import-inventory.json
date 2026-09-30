@@ -1,0 +1,320 @@
+{
+    "marker_source_sha": "2ef8c40b7d0ac3cc8b15a9292a4ec987b55854e6",
+    "baseline_source_sha": "2feed8d18d0721a4c7ca2e0187005c8cfae76322",
+    "marker_source_manifest_sha256": "55df412a6bd22af2dc367f230264c259752451e3e2ef56264bdcd4bf72c93cdc",
+    "baseline_manifest_sha256": "da4395a6a9d6532c10423e25d02c710c2ed150d226dfa87a988b5594ede8fa4a",
+    "cases": [
+        {
+            "index": 0,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-trash-posts",
+            "label": "wstm116 bulk-trash-posts confirm missing",
+            "sha256": "fdb0cc8d974f59a4cda1e833dc7842b2be7828899359c3ba2f6c71b604bf9fcb"
+        },
+        {
+            "index": 1,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-trash-posts",
+            "label": "wstm116 bulk-trash-posts confirm false",
+            "sha256": "65be1698f2a6b2100a4a0870af5046bd6e698e569b12596a4fffb4a86bd57862"
+        },
+        {
+            "index": 2,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-trash-posts",
+            "label": "wstm116 bulk-trash-posts confirm string",
+            "sha256": "135a7f1bb6414c2df18c262d5699fe01419779530e25599b133a5784b4b90995"
+        },
+        {
+            "index": 3,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-trash-posts",
+            "label": "wstm116 bulk-trash-posts confirm number",
+            "sha256": "eac8257a29fd29f57e8e8e7a2498ca9b6207f417cd471da7b965ca2399f075a7"
+        },
+        {
+            "index": 4,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-trash-posts",
+            "label": "wstm116 bulk-trash-posts confirm null",
+            "sha256": "672c23d7c077a8539f20d04e5bcd2c23e31f2d885cbf5b344585f5110f66b028"
+        },
+        {
+            "index": 5,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-trash-posts",
+            "label": "wstm116 bulk-trash-posts dry_run string",
+            "sha256": "7bcc22289c99020a1075d94be2211713dbad71f5908d871c41dfde32565febd1"
+        },
+        {
+            "index": 6,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-trash-posts",
+            "label": "wstm116 bulk-trash-posts dry_run number",
+            "sha256": "032af588678e43acc1c46efdcc341d848353a36971aa3f21b27b533562e6ad15"
+        },
+        {
+            "index": 7,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-trash-posts",
+            "label": "wstm116 bulk-trash-posts dry_run null",
+            "sha256": "01b479f6dd1afcaa7cbfa564368200f3edc9e287c11249abc0dbbb896cc35516"
+        },
+        {
+            "index": 8,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-trash-posts",
+            "label": "wstm116 bulk-trash-posts 101 unique",
+            "sha256": "041752c2b4add0bc4f5c3c55cd5dff3d6fd15be05ff27dbe2f56112246a821ef"
+        },
+        {
+            "index": 9,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-trash-posts",
+            "label": "wstm116 bulk-trash-posts 101 duplicate",
+            "sha256": "6ae75fb498df316861826d5f6df27912f39ddf7c0c5aa42ac5a440cc3d9b59ad"
+        },
+        {
+            "index": 10,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-trash-posts",
+            "label": "wstm116 bulk-trash-posts dry run mixed",
+            "sha256": "1e0d82945bda283b45936dedf1c120dcb328b61902fd19ea67a72bbf04fea5f3"
+        },
+        {
+            "index": 11,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-trash-posts",
+            "label": "wstm116 bulk-trash-posts dry run all failed",
+            "sha256": "032c94a6b96aad302dad9a079c1d0088e849a4116d118cf6f3406d50c98d1789"
+        },
+        {
+            "index": 12,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-trash-posts",
+            "label": "wstm116 bulk-trash-posts 100 duplicates",
+            "sha256": "c4a79c13600d0b6fa5a635d9915480425d36459caf105326c2f08815e55a10e2"
+        },
+        {
+            "index": 13,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-publish-posts",
+            "label": "wstm116 bulk-publish-posts confirm missing",
+            "sha256": "72ebf340337b3c9f6496dc372f7740b9e24f240a273ff19214bbb0695858e624"
+        },
+        {
+            "index": 14,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-publish-posts",
+            "label": "wstm116 bulk-publish-posts confirm false",
+            "sha256": "956414f7a6cad8dd34a34c0f77142955d12f96bf32e06cf31a06d222f17a0f74"
+        },
+        {
+            "index": 15,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-publish-posts",
+            "label": "wstm116 bulk-publish-posts confirm string",
+            "sha256": "b48996bc5cbdb40f043f25bb712a07dc7d086bb65d9c6b28c7248477d4bac0d2"
+        },
+        {
+            "index": 16,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-publish-posts",
+            "label": "wstm116 bulk-publish-posts confirm number",
+            "sha256": "7f9085060aae754f222cf78fa633e05ea79e0ec5f96ce097249e4cca063d4ab2"
+        },
+        {
+            "index": 17,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-publish-posts",
+            "label": "wstm116 bulk-publish-posts confirm null",
+            "sha256": "48e35ebbc654cd6a96777ae3494e1707c320ca947cac2856d394ec01b6ad4325"
+        },
+        {
+            "index": 18,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-publish-posts",
+            "label": "wstm116 bulk-publish-posts dry_run string",
+            "sha256": "ce6c6c1c2b521a1c3e0cb5b5bef75d83ec762a8d970d82d4d733252ee7d566cf"
+        },
+        {
+            "index": 19,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-publish-posts",
+            "label": "wstm116 bulk-publish-posts dry_run number",
+            "sha256": "d2c679f243f7226dc7deefc70dde08ec1862ef65d7afdadd425db3f84a47442c"
+        },
+        {
+            "index": 20,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-publish-posts",
+            "label": "wstm116 bulk-publish-posts dry_run null",
+            "sha256": "fddeea8e4947e2225af3599264c6f4315cdf024af084524c038b3e3f19f54715"
+        },
+        {
+            "index": 21,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-publish-posts",
+            "label": "wstm116 bulk-publish-posts 101 unique",
+            "sha256": "cf318732a8cdd8eb2861accead18463d617d1dac5d9e260a45b01c038324ca23"
+        },
+        {
+            "index": 22,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-publish-posts",
+            "label": "wstm116 bulk-publish-posts 101 duplicate",
+            "sha256": "8085672b464f46af6be282703b5de73808be36ae5bee5ab8d38320f65eb3edfb"
+        },
+        {
+            "index": 23,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-publish-posts",
+            "label": "wstm116 bulk-publish-posts dry run mixed",
+            "sha256": "dfb7b47ac23a31c5ae54c4e9d9eb41d58380828bc5ff408c133983010e2cfeda"
+        },
+        {
+            "index": 24,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-publish-posts",
+            "label": "wstm116 bulk-publish-posts dry run all failed",
+            "sha256": "31cb659c4c5ffed99d96b2e772f73288ef609735ef41490d2d80340460e875e8"
+        },
+        {
+            "index": 25,
+            "ability": "webmastery-site-toolkit-for-mcp/bulk-publish-posts",
+            "label": "wstm116 bulk-publish-posts 100 duplicates",
+            "sha256": "1e9a06e9f7ed4e13f32a8e3aa0a1c7c51a18fa460fafd10b5bd958b93748c874"
+        },
+        {
+            "index": 26,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-media",
+            "label": "wstm116 delete-media confirm missing",
+            "sha256": "6b8530e03d93d3700ce0604081337e1fe69eac51c8a05fde2b2cecab919a93c8"
+        },
+        {
+            "index": 27,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-media",
+            "label": "wstm116 delete-media confirm false",
+            "sha256": "f20c696151e2fb6f2f82883b29154dd5046a9ed091abab6ca5cd90f9868c8f8d"
+        },
+        {
+            "index": 28,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-media",
+            "label": "wstm116 delete-media confirm string",
+            "sha256": "dad99f5867beb6327e9a7370cd288cb1a80096e4ab8e983629fa26afd8215015"
+        },
+        {
+            "index": 29,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-media",
+            "label": "wstm116 delete-media confirm number",
+            "sha256": "30856d6f36055bb9525f92ee6b54289e85a9c850f8baf3f6006dbc207685277c"
+        },
+        {
+            "index": 30,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-media",
+            "label": "wstm116 delete-media confirm null",
+            "sha256": "ee570cf5a52a81ff15d558c049ceb38152d6c0005df3ea41b1c33b0fff14d017"
+        },
+        {
+            "index": 31,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-media",
+            "label": "wstm116 delete-media force string",
+            "sha256": "b57247154607df3c5d9db8ba46f800546b3ecdc87466584f0d7834348bbe3f1d"
+        },
+        {
+            "index": 32,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-media",
+            "label": "wstm116 delete-media force number",
+            "sha256": "fd9a90251a44bc5937ebc24d9cf11448e78ec9657b5d358b2b63ed7b12dc7342"
+        },
+        {
+            "index": 33,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-media",
+            "label": "wstm116 delete-media force null",
+            "sha256": "d1071c6bfb159eb53d8619385b75c479aec3f478ec83e0e0ecf651d7112972f0"
+        },
+        {
+            "index": 34,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-category",
+            "label": "wstm116 delete-category confirm missing",
+            "sha256": "25548be2128eaaec05957b5b631de1424316c0856157b4fb6cab956f9f52cc49"
+        },
+        {
+            "index": 35,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-category",
+            "label": "wstm116 delete-category confirm false",
+            "sha256": "e091b8a83d8f0aa08760a608c6fc86ee1f8d85f6e3ea2b33178bab6bc0201792"
+        },
+        {
+            "index": 36,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-category",
+            "label": "wstm116 delete-category confirm string",
+            "sha256": "da186577afa43b9573fc5c60517621d3a24200f820405980586b1fa08511d151"
+        },
+        {
+            "index": 37,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-category",
+            "label": "wstm116 delete-category confirm number",
+            "sha256": "5ce02e0f24602305d38053596c91573d0f1ad699865732a6210638b3a0364ca4"
+        },
+        {
+            "index": 38,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-category",
+            "label": "wstm116 delete-category confirm null",
+            "sha256": "3e379edcacb6f6fd2bd78653d35100789e085df5bfd1072104d8ca69bad9f512"
+        },
+        {
+            "index": 39,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-tag",
+            "label": "wstm116 delete-tag confirm missing",
+            "sha256": "feffcf6c0c4774fa4f59cf4fdd478ee82fafd8c04e059b92c916d95af09670b1"
+        },
+        {
+            "index": 40,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-tag",
+            "label": "wstm116 delete-tag confirm false",
+            "sha256": "84f704517b38e9932d3aaa4673ca1db634b1bb09f9c5e530372847c00c56a958"
+        },
+        {
+            "index": 41,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-tag",
+            "label": "wstm116 delete-tag confirm string",
+            "sha256": "0fa92c11782bb8c09f3389b269c5254f6ef16a9015274fb0c0c4a9d49c0a9bb0"
+        },
+        {
+            "index": 42,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-tag",
+            "label": "wstm116 delete-tag confirm number",
+            "sha256": "08660b172f884cd3d750d05e100f8e02430b47cb73ee984daaf73d54f0d6ceba"
+        },
+        {
+            "index": 43,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-tag",
+            "label": "wstm116 delete-tag confirm null",
+            "sha256": "c9101cfbae9a3ab21d380f97b731f04f3a4191d008dd8458aef435d7a1b25f70"
+        },
+        {
+            "index": 187,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-media",
+            "label": "wstm116 featured media requires explicit force",
+            "sha256": "ab8aabaeaf213b353be9f0904e8069926c550e3a4e2f69b544f6d46d13c98427"
+        },
+        {
+            "index": 372,
+            "ability": "webmastery-site-toolkit-for-mcp/database-health",
+            "label": "database-health default private table labels",
+            "sha256": "de67e37bb2fa5681ad70215921597cc4c490cd4213ee6654da311eafca47a6e6"
+        },
+        {
+            "index": 373,
+            "ability": "webmastery-site-toolkit-for-mcp/database-health",
+            "label": "database-health explicit false private table labels",
+            "sha256": "8fbfaeaaf84dbfea23dee412daa389c19188bf57071e2e1f2fe626ec7c551513"
+        },
+        {
+            "index": 374,
+            "ability": "webmastery-site-toolkit-for-mcp/database-health",
+            "label": "database-health admin raw table opt-in",
+            "sha256": "1932fae9b257a9d2ee2167848f85820bcb00ad45206be025d9ce7a0e7b1c46b4"
+        },
+        {
+            "index": 375,
+            "ability": "webmastery-site-toolkit-for-mcp/database-health",
+            "label": "database-health subscriber raw table opt-in denied",
+            "sha256": "958d0ff4617a3389a8689adec1937ddc2d703eeb3700cd3d1255b26108e994ad"
+        },
+        {
+            "index": 376,
+            "ability": "webmastery-site-toolkit-for-mcp/database-health",
+            "label": "database-health string flag rejected",
+            "sha256": "2a5324892d27db64aa9f0583b32cad72f6755c054cf8b9b0eb30b6b981dd1bd5"
+        },
+        {
+            "index": 377,
+            "ability": "webmastery-site-toolkit-for-mcp/database-health",
+            "label": "database-health numeric flag rejected",
+            "sha256": "3dd5701eebdf6888d5ecbd3772e961936cb753025995522f05110aa7ae73925c"
+        },
+        {
+            "index": 378,
+            "ability": "webmastery-site-toolkit-for-mcp/database-health",
+            "label": "database-health null flag rejected",
+            "sha256": "5992bd278526097586220348bb42bd46e9ad5c08b3ed4c48fd8bb14a18056fd5"
+        }
+    ]
+}

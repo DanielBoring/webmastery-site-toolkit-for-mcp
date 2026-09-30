@@ -25,6 +25,26 @@ Related strategy guides:
 
 Static QA runs the full toolchain on PHP 8.0 and syntax checks on PHP 8.4; Unit Tests run on both versions. Each workflow has a stable aggregate result. `Docker QA gate` reports successful change detection and the required Docker results; failure-induced skips cannot pass it. A separate workflow lint check runs actionlint, ShellCheck, and zizmor without making local PHP QA depend on Docker.
 
+The `2 - Unit Tests` gate also requires a separate ten-minute Ubuntu 24.04
+synthetic controller-component job using preinstalled Python 3.11 or newer.
+`scripts/test-controller-components.py` fails unsupported/denied pidfd hosts
+rather than accepting skipped tests. Its result ledger requires the exact ten
+component IDs to start, finish and pass; skips, expected failures, substitutions
+and partial execution fail. Eight additional in-process harness regressions
+check that accounting and scoped retention; they are not part of the ten
+controller cases and do not launch children.
+
+The job reserves a fresh mode-0700 namespace under runner temporary storage.
+The test class, not the launcher, creates its absent capture child. Always-run
+retention copies only allowlisted synthetic regular files, hashes their original
+bytes and records intentional symlinks as metadata without following targets.
+The synthetic bundle/result ledger is retained for seven days even when tests
+fail. File/count/byte retention limits are synthetic CI safeguards, not the
+WordPress benchmark's payload or memory budgets. This job neither starts
+WordPress/Docker nor invokes the benchmark entrypoint, reads private producer
+directories, or proves durable private custody, receiver completion, floor,
+transport or original-package correctness. Local `composer qa` remains PHP-only.
+
 ## PHPStan level 5 and baseline ratchet
 
 `composer phpstan` analyses the plugin entry point and all of `includes/` at level 5, explicitly targeting PHP 8.0 regardless of the local interpreter. `phpstan-baseline.neon` records pre-existing diagnostics, not permission to introduce new ones. Each generated ignore has an anchored message, identifier, positive count, and individual file path. There are no excluded production paths or identifier-only/global ignores. The existing `treatPhpDocTypesAsCertain: false` policy and WordPress stubs bootstrap are retained; no extra bootstrap constants or relaxed rules hide debt.
@@ -41,6 +61,8 @@ The initial reviewed baseline contains 35 diagnostics in 21 entries across nine 
 | Revision error check and sitemap offset | 2 | One impossible-type diagnostic and one redundant null-coalescing diagnostic; assess separately before simplifying defensive code. |
 
 A green run means no diagnostics beyond that reviewed debt, not that these findings are fixed or that all mixed input/output types are sound. The baseline matches counts per message/identifier/file, not line or expression identity: replacing a removed error with the same error elsewhere in the same file can evade the count ratchet and still needs human diff review. This tooling change does not validate ability schemas, enums, output contracts, or runtime permissions.
+
+The PHPStan 2.2.15 update removes the now-unmatched sitemap offset entry. With `treatPhpDocTypesAsCertain: false`, the updated regex output inference no longer reports the null-coalescing fallback as redundant. The source fallback is unchanged; this is a baseline compatibility adjustment, not a runtime fix or proof that the sitemap debt was resolved.
 
 ### Reducing debt
 
@@ -238,7 +260,14 @@ At the September 17, 2026 verification, `main` at `3dae8aa` pinned MCP Adapter 0
 
 ### Runtime coverage limitation
 
-The advertised plugin minimum remains PHP 8.0. Syntax and unit tests exercise that version, but the supported-floor WordPress Docker lane uses PHP 8.1. This is a documented integration-coverage gap, not authorization to raise the plugin minimum or claim PHP 8.0 WordPress integration was tested. Add a maintained PHP 8.0 integration fixture or make a separate support-policy decision before changing that claim.
+The advertised plugin minimum remains PHP 8.0. Syntax and unit tests exercise that version, but the `wp69-php81-compatibility` WordPress Docker lane uses PHP 8.1 and is not actual PHP 8.0 floor proof. The candidate verifier defaults to strict `php80-floor`; the hosted lane explicitly uses strict `php81-compatibility` and reports the remaining minimum-runtime requirement. Proof-tool hosts requiring `fsync` need PHP 8.1+, independently of the plugin minimum. This is an integration-coverage gap, not authorization to raise the minimum, weaken evidence checks or invent an unsupported Docker tag. Add a maintained genuine PHP 8.0 WordPress integration fixture with separately supported proof hosts before claiming that floor.
+
+The exact-candidate job uses the sibling jobs' pinned PHP 8.4/POSIX proof host
+and canonical interpreter binding independently of the WordPress image. Its
+full E2E step supplies `runner.temp` to the existing authority bootstrap, which
+still requires a canonical owned root, exclusive private reservation and actual
+topology/custody admission. Wiring or synthetic checks do not establish those
+runtime prerequisites or the separate PHP 8.0 floor.
 
 PHPCompatibilityWP's available stable rules depend on the older PHPCompatibility engine. Installing those rules alone does not establish PHP 8.4 compatibility. Runtime evidence remains necessary; a future compatibility-sniff dependency must be reviewed for its actual supported language versions.
 

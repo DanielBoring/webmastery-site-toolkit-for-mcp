@@ -178,7 +178,7 @@ class Webmastery_MCP_SEO {
 
 		$analysis           = [
 			'post_id' => $id,
-			'metrics' => $data,
+			'metrics' => Webmastery_MCP_Untrusted::mark( $data, [ 'title', 'url', 'slug', 'yoast_meta_description', 'seopress_meta_description', 'yoast_focus_keyword', 'seopress_focus_keywords' ] ),
 			'issues'  => $issues,
 			'good'    => $good,
 			'score'   => count( $good ) . '/' . ( count( $good ) + count( $issues ) ) . ' checks passed',
@@ -315,53 +315,11 @@ class Webmastery_MCP_SEO {
 	}
 
 	private static function yoast_post_meta_keys() {
-		return [
-			'title'                    => '_yoast_wpseo_title',
-			'meta_description'         => '_yoast_wpseo_metadesc',
-			'focus_keyphrase'          => '_yoast_wpseo_focuskw',
-			'canonical_url'            => '_yoast_wpseo_canonical',
-			'breadcrumb_title'         => '_yoast_wpseo_bctitle',
-			'schema_page_type'         => '_yoast_wpseo_schema_page_type',
-			'schema_article_type'      => '_yoast_wpseo_schema_article_type',
-			'opengraph_title'          => '_yoast_wpseo_opengraph-title',
-			'opengraph_description'    => '_yoast_wpseo_opengraph-description',
-			'opengraph_image'          => '_yoast_wpseo_opengraph-image',
-			'twitter_title'            => '_yoast_wpseo_twitter-title',
-			'twitter_description'      => '_yoast_wpseo_twitter-description',
-			'twitter_image'            => '_yoast_wpseo_twitter-image',
-			'seo_score'                => '_yoast_wpseo_linkdex',
-			'readability_score'        => '_yoast_wpseo_content_score',
-			'inclusive_language_score' => '_yoast_wpseo_inclusive_language_score',
-			'primary_category'         => '_yoast_wpseo_primary_category',
-			'cornerstone'              => '_yoast_wpseo_is_cornerstone',
-			'robots_noindex'           => '_yoast_wpseo_meta-robots-noindex',
-			'robots_nofollow'          => '_yoast_wpseo_meta-robots-nofollow',
-			'robots_advanced'          => '_yoast_wpseo_meta-robots-adv',
-		];
+		return Webmastery_MCP_Post_Meta::yoast_keys();
 	}
 
 	private static function seopress_post_meta_keys() {
-		return [
-			'title'                 => '_seopress_titles_title',
-			'meta_description'      => '_seopress_titles_desc',
-			'focus_keywords'        => '_seopress_analysis_target_kw',
-			'canonical_url'         => '_seopress_robots_canonical',
-			'opengraph_title'       => '_seopress_social_fb_title',
-			'opengraph_description' => '_seopress_social_fb_desc',
-			'opengraph_image'       => '_seopress_social_fb_img',
-			'twitter_title'         => '_seopress_social_twitter_title',
-			'twitter_description'   => '_seopress_social_twitter_desc',
-			'twitter_image'         => '_seopress_social_twitter_img',
-			'primary_category'      => '_seopress_robots_primary_cat',
-			'robots_noindex'        => '_seopress_robots_index',
-			'robots_nofollow'       => '_seopress_robots_follow',
-			'robots_noimageindex'   => '_seopress_robots_imageindex',
-			'robots_noarchive'      => '_seopress_robots_archive',
-			'robots_nosnippet'      => '_seopress_robots_snippet',
-			'breadcrumb_title'      => '_seopress_robots_breadcrumbs',
-			'news_sitemap_disabled' => '_seopress_news_disabled',
-			'video_sitemap_disabled' => '_seopress_video_disabled',
-		];
+		return Webmastery_MCP_Post_Meta::seopress_keys();
 	}
 
 	private static function normalize_yoast_meta_value( $field, $value ) {
@@ -444,7 +402,7 @@ class Webmastery_MCP_SEO {
 
 		return [
 			'success' => true,
-			'data'    => [
+			'data'    => Webmastery_MCP_Untrusted::mark( [
 				'yoast_active'   => true,
 				'post_id'        => $id,
 				'post_type'      => $post->post_type,
@@ -462,7 +420,7 @@ class Webmastery_MCP_SEO {
 						'key_authorization_unavailable'
 					)['error'],
 				],
-			],
+			], [ 'title', 'url', 'metadata', 'raw_meta' ] ),
 		];
 	}
 
@@ -522,7 +480,7 @@ class Webmastery_MCP_SEO {
 
 		return [
 			'success' => true,
-			'data'    => [
+			'data'    => Webmastery_MCP_Untrusted::mark( [
 				'seopress_active' => true,
 				'post_id'         => $id,
 				'post_type'       => $post->post_type,
@@ -531,7 +489,7 @@ class Webmastery_MCP_SEO {
 				'metadata'        => $meta,
 				'raw_meta'        => $raw_meta,
 				'unavailable_fields' => $read['unavailable_fields'],
-			],
+			], [ 'title', 'url', 'metadata', 'raw_meta' ] ),
 		];
 	}
 
@@ -568,7 +526,7 @@ class Webmastery_MCP_SEO {
 	private static function register_score_ability( $slug, $label, $meta_key, $description ) {
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/{$slug}", [
 			'label'               => "SEO: {$label}",
-			'description'         => $description . ' Only objects with effective permission for this score key are included in items and pagination totals.',
+			'description'         => $description . ' Only authorized score keys in this bounded candidate window are returned. Follow next_page even for empty items; no exact totals.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => self::score_input_schema(),
 			'execute_callback'    => function ( $input ) use ( $meta_key ) {
@@ -597,13 +555,16 @@ class Webmastery_MCP_SEO {
 		if ( is_wp_error( $permission ) ) {
 			return Webmastery_MCP_Response::from_wp_error( $permission );
 		}
+		$per_page = min( max( 1, (int) ( $input['per_page'] ?? 10 ) ), 100 );
+		$page     = max( 1, (int) ( $input['page'] ?? 1 ) );
 		if ( ! self::is_yoast_active() ) {
 			return [
 				'success' => true,
 				'data'    => [
 					'items'        => [],
-					'total'        => 0,
-					'total_pages'  => 0,
+					'page'         => $page,
+					'per_page'     => $per_page,
+					'next_page'    => null,
 					'yoast_active' => false,
 					'note'         => 'Yoast SEO is not active, so no Yoast scores are available.',
 				],
@@ -620,29 +581,22 @@ class Webmastery_MCP_SEO {
 			return Webmastery_MCP_Response::legacy_error( 'invalid_status', 'status is invalid.' );
 		}
 
-		$per_page = min( max( 1, (int) ( $input['per_page'] ?? 10 ) ), 100 );
-		$page     = max( 1, (int) ( $input['page'] ?? 1 ) );
-		$args     = [
+		[ 'per_page' => $per_page, 'page' => $page ] = Webmastery_MCP_Input::pagination( $input, 10 );
+		$args                                        = [
 			'post_type'      => $post_type,
 			'post_status'    => $status,
-			'posts_per_page' => -1,
-			'paged'          => 1,
 			'orderby'        => 'modified',
 			'order'          => 'DESC',
-			'fields'         => 'ids',
-			'no_found_rows'  => true,
 		];
 
 		if ( is_array( $post_type ) && ! current_user_can( 'edit_pages' ) ) {
 			$args['post_type'] = 'post';
 		}
 
-		if ( 'page' === $args['post_type'] && ! current_user_can( 'edit_others_pages' ) ) {
-			$args['author'] = get_current_user_id();
-		} elseif ( 'post' === $args['post_type'] && ! current_user_can( 'edit_others_posts' ) ) {
-			$args['author'] = get_current_user_id();
-		} elseif ( is_array( $args['post_type'] ) && ! current_user_can( 'edit_others_posts' ) ) {
-			$args['author'] = get_current_user_id();
+		if ( 'page' === $args['post_type'] ) {
+			$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_pages' );
+		} elseif ( 'post' === $args['post_type'] || is_array( $args['post_type'] ) ) {
+			$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_posts' );
 		}
 
 		if ( ! empty( $input['modified_after'] ) ) {
@@ -660,52 +614,35 @@ class Webmastery_MCP_SEO {
 			];
 		}
 
-		$query        = new WP_Query( $args );
-		$readable_ids = [];
-
-		foreach ( $query->posts as $post_id ) {
-			if ( Webmastery_MCP_Posts::can_read_post_meta_key( (int) $post_id, $meta_key ) ) {
-				$readable_ids[] = (int) $post_id;
-			}
-		}
-
-		$total    = count( $readable_ids );
-		$page_ids = array_slice( $readable_ids, ( $page - 1 ) * $per_page, $per_page );
-		$items    = [];
-
-		foreach ( $page_ids as $post_id ) {
-			$post = get_post( $post_id );
+		$data = Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => Webmastery_MCP_Post_Meta::can_read_post_meta_key( $id, $meta_key ), static function ( $post ) use ( $meta_key ) {
 			if ( ! $post ) {
-				continue;
+				return null;
 			}
 
 			$raw_score = get_post_meta( $post->ID, $meta_key, true );
-			$items[]   = [
+			return Webmastery_MCP_Untrusted::mark( [
 				'post_id'      => (int) $post->ID,
 				'title'        => $post->post_title,
 				'url'          => get_permalink( $post->ID ),
 				'post_type'    => $post->post_type,
 				'modified_gmt' => $post->post_modified_gmt,
 				'score'        => '' === $raw_score ? null : (int) $raw_score,
-			];
+			], [ 'title', 'url' ] );
+		} );
+		if ( is_wp_error( $data ) ) {
+			return Webmastery_MCP_Response::from_wp_error( $data );
 		}
+		$data['yoast_active']    = true;
+		$data['seopress_active'] = self::is_seopress_active();
 
 		return [
 			'success' => true,
-			'data'    => [
-				'items'        => $items,
-				'total'        => $total,
-				'total_pages'  => $per_page > 0 ? (int) ceil( $total / $per_page ) : 1,
-				'yoast_active' => true,
-				'seopress_active' => self::is_seopress_active(),
-			],
+			'data'    => $data,
 		];
 	}
 
 	public static function permission_site_overview() {
-		return current_user_can( 'manage_options' )
-			? true
-			: Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
+		return Webmastery_MCP_Permissions::check( 'manage_options' );
 	}
 
 	public static function execute_site_overview( $input = [] ) {
@@ -732,6 +669,8 @@ class Webmastery_MCP_SEO {
 		$robots_response    = wp_remote_head( $robots_url, [ 'timeout' => 5 ] );
 		$robots_ok          = ! is_wp_error( $robots_response ) && wp_remote_retrieve_response_code( $robots_response ) === 200;
 		$data['robots_txt'] = [ 'url' => $robots_url, 'accessible' => $robots_ok ];
+		$data['sitemap']    = Webmastery_MCP_Untrusted::mark( $data['sitemap'], [ 'url', 'entries' ] );
+		$data['robots_txt'] = Webmastery_MCP_Untrusted::mark( $data['robots_txt'], [ 'url' ] );
 
 		$data['providers'] = [
 			'yoast_active'    => self::is_yoast_active(),

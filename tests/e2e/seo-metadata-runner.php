@@ -184,7 +184,7 @@ try {
 		}
 	}
 	foreach ( array( 'get-seo-scores' => '_yoast_wpseo_linkdex', 'get-readability-scores' => '_yoast_wpseo_content_score' ) as $slug => $key ) {
-		$record_case( "{$slug}:denied key excluded before pagination", static function ( array &$record ) use ( $post_ids, $slug, $key, $execute ): void {
+		$record_case( "{$slug}:denied key excluded within bounded window", static function ( array &$record ) use ( $post_ids, $slug, $key, $execute ): void {
 			$id = $post_ids[0];
 			wstm110_seo_assert( $id === wp_update_post( array( 'ID' => $id, 'post_status' => 'pending' ), true ), 'Cannot prepare pending score fixture.' );
 			$input = array( 'post_type' => 'post', 'status' => 'pending', 'per_page' => 100, 'page' => 1 );
@@ -197,9 +197,11 @@ try {
 			$record['result'] = $result;
 			$record['reads'] = get_option( 'wstm110_seo_read_events', array() );
 			wstm110_seo_assert( true === ( $result['success'] ?? null ) && array() === $record['reads'], 'Score list read forbidden key.' );
-			wstm110_seo_assert( $baseline['data']['total'] - 1 === $result['data']['total'], 'Score total still counts denied object/key.' );
+			$expected_items = array_values( array_filter( $baseline['data']['items'], static fn( $item ) => $item['post_id'] !== $id ) );
+			wstm110_seo_assert( $expected_items === $result['data']['items'], 'Score window membership/values changed beyond denied object/key.' );
 			wstm110_seo_assert( ! in_array( $id, array_column( $result['data']['items'], 'post_id' ), true ), 'Score page contains denied object/key.' );
-			wstm110_seo_assert( (int) ceil( $result['data']['total'] / 100 ) === $result['data']['total_pages'], 'Score total_pages uses unfiltered total.' );
+			wstm110_seo_assert( ! array_key_exists( 'total', $result['data'] ) && ! array_key_exists( 'total_pages', $result['data'] ), 'Score response exposes obsolete totals.' );
+			wstm110_seo_assert( $baseline['data']['next_page'] === $result['data']['next_page'] && 1 === $result['data']['page'] && 100 === $result['data']['per_page'], 'Score continuation changed with authorization.' );
 		} );
 	}
 	$record_case( 'overview authorized bounded observations', static function ( array &$record ) use ( $post_ids, $execute ): void {

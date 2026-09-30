@@ -50,6 +50,9 @@ $summary = array(
 	'runner_sha256' => hash_file( 'sha256', __FILE__ ),
 	'fixture_sha256' => hash_file( 'sha256', __DIR__ . '/metadata-batch-fixture.php' ),
 	'posts_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-posts.php' ),
+	'meta_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-post-meta.php' ),
+	'access_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-post-access.php' ),
+	'writes_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-post-writes.php' ),
 	'cpt_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-custom-post-types.php' ),
 	'passed' => 0, 'failed' => 0, 'cases' => array(),
 );

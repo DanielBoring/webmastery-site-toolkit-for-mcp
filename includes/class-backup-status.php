@@ -31,11 +31,7 @@ class Webmastery_MCP_Backup_Status {
 	}
 
 	public static function permission() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
-		}
-
-		return true;
+		return Webmastery_MCP_Permissions::check( 'manage_options' );
 	}
 
 	public static function execute( $input = array() ) {
