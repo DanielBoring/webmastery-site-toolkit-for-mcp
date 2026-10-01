@@ -147,7 +147,7 @@ foreach ( $manifest as $index => $case ) {
 		$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_changed' ) . ' requires success without assert_unchanged.';
 	}
 	if ( array_key_exists( 'assert_permission', $case ) && ! in_array( $case['assert_permission'], array( true, 'forbidden', 'invalid_input' ), true ) ) {
-		$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_permission' ) . ' must be true, forbidden, or invalid_input.';
+		$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_permission' ) . ' must be true, forbidden, or invalid_input (the canonical permission error code, not its reason).';
 	}
 	if ( array_key_exists( 'assert_capabilities', $case ) ) {
 		$assertions = $case['assert_capabilities'];

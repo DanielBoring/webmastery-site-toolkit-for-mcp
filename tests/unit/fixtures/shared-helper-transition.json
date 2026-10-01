@@ -1,0 +1,1266 @@
+{
+  "baseline_commit": "8ea870beb03076c4d118e8d8bccb3304947bf03a",
+  "files": {
+    "includes/class-posts.php": {
+      "baseline_sha256": "698c1dace3460fd49332a94d85313780fd4b26195410ef8979056609e1609976",
+      "baseline_blob": "32cb16faee498e28d130820128f130f56aa70a35",
+      "current_sha256": "59f70369e49c62c3ead44c2a589a14c100f139caba567d8bd4c9e762e9418206",
+      "current_blob": "7566ed0cc4a2914ce58e4c975758449fb8d9b461",
+      "hunks": [
+        {
+          "start": 33,
+          "before": [
+            "\t\t$data = [\n",
+            "\t\t\t'id'                => $post->ID,\n",
+            "\t\t\t'title'             => $post->post_title,\n",
+            "\t\t\t'content'           => $post->post_content,\n",
+            "\t\t\t'excerpt'           => $post->post_excerpt,\n",
+            "\t\t\t'status'            => $post->post_status,\n",
+            "\t\t\t'slug'              => $post->post_name,\n",
+            "\t\t\t'url'               => get_permalink( $post->ID ),\n",
+            "\t\t\t'author'            => (int) $post->post_author,\n",
+            "\t\t\t'author_name'       => get_the_author_meta( 'display_name', (int) $post->post_author ),\n",
+            "\t\t\t'date_created'      => $post->post_date,\n",
+            "\t\t\t'date_modified'     => $post->post_modified,\n",
+            "\t\t\t'type'              => $post->post_type,\n",
+            "\t\t\t'featured_image_id' => (int) get_post_thumbnail_id( $post->ID ),\n",
+            "\t\t];\n"
+          ],
+          "after": [
+            "\t\t$data = Webmastery_MCP_Post_Content::normalize( $post );\n"
+          ]
+        },
+        {
+          "start": 44,
+          "before": [
+            "\t\t$post = get_post( $post );\n",
+            "\t\tif ( ! $post ) {\n",
+            "\t\t\treturn false;\n",
+            "\t\t}\n",
+            "\n",
+            "\t\tif ( 'private' === $post->post_status ) {\n",
+            "\t\t\treturn current_user_can( 'read_post', $post->ID );\n",
+            "\t\t}\n",
+            "\n",
+            "\t\tif ( 'publish' === $post->post_status ) {\n",
+            "\t\t\treturn current_user_can( 'read_post', $post->ID );\n",
+            "\t\t}\n",
+            "\n",
+            "\t\tif ( 'trash' === $post->post_status ) {\n",
+            "\t\t\treturn current_user_can( 'delete_post', $post->ID );\n",
+            "\t\t}\n",
+            "\n",
+            "\t\treturn current_user_can( 'edit_post', $post->ID );\n",
+            "\t}\n",
+            "\n",
+            "\tprivate static function filter_readable_post_ids( $ids ) {\n",
+            "\t\t$readable = [];\n",
+            "\n",
+            "\t\tforeach ( $ids as $id ) {\n",
+            "\t\t\t$post = get_post( (int) $id );\n",
+            "\t\t\tif ( $post && self::can_read_full_post( $post ) ) {\n",
+            "\t\t\t\t$readable[] = (int) $post->ID;\n",
+            "\t\t\t}\n",
+            "\t\t}\n",
+            "\n",
+            "\t\treturn $readable;\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Post_Access::can_read( $post );\n"
+          ]
+        },
+        {
+          "start": 48,
+          "before": [
+            "\t\t$count_args = array_merge(\n",
+            "\t\t\t$args,\n",
+            "\t\t\t[\n",
+            "\t\t\t\t'fields'         => 'ids',\n",
+            "\t\t\t\t'posts_per_page' => -1,\n",
+            "\t\t\t\t'paged'          => 1,\n",
+            "\t\t\t\t'no_found_rows'  => true,\n",
+            "\t\t\t]\n",
+            "\t\t);\n",
+            "\n",
+            "\t\t$query        = new WP_Query( $count_args );\n",
+            "\t\t$readable_ids = self::filter_readable_post_ids( $query->posts );\n",
+            "\t\t$total        = count( $readable_ids );\n",
+            "\t\t$page_ids     = array_slice( $readable_ids, ( max( 1, (int) $page ) - 1 ) * $per_page, $per_page );\n",
+            "\n",
+            "\t\treturn [\n",
+            "\t\t\t'items'       => array_values( array_filter( array_map( [ self::class, 'normalize' ], array_map( 'get_post', $page_ids ) ) ) ),\n",
+            "\t\t\t'total'       => $total,\n",
+            "\t\t\t'total_pages' => $per_page > 0 ? (int) ceil( $total / $per_page ) : 1,\n",
+            "\t\t];\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => self::can_read_full_post( $id ), static fn( $post ) => self::normalize( $post ) );\n"
+          ]
+        },
+        {
+          "start": 52,
+          "before": [
+            "\t\treturn [\n",
+            "\t\t\t'_yoast_wpseo_focuskw'                => 'string',\n",
+            "\t\t\t'_yoast_wpseo_metadesc'               => 'string',\n",
+            "\t\t\t'_yoast_wpseo_title'                  => 'string',\n",
+            "\t\t\t'_yoast_wpseo_canonical'              => 'url',\n",
+            "\t\t\t'_yoast_wpseo_bctitle'                => 'string',\n",
+            "\t\t\t'_yoast_wpseo_schema_page_type'       => 'string',\n",
+            "\t\t\t'_yoast_wpseo_schema_article_type'    => 'string',\n",
+            "\t\t\t'_yoast_wpseo_opengraph-title'        => 'string',\n",
+            "\t\t\t'_yoast_wpseo_opengraph-description'  => 'string',\n",
+            "\t\t\t'_yoast_wpseo_opengraph-image'        => 'url',\n",
+            "\t\t\t'_yoast_wpseo_twitter-title'          => 'string',\n",
+            "\t\t\t'_yoast_wpseo_twitter-description'    => 'string',\n",
+            "\t\t\t'_yoast_wpseo_twitter-image'          => 'url',\n",
+            "\t\t\t'_yoast_wpseo_inclusive_language_score' => 'integer_string',\n",
+            "\t\t\t'_yoast_wpseo_primary_category'         => 'integer_string',\n",
+            "\t\t\t'_yoast_wpseo_is_cornerstone'           => 'boolean_string',\n",
+            "\t\t\t'_yoast_wpseo_meta-robots-noindex'      => 'boolean_string',\n",
+            "\t\t\t'_yoast_wpseo_meta-robots-nofollow'     => 'boolean_string',\n",
+            "\t\t\t'_yoast_wpseo_meta-robots-adv'          => 'string',\n",
+            "\t\t\t'_seopress_titles_title'                => 'string',\n",
+            "\t\t\t'_seopress_titles_desc'                 => 'string',\n",
+            "\t\t\t'_seopress_analysis_target_kw'          => 'string',\n",
+            "\t\t\t'_seopress_robots_canonical'            => 'url',\n",
+            "\t\t\t'_seopress_social_fb_title'             => 'string',\n",
+            "\t\t\t'_seopress_social_fb_desc'              => 'string',\n",
+            "\t\t\t'_seopress_social_fb_img'               => 'url',\n",
+            "\t\t\t'_seopress_social_twitter_title'        => 'string',\n",
+            "\t\t\t'_seopress_social_twitter_desc'         => 'string',\n",
+            "\t\t\t'_seopress_social_twitter_img'          => 'url',\n",
+            "\t\t\t'_seopress_robots_primary_cat'          => 'integer_string',\n",
+            "\t\t\t'_seopress_robots_index'                => 'seopress_boolean_string',\n",
+            "\t\t\t'_seopress_robots_follow'               => 'seopress_boolean_string',\n",
+            "\t\t\t'_seopress_robots_imageindex'           => 'seopress_boolean_string',\n",
+            "\t\t\t'_seopress_robots_archive'              => 'seopress_boolean_string',\n",
+            "\t\t\t'_seopress_robots_snippet'              => 'seopress_boolean_string',\n",
+            "\t\t\t'_seopress_robots_breadcrumbs'          => 'string',\n",
+            "\t\t];\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Post_Meta::writable_keys();\n"
+          ]
+        },
+        {
+          "start": 248,
+          "before": [
+            "\t\treturn function () use ( $cap ) {\n",
+            "\t\t\tif ( ! current_user_can( $cap ) ) {\n",
+            "\t\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', \"Requires {$cap} capability.\" );\n",
+            "\t\t\t}\n",
+            "\t\t\treturn true;\n",
+            "\t\t};\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Permissions::cap( $cap );\n"
+          ]
+        },
+        {
+          "start": 252,
+          "before": [
+            "\t\treturn function ( $input = [] ) use ( $type, $input_key, $cap ) {\n",
+            "\t\t\t$id   = absint( $input[ $input_key ] ?? 0 );\n",
+            "\t\t\t$post = get_post( $id );\n",
+            "\n",
+            "\t\t\tif ( ! $post || $post->post_type !== $type ) {\n",
+            "\t\t\t\treturn Webmastery_MCP_Response::local_error( 'not_found', ucfirst( $type ) . ' not found.' );\n",
+            "\t\t\t}\n",
+            "\t\t\tif ( ! current_user_can( $cap, $id ) ) {\n",
+            "\t\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', \"Requires {$cap} capability for this {$type}.\" );\n",
+            "\t\t\t}\n",
+            "\t\t\treturn true;\n",
+            "\t\t};\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Permissions::object( $type, $input_key, $cap, ucfirst( $type ) . ' not found.', \"Requires {$cap} capability for this {$type}.\" );\n"
+          ]
+        },
+        {
+          "start": 275,
+          "before": [
+            "\t\treturn function ( $input = [] ) use ( $type, $input_key ) {\n",
+            "\t\t\t$id   = absint( $input[ $input_key ] ?? 0 );\n",
+            "\t\t\t$post = get_post( $id );\n",
+            "\n",
+            "\t\t\tif ( ! $post || $post->post_type !== $type ) {\n",
+            "\t\t\t\treturn Webmastery_MCP_Response::local_error( 'not_found', ucfirst( $type ) . ' not found.' );\n",
+            "\t\t\t}\n",
+            "\t\t\tif ( ! current_user_can( 'delete_post', $id ) ) {\n",
+            "\t\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', \"Requires delete_post capability for this {$type}.\" );\n",
+            "\t\t\t}\n",
+            "\n",
+            "\t\t\treturn true;\n",
+            "\t\t};\n"
+          ],
+          "after": [
+            "\t\treturn self::object_permission( $type, $input_key, 'delete_post' );\n"
+          ]
+        },
+        {
+          "start": 492,
+          "before": [
+            "\t\t\t\t\t\t$result = wp_update_post(\n",
+            "\t\t\t\t\t\t\twp_slash(\n",
+            "\t\t\t\t\t\t\t\t[\n",
+            "\t\t\t\t\t\t\t\t\t'ID'          => $id,\n",
+            "\t\t\t\t\t\t\t\t\t'post_status' => 'publish',\n",
+            "\t\t\t\t\t\t\t\t]\n",
+            "\t\t\t\t\t\t\t),\n",
+            "\t\t\t\t\t\t\ttrue\n",
+            "\t\t\t\t\t\t);\n"
+          ],
+          "after": [
+            "\t\t\t\t\t\t$result = Webmastery_MCP_Post_Writes::update( [\n",
+            "\t\t\t\t\t\t\t'ID'          => $id,\n",
+            "\t\t\t\t\t\t\t'post_status' => 'publish',\n",
+            "\t\t\t\t\t\t] );\n"
+          ]
+        },
+        {
+          "start": 921,
+          "before": [
+            "\t\t\t\t$result = wp_update_post(\n",
+            "\t\t\t\t\twp_slash(\n",
+            "\t\t\t\t\t\t[\n",
+            "\t\t\t\t\t\t\t'ID'           => $post->ID,\n",
+            "\t\t\t\t\t\t\t'post_content' => serialize_blocks( $blocks ),\n",
+            "\t\t\t\t\t\t]\n",
+            "\t\t\t\t\t),\n",
+            "\t\t\t\t\ttrue\n",
+            "\t\t\t\t);\n"
+          ],
+          "after": [
+            "\t\t\t\t$result = Webmastery_MCP_Post_Writes::update( [\n",
+            "\t\t\t\t\t'ID'           => $post->ID,\n",
+            "\t\t\t\t\t'post_content' => serialize_blocks( $blocks ),\n",
+            "\t\t\t\t] );\n"
+          ]
+        },
+        {
+          "start": 1117,
+          "before": [
+            "\t\t\t\t$result = wp_update_post( wp_slash( $args ), true );\n"
+          ],
+          "after": [
+            "\t\t\t\t$result = Webmastery_MCP_Post_Writes::update( $args );\n"
+          ]
+        },
+        {
+          "start": 1466,
+          "before": [
+            "\t\t\t\t$updated        = update_post_meta( $post_id, $key, wp_slash( $value ) );\n"
+          ],
+          "after": [
+            "\t\t\t\t$updated        = Webmastery_MCP_Post_Writes::meta( $post_id, $key, $value );\n"
+          ]
+        },
+        {
+          "start": 1575,
+          "before": [
+            "\t\t\t\t$args = [\n",
+            "\t\t\t\t\t'post_type'      => $type,\n",
+            "\t\t\t\t\t'post_status'    => $input['status'] ?? 'any',\n",
+            "\t\t\t\t\t'posts_per_page' => min( (int) ( $input['per_page'] ?? 20 ), 100 ),\n",
+            "\t\t\t\t\t'paged'          => max( 1, (int) ( $input['page'] ?? 1 ) ),\n",
+            "\t\t\t\t\t'orderby'        => $input['orderby'] ?? 'date',\n",
+            "\t\t\t\t\t'order'          => strtoupper( $input['order'] ?? 'DESC' ),\n",
+            "\t\t\t\t];\n",
+            "\n",
+            "\t\t\t\tif ( ! empty( $input['search'] ) ) {\n",
+            "\t\t\t\t\t$args['s'] = sanitize_text_field( $input['search'] );\n",
+            "\t\t\t\t}\n",
+            "\t\t\t\tif ( ! empty( $input['author'] ) ) {\n",
+            "\t\t\t\t\t$args['author'] = absint( $input['author'] );\n",
+            "\t\t\t\t}\n",
+            "\t\t\t\tif ( ! current_user_can( 'edit_others_' . $slug ) ) {\n",
+            "\t\t\t\t\t$args['author'] = get_current_user_id();\n",
+            "\t\t\t\t}\n"
+          ],
+          "after": [
+            "\t\t\t\t$args = Webmastery_MCP_Post_Access::list_args( $input, $type, 'edit_others_' . $slug );\n"
+          ]
+        },
+        {
+          "start": 1580,
+          "before": [
+            "\t\t\t\t$per_page = min( max( 1, (int) ( $input['per_page'] ?? 20 ) ), 100 );\n",
+            "\t\t\t\t$page     = max( 1, (int) ( $input['page'] ?? 1 ) );\n",
+            "\t\t\t\t$data     = self::query_readable_posts( $args, $page, $per_page );\n"
+          ],
+          "after": [
+            "\t\t\t\t[ 'per_page' => $per_page, 'page' => $page ] = Webmastery_MCP_Input::pagination( $input );\n",
+            "\t\t\t\t$data                                        = self::query_readable_posts( $args, $page, $per_page );\n"
+          ]
+        },
+        {
+          "start": 1697,
+          "before": [
+            "\t\t\t\t$id = wp_insert_post( wp_slash( $args ), true );\n"
+          ],
+          "after": [
+            "\t\t\t\t$id = Webmastery_MCP_Post_Writes::insert( $args );\n"
+          ]
+        },
+        {
+          "start": 1802,
+          "before": [
+            "\t\t\t\t$result = wp_update_post( wp_slash( $args ), true );\n"
+          ],
+          "after": [
+            "\t\t\t\t$result = Webmastery_MCP_Post_Writes::update( $args );\n"
+          ]
+        }
+      ]
+    },
+    "includes/class-custom-post-types.php": {
+      "baseline_sha256": "84f5ec24a7a5faf472b9735acbdc13bdfdcca70d896aefbd0fc5d6139648cdfb",
+      "baseline_blob": "c025ffdca479c87d89d84b69f36f8e39995bf469",
+      "current_sha256": "d37ce0fa690256bfba881a1f9af38bec63aaa6156c40651eebeeee5e218ffe20",
+      "current_blob": "a0c8fd73bc88bc1310f3f0e5cd5d26d494baacf7",
+      "hunks": [
+        {
+          "start": 146,
+          "before": [
+            "\t\treturn [\n",
+            "\t\t\t'id'                => $post->ID,\n",
+            "\t\t\t'title'             => $post->post_title,\n",
+            "\t\t\t'content'           => $post->post_content,\n",
+            "\t\t\t'excerpt'           => $post->post_excerpt,\n",
+            "\t\t\t'status'            => $post->post_status,\n",
+            "\t\t\t'slug'              => $post->post_name,\n",
+            "\t\t\t'url'               => get_permalink( $post->ID ),\n",
+            "\t\t\t'author'            => (int) $post->post_author,\n",
+            "\t\t\t'author_name'       => get_the_author_meta( 'display_name', (int) $post->post_author ),\n",
+            "\t\t\t'date_created'      => $post->post_date,\n",
+            "\t\t\t'date_modified'     => $post->post_modified,\n",
+            "\t\t\t'type'              => $post->post_type,\n",
+            "\t\t\t'featured_image_id' => (int) get_post_thumbnail_id( $post->ID ),\n",
+            "\t\t\t'taxonomy_terms'    => $taxonomy_terms,\n",
+            "\t\t];\n"
+          ],
+          "after": [
+            "\t\t$data                   = Webmastery_MCP_Post_Content::normalize( $post );\n",
+            "\t\t$data['taxonomy_terms'] = $taxonomy_terms;\n",
+            "\t\treturn $data;\n"
+          ]
+        },
+        {
+          "start": 152,
+          "before": [
+            "\t\t$post = get_post( $post );\n",
+            "\t\tif ( ! $post ) {\n",
+            "\t\t\treturn false;\n",
+            "\t\t}\n",
+            "\n",
+            "\t\tif ( 'private' === $post->post_status ) {\n",
+            "\t\t\treturn current_user_can( self::cap( $post_type_object, 'read_post' ), $post->ID );\n",
+            "\t\t}\n",
+            "\n",
+            "\t\tif ( 'publish' === $post->post_status ) {\n",
+            "\t\t\treturn current_user_can( self::cap( $post_type_object, 'read_post' ), $post->ID );\n",
+            "\t\t}\n",
+            "\n",
+            "\t\tif ( 'trash' === $post->post_status ) {\n",
+            "\t\t\treturn current_user_can( self::cap( $post_type_object, 'delete_post' ), $post->ID );\n",
+            "\t\t}\n",
+            "\n",
+            "\t\treturn current_user_can( self::cap( $post_type_object, 'edit_post' ), $post->ID );\n",
+            "\t}\n",
+            "\n",
+            "\tprivate static function filter_readable_post_ids( $post_type_object, $ids ) {\n",
+            "\t\t$readable = [];\n",
+            "\n",
+            "\t\tforeach ( $ids as $id ) {\n",
+            "\t\t\t$post = get_post( (int) $id );\n",
+            "\t\t\tif ( $post && self::can_read_full_post( $post_type_object, $post ) ) {\n",
+            "\t\t\t\t$readable[] = (int) $post->ID;\n",
+            "\t\t\t}\n",
+            "\t\t}\n",
+            "\n",
+            "\t\treturn $readable;\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Post_Access::can_read( $post, self::cap( $post_type_object, 'read_post' ), self::cap( $post_type_object, 'edit_post' ), self::cap( $post_type_object, 'delete_post' ) );\n"
+          ]
+        },
+        {
+          "start": 156,
+          "before": [
+            "\t\t$count_args = array_merge(\n",
+            "\t\t\t$args,\n",
+            "\t\t\t[\n",
+            "\t\t\t\t'fields'         => 'ids',\n",
+            "\t\t\t\t'posts_per_page' => -1,\n",
+            "\t\t\t\t'paged'          => 1,\n",
+            "\t\t\t\t'no_found_rows'  => true,\n",
+            "\t\t\t]\n",
+            "\t\t);\n",
+            "\n",
+            "\t\t$query        = new WP_Query( $count_args );\n",
+            "\t\t$readable_ids = self::filter_readable_post_ids( $post_type_object, $query->posts );\n",
+            "\t\t$total        = count( $readable_ids );\n",
+            "\t\t$page_ids     = array_slice( $readable_ids, ( max( 1, (int) $page ) - 1 ) * $per_page, $per_page );\n",
+            "\n",
+            "\t\treturn [\n",
+            "\t\t\t'items'       => array_values( array_filter( array_map( [ self::class, 'normalize_post' ], array_map( 'get_post', $page_ids ) ) ) ),\n",
+            "\t\t\t'total'       => $total,\n",
+            "\t\t\t'total_pages' => $per_page > 0 ? (int) ceil( $total / $per_page ) : 1,\n",
+            "\t\t];\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => self::can_read_full_post( $post_type_object, $id ), static fn( $post ) => self::normalize_post( $post ) );\n"
+          ]
+        },
+        {
+          "start": 161,
+          "before": [
+            "\t\t$cap = self::cap( $post_type_object, $capability );\n",
+            "\n",
+            "\t\treturn function () use ( $cap ) {\n",
+            "\t\t\tif ( ! current_user_can( $cap ) ) {\n",
+            "\t\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', \"Requires {$cap} capability.\" );\n",
+            "\t\t\t}\n",
+            "\n",
+            "\t\t\treturn true;\n",
+            "\t\t};\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Permissions::cap( self::cap( $post_type_object, $capability ) );\n"
+          ]
+        },
+        {
+          "start": 168,
+          "before": [
+            "\t\treturn function ( $input = [] ) use ( $type, $cap ) {\n",
+            "\t\t\t$id   = absint( $input['id'] ?? 0 );\n",
+            "\t\t\t$post = get_post( $id );\n",
+            "\n",
+            "\t\t\tif ( ! $post || $post->post_type !== $type ) {\n",
+            "\t\t\t\treturn Webmastery_MCP_Response::local_error( 'not_found', 'Custom post type item not found.' );\n",
+            "\t\t\t}\n",
+            "\t\t\tif ( ! current_user_can( $cap, $id ) ) {\n",
+            "\t\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', \"Requires {$cap} capability for this custom post type item.\" );\n",
+            "\t\t\t}\n",
+            "\n",
+            "\t\t\treturn true;\n",
+            "\t\t};\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Permissions::object( $type, 'id', $cap, 'Custom post type item not found.', \"Requires {$cap} capability for this custom post type item.\" );\n"
+          ]
+        },
+        {
+          "start": 334,
+          "before": [
+            "\t\t\t\t'permission_callback' => function () {\n",
+            "\t\t\t\t\tif ( ! current_user_can( 'read' ) ) {\n",
+            "\t\t\t\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );\n",
+            "\t\t\t\t\t}\n",
+            "\n",
+            "\t\t\t\t\treturn true;\n",
+            "\t\t\t\t},\n"
+          ],
+          "after": [
+            "\t\t\t\t'permission_callback' => Webmastery_MCP_Permissions::cap( 'read' ),\n"
+          ]
+        },
+        {
+          "start": 370,
+          "before": [
+            "\t\t\t\t\t$args = [\n",
+            "\t\t\t\t\t\t'post_type'      => $post_type_name,\n",
+            "\t\t\t\t\t\t'post_status'    => $input['status'] ?? 'any',\n",
+            "\t\t\t\t\t\t'posts_per_page' => min( (int) ( $input['per_page'] ?? 20 ), 100 ),\n",
+            "\t\t\t\t\t\t'paged'          => max( 1, (int) ( $input['page'] ?? 1 ) ),\n",
+            "\t\t\t\t\t\t'orderby'        => $input['orderby'] ?? 'date',\n",
+            "\t\t\t\t\t\t'order'          => strtoupper( $input['order'] ?? 'DESC' ),\n",
+            "\t\t\t\t\t];\n"
+          ],
+          "after": [
+            "\t\t\t\t\t$args = Webmastery_MCP_Post_Access::list_args( $input, $post_type_name, self::cap( $post_type_object, 'edit_others_posts' ) );\n"
+          ]
+        },
+        {
+          "start": 372,
+          "before": [
+            "\t\t\t\t\tif ( ! empty( $input['search'] ) ) {\n",
+            "\t\t\t\t\t\t$args['s'] = sanitize_text_field( $input['search'] );\n",
+            "\t\t\t\t\t}\n",
+            "\t\t\t\t\tif ( ! empty( $input['author'] ) ) {\n",
+            "\t\t\t\t\t\t$args['author'] = absint( $input['author'] );\n",
+            "\t\t\t\t\t}\n",
+            "\t\t\t\t\tif ( ! current_user_can( self::cap( $post_type_object, 'edit_others_posts' ) ) ) {\n",
+            "\t\t\t\t\t\t$args['author'] = get_current_user_id();\n",
+            "\t\t\t\t\t}\n",
+            "\n",
+            "\t\t\t\t\t$per_page = min( max( 1, (int) ( $input['per_page'] ?? 20 ) ), 100 );\n",
+            "\t\t\t\t\t$page     = max( 1, (int) ( $input['page'] ?? 1 ) );\n",
+            "\t\t\t\t\t$data     = self::query_readable_posts( $post_type_object, $args, $page, $per_page );\n"
+          ],
+          "after": [
+            "\t\t\t\t\t[ 'per_page' => $per_page, 'page' => $page ] = Webmastery_MCP_Input::pagination( $input );\n",
+            "\t\t\t\t\t$data                                        = self::query_readable_posts( $post_type_object, $args, $page, $per_page );\n"
+          ]
+        },
+        {
+          "start": 467,
+          "before": [
+            "\t\t\t\t\t$id = wp_insert_post( wp_slash( $args ), true );\n"
+          ],
+          "after": [
+            "\t\t\t\t\t$id = Webmastery_MCP_Post_Writes::insert( $args );\n"
+          ]
+        },
+        {
+          "start": 549,
+          "before": [
+            "\t\t\t\t\t$result = wp_update_post( wp_slash( $args ), true );\n"
+          ],
+          "after": [
+            "\t\t\t\t\t$result = Webmastery_MCP_Post_Writes::update( $args );\n"
+          ]
+        }
+      ]
+    },
+    "includes/class-comments.php": {
+      "baseline_sha256": "a5cc75ef65c0cb2b7b5e7c9173fc3f857f8181c9270c6f201483db73cde9bb4f",
+      "baseline_blob": "6cdba38c05e4d096df119942f78212b80e4f2c3d",
+      "current_sha256": "683762560fb364b61ac449a521f32b94034a8187ee69981aec6dd28b443ceb27",
+      "current_blob": "d3e15d2751d7545387b8206141909c9cc11358ce",
+      "hunks": [
+        {
+          "start": 60,
+          "before": [
+            "\t\treturn function () {\n",
+            "\t\t\tif ( ! current_user_can( 'edit_posts' ) ) {\n",
+            "\t\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_posts capability.' );\n",
+            "\t\t\t}\n",
+            "\n",
+            "\t\t\treturn true;\n",
+            "\t\t};\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Permissions::cap( 'edit_posts' );\n"
+          ]
+        },
+        {
+          "start": 125,
+          "before": [
+            "\t\t\t\t$args = [\n",
+            "\t\t\t\t\t'number' => min( (int) ( $input['per_page'] ?? 20 ), 100 ),\n",
+            "\t\t\t\t\t'offset' => ( max( 1, (int) ( $input['page'] ?? 1 ) ) - 1 ) * min( (int) ( $input['per_page'] ?? 20 ), 100 ),\n"
+          ],
+          "after": [
+            "\t\t\t\t[ 'per_page' => $per_page, 'page' => $page ] = Webmastery_MCP_Input::pagination( $input, 20, 100, null );\n",
+            "\t\t\t\t$args                                        = [\n",
+            "\t\t\t\t\t'number' => $per_page,\n",
+            "\t\t\t\t\t'offset' => ( $page - 1 ) * $per_page,\n"
+          ]
+        },
+        {
+          "start": 151,
+          "before": [
+            "\t\t\t'permission_callback' => function () {\n",
+            "\t\t\t\tif ( ! current_user_can( 'moderate_comments' ) ) {\n",
+            "\t\t\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires moderate_comments capability.' );\n",
+            "\t\t\t\t}\n",
+            "\t\t\t\treturn true;\n",
+            "\t\t\t},\n"
+          ],
+          "after": [
+            "\t\t\t'permission_callback' => Webmastery_MCP_Permissions::cap( 'moderate_comments' ),\n"
+          ]
+        }
+      ]
+    },
+    "includes/class-taxonomy.php": {
+      "baseline_sha256": "b9acfc828f6e5bd6607ece9aff9c85db571601f891de6dcd698a612fe1507e96",
+      "baseline_blob": "38e876ded45902b3481eb3a8c6e1de38977b176e",
+      "current_sha256": "fb1d2dfb87d1fd27e6d2a0e147583709a8f8e9872b92d108cf6d278dc14bb6da",
+      "current_blob": "4da82714c8849dda3ec3c0f5c1efe3ec2a2cbb94",
+      "hunks": [
+        {
+          "start": 70,
+          "before": [
+            "\t\t\t\t\t'number'     => min( (int) ( $input['per_page'] ?? 100 ), 200 ),\n"
+          ],
+          "after": [
+            "\t\t\t\t\t'number'     => Webmastery_MCP_Input::per_page( $input, 100, 200, null ),\n"
+          ]
+        },
+        {
+          "start": 89,
+          "before": [
+            "\t\t\t'permission_callback' => function () {\n",
+            "\t\t\t\tif ( ! current_user_can( 'read' ) ) {\n",
+            "\t\t\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );\n",
+            "\t\t\t\t}\n",
+            "\t\t\t\treturn true;\n",
+            "\t\t\t},\n"
+          ],
+          "after": [
+            "\t\t\t'permission_callback' => Webmastery_MCP_Permissions::cap( 'read' ),\n"
+          ]
+        },
+        {
+          "start": 123,
+          "before": [
+            "\t\t\t'permission_callback' => function () {\n",
+            "\t\t\t\tif ( ! current_user_can( 'read' ) ) {\n",
+            "\t\t\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );\n",
+            "\t\t\t\t}\n",
+            "\t\t\t\treturn true;\n",
+            "\t\t\t},\n"
+          ],
+          "after": [
+            "\t\t\t'permission_callback' => Webmastery_MCP_Permissions::cap( 'read' ),\n"
+          ]
+        }
+      ]
+    },
+    "includes/class-input.php": {
+      "baseline_sha256": "7e84ddf668840c01826a2865fc8929f3f55ad2ac49d8b038b5210a751925fc30",
+      "baseline_blob": "651230a40e72a80031389cfafc9b033488ac783a",
+      "current_sha256": "dd09e139055284e5a58f3c55bd881148a2595083928b802857e00f71e79f82b0",
+      "current_blob": "805c386c50cf173aa7b42930da7cecbe4e2dbca0",
+      "hunks": [
+        {
+          "start": 8,
+          "before": [],
+          "after": [
+            "\tpublic static function per_page( array $input, int $default_per_page = 20, int $maximum = 100, ?int $minimum = 1 ): int {\n",
+            "\t\t$value = (int) ( $input['per_page'] ?? $default_per_page );\n",
+            "\t\treturn min( null === $minimum ? $value : max( $minimum, $value ), $maximum );\n",
+            "\t}\n",
+            "\n",
+            "\tpublic static function page( array $input ): int {\n",
+            "\t\treturn max( 1, (int) ( $input['page'] ?? 1 ) );\n",
+            "\t}\n",
+            "\n",
+            "\tpublic static function pagination( array $input, int $default_per_page = 20, int $maximum = 100, ?int $minimum = 1 ): array {\n",
+            "\t\treturn [\n",
+            "\t\t\t'per_page' => self::per_page( $input, $default_per_page, $maximum, $minimum ),\n",
+            "\t\t\t'page'     => self::page( $input ),\n",
+            "\t\t];\n",
+            "\t}\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    "includes/class-media.php": {
+      "baseline_sha256": "5460ca34aa38cd3e402ad6d97ebe0fa28725bc7bdfabc389d8bde3bca7cc2310",
+      "baseline_blob": "8aef1d68bbbcfc5949c6ffdd435260859e01ea80",
+      "current_sha256": "1fd8d96bbe5a97a88838cc34254cfb07e9ec7f09d560f16372f9399b8b668e24",
+      "current_blob": "5c8fc88905ebd026befdeea78d45df04bd549fac",
+      "hunks": [
+        {
+          "start": 49,
+          "before": [
+            "\t\treturn function () use ( $cap ) {\n",
+            "\t\t\tif ( ! current_user_can( $cap ) ) {\n",
+            "\t\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', \"Requires {$cap} capability.\" );\n",
+            "\t\t\t}\n",
+            "\t\t\treturn true;\n",
+            "\t\t};\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Permissions::cap( $cap );\n"
+          ]
+        },
+        {
+          "start": 58,
+          "before": [
+            "\t\t$count_args = array_merge(\n",
+            "\t\t\t$args,\n",
+            "\t\t\t[\n",
+            "\t\t\t\t'fields'         => 'ids',\n",
+            "\t\t\t\t'posts_per_page' => -1,\n",
+            "\t\t\t\t'paged'          => 1,\n",
+            "\t\t\t\t'no_found_rows'  => true,\n",
+            "\t\t\t]\n",
+            "\t\t);\n",
+            "\n",
+            "\t\t$query        = new WP_Query( $count_args );\n",
+            "\t\t$readable_ids = [];\n",
+            "\n",
+            "\t\tforeach ( $query->posts as $id ) {\n",
+            "\t\t\tif ( self::can_read_attachment( (int) $id ) ) {\n",
+            "\t\t\t\t$readable_ids[] = (int) $id;\n",
+            "\t\t\t}\n",
+            "\t\t}\n",
+            "\n",
+            "\t\t$total    = count( $readable_ids );\n",
+            "\t\t$page_ids = array_slice( $readable_ids, ( max( 1, (int) $page ) - 1 ) * $per_page, $per_page );\n",
+            "\n",
+            "\t\treturn [\n",
+            "\t\t\t'items'       => array_values( array_filter( array_map( [ self::class, 'normalize' ], array_map( 'get_post', $page_ids ) ) ) ),\n",
+            "\t\t\t'total'       => $total,\n",
+            "\t\t\t'total_pages' => $per_page > 0 ? (int) ceil( $total / $per_page ) : 1,\n",
+            "\t\t];\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => self::can_read_attachment( $id ), static fn( $post ) => self::normalize( $post ) );\n"
+          ]
+        },
+        {
+          "start": 331,
+          "before": [
+            "\t\treturn function ( $input = [] ) use ( $input_key, $cap ) {\n",
+            "\t\t\t$id         = absint( $input[ $input_key ] ?? 0 );\n",
+            "\t\t\t$attachment = get_post( $id );\n",
+            "\n",
+            "\t\t\tif ( ! $attachment || 'attachment' !== $attachment->post_type ) {\n",
+            "\t\t\t\treturn Webmastery_MCP_Response::local_error( 'not_found', 'Media item not found.' );\n",
+            "\t\t\t}\n",
+            "\t\t\tif ( ! current_user_can( $cap, $id ) ) {\n",
+            "\t\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', \"Requires {$cap} capability for this media item.\" );\n",
+            "\t\t\t}\n",
+            "\t\t\treturn true;\n",
+            "\t\t};\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Permissions::object( 'attachment', $input_key, $cap, 'Media item not found.', \"Requires {$cap} capability for this media item.\" );\n"
+          ]
+        },
+        {
+          "start": 352,
+          "before": [
+            "\t\t\t\t\t'posts_per_page' => min( (int) ( $input['per_page'] ?? 20 ), 100 ),\n",
+            "\t\t\t\t\t'paged'          => max( 1, (int) ( $input['page'] ?? 1 ) ),\n"
+          ],
+          "after": [
+            "\t\t\t\t\t'posts_per_page' => Webmastery_MCP_Input::per_page( $input, 20, 100, null ),\n",
+            "\t\t\t\t\t'paged'          => Webmastery_MCP_Input::page( $input ),\n"
+          ]
+        },
+        {
+          "start": 364,
+          "before": [
+            "\t\t\t\tif ( ! current_user_can( 'edit_others_posts' ) ) {\n",
+            "\t\t\t\t\t$args['author'] = get_current_user_id();\n",
+            "\t\t\t\t}\n"
+          ],
+          "after": [
+            "\t\t\t\t$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_posts' );\n"
+          ]
+        },
+        {
+          "start": 366,
+          "before": [
+            "\t\t\t\t$per_page = min( max( 1, (int) ( $input['per_page'] ?? 20 ) ), 100 );\n",
+            "\t\t\t\t$page     = max( 1, (int) ( $input['page'] ?? 1 ) );\n",
+            "\t\t\t\t$data     = self::query_readable_attachments( $args, $page, $per_page );\n"
+          ],
+          "after": [
+            "\t\t\t\t[ 'per_page' => $per_page, 'page' => $page ] = Webmastery_MCP_Input::pagination( $input );\n",
+            "\t\t\t\t$data                                        = self::query_readable_attachments( $args, $page, $per_page );\n"
+          ]
+        },
+        {
+          "start": 533,
+          "before": [
+            "\t\t\t\t\t$updated = wp_update_post( wp_slash( $post_update ), true );\n"
+          ],
+          "after": [
+            "\t\t\t\t\t$updated = Webmastery_MCP_Post_Writes::update( $post_update );\n"
+          ]
+        },
+        {
+          "start": 540,
+          "before": [
+            "\t\t\t\t\tupdate_post_meta( $attachment_id, '_wp_attachment_image_alt', wp_slash( sanitize_text_field( $input['alt_text'] ) ) );\n"
+          ],
+          "after": [
+            "\t\t\t\t\tWebmastery_MCP_Post_Writes::meta( $attachment_id, '_wp_attachment_image_alt', sanitize_text_field( $input['alt_text'] ) );\n"
+          ]
+        },
+        {
+          "start": 593,
+          "before": [
+            "\t\t\t\t\t$result = wp_update_post( wp_slash( $args ), true );\n"
+          ],
+          "after": [
+            "\t\t\t\t\t$result = Webmastery_MCP_Post_Writes::update( $args );\n"
+          ]
+        },
+        {
+          "start": 601,
+          "before": [
+            "\t\t\t\t\tupdate_post_meta( $id, '_wp_attachment_image_alt', wp_slash( sanitize_text_field( $input['alt_text'] ) ) );\n"
+          ],
+          "after": [
+            "\t\t\t\t\tWebmastery_MCP_Post_Writes::meta( $id, '_wp_attachment_image_alt', sanitize_text_field( $input['alt_text'] ) );\n"
+          ]
+        }
+      ]
+    },
+    "includes/class-seo.php": {
+      "baseline_sha256": "40ef1ed52a667742d1078308b4c268e9b61880a8458a681450e4fb0cc56bbcf9",
+      "baseline_blob": "9af81cd9d31cec0f3f6ebe0a9a2ac278fa5cd138",
+      "current_sha256": "76fbae14ce2f6692fabebbbfd6af1395434a8729eb538fb93903365502aa42c5",
+      "current_blob": "e8942e60d7686917643126a68fd5ac55de678308",
+      "hunks": [
+        {
+          "start": 317,
+          "before": [
+            "\t\treturn [\n",
+            "\t\t\t'title'                    => '_yoast_wpseo_title',\n",
+            "\t\t\t'meta_description'         => '_yoast_wpseo_metadesc',\n",
+            "\t\t\t'focus_keyphrase'          => '_yoast_wpseo_focuskw',\n",
+            "\t\t\t'canonical_url'            => '_yoast_wpseo_canonical',\n",
+            "\t\t\t'breadcrumb_title'         => '_yoast_wpseo_bctitle',\n",
+            "\t\t\t'schema_page_type'         => '_yoast_wpseo_schema_page_type',\n",
+            "\t\t\t'schema_article_type'      => '_yoast_wpseo_schema_article_type',\n",
+            "\t\t\t'opengraph_title'          => '_yoast_wpseo_opengraph-title',\n",
+            "\t\t\t'opengraph_description'    => '_yoast_wpseo_opengraph-description',\n",
+            "\t\t\t'opengraph_image'          => '_yoast_wpseo_opengraph-image',\n",
+            "\t\t\t'twitter_title'            => '_yoast_wpseo_twitter-title',\n",
+            "\t\t\t'twitter_description'      => '_yoast_wpseo_twitter-description',\n",
+            "\t\t\t'twitter_image'            => '_yoast_wpseo_twitter-image',\n",
+            "\t\t\t'seo_score'                => '_yoast_wpseo_linkdex',\n",
+            "\t\t\t'readability_score'        => '_yoast_wpseo_content_score',\n",
+            "\t\t\t'inclusive_language_score' => '_yoast_wpseo_inclusive_language_score',\n",
+            "\t\t\t'primary_category'         => '_yoast_wpseo_primary_category',\n",
+            "\t\t\t'cornerstone'              => '_yoast_wpseo_is_cornerstone',\n",
+            "\t\t\t'robots_noindex'           => '_yoast_wpseo_meta-robots-noindex',\n",
+            "\t\t\t'robots_nofollow'          => '_yoast_wpseo_meta-robots-nofollow',\n",
+            "\t\t\t'robots_advanced'          => '_yoast_wpseo_meta-robots-adv',\n",
+            "\t\t];\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Post_Meta::yoast_keys();\n"
+          ]
+        },
+        {
+          "start": 321,
+          "before": [
+            "\t\treturn [\n",
+            "\t\t\t'title'                 => '_seopress_titles_title',\n",
+            "\t\t\t'meta_description'      => '_seopress_titles_desc',\n",
+            "\t\t\t'focus_keywords'        => '_seopress_analysis_target_kw',\n",
+            "\t\t\t'canonical_url'         => '_seopress_robots_canonical',\n",
+            "\t\t\t'opengraph_title'       => '_seopress_social_fb_title',\n",
+            "\t\t\t'opengraph_description' => '_seopress_social_fb_desc',\n",
+            "\t\t\t'opengraph_image'       => '_seopress_social_fb_img',\n",
+            "\t\t\t'twitter_title'         => '_seopress_social_twitter_title',\n",
+            "\t\t\t'twitter_description'   => '_seopress_social_twitter_desc',\n",
+            "\t\t\t'twitter_image'         => '_seopress_social_twitter_img',\n",
+            "\t\t\t'primary_category'      => '_seopress_robots_primary_cat',\n",
+            "\t\t\t'robots_noindex'        => '_seopress_robots_index',\n",
+            "\t\t\t'robots_nofollow'       => '_seopress_robots_follow',\n",
+            "\t\t\t'robots_noimageindex'   => '_seopress_robots_imageindex',\n",
+            "\t\t\t'robots_noarchive'      => '_seopress_robots_archive',\n",
+            "\t\t\t'robots_nosnippet'      => '_seopress_robots_snippet',\n",
+            "\t\t\t'breadcrumb_title'      => '_seopress_robots_breadcrumbs',\n",
+            "\t\t\t'news_sitemap_disabled' => '_seopress_news_disabled',\n",
+            "\t\t\t'video_sitemap_disabled' => '_seopress_video_disabled',\n",
+            "\t\t];\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Post_Meta::seopress_keys();\n"
+          ]
+        },
+        {
+          "start": 580,
+          "before": [
+            "\t\t$per_page = min( max( 1, (int) ( $input['per_page'] ?? 10 ) ), 100 );\n",
+            "\t\t$page     = max( 1, (int) ( $input['page'] ?? 1 ) );\n",
+            "\t\t$args     = [\n"
+          ],
+          "after": [
+            "\t\t[ 'per_page' => $per_page, 'page' => $page ] = Webmastery_MCP_Input::pagination( $input, 10 );\n",
+            "\t\t$args                                        = [\n"
+          ]
+        },
+        {
+          "start": 596,
+          "before": [
+            "\t\tif ( 'page' === $args['post_type'] && ! current_user_can( 'edit_others_pages' ) ) {\n",
+            "\t\t\t$args['author'] = get_current_user_id();\n",
+            "\t\t} elseif ( 'post' === $args['post_type'] && ! current_user_can( 'edit_others_posts' ) ) {\n",
+            "\t\t\t$args['author'] = get_current_user_id();\n",
+            "\t\t} elseif ( is_array( $args['post_type'] ) && ! current_user_can( 'edit_others_posts' ) ) {\n",
+            "\t\t\t$args['author'] = get_current_user_id();\n"
+          ],
+          "after": [
+            "\t\tif ( 'page' === $args['post_type'] ) {\n",
+            "\t\t\t$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_pages' );\n",
+            "\t\t} elseif ( 'post' === $args['post_type'] || is_array( $args['post_type'] ) ) {\n",
+            "\t\t\t$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_posts' );\n"
+          ]
+        },
+        {
+          "start": 618,
+          "before": [
+            "\t\t$readable_ids = [];\n"
+          ],
+          "after": [
+            "\t\t$readable_ids = Webmastery_MCP_Post_Access::filter_ids( $query->posts, static fn( $id ) => Webmastery_MCP_Posts::can_read_post_meta_key( $id, $meta_key ) );\n"
+          ]
+        },
+        {
+          "start": 620,
+          "before": [
+            "\t\tforeach ( $query->posts as $post_id ) {\n",
+            "\t\t\tif ( Webmastery_MCP_Posts::can_read_post_meta_key( (int) $post_id, $meta_key ) ) {\n",
+            "\t\t\t\t$readable_ids[] = (int) $post_id;\n",
+            "\t\t\t}\n",
+            "\t\t}\n",
+            "\n",
+            "\t\t$total    = count( $readable_ids );\n",
+            "\t\t$page_ids = array_slice( $readable_ids, ( $page - 1 ) * $per_page, $per_page );\n",
+            "\t\t$items    = [];\n",
+            "\n",
+            "\t\tforeach ( $page_ids as $post_id ) {\n",
+            "\t\t\t$post = get_post( $post_id );\n"
+          ],
+          "after": [
+            "\t\t$data                    = Webmastery_MCP_Post_Access::paginate( $readable_ids, $page, $per_page, static function ( $post ) use ( $meta_key ) {\n"
+          ]
+        },
+        {
+          "start": 622,
+          "before": [
+            "\t\t\t\tcontinue;\n"
+          ],
+          "after": [
+            "\t\t\t\treturn null;\n"
+          ]
+        },
+        {
+          "start": 626,
+          "before": [
+            "\t\t\t$items[]   = [\n"
+          ],
+          "after": [
+            "\t\t\treturn [\n"
+          ]
+        },
+        {
+          "start": 634,
+          "before": [
+            "\t\t}\n"
+          ],
+          "after": [
+            "\t\t} );\n",
+            "\t\t$data['yoast_active']    = true;\n",
+            "\t\t$data['seopress_active'] = self::is_seopress_active();\n"
+          ]
+        },
+        {
+          "start": 640,
+          "before": [
+            "\t\t\t'data'    => [\n",
+            "\t\t\t\t'items'        => $items,\n",
+            "\t\t\t\t'total'        => $total,\n",
+            "\t\t\t\t'total_pages'  => $per_page > 0 ? (int) ceil( $total / $per_page ) : 1,\n",
+            "\t\t\t\t'yoast_active' => true,\n",
+            "\t\t\t\t'seopress_active' => self::is_seopress_active(),\n",
+            "\t\t\t],\n"
+          ],
+          "after": [
+            "\t\t\t'data'    => $data,\n"
+          ]
+        },
+        {
+          "start": 645,
+          "before": [
+            "\t\treturn current_user_can( 'manage_options' )\n",
+            "\t\t\t? true\n",
+            "\t\t\t: Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Permissions::check( 'manage_options' );\n"
+          ]
+        }
+      ]
+    },
+    "includes/class-content-hygiene.php": {
+      "baseline_sha256": "ae702a9731e37d397402b7b8880b0fee8e3bc947b85c1d5599f83f7f38e29d24",
+      "baseline_blob": "88045c65984bea3329db705ea7b6a8ccad1fe26a",
+      "current_sha256": "dbcf5358eb3ca65df3485a81d9b35a11b8f45f1578c6f3565cf65bc8d39ff0fd",
+      "current_blob": "365c912ae4ebab82ab32d96f625a0aaee8c0c1e5",
+      "hunks": [
+        {
+          "start": 20,
+          "before": [
+            "\t\treturn min( max( 1, (int) ( $input['per_page'] ?? $default_per_page ) ), 100 );\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Input::per_page( $input, $default_per_page );\n"
+          ]
+        },
+        {
+          "start": 24,
+          "before": [
+            "\t\treturn max( 1, (int) ( $input['page'] ?? 1 ) );\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Input::page( $input );\n"
+          ]
+        },
+        {
+          "start": 28,
+          "before": [
+            "\t\treturn function () use ( $cap ) {\n",
+            "\t\t\tif ( ! current_user_can( $cap ) ) {\n",
+            "\t\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', \"Requires {$cap} capability.\" );\n",
+            "\t\t\t}\n",
+            "\n",
+            "\t\t\treturn true;\n",
+            "\t\t};\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Permissions::cap( $cap );\n"
+          ]
+        },
+        {
+          "start": 74,
+          "before": [
+            "\t\tif ( ! current_user_can( 'edit_others_posts' ) ) {\n",
+            "\t\t\t$args['author'] = get_current_user_id();\n",
+            "\t\t}\n"
+          ],
+          "after": [
+            "\t\t$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_posts' );\n"
+          ]
+        },
+        {
+          "start": 236,
+          "before": [
+            "\t\tif ( 'page' === $post_type && ! current_user_can( 'edit_others_pages' ) ) {\n",
+            "\t\t\t$args['author'] = get_current_user_id();\n",
+            "\t\t} elseif ( 'post' === $post_type && ! current_user_can( 'edit_others_posts' ) ) {\n",
+            "\t\t\t$args['author'] = get_current_user_id();\n"
+          ],
+          "after": [
+            "\t\tif ( 'page' === $post_type ) {\n",
+            "\t\t\t$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_pages' );\n",
+            "\t\t} elseif ( 'post' === $post_type ) {\n",
+            "\t\t\t$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_posts' );\n"
+          ]
+        },
+        {
+          "start": 302,
+          "before": [
+            "\t\tif ( ! current_user_can( 'edit_others_posts' ) ) {\n",
+            "\t\t\t$args['author'] = get_current_user_id();\n",
+            "\t\t}\n"
+          ],
+          "after": [
+            "\t\t$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_posts' );\n"
+          ]
+        }
+      ]
+    },
+    "includes/class-users.php": {
+      "baseline_sha256": "766e273cf9f7edc3b17d346521f6a823bc5e21a460e4e3fcbb51b289e7724338",
+      "baseline_blob": "f5df0d621d040e37832fb7c2729c12e0f9250a6d",
+      "current_sha256": "60e445992071e91481144e1075c8eb766d3ac7fb396f14e75a69e8adc822396e",
+      "current_blob": "c38a36312cd985d460018994cdbeb812be9025cf",
+      "hunks": [
+        {
+          "start": 36,
+          "before": [
+            "\t\tif ( ! current_user_can( 'list_users' ) ) {\n",
+            "\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires list_users capability.' );\n",
+            "\t\t}\n",
+            "\n",
+            "\t\treturn true;\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Permissions::check( 'list_users' );\n"
+          ]
+        },
+        {
+          "start": 40,
+          "before": [
+            "\t\tif ( ! current_user_can( 'edit_users' ) ) {\n",
+            "\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_users capability.' );\n",
+            "\t\t}\n",
+            "\n",
+            "\t\treturn true;\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Permissions::check( 'edit_users' );\n"
+          ]
+        },
+        {
+          "start": 108,
+          "before": [
+            "\t\t\t\t$per_page = min( (int) ( $input['per_page'] ?? 20 ), 100 );\n",
+            "\t\t\t\t$page     = max( 1, (int) ( $input['page'] ?? 1 ) );\n"
+          ],
+          "after": [
+            "\t\t\t\t[ 'per_page' => $per_page, 'page' => $page ] = Webmastery_MCP_Input::pagination( $input, 20, 100, null );\n"
+          ]
+        }
+      ]
+    },
+    "includes/class-database-health.php": {
+      "baseline_sha256": "a93f4a1a0dd34505d00c37722dde78588f815f5cc39863775daebf0f469bacb4",
+      "baseline_blob": "369289d3168517c9205827d567b9df653d1b3d0d",
+      "current_sha256": "25528e8323508b775727143a976e8b0696185d1a5e8c1d93854afda5dd84f1ec",
+      "current_blob": "fd7453c3b673993515cc063d3701ea9cc9d6d890",
+      "hunks": [
+        {
+          "start": 34,
+          "before": [
+            "\t\tif ( ! current_user_can( 'manage_options' ) ) {\n",
+            "\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );\n",
+            "\t\t}\n",
+            "\n",
+            "\t\treturn true;\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Permissions::check( 'manage_options' );\n"
+          ]
+        }
+      ]
+    },
+    "includes/class-performance-status.php": {
+      "baseline_sha256": "95c71a42962b07c95e2aaf62f1db6c2a31d5f48821f6112faed70b1766d44c26",
+      "baseline_blob": "4f2b34931b8bc377029d8c3b93e53412e9e5703b",
+      "current_sha256": "1d3886264c41bd3c031d2b8558e4f53dd019b8e3a1dfa6e1be379a9a01bd4148",
+      "current_blob": "a9dea5c391af6975052a984d4b67be769bb15ae6",
+      "hunks": [
+        {
+          "start": 38,
+          "before": [
+            "\t\tif ( ! current_user_can( 'manage_options' ) ) {\n",
+            "\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );\n",
+            "\t\t}\n",
+            "\n",
+            "\t\treturn true;\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Permissions::check( 'manage_options' );\n"
+          ]
+        }
+      ]
+    },
+    "includes/class-backup-status.php": {
+      "baseline_sha256": "eb7ebfd44227e3331d7f7bac4ce20667c8c27977289d7d1df62d93b01b0937fe",
+      "baseline_blob": "4cf81c1334a4454bbc025f3691daf94b0f72db34",
+      "current_sha256": "213d4519f7e8562518ed92aeb6a1fbfafa41432044de45a242dadac6f8abd2b6",
+      "current_blob": "6813416579d5c9b3006af4bfbd932b8508b73385",
+      "hunks": [
+        {
+          "start": 33,
+          "before": [
+            "\t\tif ( ! current_user_can( 'manage_options' ) ) {\n",
+            "\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );\n",
+            "\t\t}\n",
+            "\n",
+            "\t\treturn true;\n"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Permissions::check( 'manage_options' );\n"
+          ]
+        }
+      ]
+    },
+    "includes/class-site-kit.php": {
+      "baseline_sha256": "c630ab3d625218ca87cc099aaa0cca44d3d431b5c06cb269e5aed08ac07175bb",
+      "baseline_blob": "23d964fcc3cf8d2be6b40d9be8aad94a4b90a454",
+      "current_sha256": "ba53a57112cb8159ca75dfe519dc21ec5f94299945e1d9ad4e00d19a19fa6e9d",
+      "current_blob": "c7cb264b0a83f4a213d92d33951a2baa2d738959",
+      "hunks": [
+        {
+          "start": 90,
+          "before": [
+            "\t\tif ( ! current_user_can( 'manage_options' ) ) {\n",
+            "\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );\n"
+          ],
+          "after": [
+            "\t\t$permission = Webmastery_MCP_Permissions::check( 'manage_options' );\n",
+            "\t\tif ( is_wp_error( $permission ) ) {\n",
+            "\t\t\treturn $permission;\n"
+          ]
+        },
+        {
+          "start": 104,
+          "before": [
+            "\t\tif ( ! current_user_can( 'read' ) ) {\n",
+            "\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );\n"
+          ],
+          "after": [
+            "\t\t$permission = Webmastery_MCP_Permissions::check( 'read' );\n",
+            "\t\tif ( is_wp_error( $permission ) ) {\n",
+            "\t\t\treturn $permission;\n"
+          ]
+        },
+        {
+          "start": 113,
+          "before": [
+            "\t\tif ( ! current_user_can( 'read' ) ) {\n",
+            "\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );\n"
+          ],
+          "after": [
+            "\t\t$permission = Webmastery_MCP_Permissions::check( 'read' );\n",
+            "\t\tif ( is_wp_error( $permission ) ) {\n",
+            "\t\t\treturn $permission;\n"
+          ]
+        },
+        {
+          "start": 126,
+          "before": [
+            "\t\tif ( ! current_user_can( 'read' ) ) {\n",
+            "\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );\n"
+          ],
+          "after": [
+            "\t\t$permission = Webmastery_MCP_Permissions::check( 'read' );\n",
+            "\t\tif ( is_wp_error( $permission ) ) {\n",
+            "\t\t\treturn $permission;\n"
+          ]
+        },
+        {
+          "start": 188,
+          "before": [
+            "\t\tif ( ! current_user_can( 'read' ) ) {\n",
+            "\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );\n"
+          ],
+          "after": [
+            "\t\t$permission = Webmastery_MCP_Permissions::check( 'read' );\n",
+            "\t\tif ( is_wp_error( $permission ) ) {\n",
+            "\t\t\treturn $permission;\n"
+          ]
+        },
+        {
+          "start": 210,
+          "before": [
+            "\t\tif ( ! current_user_can( 'read' ) ) {\n",
+            "\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );\n"
+          ],
+          "after": [
+            "\t\t$permission = Webmastery_MCP_Permissions::check( 'read' );\n",
+            "\t\tif ( is_wp_error( $permission ) ) {\n",
+            "\t\t\treturn $permission;\n"
+          ]
+        },
+        {
+          "start": 232,
+          "before": [
+            "\t\tif ( ! current_user_can( 'read' ) ) {\n",
+            "\t\t\treturn Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );\n"
+          ],
+          "after": [
+            "\t\t$permission = Webmastery_MCP_Permissions::check( 'read' );\n",
+            "\t\tif ( is_wp_error( $permission ) ) {\n",
+            "\t\t\treturn $permission;\n"
+          ]
+        }
+      ]
+    }
+  },
+  "helpers": {
+    "includes/class-permissions.php": "2d059082b5baa8eb5be93f061f0f9a2886db2a336b147a319357e604d0495538",
+    "includes/class-post-access.php": "80a7d6712679ea8d62ae91b445b59b1c84c2990e5c8349f781ab89ef6353fa23",
+    "includes/class-post-content.php": "02011d1431e3c75a4b16b4c7bfe96cafa77c7dcd56a0c4fb97f6c899c3508394",
+    "includes/class-post-meta.php": "66f3b6bdb541a3363c785012db421b321475d30c20a2990a8bd995a403ded175",
+    "includes/class-post-writes.php": "8781ad75de4908418bf3bd462f55229d8cc6f46b42c2183a9c810bd248cf092f"
+  }
+}

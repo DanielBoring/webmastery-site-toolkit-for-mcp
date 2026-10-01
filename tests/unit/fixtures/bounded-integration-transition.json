@@ -1,0 +1,999 @@
+{
+  "schema": 1,
+  "predecessor_seal": "2be14f26642f28014a9df9e99df36cb6697520b158938f1b3bad23e9da44c4f5",
+  "source_head": "b3bff7596b5eefaee55fb7722b4e449ac9e8d57a",
+  "target": "main-after-175-176-119-127",
+  "files": {
+    "includes/class-comments.php": {
+      "baseline_sha256": "683762560fb364b61ac449a521f32b94034a8187ee69981aec6dd28b443ceb27",
+      "baseline_blob": "d3e15d2751d7545387b8206141909c9cc11358ce",
+      "current_sha256": "508c1d5f0de4096e7e692b07e04620bd1dddcd37f95b7214c29fc2b5c4ce7977",
+      "current_blob": "34559ac117afeec6503473a1f660a180076d1ee9",
+      "hunks": [
+        {
+          "start": 16,
+          "before": [
+            "\t\treturn ["
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 26,
+          "before": [
+            "\t\t];"
+          ],
+          "after": [
+            "\t\t], [ 'author', 'author_email', 'author_url', 'content' ] );"
+          ]
+        }
+      ]
+    },
+    "includes/class-content-hygiene.php": {
+      "baseline_sha256": "dbcf5358eb3ca65df3485a81d9b35a11b8f45f1578c6f3565cf65bc8d39ff0fd",
+      "baseline_blob": "365c912ae4ebab82ab32d96f625a0aaee8c0c1e5",
+      "current_sha256": "b48ece07eee76d1f1dc35fed730de289aa1349aa69228ffd2be0fd2268a439be",
+      "current_blob": "ee7e66e812719d6919fca75906bde83c1a33cc0e",
+      "hunks": [
+        {
+          "start": 46,
+          "before": [
+            "\t\t\t'description'         => 'List unattached media items that are not used as featured images or referenced in post content.',"
+          ],
+          "after": [
+            "\t\t\t'description'         => 'List unattached media without known featured-image or literal URL/GUID references in a bounded candidate window. Follow next_page even for empty items; no exact totals.',"
+          ]
+        },
+        {
+          "start": 66,
+          "before": [
+            "\t\t\t'posts_per_page' => -1,"
+          ],
+          "after": []
+        },
+        {
+          "start": 75,
+          "before": [
+            "\t\t$query = new WP_Query( $args );"
+          ],
+          "after": [
+            "\t\t$window = Webmastery_MCP_List_Query::window( $args, self::page( $input ), self::per_page( $input ) );",
+            "\t\tif ( is_wp_error( $window ) ) {",
+            "\t\t\treturn $window;",
+            "\t\t}",
+            "\t\t$attachments = [];",
+            "\t\tforeach ( $window['ids'] as $id ) {",
+            "\t\t\t$attachment = get_post( $id );",
+            "\t\t\tif ( $attachment && current_user_can( 'edit_post', $id ) ) {",
+            "\t\t\t\t$attachments[] = $attachment;",
+            "\t\t\t}",
+            "\t\t}",
+            "\t\t$referenced = self::attachments_referenced( $attachments );",
+            "\t\tif ( is_wp_error( $referenced ) ) {",
+            "\t\t\treturn $referenced;",
+            "\t\t}"
+          ]
+        },
+        {
+          "start": 91,
+          "before": [
+            "",
+            "\t\tforeach ( $query->posts as $attachment ) {",
+            "\t\t\tif ( ! current_user_can( 'edit_post', $attachment->ID ) ) {",
+            "\t\t\t\tcontinue;"
+          ],
+          "after": [
+            "\t\tforeach ( $attachments as $attachment ) {",
+            "\t\t\tif ( ! $referenced[ $attachment->ID ] ) {",
+            "\t\t\t\t$items[] = self::normalize_orphaned_media( $attachment );"
+          ]
+        },
+        {
+          "start": 95,
+          "before": [
+            "\t\t\t$referenced = self::is_attachment_referenced( $attachment );",
+            "\t\t\tif ( is_wp_error( $referenced ) ) {",
+            "\t\t\t\treturn $referenced;",
+            "\t\t\t}",
+            "\t\t\tif ( $referenced ) {",
+            "\t\t\t\tcontinue;",
+            "\t\t\t}",
+            "",
+            "\t\t\t$items[] = self::normalize_orphaned_media( $attachment );"
+          ],
+          "after": []
+        },
+        {
+          "start": 96,
+          "before": [
+            "",
+            "\t\t$per_page = self::per_page( $input );",
+            "\t\t$page     = self::page( $input );",
+            "\t\t$total    = count( $items );",
+            "\t\t$offset   = ( $page - 1 ) * $per_page;"
+          ],
+          "after": []
+        },
+        {
+          "start": 99,
+          "before": [
+            "\t\t\t'data'    => [",
+            "\t\t\t\t'items'       => array_slice( $items, $offset, $per_page ),",
+            "\t\t\t\t'total'       => $total,",
+            "\t\t\t\t'total_pages' => (int) ceil( $total / $per_page ),",
+            "\t\t\t],"
+          ],
+          "after": [
+            "\t\t\t'data'    => Webmastery_MCP_List_Query::result( $window, $items ),"
+          ]
+        },
+        {
+          "start": 107,
+          "before": [
+            "\t\treturn ["
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 113,
+          "before": [
+            "\t\t];"
+          ],
+          "after": [
+            "\t\t], [ 'title', 'url' ] );"
+          ]
+        },
+        {
+          "start": 117,
+          "before": [
+            "\t\tglobal $wpdb;",
+            ""
+          ],
+          "after": []
+        },
+        {
+          "start": 121,
+          "before": [],
+          "after": [
+            "\t\t$result = self::attachments_referenced( [ $attachment ] );",
+            "\t\treturn is_wp_error( $result ) ? $result : $result[ $attachment->ID ];",
+            "\t}"
+          ]
+        },
+        {
+          "start": 125,
+          "before": [
+            "\t\t// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Explicit audit query for attachment thumbnail references.",
+            "\t\t$thumbnail_count = $wpdb->get_var("
+          ],
+          "after": [
+            "\tpublic static function attachments_referenced( array $attachments ) {",
+            "\t\tglobal $wpdb;",
+            "",
+            "\t\tif ( [] === $attachments ) {",
+            "\t\t\treturn [];",
+            "\t\t}",
+            "\t\tif ( count( $attachments ) > 100 ) {",
+            "\t\t\treturn Webmastery_MCP_Response::local_error( 'invalid_input', 'At most 100 attachment candidates may be checked.' );",
+            "\t\t}",
+            "\t\t$by_id = [];",
+            "\t\tforeach ( $attachments as $attachment ) {",
+            "\t\t\t$attachment = get_post( $attachment );",
+            "\t\t\tif ( ! $attachment || 'attachment' !== $attachment->post_type ) {",
+            "\t\t\t\treturn Webmastery_MCP_Response::local_error( 'invalid_input', 'Reference checks require existing attachments.' );",
+            "\t\t\t}",
+            "\t\t\t$by_id[ (int) $attachment->ID ] = $attachment;",
+            "\t\t}",
+            "\t\t$hits         = array_fill_keys( array_keys( $by_id ), false );",
+            "\t\t$placeholders = implode( ', ', array_fill( 0, count( $by_id ), '%s' ) );",
+            "",
+            "\t\t// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Bounded candidate IDs and literal patterns are prepared; no sitewide metadata materialization.",
+            "\t\t$thumbnail_ids = $wpdb->get_col("
+          ]
+        },
+        {
+          "start": 148,
+          "before": [
+            "\t\t\t\t\"SELECT COUNT(1) FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s\",",
+            "\t\t\t\t'_thumbnail_id',",
+            "\t\t\t\t(string) $attachment->ID"
+          ],
+          "after": [
+            "\t\t\t\t\"SELECT DISTINCT meta_value FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value IN ($placeholders)\",",
+            "\t\t\t\tarray_merge( [ '_thumbnail_id' ], array_map( 'strval', array_keys( $by_id ) ) )"
+          ]
+        },
+        {
+          "start": 152,
+          "before": [
+            "\t\tif ( null === $thumbnail_count || '' !== $wpdb->last_error ) {"
+          ],
+          "after": [
+            "\t\tif ( null === $thumbnail_ids || '' !== $wpdb->last_error ) {"
+          ]
+        },
+        {
+          "start": 155,
+          "before": [
+            "",
+            "\t\tif ( absint( $thumbnail_count ) > 0 ) {",
+            "\t\t\treturn true;",
+            "\t\t}",
+            "",
+            "\t\t$references = array_filter(",
+            "\t\t\tarray_unique(",
+            "\t\t\t\t[",
+            "\t\t\t\t\twp_get_attachment_url( $attachment->ID ),",
+            "\t\t\t\t\t$attachment->guid,",
+            "\t\t\t\t]",
+            "\t\t\t)",
+            "\t\t);",
+            "",
+            "\t\tforeach ( $references as $reference ) {",
+            "\t\t\t// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared -- Explicit audit query for attachment URL usage in post content.",
+            "\t\t\t$content_count = $wpdb->get_var(",
+            "\t\t\t\t$wpdb->prepare(",
+            "\t\t\t\t\t\"SELECT COUNT(1) FROM {$wpdb->posts} WHERE post_content LIKE %s\",",
+            "\t\t\t\t\t'%' . $wpdb->esc_like( $reference ) . '%'",
+            "\t\t\t\t)",
+            "\t\t\t);",
+            "\t\t\tif ( null === $content_count || '' !== $wpdb->last_error ) {",
+            "\t\t\t\treturn self::database_error( 'attachment content references' );",
+            "\t\t\t}",
+            "",
+            "\t\t\tif ( absint( $content_count ) > 0 ) {",
+            "\t\t\t\treturn true;"
+          ],
+          "after": [
+            "\t\tforeach ( $thumbnail_ids as $id ) {",
+            "\t\t\tif ( array_key_exists( (int) $id, $hits ) ) {",
+            "\t\t\t\t$hits[ (int) $id ] = true;"
+          ]
+        },
+        {
+          "start": 161,
+          "before": [
+            "\t\treturn false;"
+          ],
+          "after": [
+            "\t\t$patterns = [];",
+            "\t\tforeach ( $by_id as $id => $attachment ) {",
+            "\t\t\tif ( $hits[ $id ] ) {",
+            "\t\t\t\tcontinue;",
+            "\t\t\t}",
+            "\t\t\t$references = array_filter( array_unique( [ wp_get_attachment_url( $id ), $attachment->guid ] ) );",
+            "\t\t\tforeach ( $references as $reference ) {",
+            "\t\t\t\t$patterns[] = [ 'id' => $id, 'like' => '%' . $wpdb->esc_like( $reference ) . '%' ];",
+            "\t\t\t}",
+            "\t\t}",
+            "\t\tforeach ( array_chunk( $patterns, 50 ) as $chunk ) {",
+            "\t\t\t$columns = [];",
+            "\t\t\tforeach ( array_keys( $chunk ) as $index ) {",
+            "\t\t\t\t$columns[] = \"COALESCE(MAX(post_content LIKE %s), 0) AS ref_{$index}\";",
+            "\t\t\t}",
+            "\t\t\t$sql = 'SELECT ' . implode( ', ', $columns ) . \" FROM {$wpdb->posts}\";",
+            "\t\t\t$row = $wpdb->get_row( $wpdb->prepare( $sql, array_column( $chunk, 'like' ) ), 'ARRAY_A' );",
+            "\t\t\tif ( null === $row || '' !== $wpdb->last_error ) {",
+            "\t\t\t\treturn self::database_error( 'attachment content references' );",
+            "\t\t\t}",
+            "\t\t\tforeach ( $chunk as $index => $pattern ) {",
+            "\t\t\t\tif ( ! isset( $row[ \"ref_{$index}\" ] ) ) {",
+            "\t\t\t\t\treturn self::database_error( 'attachment content references' );",
+            "\t\t\t\t}",
+            "\t\t\t\tif ( (int) $row[ \"ref_{$index}\" ] > 0 ) {",
+            "\t\t\t\t\t$hits[ $pattern['id'] ] = true;",
+            "\t\t\t\t}",
+            "\t\t\t}",
+            "\t\t}",
+            "\t\t// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared",
+            "\t\treturn $hits;"
+          ]
+        },
+        {
+          "start": 277,
+          "before": [
+            "\t\treturn ["
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 283,
+          "before": [
+            "\t\t];"
+          ],
+          "after": [
+            "\t\t], [ 'title', 'url' ] );"
+          ]
+        },
+        {
+          "start": 338,
+          "before": [
+            "\t\treturn ["
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 346,
+          "before": [
+            "\t\t];"
+          ],
+          "after": [
+            "\t\t], [ 'title', 'url', 'author_name' ] );"
+          ]
+        }
+      ]
+    },
+    "includes/class-content-patch.php": {
+      "baseline_sha256": "09709d8443ccabd2ca93c6871bedc64a07665a86346c04f341d30b3604886dba",
+      "baseline_blob": "fefd667ed3c9ed7b179c55239624fa2041d3a004",
+      "current_sha256": "4425edd6f33aaf4051ee871dae4a3afe8174a758616ed3cdd58712dc20c768c5",
+      "current_blob": "691130ab7227f2789c466ba8fee14cab7da896e9",
+      "hunks": [
+        {
+          "start": 78,
+          "before": [
+            "\t\treturn ["
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 86,
+          "before": [
+            "\t\t];"
+          ],
+          "after": [
+            "\t\t], [ 'block_name', 'text', 'html', 'attrs' ] );"
+          ]
+        },
+        {
+          "start": 337,
+          "before": [
+            "\t\t\t\t\t'data'    => ["
+          ],
+          "after": [
+            "\t\t\t\t\t'data'    => Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 349,
+          "before": [
+            "\t\t\t\t\t],"
+          ],
+          "after": [
+            "\t\t\t\t\t], [ 'content' ] ),"
+          ]
+        },
+        {
+          "start": 533,
+          "before": [
+            "\t\t\t\t\t\t'target'              => $patch['target'],"
+          ],
+          "after": [
+            "\t\t\t\t\t\t'target'              => Webmastery_MCP_Untrusted::mark( $patch['target'], [ 'heading_text' ] ),"
+          ]
+        }
+      ]
+    },
+    "includes/class-custom-post-types.php": {
+      "baseline_sha256": "d37ce0fa690256bfba881a1f9af38bec63aaa6156c40651eebeeee5e218ffe20",
+      "baseline_blob": "a0c8fd73bc88bc1310f3f0e5cd5d26d494baacf7",
+      "current_sha256": "bae6b4f5842955a947a05cc89018352b7e4a955971ed24bd96eda0bd2b29e403",
+      "current_blob": "bafa69be4376e0dec55c8568892d68ae3568f318",
+      "hunks": [
+        {
+          "start": 123,
+          "before": [
+            "\tprivate static function normalize_post( $post ) {"
+          ],
+          "after": [
+            "\tprivate static function normalize_post( $post, $fields = 'full' ) {"
+          ]
+        },
+        {
+          "start": 146,
+          "before": [
+            "\t\t$data                   = Webmastery_MCP_Post_Content::normalize( $post );"
+          ],
+          "after": [
+            "\t\t$data                   = Webmastery_MCP_Post_Content::normalize( $post, $fields );"
+          ]
+        },
+        {
+          "start": 155,
+          "before": [
+            "\tprivate static function query_readable_posts( $post_type_object, $args, $page, $per_page ) {",
+            "\t\treturn Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => self::can_read_full_post( $post_type_object, $id ), static fn( $post ) => self::normalize_post( $post ) );"
+          ],
+          "after": [
+            "\tprivate static function query_readable_posts( $post_type_object, $args, $page, $per_page, $fields = 'summary' ) {",
+            "\t\treturn Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => self::can_read_full_post( $post_type_object, $id ), static fn( $post ) => self::normalize_post( $post, $fields ) );"
+          ]
+        },
+        {
+          "start": 355,
+          "before": [
+            "\t\t\t\t'description'         => \"List {$post_type_object->label} custom post type items with optional filters.\","
+          ],
+          "after": [
+            "\t\t\t\t'description'         => \"List {$post_type_object->label} in bounded candidate windows. Follow next_page even for empty items; no exact totals. Summary omits content; fields full includes it.\","
+          ]
+        },
+        {
+          "start": 367,
+          "before": [],
+          "after": [
+            "\t\t\t\t\t\t'fields'   => Webmastery_MCP_List_Query::fields_schema(),"
+          ]
+        },
+        {
+          "start": 374,
+          "before": [
+            "\t\t\t\t\t$data                                        = self::query_readable_posts( $post_type_object, $args, $page, $per_page );"
+          ],
+          "after": [
+            "\t\t\t\t\t$data                                        = self::query_readable_posts( $post_type_object, $args, $page, $per_page, $input['fields'] ?? 'summary' );",
+            "\t\t\t\t\tif ( is_wp_error( $data ) ) {",
+            "\t\t\t\t\t\treturn Webmastery_MCP_Response::from_wp_error( $data );",
+            "\t\t\t\t\t}"
+          ]
+        }
+      ]
+    },
+    "includes/class-media.php": {
+      "baseline_sha256": "1fd8d96bbe5a97a88838cc34254cfb07e9ec7f09d560f16372f9399b8b668e24",
+      "baseline_blob": "5c8fc88905ebd026befdeea78d45df04bd549fac",
+      "current_sha256": "5472fe44d3d5653705884198a651e07bad42d63a18b5094dd63102f88cb46bc2",
+      "current_blob": "1de73ee22718e339c1b405e02448abb46b18342f",
+      "hunks": [
+        {
+          "start": 45,
+          "before": [
+            "\t\treturn $data;"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Untrusted::mark( $data, [ 'title', 'caption', 'alt_text', 'url', 'filename' ] );"
+          ]
+        },
+        {
+          "start": 337,
+          "before": [
+            "\t\t\t'description'         => 'List WordPress media items with optional filters.',"
+          ],
+          "after": [
+            "\t\t\t'description'         => 'List WordPress media in bounded candidate windows. Follow next_page even for empty items; no exact totals.',"
+          ]
+        },
+        {
+          "start": 368,
+          "before": [],
+          "after": [
+            "\t\t\t\tif ( is_wp_error( $data ) ) {",
+            "\t\t\t\t\treturn Webmastery_MCP_Response::from_wp_error( $data );",
+            "\t\t\t\t}"
+          ]
+        }
+      ]
+    },
+    "includes/class-post-access.php": {
+      "baseline_sha256": "8dc779c5469f4938c5d49f372c7c46f573873c910a5b08ca26ce8d63579469e6",
+      "baseline_blob": "8638c42709b3c080ae24af27306791163994186c",
+      "current_sha256": "4dd0bc3b3e28f68dc19add5a6cd347530a5953def441a56dd67c49c49d03f0c7",
+      "current_blob": "36f3ef7ac3623de2fd042e0a956abb06df85bacb",
+      "hunks": [
+        {
+          "start": 26,
+          "before": [
+            "\tpublic static function query_readable( array $args, int $page, int $per_page, callable $can_read, callable $normalize ): array {",
+            "\t\t$query = new WP_Query( array_merge( $args, [",
+            "\t\t\t'fields'         => 'ids',",
+            "\t\t\t'posts_per_page' => -1,",
+            "\t\t\t'paged'          => 1,",
+            "\t\t\t'no_found_rows'  => true,",
+            "\t\t] ) );",
+            "\t\t$ids   = self::filter_ids( $query->posts, $can_read );",
+            "\t\treturn self::paginate( $ids, $page, $per_page, $normalize );"
+          ],
+          "after": [
+            "\tpublic static function query_readable( array $args, int $page, int $per_page, callable $can_read, callable $normalize ): array|WP_Error {",
+            "\t\t$window = Webmastery_MCP_List_Query::window( $args, $page, $per_page );",
+            "\t\tif ( is_wp_error( $window ) ) {",
+            "\t\t\treturn $window;",
+            "\t\t}",
+            "\t\t$items = [];",
+            "\t\tforeach ( self::filter_ids( $window['ids'], $can_read ) as $id ) {",
+            "\t\t\t$item = $normalize( get_post( $id ) );",
+            "\t\t\tif ( null !== $item ) {",
+            "\t\t\t\t$items[] = $item;",
+            "\t\t\t}",
+            "\t\t}",
+            "\t\treturn Webmastery_MCP_List_Query::result( $window, $items );"
+          ]
+        }
+      ]
+    },
+    "includes/class-post-content.php": {
+      "baseline_sha256": "02011d1431e3c75a4b16b4c7bfe96cafa77c7dcd56a0c4fb97f6c899c3508394",
+      "baseline_blob": "ffa222130dfbf512dca8bb384153ab46e1cf8b21",
+      "current_sha256": "82d8c1e8ec9bf95149eb877754da531cef0e0ffdae8ed5de8435de68bff871cd",
+      "current_blob": "eb0725bfffd035400fcb87ec657c996607c86f79",
+      "hunks": [
+        {
+          "start": 5,
+          "before": [
+            "\tpublic static function normalize( $post ): ?array {"
+          ],
+          "after": [
+            "\tpublic static function normalize( $post, string $fields = 'full' ): ?array {"
+          ]
+        },
+        {
+          "start": 10,
+          "before": [
+            "\t\treturn ["
+          ],
+          "after": [
+            "\t\t$data = ["
+          ]
+        },
+        {
+          "start": 25,
+          "before": [],
+          "after": [
+            "\t\t$data = Webmastery_MCP_Untrusted::mark( $data, [ 'title', 'content', 'excerpt', 'slug', 'url', 'author_name' ] );",
+            "\t\treturn Webmastery_MCP_List_Query::project( $data, $fields );"
+          ]
+        }
+      ]
+    },
+    "includes/class-post-meta.php": {
+      "baseline_sha256": "6e4d366aa27beb2e1437925bbc1fde9f1a74457e3a30b4c1fe84361994bc3d73",
+      "baseline_blob": "55632462be791b1f99a94bab2ba4503b4c53b02f",
+      "current_sha256": "f01f9b094ed314d4f0ab4b55c57b1e2f26a678fca2a547e31cd1c08b3b45e018",
+      "current_blob": "8ef8e05cb64acd4436e843a501c5d5eb40916f4f",
+      "hunks": [
+        {
+          "start": 329,
+          "before": [
+            "\t\t\t\t\t'data'    => ["
+          ],
+          "after": [
+            "\t\t\t\t\t'data'    => Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 332,
+          "before": [
+            "\t\t\t\t\t],"
+          ],
+          "after": [
+            "\t\t\t\t\t], [ 'meta' ] ),"
+          ]
+        },
+        {
+          "start": 395,
+          "before": [
+            "\t\t\t\t\t'data'    => ["
+          ],
+          "after": [
+            "\t\t\t\t\t'data'    => Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 401,
+          "before": [
+            "\t\t\t\t\t],"
+          ],
+          "after": [
+            "\t\t\t\t\t], [ 'meta_key', 'previous_value', 'current_value' ] ),"
+          ]
+        },
+        {
+          "start": 455,
+          "before": [
+            "\t\t\t\t\t'data'    => ["
+          ],
+          "after": [
+            "\t\t\t\t\t'data'    => Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 459,
+          "before": [
+            "\t\t\t\t\t],"
+          ],
+          "after": [
+            "\t\t\t\t\t], [ 'meta_key' ] ),"
+          ]
+        }
+      ]
+    },
+    "includes/class-post-revisions.php": {
+      "baseline_sha256": "176a5bfcaa4ed0d4b58f474fd7261dc55fdb4e73e30244eb538082e0ea4a076c",
+      "baseline_blob": "65c34f0b21193eb574d18506f59cbcccacd1c98d",
+      "current_sha256": "ed8925395c984643ca9fa479ff610c6e9859b9d678b14638d9e5a77e273c6c19",
+      "current_blob": "d8ab5c29ef421f4cb59083eeb0ad2e684b944f3f",
+      "hunks": [
+        {
+          "start": 17,
+          "before": [
+            "\t\treturn ["
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 27,
+          "before": [
+            "\t\t];"
+          ],
+          "after": [
+            "\t\t], [ 'author_name', 'title', 'content', 'excerpt' ] );"
+          ]
+        },
+        {
+          "start": 33,
+          "before": [
+            "\t\t\t'description'         => 'List saved revisions for a WordPress post or page.',"
+          ],
+          "after": [
+            "\t\t\t'description'         => 'List saved revisions for a WordPress post or page. Summary omits content; use fields full for stored revision content.',"
+          ]
+        },
+        {
+          "start": 40,
+          "before": [],
+          "after": [
+            "\t\t\t\t\t'fields'   => Webmastery_MCP_List_Query::fields_schema(),"
+          ]
+        },
+        {
+          "start": 63,
+          "before": [
+            "\t\t\t\t\t\t'orderby'        => 'date',"
+          ],
+          "after": [
+            "\t\t\t\t\t\t'orderby'        => [ 'date' => 'DESC', 'ID' => 'DESC' ],"
+          ]
+        },
+        {
+          "start": 73,
+          "before": [
+            "\t\t\t\t\t\t'revisions' => array_values( array_filter( array_map( [ self::class, 'normalize_revision' ], $revisions ) ) ),"
+          ],
+          "after": [
+            "\t\t\t\t\t\t'revisions' => array_values( array_map(",
+            "\t\t\t\t\t\t\tstatic fn( $revision ) => Webmastery_MCP_List_Query::project( $revision, $input['fields'] ?? 'summary' ),",
+            "\t\t\t\t\t\t\tarray_filter( array_map( [ self::class, 'normalize_revision' ], $revisions ) )",
+            "\t\t\t\t\t\t) ),"
+          ]
+        }
+      ]
+    },
+    "includes/class-posts.php": {
+      "baseline_sha256": "be99673cd7d75d6759554c419f792cb4f2eaefeca1cb8c014a4ffb5c6ff6ad32",
+      "baseline_blob": "d8eaf74f611279a8d5ab5c2111cf37eaf89e2baf",
+      "current_sha256": "6f916cde9d6f5d29d150ee0b3010abc38372c3b915b898af7280acde782246b4",
+      "current_blob": "26cf092695b0901fbed90ef012bc8fae1360a3ec",
+      "hunks": [
+        {
+          "start": 28,
+          "before": [
+            "\tpublic static function normalize( $post ) {"
+          ],
+          "after": [
+            "\tpublic static function normalize( $post, $fields = 'full' ) {"
+          ]
+        },
+        {
+          "start": 34,
+          "before": [
+            "\t\t$data = Webmastery_MCP_Post_Content::normalize( $post );"
+          ],
+          "after": [
+            "\t\t$data = Webmastery_MCP_Post_Content::normalize( $post, $fields );"
+          ]
+        },
+        {
+          "start": 48,
+          "before": [
+            "\tprivate static function query_readable_posts( $args, $page, $per_page ) {",
+            "\t\treturn Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => self::can_read_full_post( $id ), static fn( $post ) => self::normalize( $post ) );"
+          ],
+          "after": [
+            "\tprivate static function query_readable_posts( $args, $page, $per_page, $fields = 'summary' ) {",
+            "\t\treturn Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => self::can_read_full_post( $id ), static fn( $post ) => self::normalize( $post, $fields ) );"
+          ]
+        },
+        {
+          "start": 67,
+          "before": [],
+          "after": [
+            "\t\t\t\t'fields'   => Webmastery_MCP_List_Query::fields_schema(),"
+          ]
+        },
+        {
+          "start": 77,
+          "before": [
+            "\t\t\t'description'         => \"List WordPress {$slug} with optional filters.\","
+          ],
+          "after": [
+            "\t\t\t'description'         => \"List WordPress {$slug} in bounded candidate windows. Follow next_page even for empty items; no exact totals. Summary omits content; fields full includes it.\","
+          ]
+        },
+        {
+          "start": 87,
+          "before": [
+            "\t\t\t\t$data                                        = self::query_readable_posts( $args, $page, $per_page );"
+          ],
+          "after": [
+            "\t\t\t\t$data                                        = self::query_readable_posts( $args, $page, $per_page, $input['fields'] ?? 'summary' );",
+            "\t\t\t\tif ( is_wp_error( $data ) ) {",
+            "\t\t\t\t\treturn Webmastery_MCP_Response::from_wp_error( $data );",
+            "\t\t\t\t}"
+          ]
+        }
+      ]
+    },
+    "includes/class-seo.php": {
+      "baseline_sha256": "76fbae14ce2f6692fabebbbfd6af1395434a8729eb538fb93903365502aa42c5",
+      "baseline_blob": "e8942e60d7686917643126a68fd5ac55de678308",
+      "current_sha256": "7dea287d5328076e9f67c102f93115a610c6eac991a561ded1812adc09b8a5ff",
+      "current_blob": "bfd61461cd1c4faab99ad1016d89dee612ae63ac",
+      "hunks": [
+        {
+          "start": 180,
+          "before": [
+            "\t\t\t'metrics' => $data,"
+          ],
+          "after": [
+            "\t\t\t'metrics' => Webmastery_MCP_Untrusted::mark( $data, [ 'title', 'url', 'slug', 'yoast_meta_description', 'seopress_meta_description', 'yoast_focus_keyword', 'seopress_focus_keywords' ] ),"
+          ]
+        },
+        {
+          "start": 404,
+          "before": [
+            "\t\t\t'data'    => ["
+          ],
+          "after": [
+            "\t\t\t'data'    => Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 422,
+          "before": [
+            "\t\t\t],"
+          ],
+          "after": [
+            "\t\t\t], [ 'title', 'url', 'metadata', 'raw_meta' ] ),"
+          ]
+        },
+        {
+          "start": 482,
+          "before": [
+            "\t\t\t'data'    => ["
+          ],
+          "after": [
+            "\t\t\t'data'    => Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 491,
+          "before": [
+            "\t\t\t],"
+          ],
+          "after": [
+            "\t\t\t], [ 'title', 'url', 'metadata', 'raw_meta' ] ),"
+          ]
+        },
+        {
+          "start": 528,
+          "before": [
+            "\t\t\t'description'         => $description . ' Only objects with effective permission for this score key are included in items and pagination totals.',"
+          ],
+          "after": [
+            "\t\t\t'description'         => $description . ' Only authorized score keys in this bounded candidate window are returned. Follow next_page even for empty items; no exact totals.',"
+          ]
+        },
+        {
+          "start": 557,
+          "before": [],
+          "after": [
+            "\t\t$per_page = min( max( 1, (int) ( $input['per_page'] ?? 10 ) ), 100 );",
+            "\t\t$page     = max( 1, (int) ( $input['page'] ?? 1 ) );"
+          ]
+        },
+        {
+          "start": 564,
+          "before": [
+            "\t\t\t\t\t'total'        => 0,",
+            "\t\t\t\t\t'total_pages'  => 0,"
+          ],
+          "after": [
+            "\t\t\t\t\t'page'         => $page,",
+            "\t\t\t\t\t'per_page'     => $per_page,",
+            "\t\t\t\t\t'next_page'    => null,"
+          ]
+        },
+        {
+          "start": 587,
+          "before": [
+            "\t\t\t'posts_per_page' => -1,",
+            "\t\t\t'paged'          => 1,"
+          ],
+          "after": []
+        },
+        {
+          "start": 589,
+          "before": [
+            "\t\t\t'fields'         => 'ids',",
+            "\t\t\t'no_found_rows'  => true,"
+          ],
+          "after": []
+        },
+        {
+          "start": 616,
+          "before": [
+            "\t\t$query        = new WP_Query( $args );",
+            "\t\t$readable_ids = Webmastery_MCP_Post_Access::filter_ids( $query->posts, static fn( $id ) => Webmastery_MCP_Posts::can_read_post_meta_key( $id, $meta_key ) );",
+            "",
+            "\t\t$data                    = Webmastery_MCP_Post_Access::paginate( $readable_ids, $page, $per_page, static function ( $post ) use ( $meta_key ) {"
+          ],
+          "after": [
+            "\t\t$data = Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => Webmastery_MCP_Post_Meta::can_read_post_meta_key( $id, $meta_key ), static function ( $post ) use ( $meta_key ) {"
+          ]
+        },
+        {
+          "start": 622,
+          "before": [
+            "\t\t\treturn ["
+          ],
+          "after": [
+            "\t\t\treturn Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 629,
+          "before": [
+            "\t\t\t];"
+          ],
+          "after": [
+            "\t\t\t], [ 'title', 'url' ] );"
+          ]
+        },
+        {
+          "start": 631,
+          "before": [],
+          "after": [
+            "\t\tif ( is_wp_error( $data ) ) {",
+            "\t\t\treturn Webmastery_MCP_Response::from_wp_error( $data );",
+            "\t\t}"
+          ]
+        },
+        {
+          "start": 671,
+          "before": [],
+          "after": [
+            "\t\t$data['sitemap']    = Webmastery_MCP_Untrusted::mark( $data['sitemap'], [ 'url', 'entries' ] );",
+            "\t\t$data['robots_txt'] = Webmastery_MCP_Untrusted::mark( $data['robots_txt'], [ 'url' ] );"
+          ]
+        }
+      ]
+    },
+    "includes/class-users.php": {
+      "baseline_sha256": "60e445992071e91481144e1075c8eb766d3ac7fb396f14e75a69e8adc822396e",
+      "baseline_blob": "c38a36312cd985d460018994cdbeb812be9025cf",
+      "current_sha256": "ba39cfaa197e0754e97c25af33f60fbc8534803a026950cfedbbb11491a992cb",
+      "current_blob": "e76a95b81e834f42d6c7c4f6794afbb78b2c84ad",
+      "hunks": [
+        {
+          "start": 32,
+          "before": [
+            "\t\treturn $data;"
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Untrusted::mark( $data, [ 'display_name', 'nicename', 'url', 'login', 'email' ] );"
+          ]
+        },
+        {
+          "start": 49,
+          "before": [
+            "\t\treturn ["
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 55,
+          "before": [
+            "\t\t];"
+          ],
+          "after": [
+            "\t\t], [ 'login', 'email', 'last_login' ] );"
+          ]
+        },
+        {
+          "start": 83,
+          "before": [
+            "\t\treturn ["
+          ],
+          "after": [
+            "\t\treturn Webmastery_MCP_Untrusted::mark( ["
+          ]
+        },
+        {
+          "start": 88,
+          "before": [
+            "\t\t];"
+          ],
+          "after": [
+            "\t\t], [ 'user_login', 'app_name' ] );"
+          ]
+        }
+      ]
+    },
+    "webmastery-site-toolkit-for-mcp.php": {
+      "baseline_sha256": "e112be3facbcb47f60b09fa01e3946d793400c621a914dd915fab3fc53dd659f",
+      "baseline_blob": "e61cb0d6471de0b36bcb8ef1d938d0cf57eb8e7f",
+      "current_sha256": "d5daae004259b2b391882190def8d53cffd67c9ff747ee81c1ca603bcaed3c08",
+      "current_blob": "f1c1dafa5c92c8397c1c7e919ac83ed4adc0477e",
+      "hunks": [
+        {
+          "start": 20,
+          "before": [],
+          "after": [
+            "require_once __DIR__ . '/includes/class-untrusted.php';",
+            "require_once __DIR__ . '/includes/class-list-query.php';"
+          ]
+        },
+        {
+          "start": 50,
+          "before": [],
+          "after": [
+            "\trequire_once __DIR__ . '/includes/class-untrusted.php';"
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "includes/class-backup-status.php": "213d4519f7e8562518ed92aeb6a1fbfafa41432044de45a242dadac6f8abd2b6",
+    "includes/class-bulk-posts.php": "0663045aad4bc776d45629f91cf265d2a5a4e6cbfe3bb836a4511554a7f66f1b",
+    "includes/class-comments.php": "508c1d5f0de4096e7e692b07e04620bd1dddcd37f95b7214c29fc2b5c4ce7977",
+    "includes/class-content-hygiene.php": "b48ece07eee76d1f1dc35fed730de289aa1349aa69228ffd2be0fd2268a439be",
+    "includes/class-content-patch.php": "4425edd6f33aaf4051ee871dae4a3afe8174a758616ed3cdd58712dc20c768c5",
+    "includes/class-custom-post-types.php": "bae6b4f5842955a947a05cc89018352b7e4a955971ed24bd96eda0bd2b29e403",
+    "includes/class-database-health.php": "25528e8323508b775727143a976e8b0696185d1a5e8c1d93854afda5dd84f1ec",
+    "includes/class-featured-image.php": "19971a3e82a356ff6fd7ebfdeaaef0bdca7cbb6afbbe76378cfadea7444aaba3",
+    "includes/class-input.php": "dd09e139055284e5a58f3c55bd881148a2595083928b802857e00f71e79f82b0",
+    "includes/class-list-query.php": "b76100806af2d3044404aaa2b445512f705dfb79e9ff997cc59bb57f4a537dad",
+    "includes/class-media.php": "5472fe44d3d5653705884198a651e07bad42d63a18b5094dd63102f88cb46bc2",
+    "includes/class-performance-status.php": "1d3886264c41bd3c031d2b8558e4f53dd019b8e3a1dfa6e1be379a9a01bd4148",
+    "includes/class-permissions.php": "2d059082b5baa8eb5be93f061f0f9a2886db2a336b147a319357e604d0495538",
+    "includes/class-post-access.php": "4dd0bc3b3e28f68dc19add5a6cd347530a5953def441a56dd67c49c49d03f0c7",
+    "includes/class-post-content.php": "82d8c1e8ec9bf95149eb877754da531cef0e0ffdae8ed5de8435de68bff871cd",
+    "includes/class-post-meta.php": "f01f9b094ed314d4f0ab4b55c57b1e2f26a678fca2a547e31cd1c08b3b45e018",
+    "includes/class-post-parent.php": "2b2c361eda424e7db49b1c55152640485907550dfda90957a367d7f67da1ea8a",
+    "includes/class-post-revisions.php": "ed8925395c984643ca9fa479ff610c6e9859b9d678b14638d9e5a77e273c6c19",
+    "includes/class-post-scheduling.php": "43b37d5742d4100eab15c71075d411c9cc2bc6ad7cbc5b366332a71b7ca85a7a",
+    "includes/class-post-writes.php": "8781ad75de4908418bf3bd462f55229d8cc6f46b42c2183a9c810bd248cf092f",
+    "includes/class-posts.php": "6f916cde9d6f5d29d150ee0b3010abc38372c3b915b898af7280acde782246b4",
+    "includes/class-response.php": "98c4dcd24f3ae2d82467c28ce28c05a271c587d8df2bfc1f1b80901de94a34ab",
+    "includes/class-seo.php": "7dea287d5328076e9f67c102f93115a610c6eac991a561ded1812adc09b8a5ff",
+    "includes/class-site-kit.php": "ba53a57112cb8159ca75dfe519dc21ec5f94299945e1d9ad4e00d19a19fa6e9d",
+    "includes/class-taxonomy.php": "fb1d2dfb87d1fd27e6d2a0e147583709a8f8e9872b92d108cf6d278dc14bb6da",
+    "includes/class-untrusted.php": "5a0ba6dffdf9c30b0ec7a01c6d7cbaa7c9f15c3707adc04e06255deb41104e20",
+    "includes/class-users.php": "ba39cfaa197e0754e97c25af33f60fbc8534803a026950cfedbbb11491a992cb",
+    "webmastery-site-toolkit-for-mcp.php": "d5daae004259b2b391882190def8d53cffd67c9ff747ee81c1ca603bcaed3c08"
+  }
+}

@@ -1,0 +1,301 @@
+{
+    "source_sha": "18a8716e469778819b1c92a3d6720df19c1d029b",
+    "baseline_sha": "2feed8d18d0721a4c7ca2e0187005c8cfae76322",
+    "package_run_id": 35680977162,
+    "evidence_log_sha256": "fbcaefc92851ced9a484dff4a1b9609ef422429eebcb91d83f310ca7bbbde687",
+    "before_manifest_sha256": "8f024b5e6784aeb7517aa8df67160419f2e514393a7f21ad17ed25e9eb3bd694",
+    "after_manifest_sha256": "3c70a4a561055c605dccf1cfaa78759d6e0e946ab36dccc311628eddb7760b48",
+    "baseline_manifest_sha256": "da4395a6a9d6532c10423e25d02c710c2ed150d226dfa87a988b5594ede8fa4a",
+    "unchanged_case_count": 565,
+    "historical_marked_cases": 190,
+    "historical_marker_paths": 200,
+    "current_marked_cases": 185,
+    "current_marker_paths": 195,
+    "cases": [
+        {
+            "index": 69,
+            "label": "delete-cpt-mcp-book",
+            "before_sha256": "3cfa532c76f27e2c6c739dfe704c350be22b169aafefcc1e2233bc58f96efa43",
+            "after_sha256": "5123900c88ac7dfb3aeebb3f06ffe34636469af7414ebae9d435f08ca9b63f57",
+            "observed_response": {
+                "success": true,
+                "data": {
+                    "id": 34,
+                    "status": "trash"
+                }
+            },
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/delete-cpt-mcp-book",
+                "label": "delete-cpt-mcp-book",
+                "role": "book_manager",
+                "input": {
+                    "id": "__delete_book_id__"
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.id": "__delete_book_id__",
+                    "data.status": "trash",
+                    "data.untrusted_fields": [
+                        "title",
+                        "content",
+                        "excerpt",
+                        "slug",
+                        "url",
+                        "author_name"
+                    ]
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/delete-cpt-mcp-book",
+                "label": "delete-cpt-mcp-book",
+                "role": "book_manager",
+                "input": {
+                    "id": "__delete_book_id__"
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.id": "__delete_book_id__",
+                    "data.status": "trash",
+                    "data": {
+                        "id": "__delete_book_id__",
+                        "status": "trash"
+                    }
+                }
+            }
+        },
+        {
+            "index": 79,
+            "label": "delete-cpt-mcp-case-study",
+            "before_sha256": "c2df541dfc4f2f139be294124b0305db114fca9d3af0ddb0c169181a3fab557f",
+            "after_sha256": "8dd6d2ee8e1caee4c171157f1f11aa79597f0b408634331932038c4c7a83613d",
+            "observed_response": {
+                "success": true,
+                "data": {
+                    "id": 37,
+                    "status": "trash"
+                }
+            },
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/delete-cpt-mcp-case-study",
+                "label": "delete-cpt-mcp-case-study",
+                "role": "case_manager",
+                "input": {
+                    "id": "__delete_case_id__"
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.id": "__delete_case_id__",
+                    "data.status": "trash",
+                    "data.untrusted_fields": [
+                        "title",
+                        "content",
+                        "excerpt",
+                        "slug",
+                        "url",
+                        "author_name"
+                    ]
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/delete-cpt-mcp-case-study",
+                "label": "delete-cpt-mcp-case-study",
+                "role": "case_manager",
+                "input": {
+                    "id": "__delete_case_id__"
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.id": "__delete_case_id__",
+                    "data.status": "trash",
+                    "data": {
+                        "id": "__delete_case_id__",
+                        "status": "trash"
+                    }
+                }
+            }
+        },
+        {
+            "index": 202,
+            "label": "delete-post",
+            "before_sha256": "f3470202c713c501d5970e84f32e559a0f2f23f97007e2679791a847fe8122ae",
+            "after_sha256": "c4bd445e4160c4640433731abfa542299c89dd1f7b89b21dbe24e05cb6f7fdac",
+            "observed_response": {
+                "success": true,
+                "data": {
+                    "id": 19,
+                    "status": "trash"
+                }
+            },
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/delete-post",
+                "label": "delete-post",
+                "role": "editor",
+                "input": {
+                    "post_id": "__delete_post_id__"
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.id": "__delete_post_id__",
+                    "data.status": "trash",
+                    "data.untrusted_fields": [
+                        "title",
+                        "content",
+                        "excerpt",
+                        "slug",
+                        "url",
+                        "author_name"
+                    ]
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/delete-post",
+                "label": "delete-post",
+                "role": "editor",
+                "input": {
+                    "post_id": "__delete_post_id__"
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.id": "__delete_post_id__",
+                    "data.status": "trash",
+                    "data": {
+                        "id": "__delete_post_id__",
+                        "status": "trash"
+                    }
+                }
+            }
+        },
+        {
+            "index": 219,
+            "label": "delete-page",
+            "before_sha256": "6240ac1e16b305f94fb788db57a7e1065462096b9fd01644ce2ba220c5b3d60c",
+            "after_sha256": "b7288044fdd822873276396e9f60a1e29f05b54bf3184318933aeca417250196",
+            "observed_response": {
+                "success": true,
+                "data": {
+                    "id": 39,
+                    "status": "trash"
+                }
+            },
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/delete-page",
+                "label": "delete-page",
+                "role": "editor",
+                "input": {
+                    "page_id": "__delete_page_id__"
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.id": "__delete_page_id__",
+                    "data.status": "trash",
+                    "data.untrusted_fields": [
+                        "title",
+                        "content",
+                        "excerpt",
+                        "slug",
+                        "url",
+                        "author_name"
+                    ]
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/delete-page",
+                "label": "delete-page",
+                "role": "editor",
+                "input": {
+                    "page_id": "__delete_page_id__"
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.id": "__delete_page_id__",
+                    "data.status": "trash",
+                    "data": {
+                        "id": "__delete_page_id__",
+                        "status": "trash"
+                    }
+                }
+            }
+        },
+        {
+            "index": 509,
+            "label": "wstm120 contributor trashes own draft",
+            "before_sha256": "9dfd5a8152cdedbb620b8b54eeebfa8cd27182eadac4ca911f4a931daccd48c2",
+            "after_sha256": "a32d648d11f6aec983074b67e03dd4cf1e5a9df6c3cef2e062ff268f5fd606e9",
+            "observed_response": {
+                "success": true,
+                "data": {
+                    "id": 65,
+                    "status": "trash"
+                }
+            },
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/delete-post",
+                "label": "wstm120 contributor trashes own draft",
+                "role": "contributor",
+                "input": {
+                    "post_id": "__wstm120_contributor_delete_id__"
+                },
+                "expect": "success",
+                "assert_permission": true,
+                "assert_values": {
+                    "data.id": "__wstm120_contributor_delete_id__",
+                    "data.status": "trash",
+                    "data.untrusted_fields": [
+                        "title",
+                        "content",
+                        "excerpt",
+                        "slug",
+                        "url",
+                        "author_name"
+                    ]
+                },
+                "assert_stored_post": {
+                    "post_id": "__wstm120_contributor_delete_id__",
+                    "fields": {
+                        "post_status": "trash",
+                        "post_content": "WSTM120 delete content."
+                    }
+                },
+                "assert_post_meta": [
+                    {
+                        "post_id": "__wstm120_contributor_delete_id__",
+                        "meta_key": "_wp_trash_meta_status",
+                        "value": "draft"
+                    }
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/delete-post",
+                "label": "wstm120 contributor trashes own draft",
+                "role": "contributor",
+                "input": {
+                    "post_id": "__wstm120_contributor_delete_id__"
+                },
+                "expect": "success",
+                "assert_permission": true,
+                "assert_values": {
+                    "data.id": "__wstm120_contributor_delete_id__",
+                    "data.status": "trash",
+                    "data": {
+                        "id": "__wstm120_contributor_delete_id__",
+                        "status": "trash"
+                    }
+                },
+                "assert_stored_post": {
+                    "post_id": "__wstm120_contributor_delete_id__",
+                    "fields": {
+                        "post_status": "trash",
+                        "post_content": "WSTM120 delete content."
+                    }
+                },
+                "assert_post_meta": [
+                    {
+                        "post_id": "__wstm120_contributor_delete_id__",
+                        "meta_key": "_wp_trash_meta_status",
+                        "value": "draft"
+                    }
+                ]
+            }
+        }
+    ]
+}

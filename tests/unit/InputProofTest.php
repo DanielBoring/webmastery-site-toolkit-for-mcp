@@ -332,6 +332,20 @@ PHP;
 		);
 	}
 
+	public function test_plugin_loads_and_registers_input_guard_exactly_once_after_permissions(): void {
+		$source = file_get_contents( dirname( __DIR__, 2 ) . '/webmastery-site-toolkit-for-mcp.php' );
+		$permissions = "require_once __DIR__ . '/includes/class-permissions.php';";
+		$input = "require_once __DIR__ . '/includes/class-input.php';";
+		$filter = "add_filter( 'wp_register_ability_args', [ Webmastery_MCP_Input::class, 'register_args' ], 20, 2 );";
+		foreach ( array( $permissions, $input, $filter ) as $statement ) {
+			self::assertSame( 1, substr_count( $source, $statement ), 'Loader wiring must appear exactly once: ' . $statement );
+		}
+		self::assertSame( 1, substr_count( $source, '/includes/class-input.php' ) );
+		self::assertSame( 1, substr_count( $source, 'Webmastery_MCP_Input::class' ) );
+		self::assertLessThan( strpos( $source, $input ), strpos( $source, $permissions ) );
+		self::assertLessThan( strpos( $source, $filter ), strpos( $source, $input ) );
+	}
+
 	/** @dataProvider registry_initialization_cases */
 	public function test_runner_initializes_lazy_registry_before_source_reflection( string $variant, string $expected_type, string $expected_message, int $expected_initializations ): void {
 		$root = dirname( __DIR__, 2 );

@@ -41,6 +41,17 @@ Suspected security vulnerabilities must use [private vulnerability reporting](ht
 
 ## Code conventions
 
+Use short `[]` array literals in `includes` and the plugin bootstrap. PHPCS
+enforces this repository preference with `Generic.Arrays.DisallowLongArraySyntax`;
+PHP 8.0+ supports it. Do not rewrite array type declarations, offsets or
+destructuring. Source-bound edits require an additive reviewed provenance layer;
+never regenerate historical ledger hashes or weaken their seals.
+
+The explicit `-text` entries in `.gitattributes` preserve reviewed source-bound
+bytes, including existing CRLF terminators. Do not remove these entries or
+normalize the listed files as incidental formatting. Other files retain the
+repository's normal text rules; whitespace checks remain enabled.
+
 Schema runtime changes must retain the isolated three-contract/two-HTTP stage,
 152 exact cases per invocation, unchanged configuration and original HTTP
 state. Validate resource identities before cleanup; a retained post also retains
@@ -51,14 +62,22 @@ source/floor/original-ZIP execution.
 This plugin follows [WordPress Coding Standards](https://developer.wordpress.org/coding-standards/wordpress-coding-standards/) and is evaluated against the [WordPress.org Detailed Plugin Guidelines](https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/). Key rules enforced throughout the codebase:
 
 - **Sanitize inputs** — use `sanitize_text_field()` for strings, `absint()` for IDs, `wp_kses_post()` for HTML content, and enum validation for fixed-value fields
+- **Capability checks** — every ability must have a `permission_callback` that returns a `WP_Error` on failure, not just `false`; prefer object-specific checks such as `edit_post` / `delete_post` when an object ID is available, and authorize every returned list object. Bounded lists expose continuation, never unauthorized or fabricated exact totals.
+- **Bounded list contracts** — retain candidate/query/capability budgets, empty-window continuation, stable ID ties, summary omission versus exact full values, and effective object/key authorization. Document breaking pagination/projection changes and preserve every earlier membership/value/permission oracle in a migration ledger. Run the owned benchmark only with a disposable-runtime lease; distinguish unit/static evidence from measured runtime/package results.
+- **Interrupted benchmark recovery** — use the same original identity, ownership state, namespace and byte journal in exclusive bounded attempts. Preserve original failures/outputs and cleanup eligibility; never certify shard success or overlay recovery onto an earlier-generation source.
+- **Owner/proof composition and PHP floor** — add an exact reviewed provenance transition ahead of frozen seals when retargeting extracted owners. Require composed full/summary marker proof; PHP 8.1 compatibility and proof-tool host requirements are not genuine PHP 8.0 plugin-floor acceptance.
+- **Opt-in PHP 8.0 fixture** — retain immutable core/base/ELF pins and candidate/full-E2E controls. Bind fixture selection consistently through the shared/admitted harness, inventories and retention/recovery; preserve frozen consumers through an additive bridge. Offline probes are not runtime/admission/custody acceptance. See `tests/fixtures/php80-floor/README.md`.
+- **Pre-fixture admission and cleanup** — full source/package QA must perform bounded read-only native admission before reset and again before fixtures. Require a separately approved bare stack and existing grants; refusal must not trigger fixtures or parent destructive cleanup. Preserve original streams/exits and independent fd verification; transfer package cleanup only after child success. Contract-only lifecycle remains separate.
+- **Scoped native host observation** — enable the exact versioned mode only on approved disposable hosted CI. Keep controller/capture/PHP nonroot and elevate only verified fixed system reads/supervision against the validated Docker PID. Retain complete observations, race checks, private originals, grants/custody and an exact outer source projection. The [QA policy](docs/qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts) distinguishes adapters, native sudo and actual runtime/CI acceptance, and cooperative I/O deadlines from a root-child cleanup certificate.
 - **Strict callback inputs** — declare exact types/enums and fixed property sets. The owned registration filter closes fixed objects and checks structural/type/enum/range/item constraints before raw permission and execute callbacks; it does not replace core format/combinator validation. Registered native validation must call the parent once first, preserve its error identity and empty-schema behavior, then validate strict types before permissions. Preserve normalization, lifecycle filters, actual authorization denials and direct destructive diagnostics; zero-work means original callbacks/capability/query/mutation boundaries, not all core hooks. Mark genuine extension maps explicitly open, preserve polymorphic metadata, test omitted versus null values and unknown keys with zero-work counters, and keep permission failures native `WP_Error`. Test schema/guard mutations, parent detach/omission, and direct/native/gateway/individual boundaries without weakening layer-specific errors.
-- **Capability checks** — every ability must have a `permission_callback` that returns a `WP_Error` on failure, not just `false`; prefer object-specific checks such as `edit_post` / `delete_post` when an object ID is available, and make list/query abilities filter each returned object plus totals before exposing full details
 - **Permission defaults** — standalone registered permission checks materialize a declared default only for null input with an exact object-root type, before the existing parent permission call once. Do not replay normalization filters, expand nullable/scalar-root handling, coerce explicit input, or relax raw callbacks. Cover Adapter empty-object normalization, allowed/denied users, nested nulls, invalid defaults, core lifecycle/reentrancy and unchanged diagnostic privacy.
 - **Security-sensitive abilities** — include allowed and denied manifest cases for abilities that expose private data, user identity, environment/plugin details, destructive actions, uploads, or status transitions; use `assert_missing_paths` when lower-privilege responses must hide fields
 - **Metadata boundaries** — reject metadata containers and reserved SEO aliases in general create/update before mutation, including empty/null values. Use real-object effective key capabilities for separate writes and SEO reads; prove denied calls have no writes/hooks or forbidden reads across direct, ability, gateway, and individual-tool execution. Preserve plain-content and draft/write/publish migration controls; see `docs/3.0-migration.md`.
+- **Untrusted result fields (3.0 Unreleased)** — add unique record-local `untrusted_fields` names only for present fields, including null/empty values. Preserve original values/types/HTML/block markup and container maps; never restore redacted values or put markers in canonical errors or diagnostic error subrecords. Keep SEO head output unavailable and all #110/#118 authorization/error evidence intact. See the field table in `README.md` and disposable-runtime requirements in `tests/e2e/README.md`.
 - **Destructive interlocks** — retain exact boolean confirmation for the five guarded abilities, raw bulk bounds before normalization, and strict optional flags. Prove previews/denials leave posts, metadata, terms, files, cron, and mutation hooks unchanged; distinguish permission-callback rejection from direct/per-item denial. Media force must never bypass capability or reference-query failure. Preserve existing caller assertions when adding confirmation.
 - **Delegated permissions** — require a local WordPress capability floor plus the exact upstream route permission in both permission and direct execution paths. Test missing/non-callable upstream checks, and distinguish controlled fixtures from version-specific real-provider inspection; see the Site Kit policy in `docs/security-strategy.md`.
-- **Prefer WordPress APIs** — use WordPress API functions (`get_posts()`, `wp_insert_post()`, etc.) for normal reads and writes. Direct `$wpdb` reads are limited to administrator-only diagnostics such as database health checks, must be prepared where variables are present, and must surface query errors.
+- **Prefer WordPress APIs** — use WordPress API functions (`get_posts()`, `wp_insert_post()`, etc.) for normal reads and writes. Direct `$wpdb` reads are reserved for administrator-only diagnostics such as database health checks and the narrow attachment-reference exception below. Prepare variable values and surface query errors without exposing SQL diagnostics.
+- **Bounded attachment-reference reads** — the shared orphan-list/media-deletion checker may use prepared direct SQL for non-administrator callers only after the caller's existing ability and per-object authorization checks. Check at most 100 attachment candidates, restrict thumbnail lookup to their IDs, and batch at most two escaped literal URL/GUID patterns per attachment with at most 50 patterns per content query. Preserve the existing all-post-type/status reference scope and return only per-candidate reference truth internally, never matching content, referring IDs, or sitewide counts. These bounds do not imply constant database scan time. Null, failed, or incomplete query results must fail closed, including forced deletion. Retain allowed/denied, literal-escaping, per-attachment parity, query-budget, and no-write/failure controls in `BoundedListTest` and `DestructiveSafetyTest`; real benchmark/MCP evidence remains separately required.
 - **No output buffering** — abilities return arrays or `WP_Error` objects; the MCP Adapter handles serialization
 - **WordPress.org readiness** — avoid trademark-confusing names, spammy readme text, undisclosed external calls, bundled duplicate libraries, and non-GPL-compatible assets
 
@@ -75,7 +94,23 @@ PHPStan runs at level 5 with a reviewed, file/message/identifier/count-scoped ba
 
 Workflow and shell changes also need the dedicated workflow lint checks. These tools are separate from the PHP-only `composer qa` path. Docker validation must use a disposable, uniquely named Compose project; do not run cleanup commands against a shared development stack.
 
+Controller CI changes must retain the required Ubuntu synthetic-component job:
+operational Linux pidfd/P_PIDFD, exactly ten started/finished/passing component
+IDs with no skipped/expected-failure outcomes, separate in-process harness
+regressions, and always-retained fresh private synthetic outputs with symlink
+metadata rather than target bytes. The unit gate must reject any failed or
+skipped dependency. Synthetic captures never substitute for leased WordPress,
+performance-budget, private-producer/custody, floor or package evidence.
+
 Destructive safety orchestration must retain eight serial boundary/trash-mode invocations, an actual native registration audit before test-only MU capabilities, matching real CLI/HTTP configuration, exclusive evidence reservation before credentials, and token-owned exact restoration on every exit. Keep failed journals and original failure status; do not replace real source/floor/original-package proof with mocked orchestration. See `tests/e2e/README.md`.
+
+When query shapes change, fault fixtures must attest an actual hit on each
+intended prepared query phase, owned table and candidate. Retain original and
+replacement SQL in the disposable evidence, preserve no-write/hook/file checks,
+and fail a zero-hit fault claim. Never discard earlier mutations or reset their
+baseline to make a subsequent control pass. Boundary-oracle migrations preserve
+typed inputs, actors and direct interlocks; unrelated historical ledgers remain
+unchanged.
 
 `composer lint:workflows` requires actionlint 1.7.12, ShellCheck 0.11.0, and zizmor 1.30.1 on `PATH`. Install the pinned upstream releases and verify their checksums as shown in `.github/workflows/workflow-lint.yml`; the command rejects missing or mismatched versions.
 
@@ -95,7 +130,7 @@ The repo strategy docs explain how maintainers operate the project:
 
 `Webmastery_MCP_Plugins::active_basenames()` supplies backup and performance diagnostics with uncached option-based inventory: local values first, followed by network option keys only on multisite, then string conversion, deduplication, and numeric reindexing. Non-array local/network options are ignored. The helper does not load the plugin API, mutate options, or check plugin-management capabilities; each diagnostic retains its existing `manage_options` permission callback.
 
-This is only the identical diagnostic-inventory portion of #119. Do not use inventory membership as a substitute for SEO or Site Kit provider readiness: Yoast uses runtime constants/classes/functions, SEOPress combines readiness signals with its existing local-option cast, and Site Kit combines core plugin APIs with loaded-provider and installed/version information. Those policies and the other helper rows remain separate.
+This is the identical diagnostic-inventory portion of #119. Do not use inventory membership as a substitute for SEO or Site Kit provider readiness: Yoast uses runtime constants/classes/functions, SEOPress combines readiness signals with its existing local-option cast, and Site Kit combines core plugin APIs with loaded-provider and installed/version information. Those provider policies remain separate; the [shared-helper map](docs/shared-helpers.md) records the other consolidated rows and deliberate distinctions.
 
 `PluginInventoryTest` characterizes the actual shared helper and both diagnostic forwarding methods through isolated WordPress stubs, including fresh filtered reads, malformed options, exact response shapes, and unchanged capability checks. These units complement, rather than replace, the existing diagnostic allowed/denied E2E manifest cases and real WordPress/MCP checks.
 
@@ -107,7 +142,7 @@ Each group of abilities lives in its own file under `includes/`. Follow the exis
 2. **Register** the ability inside the class's `register()` method using `wp_register_ability()`
 3. **Use the `webmastery-site-toolkit-for-mcp/` prefix** for the ability name (e.g., `webmastery-site-toolkit-for-mcp/list-media`)
 4. **Require the narrowest relevant capability** in `permission_callback` — use object-specific checks when an input ID is available and never skip the check
-5. **Return a consistent shape** — preserve successful payloads; use `Webmastery_MCP_Response::error()` for canonical failures and `local_error()` for safe native permission/helper diagnostics. Never trust provider messages/data based on a familiar code. Cover direct execution, native permission, gateway, individual-tool, and foreign-namespace isolation; see `docs/3.0-migration.md`.
+5. **Return a consistent shape** — preserve successful values/types, allowing only documented contract changes such as additive record-local markers; use `Webmastery_MCP_Response::error()` for canonical failures and `local_error()` for safe native permission/helper diagnostics. Never trust provider messages/data based on a familiar code. Cover direct execution, native permission, gateway, individual-tool, and foreign-namespace isolation; see `docs/3.0-migration.md`.
 6. **Require the class file** in `webmastery-site-toolkit-for-mcp.php` inside the `wp_abilities_api_init` action and call `ClassName::register()`
 7. **Add E2E manifest coverage** in `tests/e2e/abilities-manifest.json`; include both allowed and denied roles when permissions differ by role or capability, plus missing-path assertions when sensitive fields should be absent
 8. **Update docs and changelogs** when behavior is user-facing: `README.md`, `readme.txt`, relevant markdown files, and `CHANGELOG.md` under `## Unreleased`. Changelog entries should use plugin-facing release-note wording rather than raw internal ability namespace strings unless the exact MCP tool name is necessary. Repository, CI, contributor, GitHub platform, template, or agent workflow changes belong in `.github/REPOSITORY_CHANGELOG.md`.
@@ -142,25 +177,76 @@ wp_register_ability( 'webmastery-site-toolkit-for-mcp/your-ability', [
 
 Set `annotations` accurately — `readonly: true` for read-only abilities, `destructive: true` for deletes, `idempotent: true` if calling it twice produces the same result.
 
+### Shared capability and object checks (#119)
+Compare registrations with actual MCP Adapter 0.6.1 `tools/list` output on
+individually exposed tools: `readOnlyHint`, `destructiveHint`, and
+`idempotentHint`. The default server advertises three gateway tools, not
+per-ability hints; obtain ability metadata through get-info. Source/unit
+checks alone do not prove emitted hints; runtime annotation proof for #108 is
+pending. Both gateway and individual result data must retain field markers.
+Untrusted runtime changes must retain the complete source/package-bound case
+plan, original JSON types, exclusive evidence before credentials, no-config-write
+CLI/HTTP restoration, owned resource cleanup and fail-closed outer retention.
+Capture original wire/stdout/stderr privately before parsing; publish only
+validated projections or safe witnesses, never arbitrary redacted bodies.
+Keep independent host authority outside every project bind, verify the exact
+prepared generation/inventory and process outcomes before retiring evidence,
+and retain failed/partial evidence even after successful resource cleanup.
+Admission diagnostics use closed phase/reason witnesses and explicitly surface
+open/write/flush failures, including partial or zero writes and both-unwritable
+channels. Retain original refusal exit 78; never disclose raw exceptions,
+paths, argv or payloads, and never start runtime after failed admission.
+Keep the independently bound companion through primary clear and exact private
+capture validation. Complete evidence/authorization writes before its terminal
+unlink; that unlink commits release. A postcommit failed/lost acknowledgment is
+not retained protection or successful QA. The one public release-authorization
+receipt records precommit observations only, never completion.
+Report synthetic protocol tests, real POSIX process capture with mocked Docker,
+native-Windows refusal controls, and genuine Ubuntu runtime proof separately.
+Native-Windows positive authority/outer paths are blocked, not skipped or passed.
+Neither mock-stage tests nor predecessor CI establishes dedicated runtime proof.
+Markers, hints, and the #116 confirmation interlocks still in development
+are defense-in-depth, not capability checks, content filters, a security
+boundary, or prompt-injection prevention. Text-only output is not implemented.
+
 ### Shared capability checks (partial #119, row 2)
 
 `includes/class-permissions.php` provides `Webmastery_MCP_Permissions::check( string $cap )` for an immediate `true` or trusted local `WP_Error`, `cap( string $cap )` for a deferred zero-argument permission closure, and `admin()` for the `manage_options` closure. Each invocation checks the current effective WordPress capability exactly once; factories never check capabilities during registration or cache a user's authorization. Denials retain `forbidden` and the exact `Requires {$cap} capability.` diagnostic through `Webmastery_MCP_Response::local_error()`. Callback input remains ignored.
 
-This extraction covers only the Health and Security registration closures, Site Info's public `permission()` / `admin_permission()` facades, and Webmaster Verification's public `permission()` facade. Keep those facades and the direct verification execution guard intact. Remaining permission closures and object-permission helpers in #119 are still outstanding; do not substitute a simple capability check for object, list, or delegated authorization.
+Equivalent simple checks in Posts, CPTs, Media, Comments, Content Hygiene, Taxonomy, Users, SEO and administrator diagnostics now reuse these helpers, alongside the existing Health, Security, Site Info and Webmaster Verification consumers. Public permission facades and direct execution guards remain intact. Site Kit reuses only its local capability floor, then still runs its upstream route authorization.
+
+`object( $type, $input_key, $cap, $not_found, $forbidden )` preserves the common post/page/CPT/attachment lookup-before-capability sequence and caller-specific diagnostics. It is not a replacement for creation/publication/parent checks, revisions, featured-image targets, per-item bulk policies, comment moderation, taxonomy-term capabilities, key-level metadata authorization, network plugin management, or delegated provider checks.
 
 Related file map:
 
 | File | Responsibility |
 | --- | --- |
-| `includes/class-permissions.php` | Shared simple capability checks and deferred factories |
-| `webmastery-site-toolkit-for-mcp.php` | Loads the helper after Response, before ability registration |
+| `includes/class-permissions.php` | Shared simple capability checks and deferred simple/object factories |
+| `includes/class-post-access.php` | Status-aware access, authorized-ID filtering/pagination, common list/author policy, domain target lookup and deferred creation/parent/metadata/revision/featured/content authorization |
+| `includes/class-post-content.php` | Common full post response fields; callers retain taxonomy and attachment-specific representations |
+| `includes/class-post-meta.php` | SEO tables, metadata eligibility/effective key capabilities, value normalization, combined-input rejection and get/update/delete registrations |
+| `includes/class-post-writes.php` | Exactly-once slashing of already sanitized, unslashed post fields and metadata at persistence |
+| `includes/class-bulk-posts.php` | Bulk IDs/schema/confirmation/preview, per-item authorization, summaries and publish/trash registrations |
+| `includes/class-post-revisions.php` | Revision normalization, list/restore registrations and core revision APIs |
+| `includes/class-featured-image.php` | Post/page target and attachment-image eligibility orchestration, set/remove registrations and core thumbnail APIs |
+| `includes/class-content-patch.php` | Raw hashes, block paths/traversal, heading/exact algorithms and three content registrations with localized replacement sanitization |
+| `includes/class-posts.php` | Slim registration dispatcher, post/page CRUD and taxonomy-aware full responses; stable metadata/bulk forwarding facades |
+| `includes/class-input.php` | Existing strict schema/raw guards plus pagination primitives preserving each caller's clamps |
+| `webmastery-site-toolkit-for-mcp.php` | Loads Permissions after Response and post helpers inside the ability hook before their consumers |
 | `tests/unit/bootstrap.php` | Loads the production helper for unit tests |
 | `tests/unit/PermissionsCharacterizationTest.php` | Actual callback/facade characterization retained from before extraction |
 | `tests/unit/PermissionsTest.php` | Helper/factory behavior and mutation controls |
 | `tests/unit/PermissionsLoadingTest.php` | Actual plugin bootstrap and release package-map guards |
+| `tests/unit/SharedHelpersTest.php` | Actual-source before/after permissions, normalizers and key-table comparisons; access, pagination, persistence and provenance controls |
+| `tests/unit/fixtures/shared-helper-loader.php` | Loads actual helper bodies in isolated namespaces so WordPress spies remain effective |
+| `tests/unit/fixtures/shared-helper-transition.php`, `shared-helper-transition.json` | Sealed reversible extraction proof; historical ledgers remain unchanged |
+| `tests/unit/PostsCharacterizationTest.php`, `PostsExtractionTest.php` | Patch/metadata boundaries and exact 24-registration/permission/owner/source comparisons |
+| `tests/unit/fixtures/posts-extraction-transition.php`, `posts-extraction-transition.json`, `posts-extraction-stubs.php` | Additive exact reverse layer to the reviewed #119 source; sealed method ownership and dependency-drift controls |
 | `tests/unit/fixtures/permissions-stubs.php`, `tests/unit/fixtures/wstm114-verification.php` | Load actual helper/ability source together within isolated WordPress namespaces |
 
 The existing recursive `includes/` release map includes the helper without a packaging allowlist change. This is behavior-preserving repository maintenance, not a new ability or a user-facing permission policy change.
+
+See [the requirement matrix and completed extraction map](docs/shared-helpers.md) before changing an owner or list policy. Preserve current authorized totals, full candidate scans, provider readiness, key-level capability filters, and raw legacy clamp behavior. Do not add #166 markers, #167 bounded-list semantics, summary output, or an array-style rewrite to a behavior-preserving refactor. A bound-source change requires another reviewed additive transition, not replacement historical hashes or weakened mutation controls.
 
 ---
 
@@ -174,6 +260,24 @@ The existing recursive `includes/` release map includes the helper without a pac
 6. Update user-facing docs and add a `CHANGELOG.md` entry under `## Unreleased`; use `.github/REPOSITORY_CHANGELOG.md` for repo/platform-only changes
 7. Review the WordPress.org Detailed Plugin Guidelines when the change affects naming, readme text, privacy/external calls, licensing/assets, or release packaging
 8. Open a PR with a clear description of what changed and why
+
+The [PR template](.github/PULL_REQUEST_TEMPLATE.md) and these acceptance
+requirements apply together:
+
+- [ ] Use narrow capability checks, object/status filtering and sensitive-field omissions; preserve effective delegated and metadata authorization.
+- [ ] Sanitize/validate inputs without rewriting existing response values merely to add markers.
+- [ ] Scoped privileged native observations are explicitly enabled only on approved disposable CI hosts; keep controller/capture/PHP nonroot, fixed verified system argv/proc targets, clean environment/closed stdin, bounded exit/EOF/original retention, complete fd/listener/namespace/mount/start-identity/race predicates, unchanged grants/custody and a reviewed exact-byte outer projection; distinguish adapters from native sudo/runtime/CI acceptance and cooperative I/O deadlines from a root-child cleanup certificate
+- [ ] Successful values/types are preserved except for documented contract changes; failures use canonical code/reason/message/object-details, native permissions retain `WP_Error`, and MCP gateway/individual-tool errors plus foreign-namespace isolation are covered (real HTTP errors have `isError:true`, one JSON text block, and omitted wire `structuredContent`, internally null)
+- [ ] Untrusted-field changes preserve exact values/types/markup, use unique present-only record-local names, retain privacy omissions and unavailable SEO fields, and never mark canonical errors or diagnostic error subrecords.
+- [ ] Annotation changes compare registered hints with actual Adapter 0.6.1 individual `tools/list` output; distinguish gateway/get-info metadata, unit/source checks, and pending runtime evidence.
+- [ ] Audit all registered abilities against the E2E manifest, adding allowed/denied cases and missing-path assertions where relevant.
+- [ ] Update user-facing docs, migration/QA guidance, and `CHANGELOG.md` under `## Unreleased`; put repository/CI/contributor changes in `.github/REPOSITORY_CHANGELOG.md`.
+- [ ] Run `composer phpcs`, E2E manifest validation, relevant E2E QA, and `git diff --check`; document missing tools or runtime blockers rather than claiming unrun checks passed.
+- [ ] Review WordPress.org guideline impacts, including privacy, external communication, licensing, packaging and unsupported security claims.
+
+For the #108 runtime probes, require `WSTM108_ALLOW_DISPOSABLE=1` and an owned
+isolated test installation. The opt-in is not a Docker lease; never run
+mutating fixtures on shared/live sites.
 
 Before merge, require successful `1 - Static QA`, `2 - Unit Tests`, and `Docker QA gate` checks from real PR runs. The Docker gate accepts skipped runtime jobs only after successful change detection identifies a non-runtime change. Fork and read-only bot PRs retain job summaries without requiring a writable comment token.
 

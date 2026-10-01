@@ -11,6 +11,10 @@ use Webmastery_MCP_Input;
 use Webmastery_MCP_Response;
 use WP_Error;
 
+require_once __DIR__ . '/shared-helper-loader.php';
+require_once __DIR__ . '/shared-helper-transition.php';
+\wstm_test_load_shared_helpers( __NAMESPACE__ );
+
 const BASELINE = '735d31df97ed91af34eec9439a3dbea22ea8f5d8';
 const ORIGINAL_SHA256 = 'e9ced6e22fd1a4347565024a3a903a27d3184a86f2f674bb0d7723bcd2328ff3';
 const LEDGER_SHA256 = '30cad4e6931b82edb1ccf63c2fc429b02a1e9ccb79306d38b37a09d497a0a8a5';
@@ -42,15 +46,43 @@ function load_ledger( ?string $source = null ): stdClass {
 	return $ledger;
 }
 
+function bounded_source_bindings(): array {
+	// Independently pin the reviewed list/payload changes, never rewrite the sealed scheduling history.
+	$reviewed = \Wstm167SourceTransition::load()['files'];
+	return array(
+		'includes/class-posts.php' => array( $reviewed['includes/class-posts.php']['current_sha256'], $reviewed['includes/class-posts.php']['current_blob'] ),
+		'includes/class-custom-post-types.php' => array( $reviewed['includes/class-custom-post-types.php']['current_sha256'], $reviewed['includes/class-custom-post-types.php']['current_blob'] ),
+		'includes/class-list-query.php' => array( 'b76100806af2d3044404aaa2b445512f705dfb79e9ff997cc59bb57f4a537dad', 'ccd80dc3aadd62a4b4b41044dc4d15e0a63948be' ),
+		'includes/class-untrusted.php' => array( '5a0ba6dffdf9c30b0ec7a01c6d7cbaa7c9f15c3707adc04e06255deb41104e20', 'dd504fd3eae59bc945768b2249f122026af8bdef' ),
+	);
+}
+
+function assert_source_binding( string $path, string $source, array $binding ): void {
+	$source = normalized( $source );
+	if ( ! hash_equals( $binding[0], hash( 'sha256', $source ) )
+		|| ! hash_equals( $binding[1], sha1( 'blob ' . strlen( $source ) . "\0" . $source ) ) ) {
+		throw new RuntimeException( 'Scheduling production source binding changed: ' . $path );
+	}
+}
+
 function assert_sources( stdClass $ledger ): void {
 	assert_seal( $ledger );
+	\Wstm167SourceTransition::verify_dependencies();
+	$bounded = bounded_source_bindings();
 	foreach ( $ledger->production as $path => $binding ) {
-		$source = normalized( file_get_contents( root() . '/' . $path ) );
+		$source = \Wstm119SourceTransition::restore( $path, normalized( file_get_contents( root() . '/' . $path ) ) );
 		if ( $binding->baseline_sha256 !== $binding->current_sha256
 			|| ! hash_equals( $binding->current_sha256, hash( 'sha256', $source ) )
 			|| ! hash_equals( $binding->git_blob, sha1( 'blob ' . strlen( $source ) . "\0" . $source ) ) ) {
 			throw new RuntimeException( 'Scheduling production source binding changed: ' . $path );
 		}
+		if ( isset( $bounded[ $path ] ) ) {
+			assert_source_binding( $path, file_get_contents( root() . '/' . $path ), $bounded[ $path ] );
+		}
+		unset( $bounded[ $path ] );
+	}
+	foreach ( $bounded as $path => $binding ) {
+		assert_source_binding( $path, file_get_contents( root() . '/' . $path ), $binding );
 	}
 }
 
@@ -79,6 +111,7 @@ final class Probe {
 	public static string $timezone = 'UTC';
 
 	public static function reset(): void {
+		DualLayerProbe::reset();
 		self::$inventory = true;
 		self::$posts = self::$meta = self::$events = self::$hooks = self::$observed = array();
 		self::$next_id = 1000;
@@ -109,7 +142,7 @@ final class Probe {
 		}
 		foreach ( array( 'class-posts.php', 'class-custom-post-types.php' ) as $file ) {
 			$source = normalized( file_get_contents( root() . '/includes/' . $file ) );
-			eval( 'namespace ' . __NAMESPACE__ . '; use \\Webmastery_MCP_Response; ' . substr( $source, 5 ) );
+			eval( 'namespace ' . __NAMESPACE__ . '; use \\WP_Error; use \\Webmastery_MCP_Response; ' . substr( $source, 5 ) );
 		}
 		$method = new ReflectionMethod( Webmastery_MCP_Posts::class, 'register_post_type' );
 		$method->setAccessible( true );
@@ -196,6 +229,9 @@ function update_post_meta( $id, $key, $value ): void {
 }
 
 function get_post_meta( $id, $key, $single = false ) {
+	if ( null !== DualLayerProbe::$sentinel_read && '_yoast_wpseo_metadesc' === $key ) {
+		return DualLayerProbe::$sentinel_read;
+	}
 	return Probe::$meta[ $id ][ $key ] ?? '';
 }
 
@@ -450,4 +486,124 @@ function execute( string $source, stdClass $row ): array {
 		'events' => Probe::$events, 'observers' => Probe::$observed, 'remaining_hooks' => array_keys( Probe::$hooks ),
 		'passed' => predicate( $source, $row, $result, $before, $after, $observed ),
 	);
+}
+
+/**
+ * Supplemental same-input helper defense, separate from the sealed runner inventory.
+ * The normal registered path must reject this input before reaching the helper.
+ */
+final class DualLayerProbe {
+	public static array $terms = array();
+	public static array $cron = array();
+	public static ?string $sentinel_read = null;
+
+	public static function reset(): void {
+		self::$terms = self::$cron = array();
+		self::$sentinel_read = null;
+	}
+
+	public static function snapshot(): string {
+		return json( array( 'production' => Probe::snapshot(), 'terms' => self::$terms, 'cron' => self::$cron ) );
+	}
+
+	public static function fault( string $fault, $result, int $id ) {
+		switch ( $fault ) {
+			case '':
+				break;
+			case 'wrong-reason':
+				return Webmastery_MCP_Response::legacy_error( 'invalid_scheduled_date', 'Controlled wrong reason.' );
+			case 'wrong-code':
+				$result['error']['code'] = 'forbidden';
+				break;
+			case 'success':
+				return Webmastery_MCP_Response::ok( array() );
+			case 'raw-object':
+				return (object) array( 'success' => false, 'data' => (object) array( 'id' => 999 ) );
+			case 'object-data':
+				$result['data'] = (object) array( 'id' => 999 );
+				break;
+			case 'redirect-id':
+				$result['data'] = array( 'id' => 999 );
+				break;
+			case 'native-error':
+				return new WP_Error( 'scheduled_date_too_soon', 'Controlled native callback error.' );
+			case 'post':
+				Probe::$posts[ $id ]['post_content'] = 'Unexpected write';
+				break;
+			case 'metadata':
+				Probe::$meta[ $id ]['_yoast_wpseo_metadesc'] = 'Unexpected metadata write';
+				break;
+			case 'sentinel-read':
+				self::$sentinel_read = 'Unexpected cached sentinel';
+				break;
+			case 'terms':
+				self::$terms[] = 999;
+				break;
+			case 'cron':
+				self::$cron[] = 123;
+				break;
+			case 'hook':
+				( Probe::$hooks['save_post'] )( $id );
+				break;
+			default:
+				throw new RuntimeException( 'Unknown supplemental scheduling fault.' );
+		}
+		return $result;
+	}
+}
+
+function dual_layer( string $source, stdClass $row, string $fault_layer = '', string $fault = '' ): array {
+	Probe::fixture( $row );
+	DualLayerProbe::$terms = array( 7 );
+	DualLayerProbe::$cron = array( 1906545600 );
+	$id = $row->id;
+	$input = json_decode( json( $row->input ), true, 512, JSON_THROW_ON_ERROR );
+	$precall_post = get_post( $id );
+	$before = DualLayerProbe::snapshot();
+	$phases = array( 'snapshot' );
+	$observed = $observers = $layers = array();
+	foreach ( $row->hooks as $hook ) {
+		$observers[ $hook ] = static function () use ( &$observed, $hook ) {
+			$observed[ $hook ] = ( $observed[ $hook ] ?? 0 ) + 1;
+		};
+		add_filter( $hook, $observers[ $hook ], PHP_INT_MAX );
+	}
+	try {
+		foreach ( array( 'registered_callback' => 'ability_invalid_input', 'scheduling_helper' => 'scheduled_date_too_soon' ) as $layer => $reason ) {
+			$phases[] = $layer;
+			$native = 'registered_callback' === $layer
+				? ( Probe::$abilities[ $row->registered_name ]['execute_callback'] )( $input )
+				: Webmastery_MCP_Post_Scheduling::prepare( $input, $precall_post );
+			$result = 'scheduling_helper' === $layer && is_wp_error( $native ) ? Webmastery_MCP_Response::from_wp_error( $native ) : $native;
+			$result = DualLayerProbe::fault( $layer === $fault_layer ? $fault : '', $result, $id );
+			$after = DualLayerProbe::snapshot();
+			$phases[] = 'snapshot';
+			$oracle_row = clone $row;
+			$oracle_row->error = $reason;
+			$failure = null;
+			try {
+				$matches = $reason === wstm118_error_reason( $result );
+				$passed = predicate( $source, $oracle_row, $result, $before, $after, $observed );
+			} catch ( RuntimeException $error ) {
+				$matches = $passed = false;
+				$failure = $error->getMessage();
+			}
+			$layers[ $layer ] = array(
+				'input' => $input, 'precall_post' => (array) $precall_post, 'native_result' => $native, 'result' => $result,
+				'before' => $before, 'after' => $after, 'hooks' => $observed, 'observing' => array_keys( Probe::$hooks ) === $row->hooks,
+				'expected_reason' => $reason, 'error_matches' => $matches, 'oracle_failure' => $failure, 'passed' => $passed,
+			);
+		}
+		$post = get_post( $id );
+		return array(
+			'layers' => $layers, 'phases' => $phases, 'before' => $before, 'after' => $after, 'hooks' => $observed,
+			'post' => (array) $post, 'events' => Probe::$events,
+			'passed' => $layers['registered_callback']['passed'] && $layers['scheduling_helper']['passed'],
+		);
+	} finally {
+		foreach ( $observers as $hook => $observer ) {
+			remove_filter( $hook, $observer, PHP_INT_MAX );
+		}
+		DualLayerProbe::reset();
+	}
 }

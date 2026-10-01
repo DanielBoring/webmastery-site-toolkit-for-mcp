@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
+set +x
 set -Eeuo pipefail
 
 export MSYS_NO_PATHCONV="${MSYS_NO_PATHCONV:-1}"
 
-WORDPRESS_URL="${WORDPRESS_URL:-http://localhost}"
+if [[ -z "${WSTM_QA_RUNTIME_PROFILE:-}${WSTM_PHP80_CONFIG+x}${WSTM_PHP80_CONFIG_SHA256+x}" ]]; then
+	WORDPRESS_URL="${WORDPRESS_URL:-http://localhost}"
+fi
 PLUGIN_SLUG="webmastery-site-toolkit-for-mcp"
 DEPENDENCY_POLICY="${DEPENDENCY_POLICY:-pinned}"
 CONTAINER_PLUGIN_ROOT="/var/www/html/wp-content/plugins/${PLUGIN_SLUG}"
@@ -19,6 +22,8 @@ E2E_SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$(dirname "${BASH_SOURCE[0]}")/qa-compose.sh"
 # shellcheck source=scripts/destructive-retention.sh
 source "$(dirname "${BASH_SOURCE[0]}")/destructive-retention.sh"
+# shellcheck source=scripts/untrusted-stage.sh
+source "$(dirname "${BASH_SOURCE[0]}")/untrusted-stage.sh"
 
 wp() {
 	compose exec -T wordpress wp --allow-root "$@"
@@ -33,7 +38,7 @@ start_compose() {
 	echo "Starting Docker Compose stack..."
 	export MYSQL_PORT="${MYSQL_PORT:-0}"
 	export WORDPRESS_PORT="${WORDPRESS_PORT:-0}"
-	compose down -v --remove-orphans
+	compose down -v --remove-orphans || return $?
 	compose up -d
 }
 
@@ -43,7 +48,7 @@ cleanup_compose() {
 		if [[ "$original" != 0 ]]; then return "$original"; fi
 		return 1
 	fi
-	if [ "$E2E_MANAGE_COMPOSE" != "1" ] || [ "$E2E_KEEP_COMPOSE" = "1" ]; then
+	if [ "$E2E_MANAGE_COMPOSE" != "1" ] || { [ "$E2E_KEEP_COMPOSE" = "1" ] && { [ "$original" = 0 ] || [ "$QA_MODE" = contract ]; }; }; then
 		return 0
 	fi
 
@@ -580,6 +585,13 @@ main() {
 
 	: "${COMPOSE_PROJECT_NAME:?Runtime QA requires an explicitly owned disposable Compose project}"
 	[[ "$COMPOSE_PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || { echo "Invalid disposable Compose project name." >&2; exit 1; }
+	if [[ -n "${WSTM_QA_RUNTIME_PROFILE:-}${WSTM_PHP80_CONFIG+x}${WSTM_PHP80_CONFIG_SHA256+x}" ]]; then
+		export COMPOSE_PROJECT_NAME E2E_ARTIFACTS_DIR DEPENDENCY_POLICY E2E_MANAGE_COMPOSE
+		local runtime_selection
+		runtime_selection="$(run_untrusted_runtime_selection shell)" || return $?
+		# Only complete source-reviewed shell quoting from verified private originals.
+		eval "$runtime_selection"
+	fi
 	wstm116_require_no_retention || return $?
 	if [ -n "${E2E_PACKAGE_ROOT:-}${E2E_PACKAGE_ZIP:-}" ]; then
 		: "${E2E_PACKAGE_ROOT:?Package runtime requires E2E_PACKAGE_ROOT}"
@@ -592,11 +604,21 @@ main() {
 		echo "Release runtime plugin root: ${E2E_PACKAGE_ROOT} (verified against ${E2E_PACKAGE_ZIP})"
 	fi
 
-	trap cleanup_compose EXIT
+	if [[ "$QA_MODE" == contract ]]; then
+		trap cleanup_compose EXIT
+	else
+		# A bare owned stack is a prerequisite, not something preflight creates.
+		run_untrusted_admission || return $?
+	fi
 
 	rm -rf "$E2E_ARTIFACTS_DIR"
 	mkdir -p "$E2E_ARTIFACTS_DIR"
-	start_compose
+	start_compose || return $?
+	if [[ "$QA_MODE" != contract ]]; then
+		# Managed lifecycle changes invalidate the preceding live inventory.
+		run_untrusted_admission || return $?
+		trap cleanup_compose EXIT
+	fi
 	wait_for_wordpress_files
 	load_dependencies
 	install_wp_cli
@@ -627,6 +649,7 @@ main() {
 	fi
 
 	run_destructive_safety_qa
+	run_untrusted_content_qa
 	run_parent_assignment_qa
 	run_post_meta_authorization_qa
 	run_error_contract_qa

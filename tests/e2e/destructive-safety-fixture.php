@@ -38,8 +38,37 @@ function wstm116_unobserve( Closure $observer ): void {
 	}
 }
 
-function wstm116_faults( array $config ): Closure {
+function wstm116_reference_fault_sql( array $config ): string {
 	global $wpdb;
+	$id = $config['id'] ?? null;
+	$phase = $config['phase'] ?? null;
+	wstm116_require( is_int( $id ) && $id > 0 && in_array( $phase, array( 'thumbnail', 'content' ), true ), 'A reference fault requires a typed candidate and explicit phase.' );
+	$attachment = get_post( $id );
+	wstm116_require( $attachment && 'attachment' === $attachment->post_type && is_string( $config['owner'] ?? null )
+		&& '' !== $config['owner'] && $config['owner'] === get_post_meta( $id, 'wstm116_sentinel', true ), 'Reference fault candidate is not owned by this disposable run.' );
+	if ( 'thumbnail' === $phase ) {
+		return $wpdb->prepare(
+			"SELECT DISTINCT meta_value FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value IN (%s)",
+			array( '_thumbnail_id', (string) $id )
+		);
+	}
+	$references = array_filter( array_unique( array( wp_get_attachment_url( $id ), $attachment->guid ) ) );
+	wstm116_require( count( $references ) >= 1 && count( $references ) <= 2, 'Content fault requires one or two literal owned references.' );
+	$columns = $patterns = array();
+	foreach ( array_values( $references ) as $index => $reference ) {
+		$columns[] = "COALESCE(MAX(post_content LIKE %s), 0) AS ref_{$index}";
+		$patterns[] = '%' . $wpdb->esc_like( $reference ) . '%';
+	}
+	return $wpdb->prepare( 'SELECT ' . implode( ', ', $columns ) . " FROM {$wpdb->posts}", $patterns );
+}
+
+function wstm116_faults( array $config, array &$queries = array() ): Closure {
+	global $wpdb;
+	$expected = 'query_failure' === ( $config['mode'] ?? '' ) ? wstm116_reference_fault_sql( $config ) : null;
+	if ( null !== $expected ) {
+		// Core removes prepared percent placeholders at query priority 0, before this late filter.
+		$expected = $wpdb->remove_placeholder_escape( $expected );
+	}
 	$old_suppress = $wpdb->suppress_errors( true );
 	$cap_filter = static function ( $caps, $cap, $user, $args ) use ( $config ) {
 		if ( 'deny_object' === ( $config['mode'] ?? '' ) && in_array( $cap, array( 'edit_post', 'delete_post', 'delete_term' ), true )
@@ -48,10 +77,11 @@ function wstm116_faults( array $config ): Closure {
 		}
 		return $caps;
 	};
-	$query_filter = static function ( $query ) use ( $config ) {
-		if ( 'query_failure' === ( $config['mode'] ?? '' ) && 0 === strpos( $query, 'SELECT COUNT(1)' )
-			&& ( false !== strpos( $query, '_thumbnail_id' ) || false !== strpos( $query, 'post_content LIKE' ) ) ) {
-			return 'SELECT WSTM116_PRIVATE_SQL_FAILURE FROM';
+	$query_filter = static function ( $query ) use ( $config, $expected, &$queries ) {
+		if ( null !== $expected && $expected === $query ) {
+			$replacement = 'SELECT WSTM116_PRIVATE_SQL_FAILURE FROM';
+			$queries[] = array( 'phase' => $config['phase'], 'candidate_id' => $config['id'], 'original' => $query, 'replacement' => $replacement );
+			return $replacement;
 		}
 		return $query;
 	};
@@ -89,19 +119,20 @@ function wstm116_http_observer( $result, $server, $request ) {
 		return $result;
 	}
 	$events = array();
+	$fault_queries = array();
 	$file_operations = array();
 	$file_observer = wstm116_file_observer( $config['owner'], $file_operations );
 	add_filter( 'wp_delete_file', $file_observer, PHP_INT_MAX );
 	$observer = wstm116_observe( static function ( $hook ) use ( &$events ): void { $events[] = $hook; } );
-	$undo = wstm116_faults( $config );
+	$undo = wstm116_faults( $config, $fault_queries );
 	$finish = null;
-	$finish = static function ( $response, $response_server, $response_request ) use ( $request, $config, &$events, &$file_operations, $file_observer, $observer, $undo, &$finish ) {
+	$finish = static function ( $response, $response_server, $response_request ) use ( $request, $config, &$events, &$file_operations, &$fault_queries, $file_observer, $observer, $undo, &$finish ) {
 		if ( $request === $response_request ) {
 			$undo();
 			wstm116_unobserve( $observer );
 			remove_filter( 'wp_delete_file', $file_observer, PHP_INT_MAX );
 			remove_filter( 'rest_post_dispatch', $finish, PHP_INT_MAX );
-			update_option( 'wstm116_control', array_merge( $config, array( 'active' => false, 'observed' => $config['nonce'], 'events' => $events, 'file_operations' => $file_operations, 'trash_days' => EMPTY_TRASH_DAYS, 'stage_owner' => WSTM116_STAGE_TOKEN ) ), false );
+			update_option( 'wstm116_control', array_merge( $config, array( 'active' => false, 'observed' => $config['nonce'], 'events' => $events, 'file_operations' => $file_operations, 'fault_queries' => $fault_queries, 'fault_query_hits' => count( $fault_queries ), 'trash_days' => EMPTY_TRASH_DAYS, 'stage_owner' => WSTM116_STAGE_TOKEN ) ), false );
 		}
 		return $response;
 	};
