@@ -6,6 +6,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Update PHPStan from 2.2.14 to 2.2.15 and remove only the now-unmatched sitemap offset baseline entry. Preserve the sitemap fallback, PHP 8.0 analysis target, PHPDoc certainty policy, and strict unmatched-ignore ratchet; all other dependency pins and baseline entries are unchanged.
+
 - Shorten the Unreleased upgrade notice to Plugin Check's 300-character limit while retaining its migration guidance. Record exact-tree schema package results with cleanup, memory-measurement and pending integration/floor caveats; preserve prior failure records. Documentation only; no runtime or version change.
 
 - Release obsolete schema-cleanup snapshots and table aliases before subsequent reads, including the runner's setup map on failure paths. Preserve ownership checks, deletion order, case evidence and retention semantics; add isolated 128 MiB regressions with independently allocated snapshots. Historical OOM causation and runtime recovery still require comparative evidence.

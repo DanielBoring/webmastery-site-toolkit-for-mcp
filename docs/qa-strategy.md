@@ -42,6 +42,8 @@ The initial reviewed baseline contains 35 diagnostics in 21 entries across nine 
 
 A green run means no diagnostics beyond that reviewed debt, not that these findings are fixed or that all mixed input/output types are sound. The baseline matches counts per message/identifier/file, not line or expression identity: replacing a removed error with the same error elsewhere in the same file can evade the count ratchet and still needs human diff review. This tooling change does not validate ability schemas, enums, output contracts, or runtime permissions.
 
+The PHPStan 2.2.15 update removes the now-unmatched sitemap offset entry. With `treatPhpDocTypesAsCertain: false`, the updated regex output inference no longer reports the null-coalescing fallback as redundant. The source fallback is unchanged; this is a baseline compatibility adjustment, not a runtime fix or proof that the sitemap debt was resolved.
+
 ### Reducing debt
 
 1. Fix the underlying issue with focused behavior/typing evidence. Do not add casts, assertions, inline ignores, broader types, or remove defensive checks solely to silence analysis.
