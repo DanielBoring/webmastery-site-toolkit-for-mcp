@@ -114,9 +114,3 @@ parameters:
 			identifier: constant.notFound
 			count: 2
 			path: includes/class-security.php
-
-		-
-			message: '#^Offset 1 on array\{list\<string\>, list\<string\>\} on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: includes/class-seo.php
