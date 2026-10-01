@@ -627,7 +627,7 @@ class Webmastery_MCP_SEO {
 				'post_type'    => $post->post_type,
 				'modified_gmt' => $post->post_modified_gmt,
 				'score'        => '' === $raw_score ? null : (int) $raw_score,
-			], [ 'title', 'url' ] );
+			], [ 'title', 'url', 'score' ] );
 		} );
 		if ( is_wp_error( $data ) ) {
 			return Webmastery_MCP_Response::from_wp_error( $data );

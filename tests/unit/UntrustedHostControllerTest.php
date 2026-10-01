@@ -74,9 +74,13 @@ final class UntrustedHostControllerTest extends TestCase {
 		$command = array( PHP_BINARY, dirname( __DIR__, 2 ) . '/scripts/untrusted-host-controller.php', 'PRIVATE_SECRET_SENTINEL' );
 		$descriptors = array( 0 => array( 'pipe', 'r' ), 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) );
 		if ( 'Linux' === PHP_OS_FAMILY ) {
-			// An unspecified descriptor can be inherited; prove the launcher closes an explicitly open fd9.
+			// Leave startup room below fd9; PHP can reuse a closed descriptor when lower slots are inherited.
+			for ( $descriptor = 3; $descriptor < 9; ++$descriptor ) {
+				$descriptors[ $descriptor ] = array( 'file', '/dev/null', 'r' );
+			}
 			$descriptors[9] = array( 'pipe', 'w' );
-			$command = array_merge( array( '/bin/bash', '--noprofile', '--norc', '-c', 'exec 9>&-; exec "$@"', 'wstm108-without-fd9' ), $command );
+			$command = array_merge( array( '/bin/bash', '--noprofile', '--norc', '-c',
+				'exec 3>&- 4>&- 5>&- 6>&- 7>&- 8>&- 9>&-; exec "$@"', 'wstm108-without-fd9' ), $command );
 		}
 		$process = proc_open( $command, $descriptors, $pipes );
 		self::assertIsResource( $process );

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/score-marker-transition.php';
+
 final class Wstm166BoundedAdmissionTransition {
 	public const SEAL = 'a45c96be6790c0380788529adc509955ffc9de64b472a5fae24bb46a9e13df5f';
 	public const PREDECESSOR = '204877c9ff0325b4a6a90f040de918759d9ec45ed22b75a29a075de3451c2d78';
@@ -19,6 +21,7 @@ final class Wstm166BoundedAdmissionTransition {
 	}
 
 	public static function verify_dependencies( callable $read ): void {
+		Wstm167ScoreMarkerTransition::verify_dependencies( $read, 'Bounded integration dependency' );
 		$map = self::load();
 		foreach ( $map['dependencies'] as $path => $hash ) {
 			if ( ! hash_equals( $hash, hash( 'sha256', $read( $path ) ) ) ) { throw new RuntimeException( 'Floor selector dependency drift: ' . $path ); }
@@ -27,6 +30,7 @@ final class Wstm166BoundedAdmissionTransition {
 	}
 
 	public static function restore( string $path, string $source ): string {
+		$source = Wstm167ScoreMarkerTransition::restore( $path, $source, 'Bounded integration' );
 		$map = self::load();
 		if ( ! isset( $map['files'][ $path ] ) ) { return $source; }
 		$binding = $map['files'][ $path ];

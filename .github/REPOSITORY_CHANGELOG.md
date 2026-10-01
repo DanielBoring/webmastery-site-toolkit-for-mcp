@@ -6,9 +6,15 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
-- Make the controller's missing-output-descriptor test close an explicitly open
-  fd9 before launching native PHP, so inherited CI descriptors cannot mask the
-  expected diagnostic-I/O refusal. Keep production reporting and exact assertions.
+- Add integer/null and permission-denial regressions for SEO/readability score
+  markers, with a two-path reviewed outer source reversal at the existing
+  bounded source/dependency entry points. Keep historical seals, manifest
+  expectations and ledgers unchanged; reject source/proof omission or forgery.
+
+- Make the controller's missing-output-descriptor test clear explicitly occupied
+  fd3 through fd9 before launching native PHP, leaving lower slots for startup
+  allocations instead of reusing fd9. Keep production reporting, loaded extensions
+  and exact diagnostic-I/O refusal assertions.
 
 - Preserve reviewed source-bound fixture and configuration bytes during Git
   staging and checkout instead of silently normalizing their line endings.

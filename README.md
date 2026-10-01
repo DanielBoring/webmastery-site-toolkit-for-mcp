@@ -481,6 +481,10 @@ apply. Markers never restore omitted/redacted fields.
 | SEO/readability score record | `title`, `url`, `score` |
 | Sitemap containing record / robots record | Sitemap: `url`, `entries`; robots: `url` |
 
+SEO/readability records mark `score` when its value is an integer (including
+zero) or `null`. Markers follow field presence, not value type. Object and
+score-key authorization still precede the read; denied records are not exposed.
+
 Compact post/page/CPT trash results remain exactly `{"id":123,"status":"trash"}`:
 they contain no stored text and do not acquire a marker or extra content fields.
 This does not apply to `delete-post-meta`, which returns and marks `meta_key`.
