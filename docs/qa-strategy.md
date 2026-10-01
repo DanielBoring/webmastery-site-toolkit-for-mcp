@@ -68,6 +68,13 @@ WordPress/Docker nor invokes the benchmark entrypoint, reads private producer
 directories, or proves durable private custody, receiver completion, floor,
 transport or original-package correctness. Local `composer qa` remains PHP-only.
 
+The current compatibility baseline is WordPress 7.1.2 with MCP Adapter 0.6.1.
+The default Docker image is `wordpress:7.1.2-php8.2-apache`; other pinned
+dependencies and their digests are unchanged. `readme.txt` retains the
+major/minor `Tested up to: 7.1` header. This baseline update does not change
+the declared WordPress 6.9 / PHP 8.0 plugin minimums. The existing compatibility
+floor lane uses PHP 8.1 and is not genuine PHP 8.0 runtime evidence.
+
 ## PHPStan level 5 and baseline ratchet
 
 `composer phpstan` analyses the plugin entry point and all of `includes/` at level 5, explicitly targeting PHP 8.0 regardless of the local interpreter. `phpstan-baseline.neon` records pre-existing diagnostics, not permission to introduce new ones. Each generated ignore has an anchored message, identifier, positive count, and individual file path. There are no excluded production paths or identifier-only/global ignores. The existing `treatPhpDocTypesAsCertain: false` policy and WordPress stubs bootstrap are retained; no extra bootstrap constants or relaxed rules hide debt.
@@ -86,6 +93,11 @@ The initial reviewed baseline contains 35 diagnostics in 21 entries across nine 
 A green run means no diagnostics beyond that reviewed debt, not that these findings are fixed or that all mixed input/output types are sound. The baseline matches counts per message/identifier/file, not line or expression identity: replacing a removed error with the same error elsewhere in the same file can evade the count ratchet and still needs human diff review. This tooling change does not validate ability schemas, enums, output contracts, or runtime permissions.
 
 The PHPStan 2.2.15 update removes the now-unmatched sitemap offset entry. With `treatPhpDocTypesAsCertain: false`, the updated regex output inference no longer reports the null-coalescing fallback as redundant. The source fallback is unchanged; this is a baseline compatibility adjustment, not a runtime fix or proof that the sitemap debt was resolved.
+
+The current-main integration also retains the branch's later post-extraction
+debt reductions: the pinned 2.2.15 baseline remains exactly 17 entries / 30 errors.
+The initial table above is historical, not the current ignore inventory. Neither
+the removed sitemap offset nor removed posts entries are restored by the merge.
 
 ### Reducing debt
 

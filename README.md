@@ -33,6 +33,11 @@ Production PHP uses PHPCS-enforced short `[]` array literals. The
 [syntax/provenance policy](docs/shared-helpers.md#array-syntax-and-historical-provenance)
 documents the minimal conversion and exact preservation of historical source proofs.
 
+The current development QA baseline is **WordPress 7.1.2 with MCP Adapter
+0.6.1**. The default Docker image and compatibility metadata use that baseline;
+the declared WordPress 6.9 / PHP 8.0 plugin minimums are unchanged. See
+[QA Strategy](docs/qa-strategy.md) for the separate compatibility and runtime gates.
+
 **Unreleased 3.0 development:** this branch changes the error contract, not the
 2.6.0 stable tag. Clients must follow the [3.0 migration guide](docs/3.0-migration.md)
 before deploying it. Ability names, roles, inputs, defaults, and successful

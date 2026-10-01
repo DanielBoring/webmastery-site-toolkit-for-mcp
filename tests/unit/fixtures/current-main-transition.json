@@ -1,0 +1,190 @@
+{
+  "schema": 1,
+  "base_commit": "a761873df07406dcde676d14f80a78283b572af2",
+  "main_commit": "545e7599f6f7ad081f08d9abdedd6c8a31f76d6c",
+  "merge_base": "8ea870beb03076c4d118e8d8bccb3304947bf03a",
+  "merge_tree": "62bef64de1782f9f6e51ac803a0686c10552af60",
+  "base_map_sha256": "60f5a599024bf42e206fabe6716b03d8971578ea7e1cc8f27a6b86b149729e6d",
+  "predecessor_seal": "d6bbca72dcd3f823bffee69b3cd03e4ff51232cc324d919b05191103d11c53ee",
+  "scope": "Additive resolution of current-main documentation intents; retain exact stricter baseline, existing alignment and all runtime/workflow guards",
+  "main_alignment_method_sha256": "5f9abb77a05a318e143a4bedc7520de076260d0dedccb33cb8873c15087f308e",
+  "main_object_sha256": {
+    "main:.github/REPOSITORY_CHANGELOG.md": "c5cffee7b858a6b6ca3bf2b358f5a54ebee39430720a6ac2e962fc6e0de4e9ba",
+    "main:README.md": "81864b71a84af1700da2061ae80a3357e584bea06da9a8e55969120816e1c7fa",
+    "main:docs/qa-strategy.md": "104f0dd9d4b24d5a52bab64d1c64c15dbd37bb76fa5f1132812c72ffddf46e6a",
+    "main:phpstan-baseline.neon": "a768c2f0b820a682267be4a6c6c5a1d8ecd6000cb1c37867f553997d2fee7ab1",
+    "main:.github/compatibility-versions.json": "73865b94ad6ac10cbed9bec8a31b41911cbb35014b4a904734d9258f0718c19a",
+    "main:docker-compose.yml": "cade04bfa0c3708c1f68e968a73e2ba7582730b48802fa9d3067f8b67dcf42a8",
+    "main:composer.lock": "26699eda230d588c6895dfabd39c2362a22d84b9bbb0e69f15b11f8fe970de2a",
+    "main:tests/unit/CompatibilityBaselinesTest.php": "99a177ddb1f395a7d0a16281c8e569849d340ebb2a5e277e9de712a3a2da1f97"
+  },
+  "files": {
+    ".github/REPOSITORY_CHANGELOG.md": {
+      "baseline_raw_sha256": "1ceee7b3ba4bd0f31795d30a340bd5dc495878bdec8ef4183002999ff38e2be7",
+      "current_raw_sha256": "279ff5d4dbd38e7790293e9b8e4b0298fd34944bb77b49329f75285082f1fc64",
+      "hunks": [
+        {
+          "start": 7,
+          "before": [],
+          "after": [
+            "",
+            "- Integrate approved current-main compatibility documentation additively with the",
+            "  existing extraction, controller-component and provenance guidance. Retain the",
+            "  exact WordPress 7.1.2 / MCP Adapter 0.6.1 defaults and alignment regression",
+            "  already present on this branch, the PHPStan 2.2.15 lock and the stricter",
+            "  17-entry / 30-error baseline; do not restore removed sitemap or posts debt.",
+            "  Preserve every accepted proof seal with a reviewed exact outer integration."
+          ]
+        },
+        {
+          "start": 143,
+          "before": [],
+          "after": [
+            "",
+            "",
+            "- Promote the current compatibility QA baseline and default Docker image to",
+            "  WordPress 7.1.2, retaining MCP Adapter 0.6.1 and all dependency digests.",
+            "  Document the unchanged support floor and add a regression keeping baseline",
+            "  metadata, the default image, the current matrix lane and readme header aligned.",
+            "",
+            "- Update PHPStan from 2.2.14 to 2.2.15 and remove only the now-unmatched sitemap offset baseline entry. Preserve the sitemap fallback, PHP 8.0 analysis target, PHPDoc certainty policy, and strict unmatched-ignore ratchet; all other dependency pins and baseline entries are unchanged."
+          ]
+        }
+      ]
+    },
+    "README.md": {
+      "baseline_raw_sha256": "5435131bd4d7b7a5718e3746b5f3a68c9e5f16daa97caca8da33b78e0f6d4e66",
+      "current_raw_sha256": "888e8dda0ef730fa0e565c4e1110e285dc2bed34b85acfa38cba9019197f7f81",
+      "hunks": [
+        {
+          "start": 34,
+          "before": [],
+          "after": [
+            "",
+            "The current development QA baseline is **WordPress 7.1.2 with MCP Adapter",
+            "0.6.1**. The default Docker image and compatibility metadata use that baseline;",
+            "the declared WordPress 6.9 / PHP 8.0 plugin minimums are unchanged. See",
+            "[QA Strategy](docs/qa-strategy.md) for the separate compatibility and runtime gates."
+          ]
+        }
+      ]
+    },
+    "docs/qa-strategy.md": {
+      "baseline_raw_sha256": "d3fe889cb8faac47d182bd937e54f6e084a5951cbb20cd5407bb6906c6f96628",
+      "current_raw_sha256": "4b9fa0717a23af2abde5118bd948e24ac74b899621ba792008da74b297baf72d",
+      "hunks": [
+        {
+          "start": 70,
+          "before": [],
+          "after": [
+            "The current compatibility baseline is WordPress 7.1.2 with MCP Adapter 0.6.1.",
+            "The default Docker image is `wordpress:7.1.2-php8.2-apache`; other pinned",
+            "dependencies and their digests are unchanged. `readme.txt` retains the",
+            "major/minor `Tested up to: 7.1` header. This baseline update does not change",
+            "the declared WordPress 6.9 / PHP 8.0 plugin minimums. The existing compatibility",
+            "floor lane uses PHP 8.1 and is not genuine PHP 8.0 runtime evidence.",
+            ""
+          ]
+        },
+        {
+          "start": 95,
+          "before": [],
+          "after": [
+            "",
+            "The current-main integration also retains the branch's later post-extraction",
+            "debt reductions: the pinned 2.2.15 baseline remains exactly 17 entries / 30 errors.",
+            "The initial table above is historical, not the current ignore inventory. Neither",
+            "the removed sitemap offset nor removed posts entries are restored by the merge."
+          ]
+        }
+      ]
+    },
+    "tests/unit/fixtures/selected-listener-transition.php": {
+      "baseline_raw_sha256": "174b9f254f864d994ad92938d6ee7d28c225d30df3f876a68654fe9200d10595",
+      "current_raw_sha256": "a84165581f3b373ef5b41a8098e294d74c0f36c1a8a512efc9c5b3a4ded5512f",
+      "hunks": [
+        {
+          "start": 3,
+          "before": [],
+          "after": [
+            "",
+            "require_once __DIR__ . '/current-main-transition.php';"
+          ]
+        },
+        {
+          "start": 24,
+          "before": [],
+          "after": [
+            "\t\tWstm167CurrentMainTransition::verify_dependencies( $read );"
+          ]
+        },
+        {
+          "start": 28,
+          "before": [],
+          "after": [
+            "\t\t\tif ( is_string( $source ) ) { $source = Wstm167CurrentMainTransition::restore( $path, $source ); }"
+          ]
+        },
+        {
+          "start": 43,
+          "before": [],
+          "after": [
+            "\t\t$source = Wstm167CurrentMainTransition::restore( $path, $source, $context );"
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    ".github/compatibility-versions.json": "73865b94ad6ac10cbed9bec8a31b41911cbb35014b4a904734d9258f0718c19a",
+    ".github/workflows/coding-standards.yml": "1778f0179b3713aece5a60e14b734eeb3ce7416942cf00393635fe5dea260000",
+    ".github/workflows/compatibility-qa.yml": "ca8c18c12b14d76d27be262da5ef2c2dd80ec7dbcb4fcbb7df86f3d9a381936f",
+    ".github/workflows/e2e-qa.yml": "f2f4febd0da80b37263b2c32d306e24094ae5dd51787a65fd97e73fb210f716c",
+    ".github/workflows/import-issue-backlog.yml": "4a4a785a6e72a10f661ce4e52412ab1d8563a3000de8c9605ffb91e0ee1262fe",
+    ".github/workflows/release-package-qa.yml": "ea39ebd603fd9d5f924d11106874e80d9efab37bfc7f5157a1d0f35a1a91b548",
+    ".github/workflows/release.yml": "05ccd7cf43d35cf93af50917eeb659f2c8b533df500ae46ab905093c1b17a659",
+    ".github/workflows/unit-tests.yml": "588fe8eb8d437bdaedf84a18dc930f73c317671f061f355f5bbe08380d620917",
+    ".github/workflows/workflow-lint.yml": "0bda65329c2716fb19471ae5e1a464900c9d64ac9791ce4d2817ea35c595206c",
+    "composer.json": "3a231c527e8f04c6cec07edaac76b6c3611060dac97ec3ac90c1809dfa453506",
+    "composer.lock": "26699eda230d588c6895dfabd39c2362a22d84b9bbb0e69f15b11f8fe970de2a",
+    "docker-compose.yml": "cade04bfa0c3708c1f68e968a73e2ba7582730b48802fa9d3067f8b67dcf42a8",
+    "phpstan-baseline.neon": "d64cf0922b3cf04f83728bb3b14575e154a08fa714abe38cdc325660ab450382",
+    "phpstan.neon.dist": "8d5bd7a3d1ce85011c9eec064b8f9c07c895c4119e7ab9d07c141cd73f18b8f4",
+    "readme.txt": "239326e16a5675027865eeddbd863f5a99fb01e8e23fb46d28c7c6ddb5a640d7",
+    "scripts/untrusted-admission-diagnostic.php": "0d0b3d993753e2a09016d75e7802797ddc40959511e22dcbe713193e1f4e3b4a",
+    "scripts/untrusted-host-bootstrap.sh": "21de117d566440e6ee924f4cc9d7f7098918eba3b5fe70cf0d49d6ca21332868",
+    "scripts/untrusted-host-controller.php": "6fd0adb5f62aa3746293cc4f849897799991d4f86cfbb095cee9c1b25b6332af",
+    "scripts/untrusted-host-topology.php": "2c0951d9097e3b9b8246e7247dabfd6034a5b50680bee7963827968f5866f3e8",
+    "tests/e2e/abilities-manifest.json": "f09633e8e6e2fe88b18eefe5748e3eafd3a55ff62c17b54ec9cae76bd776029d",
+    "tests/unit/CiAdmissionDiagnosticTest.php": "adb252540738114447833e99f07ba3cbc4484447064582b01bfcbdedfbe282c7",
+    "tests/unit/CiBudgetControlFollowupTest.php": "666052a9c0454918a3dcf4cc5bb67ba9d31028264632f360c3ca131325b8aa68",
+    "tests/unit/CompatibilityBaselinesTest.php": "7007e97ef0496d62322b2fc82660d9f4c8712170497a5e6b43af35fed54b6a99",
+    "tests/unit/CurrentMainIntegrationTest.php": "6efadfdf2f54da574c3c54eb3258fd2398ee82c28d4bdec01e36bb8383f01318",
+    "tests/unit/SelectedListenerTest.php": "310a645f6a796f4abd463fada16ab6c91633f3a7121ebe7f22629777839d6eda",
+    "tests/unit/fixtures/admission-native-fixture-transition.json": "08cc480bd501c8a190699ef5a114fffd694332b4485bbc595ed13e0b87a8e99e",
+    "tests/unit/fixtures/array-syntax-transition.json": "b8d2ad18c87ee97c8eeb86f8601b6d1fce5af16842b7a4c4de9e886138ba53e0",
+    "tests/unit/fixtures/authority-observer-transition.json": "88ff7a6b1d42d7839c793aa481b9099dd4631a49eabf39aa87100600b96fef58",
+    "tests/unit/fixtures/bounded-admission-transition.json": "a45c96be6790c0380788529adc509955ffc9de64b472a5fae24bb46a9e13df5f",
+    "tests/unit/fixtures/bounded-integration-transition.json": "e847ac561c95854f66b5b04af627e992fa8886dd76eab018b730b07f42d290fa",
+    "tests/unit/fixtures/ci-budget-control-transition.json": "6126a718e4a19904fa4ee64c2b6cc159ee0cb82239a391dbb0ac73c1a10e0591",
+    "tests/unit/fixtures/ci-diagnostic-transition.json": "a1e215abbc4e0f8ae3bf47a7becda2ab474740a8b8192ca0223afc668aeae201",
+    "tests/unit/fixtures/comments-calibration-ledger.json": "c350dd9f4915c4b4f84940fa083ab46a807dac285d40007a536ddc041adf3b2d",
+    "tests/unit/fixtures/floor-selector-transition.json": "204877c9ff0325b4a6a90f040de918759d9ec45ed22b75a29a075de3451c2d78",
+    "tests/unit/fixtures/legacy-runtime-transition.json": "e713a22640ae27f2b3fc9de235fc32620cb6270b77a6bc3527d661dfa48b5b9d",
+    "tests/unit/fixtures/posts-extraction-transition.json": "2be14f26642f28014a9df9e99df36cb6697520b158938f1b3bad23e9da44c4f5",
+    "tests/unit/fixtures/scheduling-calibration-ledger.json": "30cad4e6931b82edb1ccf63c2fc429b02a1e9ccb79306d38b37a09d497a0a8a5",
+    "tests/unit/fixtures/score-marker-transition.json": "bbc14f6fdf5184f515a93dedd19b29d707245e52bd4d17207a61b5fbfd8e2076",
+    "tests/unit/fixtures/score-proof-entry-transition.json": "e79abfdb00bcb85deff22b30c836b2bfbc2ac1e343a8b20dc9ba1311aaeb8ca8",
+    "tests/unit/fixtures/selected-listener-transition.json": "d6bbca72dcd3f823bffee69b3cd03e4ff51232cc324d919b05191103d11c53ee",
+    "tests/unit/fixtures/selector-import-transition.json": "67e7fc5b92b672b8e56c6346c121f5837f9a1cb62257e31b4ae494c23c34f539",
+    "tests/unit/fixtures/shared-helper-transition.json": "1bdd69f8b930f9c744afe557800eeafd195f30eeaa9b61c9b81fff5267e426d6",
+    "tests/unit/fixtures/taxonomy-calibration-ledger.json": "e389a6346d111c7ac72e83083b4eeee8d396a4aa33b11ce6ca1942e80734022c",
+    "tests/unit/fixtures/untrusted-bounded-manifest-transition.json": "a86d8850ca345db59302cde04f14f1f75b1b06baf41e9f72df41db9e3954ed88",
+    "tests/unit/fixtures/untrusted-compact-delete-calibration.json": "3011a23c2ddd947127caccd4149ca85d17c2b532d97e5cf4e1dce0c7145e0544",
+    "tests/unit/fixtures/untrusted-import-inventory.json": "78211008ad27e0ec44c4241bfc621edf6b882f2b0605a2dea0d180dcdd578bae",
+    "tests/unit/fixtures/untrusted-manifest-inventory.json": "7fb86639b203b4b8f36aabd6a1893bd13eaec55fb2201c44a29ebd806dfc3db2",
+    "tests/unit/fixtures/untrusted-schema-integration-ledger.json": "6f7612776a8efef97c776e03277ace03bd8f013b1938dace1d737efc42ce5f15",
+    "tests/unit/fixtures/untrusted-typed-oracle-ledger.json": "1c91d8f3bf003057026aa13f8d0cbbfa44d80a94f2a5390abc8ac7e1a965f352",
+    "tests/unit/fixtures/untrusted-workflow-transition.json": "f30822cfc6eb489c3993ffaacdc89862d87780335ff64e222e04cdf5c3a5e64e"
+  }
+}

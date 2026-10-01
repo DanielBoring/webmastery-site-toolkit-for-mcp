@@ -6,6 +6,13 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Integrate approved current-main compatibility documentation additively with the
+  existing extraction, controller-component and provenance guidance. Retain the
+  exact WordPress 7.1.2 / MCP Adapter 0.6.1 defaults and alignment regression
+  already present on this branch, the PHPStan 2.2.15 lock and the stricter
+  17-entry / 30-error baseline; do not restore removed sitemap or posts debt.
+  Preserve every accepted proof seal with a reviewed exact outer integration.
+
 - Classify normal connected Unix stream rows separately from the unique selected
   listening inode in the QA host-topology controller. Reject malformed or unknown
   selected-path rows and preserve descriptor/PID/namespace/identity checks.
@@ -134,6 +141,14 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 - Integrate the untrusted-record contract with the current 589-case closed-schema suite using an additional exact typed source ledger. Preserve both historical ledgers, four native parent rejections, and all role/no-write oracles; add marker assertions to the omitted-filter success control. Update synthetic source-prefix fixtures for explicit executable refusal conditionals and keep both schema and untrusted QA stages.
 - Surface only closed topology reason/phase witnesses on controller admission refusal. Check diagnostic opens, partial/zero writes, stream exceptions and flush failures; retain exit 78 and explicit non-success receipts when channels fail. Raw private diagnostics and all admission/custody policies remain unchanged.
 - Fix five ShellCheck findings in runtime safeguards and host bootstrap without changing executable identity/mode checks, literal PHP snippets, refusal exits or private trap handling.
+
+
+- Promote the current compatibility QA baseline and default Docker image to
+  WordPress 7.1.2, retaining MCP Adapter 0.6.1 and all dependency digests.
+  Document the unchanged support floor and add a regression keeping baseline
+  metadata, the default image, the current matrix lane and readme header aligned.
+
+- Update PHPStan from 2.2.14 to 2.2.15 and remove only the now-unmatched sitemap offset baseline entry. Preserve the sitemap fallback, PHP 8.0 analysis target, PHPDoc certainty policy, and strict unmatched-ignore ratchet; all other dependency pins and baseline entries are unchanged.
 
 - Shorten the Unreleased upgrade notice to Plugin Check's 300-character limit while retaining its migration guidance. Record exact-tree schema package results with cleanup, memory-measurement and pending integration/floor caveats; preserve prior failure records. Documentation only; no runtime or version change.
 
