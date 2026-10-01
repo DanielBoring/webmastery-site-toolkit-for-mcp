@@ -14,6 +14,51 @@ Related strategy guides:
 
 ## QA checks
 
+### Opt-in read-only system observation on disposable CI hosts
+
+Disposable GitHub-hosted source, package and PHP-floor QA entries explicitly set
+`WSTM108_HOST_INSPECTION=system-readonly-v1`. Unset preserves native unprivileged
+reads; an unknown value refuses admission. Do not enable it on shared, live or
+self-hosted systems. Inspection does not provision fixtures, reset a stack,
+grant a lease or bypass any admission predicate.
+
+The controller, PHP and private capture remain nonroot. Verified absolute,
+root-owned, non-group/world-writable system tools alone run through
+`/usr/bin/sudo -n --user=root --`: a fixed root `/usr/bin/timeout` supervises
+`/usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C` and one fixed `/usr/bin/find -P`,
+`/usr/bin/stat` or `/usr/bin/head` read of the validated Docker PID's descriptors,
+mount namespace or mount table. Tools require a matching native ELF64
+little-endian Linux/System-V x86-64 or AArch64 header; only sudo may have set-ID
+bits. No candidate PHP, Python, shell or script is elevated. A fixed nonroot
+system timeout also bounds the sudo-entry transport.
+
+The positive PID/root hint, process/start identity, canonical root-owned socket,
+unique listening inode, descriptor ownership, namespace identity, equal complete
+mount tables and before/after identities remain mandatory. Missing tools, sudo
+denial, partial/over-limit bytes, stderr, nonzero exit, deadline expiry and races
+refuse without a success fallback. Stdin is closed and environments contain
+only fixed `PATH` and `LC_ALL`; the native env entry clears sudo-added variables.
+
+Private originals precede parsing. An exclusively reserved observation child
+uses the existing owned-child transition; helpers retain its handle and mode,
+while candidate child environments receive neither. Release checks the complete
+original inventory, identities, hashes, lengths, fixed argv and parsers.
+Incomplete or changed observations retain private evidence and block release.
+Public diagnostics expose only closed reasons, never raw process/filesystem data.
+
+One capture deadline starts before reservation/tool checks and covers streams,
+exit/EOF, persistence and identity completion. Refusal uses nonblocking PHP
+process-resource disposal, not a blocking reap or a signal to a possibly reused
+PID; fixed system timers remain intact. These deadlines do not certify
+root-child cleanup or hard preemption of synchronous filesystem/kernel I/O.
+Late completion cannot be accepted, but blocked storage operations can return
+after the deadline. Parser and nonprivileged transport adapters are not native
+sudo, Docker admission, custody, owned runtime or required-check acceptance.
+
+The additive exact-byte outer projection restores the reviewed current-main
+generation before its unchanged historical bridge. It does not regenerate any
+accepted ledger or change original dependency hash assertions.
+
 Full source/package QA requires a separately approved bare owned stack before
 fixture execution. Read-only admission does not provision or tear down that
 stack. The harness checks native admission before clearing artifacts or managed

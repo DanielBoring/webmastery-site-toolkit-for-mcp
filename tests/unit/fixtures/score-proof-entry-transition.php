@@ -19,11 +19,12 @@ final class Wstm167ScoreProofEntryTransition {
 	public static function verify_dependencies( callable $read ): void {
 		Wstm167CiDiagnosticTransition::verify_dependencies( $read );
 		foreach ( self::load()['files'] as $path => $binding ) {
-			$source = $read( $path );
+			$current = $read( $path );
+			$source = is_string( $current ) ? Wstm167ScopedHostObservationTransition::restore( $path, $current ) : $current;
 			if ( ! is_string( $source ) || ! hash_equals( $binding['current_raw_sha256'], hash( 'sha256', $source ) ) ) {
 				throw new RuntimeException( 'Score proof entry dependency current source drift: ' . $path );
 			}
-			self::restore( $path, $source );
+			self::restore( $path, $current );
 		}
 	}
 

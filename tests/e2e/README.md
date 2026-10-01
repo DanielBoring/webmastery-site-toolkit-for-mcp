@@ -16,6 +16,19 @@ Docker, provider, cleanup, original-ZIP or runtime acceptance.
 
 For the full repository QA posture, including static checks, unit tests, release checks, and GitHub Actions trigger policy, see [`docs/qa-strategy.md`](../../docs/qa-strategy.md).
 
+Disposable hosted authority entries set
+`WSTM108_HOST_INSPECTION=system-readonly-v1` for otherwise inaccessible native
+Docker-daemon proc observations. The controller/capture/PHP remain nonroot;
+only fixed verified system reads of the validated PID and their supervision
+are elevated. Unset retains native reads, unknown modes refuse, and this mode
+must not be enabled on shared/live hosts. Complete listener/fd/namespace/mount/
+start-identity checks, original retention, grants and cleanup ownership remain
+mandatory. Parser or transport adapters never substitute for actual sudo,
+source/floor/original-ZIP, provider, benchmark or custody evidence. See the
+[scoped inspection policy](../../docs/qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts),
+including cooperative filesystem deadlines and the absence of a root-child
+cleanup certificate.
+
 Synthetic stage-proof unit fixtures release their runner graphs in per-case
 teardown because PHPUnit retains completed test instances. Phase fixtures build
 only their catalog/schema witnesses, not a complete runner proof. The ordinary

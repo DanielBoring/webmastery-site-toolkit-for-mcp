@@ -88,6 +88,7 @@ jobs:
         env:
           COMPOSE_PROJECT_NAME: wstm-package-qa-${{ github.run_id }}-${{ github.run_attempt }}
           WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
+          WSTM108_HOST_INSPECTION: system-readonly-v1
         run: bash scripts/release-qa.sh
 
       - name: Show closed admission refusal diagnostic (not acceptance)

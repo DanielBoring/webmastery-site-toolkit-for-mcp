@@ -5,16 +5,70 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once dirname( __DIR__, 2 ) . '/scripts/untrusted-host-topology.php';
+require_once dirname( __DIR__, 2 ) . '/scripts/untrusted-host-observation.php';
 require_once __DIR__ . '/fixtures/selected-listener-transition.php';
 
 final class UntrustedHostTopologyTest extends TestCase {
+	private static function observer_literal_reasons( string $source ): array {
+		$tokens = array_values( array_filter( token_get_all( $source ),
+			static fn( $token ) => ! is_array( $token ) || ! in_array( $token[0], array( T_WHITESPACE, T_COMMENT, T_DOC_COMMENT ), true ) ) );
+		$reasons = array();
+		$pairs = array( ')' => '(', ']' => '[', '}' => '{' );
+		for ( $i = 0; $i + 3 < count( $tokens ); ++$i ) {
+			if ( ! is_array( $tokens[ $i ] ) || T_STRING !== $tokens[ $i ][0] || 'self' !== strtolower( $tokens[ $i ][1] )
+				|| ! is_array( $tokens[ $i + 1 ] ) || T_DOUBLE_COLON !== $tokens[ $i + 1 ][0]
+				|| ! is_array( $tokens[ $i + 2 ] ) || ! in_array( $tokens[ $i + 2 ][0], array( T_STRING, T_REQUIRE ), true )
+				|| 'require' !== strtolower( $tokens[ $i + 2 ][1] ) || '(' !== $tokens[ $i + 3 ] ) { continue; }
+			$stack = array( '(' ); $commas = 0; $argument = array();
+			for ( $j = $i + 4; $j < count( $tokens ); ++$j ) {
+				$token = $tokens[ $j ];
+				if ( is_string( $token ) && in_array( $token, array( '(', '[', '{' ), true ) ) {
+					$stack[] = $token;
+				} elseif ( is_string( $token ) && isset( $pairs[ $token ] ) ) {
+					self::assertSame( $pairs[ $token ], array_pop( $stack ), 'Observer guard delimiters must balance.' );
+					if ( array() === $stack ) { break; }
+				}
+				if ( 1 === count( $stack ) && ',' === $token ) { ++$commas; $argument = array(); continue; }
+				if ( $commas > 0 ) { $argument[] = $token; }
+			}
+			self::assertSame( array(), $stack, 'Observer guard call must be complete.' );
+			self::assertLessThanOrEqual( 1, $commas, 'Observer guard has a condition and optional literal reason only.' );
+			if ( 0 === $commas ) { continue; }
+			self::assertCount( 1, $argument );
+			self::assertIsArray( $argument[0] );
+			self::assertSame( T_CONSTANT_ENCAPSED_STRING, $argument[0][0] );
+			self::assertSame( 1, preg_match( "/^'([a-z][a-z-]+)'$/D", $argument[0][1], $match ) );
+			$reasons[] = $match[1];
+		}
+		return $reasons;
+	}
+
+	public function test_observer_reason_extraction_ignores_nested_arguments_and_noncode(): void {
+		$source = <<<'PHP'
+<?php
+self::require( is_resource( fopen( '/synthetic/not-opened', 'rb' ) ) );
+self::require( array( 'first', 'second' ) === array( 'first', 'second' ), 'actual-literal-reason' );
+self::require( [ 'first', 'second' ] === [ 'first', 'second' ], 'another-literal-reason' );
+// self::require( false, 'comment-only-reason' );
+$not_code = "self::require( false, 'quoted-only-reason' );";
+PHP;
+		self::assertSame( array( 'actual-literal-reason', 'another-literal-reason' ), self::observer_literal_reasons( $source ) );
+	}
+
 	public function test_refusal_allowlist_matches_every_existing_topology_guard(): void {
 		$source = file_get_contents( dirname( __DIR__, 2 ) . '/scripts/untrusted-host-topology.php' );
 		$source = Wstm167SelectedListenerTransition::restore( 'scripts/untrusted-host-topology.php', $source );
 		$source = substr( $source, strpos( $source, 'private static function path(' ) );
 		preg_match_all( "/'([a-z][a-z-]+)' \\);/", $source, $matches );
-		self::assertSame( Wstm108_HostTopology::REFUSAL_REASONS, $matches[1] );
+		self::assertSame( array_slice( Wstm108_HostTopology::REFUSAL_REASONS, 0, 36 ), $matches[1] );
 		self::assertCount( 36, array_unique( $matches[1] ) );
+		$observer = file_get_contents( dirname( __DIR__, 2 ) . '/scripts/untrusted-host-observation.php' );
+		$observer_reasons = array_values( array_unique( self::observer_literal_reasons( $observer ) ) );
+		self::assertNotEmpty( $observer_reasons );
+		self::assertContains( 'invalid-host-inspection-mode', $observer_reasons );
+		self::assertCount( 37, Wstm108_HostTopology::REFUSAL_REASONS );
+		self::assertSame( Wstm108_HostTopology::REFUSAL_REASONS, array_values( array_unique( Wstm108_HostTopology::REFUSAL_REASONS ) ) );
+		self::assertSame( Wstm108_HostTopology::REFUSAL_REASONS, array_values( array_unique( array_merge( $matches[1], $observer_reasons ) ) ) );
 		$require = new ReflectionMethod( Wstm108_HostTopology::class, 'require' );
 		$require->setAccessible( true );
 		foreach ( $matches[1] as $reason ) {
@@ -26,6 +80,33 @@ final class UntrustedHostTopologyTest extends TestCase {
 				self::assertSame( 'WSTM108 BLOCKED topology: ' . $reason, $error->getMessage() );
 				self::assertSame( array( 'phase' => 'topology', 'reason' => $reason ), Wstm108_HostTopology::failure_witness( $error ) );
 			}
+		}
+		$observer_require = new ReflectionMethod( Wstm108_HostObservation::class, 'require' );
+		$observer_require->setAccessible( true );
+		$default_reason = $observer_require->getParameters()[1]->getDefaultValue();
+		self::assertSame( 'unreadable-kernel-evidence', $default_reason );
+		foreach ( array_merge( $observer_reasons, array( $default_reason ) ) as $reason ) {
+			try {
+				$arguments = $reason === $default_reason ? array( false ) : array( false, $reason );
+				$observer_require->invokeArgs( null, $arguments );
+				self::fail( 'Observer-owned refusal must still throw.' );
+			} catch ( Wstm108_TopologyRefusal $error ) {
+				self::assertSame( 78, $error->getCode() );
+				self::assertSame( 'WSTM108 BLOCKED topology: ' . $reason, $error->getMessage() );
+				self::assertSame( array( 'phase' => 'topology', 'reason' => $reason ), Wstm108_HostTopology::failure_witness( $error ) );
+			}
+		}
+	}
+
+	public function test_observer_invalid_mode_keeps_exact_refusal_and_closed_witness(): void {
+		self::assertFalse( Wstm108_HostObservation::enabled( array() ) );
+		try {
+			Wstm108_HostObservation::enabled( array( 'WSTM108_HOST_INSPECTION' => 'invalid-observer-test-mode' ) );
+			self::fail( 'An invalid inspection mode must refuse at its actual observer guard.' );
+		} catch ( Wstm108_TopologyRefusal $error ) {
+			self::assertSame( 78, $error->getCode() );
+			self::assertSame( 'WSTM108 BLOCKED topology: invalid-host-inspection-mode', $error->getMessage() );
+			self::assertSame( array( 'phase' => 'topology', 'reason' => 'invalid-host-inspection-mode' ), Wstm108_HostTopology::failure_witness( $error ) );
 		}
 	}
 

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/untrusted-host-topology.php';
+require_once __DIR__ . '/untrusted-host-observation.php';
 require_once __DIR__ . '/untrusted-export.php';
 
 /** The controller retains originals and publication custody; children receive neither channel. */
@@ -64,6 +65,7 @@ final class Wstm108_HostController {
 	private array $failures = array();
 	private array $helper_captures = array();
 	private array $query_captures = array();
+	private array $observation_captures = array();
 	private int $first_failure = 0;
 	private ?array $publication = null;
 	private ?array $publication_channel = null;
@@ -83,6 +85,24 @@ final class Wstm108_HostController {
 		$this->identity = $identity;
 		$this->environment = $environment;
 		$this->verify();
+		if ( Wstm108_HostObservation::enabled( $environment ) ) {
+			self::require( posix_geteuid() > 0 && ! isset( $environment['WSTM108_HOST_OBSERVATION_CUSTODY'] ), 'inspection-custody-already-set-or-root-controller' );
+		}
+	}
+
+	private function reserve_observations(): void {
+		if ( ! Wstm108_HostObservation::enabled( $this->environment ) ) { return; }
+		$this->verify();
+		$directory = $this->directory . '/host-observations';
+		self::require( mkdir( $directory, 0700 ), 'exclusive-host-observation-reservation' );
+		$child = Wstm108_Files::directory( $directory );
+		$updated = Wstm108_Files::directory( $this->directory );
+		Wstm108_HostTopology::owned_child_transition( $this->identity, $updated, $child );
+		$this->identity = $updated;
+		$this->environment['WSTM108_HOST_OBSERVATION_CUSTODY'] = base64_encode( json_encode( array(
+			'directory' => $directory, 'identity' => Wstm108_HostTopology::stable_identity( $child ),
+		), JSON_THROW_ON_ERROR ) );
+		self::require( putenv( 'WSTM108_HOST_OBSERVATION_CUSTODY=' . $this->environment['WSTM108_HOST_OBSERVATION_CUSTODY'] ), 'inspection-custody-environment' );
 	}
 
 	private static function require( bool $condition, string $reason ): void {
@@ -436,6 +456,10 @@ final class Wstm108_HostController {
 		$this->verify_controller_streams();
 		self::require( 0 === $this->first_failure && array() === $this->failures, 'failed-producer-cannot-release' );
 		$names = array( '.', '..', 'controller.stderr.private', 'controller.stdout.private', 'export' );
+		if ( Wstm108_HostObservation::enabled( $this->environment ) ) {
+			$names[] = 'host-observations';
+			$this->observation_captures = Wstm108_HostObservation::retained( $this->environment, $this->observation_captures );
+		}
 		foreach ( $this->helper_captures as $name => $capture ) {
 			self::require( true === $capture['capture_complete'] && 0 === $capture['child_exit'], 'incomplete-producer-chain' );
 			$names[] = $name . '.intent.private.json';
@@ -494,6 +518,7 @@ final class Wstm108_HostController {
 		Wstm108_Export::run( $run );
 		$project = $this->environment['COMPOSE_PROJECT_NAME'];
 		// Until this returns, only nonsecret endpoint/mount admission is permitted.
+		$this->reserve_observations();
 		$this->begin_query_pass();
 		require_once __DIR__ . '/qa-runtime.php';
 		if ( WstmQaRuntime::floor( $this->environment ) ) { $this->environment['E2E_ARTIFACTS_DIR'] = $artifact_base; }

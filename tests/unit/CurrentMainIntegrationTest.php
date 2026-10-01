@@ -56,7 +56,7 @@ final class CurrentMainIntegrationTest extends TestCase {
 		foreach ( $map['files'] as $path => $binding ) {
 			self::assertSame( $binding['baseline_raw_sha256'], hash( 'sha256', Wstm167CurrentMainTransition::restore( $path, $this->read( $path ) ) ), $path );
 		}
-		foreach ( $map['dependencies'] as $path => $hash ) { self::assertSame( $hash, hash( 'sha256', $this->read( $path ) ), $path ); }
+		foreach ( $map['dependencies'] as $path => $hash ) { self::assertSame( $hash, hash( 'sha256', Wstm167ScopedHostObservationTransition::restore( $path, $this->read( $path ) ) ), $path ); }
 	}
 
 	public function test_missing_foreign_and_old_raw_sources_cannot_bypass_current_generation(): void {

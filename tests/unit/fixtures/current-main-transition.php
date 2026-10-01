@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/scoped-host-observation-transition.php';
+
 /** Exact current-main integration before the accepted selected-listener projection. */
 final class Wstm167CurrentMainTransition {
 	public const SEAL = '21ab59664f8a249323e9c94bbcf197965a3a42c562f6c271cc98b330a38007c7';
@@ -21,9 +23,13 @@ final class Wstm167CurrentMainTransition {
 	}
 
 	public static function verify_dependencies( callable $read ): void {
+		Wstm167ScopedHostObservationTransition::verify_dependencies( $read );
 		$map = self::load();
 		foreach ( $map['dependencies'] as $path => $hash ) {
 			$source = $read( $path );
+			if ( is_string( $source ) ) {
+				$source = Wstm167ScopedHostObservationTransition::restore( $path, $source );
+			}
 			if ( ! is_string( $source ) || ! hash_equals( $hash, hash( 'sha256', $source ) ) ) {
 				throw new RuntimeException( 'CI diagnostic dependency drift: ' . $path );
 			}
@@ -38,6 +44,7 @@ final class Wstm167CurrentMainTransition {
 	}
 
 	public static function restore( string $path, string $source, string $context = 'CI diagnostic current source drift' ): string {
+		$source = Wstm167ScopedHostObservationTransition::restore( $path, $source, $context );
 		$map = self::load();
 		if ( ! isset( $map['files'][ $path ] ) ) { return $source; }
 		$binding = $map['files'][ $path ];

@@ -151,6 +151,7 @@ jobs:
         id: qa
         env:
           WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
+          WSTM108_HOST_INSPECTION: system-readonly-v1
         run: bash scripts/e2e-test.sh contract
 
       - name: Show closed admission refusal diagnostic (not acceptance)
@@ -465,6 +466,7 @@ jobs:
         id: qa
         env:
           WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
+          WSTM108_HOST_INSPECTION: system-readonly-v1
         run: bash scripts/e2e-test.sh e2e
 
       - name: Show closed admission refusal diagnostic (not acceptance)

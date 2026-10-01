@@ -25,6 +25,22 @@ Primary risks for this plugin:
 
 ## Agent threat model
 
+### Scoped repository QA host observation
+
+Only separately approved disposable hosted CI selects
+`WSTM108_HOST_INSPECTION=system-readonly-v1`. The controller, capture and PHP
+remain nonroot; verified fixed system read/supervision primitives alone run
+through sudo against the validated Docker PID's descriptors, namespace and
+mount table. Candidate code is not elevated, no capabilities/permissions/mounts
+are changed, and namespace entry or container commands are not part of this
+boundary. See the [QA inspection policy](qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts)
+for clean environments, executable/target identity, complete observations,
+private originals, refusal/release rules and cooperative I/O limitations.
+Inspection cannot grant runtime or cleanup authority. Shared/live/self-hosted
+systems must not opt in. Keep every earlier proof seal unchanged through a
+reviewed outer source transition; native sudo and real runtime acceptance need
+separate evidence from parser/transport adapters.
+
 ### Administrator diagnostic minimization (3.0 development)
 
 Administrator access does not imply that database identifiers should be sent to a model provider. Database health reports omit the configured prefix and custom/plugin table names by default, exposing only core logical labels and response-local opaque custom labels. Core classification uses WordPress's physical mapping rather than suffix guessing, without expanding the current-prefix query scope. Raw identifiers require explicit boolean `include_table_names: true` and effective `manage_options` even for direct callbacks. This opt-in deliberately discloses environment fingerprints; clients should confirm that disclosure is needed rather than enabling it automatically. It never enables passwords, raw SQL errors, or filesystem paths. Opaque labels are not stable cross-response identities, and unchanged counts/sizes remain diagnostic information, not complete anonymization.

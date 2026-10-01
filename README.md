@@ -33,6 +33,13 @@ Production PHP uses PHPCS-enforced short `[]` array literals. The
 [syntax/provenance policy](docs/shared-helpers.md#array-syntax-and-historical-provenance)
 documents the minimal conversion and exact preservation of historical source proofs.
 
+Disposable hosted QA explicitly opts into read-only system observation when
+Docker-daemon proc evidence is inaccessible to the nonroot controller. Only
+fixed verified system read/supervision tools are elevated; candidate code,
+fixture authority and admission requirements are unchanged. Do not enable this
+mode on shared/live hosts. See the
+[inspection boundary and evidence limitations](docs/qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts).
+
 The current development QA baseline is **WordPress 7.1.2 with MCP Adapter
 0.6.1**. The default Docker image and compatibility metadata use that baseline;
 the declared WordPress 6.9 / PHP 8.0 plugin minimums are unchanged. See

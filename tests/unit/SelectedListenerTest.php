@@ -111,19 +111,25 @@ final class SelectedListenerTest extends TestCase {
 	public function test_peer_preserves_all_identity_descriptor_namespace_and_alias_guards(): void {
 		$source = $this->read( 'scripts/untrusted-host-topology.php' );
 		$before = Wstm167SelectedListenerTransition::restore( 'scripts/untrusted-host-topology.php', $source );
+		// Isolate the selected-listener change from the separately sealed observation transport.
+		$selected = Wstm167CurrentMainTransition::restore( 'scripts/untrusted-host-topology.php', $source );
 		self::assertSame( substr( $before, strpos( $before, '$descriptors = ' ) ),
-			substr( $source, strpos( $source, '$descriptors = ' ) ) );
+			substr( $selected, strpos( $selected, '$descriptors = ' ) ) );
 		$prefix = 'private static function peer('; $end = '$rows = array();';
 		self::assertSame( substr( $before, strpos( $before, $prefix ), strpos( $before, '$listener = array();' ) - strpos( $before, $prefix ) ),
-			substr( $source, strpos( $source, $prefix ), strpos( $source, $end ) - strpos( $source, $prefix ) ) );
+			substr( $selected, strpos( $selected, $prefix ), strpos( $selected, $end ) - strpos( $selected, $prefix ) ) );
 		self::assertStringContainsString( "self::read( '/proc/net/unix', 4194304 )", $source );
 		self::assertStringContainsString( "array_intersect( array( '/run/docker.sock', '/var/run/docker.sock' ), \$columns )", $source );
 		self::assertStringContainsString( 'realpath( reset( $aliases ) ) !== $socket', $source );
 		self::assertStringContainsString( '$listener = array( self::selected_listener( $rows ) );', $source );
 		preg_match_all( "/'([a-z][a-z-]+)' \\);/", substr( $source, strpos( $source, 'private static function path(' ) ), $matches );
+		preg_match_all( "/self::require\\([^;]*'([a-z][a-z-]+)'\\s*\\);/",
+			$this->read( 'scripts/untrusted-host-observation.php' ), $observation_matches );
+		$used_reasons = array_values( array_unique( array_merge( $matches[1], $observation_matches[1] ) ) );
 		$reasons = Wstm108_HostTopology::REFUSAL_REASONS;
-		sort( $matches[1] ); sort( $reasons );
-		self::assertSame( $reasons, $matches[1] );
+		self::assertCount( count( $reasons ), array_unique( $reasons ) );
+		sort( $used_reasons ); sort( $reasons );
+		self::assertSame( $reasons, $used_reasons );
 	}
 
 	public function test_additive_outer_chain_keeps_all_accepted_seals_and_workflows_exact(): void {
@@ -137,7 +143,7 @@ final class SelectedListenerTest extends TestCase {
 			self::assertSame( $binding['baseline_raw_sha256'], hash( 'sha256', Wstm167SelectedListenerTransition::restore( $path, $this->read( $path ) ) ), $path );
 		}
 		foreach ( $map['dependencies'] as $path => $hash ) {
-			self::assertSame( $hash, hash( 'sha256', $this->read( $path ) ), $path );
+			self::assertSame( $hash, hash( 'sha256', Wstm167CurrentMainTransition::restore( $path, $this->read( $path ) ) ), $path );
 		}
 	}
 

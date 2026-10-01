@@ -31,6 +31,7 @@ final class Wstm108_HostTopology {
 		'pid-hint-does-not-own-selected-listener', 'daemon-mount-namespace-differs', 'daemon-identity-changed-during-read',
 		'native-linux-prerequisite', 'nonlocal-endpoint', 'unrecognized-socket-alias', 'nonroot-or-nonsocket-endpoint',
 		'untrusted-pid-discovery-hint', 'daemon-mount-table-differs', 'peer-or-topology-changed-during-admission',
+		'invalid-host-inspection-mode',
 	);
 
 	public static function failure_witness( Throwable $error ): ?array {
@@ -211,6 +212,13 @@ final class Wstm108_HostTopology {
 			$rows[] = $columns;
 		}
 		$listener = array( self::selected_listener( $rows ) );
+		if ( Wstm108_HostObservation::enabled( getenv() ) ) {
+			$links = Wstm108_HostObservation::descriptors( Wstm108_HostObservation::read( 'descriptors', $pid ) );
+			$matched = array();
+			foreach ( $links as $descriptor => $link ) {
+				if ( 'socket:[' . $listener[0] . ']' === $link ) { $matched[] = (string) $descriptor; }
+			}
+		} else {
 		$descriptors = @scandir( $process . '/fd' );
 		self::require( is_array( $descriptors ) && count( $descriptors ) <= 8192, 'daemon-descriptors-inaccessible' );
 		$matched = array();
@@ -220,8 +228,11 @@ final class Wstm108_HostTopology {
 			self::require( is_string( $link ), 'daemon-descriptor-race-or-denial' );
 			if ( 'socket:[' . $listener[0] . ']' === $link ) { $matched[] = $descriptor; }
 		}
+		}
 		self::require( array() !== $matched, 'pid-hint-does-not-own-selected-listener' );
-		$namespace = self::stat( $process . '/ns/mnt' );
+		$namespace = Wstm108_HostObservation::enabled( getenv() )
+			? Wstm108_HostObservation::namespace_identity( Wstm108_HostObservation::read( 'namespace', $pid ) )
+			: self::stat( $process . '/ns/mnt' );
 		$self_namespace = self::stat( '/proc/self/ns/mnt' );
 		self::require( $namespace['dev'] === $self_namespace['dev'] && $namespace['ino'] === $self_namespace['ino'], 'daemon-mount-namespace-differs' );
 		self::require( $identity === self::stat( $process ), 'daemon-identity-changed-during-read' );
@@ -230,6 +241,9 @@ final class Wstm108_HostTopology {
 	}
 
 	public static function admit( string $endpoint ): array {
+		require_once __DIR__ . '/untrusted-host-observation.php';
+		Wstm108_HostObservation::enabled( getenv() );
+		Wstm108_HostObservation::begin_pass();
 		self::require( 'Linux' === PHP_OS_FAMILY && function_exists( 'posix_geteuid' ), 'native-linux-prerequisite' );
 		self::require( in_array( $endpoint, array( 'unix:///run/docker.sock', 'unix:///var/run/docker.sock' ), true ), 'nonlocal-endpoint' );
 		$socket = realpath( substr( $endpoint, 7 ) );
@@ -240,12 +254,18 @@ final class Wstm108_HostTopology {
 		self::require( 0 === $hint['identity']['uid'] && 0 === ( $hint['identity']['mode'] & 0022 )
 			&& 1 === preg_match( '/^[1-9][0-9]{0,9}\n?$/D', $hint['bytes'] ), 'untrusted-pid-discovery-hint' );
 		$pid = (int) trim( $hint['bytes'] );
+		self::require( $pid > 0 && $pid <= 2147483647, 'untrusted-pid-discovery-hint' );
 		$before = self::peer( $socket, $pid );
 		$mountinfo = self::read( '/proc/self/mountinfo', 4194304 );
-		self::require( $mountinfo === self::read( '/proc/' . $pid . '/mountinfo', 4194304 ), 'daemon-mount-table-differs' );
+		$daemon_mountinfo = Wstm108_HostObservation::enabled( getenv() )
+			? Wstm108_HostObservation::read( 'mountinfo', $pid ) : self::read( '/proc/' . $pid . '/mountinfo', 4194304 );
+		self::require( $mountinfo === $daemon_mountinfo, 'daemon-mount-table-differs' );
 		$mounts = self::mounts( $mountinfo );
 		self::require( $before === self::peer( $socket, $pid ) && $socket_before === self::stat( $socket )
 			&& $mountinfo === self::read( '/proc/self/mountinfo', 4194304 ), 'peer-or-topology-changed-during-admission' );
+		if ( Wstm108_HostObservation::enabled( getenv() ) ) {
+			self::require( $daemon_mountinfo === Wstm108_HostObservation::read( 'mountinfo', $pid ), 'peer-or-topology-changed-during-admission' );
+		}
 		Wstm108_Files::assert_file( '/run/docker.pid', $hint );
 		return array( 'endpoint' => $endpoint, 'socket_identity' => $socket_before, 'peer' => $before,
 			'mountinfo_sha256' => hash( 'sha256', $mountinfo ), 'mounts' => $mounts );

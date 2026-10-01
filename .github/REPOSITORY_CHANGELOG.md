@@ -6,6 +6,17 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add explicitly opted-in read-only system observation for inaccessible
+  Docker-daemon proc evidence on approved disposable CI hosts. Controller,
+  capture and PHP remain nonroot; only verified fixed system reads and
+  supervision are elevated. Preserve complete native admission, bounded
+  original retention, grants and release checks through an exact outer
+  source transition. Native/runtime/CI acceptance remains separate from
+  parser or nonprivileged adapter results; filesystem deadlines are
+  cooperative and do not certify root-child cleanup. Explicit Git attributes
+  preserve all six added source-bound files without incidental newline
+  conversion.
+
 - Integrate approved current-main compatibility documentation additively with the
   existing extraction, controller-component and provenance guidance. Retain the
   exact WordPress 7.1.2 / MCP Adapter 0.6.1 defaults and alignment regression

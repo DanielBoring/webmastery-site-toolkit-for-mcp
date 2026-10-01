@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/fixtures/legacy-runtime-transition.php';
 require_once __DIR__ . '/fixtures/score-proof-entry-transition.php';
+require_once __DIR__ . '/fixtures/scoped-host-observation-transition.php';
 
 final class AdmissionNativeFixtureTransitionTest extends TestCase {
 	private const SEAL = '08cc480bd501c8a190699ef5a114fffd694332b4485bbc595ed13e0b87a8e99e';
@@ -36,6 +37,7 @@ final class AdmissionNativeFixtureTransitionTest extends TestCase {
 		$root = dirname( __DIR__, 2 );
 		foreach ( $map['files'] as $path => $binding ) {
 			$current = file_get_contents( $root . '/' . $path );
+			$current = Wstm167ScopedHostObservationTransition::restore( $path, $current );
 			self::assertSame( $binding['baseline_raw_sha256'], hash( 'sha256', self::restore( $current, $binding ) ) );
 			try {
 				self::restore( $current . "\nforeign", $binding );

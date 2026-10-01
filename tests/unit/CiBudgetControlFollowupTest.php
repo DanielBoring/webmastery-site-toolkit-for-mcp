@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/fixtures/ci-diagnostic-transition.php';
+require_once __DIR__ . '/fixtures/scoped-host-observation-transition.php';
 
 final class CiBudgetControlFollowupTest extends TestCase {
 	private function read( string $path ): string {
@@ -32,7 +33,10 @@ final class CiBudgetControlFollowupTest extends TestCase {
 		$current = $this->read( $path );
 		$override = '        working-directory: ${{ github.workspace }}/candidate-floor-tools' . "\n";
 		self::assertSame( 1, substr_count( $current, $override ) );
-		self::assertSame( str_replace( $override, '', $current ), Wstm167CiBudgetControlTransition::restore( $path, $current ) );
+		self::assertSame( 4, substr_count( $current, "          WSTM108_HOST_INSPECTION: system-readonly-v1\n" ) );
+		self::assertSame( 4, substr_count( $current, 'WSTM108_HOST_INSPECTION:' ) );
+		$before_observation = Wstm167ScopedHostObservationTransition::restore( $path, $current );
+		self::assertSame( str_replace( $override, '', $before_observation ), Wstm167CiBudgetControlTransition::restore( $path, $current ) );
 		self::assertSame( 1, preg_match( '/^  candidate-floor:\n(.*?)(?=^  [a-z-]+:|\z)/ms', $current, $job ) );
 		self::assertStringContainsString( "        working-directory: candidate\n", $job[1] );
 		self::assertStringContainsString( 'ref: ${{ github.workflow_sha }}' . "\n          path: candidate-floor-tools", $job[1] );

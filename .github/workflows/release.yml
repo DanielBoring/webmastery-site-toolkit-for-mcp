@@ -90,6 +90,7 @@ jobs:
           RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
           REQUIRE_CURRENT_PLUGIN_CHECK: '1'
           WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
+          WSTM108_HOST_INSPECTION: system-readonly-v1
         run: bash scripts/release-qa.sh "$RELEASE_VERSION"
 
       - name: Show closed admission refusal diagnostic (not acceptance)

@@ -42,6 +42,7 @@ final class ScoreProofEntryTransitionTest extends TestCase {
 	}
 
 	public function test_omitted_reverted_and_foreign_consumers_cannot_bypass_dependency_checks(): void {
+		$outer = Wstm167ScopedHostObservationTransition::load();
 		foreach ( Wstm167ScoreProofEntryTransition::load()['files'] as $path => $binding ) {
 			$current = $this->read( $path );
 			$before = Wstm167ScoreProofEntryTransition::restore( $path, $current );
@@ -50,7 +51,8 @@ final class ScoreProofEntryTransitionTest extends TestCase {
 					Wstm167ScoreProofEntryTransition::restore( $path, $foreign );
 					self::fail( 'Accepted unreviewed entry source: ' . $path );
 				} catch ( RuntimeException $error ) {
-					self::assertSame( 'Score proof entry current source drift: ' . $path, $error->getMessage() );
+					$context = isset( $outer['files'][ $path ] ) ? 'CI diagnostic current source drift: ' : 'Score proof entry current source drift: ';
+					self::assertSame( $context . $path, $error->getMessage() );
 				}
 			}
 			foreach ( [ false, '', $current . "\nforeign" ] as $foreign ) {
@@ -58,7 +60,13 @@ final class ScoreProofEntryTransitionTest extends TestCase {
 					Wstm167ScoreProofEntryTransition::verify_dependencies( fn( $entry ) => $entry === $path ? $foreign : $this->read( $entry ) );
 					self::fail( 'Accepted omitted/foreign entry dependency.' );
 				} catch ( RuntimeException $error ) {
-					self::assertSame( 'Score proof entry dependency current source drift: ' . $path, $error->getMessage() );
+					$context = 'Score proof entry dependency current source drift: ';
+					if ( isset( $outer['files'][ $path ] ) ) {
+						$context = is_string( $foreign ) ? 'CI diagnostic current source drift: ' : 'CI diagnostic dependency drift: ';
+					} elseif ( isset( $outer['dependencies'][ $path ] ) ) {
+						$context = 'CI diagnostic dependency drift: ';
+					}
+					self::assertSame( $context . $path, $error->getMessage() );
 				}
 			}
 		}

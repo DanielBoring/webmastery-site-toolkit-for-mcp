@@ -27,6 +27,18 @@ See the [Software Development Lifecycle](sdlc-overview.md) for where CI/CD conne
 
 ## Pull request policy
 
+### Scoped system observation on disposable hosts
+
+Approved disposable GitHub-hosted authority entries explicitly select
+`WSTM108_HOST_INSPECTION=system-readonly-v1`; shared/live/self-hosted runners
+must not select it. The [QA strategy](qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts)
+defines the fixed sudo/system-read boundary, native executable/target checks,
+private originals and supervision limitations. Controller/capture/PHP remain
+nonroot, candidate code is never elevated, and inspection changes no grants,
+fixtures, permissions, namespaces or mounts. All actual required runtime gates
+remain mandatory; synthetic adapters and older CI cannot substitute. Preserve
+the reviewed exact-byte outer projection ahead of every frozen seal.
+
 ### Selected Unix listener classification
 
 Exact-b5 PR-event run `36817024600` reported closed refusals:

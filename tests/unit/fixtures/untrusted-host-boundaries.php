@@ -171,6 +171,42 @@ PHP;
 			'mountinfo_sha256' => hash( 'sha256', $mountinfo ), 'mounts' => $mounts );
 	}
 PHP;
+		$scoped_original = <<<'PHP'
+	public static function admit( string $endpoint ): array {
+		require_once __DIR__ . '/untrusted-host-observation.php';
+		Wstm108_HostObservation::enabled( getenv() );
+		Wstm108_HostObservation::begin_pass();
+		self::require( 'Linux' === PHP_OS_FAMILY && function_exists( 'posix_geteuid' ), 'native-linux-prerequisite' );
+		self::require( in_array( $endpoint, array( 'unix:///run/docker.sock', 'unix:///var/run/docker.sock' ), true ), 'nonlocal-endpoint' );
+		$socket = realpath( substr( $endpoint, 7 ) );
+		self::require( '/run/docker.sock' === $socket, 'unrecognized-socket-alias' );
+		$socket_before = self::stat( $socket );
+		self::require( 0140000 === ( $socket_before['mode'] & 0170000 ) && 0 === $socket_before['uid'], 'nonroot-or-nonsocket-endpoint' );
+		$hint = Wstm108_Files::file( '/run/docker.pid' );
+		self::require( 0 === $hint['identity']['uid'] && 0 === ( $hint['identity']['mode'] & 0022 )
+			&& 1 === preg_match( '/^[1-9][0-9]{0,9}\n?$/D', $hint['bytes'] ), 'untrusted-pid-discovery-hint' );
+		$pid = (int) trim( $hint['bytes'] );
+		self::require( $pid > 0 && $pid <= 2147483647, 'untrusted-pid-discovery-hint' );
+		$before = self::peer( $socket, $pid );
+		$mountinfo = self::read( '/proc/self/mountinfo', 4194304 );
+		$daemon_mountinfo = Wstm108_HostObservation::enabled( getenv() )
+			? Wstm108_HostObservation::read( 'mountinfo', $pid ) : self::read( '/proc/' . $pid . '/mountinfo', 4194304 );
+		self::require( $mountinfo === $daemon_mountinfo, 'daemon-mount-table-differs' );
+		$mounts = self::mounts( $mountinfo );
+		self::require( $before === self::peer( $socket, $pid ) && $socket_before === self::stat( $socket )
+			&& $mountinfo === self::read( '/proc/self/mountinfo', 4194304 ), 'peer-or-topology-changed-during-admission' );
+		if ( Wstm108_HostObservation::enabled( getenv() ) ) {
+			self::require( $daemon_mountinfo === Wstm108_HostObservation::read( 'mountinfo', $pid ), 'peer-or-topology-changed-during-admission' );
+		}
+		Wstm108_Files::assert_file( '/run/docker.pid', $hint );
+		return array( 'endpoint' => $endpoint, 'socket_identity' => $socket_before, 'peer' => $before,
+			'mountinfo_sha256' => hash( 'sha256', $mountinfo ), 'mounts' => $mounts );
+	}
+PHP;
+		$normalized_source = str_replace( "\r\n", "\n", $source );
+		self::require( 1 === substr_count( $normalized_source, $original ) + substr_count( $normalized_source, $scoped_original ),
+			'exact non-noop source substitution must match once' );
+		$original = 1 === substr_count( $normalized_source, $scoped_original ) ? $scoped_original : $original;
 		$mock = <<<'PHP'
 	public static function admit( string $endpoint ): array {
 		if ('1' !== getenv('WSTM108_MOCK_ONLY') || 'Linux' !== PHP_OS_FAMILY || ! function_exists('posix_geteuid')) {
@@ -350,7 +386,7 @@ SH;
 			$start = strpos( $source, 'final class Wstm108_HostController' );
 			$end = strpos( $source, "\nif ( realpath( ", $start );
 			self::require( false !== $start && false !== $end, 'bounded original controller class' );
-			eval( 'namespace Wstm108DescriptorSyncFault; use \Wstm108_Files; use \Wstm108_HostTopology; use \Wstm108_Export; use \RuntimeException; use \Throwable;
+			eval( 'namespace Wstm108DescriptorSyncFault; use \Wstm108_Files; use \Wstm108_HostTopology; use \Wstm108_HostObservation; use \Wstm108_Export; use \RuntimeException; use \Throwable;
 function fsync($handle) {
 	if ("php://fd/3" === (stream_get_meta_data($handle)["uri"] ?? "")) { return false; }
 	return \fsync($handle);
@@ -508,7 +544,7 @@ function fsync($handle) {
 		$start = strpos( $source, 'final class Wstm108_HostController' );
 		$end = strpos( $source, "\nif ( realpath( ", $start );
 		self::require( false !== $start && false !== $end, 'bounded controller class for single syscall injection' );
-		eval( 'namespace Wstm108ControllerSyncFault; use \Wstm108_Files; use \Wstm108_HostTopology; use \Wstm108_Export; use \RuntimeException; use \Throwable;
+		eval( 'namespace Wstm108ControllerSyncFault; use \Wstm108_Files; use \Wstm108_HostTopology; use \Wstm108_HostObservation; use \Wstm108_Export; use \RuntimeException; use \Throwable;
 function fsync($handle) {
 	$uri = stream_get_meta_data($handle)["uri"] ?? "";
 	if (substr($uri, -15) === ".stdout.private") { return false; }
