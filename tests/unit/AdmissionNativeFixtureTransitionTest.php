@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/fixtures/legacy-runtime-transition.php';
+require_once __DIR__ . '/fixtures/score-proof-entry-transition.php';
 
 final class AdmissionNativeFixtureTransitionTest extends TestCase {
 	private const SEAL = '08cc480bd501c8a190699ef5a114fffd694332b4485bbc595ed13e0b87a8e99e';
@@ -49,6 +50,7 @@ final class AdmissionNativeFixtureTransitionTest extends TestCase {
 		}
 		foreach ( $map['frozen_files'] as $path => $hash ) {
 			$current = file_get_contents( $root . '/' . $path );
+			$current = Wstm167ScoreProofEntryTransition::restore( $path, $current );
 			self::assertSame( $hash, hash( 'sha256', Wstm166LegacyRuntimeTransition::restore( $path, $current ) ) );
 		}
 	}

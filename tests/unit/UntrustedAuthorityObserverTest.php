@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/fixtures/score-proof-entry-transition.php';
+
 final class UntrustedAuthorityObserverTest extends TestCase {
 	private const SEAL = '88ff7a6b1d42d7839c793aa481b9099dd4631a49eabf39aa87100600b96fef58';
 
@@ -49,7 +51,8 @@ final class UntrustedAuthorityObserverTest extends TestCase {
 			}
 		}
 		foreach ( $map['frozen_files'] as $path => $hash ) {
-			self::assertSame( $hash, hash_file( 'sha256', dirname( __DIR__, 2 ) . '/' . $path ), $path );
+			$current = file_get_contents( dirname( __DIR__, 2 ) . '/' . $path );
+			self::assertSame( $hash, hash( 'sha256', Wstm167ScoreProofEntryTransition::restore( $path, $current ) ), $path );
 		}
 	}
 

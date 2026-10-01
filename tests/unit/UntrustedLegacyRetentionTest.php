@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/fixtures/untrusted-legacy-retention.php';
 require_once __DIR__ . '/fixtures/legacy-runtime-transition.php';
+require_once __DIR__ . '/fixtures/score-proof-entry-transition.php';
 
 final class UntrustedLegacyRetentionTest extends TestCase {
 	private function source( string $path ): string {
@@ -61,7 +62,7 @@ final class UntrustedLegacyRetentionTest extends TestCase {
 		$map = Wstm166LegacyRuntimeTransition::load();
 		self::assertCount( 3, $map['files'] );
 		foreach ( $map['files'] as $path => $binding ) {
-			$source = $this->source( $path );
+			$source = Wstm167ScoreProofEntryTransition::restore( $path, $this->source( $path ) );
 			self::assertSame( $binding['baseline_raw_sha256'], hash( 'sha256', Wstm166LegacyRuntimeTransition::restore( $path, $source ) ) );
 			try {
 				Wstm166LegacyRuntimeTransition::restore( $path, $source . "\nforeign" );
@@ -77,7 +78,7 @@ final class UntrustedLegacyRetentionTest extends TestCase {
 			} catch ( RuntimeException $error ) { self::assertSame( 'Legacy runtime reverse hunk mismatch.', $error->getMessage() ); }
 		}
 		foreach ( $map['frozen_files'] as $path => $hash ) {
-			self::assertSame( $hash, hash( 'sha256', $this->source( $path ) ) );
+			self::assertSame( $hash, hash( 'sha256', Wstm167ScoreProofEntryTransition::restore( $path, $this->source( $path ) ) ) );
 		}
 	}
 
