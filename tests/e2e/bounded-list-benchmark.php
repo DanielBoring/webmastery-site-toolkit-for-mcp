@@ -109,7 +109,7 @@ function wstm121_lock( string $path, int $mode ) {
 function wstm121_sources(): array {
 	$files = array_merge(
 		glob( dirname( __DIR__, 2 ) . '/includes/*.php' ),
-		array( dirname( __DIR__, 2 ) . '/webmastery-site-toolkit-for-mcp.php', __FILE__, __DIR__ . '/bounded-list-assertions.php', __DIR__ . '/bounded-list-plan.php', __DIR__ . '/bounded-list-verifier.php', __DIR__ . '/bounded-list-controller.py' )
+		array( dirname( __DIR__, 2 ) . '/webmastery-site-toolkit-for-mcp.php', __FILE__, __DIR__ . '/bounded-list-assertions.php', __DIR__ . '/bounded-list-plan.php', __DIR__ . '/bounded-list-verifier.php', __DIR__ . '/bounded-list-controller.py', __DIR__ . '/bounded-list-recovery.py' )
 	);
 	$hashes = array();
 	foreach ( $files as $file ) {
@@ -484,7 +484,7 @@ function wstm121_window_faults( array $state, string $directory ): void {
 	}
 }
 
-function wstm121_cleanup_readback( array $state, string $directory ): void {
+function wstm121_cleanup_readback( array $state, string $directory, ?string $output = null ): void {
 	global $wpdb;
 	$checks = array(
 		'posts' => $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_content_filtered=%s", $state['token'] ),
@@ -500,7 +500,7 @@ function wstm121_cleanup_readback( array $state, string $directory ): void {
 		$remaining[ $name ] = (int) $count;
 	}
 	$snapshot = wstm121_snapshot();
-	wstm121_json_write( $directory . '/cleanup-readback.json', array( 'remaining' => $remaining, 'snapshot' => $snapshot ) );
+	wstm121_json_write( ( $output ?? $directory ) . '/cleanup-readback.json', array( 'remaining' => $remaining, 'snapshot' => $snapshot ) );
 	wstm121_require( array_fill_keys( array_keys( $checks ), 0 ) === $remaining, 'Owned fixture resources remain after cleanup.' );
 	wstm121_require( $snapshot === wstm121_json_read( $directory . '/setup-before.json' ), 'Cleanup did not restore the pre-seed persisted state.' );
 }
@@ -791,13 +791,22 @@ function wstm121_main( array $argv ): int {
 		$state = wstm121_json_read( $directory . '/state.json' );
 		wstm121_require( $state['namespace'] === $namespace, 'State namespace mismatch.' );
 		wstm121_require( $state['sources'] === wstm121_sources(), 'Source changed during immutable benchmark.' );
+		$recovery = (string) getenv( 'WSTM_BOUNDED_RECOVERY_OUTPUT' );
+		$output = $directory;
+		if ( '' !== $recovery ) {
+			wstm121_require( in_array( $mode, array( 'cleanup', 'cleanup-readback' ), true ), 'Recovery may only clean up and read back.' );
+			$output = realpath( $recovery );
+			wstm121_require( false !== $output && ! is_link( $recovery ) && dirname( $output ) === realpath( $controller )
+				&& 1 === preg_match( '/\\Arecovery-[0-9]+\\z/', basename( $output ) ), 'Recovery output is outside this controller.' );
+			wstm121_require( ! file_exists( $output . '/' . $mode . '.json' ) && ! file_exists( $output . '/' . $mode . '.json.pending' ), 'Recovery output collision.' );
+		}
 		if ( 'cleanup' === $mode ) {
 			wstm121_cleanup( $state );
-			wstm121_json_write( $directory . '/cleanup.json', array( 'passed' => true ) );
+			wstm121_json_write( $output . '/cleanup.json', array( 'passed' => true ) );
 			return 0;
 		}
 		if ( 'cleanup-readback' === $mode ) {
-			wstm121_cleanup_readback( $state, $directory );
+			wstm121_cleanup_readback( $state, $directory, $output );
 			return 0;
 		}
 		wstm121_control( $state );

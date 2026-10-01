@@ -14,6 +14,29 @@ Related strategy guides:
 
 ## QA checks
 
+Full source/package QA requires a separately approved bare owned stack before
+fixture execution. Read-only admission does not provision or tear down that
+stack. The harness checks native admission before clearing artifacts or managed
+reset, then checks the changed inventory again before installing fixtures or
+arming their cleanup. Contract-only lifecycle behavior remains separate.
+
+Native discovery and original floor selection use the existing Linux pidfd
+supervisor: ten seconds per query, at most 64 queries/120 seconds per discovery
+pass, and four MiB per original stream. Captures and failures remain private;
+closed diagnostics never publish exception text or originals. Filesystem
+verification is cooperative, not a hard storage-I/O deadline. The floor
+selector preserves original config/hash and conflicting inputs through the
+bootstrap. Source-only floor selection is incompatible with original-ZIP
+package QA, including offline package mode; its early refusal is captured
+before any build/extraction. Successful selection never substitutes for native
+admission, fixture authority, cleanup leases, custody or publication approval.
+
+The synthetic native-authority exception observer disables all observers before
+attempting its closed location record. A failed writer reports once and rethrows
+the original Throwable into PHP's default fatal handler, retaining the native
+255 exit and original private trace rather than delegating into another observer.
+This test-only behavior does not change production diagnostic channels.
+
 | GitHub Actions check | Command | What it proves | When it should run |
 | --- | --- | --- | --- |
 | 1 - Static QA | `composer qa:static` | PHP files parse, WordPress Coding Standards pass, PHPStan level 5 passes against reviewed baseline debt with working regression/ratchet guards, Composer dependencies have no known locked advisories, the E2E manifest is structurally valid, security-sensitive QA policy checks pass, and the diff has no whitespace errors. | Every PR and every push to `main`. |
@@ -61,6 +84,8 @@ The initial reviewed baseline contains 35 diagnostics in 21 entries across nine 
 | Revision error check and sitemap offset | 2 | One impossible-type diagnostic and one redundant null-coalescing diagnostic; assess separately before simplifying defensive code. |
 
 A green run means no diagnostics beyond that reviewed debt, not that these findings are fixed or that all mixed input/output types are sound. The baseline matches counts per message/identifier/file, not line or expression identity: replacing a removed error with the same error elsewhere in the same file can evade the count ratchet and still needs human diff review. This tooling change does not validate ability schemas, enums, output contracts, or runtime permissions.
+
+The PHPStan 2.2.15 update removes the now-unmatched sitemap offset entry. With `treatPhpDocTypesAsCertain: false`, the updated regex output inference no longer reports the null-coalescing fallback as redundant. The source fallback is unchanged; this is a baseline compatibility adjustment, not a runtime fix or proof that the sitemap debt was resolved.
 
 ### Reducing debt
 
@@ -258,7 +283,14 @@ At the September 17, 2026 verification, `main` at `3dae8aa` pinned MCP Adapter 0
 
 ### Runtime coverage limitation
 
-The advertised plugin minimum remains PHP 8.0. Syntax and unit tests exercise that version, but the supported-floor WordPress Docker lane uses PHP 8.1. This is a documented integration-coverage gap, not authorization to raise the plugin minimum or claim PHP 8.0 WordPress integration was tested. Add a maintained PHP 8.0 integration fixture or make a separate support-policy decision before changing that claim.
+The advertised plugin minimum remains PHP 8.0. Syntax and unit tests exercise that version, but the `wp69-php81-compatibility` WordPress Docker lane uses PHP 8.1 and is not actual PHP 8.0 floor proof. The candidate verifier defaults to strict `php80-floor`; the hosted lane explicitly uses strict `php81-compatibility` and reports the remaining minimum-runtime requirement. Proof-tool hosts requiring `fsync` need PHP 8.1+, independently of the plugin minimum. This is an integration-coverage gap, not authorization to raise the minimum, weaken evidence checks or invent an unsupported Docker tag. Add a maintained genuine PHP 8.0 WordPress integration fixture with separately supported proof hosts before claiming that floor.
+
+The exact-candidate job uses the sibling jobs' pinned PHP 8.4/POSIX proof host
+and canonical interpreter binding independently of the WordPress image. Its
+full E2E step supplies `runner.temp` to the existing authority bootstrap, which
+still requires a canonical owned root, exclusive private reservation and actual
+topology/custody admission. Wiring or synthetic checks do not establish those
+runtime prerequisites or the separate PHP 8.0 floor.
 
 PHPCompatibilityWP's available stable rules depend on the older PHPCompatibility engine. Installing those rules alone does not establish PHP 8.4 compatibility. Runtime evidence remains necessary; a future compatibility-sniff dependency must be reviewed for its actual supported language versions.
 

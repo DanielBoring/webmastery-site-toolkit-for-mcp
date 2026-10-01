@@ -25,7 +25,7 @@ final class BoundedMarkerManifestTest extends TestCase {
 		$before = BoundedManifestProjection::before_markers( $manifest );
 		self::assertCount( 601, $before );
 		$changes = 0;
-		foreach ( $manifest as $index => $case ) {
+		foreach ( Wstm108_Bounded_Manifest_Transition::bounded( $manifest ) as $index => $case ) {
 			$expected = json_decode( self::typed( $case ), false, 512, JSON_THROW_ON_ERROR );
 			if ( in_array( $case->label, self::LABELS, true ) ) {
 				unset( $expected->assert_values->{self::PATH} );

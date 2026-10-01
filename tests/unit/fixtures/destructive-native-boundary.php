@@ -8,6 +8,8 @@ use Webmastery_MCP_Response;
 
 require_once dirname( __DIR__, 3 ) . '/includes/class-input.php';
 require_once dirname( __DIR__, 3 ) . '/includes/class-media.php';
+require_once __DIR__ . '/shared-helper-loader.php';
+\wstm_test_load_shared_helpers( __NAMESPACE__ );
 
 /**
  * Unmodified production method bodies with namespace-local boundary spies.
@@ -33,8 +35,8 @@ final class Probe {
 			'post_tag' => array( 52 => (object) array( 'term_id' => 52, 'name' => 'Retained tag' ) ),
 		);
 		foreach ( array(
-			array( Webmastery_MCP_Posts::class, 'register_bulk_trash_posts', array() ),
-			array( Webmastery_MCP_Posts::class, 'register_bulk_publish_posts', array() ),
+			array( Webmastery_MCP_Bulk_Posts::class, 'register_bulk_trash_posts', array() ),
+			array( Webmastery_MCP_Bulk_Posts::class, 'register_bulk_publish_posts', array() ),
 			array( Webmastery_MCP_Media::class, 'register_delete', array() ),
 			array( Webmastery_MCP_Taxonomy::class, 'register_delete', array( 'category' ) ),
 			array( Webmastery_MCP_Taxonomy::class, 'register_delete', array( 'post_tag' ) ),
@@ -55,7 +57,7 @@ final class Probe {
 	}
 }
 
-foreach ( array( 'permissions', 'posts', 'media', 'taxonomy' ) as $class ) {
+foreach ( array( 'posts', 'media', 'taxonomy' ) as $class ) {
 	$source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-' . $class . '.php' );
 	eval( 'namespace Wstm126Destructive; use \Closure; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Untrusted; use \Webmastery_MCP_Post_Parent; use \Webmastery_MCP_Post_Scheduling; ' . substr( $source, 5 ) );
 }

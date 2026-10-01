@@ -323,9 +323,29 @@ def validate_environment(spec):
 
 
 def execute(spec):
+    import fcntl
+
+    started = time.monotonic_ns()
+    require(sys.platform.startswith("linux") and sys.version_info >= (3, 11)
+            and hasattr(os, "pidfd_open") and hasattr(os, "P_PIDFD"),
+            "Linux/Python 3.11 pidfd support is required before creating artifacts.")
+    probe = os.pidfd_open(os.getpid())
+    os.close(probe)
+    # Keep a namespace-level lock for the entire controller, including gaps
+    # between PHP phases. PHP still holds its narrower run/worker locks.
+    _, _, _, artifact_root = validate_environment(spec)
+    control = artifact_root / (spec["namespace"] + ".controller")
+    require(not control.exists() and not (artifact_root / spec["namespace"]).exists(),
+            "Namespace/evidence collision.")
+    control.mkdir(mode=0o700)
+    with (control / "invocation.lock").open("xb") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return execute_owned(spec, control, started)
+
+
+def execute_owned(spec, control, started):
     global CONTROLLER_WRITTEN
     CONTROLLER_WRITTEN = 0
-    started = time.monotonic_ns()
     hard_end = started + NATIVE_SECONDS * 10**9
     require(sys.version_info >= (3, 11) and sys.platform.startswith("linux")
             and hasattr(os, "pidfd_open") and hasattr(os, "P_PIDFD"),
@@ -337,8 +357,7 @@ def execute(spec):
     root = Path(__file__).resolve().parents[2]
     evidence = artifact_root / spec["namespace"]
     control = artifact_root / (spec["namespace"] + ".controller")
-    require(not evidence.exists() and not control.exists(), "Namespace/evidence collision.")
-    control.mkdir(mode=0o700)
+    require(not evidence.exists(), "Namespace/evidence collision.")
     publish(control / "environment.json", spec)
     for name in ("storage_receipt", "private_durability_receipt"):
         retain_receipt(spec[name], control / (name + ".original.json"))

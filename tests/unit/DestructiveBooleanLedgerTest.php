@@ -7,6 +7,8 @@ use PHPUnit\Framework\TestCase;
 require_once __DIR__ . '/fixtures/bounded-manifest-projection.php';
 require_once __DIR__ . '/fixtures/runtime-calibration.php';
 
+require_once __DIR__ . '/fixtures/untrusted-manifest-projection.php';
+
 final class DestructiveBooleanLedgerTest extends TestCase {
 	private static function fingerprint( array $cases, bool $without_oracles = false ): string {
 		$copy = json_decode( json_encode( $cases, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION ), false, 512, JSON_THROW_ON_ERROR );

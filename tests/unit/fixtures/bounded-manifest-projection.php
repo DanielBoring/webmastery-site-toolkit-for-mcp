@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\Assert;
 
 require_once __DIR__ . '/schema-integration-ledger.php';
+require_once __DIR__ . '/untrusted-bounded-manifest-transition.php';
 
 final class BoundedManifestProjection {
 	private static function read( string $path ) {
@@ -75,6 +76,7 @@ final class BoundedManifestProjection {
 
 	/** Strip exactly the four approved hygiene marker assertions, never stored values. */
 	public static function before_markers( array $manifest ): array {
+		$manifest = Wstm108_Bounded_Manifest_Transition::bounded( $manifest );
 		$copy = json_decode( json_encode( $manifest, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION ), false, 512, JSON_THROW_ON_ERROR );
 		$cases = self::indexed( $copy );
 		$approved = array(

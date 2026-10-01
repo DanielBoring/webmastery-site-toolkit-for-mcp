@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Backup_Status {
 
-	private const KNOWN_BACKUP_PLUGINS = array(
+	private const KNOWN_BACKUP_PLUGINS = [
 		'updraftplus/updraftplus.php'                                => 'UpdraftPlus',
 		'backwpup/backwpup.php'                                      => 'BackWPup',
 		'duplicator/duplicator.php'                                  => 'Duplicator',
@@ -14,77 +14,73 @@ class Webmastery_MCP_Backup_Status {
 		'jetpack/jetpack.php'                                        => 'Jetpack',
 		'vaultpress/vaultpress.php'                                  => 'VaultPress',
 		'worker/init.php'                                            => 'ManageWP Worker',
-	);
+	];
 
 	public static function register() {
-		wp_register_ability( 'webmastery-site-toolkit-for-mcp/backup-status', array(
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/backup-status', [
 			'label'               => 'Backup Status',
 			'description'         => 'Detect active known WordPress backup plugins and report accessible last-backup and schedule details.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
-			'execute_callback'    => array( self::class, 'execute' ),
-			'permission_callback' => array( self::class, 'permission' ),
-			'meta'                => array(
-				'annotations' => array( 'readonly' => true, 'destructive' => false, 'idempotent' => true ),
-				'mcp'         => array( 'public' => true, 'type' => 'tool' ),
-			),
-		) );
+			'execute_callback'    => [ self::class, 'execute' ],
+			'permission_callback' => [ self::class, 'permission' ],
+			'meta'                => [
+				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
 	}
 
 	public static function permission() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
-		}
-
-		return true;
+		return Webmastery_MCP_Permissions::check( 'manage_options' );
 	}
 
-	public static function execute( $input = array() ) {
+	public static function execute( $input = [] ) {
 		$active_plugins = self::get_active_plugin_basenames();
 		$plugins        = self::get_active_known_backup_plugins( $active_plugins );
 
 		if ( empty( $plugins ) ) {
-			return array(
+			return [
 				'success' => true,
-				'data'    => array(
+				'data'    => [
 					'backup_plugin_detected' => false,
 					'plugin_name'            => null,
 					'last_backup'            => null,
 					'schedule'               => null,
 					'warning'                => 'No known active WordPress backup plugin was detected. Configure and verify a reliable backup solution for this site.',
-					'active_known_plugins'   => array(),
-				),
-			);
+					'active_known_plugins'   => [],
+				],
+			];
 		}
 
 		$primary = $plugins[0];
 
-		return array(
+		return [
 			'success' => true,
-			'data'    => array(
+			'data'    => [
 				'backup_plugin_detected' => true,
 				'plugin_name'            => $primary['name'],
 				'last_backup'            => $primary['last_backup'],
 				'schedule'               => $primary['schedule'],
 				'warning'                => null,
 				'active_known_plugins'   => $plugins,
-			),
-		);
+			],
+		];
 	}
 
 	private static function get_active_known_backup_plugins( $active_plugins ) {
-		$plugins = array();
+		$plugins = [];
 
 		foreach ( self::KNOWN_BACKUP_PLUGINS as $basename => $name ) {
 			if ( ! in_array( $basename, $active_plugins, true ) ) {
 				continue;
 			}
 
-			$plugins[] = array(
+			$plugins[] = [
 				'name'        => $name,
 				'basename'    => $basename,
 				'last_backup' => self::get_last_backup_for_plugin( $basename ),
 				'schedule'    => self::get_schedule_for_plugin( $basename ),
-			);
+			];
 		}
 
 		return $plugins;
@@ -96,7 +92,7 @@ class Webmastery_MCP_Backup_Status {
 		}
 
 		if ( 'backwpup/backwpup.php' === $basename ) {
-			return self::format_latest_timestamp( get_option( 'backwpup_jobs', array() ) );
+			return self::format_latest_timestamp( get_option( 'backwpup_jobs', [] ) );
 		}
 
 		return null;
@@ -161,7 +157,7 @@ class Webmastery_MCP_Backup_Status {
 	}
 
 	private static function extract_timestamps( $value ) {
-		$timestamps = array();
+		$timestamps = [];
 
 		if ( is_numeric( $value ) ) {
 			$timestamp = self::normalize_timestamp( $value );

@@ -1,0 +1,38 @@
+services:
+  mysql:
+    image: ${PHP80_MYSQL_IMAGE:?Owner-pinned MySQL 8.0.36 digest required}
+    env_file:
+      - ${PHP80_MYSQL_ENV_FILE:?Original private MySQL configuration required}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+  wordpress:
+    image: ${PHP80_RUNTIME_IMAGE:?Actual immutable built floor image ID required}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PHP80_WP_CONFIG_SHA256: ${PHP80_WP_CONFIG_SHA256:?Original WordPress config pin required}
+    ports:
+      - "127.0.0.1:${PHP80_HTTP_PORT:?Explicit owned loopback port required}:80"
+    volumes:
+      - type: bind
+        source: ${PHP80_CANDIDATE_ROOT:?Dedicated approved candidate checkout required}
+        target: /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${PHP80_WP_CONFIG:?Original private WordPress config required}
+        target: /run/php80-floor/wp-config.php
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost/_wstm_php80_floor"]
+      timeout: 20s
+      retries: 10
+volumes:
+  mysql_data:

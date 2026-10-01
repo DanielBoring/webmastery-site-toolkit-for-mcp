@@ -47,6 +47,8 @@ function load_fault_helper( ?string $source = null ): void {
 }
 
 function load_media(): void {
+	require_once __DIR__ . '/shared-helper-loader.php';
+	\wstm_test_load_shared_helpers( __NAMESPACE__ );
 	foreach ( array( 'media', 'content-hygiene' ) as $name ) {
 		$source = file_get_contents( dirname( __DIR__, 3 ) . "/includes/class-$name.php" );
 		eval( 'namespace Wstm121Runtime; use \Webmastery_MCP_Response; ' . substr( $source, 5 ) );

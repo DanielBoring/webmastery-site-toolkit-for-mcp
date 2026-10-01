@@ -1,0 +1,21 @@
+{
+    "source_sha": "a05e47e0a868dafe23f8b7371e723e43c23ace35",
+    "path": "tests/e2e/untrusted-content-runner.php",
+    "source_blob_sha256": "e3a682b6a716dc70ae921a938f95c8e6627278068c3f06ba13af49271b209342",
+    "sites": [
+        {
+            "function": "wstm108_unavailable",
+            "before_sha256": "b290a06093e61ac1ff5b1476b337e7e48cd8ebe935aff99947e06272402c0a0d",
+            "after_sha256": "d25358541b3b3a86c0ff8d73e651daba7d12d5f391803fc0517900aa1492a39e",
+            "before": "'details' => array()",
+            "after": "'details' => (object) array()"
+        },
+        {
+            "function": "wstm108_expected_provider",
+            "before_sha256": "94f90aa2d96e0b3ee48ee7f72651650c825bc73a622507b34ee39b21295faa12",
+            "after_sha256": "3917f21ca9d546096d065c46d325c20202398252e9c3572f4d23789cbde88f8a",
+            "before": "'details' => array()",
+            "after": "'details' => (object) array()"
+        }
+    ]
+}

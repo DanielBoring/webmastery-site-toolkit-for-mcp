@@ -47,12 +47,7 @@ class Webmastery_MCP_Media {
 	}
 
 	private static function permission( $cap ) {
-		return function () use ( $cap ) {
-			if ( ! current_user_can( $cap ) ) {
-				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability." );
-			}
-			return true;
-		};
+		return Webmastery_MCP_Permissions::cap( $cap );
 	}
 
 	private static function can_read_attachment( $attachment ) {
@@ -61,20 +56,7 @@ class Webmastery_MCP_Media {
 	}
 
 	private static function query_readable_attachments( $args, $page, $per_page ) {
-		$window = Webmastery_MCP_List_Query::window( $args, $page, $per_page );
-		if ( is_wp_error( $window ) ) {
-			return $window;
-		}
-		$items = [];
-		foreach ( $window['ids'] as $id ) {
-			if ( self::can_read_attachment( (int) $id ) ) {
-				$item = self::normalize( $id );
-				if ( null !== $item ) {
-					$items[] = $item;
-				}
-			}
-		}
-		return Webmastery_MCP_List_Query::result( $window, $items );
+		return Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => self::can_read_attachment( $id ), static fn( $post ) => self::normalize( $post ) );
 	}
 
 
@@ -347,18 +329,7 @@ class Webmastery_MCP_Media {
 	}
 
 	private static function attachment_permission( $input_key, $cap ) {
-		return function ( $input = [] ) use ( $input_key, $cap ) {
-			$id         = absint( $input[ $input_key ] ?? 0 );
-			$attachment = get_post( $id );
-
-			if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
-				return Webmastery_MCP_Response::local_error( 'not_found', 'Media item not found.' );
-			}
-			if ( ! current_user_can( $cap, $id ) ) {
-				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability for this media item." );
-			}
-			return true;
-		};
+		return Webmastery_MCP_Permissions::object( 'attachment', $input_key, $cap, 'Media item not found.', "Requires {$cap} capability for this media item." );
 	}
 
 	private static function register_list() {
@@ -379,8 +350,8 @@ class Webmastery_MCP_Media {
 				$args = [
 					'post_type'      => 'attachment',
 					'post_status'    => 'inherit',
-					'posts_per_page' => min( (int) ( $input['per_page'] ?? 20 ), 100 ),
-					'paged'          => max( 1, (int) ( $input['page'] ?? 1 ) ),
+					'posts_per_page' => Webmastery_MCP_Input::per_page( $input, 20, 100, null ),
+					'paged'          => Webmastery_MCP_Input::page( $input ),
 					'orderby'        => 'date',
 					'order'          => 'DESC',
 				];
@@ -391,13 +362,10 @@ class Webmastery_MCP_Media {
 				if ( ! empty( $input['search'] ) ) {
 					$args['s'] = sanitize_text_field( $input['search'] );
 				}
-				if ( ! current_user_can( 'edit_others_posts' ) ) {
-					$args['author'] = get_current_user_id();
-				}
+				$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_posts' );
 
-				$per_page = min( max( 1, (int) ( $input['per_page'] ?? 20 ) ), 100 );
-				$page     = max( 1, (int) ( $input['page'] ?? 1 ) );
-				$data     = self::query_readable_attachments( $args, $page, $per_page );
+				[ 'per_page' => $per_page, 'page' => $page ] = Webmastery_MCP_Input::pagination( $input );
+				$data                                        = self::query_readable_attachments( $args, $page, $per_page );
 				if ( is_wp_error( $data ) ) {
 					return Webmastery_MCP_Response::from_wp_error( $data );
 				}
@@ -566,14 +534,14 @@ class Webmastery_MCP_Media {
 				}
 
 				if ( count( $post_update ) > 1 ) {
-					$updated = wp_update_post( wp_slash( $post_update ), true );
+					$updated = Webmastery_MCP_Post_Writes::update( $post_update );
 					if ( is_wp_error( $updated ) ) {
 						return Webmastery_MCP_Response::legacy_error( 'metadata_update_failed', 'Failed to update image attachment metadata.' );
 					}
 				}
 
 				if ( isset( $input['alt_text'] ) ) {
-					update_post_meta( $attachment_id, '_wp_attachment_image_alt', wp_slash( sanitize_text_field( $input['alt_text'] ) ) );
+					Webmastery_MCP_Post_Writes::meta( $attachment_id, '_wp_attachment_image_alt', sanitize_text_field( $input['alt_text'] ) );
 				}
 
 				if ( $set_featured && ! set_post_thumbnail( $post_id, $attachment_id ) ) {
@@ -626,7 +594,7 @@ class Webmastery_MCP_Media {
 				}
 
 				if ( count( $args ) > 1 ) {
-					$result = wp_update_post( wp_slash( $args ), true );
+					$result = Webmastery_MCP_Post_Writes::update( $args );
 
 					if ( is_wp_error( $result ) ) {
 						return Webmastery_MCP_Response::from_wp_error( $result );
@@ -634,7 +602,7 @@ class Webmastery_MCP_Media {
 				}
 
 				if ( isset( $input['alt_text'] ) ) {
-					update_post_meta( $id, '_wp_attachment_image_alt', wp_slash( sanitize_text_field( $input['alt_text'] ) ) );
+					Webmastery_MCP_Post_Writes::meta( $id, '_wp_attachment_image_alt', sanitize_text_field( $input['alt_text'] ) );
 				}
 
 				return [ 'success' => true, 'data' => self::normalize( $id ) ];

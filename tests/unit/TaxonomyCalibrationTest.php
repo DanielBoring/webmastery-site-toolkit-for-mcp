@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Wstm117Calibration\Probe;
 
 require_once __DIR__ . '/fixtures/taxonomy-calibration.php';
+require_once __DIR__ . '/fixtures/shared-helper-transition.php';
 require_once dirname( __DIR__ ) . '/e2e/error-contract-assertions.php';
 
 /**
@@ -44,7 +45,7 @@ final class TaxonomyCalibrationTest extends TestCase {
 			foreach ( $files as $path => $hash ) {
 				$source = 'tests/e2e/taxonomy-write-runner.php' === $path ? $ledger->original_source
 					: str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) );
-				self::assertSame( $hash, hash( 'sha256', $source ), $path );
+				self::assertSame( $hash, hash( 'sha256', Wstm119SourceTransition::restore( $path, $source ) ), $path );
 			}
 		}
 		self::assertInstanceOf( stdClass::class, $ledger->calibration_pairs[0]->new_original_oracle->error->details );

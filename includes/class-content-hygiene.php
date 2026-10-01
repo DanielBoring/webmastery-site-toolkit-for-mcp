@@ -18,21 +18,15 @@ class Webmastery_MCP_Content_Hygiene {
 	}
 
 	private static function per_page( $input, $default_per_page = 20 ) {
-		return min( max( 1, (int) ( $input['per_page'] ?? $default_per_page ) ), 100 );
+		return Webmastery_MCP_Input::per_page( $input, $default_per_page );
 	}
 
 	private static function page( $input ) {
-		return max( 1, (int) ( $input['page'] ?? 1 ) );
+		return Webmastery_MCP_Input::page( $input );
 	}
 
 	private static function permission( $cap ) {
-		return function () use ( $cap ) {
-			if ( ! current_user_can( $cap ) ) {
-				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability." );
-			}
-
-			return true;
-		};
+		return Webmastery_MCP_Permissions::cap( $cap );
 	}
 
 	public static function posts_no_featured_image_permission( $input = [] ) {
@@ -77,9 +71,7 @@ class Webmastery_MCP_Content_Hygiene {
 			'order'          => 'DESC',
 		];
 
-		if ( ! current_user_can( 'edit_others_posts' ) ) {
-			$args['author'] = get_current_user_id();
-		}
+		$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_posts' );
 
 		$window = Webmastery_MCP_List_Query::window( $args, self::page( $input ), self::per_page( $input ) );
 		if ( is_wp_error( $window ) ) {
@@ -261,10 +253,10 @@ class Webmastery_MCP_Content_Hygiene {
 			],
 		];
 
-		if ( 'page' === $post_type && ! current_user_can( 'edit_others_pages' ) ) {
-			$args['author'] = get_current_user_id();
-		} elseif ( 'post' === $post_type && ! current_user_can( 'edit_others_posts' ) ) {
-			$args['author'] = get_current_user_id();
+		if ( 'page' === $post_type ) {
+			$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_pages' );
+		} elseif ( 'post' === $post_type ) {
+			$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_posts' );
 		}
 
 		$query = new WP_Query( $args );
@@ -327,9 +319,7 @@ class Webmastery_MCP_Content_Hygiene {
 			],
 		];
 
-		if ( ! current_user_can( 'edit_others_posts' ) ) {
-			$args['author'] = get_current_user_id();
-		}
+		$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_posts' );
 
 		$query = new WP_Query( $args );
 

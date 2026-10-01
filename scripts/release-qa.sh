@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
+set +x
 set -Eeuo pipefail
 
 VERSION="${1:-}"
 PLUGIN_SLUG="webmastery-site-toolkit-for-mcp"
+if [[ -n "${WSTM_QA_RUNTIME_PROFILE:-}${WSTM_PHP80_CONFIG+x}${WSTM_PHP80_CONFIG_SHA256+x}" ]]; then
+	E2E_SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+	# shellcheck source=scripts/untrusted-stage.sh
+	source "$E2E_SCRIPT_ROOT/untrusted-stage.sh"
+	status=0
+	run_untrusted_runtime_selection package || status=$?
+	# Package selection must never succeed, including an incomplete helper result.
+	if [[ "$status" == 0 ]]; then echo "Package runtime selection unexpectedly succeeded; refusing." >&2; exit 78; fi
+	exit "$status"
+fi
 if [[ ( "${CI:-}" == "true" || "${GITHUB_ACTIONS:-}" == "true" ) && "${SKIP_PLUGIN_CHECK:-0}" != "0" ]]; then
 	echo "Plugin Check cannot be bypassed in CI." >&2
 	exit 1
@@ -60,8 +71,12 @@ cleanup_release() {
 	if [[ "$status" != 0 ]]; then exit "$status"; fi
 	exit "$cleanup"
 }
+# The child owns admitted failure cleanup. Until it succeeds, the parent must
+# not tear down a bare stack after a pre-fixture refusal.
+runtime_status=0
+bash scripts/e2e-test.sh all || runtime_status=$?
+if [[ "$runtime_status" != 0 ]]; then exit "$runtime_status"; fi
 trap cleanup_release EXIT
-bash scripts/e2e-test.sh all
 
 source scripts/release-plugin-check.sh
 check_package "$PLUGIN_CHECK_VERSION"

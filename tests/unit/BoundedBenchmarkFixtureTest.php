@@ -21,6 +21,18 @@ function delete_option( $name ) { return $GLOBALS["wpdb"]->remove_control( $name
 ' . $cleanup_source );
 unset( $cleanup_source );
 
+$readback_source = file_get_contents( dirname( __DIR__ ) . '/e2e/bounded-list-benchmark.php' );
+$readback_start = strpos( $readback_source, 'function wstm121_cleanup_readback(' );
+$readback_end = strpos( $readback_source, "\nfunction ", $readback_start + 1 );
+eval( 'namespace Wstm121RecoveryReadbackOracle; use \RuntimeException;
+function wstm121_require( $condition, $message ) { if ( ! $condition ) { throw new RuntimeException( $message ); } }
+function wstm121_db_ok() { wstm121_require( "" === $GLOBALS["wpdb"]->last_error, "Readback lookup failed." ); }
+function wstm121_snapshot() { return array( "original" => true ); }
+function wstm121_json_read( $path ) { $GLOBALS["recovery_readback_reads"][] = $path; return array( "original" => true ); }
+function wstm121_json_write( $path, $value ) { $GLOBALS["recovery_readback_writes"][$path] = $value; }
+' . substr( $readback_source, $readback_start, $readback_end - $readback_start ) );
+unset( $readback_source, $readback_start, $readback_end );
+
 final class BoundedBenchmarkCleanupDatabase {
 	public string $last_error = '';
 	public string $posts = 'fixture_posts';
@@ -129,6 +141,32 @@ final class BoundedBenchmarkCleanupDatabase {
 }
 
 final class BoundedBenchmarkFixtureTest extends TestCase {
+	public function test_recovery_readback_writes_separately_but_compares_original_setup_snapshot(): void {
+		$previous = $GLOBALS['wpdb'] ?? null;
+		$GLOBALS['wpdb'] = new class() {
+			public string $last_error = '';
+			public string $posts = 'posts';
+			public string $users = 'users';
+			public string $usermeta = 'usermeta';
+			public string $options = 'options';
+
+			public function prepare( $sql, ...$args ) { return $sql; }
+			public function get_var( $sql ) { return 0; }
+		};
+		$GLOBALS['recovery_readback_reads'] = array();
+		$GLOBALS['recovery_readback_writes'] = array();
+		try {
+			\Wstm121RecoveryReadbackOracle\wstm121_cleanup_readback( $this->cleanup_state(), '/original-data', '/controller/recovery-1' );
+			self::assertSame( array( '/original-data/setup-before.json' ), $GLOBALS['recovery_readback_reads'] );
+			self::assertSame( array( '/controller/recovery-1/cleanup-readback.json' ), array_keys( $GLOBALS['recovery_readback_writes'] ) );
+			self::assertSame( array( 'posts' => 0, 'actor' => 0, 'actor_meta' => 0, 'control' => 0 ),
+				$GLOBALS['recovery_readback_writes']['/controller/recovery-1/cleanup-readback.json']['remaining'] );
+		} finally {
+			$GLOBALS['wpdb'] = $previous;
+			unset( $GLOBALS['recovery_readback_reads'], $GLOBALS['recovery_readback_writes'] );
+		}
+	}
+
 	private function cleanup_state(): array {
 		return array( 'owns_control' => true, 'namespace' => 'w121_0123456789ab', 'token' => 'owned-token', 'user' => 42 );
 	}

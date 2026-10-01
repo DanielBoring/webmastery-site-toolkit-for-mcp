@@ -11,7 +11,8 @@ require_once __DIR__ . '/fixtures/metadata-boundary-stubs.php';
 final class PostsHelpersTest extends TestCase {
 
 	private static function call_private( string $method, array $args = array() ) {
-		$reflection = new ReflectionMethod( Webmastery_MCP_Posts::class, $method );
+		$class = str_starts_with( $method, 'patch_content_' ) ? Webmastery_MCP_Content_Patch::class : Webmastery_MCP_Post_Meta::class;
+		$reflection = new ReflectionMethod( $class, $method );
 		$reflection->setAccessible( true );
 		return $reflection->invokeArgs( null, $args );
 	}

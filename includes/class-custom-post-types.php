@@ -121,7 +121,7 @@ class Webmastery_MCP_Custom_Post_Types {
 		];
 	}
 
-	private static function normalize_post( $post ) {
+	private static function normalize_post( $post, $fields = 'full' ) {
 		$post = get_post( $post );
 
 		if ( ! $post ) {
@@ -144,103 +144,29 @@ class Webmastery_MCP_Custom_Post_Types {
 			}
 		}
 
-		return Webmastery_MCP_Untrusted::mark( [
-			'id'                => $post->ID,
-			'title'             => $post->post_title,
-			'content'           => $post->post_content,
-			'excerpt'           => $post->post_excerpt,
-			'status'            => $post->post_status,
-			'slug'              => $post->post_name,
-			'url'               => get_permalink( $post->ID ),
-			'author'            => (int) $post->post_author,
-			'author_name'       => get_the_author_meta( 'display_name', (int) $post->post_author ),
-			'date_created'      => $post->post_date,
-			'date_modified'     => $post->post_modified,
-			'type'              => $post->post_type,
-			'featured_image_id' => (int) get_post_thumbnail_id( $post->ID ),
-			'taxonomy_terms'    => $taxonomy_terms,
-		], [ 'title', 'content', 'excerpt', 'slug', 'url', 'author_name' ] );
+		$data                   = Webmastery_MCP_Post_Content::normalize( $post, $fields );
+		$data['taxonomy_terms'] = $taxonomy_terms;
+		return $data;
 	}
 
 	private static function can_read_full_post( $post_type_object, $post ) {
-		$post = get_post( $post );
-		if ( ! $post ) {
-			return false;
-		}
-
-		if ( 'private' === $post->post_status ) {
-			return current_user_can( self::cap( $post_type_object, 'read_post' ), $post->ID );
-		}
-
-		if ( 'publish' === $post->post_status ) {
-			return current_user_can( self::cap( $post_type_object, 'read_post' ), $post->ID );
-		}
-
-		if ( 'trash' === $post->post_status ) {
-			return current_user_can( self::cap( $post_type_object, 'delete_post' ), $post->ID );
-		}
-
-		return current_user_can( self::cap( $post_type_object, 'edit_post' ), $post->ID );
-	}
-
-	private static function filter_readable_post_ids( $post_type_object, $ids ) {
-		$readable = [];
-
-		foreach ( $ids as $id ) {
-			$post = get_post( (int) $id );
-			if ( $post && self::can_read_full_post( $post_type_object, $post ) ) {
-				$readable[] = (int) $post->ID;
-			}
-		}
-
-		return $readable;
+		return Webmastery_MCP_Post_Access::can_read( $post, self::cap( $post_type_object, 'read_post' ), self::cap( $post_type_object, 'edit_post' ), self::cap( $post_type_object, 'delete_post' ) );
 	}
 
 	private static function query_readable_posts( $post_type_object, $args, $page, $per_page, $fields = 'summary' ) {
-		$window = Webmastery_MCP_List_Query::window( $args, $page, $per_page );
-		if ( is_wp_error( $window ) ) {
-			return $window;
-		}
-		$items = [];
-		foreach ( self::filter_readable_post_ids( $post_type_object, $window['ids'] ) as $id ) {
-			$item = self::normalize_post( $id );
-			if ( null !== $item ) {
-				$items[] = Webmastery_MCP_List_Query::project( $item, $fields );
-			}
-		}
-		return Webmastery_MCP_List_Query::result( $window, $items );
+		return Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => self::can_read_full_post( $post_type_object, $id ), static fn( $post ) => self::normalize_post( $post, $fields ) );
 	}
 
 
 	private static function permission( $post_type_object, $capability ) {
-		$cap = self::cap( $post_type_object, $capability );
-
-		return function () use ( $cap ) {
-			if ( ! current_user_can( $cap ) ) {
-				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability." );
-			}
-
-			return true;
-		};
+		return Webmastery_MCP_Permissions::cap( self::cap( $post_type_object, $capability ) );
 	}
 
 	private static function object_permission( $post_type_object, $capability ) {
 		$type = $post_type_object->name;
 		$cap  = self::cap( $post_type_object, $capability );
 
-		return function ( $input = [] ) use ( $type, $cap ) {
-			$id   = absint( $input['id'] ?? 0 );
-			$post = get_post( $id );
-
-			if ( ! $post || $post->post_type !== $type ) {
-				return Webmastery_MCP_Response::local_error( 'not_found', 'Custom post type item not found.' );
-			}
-			if ( ! current_user_can( $cap, $id ) ) {
-				return Webmastery_MCP_Response::local_error( 'forbidden', "Requires {$cap} capability for this custom post type item." );
-			}
-
-			return true;
-		};
+		return Webmastery_MCP_Permissions::object( $type, 'id', $cap, 'Custom post type item not found.', "Requires {$cap} capability for this custom post type item." );
 	}
 
 	private static function create_permission( $post_type_object ) {
@@ -406,13 +332,7 @@ class Webmastery_MCP_Custom_Post_Types {
 						],
 					];
 				},
-				'permission_callback' => function () {
-					if ( ! current_user_can( 'read' ) ) {
-						return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
-					}
-
-					return true;
-				},
+				'permission_callback' => Webmastery_MCP_Permissions::cap( 'read' ),
 				'meta'                => [
 					'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
 					'mcp'         => [ 'public' => true, 'type' => 'tool' ],
@@ -449,28 +369,10 @@ class Webmastery_MCP_Custom_Post_Types {
 					],
 				],
 				'execute_callback'    => function ( $input ) use ( $post_type_object, $post_type_name ) {
-					$args = [
-						'post_type'      => $post_type_name,
-						'post_status'    => $input['status'] ?? 'any',
-						'posts_per_page' => min( (int) ( $input['per_page'] ?? 20 ), 100 ),
-						'paged'          => max( 1, (int) ( $input['page'] ?? 1 ) ),
-						'orderby'        => $input['orderby'] ?? 'date',
-						'order'          => strtoupper( $input['order'] ?? 'DESC' ),
-					];
+					$args = Webmastery_MCP_Post_Access::list_args( $input, $post_type_name, self::cap( $post_type_object, 'edit_others_posts' ) );
 
-					if ( ! empty( $input['search'] ) ) {
-						$args['s'] = sanitize_text_field( $input['search'] );
-					}
-					if ( ! empty( $input['author'] ) ) {
-						$args['author'] = absint( $input['author'] );
-					}
-					if ( ! current_user_can( self::cap( $post_type_object, 'edit_others_posts' ) ) ) {
-						$args['author'] = get_current_user_id();
-					}
-
-					$per_page = min( max( 1, (int) ( $input['per_page'] ?? 20 ) ), 100 );
-					$page     = max( 1, (int) ( $input['page'] ?? 1 ) );
-					$data     = self::query_readable_posts( $post_type_object, $args, $page, $per_page, $input['fields'] ?? 'summary' );
+					[ 'per_page' => $per_page, 'page' => $page ] = Webmastery_MCP_Input::pagination( $input );
+					$data                                        = self::query_readable_posts( $post_type_object, $args, $page, $per_page, $input['fields'] ?? 'summary' );
 					if ( is_wp_error( $data ) ) {
 						return Webmastery_MCP_Response::from_wp_error( $data );
 					}
@@ -567,7 +469,7 @@ class Webmastery_MCP_Custom_Post_Types {
 						}
 					}
 
-					$id = wp_insert_post( wp_slash( $args ), true );
+					$id = Webmastery_MCP_Post_Writes::insert( $args );
 
 					if ( is_wp_error( $id ) ) {
 						return Webmastery_MCP_Response::legacy_error( 'create_failed', 'Failed to create custom post type item.' );
@@ -649,7 +551,7 @@ class Webmastery_MCP_Custom_Post_Types {
 						}
 					}
 
-					$result = wp_update_post( wp_slash( $args ), true );
+					$result = Webmastery_MCP_Post_Writes::update( $args );
 
 					if ( is_wp_error( $result ) ) {
 						return Webmastery_MCP_Response::legacy_error( 'update_failed', 'Failed to update custom post type item.' );

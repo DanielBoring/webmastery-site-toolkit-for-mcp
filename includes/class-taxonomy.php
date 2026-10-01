@@ -68,7 +68,7 @@ class Webmastery_MCP_Taxonomy {
 			'execute_callback'    => function ( $input ) use ( $taxonomy ) {
 				$args = [
 					'taxonomy'   => $taxonomy,
-					'number'     => min( (int) ( $input['per_page'] ?? 100 ), 200 ),
+					'number'     => Webmastery_MCP_Input::per_page( $input, 100, 200, null ),
 					'hide_empty' => ! empty( $input['hide_empty'] ),
 				];
 
@@ -87,12 +87,7 @@ class Webmastery_MCP_Taxonomy {
 					'data'    => array_map( [ self::class, 'normalize_term' ], $terms ),
 				];
 			},
-			'permission_callback' => function () {
-				if ( ! current_user_can( 'read' ) ) {
-					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
-				}
-				return true;
-			},
+			'permission_callback' => Webmastery_MCP_Permissions::cap( 'read' ),
 			'meta' => [
 				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
@@ -126,12 +121,7 @@ class Webmastery_MCP_Taxonomy {
 
 				return [ 'success' => true, 'data' => self::normalize_term( $term ) ];
 			},
-			'permission_callback' => function () {
-				if ( ! current_user_can( 'read' ) ) {
-					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
-				}
-				return true;
-			},
+			'permission_callback' => Webmastery_MCP_Permissions::cap( 'read' ),
 			'meta'                => [
 				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],

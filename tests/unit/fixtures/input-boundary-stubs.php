@@ -47,13 +47,19 @@ final class Probe {
 	}
 }
 
+require_once __DIR__ . '/shared-helper-loader.php';
+\wstm_test_load_shared_helpers( __NAMESPACE__ );
+
 foreach ( glob( dirname( __DIR__, 3 ) . '/includes/class-*.php' ) as $file ) {
 	$source = file_get_contents( $file );
 	if ( ! str_contains( $source, 'public static function register()' ) ) {
 		continue;
 	}
 	preg_match( '/class (Webmastery_MCP_\w+)/', $source, $matches );
-	eval( 'namespace Wstm126Boundary; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Untrusted; use \Webmastery_MCP_Post_Parent; use \Webmastery_MCP_Post_Scheduling; ' . substr( $source, 5 ) );
+	if ( class_exists( __NAMESPACE__ . '\\' . $matches[1], false ) ) {
+		continue;
+	}
+	eval( 'namespace Wstm126Boundary; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Post_Parent; use \Webmastery_MCP_Post_Scheduling; ' . substr( $source, 5 ) );
 	Probe::$classes[] = __NAMESPACE__ . '\\' . $matches[1];
 }
 

@@ -315,53 +315,11 @@ class Webmastery_MCP_SEO {
 	}
 
 	private static function yoast_post_meta_keys() {
-		return [
-			'title'                    => '_yoast_wpseo_title',
-			'meta_description'         => '_yoast_wpseo_metadesc',
-			'focus_keyphrase'          => '_yoast_wpseo_focuskw',
-			'canonical_url'            => '_yoast_wpseo_canonical',
-			'breadcrumb_title'         => '_yoast_wpseo_bctitle',
-			'schema_page_type'         => '_yoast_wpseo_schema_page_type',
-			'schema_article_type'      => '_yoast_wpseo_schema_article_type',
-			'opengraph_title'          => '_yoast_wpseo_opengraph-title',
-			'opengraph_description'    => '_yoast_wpseo_opengraph-description',
-			'opengraph_image'          => '_yoast_wpseo_opengraph-image',
-			'twitter_title'            => '_yoast_wpseo_twitter-title',
-			'twitter_description'      => '_yoast_wpseo_twitter-description',
-			'twitter_image'            => '_yoast_wpseo_twitter-image',
-			'seo_score'                => '_yoast_wpseo_linkdex',
-			'readability_score'        => '_yoast_wpseo_content_score',
-			'inclusive_language_score' => '_yoast_wpseo_inclusive_language_score',
-			'primary_category'         => '_yoast_wpseo_primary_category',
-			'cornerstone'              => '_yoast_wpseo_is_cornerstone',
-			'robots_noindex'           => '_yoast_wpseo_meta-robots-noindex',
-			'robots_nofollow'          => '_yoast_wpseo_meta-robots-nofollow',
-			'robots_advanced'          => '_yoast_wpseo_meta-robots-adv',
-		];
+		return Webmastery_MCP_Post_Meta::yoast_keys();
 	}
 
 	private static function seopress_post_meta_keys() {
-		return [
-			'title'                 => '_seopress_titles_title',
-			'meta_description'      => '_seopress_titles_desc',
-			'focus_keywords'        => '_seopress_analysis_target_kw',
-			'canonical_url'         => '_seopress_robots_canonical',
-			'opengraph_title'       => '_seopress_social_fb_title',
-			'opengraph_description' => '_seopress_social_fb_desc',
-			'opengraph_image'       => '_seopress_social_fb_img',
-			'twitter_title'         => '_seopress_social_twitter_title',
-			'twitter_description'   => '_seopress_social_twitter_desc',
-			'twitter_image'         => '_seopress_social_twitter_img',
-			'primary_category'      => '_seopress_robots_primary_cat',
-			'robots_noindex'        => '_seopress_robots_index',
-			'robots_nofollow'       => '_seopress_robots_follow',
-			'robots_noimageindex'   => '_seopress_robots_imageindex',
-			'robots_noarchive'      => '_seopress_robots_archive',
-			'robots_nosnippet'      => '_seopress_robots_snippet',
-			'breadcrumb_title'      => '_seopress_robots_breadcrumbs',
-			'news_sitemap_disabled' => '_seopress_news_disabled',
-			'video_sitemap_disabled' => '_seopress_video_disabled',
-		];
+		return Webmastery_MCP_Post_Meta::seopress_keys();
 	}
 
 	private static function normalize_yoast_meta_value( $field, $value ) {
@@ -623,7 +581,8 @@ class Webmastery_MCP_SEO {
 			return Webmastery_MCP_Response::legacy_error( 'invalid_status', 'status is invalid.' );
 		}
 
-		$args = [
+		[ 'per_page' => $per_page, 'page' => $page ] = Webmastery_MCP_Input::pagination( $input, 10 );
+		$args                                        = [
 			'post_type'      => $post_type,
 			'post_status'    => $status,
 			'orderby'        => 'modified',
@@ -634,12 +593,10 @@ class Webmastery_MCP_SEO {
 			$args['post_type'] = 'post';
 		}
 
-		if ( 'page' === $args['post_type'] && ! current_user_can( 'edit_others_pages' ) ) {
-			$args['author'] = get_current_user_id();
-		} elseif ( 'post' === $args['post_type'] && ! current_user_can( 'edit_others_posts' ) ) {
-			$args['author'] = get_current_user_id();
-		} elseif ( is_array( $args['post_type'] ) && ! current_user_can( 'edit_others_posts' ) ) {
-			$args['author'] = get_current_user_id();
+		if ( 'page' === $args['post_type'] ) {
+			$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_pages' );
+		} elseif ( 'post' === $args['post_type'] || is_array( $args['post_type'] ) ) {
+			$args = Webmastery_MCP_Post_Access::restrict_author( $args, 'edit_others_posts' );
 		}
 
 		if ( ! empty( $input['modified_after'] ) ) {
@@ -657,44 +614,35 @@ class Webmastery_MCP_SEO {
 			];
 		}
 
-		$window = Webmastery_MCP_List_Query::window( $args, $page, $per_page );
-		if ( is_wp_error( $window ) ) {
-			return Webmastery_MCP_Response::from_wp_error( $window );
-		}
-		$items = [];
-		foreach ( $window['ids'] as $post_id ) {
-			if ( ! Webmastery_MCP_Posts::can_read_post_meta_key( $post_id, $meta_key ) ) {
-				continue;
-			}
-			$post = get_post( $post_id );
+		$data = Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => Webmastery_MCP_Post_Meta::can_read_post_meta_key( $id, $meta_key ), static function ( $post ) use ( $meta_key ) {
 			if ( ! $post ) {
-				continue;
+				return null;
 			}
 
 			$raw_score = get_post_meta( $post->ID, $meta_key, true );
-			$items[]   = Webmastery_MCP_Untrusted::mark( [
+			return Webmastery_MCP_Untrusted::mark( [
 				'post_id'      => (int) $post->ID,
 				'title'        => $post->post_title,
 				'url'          => get_permalink( $post->ID ),
 				'post_type'    => $post->post_type,
 				'modified_gmt' => $post->post_modified_gmt,
 				'score'        => '' === $raw_score ? null : (int) $raw_score,
-			], [ 'title', 'url', 'score' ] );
+			], [ 'title', 'url' ] );
+		} );
+		if ( is_wp_error( $data ) ) {
+			return Webmastery_MCP_Response::from_wp_error( $data );
 		}
+		$data['yoast_active']    = true;
+		$data['seopress_active'] = self::is_seopress_active();
 
 		return [
 			'success' => true,
-			'data'    => Webmastery_MCP_List_Query::result( $window, $items ) + [
-				'yoast_active' => true,
-				'seopress_active' => self::is_seopress_active(),
-			],
+			'data'    => $data,
 		];
 	}
 
 	public static function permission_site_overview() {
-		return current_user_can( 'manage_options' )
-			? true
-			: Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
+		return Webmastery_MCP_Permissions::check( 'manage_options' );
 	}
 
 	public static function execute_site_overview( $input = [] ) {

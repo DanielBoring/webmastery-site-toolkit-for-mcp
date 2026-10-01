@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/compatibility-baselines.php';
 
-function webmastery_mcp_verify_candidate_floor( array $runtime, array $pins ): void {
+function webmastery_mcp_verify_candidate_floor( array $runtime, array $pins, string $profile = 'php80-floor' ): void {
+	if ( ! in_array( $profile, array( 'php80-floor', 'php81-compatibility' ), true ) ) {
+		throw new InvalidArgumentException( 'Unknown exact candidate runtime profile.' );
+	}
 	$source = $runtime['requested_source'] ?? null;
 	if ( ! is_string( $source ) || 1 !== preg_match( '/^[0-9a-f]{40}$/D', $source ) || ( $runtime['actual_source'] ?? null ) !== $source ) {
 		throw new RuntimeException( 'Candidate checkout does not match the exact requested commit.' );
@@ -19,9 +22,10 @@ function webmastery_mcp_verify_candidate_floor( array $runtime, array $pins ): v
 		( $loaded['response_file'] ?? null ) !== '/var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/includes/class-response.php' ) {
 		throw new RuntimeException( 'WordPress did not load the candidate toolkit source.' );
 	}
-	foreach ( array( 'wordpress' => '/^6\.9(?:\.\d+)?$/D', 'php' => '/^8\.1\.\d+$/D', 'mysql_server' => '/^8\.0\.36$/D' ) as $key => $pattern ) {
+	$php_pattern = 'php80-floor' === $profile ? '/^8\.0\.\d+$/D' : '/^8\.1\.\d+$/D';
+	foreach ( array( 'wordpress' => '/^6\.9(?:\.\d+)?$/D', 'php' => $php_pattern, 'mysql_server' => '/^8\.0\.36$/D' ) as $key => $pattern ) {
 		if ( ! isset( $runtime[ $key ] ) || ! is_string( $runtime[ $key ] ) || 1 !== preg_match( $pattern, $runtime[ $key ] ) ) {
-			throw new RuntimeException( 'Observed runtime is not the supported floor: ' . $key );
+			throw new RuntimeException( 'Observed runtime does not match ' . $profile . ': ' . $key );
 		}
 	}
 	if ( ( $runtime['dependency_policy'] ?? null ) !== 'pinned' || ( $runtime['wp_cli'] ?? null ) !== 'WP-CLI ' . $pins['wp_cli'] ) {
@@ -51,8 +55,8 @@ function webmastery_mcp_verify_candidate_floor( array $runtime, array $pins ): v
 
 if ( isset( $_SERVER['SCRIPT_FILENAME'] ) && realpath( $_SERVER['SCRIPT_FILENAME'] ) === __FILE__ ) {
 	try {
-		if ( count( $argv ) !== 3 ) {
-			throw new InvalidArgumentException( 'Usage: php scripts/verify-candidate-floor.php <runtime.json> <candidate-pins.json>' );
+		if ( count( $argv ) < 3 || count( $argv ) > 4 ) {
+			throw new InvalidArgumentException( 'Usage: php scripts/verify-candidate-floor.php <runtime.json> <candidate-pins.json> [php80-floor|php81-compatibility]' );
 		}
 		$contents = file_get_contents( $argv[1] );
 		if ( false === $contents ) {
@@ -63,8 +67,11 @@ if ( isset( $_SERVER['SCRIPT_FILENAME'] ) && realpath( $_SERVER['SCRIPT_FILENAME
 			throw new RuntimeException( 'Runtime evidence must be a JSON object.' );
 		}
 		$runtime = json_decode( $contents, true, 512, JSON_THROW_ON_ERROR );
-		webmastery_mcp_verify_candidate_floor( $runtime, webmastery_mcp_read_baselines( $argv[2] ) );
-		echo "Exact candidate supported-floor runtime and full E2E verified; cleanup outcome remains separate.\n";
+		$profile = $argv[3] ?? 'php80-floor';
+		webmastery_mcp_verify_candidate_floor( $runtime, webmastery_mcp_read_baselines( $argv[2] ), $profile );
+		echo 'php80-floor' === $profile
+			? "Exact candidate PHP 8.0 minimum runtime and full E2E verified; cleanup outcome remains separate.\n"
+			: "Exact candidate PHP 8.1 compatibility and full E2E verified; NOT PHP 8.0 floor proof; genuine PHP 8.0 remains required; cleanup outcome remains separate.\n";
 	} catch ( Throwable $error ) {
 		fwrite( STDERR, 'ERROR ' . $error->getMessage() . PHP_EOL );
 		exit( 1 );

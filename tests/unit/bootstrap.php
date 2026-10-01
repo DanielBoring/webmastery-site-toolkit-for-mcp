@@ -50,6 +50,15 @@ function wp_json_encode( $value, $flags = 0 ) {
 require_once dirname(__DIR__, 2) . '/includes/class-response.php';
 require_once dirname(__DIR__, 2) . '/includes/class-untrusted.php';
 require_once dirname(__DIR__, 2) . '/includes/class-permissions.php';
+require_once dirname(__DIR__, 2) . '/includes/class-input.php';
+require_once dirname(__DIR__, 2) . '/includes/class-post-access.php';
+require_once dirname(__DIR__, 2) . '/includes/class-post-content.php';
+require_once dirname(__DIR__, 2) . '/includes/class-post-meta.php';
+require_once dirname(__DIR__, 2) . '/includes/class-post-writes.php';
+require_once dirname(__DIR__, 2) . '/includes/class-bulk-posts.php';
+require_once dirname(__DIR__, 2) . '/includes/class-post-revisions.php';
+require_once dirname(__DIR__, 2) . '/includes/class-featured-image.php';
+require_once dirname(__DIR__, 2) . '/includes/class-content-patch.php';
 
 function sanitize_key( $key ): string {
 	$key = strtolower( (string) $key );

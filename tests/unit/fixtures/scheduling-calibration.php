@@ -11,6 +11,10 @@ use Webmastery_MCP_Input;
 use Webmastery_MCP_Response;
 use WP_Error;
 
+require_once __DIR__ . '/shared-helper-loader.php';
+require_once __DIR__ . '/shared-helper-transition.php';
+\wstm_test_load_shared_helpers( __NAMESPACE__ );
+
 const BASELINE = '735d31df97ed91af34eec9439a3dbea22ea8f5d8';
 const ORIGINAL_SHA256 = 'e9ced6e22fd1a4347565024a3a903a27d3184a86f2f674bb0d7723bcd2328ff3';
 const LEDGER_SHA256 = '30cad4e6931b82edb1ccf63c2fc429b02a1e9ccb79306d38b37a09d497a0a8a5';
@@ -44,9 +48,10 @@ function load_ledger( ?string $source = null ): stdClass {
 
 function bounded_source_bindings(): array {
 	// Independently pin the reviewed list/payload changes, never rewrite the sealed scheduling history.
+	$reviewed = \Wstm167SourceTransition::load()['files'];
 	return array(
-		'includes/class-posts.php' => array( 'ce1faf064d620b9db87e1099a6d06d4e039aeb4246ba4933234f6134b81828e3', 'f5d41d7bfd2ba12a251d5aec6b5517f3d1623189' ),
-		'includes/class-custom-post-types.php' => array( '221729de6fd90cce6f3b77d4a2f207367855093895c65df0e0dae85e19d26fa9', 'f6e5bd00c04b2394c035a295bfc221e3a8714c8a' ),
+		'includes/class-posts.php' => array( $reviewed['includes/class-posts.php']['current_sha256'], $reviewed['includes/class-posts.php']['current_blob'] ),
+		'includes/class-custom-post-types.php' => array( $reviewed['includes/class-custom-post-types.php']['current_sha256'], $reviewed['includes/class-custom-post-types.php']['current_blob'] ),
 		'includes/class-list-query.php' => array( 'b76100806af2d3044404aaa2b445512f705dfb79e9ff997cc59bb57f4a537dad', 'ccd80dc3aadd62a4b4b41044dc4d15e0a63948be' ),
 		'includes/class-untrusted.php' => array( '5a0ba6dffdf9c30b0ec7a01c6d7cbaa7c9f15c3707adc04e06255deb41104e20', 'dd504fd3eae59bc945768b2249f122026af8bdef' ),
 	);
@@ -62,12 +67,18 @@ function assert_source_binding( string $path, string $source, array $binding ): 
 
 function assert_sources( stdClass $ledger ): void {
 	assert_seal( $ledger );
+	\Wstm167SourceTransition::verify_dependencies();
 	$bounded = bounded_source_bindings();
 	foreach ( $ledger->production as $path => $binding ) {
-		if ( $binding->baseline_sha256 !== $binding->current_sha256 ) {
+		$source = \Wstm119SourceTransition::restore( $path, normalized( file_get_contents( root() . '/' . $path ) ) );
+		if ( $binding->baseline_sha256 !== $binding->current_sha256
+			|| ! hash_equals( $binding->current_sha256, hash( 'sha256', $source ) )
+			|| ! hash_equals( $binding->git_blob, sha1( 'blob ' . strlen( $source ) . "\0" . $source ) ) ) {
 			throw new RuntimeException( 'Scheduling production source binding changed: ' . $path );
 		}
-		assert_source_binding( $path, file_get_contents( root() . '/' . $path ), $bounded[ $path ] ?? array( $binding->current_sha256, $binding->git_blob ) );
+		if ( isset( $bounded[ $path ] ) ) {
+			assert_source_binding( $path, file_get_contents( root() . '/' . $path ), $bounded[ $path ] );
+		}
 		unset( $bounded[ $path ] );
 	}
 	foreach ( $bounded as $path => $binding ) {
@@ -129,7 +140,7 @@ final class Probe {
 		if ( class_exists( __NAMESPACE__ . '\\Webmastery_MCP_Posts', false ) ) {
 			return;
 		}
-		foreach ( array( 'class-untrusted.php', 'class-list-query.php', 'class-posts.php', 'class-custom-post-types.php' ) as $file ) {
+		foreach ( array( 'class-posts.php', 'class-custom-post-types.php' ) as $file ) {
 			$source = normalized( file_get_contents( root() . '/includes/' . $file ) );
 			eval( 'namespace ' . __NAMESPACE__ . '; use \\WP_Error; use \\Webmastery_MCP_Response; ' . substr( $source, 5 ) );
 		}

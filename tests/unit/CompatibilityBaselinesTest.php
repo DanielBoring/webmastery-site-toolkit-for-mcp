@@ -115,6 +115,51 @@ final class CompatibilityBaselinesTest extends TestCase {
 		);
 	}
 
+	public static function sourceBoundJobProvider(): array {
+		return array(
+			'baseline-only dirty harness' => array( 'compatibility-qa', '.github/compatibility-versions.json', 'cp compatibility-artifacts/lane-versions.json', 'bash scripts/e2e-test.sh all' ),
+			'current checker production metadata' => array( 'current-plugin-check', '.github/compatibility-versions.json docker-compose.yml readme.txt', 'php scripts/update-compatibility-baselines.php', 'bash scripts/release-qa.sh' ),
+		);
+	}
+
+	/** @dataProvider sourceBoundJobProvider */
+	public function testGeneratedInputsUseExactLocalCandidateBeforeQa( string $job, string $paths, string $generator, string $qa ): void {
+		$workflow = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/compatibility-qa.yml' ) );
+		self::assertSame( 1, preg_match( '/^  ' . preg_quote( $job, '/' ) . ':\n(.*?)(?=^  [a-z-]+:|\z)/ms', $workflow, $section ) );
+		$source = $section[1];
+		self::assertSame( 1, preg_match( '/      - name: Commit exact generated inputs for source-bound QA\n(.*?)(?=      - name:)/s', $source, $step ) );
+		$candidate = $step[1];
+		$exclude = implode( ' ', array_map( static fn( string $path ): string => "':(exclude)" . $path . "'", explode( ' ', $paths ) ) );
+		self::assertStringContainsString( 'git diff --quiet -- . ' . $exclude, $candidate );
+		self::assertStringContainsString( 'git add -- ' . $paths . "\n", $candidate );
+		foreach ( array(
+			'test "$(git rev-parse HEAD)" = "$BASE_SOURCE_SHA"',
+			'if [[ -e compatibility-artifacts/tested-source.json || -L compatibility-artifacts/tested-source.json ]]; then',
+			'git diff --cached --quiet || { status=$?;',
+			'untracked="$(git ls-files --others --exclude-standard -- . \':(exclude)compatibility-artifacts/**\')"',
+			'test -z "$untracked"',
+			"if git diff --cached --quiet; then\n            changed=false",
+			'test "$status" = 1 || exit "$status"',
+			'git diff --exit-code HEAD',
+			'tested="$(git rev-parse HEAD)"',
+			'set -o noclobber',
+			'{base_source:$base,tested_source:$tested,tested_tree:$tree,changed:$changed}',
+			'printf \'source-sha=%s\n\' "$tested"',
+		) as $guard ) {
+			self::assertStringContainsString( $guard, $candidate );
+		}
+		self::assertStringNotContainsString( 'git push', $candidate );
+		self::assertStringNotContainsString( 'git checkout', $candidate );
+		self::assertStringNotContainsString( '--allow-empty', $candidate );
+		self::assertStringNotContainsString( 'git add .', $candidate );
+		self::assertLessThan( strpos( $candidate, 'git add -- ' ), strpos( $candidate, 'if [[ -e compatibility-artifacts/tested-source.json' ) );
+		self::assertLessThan( strpos( $source, $step[0] ), strpos( $source, $generator ) );
+		self::assertLessThan( strpos( $source, $qa ), strpos( $source, $step[0] ) );
+		self::assertStringContainsString( 'BASE_SOURCE_SHA: ${{ needs.discover-versions.outputs.source-sha }}', $candidate );
+		self::assertStringContainsString( 'WSTM108_EXPECTED_SOURCE: ${{ steps.tested-source.outputs.source-sha }}', $source );
+		self::assertStringNotContainsString( 'WSTM108_EXPECTED_SOURCE: ${{ needs.discover-versions.outputs.source-sha }}', $source );
+	}
+
 	/** @dataProvider invalidCliProvider */
 	public function testCliRejectsInvalidArgumentsBeforeAnyWrite( array $overrides, array $remove, array $extra, string $error ): void {
 		$options = array_merge( $this->options(), array( 'wp-cli' => '99.1.0', 'wp-cli-sha512' => str_repeat( 'b', 128 ) ), $overrides );
@@ -280,6 +325,8 @@ final class CompatibilityBaselinesTest extends TestCase {
 		self::assertCount( 8, $lanes );
 		self::assertCount( 8, array_unique( array_column( $lanes, 'label' ) ) );
 		self::assertSame( 'wordpress:6.9-php8.1-apache', $lanes[0]['wordpress-image'] );
+		self::assertSame( 'wp69-php81-compatibility', $lanes[0]['label'] );
+		self::assertNotContains( 'supported-floor', array_column( $lanes, 'label' ) );
 		self::assertSame( 'mysql:8.0.36', $lanes[0]['mysql-image'] );
 		foreach ( $lanes as $lane ) {
 			$expected = str_contains( $lane['mcp-adapter-zip'], '/v99.2.3/' ) ? $latest['mcp_adapter_sha256'] : $this->baseline['mcp_adapter_sha256'];
@@ -288,6 +335,21 @@ final class CompatibilityBaselinesTest extends TestCase {
 		self::assertStringContainsString( '-php8.4-', $lanes[5]['wordpress-image'] );
 		self::assertSame( 'mysql:8.4', $lanes[6]['mysql-image'] );
 		self::assertSame( 'latest-seo', $lanes[7]['dependency-policy'] );
+	}
+
+	public function testRepositoryBaselineImageMatrixAndReadmeStayAligned(): void {
+		$root = dirname( __DIR__, 2 );
+		$baseline = webmastery_mcp_read_baselines( $root . '/.github/compatibility-versions.json' );
+		$image = 'wordpress:' . $baseline['wordpress'] . '-php8.2-apache';
+		self::assertSame( 1, substr_count( file_get_contents( $root . '/docker-compose.yml' ), '${WORDPRESS_IMAGE:-' . $image . '}' ) );
+		$lanes = webmastery_mcp_compatibility_matrix( $baseline, $baseline )['include'];
+		self::assertSame( 'current-baseline', $lanes[1]['label'] );
+		self::assertSame( $image, $lanes[1]['wordpress-image'] );
+		$parts = explode( '.', $baseline['wordpress'] );
+		$readme = str_replace( "\r\n", "\n", file_get_contents( $root . '/readme.txt' ) );
+		self::assertStringContainsString( 'Tested up to: ' . $parts[0] . '.' . $parts[1] . "\n", $readme );
+		self::assertStringContainsString( "Requires at least: 6.9\n", $readme );
+		self::assertStringContainsString( "Requires PHP: 8.0\n", $readme );
 	}
 
 	public function testCurrentCheckerRequiresRuntimeEvidenceBeforeUpdatingCandidateMetadata(): void {
@@ -318,7 +380,7 @@ final class CompatibilityBaselinesTest extends TestCase {
 				'response_file'       => '/var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/includes/class-response.php',
 			),
 			'wordpress'          => '6.9.4',
-			'php'                => '8.1.34',
+			'php'                => '8.0.30',
 			'mysql_server'       => '8.0.36',
 			'dependency_policy'  => 'pinned',
 			'wp_cli'             => 'WP-CLI ' . $this->baseline['wp_cli'],
@@ -339,6 +401,30 @@ final class CompatibilityBaselinesTest extends TestCase {
 		$runtime['wordpress'] = '6.9';
 		webmastery_mcp_verify_candidate_floor( $runtime, $this->baseline );
 		self::assertSame( $before, $this->snapshot() );
+	}
+
+	public function testPhp81CompatibilityCannotBeAcceptedAsPhp80Floor(): void {
+		$runtime        = $this->candidateRuntime();
+		$runtime['php'] = '8.1.34';
+		webmastery_mcp_verify_candidate_floor( $runtime, $this->baseline, 'php81-compatibility' );
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'Observed runtime does not match php80-floor: php' );
+		webmastery_mcp_verify_candidate_floor( $runtime, $this->baseline );
+	}
+
+	public function testCompatibilityCliExplicitlyReportsPendingMinimum(): void {
+		$path           = $this->root . '/candidate-runtime.json';
+		$runtime        = $this->candidateRuntime();
+		$runtime['php'] = '8.1.34';
+		file_put_contents( $path, json_encode( $runtime, JSON_THROW_ON_ERROR ) );
+		$result = $this->runPhpEntryPoint( dirname( __DIR__, 2 ) . '/scripts/verify-candidate-floor.php',
+			array( $path, $this->root . '/.github/compatibility-versions.json', 'php81-compatibility' ) );
+		self::assertSame( 0, $result[0] );
+		self::assertStringContainsString( 'NOT PHP 8.0 floor proof; genuine PHP 8.0 remains required', $result[1] );
+		$result = $this->runPhpEntryPoint( dirname( __DIR__, 2 ) . '/scripts/verify-candidate-floor.php',
+			array( $path, $this->root . '/.github/compatibility-versions.json', 'invented' ) );
+		self::assertSame( 1, $result[0] );
+		self::assertStringContainsString( 'Unknown exact candidate runtime profile', $result[2] );
 	}
 
 	public function testCandidateFloorCliRetainsEvidenceAndReportsRealFailure(): void {
@@ -374,7 +460,7 @@ final class CompatibilityBaselinesTest extends TestCase {
 		$runtime['mysql_client'] = 'mysql  Ver 8.0.36 for Linux on x86_64 (MySQL Community Server - GPL)';
 		unset( $runtime['mysql_server'] );
 		$this->expectException( RuntimeException::class );
-		$this->expectExceptionMessage( 'Observed runtime is not the supported floor: mysql_server' );
+		$this->expectExceptionMessage( 'Observed runtime does not match php80-floor: mysql_server' );
 		webmastery_mcp_verify_candidate_floor( $runtime, $this->baseline );
 	}
 
@@ -540,6 +626,53 @@ PHP;
 		return $cases;
 	}
 
+	public function testCandidateCompatibilityUsesSiblingProofHostWithoutClaimingPhp80Floor(): void {
+		$workflow = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/compatibility-qa.yml' ) );
+		$jobs = array();
+		foreach ( array( 'candidate-floor', 'compatibility-qa' ) as $name ) {
+			self::assertSame( 1, preg_match( '/^  ' . preg_quote( $name, '/' ) . ':\n(.*?)(?=^  [a-z-]+:|\z)/ms', $workflow, $match ) );
+			$jobs[ $name ] = $match[1];
+		}
+		$proof_steps = '/      - name: Set up host QA PHP\n.*?      - name: Bind canonical host QA interpreter\n.*?(?=      - name:)/s';
+		$steps = array();
+		foreach ( $jobs as $name => $source ) {
+			self::assertSame( 1, preg_match( $proof_steps, $source, $steps[ $name ] ), $name . ' must select its independent proof host before QA.' );
+		}
+		self::assertSame( $steps['compatibility-qa'][0], $steps['candidate-floor'][0] );
+		foreach ( array(
+			'shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240',
+			"php-version: '8.4'", 'extensions: zip, posix', 'coverage: none',
+			'binary="$(readlink -e /usr/bin/php8.4)"',
+			'test "${binary##*/}" = php8.4',
+			'printf \'WSTM108_HOST_PHP=%s\n\' "$binary" >> "$GITHUB_ENV"',
+		) as $guard ) {
+			self::assertStringContainsString( $guard, $steps['candidate-floor'][0] );
+		}
+		$candidate = $jobs['candidate-floor'];
+		self::assertSame( 1, preg_match( '/      - name: Run unchanged full candidate E2E harness\n(.*?)(?=      - name:)/s', $candidate, $qa ) );
+		foreach ( array( 'id: qa', 'E2E_MANAGE_COMPOSE: 1', 'E2E_KEEP_COMPOSE: 1',
+			'WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}', 'run: bash scripts/e2e-test.sh all' ) as $guard ) {
+			self::assertStringContainsString( $guard, $qa[1] );
+		}
+		self::assertSame( 1, substr_count( $candidate, 'WSTM108_HOST_AUTHORITY_ROOT:' ) );
+		self::assertLessThan( strpos( $candidate, 'Bind source and candidate-pinned' ), strpos( $candidate, $steps['candidate-floor'][0] ) );
+		self::assertLessThan( strpos( $candidate, $qa[0] ), strpos( $candidate, $steps['candidate-floor'][0] ) );
+		self::assertStringContainsString( '.label == "wp69-php81-compatibility"', $candidate );
+		self::assertStringContainsString( 'wordpress:6.9-php8.1-apache', $candidate );
+		self::assertStringContainsString( 'candidate-pins.json php81-compatibility', $candidate );
+		self::assertStringContainsString( 'Genuine PHP 8.0 full candidate E2E remains required.', $candidate );
+		foreach ( array( 'php80-floor', 'wordpress:6.9-php8.0-apache', 'wordpress:6.9-php8.4-apache',
+			'WSTM108_MOCK', 'sudo ', 'chmod ', 'mkdir ', 'continue-on-error:' ) as $forbidden ) {
+			self::assertStringNotContainsString( $forbidden, $steps['candidate-floor'][0] . $qa[1] );
+		}
+		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/scripts/untrusted-host-bootstrap.sh' );
+		foreach ( array( 'umask 077', 'set -o noclobber', 'mkdir -m 700 -- "$directory"',
+			'[[ -n "$root" && "$root" == "$(readlink -e -- "$root")"',
+			'[[ -d "$root" && ! -L "$root"', '(( ( 8#$(stat -c %a -- "$root") & 0022 ) == 0 ))' ) as $guard ) {
+			self::assertStringContainsString( $guard, $bootstrap );
+		}
+	}
+
 	public function testCandidateWorkflowIsIsolatedFromDiscoveryAndPromotion(): void {
 		$workflow = file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/compatibility-qa.yml' );
 		$jobs     = array();
@@ -560,7 +693,10 @@ PHP;
 		self::assertStringContainsString( 'wordpress sha256sum --check --strict < compatibility-artifacts/source.sha256', $candidate );
 		self::assertStringContainsString( 'new ReflectionClass("Webmastery_MCP_Response")', $candidate );
 		self::assertStringContainsString( 'php ../candidate-floor-tools/scripts/verify-candidate-floor.php', $candidate );
-		self::assertStringContainsString( 'compatibility-artifacts/runtime.json compatibility-artifacts/candidate-pins.json', $candidate );
+		self::assertStringContainsString( 'compatibility-artifacts/runtime.json compatibility-artifacts/candidate-pins.json php81-compatibility', $candidate );
+		self::assertStringContainsString( '.label == "wp69-php81-compatibility"', $candidate );
+		self::assertStringContainsString( 'Not PHP 8.0 minimum-runtime proof', $candidate );
+		self::assertStringNotContainsString( 'supported-floor', $candidate );
 		self::assertStringContainsString( 'run: bash scripts/destructive-retention.sh cleanup', $candidate );
 		self::assertStringContainsString( 'capture checkout git diff --exit-code HEAD', $candidate );
 		self::assertStringContainsString( 'capture mysql-server docker compose exec -T wordpress wp --allow-root eval', $candidate );

@@ -58,13 +58,7 @@ class Webmastery_MCP_Comments {
 	}
 
 	private static function reply_permission() {
-		return function () {
-			if ( ! current_user_can( 'edit_posts' ) ) {
-				return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_posts capability.' );
-			}
-
-			return true;
-		};
+		return Webmastery_MCP_Permissions::cap( 'edit_posts' );
 	}
 
 	private static function moderate_permission() {
@@ -129,9 +123,10 @@ class Webmastery_MCP_Comments {
 				],
 			],
 			'execute_callback'    => function ( $input ) {
-				$args = [
-					'number' => min( (int) ( $input['per_page'] ?? 20 ), 100 ),
-					'offset' => ( max( 1, (int) ( $input['page'] ?? 1 ) ) - 1 ) * min( (int) ( $input['per_page'] ?? 20 ), 100 ),
+				[ 'per_page' => $per_page, 'page' => $page ] = Webmastery_MCP_Input::pagination( $input, 20, 100, null );
+				$args                                        = [
+					'number' => $per_page,
+					'offset' => ( $page - 1 ) * $per_page,
 					'status' => $input['status'] ?? 'all',
 				];
 
@@ -154,12 +149,7 @@ class Webmastery_MCP_Comments {
 					],
 				];
 			},
-			'permission_callback' => function () {
-				if ( ! current_user_can( 'moderate_comments' ) ) {
-					return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires moderate_comments capability.' );
-				}
-				return true;
-			},
+			'permission_callback' => Webmastery_MCP_Permissions::cap( 'moderate_comments' ),
 			'meta' => [
 				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],

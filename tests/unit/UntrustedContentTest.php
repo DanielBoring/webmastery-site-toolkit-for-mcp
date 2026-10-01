@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use Wstm108Content\Webmastery_MCP_Posts as Posts;
+use Wstm108Content\Webmastery_MCP_Post_Revisions as Revisions;
+use Wstm108Content\Webmastery_MCP_Content_Patch as ContentPatch;
 use Wstm108Content\Webmastery_MCP_Custom_Post_Types as CustomPostTypes;
 use Wstm108Content\Webmastery_MCP_Comments as Comments;
 use Wstm108Content\Webmastery_MCP_Media as Media;
@@ -157,8 +159,8 @@ final class UntrustedContentTest extends TestCase {
 			array( Posts::class, 'normalize', array( self::post() ), self::expected_post(), self::POST_FIELDS ),
 			array( Posts::class, 'normalize', array( self::post( 'page', 44 ) ), self::expected_post( 'page', 44 ), self::POST_FIELDS ),
 			array( CustomPostTypes::class, 'normalize_post', array( self::post( 'book', 45 ) ), self::expected_post( 'book', 45 ), self::POST_FIELDS ),
-			array( Posts::class, 'normalize_revision', array( self::post( 'revision', 43 ) ), self::expected_revision(), array( 'author_name', 'title', 'content', 'excerpt' ) ),
-			array( Posts::class, 'normalize_block', array( self::block(), '0.1' ), self::expected_block(), array( 'block_name', 'text', 'html', 'attrs' ) ),
+			array( Revisions::class, 'normalize_revision', array( self::post( 'revision', 43 ) ), self::expected_revision(), array( 'author_name', 'title', 'content', 'excerpt' ) ),
+			array( ContentPatch::class, 'normalize_block', array( self::block(), '0.1' ), self::expected_block(), array( 'block_name', 'text', 'html', 'attrs' ) ),
 			array( Comments::class, 'normalize', array( $comment ), array(
 				'id' => 51, 'post_id' => 42, 'author' => self::TEXT, 'author_email' => '"quoted"@example.test',
 				'author_url' => '', 'content' => self::HTML, 'status' => 'approved',
@@ -268,7 +270,7 @@ final class UntrustedContentTest extends TestCase {
 		$this->assert_marked(
 			array( 'path' => '0', 'block_name' => null, 'text' => '', 'html' => '', 'attrs' => array(), 'inner_block_count' => 0, 'hash' => hash( 'sha256', self::HTML ) ),
 			array( 'block_name', 'text', 'html', 'attrs' ),
-			self::invoke( Posts::class, 'normalize_block', array( array(), '0' ) )
+			self::invoke( ContentPatch::class, 'normalize_block', array( array(), '0' ) )
 		);
 		$GLOBALS['wstm108']['file'] = false;
 		$GLOBALS['wstm108']['attachment_metadata'] = false;
@@ -282,14 +284,14 @@ final class UntrustedContentTest extends TestCase {
 	public function test_missing_or_wrong_record_types_remain_null(): void {
 		foreach ( array(
 			array( Posts::class, 'normalize' ), array( CustomPostTypes::class, 'normalize_post' ),
-			array( Posts::class, 'normalize_revision' ), array( Media::class, 'normalize' ),
+			array( Revisions::class, 'normalize_revision' ), array( Media::class, 'normalize' ),
 			array( Users::class, 'normalize' ), array( Users::class, 'normalize_admin_account' ),
 		) as list( $class, $method ) ) {
 			$this->assertNull( self::invoke( $class, $method, array( 999 ) ) );
 		}
 		self::post();
 		$this->assertNull( self::invoke( Media::class, 'normalize', array( 42 ) ) );
-		$this->assertNull( self::invoke( Posts::class, 'normalize_revision', array( 42 ) ) );
+		$this->assertNull( self::invoke( Revisions::class, 'normalize_revision', array( 42 ) ) );
 	}
 
 	private function execute( string $name, array $input ): array {
@@ -310,6 +312,9 @@ final class UntrustedContentTest extends TestCase {
 			$list = $this->execute( 'list-' . ( 'post' === $type ? 'posts' : 'pages' ), array() );
 			$this->assert_single_window( $list );
 			$this->assert_summary( $expected, self::POST_FIELDS, $list['items'][0] );
+			$summary = $this->execute( 'list-' . ( 'post' === $type ? 'posts' : 'pages' ), array( 'fields' => 'summary' ) );
+			$this->assert_single_window( $summary );
+			$this->assert_summary( $expected, self::POST_FIELDS, $summary['items'][0] );
 			$full = $this->execute( 'list-' . ( 'post' === $type ? 'posts' : 'pages' ), array( 'fields' => 'full' ) );
 			$this->assert_single_window( $full );
 			$this->assert_marked( $expected, self::POST_FIELDS, $full['items'][0] );
@@ -333,6 +338,9 @@ final class UntrustedContentTest extends TestCase {
 		$this->assertSame( 'post', $data['type'] );
 		$this->assertCount( 1, $data['revisions'] );
 		$this->assert_summary( self::expected_revision(), array( 'author_name', 'title', 'content', 'excerpt' ), $data['revisions'][0] );
+		$summary = $this->execute( 'list-revisions', array( 'post_id' => 42, 'fields' => 'summary' ) );
+		$this->assertCount( 1, $summary['revisions'] );
+		$this->assert_summary( self::expected_revision(), array( 'author_name', 'title', 'content', 'excerpt' ), $summary['revisions'][0] );
 		$full = $this->execute( 'list-revisions', array( 'post_id' => 42, 'fields' => 'full' ) );
 		$this->assertSame( array( 'post_id', 'type', 'revisions' ), array_keys( $full ) );
 		$this->assertSame( 42, $full['post_id'] );
@@ -484,6 +492,9 @@ final class UntrustedContentTest extends TestCase {
 		$list = $this->execute( 'list-cpt-book', array() );
 		$this->assert_single_window( $list );
 		$this->assert_summary( $expected, self::POST_FIELDS, $list['items'][0] );
+		$summary = $this->execute( 'list-cpt-book', array( 'fields' => 'summary' ) );
+		$this->assert_single_window( $summary );
+		$this->assert_summary( $expected, self::POST_FIELDS, $summary['items'][0] );
 		$full = $this->execute( 'list-cpt-book', array( 'fields' => 'full' ) );
 		$this->assert_single_window( $full );
 		$this->assert_marked( $expected, self::POST_FIELDS, $full['items'][0] );

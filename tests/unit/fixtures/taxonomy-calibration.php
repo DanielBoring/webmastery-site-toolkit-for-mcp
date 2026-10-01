@@ -10,6 +10,8 @@ use Webmastery_MCP_Input;
 use Webmastery_MCP_Response;
 
 require_once dirname( __DIR__, 3 ) . '/includes/class-input.php';
+require_once __DIR__ . '/shared-helper-loader.php';
+\wstm_test_load_shared_helpers( __NAMESPACE__ );
 
 final class Probe {
 	public static array $abilities = array();

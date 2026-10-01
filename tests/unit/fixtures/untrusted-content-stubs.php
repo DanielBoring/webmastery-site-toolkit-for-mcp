@@ -2,8 +2,11 @@
 
 namespace Wstm108Content;
 
+require_once __DIR__ . '/shared-helper-loader.php';
+\wstm_test_load_shared_helpers( __NAMESPACE__ );
+
 // Keep production class bodies intact while controlling their WordPress boundaries.
-foreach ( array( 'list-query', 'posts', 'custom-post-types', 'comments', 'media', 'users', 'content-hygiene' ) as $module ) {
+foreach ( array( 'posts', 'custom-post-types', 'comments', 'media', 'users', 'content-hygiene' ) as $module ) {
 	$source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-' . $module . '.php' );
 	eval( 'namespace Wstm108Content; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Untrusted; use \Webmastery_MCP_Post_Scheduling; use \Webmastery_MCP_Post_Parent; ' . substr( $source, 5 ) );
 }

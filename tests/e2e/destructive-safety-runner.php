@@ -88,6 +88,8 @@ foreach ( array( __FILE__, __DIR__ . '/destructive-safety-fixture.php', __DIR__ 
 	__DIR__ . '/metadata-transport.php', __DIR__ . '/metadata-batch-fixture.php',
 	__DIR__ . '/error-contract-assertions.php', __DIR__ . '/error-contract-fixture.php', __DIR__ . '/abilities-manifest.json',
 	__DIR__ . '/../../includes/class-posts.php', __DIR__ . '/../../includes/class-media.php',
+	__DIR__ . '/../../includes/class-bulk-posts.php', __DIR__ . '/../../includes/class-post-access.php',
+	__DIR__ . '/../../includes/class-post-writes.php', __DIR__ . '/../../includes/class-permissions.php',
 	__DIR__ . '/../../includes/class-taxonomy.php', __DIR__ . '/../../includes/class-content-hygiene.php' ) as $source ) {
 	$summary['hashes'][ basename( $source ) ] = hash_file( 'sha256', $source );
 }

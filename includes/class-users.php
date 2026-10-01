@@ -34,19 +34,11 @@ class Webmastery_MCP_Users {
 	}
 
 	public static function permission() {
-		if ( ! current_user_can( 'list_users' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires list_users capability.' );
-		}
-
-		return true;
+		return Webmastery_MCP_Permissions::check( 'list_users' );
 	}
 
 	public static function audit_permission() {
-		if ( ! current_user_can( 'edit_users' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_users capability.' );
-		}
-
-		return true;
+		return Webmastery_MCP_Permissions::check( 'edit_users' );
 	}
 
 	private static function normalize_admin_account( $user ) {
@@ -114,8 +106,7 @@ class Webmastery_MCP_Users {
 				],
 			],
 			'execute_callback'    => function ( $input ) {
-				$per_page = min( (int) ( $input['per_page'] ?? 20 ), 100 );
-				$page     = max( 1, (int) ( $input['page'] ?? 1 ) );
+				[ 'per_page' => $per_page, 'page' => $page ] = Webmastery_MCP_Input::pagination( $input, 20, 100, null );
 
 				$args = [
 					'number'      => $per_page,

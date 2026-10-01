@@ -5,8 +5,11 @@ namespace Wstm110Boundary;
 use LogicException;
 use RuntimeException;
 
+require_once __DIR__ . '/shared-helper-loader.php';
+\wstm_test_load_shared_helpers( __NAMESPACE__ );
+
 // Execute unchanged production bodies with fail-fast WordPress boundary probes.
-foreach ( array( 'class-list-query.php', 'class-posts.php', 'class-custom-post-types.php', 'class-seo.php' ) as $file ) {
+foreach ( array( 'class-posts.php', 'class-custom-post-types.php', 'class-seo.php' ) as $file ) {
 	$source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/' . $file );
 	eval( 'namespace Wstm110Boundary; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Untrusted; use \Webmastery_MCP_Post_Scheduling; use \Webmastery_MCP_Post_Parent; ' . substr( $source, 5 ) );
 }

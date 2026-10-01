@@ -6,6 +6,22 @@ defined( 'ABSPATH' ) || exit;
  * Validate raw callback input without coercion, queries, or capability hooks.
  */
 final class Webmastery_MCP_Input {
+	public static function per_page( array $input, int $default_per_page = 20, int $maximum = 100, ?int $minimum = 1 ): int {
+		$value = (int) ( $input['per_page'] ?? $default_per_page );
+		return min( null === $minimum ? $value : max( $minimum, $value ), $maximum );
+	}
+
+	public static function page( array $input ): int {
+		return max( 1, (int) ( $input['page'] ?? 1 ) );
+	}
+
+	public static function pagination( array $input, int $default_per_page = 20, int $maximum = 100, ?int $minimum = 1 ): array {
+		return [
+			'per_page' => self::per_page( $input, $default_per_page, $maximum, $minimum ),
+			'page'     => self::page( $input ),
+		];
+	}
+
 	public static function register_args( array $args, string $name ): array {
 		if ( ! Webmastery_MCP_Response::owns( $name ) ) {
 			return $args;

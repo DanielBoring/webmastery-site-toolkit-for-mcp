@@ -23,7 +23,24 @@ final class PermissionsLoadingTest extends TestCase {
 		$root = dirname( __DIR__, 2 );
 		require_once $root . '/scripts/release-lib.php';
 		$files = release_source_files( $root );
-		self::assertArrayHasKey( 'includes/class-permissions.php', $files );
-		self::assertSame( hash_file( 'sha256', $root . '/includes/class-permissions.php' ), $files['includes/class-permissions.php'] );
+		foreach ( array( 'permissions', 'post-access', 'post-content', 'post-meta', 'post-writes', 'bulk-posts', 'post-revisions', 'featured-image', 'content-patch' ) as $helper ) {
+			$path = 'includes/class-' . $helper . '.php';
+			self::assertArrayHasKey( $path, $files );
+			self::assertSame( hash_file( 'sha256', $root . '/' . $path ), $files[ $path ] );
+		}
+
+	}
+
+	public function testSharedHelpersLoadInsideAbilityHookBeforeConsumers(): void {
+		$source = file_get_contents( dirname( __DIR__, 2 ) . '/webmastery-site-toolkit-for-mcp.php' );
+		$hook = strpos( $source, "add_action( 'wp_abilities_api_init'" );
+		$consumer = strpos( $source, "require_once __DIR__ . '/includes/class-posts.php'" );
+		foreach ( array( 'post-access', 'post-content', 'post-meta', 'post-writes', 'bulk-posts', 'post-revisions', 'featured-image', 'content-patch' ) as $helper ) {
+			$require = "require_once __DIR__ . '/includes/class-" . $helper . ".php'";
+			self::assertSame( 1, substr_count( $source, $require ) );
+			$position = strpos( $source, $require );
+			self::assertGreaterThan( $hook, $position );
+			self::assertLessThan( $consumer, $position );
+		}
 	}
 }

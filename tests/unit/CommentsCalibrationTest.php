@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Wstm105Calibration\Probe;
 
 require_once __DIR__ . '/fixtures/comments-calibration.php';
+require_once __DIR__ . '/fixtures/shared-helper-transition.php';
 require_once dirname( __DIR__ ) . '/e2e/error-contract-assertions.php';
 
 /**
@@ -200,12 +201,10 @@ final class CommentsCalibrationTest extends TestCase {
 
 	private function assert_comments_provenance_bridge( string $source, string $historical_hash ): void {
 		$source = str_replace( "\r\n", "\n", $source );
-		self::assertSame( '3db21ccc0fc980d2d0b6e13d7ee7d2da8b53c3eee31580c715e8c1e35604bc81', hash( 'sha256', $source ), 'Current Comments source drift.' );
-		self::assertSame( '3f5ede301f3a6a2308b17aff6f498ce07d9b2990', hash( 'sha1', 'blob ' . strlen( $source ) . "\0" . $source ), 'Current Comments Git blob drift.' );
-		$restored = str_replace( self::COMMENTS_MARKER_OPEN, "\t\treturn [\n", $source, $openings );
-		self::assertSame( 1, $openings, 'Reverse exactly one approved marker opening.' );
-		$restored = str_replace( self::COMMENTS_MARKER_CLOSE, "\t\t];\n", $restored, $closings );
-		self::assertSame( 1, $closings, 'Reverse exactly one approved marker allowlist and closing.' );
+		$binding = Wstm167SourceTransition::load()['files']['includes/class-comments.php'];
+		self::assertSame( $binding['current_sha256'], hash( 'sha256', $source ), 'Current Comments source drift.' );
+		self::assertSame( $binding['current_blob'], hash( 'sha1', 'blob ' . strlen( $source ) . "\0" . $source ), 'Current Comments Git blob drift.' );
+		$restored = Wstm119SourceTransition::restore( 'includes/class-comments.php', $source );
 		self::assertSame( 'a5cc75ef65c0cb2b7b5e7c9173fc3f857f8181c9270c6f201483db73cde9bb4f', hash( 'sha256', $restored ), 'Restored historical Comments source drift.' );
 		self::assertSame( $historical_hash, hash( 'sha256', $restored ), 'Restored Comments must match the unchanged sealed ledger binding.' );
 	}
@@ -257,7 +256,8 @@ final class CommentsCalibrationTest extends TestCase {
 				} elseif ( 'includes/class-comments.php' === $path ) {
 					$this->assert_comments_provenance_bridge( file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ), $hash );
 				} else {
-					self::assertSame( $hash, hash( 'sha256', str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) ) ), 'Production drift: ' . $path );
+					$historical = Wstm119SourceTransition::restore( $path, file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) );
+					self::assertSame( $hash, hash( 'sha256', $historical ), 'Production drift: ' . $path );
 				}
 			}
 		}

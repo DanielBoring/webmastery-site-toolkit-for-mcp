@@ -3,8 +3,10 @@
 namespace Wstm121;
 
 require_once dirname( __DIR__, 3 ) . '/includes/class-input.php';
+require_once __DIR__ . '/shared-helper-loader.php';
+\wstm_test_load_shared_helpers( __NAMESPACE__ );
 
-foreach ( array( 'class-list-query.php', 'class-posts.php', 'class-custom-post-types.php', 'class-media.php', 'class-content-hygiene.php', 'class-seo.php' ) as $file ) {
+foreach ( array( 'class-posts.php', 'class-custom-post-types.php', 'class-media.php', 'class-content-hygiene.php', 'class-seo.php' ) as $file ) {
 	$path = dirname( __DIR__, 3 ) . '/includes/' . $file;
 	if ( is_file( $path ) ) {
 		eval( 'namespace Wstm121; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Untrusted; ' . substr( file_get_contents( $path ), 5 ) );

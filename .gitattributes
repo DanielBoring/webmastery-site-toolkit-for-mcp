@@ -9,3 +9,32 @@
 *.txt text eol=lf
 *.xml text eol=lf
 *.yml text eol=lf
+tests/e2e/bounded-list-recovery.py text eol=lf
+tests/unit/test_bounded_recovery.py text eol=lf
+scripts/untrusted-query.py text eol=lf
+tests/unit/test_untrusted_query.py text eol=lf
+tests/fixtures/php80-floor/Dockerfile text eol=lf
+tests/unit/fixtures/untrusted-docker text eol=lf
+tests/unit/fixtures/untrusted-host-process text eol=lf
+
+# Preserve reviewed source-bound bytes instead of normalizing their line endings.
+phpcs.xml.dist -text whitespace=cr-at-eol
+phpstan-baseline.neon -text whitespace=cr-at-eol
+phpstan.neon.dist -text whitespace=cr-at-eol
+phpunit.xml.dist -text whitespace=cr-at-eol
+scripts/qa-local.ps1 -text whitespace=cr-at-eol
+scripts/test-controller-components.py -text whitespace=cr-at-eol
+tests/e2e/bounded-list-controller.py -text whitespace=cr-at-eol
+tests/unit/ArraySyntaxTest.php -text whitespace=cr-at-eol
+tests/unit/BoundedOwnerIntegrationTest.php -text whitespace=cr-at-eol
+tests/unit/fixtures/array-syntax-transition.php -text whitespace=cr-at-eol
+tests/unit/fixtures/posts-extraction-stubs.php -text whitespace=cr-at-eol
+tests/unit/fixtures/posts-extraction-transition.php -text whitespace=cr-at-eol
+tests/unit/fixtures/shared-helper-loader.php -text whitespace=cr-at-eol
+tests/unit/fixtures/shared-helper-transition.php -text whitespace=cr-at-eol
+tests/unit/fixtures/shared-helpers-stubs.php -text whitespace=cr-at-eol
+tests/unit/PostsExtractionTest.php -text whitespace=cr-at-eol
+tests/unit/SharedHelpersTest.php -text whitespace=cr-at-eol
+tests/unit/test_bounded_controller.py -text whitespace=cr-at-eol
+tests/unit/test_controller_ci_harness.py -text whitespace=cr-at-eol
+tests/unit/UntrustedMockRetentionTest.php -text whitespace=cr-at-eol
