@@ -6,6 +6,12 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Surface only the controller's approved closed topology refusal witness after
+  runtime CI QA, including compatibility and release/package jobs. Treat absent
+  or invalid witnesses explicitly without exposing private streams or changing
+  QA, admission, artifact, cleanup or publishing conclusions. Preserve historical
+  workflow/proof seals through a minimal reviewed outer reversal.
+
 - Add integer/null and permission-denial regressions for SEO/readability score
   markers, with a two-path reviewed outer source reversal at the existing
   bounded source/dependency entry points. Keep historical seals, manifest

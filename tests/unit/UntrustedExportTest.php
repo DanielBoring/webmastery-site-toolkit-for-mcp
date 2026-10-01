@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once dirname( __DIR__, 2 ) . '/scripts/untrusted-export.php';
+require_once __DIR__ . '/fixtures/ci-diagnostic-transition.php';
 
 final class UntrustedExportTest extends TestCase {
 	public static function list_shapes(): array {
@@ -316,7 +317,7 @@ final class UntrustedExportTest extends TestCase {
 	}
 
 	public function test_only_authorized_tag_release_wiring_changes_original_workflow_bytes(): void {
-		$source = self::release_workflow();
+		$source = Wstm167CiDiagnosticTransition::restore( '.github/workflows/release.yml', self::release_workflow() );
 		self::assert_release_gates( $source );
 		$qa = self::release_step( $source, 'Build once and test the package with pinned and current Plugin Check' );
 		$original_qa = str_replace( array(

@@ -68,6 +68,27 @@ The production environment, main-history/PR rules, and tag protections were last
 
 ## Workflow permissions
 
+### Closed admission refusal diagnostics
+
+Every runtime `qa` step in Docker E2E, release/package QA and compatibility
+jobs is followed by an `always()` diagnostic step. It passes only the existing
+`untrusted_admission_failure` output via `WSTM108_ADMISSION_FAILURE`, never
+interpolates that value into a shell command, and uses the topology allowlist
+already approved by the controller. The formatter accepts only a two-string
+`phase`/`reason` JSON object (at most 256 bytes, unescaped members), with phase
+`topology` and an approved refusal reason. Duplicate or extra keys, foreign
+phases/reasons, malformed or oversized payloads produce a fixed invalid message;
+absent output produces a fixed unavailable message. No raw payload, private
+stream, authority path or exception is logged or uploaded.
+
+Formatter exit zero means only formatting completed, not that admission passed.
+The best-effort diagnostic cannot override the original QA failure (including
+exit 78), export/artifact eligibility, cleanup, custody or release gates. An
+unavailable witness is not evidence of a missing grant, missing bare stack or
+unsupported host. Runtime acceptance and native/Composer QA remain separate.
+Existing sealed workflow and proof expectations are retained through an exact,
+reversible outer CI-only transition; historical ledgers are not regenerated.
+
 Use least privilege per job:
 
 - Read-only jobs use `contents: read`.

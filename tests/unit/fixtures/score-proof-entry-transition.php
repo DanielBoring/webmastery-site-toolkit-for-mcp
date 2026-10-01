@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/score-marker-transition.php';
+require_once __DIR__ . '/ci-diagnostic-transition.php';
 
 final class Wstm167ScoreProofEntryTransition {
 	public const SEAL = 'e79abfdb00bcb85deff22b30c836b2bfbc2ac1e343a8b20dc9ba1311aaeb8ca8';
@@ -16,6 +17,7 @@ final class Wstm167ScoreProofEntryTransition {
 	}
 
 	public static function verify_dependencies( callable $read ): void {
+		Wstm167CiDiagnosticTransition::verify_dependencies( $read );
 		foreach ( self::load()['files'] as $path => $binding ) {
 			$source = $read( $path );
 			if ( ! is_string( $source ) || ! hash_equals( $binding['current_raw_sha256'], hash( 'sha256', $source ) ) ) {
@@ -26,6 +28,7 @@ final class Wstm167ScoreProofEntryTransition {
 	}
 
 	public static function restore( string $path, string $source ): string {
+		$source = Wstm167CiDiagnosticTransition::restore( $path, $source );
 		$map = self::load();
 		if ( isset( $map['files'][ $path ] ) ) {
 			$binding = $map['files'][ $path ];

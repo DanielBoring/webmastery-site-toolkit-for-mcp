@@ -26,7 +26,7 @@ final class ScoreProofEntryTransitionTest extends TestCase {
 			self::assertSame( $binding['baseline_raw_sha256'], hash( 'sha256', Wstm167ScoreProofEntryTransition::restore( $path, $this->read( $path ) ) ), $path );
 		}
 		foreach ( $map['preserved_raw_sha256'] as $path => $hash ) {
-			self::assertSame( $hash, hash( 'sha256', $this->read( $path ) ), $path );
+			self::assertSame( $hash, hash( 'sha256', Wstm167CiDiagnosticTransition::restore( $path, $this->read( $path ) ) ), $path );
 		}
 		self::assertSame( 'bbc14f6fdf5184f515a93dedd19b29d707245e52bd4d17207a61b5fbfd8e2076', Wstm167ScoreMarkerTransition::SEAL );
 		$path = 'tests/unit/fixtures/bounded-admission-transition.php';

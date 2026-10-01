@@ -90,6 +90,13 @@ jobs:
           WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
         run: bash scripts/release-qa.sh
 
+      - name: Show closed admission refusal diagnostic (not acceptance)
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}
+        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php
+
       - name: Upload destructive safety package evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
