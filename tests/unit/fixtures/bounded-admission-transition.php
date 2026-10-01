@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/score-marker-transition.php';
+require_once __DIR__ . '/selected-listener-transition.php';
 
 final class Wstm166BoundedAdmissionTransition {
 	public const SEAL = 'a45c96be6790c0380788529adc509955ffc9de64b472a5fae24bb46a9e13df5f';
@@ -21,15 +22,21 @@ final class Wstm166BoundedAdmissionTransition {
 	}
 
 	public static function verify_dependencies( callable $read ): void {
-		Wstm167ScoreMarkerTransition::verify_dependencies( $read, 'Bounded integration dependency' );
+		Wstm167ScoreMarkerTransition::verify_dependencies(
+			static function ( $path ) use ( $read ) {
+				$source = $read( $path );
+				return is_string( $source ) ? Wstm167SelectedListenerTransition::restore( $path, $source, 'Bounded integration dependency current source drift' ) : $source;
+			}, 'Bounded integration dependency' );
 		$map = self::load();
 		foreach ( $map['dependencies'] as $path => $hash ) {
-			if ( ! hash_equals( $hash, hash( 'sha256', $read( $path ) ) ) ) { throw new RuntimeException( 'Floor selector dependency drift: ' . $path ); }
+			$source = Wstm167SelectedListenerTransition::restore( $path, $read( $path ) );
+			if ( ! hash_equals( $hash, hash( 'sha256', $source ) ) ) { throw new RuntimeException( 'Floor selector dependency drift: ' . $path ); }
 		}
 		foreach ( $map['files'] as $path => $binding ) { self::restore( $path, $read( $path ) ); }
 	}
 
 	public static function restore( string $path, string $source ): string {
+		$source = Wstm167SelectedListenerTransition::restore( $path, $source );
 		$source = Wstm167ScoreMarkerTransition::restore( $path, $source, 'Bounded integration' );
 		$map = self::load();
 		if ( ! isset( $map['files'][ $path ] ) ) { return $source; }

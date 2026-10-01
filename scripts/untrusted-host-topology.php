@@ -172,6 +172,29 @@ final class Wstm108_HostTopology {
 		return array_intersect_key( $stat, array_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode', 'nlink' ) ) );
 	}
 
+	/** Classify only canonical-path rows; connected streams are not listening inodes. */
+	public static function selected_listener( array $rows ): string {
+		$listeners = array();
+		$inodes = array();
+		foreach ( $rows as $columns ) {
+			self::require( is_array( $columns ) && array_keys( $columns ) === range( 0, 7 )
+				&& count( array_filter( $columns, 'is_string' ) ) === 8
+				&& 1 === preg_match( '/^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{16}):$/D', $columns[0] )
+				&& 1 === preg_match( '/^[0-9a-fA-F]{8}$/D', $columns[1] ) && hexdec( $columns[1] ) > 0
+				&& '00000000' === $columns[2] && '0001' === $columns[4]
+				&& 1 === preg_match( '/^[1-9][0-9]{0,19}$/D', $columns[6] )
+				&& ( strlen( $columns[6] ) < 20 || strcmp( $columns[6], '18446744073709551615' ) <= 0 )
+				&& ! isset( $inodes[ $columns[6] ] )
+				&& in_array( $columns[7], array( '/run/docker.sock', '/var/run/docker.sock' ), true )
+				&& ( ( '00010000' === $columns[3] && '01' === $columns[5] )
+					|| ( '00000000' === $columns[3] && '03' === $columns[5] ) ), 'ambiguous-selected-listener' );
+			$inodes[ $columns[6] ] = true;
+			if ( '00010000' === $columns[3] ) { $listeners[] = $columns[6]; }
+		}
+		self::require( 1 === count( $listeners ), 'selected-listener-not-unique' );
+		return $listeners[0];
+	}
+
 	private static function peer( string $socket, int $pid ): array {
 		$process = '/proc/' . $pid;
 		$identity = self::stat( $process );
@@ -180,16 +203,14 @@ final class Wstm108_HostTopology {
 		self::require( 1 === preg_match( '/^([0-9]+) \(.+\) (.+)\n?$/D', $stat, $matches ) && (int) $matches[1] === $pid, 'ambiguous-process-identity' );
 		$fields = explode( ' ', rtrim( $matches[2], "\n" ) );
 		self::require( isset( $fields[19] ) && ctype_digit( $fields[19] ), 'missing-process-start-identity' );
-		$listener = array();
+		$rows = array();
 		foreach ( explode( "\n", self::read( '/proc/net/unix', 4194304 ) ) as $line ) {
-			$columns = preg_split( '/\s+/', trim( $line ), 8 );
-			if ( 8 !== count( $columns ) || ! in_array( $columns[7], array( '/run/docker.sock', '/var/run/docker.sock' ), true ) ) { continue; }
-			if ( realpath( $columns[7] ) !== $socket ) { continue; }
-			self::require( '00010000' === $columns[3] && '0001' === $columns[4] && '01' === $columns[5]
-				&& ctype_digit( $columns[6] ), 'ambiguous-selected-listener' );
-			$listener[] = $columns[6];
+			$columns = preg_split( '/\s+/', trim( $line ) );
+			$aliases = array_intersect( array( '/run/docker.sock', '/var/run/docker.sock' ), $columns );
+			if ( array() === $aliases || realpath( reset( $aliases ) ) !== $socket ) { continue; }
+			$rows[] = $columns;
 		}
-		self::require( 1 === count( $listener ), 'selected-listener-not-unique' );
+		$listener = array( self::selected_listener( $rows ) );
 		$descriptors = @scandir( $process . '/fd' );
 		self::require( is_array( $descriptors ) && count( $descriptors ) <= 8192, 'daemon-descriptors-inaccessible' );
 		$matched = array();

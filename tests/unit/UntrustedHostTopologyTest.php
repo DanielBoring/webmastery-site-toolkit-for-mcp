@@ -5,10 +5,12 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once dirname( __DIR__, 2 ) . '/scripts/untrusted-host-topology.php';
+require_once __DIR__ . '/fixtures/selected-listener-transition.php';
 
 final class UntrustedHostTopologyTest extends TestCase {
 	public function test_refusal_allowlist_matches_every_existing_topology_guard(): void {
 		$source = file_get_contents( dirname( __DIR__, 2 ) . '/scripts/untrusted-host-topology.php' );
+		$source = Wstm167SelectedListenerTransition::restore( 'scripts/untrusted-host-topology.php', $source );
 		$source = substr( $source, strpos( $source, 'private static function path(' ) );
 		preg_match_all( "/'([a-z][a-z-]+)' \\);/", $source, $matches );
 		self::assertSame( Wstm108_HostTopology::REFUSAL_REASONS, $matches[1] );

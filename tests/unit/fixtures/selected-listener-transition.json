@@ -1,0 +1,316 @@
+{
+  "schema": 1,
+  "base_commit": "b5c087e4d4213264aba693c4eef9dee22c11ceac",
+  "predecessor_seal": "6126a718e4a19904fa4ee64c2b6cc159ee0cb82239a391dbb0ac73c1a10e0591",
+  "scope": "Classify only valid selected-path listener and accepted connected Unix stream rows; no descriptor, privilege, workflow or admission-policy change",
+  "files": {
+    ".github/REPOSITORY_CHANGELOG.md": {
+      "baseline_raw_sha256": "92e98751b8b05578aa3ce596d3975dc9d1d6a2112639a4299fd13bd6ad964b08",
+      "current_raw_sha256": "1ceee7b3ba4bd0f31795d30a340bd5dc495878bdec8ef4183002999ff38e2be7",
+      "hunks": [
+        {
+          "start": 7,
+          "before": [],
+          "after": [
+            "",
+            "- Classify normal connected Unix stream rows separately from the unique selected",
+            "  listening inode in the QA host-topology controller. Reject malformed or unknown",
+            "  selected-path rows and preserve descriptor/PID/namespace/identity checks.",
+            "  An owned nonroot socket probe reproduces the parser bug; hosted descriptor",
+            "  access remains independently blocked, and no runtime acceptance is implied.",
+            "  Preserve all accepted proof seals through an exact outer source reversal."
+          ]
+        }
+      ]
+    },
+    "docs/ci-cd-strategy.md": {
+      "baseline_raw_sha256": "c3cfd86861ab6e9c9eb9874b6d7f96ca757f3db18699d894889a61cb552ae7d0",
+      "current_raw_sha256": "82596fd1933ba50ba422bf3588794f6fd11e29cac275471f600424e6b2686215",
+      "hunks": [
+        {
+          "start": 28,
+          "before": [],
+          "after": [
+            "",
+            "### Selected Unix listener classification",
+            "",
+            "Exact-b5 PR-event run `36817024600` reported closed refusals:",
+            "E2E job `110224240488` (`topology/daemon-descriptors-inaccessible`) and Contract",
+            "job `110224240544` (`topology/ambiguous-selected-listener`). These witnesses do",
+            "not expose private hosted rows or establish their contents.",
+            "",
+            "A separate owned, nonroot Linux socket probe (read-only, network-none; no daemon",
+            "or site access) reproduced a parser assumption: one canonical pathname may have",
+            "both a listening stream row (`Flags=00010000`, `Type=0001`, `St=01`) and a normal",
+            "accepted connected stream row (`00000000`, `0001`, `03`). The controller now",
+            "classifies only these two exact shapes, counting only listening inodes. It still",
+            "requires exactly one listener, rejects malformed/unknown selected-path records,",
+            "and preserves canonical alias/realpath, bounded reads, PID-hint socket-fd ownership,",
+            "descriptor readlink/access, process identity/start time and namespace continuity.",
+            "Synthetic differential tests show the old predicate rejects the normal pair;",
+            "they do not prove this pair occurred in hosted Contract evidence.",
+            "",
+            "The independent descriptor-access refusal remains blocked. No privileges,",
+            "runtime configuration, grants, custody, deadlines or workflow changes are part",
+            "of this correction. Parser validation is not WordPress/daemon admission."
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-host-topology.php": {
+      "baseline_raw_sha256": "acf569cce5b595e01d5f8208ec88159e511214f0697b97552ad0a79af9ed97aa",
+      "current_raw_sha256": "2c0951d9097e3b9b8246e7247dabfd6034a5b50680bee7963827968f5866f3e8",
+      "hunks": [
+        {
+          "start": 174,
+          "before": [],
+          "after": [
+            "\t/** Classify only canonical-path rows; connected streams are not listening inodes. */",
+            "\tpublic static function selected_listener( array $rows ): string {",
+            "\t\t$listeners = array();",
+            "\t\t$inodes = array();",
+            "\t\tforeach ( $rows as $columns ) {",
+            "\t\t\tself::require( is_array( $columns ) && array_keys( $columns ) === range( 0, 7 )",
+            "\t\t\t\t&& count( array_filter( $columns, 'is_string' ) ) === 8",
+            "\t\t\t\t&& 1 === preg_match( '/^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{16}):$/D', $columns[0] )",
+            "\t\t\t\t&& 1 === preg_match( '/^[0-9a-fA-F]{8}$/D', $columns[1] ) && hexdec( $columns[1] ) > 0",
+            "\t\t\t\t&& '00000000' === $columns[2] && '0001' === $columns[4]",
+            "\t\t\t\t&& 1 === preg_match( '/^[1-9][0-9]{0,19}$/D', $columns[6] )",
+            "\t\t\t\t&& ( strlen( $columns[6] ) < 20 || strcmp( $columns[6], '18446744073709551615' ) <= 0 )",
+            "\t\t\t\t&& ! isset( $inodes[ $columns[6] ] )",
+            "\t\t\t\t&& in_array( $columns[7], array( '/run/docker.sock', '/var/run/docker.sock' ), true )",
+            "\t\t\t\t&& ( ( '00010000' === $columns[3] && '01' === $columns[5] )",
+            "\t\t\t\t\t|| ( '00000000' === $columns[3] && '03' === $columns[5] ) ), 'ambiguous-selected-listener' );",
+            "\t\t\t$inodes[ $columns[6] ] = true;",
+            "\t\t\tif ( '00010000' === $columns[3] ) { $listeners[] = $columns[6]; }",
+            "\t\t}",
+            "\t\tself::require( 1 === count( $listeners ), 'selected-listener-not-unique' );",
+            "\t\treturn $listeners[0];",
+            "\t}",
+            ""
+          ]
+        },
+        {
+          "start": 205,
+          "before": [
+            "\t\t$listener = array();"
+          ],
+          "after": [
+            "\t\t$rows = array();"
+          ]
+        },
+        {
+          "start": 207,
+          "before": [
+            "\t\t\t$columns = preg_split( '/\\s+/', trim( $line ), 8 );",
+            "\t\t\tif ( 8 !== count( $columns ) || ! in_array( $columns[7], array( '/run/docker.sock', '/var/run/docker.sock' ), true ) ) { continue; }",
+            "\t\t\tif ( realpath( $columns[7] ) !== $socket ) { continue; }",
+            "\t\t\tself::require( '00010000' === $columns[3] && '0001' === $columns[4] && '01' === $columns[5]",
+            "\t\t\t\t&& ctype_digit( $columns[6] ), 'ambiguous-selected-listener' );",
+            "\t\t\t$listener[] = $columns[6];"
+          ],
+          "after": [
+            "\t\t\t$columns = preg_split( '/\\s+/', trim( $line ) );",
+            "\t\t\t$aliases = array_intersect( array( '/run/docker.sock', '/var/run/docker.sock' ), $columns );",
+            "\t\t\tif ( array() === $aliases || realpath( reset( $aliases ) ) !== $socket ) { continue; }",
+            "\t\t\t$rows[] = $columns;"
+          ]
+        },
+        {
+          "start": 212,
+          "before": [
+            "\t\tself::require( 1 === count( $listener ), 'selected-listener-not-unique' );"
+          ],
+          "after": [
+            "\t\t$listener = array( self::selected_listener( $rows ) );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/ScoreMarkerTransitionTest.php": {
+      "baseline_raw_sha256": "a6ed4877bd4bcf3bfe3b5d7168296ac425c1e4c627139cd002005dc64c831a2d",
+      "current_raw_sha256": "62fa68c927f6a24a7cac8a1ae7659e555d09962a435d0ec71c965f2625abe2a0",
+      "hunks": [
+        {
+          "start": 11,
+          "before": [
+            "\t\t$read = static fn( $path ) => file_get_contents( $root . '/' . $path );"
+          ],
+          "after": [
+            "\t\t$read = static fn( $path ) => Wstm167SelectedListenerTransition::restore( $path, file_get_contents( $root . '/' . $path ) );"
+          ]
+        },
+        {
+          "start": 44,
+          "before": [],
+          "after": [
+            "\t\t\t$current = Wstm167SelectedListenerTransition::restore( $path, $current );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/UntrustedHostTopologyTest.php": {
+      "baseline_raw_sha256": "0533e4a80f6ef0e1cf791f4d5160c4a0227ab8d8be0ea6aa0eccab1508b1fdf7",
+      "current_raw_sha256": "4a3462236a73bed0b2cf066c20eabeac78b00fc6777f8c939c57a2b7db0e6f0a",
+      "hunks": [
+        {
+          "start": 7,
+          "before": [],
+          "after": [
+            "require_once __DIR__ . '/fixtures/selected-listener-transition.php';"
+          ]
+        },
+        {
+          "start": 12,
+          "before": [],
+          "after": [
+            "\t\t$source = Wstm167SelectedListenerTransition::restore( 'scripts/untrusted-host-topology.php', $source );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/UntrustedRuntimeDiagnosticTest.php": {
+      "baseline_raw_sha256": "d8f67c0ab8ae4e483a1979c373025bfb114c3995e67e9d21c86870e9eb7b2a66",
+      "current_raw_sha256": "2a93d2300e8157b1bff333d3b421f427eda33dc890627348f434aa47cc1da96d",
+      "hunks": [
+        {
+          "start": 9,
+          "before": [],
+          "after": [
+            "require_once __DIR__ . '/fixtures/selected-listener-transition.php';"
+          ]
+        },
+        {
+          "start": 202,
+          "before": [],
+          "after": [
+            "\t\t$source = Wstm167SelectedListenerTransition::restore( 'scripts/untrusted-host-topology.php', $source );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/fixtures/bounded-admission-transition.php": {
+      "baseline_raw_sha256": "a2d46adfed4e8488dfe149796b88cecc3e71f89ea1a77ac429b03b0a8603f467",
+      "current_raw_sha256": "0342720f9500d9c099be30bb5d746a11b820c57fef05aab895be543995503763",
+      "hunks": [
+        {
+          "start": 5,
+          "before": [],
+          "after": [
+            "require_once __DIR__ . '/selected-listener-transition.php';"
+          ]
+        },
+        {
+          "start": 24,
+          "before": [
+            "\t\tWstm167ScoreMarkerTransition::verify_dependencies( $read, 'Bounded integration dependency' );"
+          ],
+          "after": [
+            "\t\tWstm167ScoreMarkerTransition::verify_dependencies(",
+            "\t\t\tstatic function ( $path ) use ( $read ) {",
+            "\t\t\t\t$source = $read( $path );",
+            "\t\t\t\treturn is_string( $source ) ? Wstm167SelectedListenerTransition::restore( $path, $source, 'Bounded integration dependency current source drift' ) : $source;",
+            "\t\t\t}, 'Bounded integration dependency' );"
+          ]
+        },
+        {
+          "start": 31,
+          "before": [
+            "\t\t\tif ( ! hash_equals( $hash, hash( 'sha256', $read( $path ) ) ) ) { throw new RuntimeException( 'Floor selector dependency drift: ' . $path ); }"
+          ],
+          "after": [
+            "\t\t\t$source = Wstm167SelectedListenerTransition::restore( $path, $read( $path ) );",
+            "\t\t\tif ( ! hash_equals( $hash, hash( 'sha256', $source ) ) ) { throw new RuntimeException( 'Floor selector dependency drift: ' . $path ); }"
+          ]
+        },
+        {
+          "start": 38,
+          "before": [],
+          "after": [
+            "\t\t$source = Wstm167SelectedListenerTransition::restore( $path, $source );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/fixtures/ci-budget-control-transition.php": {
+      "baseline_raw_sha256": "a451c8ec9c3fbd7999193fffef2d910579d0d3065c55108612bccb93b4878198",
+      "current_raw_sha256": "7022898c96c4a9ccb334a3c85df8c7142a754ea90eebc1d0cbec4d8dcf7d7cb5",
+      "hunks": [
+        {
+          "start": 3,
+          "before": [],
+          "after": [
+            "",
+            "require_once __DIR__ . '/selected-listener-transition.php';"
+          ]
+        },
+        {
+          "start": 23,
+          "before": [],
+          "after": [
+            "\t\tWstm167SelectedListenerTransition::verify_dependencies( $read );"
+          ]
+        },
+        {
+          "start": 27,
+          "before": [],
+          "after": [
+            "\t\t\tif ( is_string( $source ) ) { $source = Wstm167SelectedListenerTransition::restore( $path, $source ); }"
+          ]
+        },
+        {
+          "start": 42,
+          "before": [],
+          "after": [
+            "\t\t$source = Wstm167SelectedListenerTransition::restore( $path, $source,",
+            "\t\t\t'tests/unit/fixtures/bounded-admission-transition.php' === $path ? 'Score marker current source drift' : 'CI diagnostic current source drift' );"
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    ".github/workflows/coding-standards.yml": "1778f0179b3713aece5a60e14b734eeb3ce7416942cf00393635fe5dea260000",
+    ".github/workflows/compatibility-qa.yml": "ca8c18c12b14d76d27be262da5ef2c2dd80ec7dbcb4fcbb7df86f3d9a381936f",
+    ".github/workflows/e2e-qa.yml": "f2f4febd0da80b37263b2c32d306e24094ae5dd51787a65fd97e73fb210f716c",
+    ".github/workflows/import-issue-backlog.yml": "4a4a785a6e72a10f661ce4e52412ab1d8563a3000de8c9605ffb91e0ee1262fe",
+    ".github/workflows/release-package-qa.yml": "ea39ebd603fd9d5f924d11106874e80d9efab37bfc7f5157a1d0f35a1a91b548",
+    ".github/workflows/release.yml": "05ccd7cf43d35cf93af50917eeb659f2c8b533df500ae46ab905093c1b17a659",
+    ".github/workflows/unit-tests.yml": "588fe8eb8d437bdaedf84a18dc930f73c317671f061f355f5bbe08380d620917",
+    ".github/workflows/workflow-lint.yml": "0bda65329c2716fb19471ae5e1a464900c9d64ac9791ce4d2817ea35c595206c",
+    "composer.json": "3a231c527e8f04c6cec07edaac76b6c3611060dac97ec3ac90c1809dfa453506",
+    "scripts/untrusted-admission-diagnostic.php": "0d0b3d993753e2a09016d75e7802797ddc40959511e22dcbe713193e1f4e3b4a",
+    "scripts/untrusted-host-bootstrap.sh": "21de117d566440e6ee924f4cc9d7f7098918eba3b5fe70cf0d49d6ca21332868",
+    "scripts/untrusted-host-controller.php": "6fd0adb5f62aa3746293cc4f849897799991d4f86cfbb095cee9c1b25b6332af",
+    "tests/e2e/abilities-manifest.json": "f09633e8e6e2fe88b18eefe5748e3eafd3a55ff62c17b54ec9cae76bd776029d",
+    "tests/unit/CiAdmissionDiagnosticTest.php": "adb252540738114447833e99f07ba3cbc4484447064582b01bfcbdedfbe282c7",
+    "tests/unit/CiBudgetControlFollowupTest.php": "666052a9c0454918a3dcf4cc5bb67ba9d31028264632f360c3ca131325b8aa68",
+    "tests/unit/CompatibilityBaselinesTest.php": "7007e97ef0496d62322b2fc82660d9f4c8712170497a5e6b43af35fed54b6a99",
+    "tests/unit/SelectedListenerTest.php": "310a645f6a796f4abd463fada16ab6c91633f3a7121ebe7f22629777839d6eda",
+    "tests/unit/fixtures/admission-native-fixture-transition.json": "08cc480bd501c8a190699ef5a114fffd694332b4485bbc595ed13e0b87a8e99e",
+    "tests/unit/fixtures/array-syntax-transition.json": "b8d2ad18c87ee97c8eeb86f8601b6d1fce5af16842b7a4c4de9e886138ba53e0",
+    "tests/unit/fixtures/authority-observer-transition.json": "88ff7a6b1d42d7839c793aa481b9099dd4631a49eabf39aa87100600b96fef58",
+    "tests/unit/fixtures/bounded-admission-transition.json": "a45c96be6790c0380788529adc509955ffc9de64b472a5fae24bb46a9e13df5f",
+    "tests/unit/fixtures/bounded-integration-transition.json": "e847ac561c95854f66b5b04af627e992fa8886dd76eab018b730b07f42d290fa",
+    "tests/unit/fixtures/ci-budget-control-transition.json": "6126a718e4a19904fa4ee64c2b6cc159ee0cb82239a391dbb0ac73c1a10e0591",
+    "tests/unit/fixtures/ci-diagnostic-transition.json": "a1e215abbc4e0f8ae3bf47a7becda2ab474740a8b8192ca0223afc668aeae201",
+    "tests/unit/fixtures/ci-diagnostic-transition.php": "68abd2be28837cdda9e252fa7334eaa0c5e84b674165c1efc009610dbcaec06f",
+    "tests/unit/fixtures/comments-calibration-ledger.json": "c350dd9f4915c4b4f84940fa083ab46a807dac285d40007a536ddc041adf3b2d",
+    "tests/unit/fixtures/floor-selector-transition.json": "204877c9ff0325b4a6a90f040de918759d9ec45ed22b75a29a075de3451c2d78",
+    "tests/unit/fixtures/legacy-runtime-transition.json": "e713a22640ae27f2b3fc9de235fc32620cb6270b77a6bc3527d661dfa48b5b9d",
+    "tests/unit/fixtures/posts-extraction-transition.json": "2be14f26642f28014a9df9e99df36cb6697520b158938f1b3bad23e9da44c4f5",
+    "tests/unit/fixtures/scheduling-calibration-ledger.json": "30cad4e6931b82edb1ccf63c2fc429b02a1e9ccb79306d38b37a09d497a0a8a5",
+    "tests/unit/fixtures/score-marker-transition.json": "bbc14f6fdf5184f515a93dedd19b29d707245e52bd4d17207a61b5fbfd8e2076",
+    "tests/unit/fixtures/score-proof-entry-transition.json": "e79abfdb00bcb85deff22b30c836b2bfbc2ac1e343a8b20dc9ba1311aaeb8ca8",
+    "tests/unit/fixtures/selector-import-transition.json": "67e7fc5b92b672b8e56c6346c121f5837f9a1cb62257e31b4ae494c23c34f539",
+    "tests/unit/fixtures/shared-helper-transition.json": "1bdd69f8b930f9c744afe557800eeafd195f30eeaa9b61c9b81fff5267e426d6",
+    "tests/unit/fixtures/taxonomy-calibration-ledger.json": "e389a6346d111c7ac72e83083b4eeee8d396a4aa33b11ce6ca1942e80734022c",
+    "tests/unit/fixtures/untrusted-bounded-manifest-transition.json": "a86d8850ca345db59302cde04f14f1f75b1b06baf41e9f72df41db9e3954ed88",
+    "tests/unit/fixtures/untrusted-compact-delete-calibration.json": "3011a23c2ddd947127caccd4149ca85d17c2b532d97e5cf4e1dce0c7145e0544",
+    "tests/unit/fixtures/untrusted-import-inventory.json": "78211008ad27e0ec44c4241bfc621edf6b882f2b0605a2dea0d180dcdd578bae",
+    "tests/unit/fixtures/untrusted-manifest-inventory.json": "7fb86639b203b4b8f36aabd6a1893bd13eaec55fb2201c44a29ebd806dfc3db2",
+    "tests/unit/fixtures/untrusted-schema-integration-ledger.json": "6f7612776a8efef97c776e03277ace03bd8f013b1938dace1d737efc42ce5f15",
+    "tests/unit/fixtures/untrusted-typed-oracle-ledger.json": "1c91d8f3bf003057026aa13f8d0cbbfa44d80a94f2a5390abc8ac7e1a965f352",
+    "tests/unit/fixtures/untrusted-workflow-transition.json": "f30822cfc6eb489c3993ffaacdc89862d87780335ff64e222e04cdf5c3a5e64e"
+  }
+}

@@ -27,6 +27,28 @@ See the [Software Development Lifecycle](sdlc-overview.md) for where CI/CD conne
 
 ## Pull request policy
 
+### Selected Unix listener classification
+
+Exact-b5 PR-event run `36817024600` reported closed refusals:
+E2E job `110224240488` (`topology/daemon-descriptors-inaccessible`) and Contract
+job `110224240544` (`topology/ambiguous-selected-listener`). These witnesses do
+not expose private hosted rows or establish their contents.
+
+A separate owned, nonroot Linux socket probe (read-only, network-none; no daemon
+or site access) reproduced a parser assumption: one canonical pathname may have
+both a listening stream row (`Flags=00010000`, `Type=0001`, `St=01`) and a normal
+accepted connected stream row (`00000000`, `0001`, `03`). The controller now
+classifies only these two exact shapes, counting only listening inodes. It still
+requires exactly one listener, rejects malformed/unknown selected-path records,
+and preserves canonical alias/realpath, bounded reads, PID-hint socket-fd ownership,
+descriptor readlink/access, process identity/start time and namespace continuity.
+Synthetic differential tests show the old predicate rejects the normal pair;
+they do not prove this pair occurred in hosted Contract evidence.
+
+The independent descriptor-access refusal remains blocked. No privileges,
+runtime configuration, grants, custody, deadlines or workflow changes are part
+of this correction. Parser validation is not WordPress/daemon admission.
+
 ### Bounded unit and safeguard budget
 
 Both PHP 8.0/8.4 unit jobs are configured with a bounded 60-minute limit, retaining

@@ -9,7 +9,7 @@ require_once __DIR__ . '/fixtures/shared-helper-transition.php';
 final class ScoreMarkerTransitionTest extends TestCase {
 	public function test_exact_two_path_outer_reversal_preserves_historical_bytes_and_entry_points(): void {
 		$root = dirname( __DIR__, 2 );
-		$read = static fn( $path ) => file_get_contents( $root . '/' . $path );
+		$read = static fn( $path ) => Wstm167SelectedListenerTransition::restore( $path, file_get_contents( $root . '/' . $path ) );
 		$map = Wstm167ScoreMarkerTransition::load();
 		self::assertSame( 'a0e01905214d11aa90a17f265e0f0316a43daa28', $map['base_commit'] );
 		self::assertSame( [ 'includes/class-seo.php', 'tests/unit/fixtures/bounded-admission-transition.php' ], array_keys( $map['files'] ) );
@@ -42,6 +42,7 @@ final class ScoreMarkerTransitionTest extends TestCase {
 		$map = Wstm167ScoreMarkerTransition::load();
 		foreach ( $map['files'] as $path => $binding ) {
 			$current = file_get_contents( $root . '/' . $path );
+			$current = Wstm167SelectedListenerTransition::restore( $path, $current );
 			$before = Wstm167ScoreMarkerTransition::restore( $path, $current );
 			foreach ( [ $before, $current . "\nforeign", str_replace( '<?php', "<?php\n// foreign", $current ) ] as $foreign ) {
 				try {

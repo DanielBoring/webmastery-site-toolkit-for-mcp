@@ -6,6 +6,13 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Classify normal connected Unix stream rows separately from the unique selected
+  listening inode in the QA host-topology controller. Reject malformed or unknown
+  selected-path rows and preserve descriptor/PID/namespace/identity checks.
+  An owned nonroot socket probe reproduces the parser bug; hosted descriptor
+  access remains independently blocked, and no runtime acceptance is implied.
+  Preserve all accepted proof seals through an exact outer source reversal.
+
 - Give both unit/safeguard lanes a bounded 60-minute budget without skipping any
   controls or changing matrix, permissions or aggregate gates. Original hosted
   unit jobs passed units but were cancelled at the 15-minute limit; local native
