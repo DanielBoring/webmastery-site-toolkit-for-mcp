@@ -6,6 +6,10 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Make the controller's missing-output-descriptor test close an explicitly open
+  fd9 before launching native PHP, so inherited CI descriptors cannot mask the
+  expected diagnostic-I/O refusal. Keep production reporting and exact assertions.
+
 - Preserve reviewed source-bound fixture and configuration bytes during Git
   staging and checkout instead of silently normalizing their line endings.
   Keep the normal whitespace checks, allowing existing CRLF terminators only

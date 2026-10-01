@@ -71,13 +71,23 @@ final class UntrustedHostControllerTest extends TestCase {
 	}
 
 	public function test_actual_terminal_entrypoint_keeps_generic_refusal_without_output_descriptor(): void {
-		$process = proc_open( array( PHP_BINARY, dirname( __DIR__, 2 ) . '/scripts/untrusted-host-controller.php', 'PRIVATE_SECRET_SENTINEL' ),
-			array( 0 => array( 'pipe', 'r' ), 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ), $pipes );
+		$command = array( PHP_BINARY, dirname( __DIR__, 2 ) . '/scripts/untrusted-host-controller.php', 'PRIVATE_SECRET_SENTINEL' );
+		$descriptors = array( 0 => array( 'pipe', 'r' ), 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) );
+		if ( 'Linux' === PHP_OS_FAMILY ) {
+			// An unspecified descriptor can be inherited; prove the launcher closes an explicitly open fd9.
+			$descriptors[9] = array( 'pipe', 'w' );
+			$command = array_merge( array( '/bin/bash', '--noprofile', '--norc', '-c', 'exec 9>&-; exec "$@"', 'wstm108-without-fd9' ), $command );
+		}
+		$process = proc_open( $command, $descriptors, $pipes );
 		self::assertIsResource( $process );
 		fclose( $pipes[0] );
 		$output = stream_get_contents( $pipes[1] );
 		$diagnostic = stream_get_contents( $pipes[2] );
 		fclose( $pipes[1] ); fclose( $pipes[2] );
+		if ( 'Linux' === PHP_OS_FAMILY ) {
+			self::assertSame( '', stream_get_contents( $pipes[9] ), 'The closed launcher descriptor must not carry a controller witness.' );
+			fclose( $pipes[9] );
+		}
 		self::assertSame( 1, proc_close( $process ) );
 		self::assertSame( '', $output );
 		self::assertSame(
