@@ -6,6 +6,11 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Promote the current compatibility QA baseline and default Docker image to
+  WordPress 7.1.2, retaining MCP Adapter 0.6.1 and all dependency digests.
+  Document the unchanged support floor and add a regression keeping baseline
+  metadata, the default image, the current matrix lane and readme header aligned.
+
 - Update PHPStan from 2.2.14 to 2.2.15 and remove only the now-unmatched sitemap offset baseline entry. Preserve the sitemap fallback, PHP 8.0 analysis target, PHPDoc certainty policy, and strict unmatched-ignore ratchet; all other dependency pins and baseline entries are unchanged.
 
 - Shorten the Unreleased upgrade notice to Plugin Check's 300-character limit while retaining its migration guidance. Record exact-tree schema package results with cleanup, memory-measurement and pending integration/floor caveats; preserve prior failure records. Documentation only; no runtime or version change.

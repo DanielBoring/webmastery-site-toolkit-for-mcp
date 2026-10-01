@@ -284,6 +284,21 @@ final class CompatibilityBaselinesTest extends TestCase {
 		self::assertSame( 'latest-seo', $lanes[7]['dependency-policy'] );
 	}
 
+	public function testRepositoryBaselineImageMatrixAndReadmeStayAligned(): void {
+		$root = dirname( __DIR__, 2 );
+		$baseline = webmastery_mcp_read_baselines( $root . '/.github/compatibility-versions.json' );
+		$image = 'wordpress:' . $baseline['wordpress'] . '-php8.2-apache';
+		self::assertSame( 1, substr_count( file_get_contents( $root . '/docker-compose.yml' ), '${WORDPRESS_IMAGE:-' . $image . '}' ) );
+		$lanes = webmastery_mcp_compatibility_matrix( $baseline, $baseline )['include'];
+		self::assertSame( 'current-baseline', $lanes[1]['label'] );
+		self::assertSame( $image, $lanes[1]['wordpress-image'] );
+		$parts = explode( '.', $baseline['wordpress'] );
+		$readme = str_replace( "\r\n", "\n", file_get_contents( $root . '/readme.txt' ) );
+		self::assertStringContainsString( 'Tested up to: ' . $parts[0] . '.' . $parts[1] . "\n", $readme );
+		self::assertStringContainsString( "Requires at least: 6.9\n", $readme );
+		self::assertStringContainsString( "Requires PHP: 8.0\n", $readme );
+	}
+
 	public function testCurrentCheckerRequiresRuntimeEvidenceBeforeUpdatingCandidateMetadata(): void {
 		$workflow = file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/compatibility-qa.yml' );
 		$start    = strpos( $workflow, '  current-plugin-check:' );

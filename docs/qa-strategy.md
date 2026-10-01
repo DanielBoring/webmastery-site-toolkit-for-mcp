@@ -25,6 +25,13 @@ Related strategy guides:
 
 Static QA runs the full toolchain on PHP 8.0 and syntax checks on PHP 8.4; Unit Tests run on both versions. Each workflow has a stable aggregate result. `Docker QA gate` reports successful change detection and the required Docker results; failure-induced skips cannot pass it. A separate workflow lint check runs actionlint, ShellCheck, and zizmor without making local PHP QA depend on Docker.
 
+The current compatibility baseline is WordPress 7.1.2 with MCP Adapter 0.6.1.
+The default Docker image is `wordpress:7.1.2-php8.2-apache`; other pinned
+dependencies and their digests are unchanged. `readme.txt` retains the
+major/minor `Tested up to: 7.1` header. This baseline update does not change
+the declared WordPress 6.9 / PHP 8.0 plugin minimums. The existing compatibility
+floor lane uses PHP 8.1 and is not genuine PHP 8.0 runtime evidence.
+
 ## PHPStan level 5 and baseline ratchet
 
 `composer phpstan` analyses the plugin entry point and all of `includes/` at level 5, explicitly targeting PHP 8.0 regardless of the local interpreter. `phpstan-baseline.neon` records pre-existing diagnostics, not permission to introduce new ones. Each generated ignore has an anchored message, identifier, positive count, and individual file path. There are no excluded production paths or identifier-only/global ignores. The existing `treatPhpDocTypesAsCertain: false` policy and WordPress stubs bootstrap are retained; no extra bootstrap constants or relaxed rules hide debt.
