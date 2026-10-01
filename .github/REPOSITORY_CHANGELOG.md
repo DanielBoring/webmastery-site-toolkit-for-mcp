@@ -6,6 +6,11 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Promote the current compatibility QA baseline and default Docker image to
+  WordPress 7.1.2, retaining MCP Adapter 0.6.1 and all dependency digests.
+  Document the unchanged support floor and add a regression keeping baseline
+  metadata, the default image, the current matrix lane and readme header aligned.
+
 - Shorten the Unreleased upgrade notice to Plugin Check's 300-character limit while retaining its migration guidance. Record exact-tree schema package results with cleanup, memory-measurement and pending integration/floor caveats; preserve prior failure records. Documentation only; no runtime or version change.
 
 - Release obsolete schema-cleanup snapshots and table aliases before subsequent reads, including the runner's setup map on failure paths. Preserve ownership checks, deletion order, case evidence and retention semantics; add isolated 128 MiB regressions with independently allocated snapshots. Historical OOM causation and runtime recovery still require comparative evidence.
