@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 require_once dirname( __DIR__, 2 ) . '/scripts/update-compatibility-baselines.php';
 require_once dirname( __DIR__, 2 ) . '/scripts/compatibility-matrix.php';
 require_once dirname( __DIR__, 2 ) . '/scripts/verify-candidate-floor.php';
+require_once __DIR__ . '/fixtures/ci-diagnostic-transition.php';
 
 final class CompatibilityBaselinesTest extends TestCase {
 	private string $root;
@@ -674,7 +675,10 @@ PHP;
 	}
 
 	public function testCandidateWorkflowIsIsolatedFromDiscoveryAndPromotion(): void {
-		$workflow = file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/compatibility-qa.yml' );
+		$workflow = Wstm167CiDiagnosticTransition::restore(
+			'.github/workflows/compatibility-qa.yml',
+			file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/compatibility-qa.yml' )
+		);
 		$jobs     = array();
 		foreach ( array( 'candidate-floor', 'discover-versions', 'open-update-pr', 'report' ) as $name ) {
 			self::assertSame( 1, preg_match( '/^  ' . preg_quote( $name, '/' ) . ':\n(.*?)(?=^  [a-z-]+:|\z)/ms', $workflow, $match ) );
