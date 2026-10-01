@@ -27,6 +27,34 @@ See the [Software Development Lifecycle](sdlc-overview.md) for where CI/CD conne
 
 ## Pull request policy
 
+### Bounded unit and safeguard budget
+
+Both PHP 8.0/8.4 unit jobs are configured with a bounded 60-minute limit, retaining
+the original matrix, `fail-fast: false`, every command, permissions and aggregate
+gates. This new budget is not CI-verified until the next genuine PR run.
+
+The evidence differs by environment and scope:
+
+- Both original 1d1f hosted unit jobs completed their unit suites, then were
+  cancelled during safeguards with explicit 15-minute maximum-execution-time
+  annotations. They do not establish a completed safeguard duration.
+- The parent measured all 14 original safeguard commands, including Python, on
+  frozen 1d1f under native PHP 8.4: all passed in 16m38s, including release-runtime
+  700s and untrusted-stage 284s. That local measurement used a 2-CPU/3-GiB,
+  network-none, read-only image without a Docker socket.
+- Original 1d1f hosted Release Package job `110204613200` completed its
+  seven-command "Test release safeguard regressions" subset successfully from
+  03:27:55 to 04:04:33: 36m38s. Only that subset was measured; subsequent actual
+  package QA immediately refused with exit 78 and no known closed reason.
+
+The hosted subset already exceeds 30 minutes, so the native measurement cannot
+justify that budget. The bounded 60-minute choice allows the observed 36m38s
+subset, about 2m24s units/setup and headroom for remaining controls without
+skipping any checks. It is a budget decision, not proof that a complete hosted
+unit/safeguard job will finish within it. Release job limits, runtime deadlines
+and admission policies remain unchanged. None of these timings establishes
+WordPress/runtime/custody acceptance or explains the unknown refusal.
+
 All pull requests should pass:
 
 1. `1 - Static QA`
@@ -88,6 +116,13 @@ unavailable witness is not evidence of a missing grant, missing bare stack or
 unsupported host. Runtime acceptance and native/Composer QA remain separate.
 Existing sealed workflow and proof expectations are retained through an exact,
 reversible outer CI-only transition; historical ledgers are not regenerated.
+
+The exact-candidate compatibility job keeps QA and all source observations in
+`candidate`. Only its diagnostic step overrides that default working directory
+to `${{ github.workspace }}/candidate-floor-tools`, the separate approved tools
+checkout at `github.workflow_sha`. This permits arbitrary older candidate SHAs
+that lack the formatter, without trusting candidate diagnostic code or overlaying
+tools onto the candidate. The other seven diagnostic placements are unchanged.
 
 Use least privilege per job:
 

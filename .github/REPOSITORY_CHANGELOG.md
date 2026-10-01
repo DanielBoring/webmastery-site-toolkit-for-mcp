@@ -6,6 +6,19 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Give both unit/safeguard lanes a bounded 60-minute budget without skipping any
+  controls or changing matrix, permissions or aggregate gates. Original hosted
+  unit jobs passed units but were cancelled at the 15-minute limit; local native
+  PHP 8.4 completed all 14 guards in 16m38s, while the original hosted release
+  job's seven-command safeguard subset alone passed in 36m38s. Thirty minutes is
+  therefore unsupported by hosted evidence. The new 60-minute setting still
+  requires a genuine PR run; release limits, runtime deadlines and admission
+  policies are unchanged, and the subsequent package refusal reason is unknown.
+- Run only the exact-candidate compatibility diagnostic from the separately
+  approved workflow-tools checkout, not potentially older candidate code.
+  Preserve the eight closed, environment-only diagnostics, candidate isolation
+  and all accepted seals through a reviewed exact outer correction.
+
 - Surface only the controller's approved closed topology refusal witness after
   runtime CI QA, including compatibility and release/package jobs. Treat absent
   or invalid witnesses explicitly without exposing private streams or changing

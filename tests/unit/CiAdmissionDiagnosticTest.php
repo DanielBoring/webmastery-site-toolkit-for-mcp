@@ -111,12 +111,12 @@ final class CiAdmissionDiagnosticTest extends TestCase {
 			. "        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php\n";
 		foreach ( array( 'e2e-qa.yml' => 2, 'release-package-qa.yml' => 1, 'release.yml' => 1, 'compatibility-qa.yml' => 4 ) as $name => $count ) {
 			$path = '.github/workflows/' . $name;
-			$source = $this->read( $path );
+			$source = Wstm167CiBudgetControlTransition::restore( $path, $this->read( $path ) );
 			self::assertSame( $count, substr_count( $source, '        id: qa' ), $name );
 			self::assertSame( $count, substr_count( $source, $step ), $name );
 			self::assertSame( $count, substr_count( $source, 'untrusted_admission_failure' ), $name );
 			self::assertSame( $count, preg_match_all( '/        id: qa\n(?:(?!      - name:).)*?        run: bash scripts\/(?:e2e-test|release-qa)\.sh[^\n]*\n\n?' . preg_quote( $step, '/' ) . '/s', $source ), $name );
-			self::assertSame( str_replace( $step, '', str_replace( $step . "\n", '', $source ) ), Wstm167CiDiagnosticTransition::restore( $path, $source ), $name );
+			self::assertSame( str_replace( $step, '', str_replace( $step . "\n", '', $source ) ), Wstm167CiDiagnosticTransition::restore( $path, $this->read( $path ) ), $name );
 		}
 		foreach ( array( 'unit-tests.yml', 'coding-standards.yml', 'workflow-lint.yml' ) as $name ) {
 			self::assertStringNotContainsString( 'untrusted-admission-diagnostic', $this->read( '.github/workflows/' . $name ) );
