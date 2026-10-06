@@ -6,6 +6,15 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add an immutable outer proof for the reviewed joint mount-root diagnostic, restoring the exact published 511-path generation before every unchanged historical witness; bind all current bytes and retain omission, forgery, wrong-generation and post-cache rejection controls. This adds no mount acceptance or hosted-root attribution.
+
+- Add a failure-only, source-bound true/false/unknown diagnostic for the original
+  relative mount root's exact nsfs/network-namespace/u32-token predicate.
+  Keep parsed-row provenance, argument-free native birth, all admission and
+  physical-coordinate rules, budgets, reasons, schema and terminal I/O intact.
+  This reports a finite joint fact; it does not accept namespace root metadata
+  or add a privilege transition.
+
 - Compose an exact-byte outer proof for the refined mount-root diagnostics
   over the published 508-path generation. Preserve all older seals and
   comparisons, keep runtime execution on current source, and reject missing,

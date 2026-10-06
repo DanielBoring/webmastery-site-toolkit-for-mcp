@@ -67,10 +67,24 @@ arming their cleanup. Contract-only lifecycle behavior remains separate.
 
 ### Kernel mount verification
 
+For the original relative-root row only, failure diagnostics distinguish
+`mount-root-net-true`, `mount-root-net-false` and `mount-root-net-unknown`.
+True requires the complete joint predicate: the existing row's exact type is
+`nsfs`, its decoded root is a canonical positive `net:[inode]` token, and the
+decimal inode is at most 4294967295. Decimal string comparison is 32-bit safe.
+False is a known nonmatch, not a filesystem inference; missing, malformed or
+inconsistent row context and unverifiable native birth remain unknown. The
+original parser row is bound through five exact argument-free native source
+frames and the existing private birth/full-trace custody, not a caller Boolean
+or receipt. The longest new label is 22 ASCII bytes. No operand is reflected.
+All three outcomes still refuse: there is no metadata acceptance exception,
+physical-coordinate allowance, new read, grant or privilege transition.
+
 Decoded mount-root refusals refine only the exact, source-bound parser caller.
 The original host canonical predicate is evaluated once, unchanged; its success
 return and all admission decisions remain unchanged. Failure-only sites report
-ordered `mount-root-empty`, `mount-root-relative` or `mount-root-nul` prefixes.
+ordered empty, relative or NUL prefixes; the relative case reports the joint
+fact above instead of the generic legacy `mount-root-relative` label.
 Otherwise `mount-root-rx-c`, `-s`, `-d`, `-cs`, `-cd`, `-sd` or `-csd` identify
 the exact combination of control-byte, double-slash and dot-component matches,
 without ranking overlapping matches or disclosing matched bytes. Inconsistent

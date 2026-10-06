@@ -47,10 +47,10 @@ final class Wstm108_HostTopology {
 		if ( ! $condition ) { throw new Wstm108_TopologyRefusal( $reason ); }
 	}
 
-	private static function path( string $path ): string {
+	private static function path( string $path, ?array $mount_row = null ): string {
 		$canonical = '' !== $path && '/' === $path[0] && false === strpos( $path, "\0" )
 			&& ! preg_match( '/[\x00-\x1f\x7f]|\/\/|(?:^|\/)\.\.?(?:\/|$)/', $path );
-		if ( ! $canonical ) { self::path_failure( $path ); } return '/' === $path ? '/' : rtrim( $path, '/' );
+		if ( ! $canonical ) { self::path_failure( $path, $mount_row ); } return '/' === $path ? '/' : rtrim( $path, '/' );
 	}
 
 	private static function contains( string $parent, string $child ): bool {
@@ -84,7 +84,7 @@ final class Wstm108_HostTopology {
 				&& ctype_digit( $fields[0] ) && ctype_digit( $fields[1] )
 				&& 1 === preg_match( '/^[0-9]+:[0-9]+$/D', $fields[2] ), 'malformed-mount-record' );
 			$id = (int) $fields[0];
-			$root = self::path( self::unescape( $fields[3] ) );
+			$root = self::path( self::unescape( $fields[3] ), $fields );
 			$point = self::path( self::unescape( $fields[4] ) );
 			self::require( $id > 0 && ( ! $structural || (string) $id === ltrim( $fields[0], '0' ) ) && ! isset( $records[ $id ] )
 				&& ( $structural || ! isset( $points[ $point ] ) ), 'ambiguous-stacked-mount' );
@@ -298,9 +298,9 @@ final class Wstm108_HostTopology {
 	}
 
 	/** Failure-only metadata; the original predicate alone decides acceptance. */
-	private static function path_failure( string $path ): void {
+	private static function path_failure( string $path, ?array $mount_row = null ): void {
 		if ( '' === $path ) { self::require( false, 'noncanonical-path' ); }
-		if ( '/' !== $path[0] ) { self::require( false, 'noncanonical-path' ); }
+		if ( '/' !== $path[0] ) { self::relative_root_failure( $path, $mount_row ); }
 		if ( false !== strpos( $path, "\0" ) ) { self::require( false, 'noncanonical-path' ); }
 		$control = preg_match( '/[\x00-\x1f\x7f]/', $path );
 		$slash = preg_match( '/\/\//', $path );
@@ -319,6 +319,28 @@ final class Wstm108_HostTopology {
 		}
 		self::require( false, 'noncanonical-path' );
 	}
+
+	/** Only original row data is examined; every outcome remains a refusal. */
+	private static function relative_root_failure( string $path, ?array $row ): void {
+		$separator = null === $row ? false : array_search( '-', $row, true );
+		$known = null !== $row && is_int( $separator ) && $separator >= 6 && count( $row ) === $separator + 4
+			&& is_string( $row[3] ?? null ) && is_string( $row[ $separator + 1 ] ?? null ) && '' !== $row[ $separator + 1 ] && 0 === preg_match( '/[\x00-\x20\x7f]/', $row[ $separator + 1 ] )
+			&& $path === strtr( $row[3], array( '\\040' => ' ', '\\011' => "\t", '\\012' => "\n", '\\134' => '\\' ) );
+		$recognized = null;
+		if ( $known ) {
+			if ( 'nsfs' !== $row[ $separator + 1 ] ) { $recognized = false; }
+			else {
+				$matched = preg_match( '/\Anet:\[([1-9][0-9]{0,9})\]\z/D', $path, $match );
+				if ( 0 === $matched ) { $recognized = false; }
+				elseif ( 1 === $matched ) {
+					$recognized = strlen( $match[1] ) < 10 || strcmp( $match[1], '4294967295' ) <= 0;
+				}
+			}
+		}
+		if ( true === $recognized ) { self::require( false, 'noncanonical-path' ); }
+		if ( false === $recognized ) { self::require( false, 'noncanonical-path' ); }
+		self::require( false, 'noncanonical-path' );
+	}
 }
 
 /** Passive finite diagnostics, inside the existing source-provenance closure. */
@@ -330,6 +352,7 @@ final class Wstm108_AdmissionCallsite {
 		'mount-root-empty', 'mount-root-relative', 'mount-root-nul',
 		'mount-root-rx-c', 'mount-root-rx-s', 'mount-root-rx-d', 'mount-root-rx-cs',
 		'mount-root-rx-cd', 'mount-root-rx-sd', 'mount-root-rx-csd',
+		'mount-root-net-true', 'mount-root-net-false', 'mount-root-net-unknown',
 		'kernel-selected-length', 'kernel-selected-canonical',
 		'kernel-input-length', 'kernel-input-canonical',
 		'kernel-physical-length', 'kernel-physical-canonical',
@@ -441,16 +464,21 @@ final class Wstm108_AdmissionCallsite {
 	private const BIRTH_LINE = 13;
 	private const HOST_FAILURE_CALL_LINE = 53;
 	private const HOST_FAILURE_GUARDS = array(
-		302 => 'mount-root-empty', 303 => 'mount-root-relative', 304 => 'mount-root-nul',
+		302 => 'mount-root-empty', 304 => 'mount-root-nul',
 		311 => 'mount-root-rx-c', 312 => 'mount-root-rx-s', 313 => 'mount-root-rx-cs',
 		314 => 'mount-root-rx-d', 315 => 'mount-root-rx-cd', 316 => 'mount-root-rx-sd',
 		317 => 'mount-root-rx-csd', 320 => 'unknown',
 	);
+	private const RELATIVE_FAILURE_CALL_LINE = 303;
+	private const RELATIVE_FAILURE_GUARDS = array(
+		340 => 'mount-root-net-true', 341 => 'mount-root-net-false', 342 => 'mount-root-net-unknown',
+	);
 	private const MODEL_LENGTH_LINE = 107;
 	private const MODEL_CANONICAL_LINE = 108;
 	private const PHP80_PATH_GUARD_LINES = array(
-		'Wstm108_HostTopology' => array( 302 => 302, 303 => 303, 304 => 304, 311 => 311, 312 => 312,
-			313 => 313, 314 => 314, 315 => 315, 316 => 316, 317 => 317, 320 => 320 ),
+		'Wstm108_HostTopology' => array( 302 => 302, 304 => 304, 311 => 311, 312 => 312,
+			313 => 313, 314 => 314, 315 => 315, 316 => 316, 317 => 317, 320 => 320,
+			340 => 340, 341 => 341, 342 => 342 ),
 		'Wstm108_KernelMountModel' => array( 107 => 107, 108 => 109 ),
 	);
 	private const HOST_CALLERS = array(
@@ -565,6 +593,9 @@ final class Wstm108_AdmissionCallsite {
 		if ( null === $line ) { return 'unknown'; }
 		$guard['line'] = $line;
 		if ( 'Wstm108_HostTopology' === $guard['class'] ) {
+			if ( 'relative_root_failure' === $caller['function'] ) {
+				return self::relative_site( $trace, $guard, $caller );
+			}
 			if ( $guard['file'] !== self::file( 'untrusted-host-topology.php' )
 				|| ! array_key_exists( $guard['line'], self::HOST_FAILURE_GUARDS )
 				|| 'path_failure' !== $caller['function'] || $caller['line'] !== self::HOST_FAILURE_CALL_LINE
@@ -594,6 +625,25 @@ final class Wstm108_AdmissionCallsite {
 		}
 		$site = self::owner( $trace[2], $owner, $binding ) ? $binding[0] . '-' . $kind : 'unknown';
 		return in_array( $site, self::IDS, true ) ? $site : 'unknown';
+	}
+
+	private static function relative_site( array $trace, array $guard, array $caller ): string {
+		$file = self::file( 'untrusted-host-topology.php' );
+		if ( count( $trace ) < 5 || $guard['file'] !== $file || $caller['file'] !== $file
+			|| ! array_key_exists( $guard['line'], self::RELATIVE_FAILURE_GUARDS )
+			|| $caller['line'] !== self::RELATIVE_FAILURE_CALL_LINE ) { return 'unknown'; }
+		$failure = $trace[2]; $path = $trace[3]; $owner = $trace[4];
+		foreach ( array( $failure, $path, $owner ) as $frame ) {
+			if ( ! is_array( $frame ) || array_key_exists( 'args', $frame ) || array_key_exists( 'object', $frame )
+				|| ( $frame['class'] ?? null ) !== 'Wstm108_HostTopology' || ! is_string( $frame['function'] ?? null ) ) { return 'unknown'; }
+		}
+		if ( 'path_failure' !== $failure['function'] || ( $failure['line'] ?? null ) !== self::HOST_FAILURE_CALL_LINE
+			|| ! is_string( $failure['file'] ?? null ) || str_replace( '\\', '/', $failure['file'] ) !== $file
+			|| 'path' !== $path['function'] || ! is_int( $path['line'] ?? null )
+			|| ! is_string( $path['file'] ?? null ) || str_replace( '\\', '/', $path['file'] ) !== $file ) { return 'unknown'; }
+		$binding = self::HOST_CALLERS[ $path['line'] ] ?? null;
+		if ( ! self::owner( $owner, 'Wstm108_HostTopology', $binding ) ) { return 'unknown'; }
+		return 'mount-root' === $binding[0] ? self::RELATIVE_FAILURE_GUARDS[ $guard['line'] ] : $binding[0];
 	}
 
 	private static function owner( array $frame, string $class, ?array $binding ): bool {

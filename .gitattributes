@@ -84,3 +84,6 @@ tests/unit/fixtures/mount-root-transition.json -text whitespace=cr-at-eol
 tests/unit/MountRootDiagnosticTransitionTest.php -text whitespace=cr-at-eol
 tests/unit/TerminalOutputTransitionTest.php -text whitespace=cr-at-eol
 tests/unit/CiAdmissionDiagnosticTest.php -text whitespace=cr-at-eol
+tests/unit/fixtures/mount-root-net-transition.php -text whitespace=cr-at-eol
+tests/unit/fixtures/mount-root-net-transition.json -text whitespace=cr-at-eol
+tests/unit/MountRootNetDiagnosticTransitionTest.php -text whitespace=cr-at-eol
