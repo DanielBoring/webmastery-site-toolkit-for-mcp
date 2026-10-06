@@ -123,6 +123,12 @@ final class AdmissionCallsiteTest extends TestCase {
 		);
 		foreach ( $cases as $case ) {
 			foreach ( array( 'mounts', 'structural_mounts' ) as $parser ) {
+				if ( 'true' === $case[2] ) {
+					$mounts = Wstm108_HostTopology::$parser( '1 0 0:1 ' . $case[0] . ' / rw - ' . $case[1] . " none rw\n" );
+					self::assertSame( $case[0], $mounts[0]['root'] );
+					self::assertSame( $case[1], $mounts[0]['type'] );
+					continue;
+				}
 				$error = $this->refusal( static fn() => Wstm108_HostTopology::$parser( '1 0 0:1 ' . $case[0] . ' / rw - ' . $case[1] . " none rw\n" ) );
 				$site = 'mount-root-net-' . $case[2];
 				self::assertSame( $site, Wstm108_AdmissionCallsite::identify( $error ) );
@@ -160,12 +166,12 @@ final class AdmissionCallsiteTest extends TestCase {
 			$error = $this->refusal( static fn() => $relative->invoke( null, 'net:[1]', $context ) );
 			self::assertSame( 'unknown', Wstm108_AdmissionCallsite::identify( $error ) );
 		}
-		$call = static fn() => Wstm108_HostTopology::structural_mounts( "1 0 0:1 net:[1] / rw - nsfs none ro\n" );
+		$call = static fn() => Wstm108_HostTopology::structural_mounts( "1 0 0:1 net:[0] / rw - nsfs none ro\n" );
 		$trace_property = new ReflectionProperty( Exception::class, 'trace' ); $trace_property->setAccessible( true );
 		foreach ( range( 0, 4 ) as $index ) {
 			foreach ( array( 'file', 'line', 'class', 'function', 'args', 'object' ) as $field ) {
 				$error = $this->refusal( $call ); $trace = $error->getTrace();
-				self::assertSame( 'mount-root-net-true', Wstm108_AdmissionCallsite::identify( $error ) );
+				self::assertSame( 'mount-root-net-false', Wstm108_AdmissionCallsite::identify( $error ) );
 				$trace[ $index ][ $field ] = 'line' === $field ? 999999 : 'PRIVATE_SENTINEL';
 				$trace_property->setValue( $error, $trace );
 				self::assertSame( 'unknown', Wstm108_AdmissionCallsite::identify( $error ) );
@@ -174,8 +180,8 @@ final class AdmissionCallsiteTest extends TestCase {
 			}
 		}
 		$error = $this->refusal( $call ); $trace = $error->getTrace();
-		$trace[0]['line'] = 341; $trace_property->setValue( $error, $trace );
-		self::assertSame( 'unknown', Wstm108_AdmissionCallsite::identify( $error ), 'A genuine birth cannot be changed to the false guard.' );
+		$trace[0]['line'] = 326; $trace_property->setValue( $error, $trace );
+		self::assertSame( 'unknown', Wstm108_AdmissionCallsite::identify( $error ), 'A genuine birth cannot be changed to the true guard.' );
 		$this->state( 'enabled', false );
 		$error = $this->refusal( $call ); $this->state( 'enabled', true );
 		self::assertSame( 'unknown', Wstm108_AdmissionCallsite::identify( $error ) );
@@ -191,7 +197,10 @@ final class AdmissionCallsiteTest extends TestCase {
 register_shutdown_function( static function (): void {
 	$sites = array(); $arguments = false;
 	foreach ( array( 'nsfs', 'tmpfs', '' ) as $type ) {
-		try { Wstm108_HostTopology::structural_mounts( '1 0 0:1 net:[1] / rw - ' . $type . " none ro\n" ); }
+		try {
+			Wstm108_HostTopology::structural_mounts( '1 0 0:1 net:[1] / rw - ' . $type . " none ro\n" );
+			$sites[] = 'metadata-accepted';
+		}
 		catch ( Wstm108_TopologyRefusal $error ) {
 			$sites[] = Wstm108_AdmissionCallsite::identify( $error );
 			foreach ( $error->getTrace() as $frame ) { $arguments = $arguments || isset( $frame['args'] ) || isset( $frame['object'] ); }
@@ -209,7 +218,7 @@ PHP;
 			$output = stream_get_contents( $pipes[1] ); $errors = stream_get_contents( $pipes[2] );
 			fclose( $pipes[1] ); fclose( $pipes[2] );
 			self::assertSame( 1, proc_close( $process ), 'No admission was requested.' );
-			self::assertSame( array( '1', array( 'mount-root-net-true', 'mount-root-net-false', 'mount-root-net-unknown' ), false ),
+			self::assertSame( array( '1', array( 'metadata-accepted', 'mount-root-net-false', 'mount-root-net-unknown' ), false ),
 				json_decode( $output, true, 4, JSON_THROW_ON_ERROR ) );
 			self::assertStringNotContainsString( 'net:[', $output . $errors );
 		} finally { unlink( $hook ); }

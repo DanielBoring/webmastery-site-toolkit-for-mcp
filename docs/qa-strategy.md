@@ -67,6 +67,24 @@ arming their cleanup. Contract-only lifecycle behavior remains separate.
 
 ### Kernel mount verification
 
+The parser retains the exact decoded root as opaque metadata only for the
+reviewed joint pair: type exactly `nsfs`, root `net:[inode]` with canonical
+positive decimal inode at most 4294967295. Both parser modes use the same
+bounded, 32-bit-safe recognizer as the relative-root diagnostic. Every other
+root still uses the original canonical path validator. Mount points and caller
+lookup paths never receive this exception. No row, key or table ordering is
+changed, and structural decoding, EOF, IDs, optional tags and limits still apply.
+
+This is not physical authority. Both coordinate implementations keep their
+ext4/tmpfs gate before joining a root with a suffix. Nested nsfs mounts under
+authority or source remain in the physical closure and refuse as unsupported;
+they are not filtered out. Whole-table comparisons, duplicate-point visibility,
+descriptor mount/device/inode checks, namespace/process identity, race checks,
+capture custody and shared budgets remain mandatory. Parsed/model rows never
+mint native proof. Tests cover exact minimum/maximum metadata rows, all rejected
+near-matches, unchanged lookup paths, unsupported coordinates in both models,
+nested closure, complete-table equality and duplicate visibility.
+
 For the original relative-root row only, failure diagnostics distinguish
 `mount-root-net-true`, `mount-root-net-false` and `mount-root-net-unknown`.
 True requires the complete joint predicate: the existing row's exact type is
@@ -77,8 +95,12 @@ inconsistent row context and unverifiable native birth remain unknown. The
 original parser row is bound through five exact argument-free native source
 frames and the existing private birth/full-trace custody, not a caller Boolean
 or receipt. The longest new label is 22 ASCII bytes. No operand is reflected.
-All three outcomes still refuse: there is no metadata acceptance exception,
-physical-coordinate allowance, new read, grant or privilege transition.
+The failure helper still refuses for all three outcomes. A genuine reviewed
+true pair is now retained by the parser before calling the path validator, so
+it produces no refusal diagnostic. A reflected helper or forged true frame
+cannot establish attribution. False/unknown pairs still reach the unchanged
+path refusal. No physical-coordinate allowance, new read, grant or privilege
+transition accompanies the metadata exception.
 
 Decoded mount-root refusals refine only the exact, source-bound parser caller.
 The original host canonical predicate is evaluated once, unchanged; its success

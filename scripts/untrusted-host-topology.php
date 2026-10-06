@@ -84,7 +84,7 @@ final class Wstm108_HostTopology {
 				&& ctype_digit( $fields[0] ) && ctype_digit( $fields[1] )
 				&& 1 === preg_match( '/^[0-9]+:[0-9]+$/D', $fields[2] ), 'malformed-mount-record' );
 			$id = (int) $fields[0];
-			$root = self::path( self::unescape( $fields[3] ), $fields );
+			$decoded_root = self::unescape( $fields[3] ); $root = true === self::relative_root_match( $decoded_root, $fields ) ? $decoded_root : self::path( $decoded_root, $fields );
 			$point = self::path( self::unescape( $fields[4] ) );
 			self::require( $id > 0 && ( ! $structural || (string) $id === ltrim( $fields[0], '0' ) ) && ! isset( $records[ $id ] )
 				&& ( $structural || ! isset( $points[ $point ] ) ), 'ambiguous-stacked-mount' );
@@ -322,6 +322,14 @@ final class Wstm108_HostTopology {
 
 	/** Only original row data is examined; every outcome remains a refusal. */
 	private static function relative_root_failure( string $path, ?array $row ): void {
+		$recognized = self::relative_root_match( $path, $row );
+		if ( true === $recognized ) { self::require( false, 'noncanonical-path' ); }
+		if ( false === $recognized ) { self::require( false, 'noncanonical-path' ); }
+		self::require( false, 'noncanonical-path' );
+	}
+
+	/** Exact reviewed kernel metadata, never a physical or caller lookup path. */
+	private static function relative_root_match( string $path, ?array $row ): ?bool {
 		$separator = null === $row ? false : array_search( '-', $row, true );
 		$known = null !== $row && is_int( $separator ) && $separator >= 6 && count( $row ) === $separator + 4
 			&& is_string( $row[3] ?? null ) && is_string( $row[ $separator + 1 ] ?? null ) && '' !== $row[ $separator + 1 ] && 0 === preg_match( '/[\x00-\x20\x7f]/', $row[ $separator + 1 ] )
@@ -337,9 +345,7 @@ final class Wstm108_HostTopology {
 				}
 			}
 		}
-		if ( true === $recognized ) { self::require( false, 'noncanonical-path' ); }
-		if ( false === $recognized ) { self::require( false, 'noncanonical-path' ); }
-		self::require( false, 'noncanonical-path' );
+		return $recognized;
 	}
 }
 
@@ -471,14 +477,14 @@ final class Wstm108_AdmissionCallsite {
 	);
 	private const RELATIVE_FAILURE_CALL_LINE = 303;
 	private const RELATIVE_FAILURE_GUARDS = array(
-		340 => 'mount-root-net-true', 341 => 'mount-root-net-false', 342 => 'mount-root-net-unknown',
+		326 => 'mount-root-net-true', 327 => 'mount-root-net-false', 328 => 'mount-root-net-unknown',
 	);
 	private const MODEL_LENGTH_LINE = 107;
 	private const MODEL_CANONICAL_LINE = 108;
 	private const PHP80_PATH_GUARD_LINES = array(
 		'Wstm108_HostTopology' => array( 302 => 302, 304 => 304, 311 => 311, 312 => 312,
 			313 => 313, 314 => 314, 315 => 315, 316 => 316, 317 => 317, 320 => 320,
-			340 => 340, 341 => 341, 342 => 342 ),
+			326 => 326, 327 => 327, 328 => 328 ),
 		'Wstm108_KernelMountModel' => array( 107 => 107, 108 => 109 ),
 	);
 	private const HOST_CALLERS = array(

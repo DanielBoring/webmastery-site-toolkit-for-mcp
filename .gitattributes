@@ -87,3 +87,7 @@ tests/unit/CiAdmissionDiagnosticTest.php -text whitespace=cr-at-eol
 tests/unit/fixtures/mount-root-net-transition.php -text whitespace=cr-at-eol
 tests/unit/fixtures/mount-root-net-transition.json -text whitespace=cr-at-eol
 tests/unit/MountRootNetDiagnosticTransitionTest.php -text whitespace=cr-at-eol
+tests/unit/fixtures/nsfs-net-metadata-transition.php -text whitespace=cr-at-eol
+tests/unit/fixtures/nsfs-net-metadata-transition.json -text whitespace=cr-at-eol
+tests/unit/NsfsNetMetadataTransitionTest.php -text whitespace=cr-at-eol
+tests/unit/NsfsNetMetadataCompatibilityTest.php -text whitespace=cr-at-eol

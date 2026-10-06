@@ -6,6 +6,15 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add an immutable outer proof for the reviewed nsfs/net metadata correction, restoring the exact published 514-path generation before every unchanged historical witness; bind the approved runtime and all current source bytes with omission, forgery, wrong-generation and post-cache rejection controls. This proof changes no physical-root or process admission gate.
+
+- Retain the reviewed nsfs network-namespace root token as opaque mount-table
+  metadata in both QA parser modes after the genuine hosted joint diagnostic
+  established this compatibility case. Reuse the exact bounded positive-u32
+  recognizer; keep all other root and lookup checks, physical filesystem gates,
+  nested-mount closure, capture custody and budgets unchanged. This does not
+  grant native proof or introduce a privilege/process transition.
+
 - Add an immutable outer proof for the reviewed joint mount-root diagnostic, restoring the exact published 511-path generation before every unchanged historical witness; bind all current bytes and retain omission, forgery, wrong-generation and post-cache rejection controls. This adds no mount acceptance or hosted-root attribution.
 
 - Add a failure-only, source-bound true/false/unknown diagnostic for the original
