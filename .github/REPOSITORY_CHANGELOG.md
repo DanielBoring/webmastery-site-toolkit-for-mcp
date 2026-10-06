@@ -6,6 +6,18 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Compose an exact-byte outer proof for the refined mount-root diagnostics
+  over the published 508-path generation. Preserve all older seals and
+  comparisons, keep runtime execution on current source, and reject missing,
+  reverted or forged diagnostic dependencies and resealed wrong baselines.
+
+- Refine source-bound decoded mount-root failure diagnostics into three ordered
+  prefix sites and seven exact control/slash/dot combinations. Evaluate the
+  original admission predicate once and preserve acceptance, source closure,
+  credentials, budgets, all 37 reasons, witness schema and terminal handling.
+  Unknown or inconsistent provenance remains unknown; finite labels do not
+  disclose private roots or attribute a hosted failure to a filesystem.
+
 - Add an exact-byte outer proof for synthetic terminal-output descriptor binding.
   Restore the approved 505-path callsite baseline before its unchanged seal
   and older witnesses; keep actual execution on current source and retain

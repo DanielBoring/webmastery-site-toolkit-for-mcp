@@ -141,6 +141,18 @@ final class CiAdmissionDiagnosticTest extends TestCase {
 			self::assertSame( 0, $result[0] );
 			self::assertSame( '', $result[2] );
 			self::assertStringContainsString( ' callsite=' . $site . ';', $result[1] );
+			if ( 0 === strpos( $site, 'mount-root-' ) ) {
+				// OS environments cannot carry NUL; test that value at the closed allowlist itself.
+				self::assertFalse( Wstm108_AdmissionCallsite::allows( 'noncanonical-path', $site . "\0" ) );
+				foreach ( array( $site . "\nPRIVATE_SENTINEL", $site . ' ', $site . '-PRIVATE_SENTINEL' ) as $bad ) {
+					$result = $this->format( $payload, false, $bad );
+					self::assertStringContainsString( ' callsite=unknown;', $result[1] );
+					self::assertSame( '', $result[2] );
+					self::assertStringNotContainsString( 'PRIVATE_SENTINEL', $result[1] );
+				}
+				self::assertStringContainsString( ' callsite=unknown;',
+					$this->format( '{"phase":"topology","reason":"native-coordinate-prerequisite"}', false, $site )[1] );
+			}
 		}
 		foreach ( array( '', 'PRIVATE_SENTINEL', '/private/mount-root', 'mount-root ', "mount-root\n::error::PRIVATE_SENTINEL",
 			'{"site":"mount-root"}', str_repeat( 'PRIVATE_SENTINEL', 20 ), 'kernel-physical-length-extra' ) as $site ) {

@@ -48,7 +48,7 @@ final class AdmissionCallsiteTest extends TestCase {
 
 	public function test_real_host_guard_frames_cover_each_reviewed_caller(): void {
 		$cases = array(
-			'mount-root' => static fn() => Wstm108_HostTopology::structural_mounts( "1 0 0:1 /../PRIVATE_SENTINEL /bound rw - tmpfs tmpfs rw\n" ),
+			'mount-root-rx-d' => static fn() => Wstm108_HostTopology::structural_mounts( "1 0 0:1 /../PRIVATE_SENTINEL /bound rw - tmpfs tmpfs rw\n" ),
 			'mount-point' => static fn() => Wstm108_HostTopology::structural_mounts( "1 0 0:1 / /../PRIVATE_SENTINEL rw - tmpfs tmpfs rw\n" ),
 			'legacy-input' => fn() => Wstm108_HostTopology::coordinate( '/../PRIVATE_SENTINEL', array( $this->row() ) ),
 			'legacy-physical' => fn() => Wstm108_HostTopology::coordinate( '/bound/file', array( $this->row( '/../PRIVATE_SENTINEL' ) ) ),
@@ -61,6 +61,72 @@ final class AdmissionCallsiteTest extends TestCase {
 				self::assertArrayNotHasKey( 'args', $frame );
 				self::assertArrayNotHasKey( 'object', $frame );
 			}
+		}
+	}
+
+	public function test_real_root_frames_cover_all_prefixes_and_exact_regex_combinations(): void {
+		$cases = array(
+			'mount-root-empty' => '',
+			'mount-root-relative' => "PRIVATE_SENTINEL\0//../",
+			'mount-root-nul' => "/PRIVATE_SENTINEL\0//../",
+			'mount-root-rx-c' => '/PRIVATE_SENTINEL\\011',
+			'mount-root-rx-s' => '/PRIVATE_SENTINEL//end',
+			'mount-root-rx-d' => '/PRIVATE_SENTINEL/../end',
+			'mount-root-rx-cs' => '/PRIVATE_SENTINEL\\012//end',
+			'mount-root-rx-cd' => '/PRIVATE_SENTINEL\\011/./end',
+			'mount-root-rx-sd' => '/PRIVATE_SENTINEL//../end',
+			'mount-root-rx-csd' => '/PRIVATE_SENTINEL\\012//../end',
+		);
+		$reflection = new ReflectionClass( Wstm108_AdmissionCallsite::class );
+		$guards = $reflection->getConstant( 'HOST_FAILURE_GUARDS' );
+		$expected = array_values( array_filter( $guards, static fn( $id ) => 'unknown' !== $id ) );
+		self::assertEqualsCanonicalizing( $expected, array_keys( $cases ) );
+		foreach ( $cases as $site => $root ) {
+			foreach ( array( 'mounts', 'structural_mounts' ) as $parser ) {
+				$error = $this->refusal( static fn() => Wstm108_HostTopology::$parser( '1 0 0:1 ' . $root . " / rw - tmpfs tmpfs rw\n" ) );
+				self::assertSame( $site, Wstm108_AdmissionCallsite::identify( $error ) );
+				self::assertSame( array( 'phase' => 'topology', 'reason' => 'noncanonical-path' ), Wstm108_HostTopology::failure_witness( $error ) );
+				foreach ( $error->getTrace() as $frame ) {
+					self::assertArrayNotHasKey( 'args', $frame );
+					self::assertArrayNotHasKey( 'object', $frame );
+				}
+				$diagnostic = fopen( 'php://memory', 'w+b' ); $output = fopen( 'php://memory', 'w+b' );
+				Wstm108_HostController::report_terminal_failure( $error, $diagnostic, $output );
+				rewind( $diagnostic ); rewind( $output );
+				$private = stream_get_contents( $diagnostic ); $public = stream_get_contents( $output );
+				self::assertStringContainsString( 'untrusted_admission_callsite_v1=' . $site . "\n", $public );
+				self::assertLessThanOrEqual( 256, strlen( $private ) );
+				self::assertLessThanOrEqual( 256, strlen( $public ) );
+				self::assertStringNotContainsString( 'PRIVATE_SENTINEL', $private . $public );
+				Wstm108_HostController::report_terminal_failure( new RuntimeException( 'PRIVATE_SENTINEL' ), $diagnostic, $output );
+				rewind( $output );
+				self::assertStringEndsWith( "untrusted_admission_callsite_v1=unknown\n", stream_get_contents( $output ) );
+				fclose( $diagnostic ); fclose( $output );
+			}
+		}
+	}
+
+	public function test_failure_only_fallback_and_direct_or_drifted_calls_are_unknown(): void {
+		$failure = new ReflectionMethod( Wstm108_HostTopology::class, 'path_failure' ); $failure->setAccessible( true );
+		foreach ( array( '/', '', '/PRIVATE_SENTINEL//../end' ) as $path ) {
+			$error = $this->refusal( static fn() => $failure->invoke( null, $path ) );
+			self::assertSame( 'unknown', Wstm108_AdmissionCallsite::identify( $error ) );
+		}
+		$call = static fn() => Wstm108_HostTopology::structural_mounts( "1 0 0:1 /PRIVATE_SENTINEL//../ / rw - tmpfs tmpfs rw\n" );
+		$trace_property = new ReflectionProperty( Exception::class, 'trace' ); $trace_property->setAccessible( true );
+		foreach ( array( 'guard-swap', 'failure-call', 'path-class', 'path-file', 'path-line', 'path-function', 'owner', 'owner-args', 'owner-object' ) as $change ) {
+			$error = $this->refusal( $call ); $trace = $error->getTrace();
+			self::assertSame( 'mount-root-rx-sd', Wstm108_AdmissionCallsite::identify( $error ) );
+			if ( 'guard-swap' === $change ) { $trace[0]['line'] = 302; }
+			elseif ( 'failure-call' === $change ) { ++$trace[1]['line']; }
+			elseif ( 'owner' === $change ) { $trace[3]['function'] = 'foreign'; }
+			elseif ( 'owner-args' === $change ) { $trace[3]['args'] = array( 'PRIVATE_SENTINEL' ); }
+			elseif ( 'owner-object' === $change ) { $trace[3]['object'] = new stdClass(); }
+			else { $trace[2][ substr( $change, 5 ) ] = 'path-line' === $change ? 88 : 'PRIVATE_SENTINEL'; }
+			$trace_property->setValue( $error, $trace );
+			self::assertSame( 'unknown', Wstm108_AdmissionCallsite::identify( $error ), $change );
+			Wstm108_AdmissionCallsite::record_creation( $error );
+			self::assertSame( 'unknown', Wstm108_AdmissionCallsite::identify( $error ) );
 		}
 	}
 
@@ -127,10 +193,15 @@ final class AdmissionCallsiteTest extends TestCase {
 			}
 		}
 		$host = file_get_contents( $root . 'untrusted-host-topology.php' );
-		self::assertStringContainsString(
-			"self::require( '' !== \$path && '/' === \$path[0] && false === strpos( \$path, \"\\0\" )\n"
-			. "\t\t\t&& ! preg_match( '/[\\x00-\\x1f\\x7f]|\\/\\/|(?:^|\\/)\\.\\.?(?:\\/|\$)/', \$path ), 'noncanonical-path' );",
-			str_replace( "\r\n", "\n", $host ) );
+		$predicate = "'' !== \$path && '/' === \$path[0] && false === strpos( \$path, \"\\0\" )\n"
+			. "\t\t\t&& ! preg_match( '/[\\x00-\\x1f\\x7f]|\\/\\/|(?:^|\\/)\\.\\.?(?:\\/|\$)/', \$path )";
+		self::assertSame( 1, substr_count( str_replace( "\r\n", "\n", $host ), '$canonical = ' . $predicate . ';' ) );
+		self::assertStringContainsString( "if ( ! \$canonical ) { self::path_failure( \$path ); } return '/' === \$path ? '/' : rtrim( \$path, '/' );", $host );
+		$lines = file( $root . 'untrusted-host-topology.php' );
+		foreach ( $reflection->getConstant( 'HOST_FAILURE_GUARDS' ) as $line => $site ) {
+			self::assertStringContainsString( "self::require( false, 'noncanonical-path' );", $lines[ $line - 1 ] );
+			self::assertTrue( Wstm108_AdmissionCallsite::allows( 'noncanonical-path', $site ) );
+		}
 		$model = file( $root . 'untrusted-kernel-mount-model.php' );
 		self::assertStringContainsString( "strlen( \$path ) <= 4096, 'noncanonical-path'", $model[ $reflection->getConstant( 'MODEL_LENGTH_LINE' ) - 1 ] );
 		self::assertStringContainsString( "self::require( '' !== \$path", $model[ $reflection->getConstant( 'MODEL_CANONICAL_LINE' ) - 1 ] );
@@ -190,7 +261,7 @@ final class AdmissionCallsiteTest extends TestCase {
 	public function test_real_birth_rejects_changed_ini_serialization_and_native_trace_forgery(): void {
 		$call = static fn() => Wstm108_HostTopology::structural_mounts( "1 0 0:1 /../private / rw - tmpfs tmpfs rw\n" );
 		$error = $this->refusal( $call );
-		self::assertSame( 'mount-root', Wstm108_AdmissionCallsite::identify( $error ) );
+		self::assertSame( 'mount-root-rx-d', Wstm108_AdmissionCallsite::identify( $error ) );
 		ini_set( 'zend.exception_ignore_args', '0' );
 		self::assertSame( 'unknown', Wstm108_AdmissionCallsite::identify( $error ) );
 		ini_set( 'zend.exception_ignore_args', '1' );
@@ -199,8 +270,8 @@ final class AdmissionCallsiteTest extends TestCase {
 		$property->setAccessible( true );
 		foreach ( array( 'line', 'file', 'class', 'function', 'args', 'object', 'owner', 'different-site', 'tail', 'missing' ) as $change ) {
 			$error = $this->refusal( $call ); $trace = $error->getTrace();
-			if ( 'owner' === $change ) { $trace[2]['function'] = 'foreign'; }
-			elseif ( 'different-site' === $change ) { $trace[1]['line'] = 88; }
+			if ( 'owner' === $change ) { $trace[3]['function'] = 'foreign'; }
+			elseif ( 'different-site' === $change ) { $trace[2]['line'] = 88; }
 			elseif ( 'tail' === $change ) { $trace[] = array( 'function' => 'PRIVATE_SENTINEL' ); }
 			elseif ( 'missing' === $change ) { $trace = array(); }
 			else { $trace[0][ $change ] = 'line' === $change ? 999999 : 'PRIVATE_SENTINEL'; }
@@ -226,7 +297,7 @@ final class AdmissionCallsiteTest extends TestCase {
 			$unverified = 'ini_get' === $disabled ? array( false, 'unavailable', 'unknown', false, array( 'unknown', 'unknown', 'unknown' ) )
 				: array( false, '0', 'unknown', true, array( 'unknown', 'unknown', 'unknown' ) );
 			self::assertSame( '' !== $disabled ? $unverified
-				: array( true, '1', 'mount-root', false, array( 'kernel-physical-length', 'kernel-held-canonical', 'pr-active-scope' ) ),
+				: array( true, '1', 'mount-root-rx-d', false, array( 'kernel-physical-length', 'kernel-held-canonical', 'pr-active-scope' ) ),
 				json_decode( $output, true, 4, JSON_THROW_ON_ERROR ) );
 			self::assertStringNotContainsString( 'PRIVATE_SENTINEL', $diagnostic . $output );
 		}
@@ -245,22 +316,24 @@ final class AdmissionCallsiteTest extends TestCase {
 					foreach ( (array) $binding[1] as $owner ) {
 						$error = $this->refusal( static fn() => Wstm108_HostTopology::structural_mounts( "1 0 0:1 /../private / rw - tmpfs tmpfs rw\n" ) );
 						$class = $host ? 'Wstm108_HostTopology' : 'Wstm108_KernelMountModel';
-						$guard = $host ? $reflection->getConstant( 'HOST_GUARD_LINE' )
+						$guard = $host ? 314
 							: $reflection->getConstant( 'MODEL_' . strtoupper( $kind ) . '_LINE' );
 						if ( PHP_VERSION_ID < 80100 ) {
 							$guard = $reflection->getConstant( 'PHP80_PATH_GUARD_LINES' )[ $class ][ $guard ];
 						}
 						$trace = array(
 							array( 'class' => $class, 'function' => 'require', 'file' => $root . ( $host ? $file : 'untrusted-kernel-mount-model.php' ), 'line' => $guard ),
-							array( 'class' => $class, 'function' => 'path', 'file' => $root . $file, 'line' => $line ),
+							array( 'class' => $class, 'function' => $host ? 'path_failure' : 'path', 'file' => $root . $file,
+								'line' => $host ? $reflection->getConstant( 'HOST_FAILURE_CALL_LINE' ) : $line ),
 							array( 'class' => 'KERNEL_CALLERS' === $key ? 'Wstm108_KernelMounts' : $class, 'function' => $owner ),
 						);
+						if ( $host ) { array_splice( $trace, 2, 0, array( array( 'class' => $class, 'function' => 'path', 'file' => $root . $file, 'line' => $line ) ) ); }
 						$trace_property->setValue( $error, $trace );
-						$expected = $binding[0] . ( $host ? '' : '-' . $kind );
+						$expected = $host && 'mount-root' === $binding[0] ? 'mount-root-rx-d' : $binding[0] . ( $host ? '' : '-' . $kind );
 						// Private lookup grammar only: these fabricated frames are not native provenance.
 						self::assertSame( $expected, $native->invoke( null, $error ) );
 						self::assertSame( 'unknown', Wstm108_AdmissionCallsite::identify( $error ) );
-						$trace[1]['line'] += 10000; $trace_property->setValue( $error, $trace );
+						$trace[ $host ? 2 : 1 ]['line'] += 10000; $trace_property->setValue( $error, $trace );
 						self::assertSame( 'unknown', $native->invoke( null, $error ) );
 						self::assertSame( 'unknown', Wstm108_AdmissionCallsite::identify( $error ) );
 					}
@@ -276,7 +349,7 @@ final class AdmissionCallsiteTest extends TestCase {
 		Wstm108_HostController::report_terminal_failure( new RuntimeException( 'PRIVATE_SENTINEL' ), $diagnostic, $output );
 		rewind( $output ); $bytes = stream_get_contents( $output );
 		self::assertStringContainsString( "untrusted_admission_failure={\"phase\":\"topology\",\"reason\":\"noncanonical-path\"}\n", $bytes );
-		self::assertStringContainsString( "untrusted_admission_callsite_v1=mount-root\n", $bytes );
+		self::assertStringContainsString( "untrusted_admission_callsite_v1=mount-root-rx-d\n", $bytes );
 		self::assertStringEndsWith( "untrusted_admission_callsite_v1=unknown\n", $bytes );
 		rewind( $diagnostic ); self::assertStringNotContainsString( 'PRIVATE_SENTINEL', stream_get_contents( $diagnostic ) );
 		fclose( $diagnostic ); fclose( $output );

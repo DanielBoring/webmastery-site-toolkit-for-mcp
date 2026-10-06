@@ -48,9 +48,9 @@ final class Wstm108_HostTopology {
 	}
 
 	private static function path( string $path ): string {
-		self::require( '' !== $path && '/' === $path[0] && false === strpos( $path, "\0" )
-			&& ! preg_match( '/[\x00-\x1f\x7f]|\/\/|(?:^|\/)\.\.?(?:\/|$)/', $path ), 'noncanonical-path' );
-		return '/' === $path ? '/' : rtrim( $path, '/' );
+		$canonical = '' !== $path && '/' === $path[0] && false === strpos( $path, "\0" )
+			&& ! preg_match( '/[\x00-\x1f\x7f]|\/\/|(?:^|\/)\.\.?(?:\/|$)/', $path );
+		if ( ! $canonical ) { self::path_failure( $path ); } return '/' === $path ? '/' : rtrim( $path, '/' );
 	}
 
 	private static function contains( string $parent, string $child ): bool {
@@ -296,6 +296,29 @@ final class Wstm108_HostTopology {
 		return array( 'endpoint' => $endpoint, 'socket_identity' => $socket_before, 'peer' => $before,
 			'mountinfo_sha256' => hash( 'sha256', $mountinfo ), 'mounts' => $mounts );
 	}
+
+	/** Failure-only metadata; the original predicate alone decides acceptance. */
+	private static function path_failure( string $path ): void {
+		if ( '' === $path ) { self::require( false, 'noncanonical-path' ); }
+		if ( '/' !== $path[0] ) { self::require( false, 'noncanonical-path' ); }
+		if ( false !== strpos( $path, "\0" ) ) { self::require( false, 'noncanonical-path' ); }
+		$control = preg_match( '/[\x00-\x1f\x7f]/', $path );
+		$slash = preg_match( '/\/\//', $path );
+		$dot = preg_match( '/(?:^|\/)\.\.?(?:\/|$)/', $path );
+		if ( in_array( $control, array( 0, 1 ), true ) && in_array( $slash, array( 0, 1 ), true )
+			&& in_array( $dot, array( 0, 1 ), true ) ) {
+			switch ( $control + 2 * $slash + 4 * $dot ) {
+				case 1: self::require( false, 'noncanonical-path' ); break;
+				case 2: self::require( false, 'noncanonical-path' ); break;
+				case 3: self::require( false, 'noncanonical-path' ); break;
+				case 4: self::require( false, 'noncanonical-path' ); break;
+				case 5: self::require( false, 'noncanonical-path' ); break;
+				case 6: self::require( false, 'noncanonical-path' ); break;
+				case 7: self::require( false, 'noncanonical-path' ); break;
+			}
+		}
+		self::require( false, 'noncanonical-path' );
+	}
 }
 
 /** Passive finite diagnostics, inside the existing source-provenance closure. */
@@ -304,6 +327,9 @@ final class Wstm108_AdmissionCallsite {
 	public const MAX_TERMINAL_BYTES = 256;
 	public const IDS = array(
 		'unknown', 'mount-root', 'mount-point', 'legacy-input', 'legacy-physical', 'legacy-source',
+		'mount-root-empty', 'mount-root-relative', 'mount-root-nul',
+		'mount-root-rx-c', 'mount-root-rx-s', 'mount-root-rx-d', 'mount-root-rx-cs',
+		'mount-root-rx-cd', 'mount-root-rx-sd', 'mount-root-rx-csd',
 		'kernel-selected-length', 'kernel-selected-canonical',
 		'kernel-input-length', 'kernel-input-canonical',
 		'kernel-physical-length', 'kernel-physical-canonical',
@@ -413,11 +439,18 @@ final class Wstm108_AdmissionCallsite {
 	);
 	private const ENTRY_LINE = 756;
 	private const BIRTH_LINE = 13;
-	private const HOST_GUARD_LINE = 51;
+	private const HOST_FAILURE_CALL_LINE = 53;
+	private const HOST_FAILURE_GUARDS = array(
+		302 => 'mount-root-empty', 303 => 'mount-root-relative', 304 => 'mount-root-nul',
+		311 => 'mount-root-rx-c', 312 => 'mount-root-rx-s', 313 => 'mount-root-rx-cs',
+		314 => 'mount-root-rx-d', 315 => 'mount-root-rx-cd', 316 => 'mount-root-rx-sd',
+		317 => 'mount-root-rx-csd', 320 => 'unknown',
+	);
 	private const MODEL_LENGTH_LINE = 107;
 	private const MODEL_CANONICAL_LINE = 108;
 	private const PHP80_PATH_GUARD_LINES = array(
-		'Wstm108_HostTopology' => array( 51 => 52 ),
+		'Wstm108_HostTopology' => array( 302 => 302, 303 => 303, 304 => 304, 311 => 311, 312 => 312,
+			313 => 313, 314 => 314, 315 => 315, 316 => 316, 317 => 317, 320 => 320 ),
 		'Wstm108_KernelMountModel' => array( 107 => 107, 108 => 109 ),
 	);
 	private const HOST_CALLERS = array(
@@ -527,19 +560,26 @@ final class Wstm108_AdmissionCallsite {
 		}
 		$guard['file'] = str_replace( '\\', '/', $guard['file'] );
 		$caller['file'] = str_replace( '\\', '/', $caller['file'] );
-		if ( 'require' !== $guard['function'] || 'path' !== $caller['function']
-			|| $guard['class'] !== $caller['class'] ) { return 'unknown'; }
+		if ( 'require' !== $guard['function'] || $guard['class'] !== $caller['class'] ) { return 'unknown'; }
 		$line = self::compiled_guard_line( $guard['class'], $guard['line'], PHP_VERSION_ID );
 		if ( null === $line ) { return 'unknown'; }
 		$guard['line'] = $line;
 		if ( 'Wstm108_HostTopology' === $guard['class'] ) {
 			if ( $guard['file'] !== self::file( 'untrusted-host-topology.php' )
-				|| $guard['line'] !== self::HOST_GUARD_LINE
-				|| $caller['file'] !== self::file( 'untrusted-host-topology.php' ) ) { return 'unknown'; }
-			$binding = self::HOST_CALLERS[ $caller['line'] ] ?? null;
-			return self::owner( $trace[2], 'Wstm108_HostTopology', $binding ) ? $binding[0] : 'unknown';
+				|| ! array_key_exists( $guard['line'], self::HOST_FAILURE_GUARDS )
+				|| 'path_failure' !== $caller['function'] || $caller['line'] !== self::HOST_FAILURE_CALL_LINE
+				|| $caller['file'] !== self::file( 'untrusted-host-topology.php' ) || count( $trace ) < 4 ) { return 'unknown'; }
+			$path = $trace[2]; $owner = $trace[3];
+			if ( 'Wstm108_HostTopology' !== $path['class'] || 'path' !== $path['function']
+				|| ! is_string( $path['file'] ?? null ) || str_replace( '\\', '/', $path['file'] ) !== self::file( 'untrusted-host-topology.php' )
+				|| ! is_int( $path['line'] ?? null )
+				|| ! is_array( $owner ) || array_key_exists( 'args', $owner ) || array_key_exists( 'object', $owner )
+				|| ! isset( $owner['class'], $owner['function'] ) ) { return 'unknown'; }
+			$binding = self::HOST_CALLERS[ $path['line'] ] ?? null;
+			if ( ! self::owner( $owner, 'Wstm108_HostTopology', $binding ) ) { return 'unknown'; }
+			return 'mount-root' === $binding[0] ? self::HOST_FAILURE_GUARDS[ $guard['line'] ] : $binding[0];
 		}
-		if ( 'Wstm108_KernelMountModel' !== $guard['class']
+		if ( 'path' !== $caller['function'] || 'Wstm108_KernelMountModel' !== $guard['class']
 			|| $guard['file'] !== self::file( 'untrusted-kernel-mount-model.php' ) ) { return 'unknown'; }
 		$kind = self::MODEL_LENGTH_LINE === $guard['line'] ? 'length'
 			: ( self::MODEL_CANONICAL_LINE === $guard['line'] ? 'canonical' : null );

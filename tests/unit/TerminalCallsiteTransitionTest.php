@@ -28,7 +28,7 @@ final class TerminalCallsiteTransitionTest extends TestCase {
 	public function test_actual_runtime_and_diagnostic_controls_are_exact_c2_not_historical_execution(): void {
 		$map = Wstm167TerminalCallsiteTransition::load();
 		foreach ( $map['diagnostic_execution'] as $path => $hash ) {
-			self::assertSame( $hash, hash( 'sha256', $this->read( $path ) ), $path );
+			self::assertSame( $hash, hash( 'sha256', Wstm167MountRootTransition::restore( $path, $this->read( $path ) ) ), $path );
 			self::assertTrue( isset( $map['dependencies'][ $path ] ) || isset( $map['files'][ $path ] ), $path );
 		}
 		foreach ( array( 'tests/unit/AdmissionCallsiteTest.php', 'tests/unit/NativePrerequisiteDiagnosticTest.php', 'tests/unit/fixtures/callsite-entry-shutdown.php', 'tests/unit/TerminalCallsiteTransitionTest.php' ) as $path ) {
@@ -129,7 +129,7 @@ final class TerminalCallsiteTransitionTest extends TestCase {
 			try {
 				self::assertSame( $wrong, $outer_class::restore( $path, $current ) );
 				try {
-					$older_class::verify_dependencies( fn( $entry ) => $outer_class::restore( $entry, $this->read( $entry ) ) );
+					$older_class::verify_dependencies( fn( $entry ) => $outer_class::restore( $entry, Wstm167MountRootTransition::restore( $entry, $this->read( $entry ) ) ) );
 					self::fail( 'Resealed diagnostic baseline replaced the published main witness.' );
 				} catch ( RuntimeException $error ) {
 					self::assertSame(

@@ -67,6 +67,21 @@ arming their cleanup. Contract-only lifecycle behavior remains separate.
 
 ### Kernel mount verification
 
+Decoded mount-root refusals refine only the exact, source-bound parser caller.
+The original host canonical predicate is evaluated once, unchanged; its success
+return and all admission decisions remain unchanged. Failure-only sites report
+ordered `mount-root-empty`, `mount-root-relative` or `mount-root-nul` prefixes.
+Otherwise `mount-root-rx-c`, `-s`, `-d`, `-cs`, `-cd`, `-sd` or `-csd` identify
+the exact combination of control-byte, double-slash and dot-component matches,
+without ranking overlapping matches or disclosing matched bytes. Inconsistent
+classification or unverifiable native birth remains `unknown`. Other reviewed
+callers retain their IDs. These diagnostics do not identify a filesystem,
+namespace owner, mount row or physical coordinate and cannot establish that a
+hosted root uses cgroup namespace semantics. A canonical host-parser root longer
+than 4096 remains accepted by that parser; the separate physical-coordinate
+limit is unchanged. The longest refined ID is 19 ASCII bytes; existing scalar
+and terminal-channel limits remain 32 and 256 bytes.
+
 Terminal `noncanonical-path` diagnostics distinguish decoded mount roots/points,
 legacy source/input/physical callers and kernel selected/input/source/held/path/
 chunk callers. Kernel IDs end in `length` or `canonical`; only the existing
