@@ -25,7 +25,61 @@ Primary risks for this plugin:
 
 ## Agent threat model
 
+### Approved setup-only PHP permission provisioning
+
+On the explicitly approved owned disposable GitHub-hosted QA runners, the
+ordinary-user `host-prerequisite-setup.py` driver with required8.2/8.4 selection
+guard follows the final pinned PHP setup action and precedes every candidate
+configured-PHP script. Package selection8.2 is restricted to the release-package
+job; selection8.4 to Ability Contract and Full MCP. The same guard and
+read-only inventory implementation serve all three, with no version/env fallback.
+No candidate/config writer may run in this provisioning
+interval. Workflow context is a scope assertion, not an authorization token
+for a different machine or evidence that a hostile root administrator is absent.
+
+Its only elevated argv is the fixed system sudo/chmod0644 command for the
+selected literal php.ini/99-pecl.ini pair:8.2 in Package,8.4 in Contract/Full MCP.
+No cross-version pair or other path can be constructed from input. The canonical
+interpreter and actual bare identity must agree with that SAME selection.
+Original root-owned/writable input remains ineligible for the read-only
+inventory until the guarded0644 postcondition; shared acquisition precedes
+candidate PHP on all three surfaces. Failed provisioning/acquisition also
+withholds always-running PHP diagnostics, summaries and export verification.
+No root repository/PHP/Python/shell script, dynamic path/argv, directory/glob,
+unapproved version/SAPI, ownership change, extra extension, namespace operation or
+runtime sudo policy is permitted. Before launch, full bounded content/identity
+and root-owned canonical parent checks protect both literal nonsymlink targets;
+trusted sudo/chmod package ELF and loader/policy-module pins protect system
+execution. Held original read descriptors and full postchecks reject content,
+inode, ownership or parent replacement while accepting only the expected0644
+mode/ctime change. Source archive/build-chain and actual loaded-module behavior
+remain explicit evidence limits, not inferred guarantees.
+
+All originals stay in exclusive owned private custody. One setup deadline and
+conserved file/byte/command/output ledgers cover the complete operation, including
+rechecks and the single root launch. Failure retains prefixes/unknown tails;
+the nonroot guard never signals a privileged child, invents a drain allowance
+or claims root cleanup. The original read-only inventory and three runtime
+observer operations are unchanged. No local/WSL root execution is part of the
+review/validation process.
+
 ### Scoped repository QA host observation
+
+The setup driver's durable G1/G2 log projection is an availability-only public
+boundary, not an additional observer or permission grant. Its source-bound
+private original inventory, wait/EOF captures and input hash are retained before
+public parsing. A closed <=16384-byte schema permits only enumerated IDs,
+booleans/nulls, approved version/job selectors and canonical SHA256 digests.
+Raw operands, paths, configuration, versions, package text, process information
+and native output remain private. Unknown Python API observations remain unknown;
+no socket/FD/protocol operation is introduced to manufacture them.
+The existing original deadline and ledgers cover source rechecks and projection
+retention. Refusal preserves private partial evidence and withholds candidate
+PHP; failed writes, changed source, missing EOF or unknown exit cannot become
+successful acquisition. The genuine Actions job/attempt log and comparison
+against the reviewed source tuple are required when retrieving facts, including
+after a later admission failure. A copied JSON object, unit/mock marker, generic
+step success or configured workflow input is not genuine HOST evidence.
 
 Only separately approved disposable hosted CI selects
 `WSTM108_HOST_INSPECTION=system-readonly-v1`. The controller, capture and PHP

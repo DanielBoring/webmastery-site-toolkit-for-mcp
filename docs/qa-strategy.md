@@ -14,6 +14,188 @@ Related strategy guides:
 
 ## QA checks
 
+### Current-source composition witness and mock-only static coverage
+
+The three-surface gate is composed onto published PR167 head
+`29f76178ceed3cf49eea02122defe7524eb2b555`, not substituted from its older
+511-path input baseline. The outer host-prerequisite transition reverses
+only additive composition and QA changes to the exact published518 bytes
+before the unchanged nsfs/net and older witnesses. Its closure includes the
+three Python scripts, three mock test files, workflows and documentation.
+
+`composer lint:php` also AST-parses every Python source under scripts/tests
+without executing inventory or provisioning. `composer test:host-prerequisites`
+runs the three fixed mock-only suites (31 inventory,22 provisioning,26 shared
+driver/projection controls). Both static QA and the existing CI safeguards entry run
+those controls; their existing scripts/tests path coverage includes every
+new file. None of these checks is native HOST acquisition or protocol
+approval. Real PHP8.0/8.4 and Docker acceptance remain new-head CI evidence.
+
+### Read-only HOST prerequisite inventory before the three QA surfaces
+
+Release Package, Ability Contract and Full MCP QA use the same
+`scripts/host-prerequisite-setup.py` driver immediately after the final host
+PHP setup and shared unit controls, BEFORE candidate configured PHP, custody
+probes, safeguards or runtime QA. Its required explicit selection is8.2 for
+the package job and8.4 for Contract/Full MCP; no version/environment fallback.
+The driver hardens the selected two files, then invokes
+`scripts/host-prerequisite-inventory.py` with the SAME closed selection.
+After acquisition it retains and validates a finite public projection, then
+logs exactly one `WSTM_G1G2_ACQUISITION_V1 ` marker followed by compact JSON.
+The existing Actions job log retains this line even if later runtime QA
+refuses admission with exit78. Unit-only execution never emits that marker.
+Retrieve the original job/attempt log and compare its three `sources` digests
+(`driver`, `guard`, `gate`) with the reviewed candidate; step completion alone
+is not availability evidence. Log metadata supplies run/attempt/head context,
+not a fabricated field or standalone attestation in the projection.
+
+The closed `g1g2-acquisition-v1` schema contains only the selected8.2/8.4,
+the corresponding finite job ID, canonical SHA256 strings, enumerated tool/API
+IDs, strict booleans, nulls and finite observed/refused/unknown states.
+Tool IDs are setpriv, python, php, dpkg-query, readelf, sudo and chmod.
+PHP facts use all seven function and thirteen constant IDs in the existing
+no-argument presence query, including optional fcntl/CLOEXEC IDs. False optional
+facts do not change the existing six-function/nine-constant eligibility checks.
+Python socket facts are explicitly unknown: this collector has not probed them.
+Configured PHP presence is distinct from the bare PHP original-capture flags.
+No raw paths, argv, environment, package/module/version strings, configuration,
+process data, stdout/stderr or error details are public.
+
+The guard and inventory snapshot their original private inventory, retention
+index and closed native-command observed/stdout/stderr bytes before projection.
+The last retained phase rechecks all three own-source identities and full hashes
+against its existing ledger, charging re-read bytes to that same ledger.
+It writes/fsyncs `projection-input.private.json` and its SHA256 file before
+parsing their verified readback. Each inventory/event/pipe is bound to the
+retained index's original identity, size and digest, and the original direct
+child exit plus both EOF flags. No inferred wait or mock result supplies a fact.
+`projection.public.json` is also retained and read back before closed-schema
+validation and log emission. These new files remain private; there is no upload,
+recipient, secret, new transport or export of the full inventory.
+
+The input's exact base64-expanded size is bounded before encoding. Input/hash
+and projected bytes share the last phase's existing16MiB aggregate capture
+ledger, rather than a new pool; individual records retain their existing16MiB
+bound, and the entire public line is limited to16384 bytes. All checks use the
+last phase's original absolute deadline, including before and after log flush.
+No deadline reset, retry, refunded failed debit or drain allowance is added.
+Missing APIs can yield a validated `refused` projection; malformed/partial
+source/capture bindings or retention failures instead emit only a fixed refusal,
+never a success fallback, raw diagnostic or traceback. Either failure returns78
+and prevents downstream candidate PHP. Original failure prefixes remain private.
+The availability projection is explicitly **not HOST admission, native FD
+behavior, protocol acceptance or a privileged-child cleanup certificate**.
+The read-only gate uses fixed public Linux tool/package paths and an
+isolated, scrubbed nonroot interpreter. It never executes setpriv (including
+`--version`), sudo, a launcher, NNP, socketpair/send/receive, Docker or a daemon.
+PHP is queried for actual sockets functions/constants; requesting only `zip`
+in package PHP setup, or only posix in E2E host setup, is not evidence that
+sockets exists. No extension is installed
+automatically, and the plugin's PHP8.0 floor is unchanged.
+
+The gate pins complete root-owned non-set-ID ELF bytes, canonical parent modes,
+installed package/source-version metadata and installed-manifest digests.
+It recursively inventories declared ELF loader/library dependencies, isolated
+Python modules, and the fixed root-owned PHP CLI configuration/native modules
+before the configured PHP query. Private hashes pin actual configuration;
+arbitrary extension paths, preload/prepend scripts and ambient loader/PHP
+environment overrides are rejected. Only a finite standard module catalog
+may be queried; CLI session startup, opcode file caching, logging and Xdebug
+profiling/tracing are disabled for the inventory query. This neither installs
+nor pretends to enable missing sockets. Source archive digests and actual loaded
+module/duplicate-FD behavior are not inferred from package names or OS versions.
+
+The gate has one30s absolute clock, at most256 pinned files/256MiB,512 fixed
+read-only native commands,64KiB stdout/8KiB stderr per command and16MiB total
+command bytes; cached installed manifests are also limited to16MiB.
+Every unique tool, dependency and PHP configuration pin shares the same
+256-file/256MiB ledger. File size and a slot are reserved before acquiring
+bytes, retained on failure, and not charged again for a validated cached alias.
+Changed file, alias or parent identities invalidate that cache.
+
+The pinned setup-php action makes the selected php.ini and 99-pecl.ini writable
+with chmod777. Such input still refuses this read-only gate. A separate
+approved setup-only guard, `scripts/provision-php82-permissions.py`, runs
+immediately after all setup-php changes and before the first candidate
+configured PHP invocation, including workflow custody and safeguard probes.
+It selects ONLY one of two literal pairs: `/etc/php/8.2/cli/php.ini` and
+`/etc/php/8.2/cli/conf.d/99-pecl.ini` for Release Package, or the equivalent
+two literal8.4 files for Contract/Full MCP, through one fixed system
+sudo/chmod argv to0644. Other versions, mixed pairs, missing/extra selectors
+and mismatched canonical interpreters refuse. The legacy php82 script filename
+and setup mode remain compatibility labels; one shared guard implementation
+uses the explicit approved version/job allowlist, not path/version inference.
+The Python guard never runs as root; it is not an inventory
+or runtime observer sudo permission. The failure diagnostic is also withheld
+if the combined provisioning/acquisition fails. Always-running PHP summaries
+and export verifiers are gated too. No extension is added and no PHP-n controller
+substitution is made; only the identity query uses PHP-n before hardening.
+
+The setup guard requires the owned disposable GitHub-hosted workflow interval,
+before any candidate/config writer is started; these workflow assertions are
+scope checks, not standalone credentials or proof against a hostile root
+administrator. Unexpected layout refuses. It checks root-owned nonsymlink,
+single-link non-set-ID targets with no file capabilities, canonical nonwritable
+root-owned parents and full content hashes. Original read handles remain held
+across chmod; postchecks require identical device/inode/ownership/parents/
+length/content/mtime and mode0644. Only the expected mode/ctime change is
+permitted. Sudo alone may be set-UID. Complete sudo/chmod ELF, installed
+package/source-version/manifests, declared loader dependencies and the fixed
+sudo policy module are pinned. Custom sudo.conf plugins/paths refuse;
+sudo-private loader paths are limited to the two fixed root-owned package
+directories, not arbitrary RPATH or environment paths. Actual loaded-module
+behavior and source-build provenance are not inferred.
+
+Setup owns one30s absolute admission/capture clock WITHIN the unchanged
+55-minute package or30-minute Contract/Full MCP job, not a kernel/helper pass.
+It has the same ceilings of256 pins/256MiB
+acquisition bytes,512 native commands INCLUDING at most ONE root invocation,
+64KiB/8KiB per command and16MiB aggregate command capture; cached public
+manifests remain bounded to16MiB. All repeated target hash reads debit the
+same256MiB setup ledger before bytes. The two targets are read at most four
+times (initial, prepared guard, immediate prelaunch, postcheck), at most8MiB
+total, WITHIN that ledger, not an added pool. There is no retry or fresh
+per-hop clock. The separate read-only inventory retains its original30s and
+budgets; kernel/controller/observer/helper budgets are unchanged.
+Both setup-root and read-only system launches recheck that same absolute
+deadline immediately after private reservation is retained, before Popen.
+Reservation/fsync reaching exactly the deadline refuses without a child;
+the command debit and failed originals remain retained, not refunded.
+
+Original private intent, capture and actual direct-child exit/both EOF records
+precede interpretation and postcondition success. A privileged child is never
+signaled by the guard. Deadline/retention/failure leaves original prefixes and
+unknown exit/EOF honestly; no detach/drain clock, hard wall-time guarantee or
+root-cleanup certificate is invented. The existing enclosing runner/job
+lifecycle remains responsible for administration. Full native provisioning
+execution is pending independent review and genuine existing PR-runner evidence;
+unit/mock0644 postconditions do not prove a real chmod occurred.
+
+Original0600 command streams/intents precede parsing in an
+exclusive0700 `wstm-prerequisite-*` child of the owned runner custody root.
+Failures retain original prefixes and observed exits/EOFs where available;
+missing tools, package mismatch, sockets/constants, changed identities,
+over-limit output, deadlines or retention failures close the gate with exit78.
+Synchronous I/O/scheduling still cannot be certified as hard-preemptible.
+
+Public output is a finite summary only. Full inventories, native output and
+private paths are not uploaded to public artifacts or printed. Originals are
+job-local; durable encrypted retrieval requires the existing separately bound
+private-custody mechanism, not an automatic plaintext upload or key generation.
+An inventory pass is not HOST admission, remote-wait authority, FD isolation,
+root cleanup, package/release acceptance or a source-transition proof. Genuine
+runner evidence must not be replaced by WSL tool hashes or unit mocks.
+
+Portable controls:
+`python -B -m unittest discover -s tests/unit -p test_host_prerequisite_inventory.py -v`.
+Provisioning and shared-driver selectors are
+`test_provision_php82_permissions.py` and `test_host_prerequisite_setup.py`.
+CI uses the shared driver's closed `units 8.2` or `units 8.4` entry to load
+exactly these three test files; that mode never runs provisioning/acquisition.
+These cover actual missing PHP APIs, tool/parent/link/origin/hash refusal,
+unsafe inputs/configuration, original-prefix retention, finite output, exit/
+EOF failure, deadline exhaustion and closed public summaries.
+
 ### Opt-in read-only system observation on disposable CI hosts
 
 Disposable GitHub-hosted source, package and PHP-floor QA entries explicitly set
@@ -338,7 +520,8 @@ fail. File/count/byte retention limits are synthetic CI safeguards, not the
 WordPress benchmark's payload or memory budgets. This job neither starts
 WordPress/Docker nor invokes the benchmark entrypoint, reads private producer
 directories, or proves durable private custody, receiver completion, floor,
-transport or original-package correctness. Local `composer qa` remains PHP-only.
+transport or original-package correctness. Local `composer qa` includes Python
+AST and mock-only prerequisite controls, but no native provisioning or Docker dependency.
 
 Database privacy's three real responses retain exact full-payload metric/order parity. To avoid comparing opposite sides of an existing transient's natural expiration, the disposable runner first admits a read-only 15-second expiration horizon, bounded by one shared 90-second run deadline. It uses production timeout conversion and the strict expiration boundary, records no transient identities/values, and never retries failed payloads. Exhaustion, SQL failure, clock/window overrun, newly changed expirations, and other metric drift remain failures with original responses retained. Synthetic expiration tests supplement, rather than replace, the genuine native/HTTP original-package proofs described in `tests/e2e/README.md`.
 

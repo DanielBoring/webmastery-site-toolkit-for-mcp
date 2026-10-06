@@ -115,6 +115,16 @@ jobs:
           extensions: posix
           coverage: none
 
+      - name: Test shared HOST prerequisite controls
+        run: /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py units 8.4
+
+      - name: Guard and acquire selected HOST prerequisites
+        id: php-permissions
+        env:
+          WSTM_HOST_SETUP_ROOT: ${{ runner.temp }}
+          WSTM_HOST_SETUP_RUNNER: ${{ runner.environment }}
+        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT="$WSTM_HOST_SETUP_ROOT" WSTM_HOST_SETUP_RUNNER="$WSTM_HOST_SETUP_RUNNER" GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_JOB="$GITHUB_JOB" /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py 8.4
+
       - name: Bind canonical host QA interpreter
         shell: bash
         run: |
@@ -155,7 +165,7 @@ jobs:
         run: bash scripts/e2e-test.sh contract
 
       - name: Show closed admission refusal diagnostic (not acceptance)
-        if: ${{ always() }}
+        if: ${{ always() && steps.php-permissions.outcome == 'success' }}
         continue-on-error: true
         env:
           WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}
@@ -230,7 +240,7 @@ jobs:
           echo "status=no_error_entries" >> "$GITHUB_OUTPUT"
 
       - name: Publish contract job summary
-        if: ${{ always() }}
+        if: ${{ always() && steps.php-permissions.outcome == 'success' }}
         run: php scripts/docker-qa-summary.php e2e-artifacts/e2e-summary.json build/qa-summary-contract.json contract
 
       - name: Clean up
@@ -342,7 +352,7 @@ jobs:
 
       - name: Verify independently published untrusted export
         id: untrusted-export-check
-        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
+        if: ${{ always() && steps.php-permissions.outcome == 'success' && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
         env:
           WSTM108_EXPORT_ROOT: ${{ steps.qa.outputs.untrusted_export_root }}
           WSTM108_EXPORT_SHA256: ${{ steps.qa.outputs.untrusted_export_manifest_sha256 }}
@@ -431,6 +441,16 @@ jobs:
           extensions: posix
           coverage: none
 
+      - name: Test shared HOST prerequisite controls
+        run: /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py units 8.4
+
+      - name: Guard and acquire selected HOST prerequisites
+        id: php-permissions
+        env:
+          WSTM_HOST_SETUP_ROOT: ${{ runner.temp }}
+          WSTM_HOST_SETUP_RUNNER: ${{ runner.environment }}
+        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT="$WSTM_HOST_SETUP_ROOT" WSTM_HOST_SETUP_RUNNER="$WSTM_HOST_SETUP_RUNNER" GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_JOB="$GITHUB_JOB" /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py 8.4
+
       - name: Bind canonical host QA interpreter
         shell: bash
         run: |
@@ -471,7 +491,7 @@ jobs:
         run: bash scripts/e2e-test.sh e2e
 
       - name: Show closed admission refusal diagnostic (not acceptance)
-        if: ${{ always() }}
+        if: ${{ always() && steps.php-permissions.outcome == 'success' }}
         continue-on-error: true
         env:
           WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}
@@ -479,7 +499,7 @@ jobs:
         run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php
 
       - name: Publish transport job summary
-        if: ${{ always() }}
+        if: ${{ always() && steps.php-permissions.outcome == 'success' }}
         run: php scripts/docker-qa-summary.php e2e-artifacts/mcp-crud-summary.json build/qa-summary-transport.json transport
 
       - name: Clean up
@@ -557,7 +577,7 @@ jobs:
 
       - name: Verify independently published untrusted export
         id: untrusted-export-check
-        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
+        if: ${{ always() && steps.php-permissions.outcome == 'success' && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
         env:
           WSTM108_EXPORT_ROOT: ${{ steps.qa.outputs.untrusted_export_root }}
           WSTM108_EXPORT_SHA256: ${{ steps.qa.outputs.untrusted_export_manifest_sha256 }}

@@ -14,7 +14,7 @@ This repository uses GitHub Actions for layered WordPress.org plugin QA plus tag
 | `workflow_dispatch` | `.github/workflows/import-issue-backlog.yml` | Previews or imports Markdown files from `ISSUES/` as GitHub Issues, preserving titles, labels, and bodies while skipping duplicates. |
 | `push` to `main` | Static, unit, and Docker QA workflows | Re-runs the appropriate numbered checks after merge. |
 | `workflow_dispatch` | Static, unit, Docker, or release-package QA workflows | Runs the selected QA layer on demand; does not publish or satisfy required PR checks. |
-| `pull_request`, `push` to `main`, `workflow_dispatch` | Workflow lint | Runs actionlint, ShellCheck, and zizmor separately from PHP-only local QA. |
+| `pull_request`, `push` to `main`, `workflow_dispatch` | Workflow lint | Runs actionlint, ShellCheck, and zizmor separately from local Composer QA, including its Python AST and mock-only prerequisite controls. |
 | `push` tag `v*` | `.github/workflows/release.yml` | Requires main ancestry and static/unit QA, validates the package, waits for `wordpress-org` approval, and publishes the validated artifact. |
 
 ## Workflow details

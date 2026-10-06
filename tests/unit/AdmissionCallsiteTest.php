@@ -337,10 +337,12 @@ PHP;
 			. "        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php\n";
 		foreach ( array( 'e2e-qa.yml' => 2, 'release-package-qa.yml' => 1, 'release.yml' => 1, 'compatibility-qa.yml' => 4 ) as $file => $count ) {
 			$source = file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/' . $file );
+			$current_step = in_array( $file, array( 'e2e-qa.yml', 'release-package-qa.yml' ), true )
+				? str_replace( 'if: ${{ always() }}', "if: \${{ always() && steps.php-permissions.outcome == 'success' }}", $step ) : $step;
 			$floor_step = str_replace( "diagnostic (not acceptance)\n", "diagnostic (not acceptance)\n"
-				. "        working-directory: \${{ github.workspace }}/candidate-floor-tools\n", $step );
+				. "        working-directory: \${{ github.workspace }}/candidate-floor-tools\n", $current_step );
 			$floor_count = 'compatibility-qa.yml' === $file ? 1 : 0;
-			self::assertSame( $count - $floor_count, substr_count( $source, $step ), $file );
+			self::assertSame( $count - $floor_count, substr_count( $source, $current_step ), $file );
 			self::assertSame( $floor_count, substr_count( $source, $floor_step ), $file );
 			self::assertSame( $count, substr_count( $source, 'untrusted_admission_callsite_v1' ), $file );
 			self::assertSame( $count, substr_count( $source, 'WSTM108_ADMISSION_CALLSITE_V1' ), $file );

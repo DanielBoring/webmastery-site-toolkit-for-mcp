@@ -115,14 +115,16 @@ final class CiAdmissionDiagnosticTest extends TestCase {
 			$path = '.github/workflows/' . $name;
 			$source = $this->read( $path );
 			self::assertSame( $count, substr_count( $source, '        id: qa' ), $name );
+			$current_step = in_array( $name, array( 'e2e-qa.yml', 'release-package-qa.yml' ), true )
+				? str_replace( 'if: ${{ always() }}', "if: \${{ always() && steps.php-permissions.outcome == 'success' }}", $step ) : $step;
 			$floor_step = str_replace( "diagnostic (not acceptance)\n", "diagnostic (not acceptance)\n"
-				. "        working-directory: \${{ github.workspace }}/candidate-floor-tools\n", $step );
+				. "        working-directory: \${{ github.workspace }}/candidate-floor-tools\n", $current_step );
 			$floor_count = 'compatibility-qa.yml' === $name ? 1 : 0;
-			self::assertSame( $count - $floor_count, substr_count( $source, $step ), $name );
+			self::assertSame( $count - $floor_count, substr_count( $source, $current_step ), $name );
 			self::assertSame( $floor_count, substr_count( $source, $floor_step ), $name );
 			self::assertSame( $count, substr_count( $source, 'untrusted_admission_failure' ), $name );
 			self::assertSame( $count, preg_match_all( '/        id: qa\n(?:(?!      - name:).)*?        run: bash scripts\/(?:e2e-test|release-qa)\.sh[^\n]*\n\n?(?:'
-				. preg_quote( $step, '/' ) . '|' . preg_quote( $floor_step, '/' ) . ')/s', $source ), $name );
+				. preg_quote( $current_step, '/' ) . '|' . preg_quote( $floor_step, '/' ) . ')/s', $source ), $name );
 			$historical = Wstm167CiBudgetControlTransition::restore( $path, $this->read( $path ) );
 			$old_step = str_replace( "          WSTM108_ADMISSION_CALLSITE_V1: \${{ steps.qa.outputs.untrusted_admission_callsite_v1 }}\n", '', $step );
 			self::assertSame( str_replace( $old_step, '', str_replace( $old_step . "\n", '', $historical ) ),

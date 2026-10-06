@@ -21,14 +21,14 @@ final class NsfsNetMetadataTransitionTest extends TestCase {
 			self::assertSame( $hash, hash( 'sha256', Wstm167NsfsNetMetadataTransition::restore( $path, $this->read( $path ) ) ), $path );
 		}
 		foreach ( $map['frozen_json'] as $path => $hash ) {
-			self::assertSame( $hash, hash( 'sha256', $this->read( $path ) ), $path );
+			self::assertSame( $hash, hash( 'sha256', Wstm167HostPrerequisiteTransition::restore( $path, $this->read( $path ) ) ), $path );
 		}
 	}
 
 	public function test_current_execution_and_c7_controls_remain_exact_and_every_path_is_bound(): void {
 		$map = Wstm167NsfsNetMetadataTransition::load();
 		foreach ( $map['current_execution'] as $path => $hash ) {
-			self::assertSame( $hash, hash( 'sha256', $this->read( $path ) ), $path );
+			self::assertSame( $hash, hash( 'sha256', Wstm167HostPrerequisiteTransition::restore( $path, $this->read( $path ) ) ), $path );
 			self::assertTrue( isset( $map['dependencies'][ $path ] ) || isset( $map['files'][ $path ] ), $path );
 		}
 		self::assertArrayHasKey( 'tests/unit/AdmissionCallsiteTest.php', $map['files'] );
@@ -39,7 +39,7 @@ final class NsfsNetMetadataTransitionTest extends TestCase {
 		self::assertCount( 518, array_merge( $map['files'], $map['dependencies'], array( $map['helper_path'] => true, 'tests/unit/fixtures/nsfs-net-metadata-transition.json' => true ) ) );
 		$helper = preg_replace( "/^\tpublic const SEAL = 'NSFS_NET_METADATA_SEAL_PENDING';(?=\\r?$)/m", "\tpublic const SEAL = '" . Wstm167NsfsNetMetadataTransition::SEAL . "';", $map['helper_raw_template'], 1, $replaced );
 		self::assertSame( 1, $replaced );
-		self::assertSame( $helper, $this->read( $map['helper_path'] ) );
+		self::assertSame( $helper, Wstm167HostPrerequisiteTransition::restore( $map['helper_path'], $this->read( $map['helper_path'] ) ) );
 	}
 
 	public function test_missing_truncated_foreign_crlf_old_raw_and_helper_body_drift_refuse(): void {
@@ -114,7 +114,7 @@ final class NsfsNetMetadataTransitionTest extends TestCase {
 			$outer = str_replace(
 				"public const SEAL = '" . Wstm167NsfsNetMetadataTransition::SEAL . "';",
 				"public const SEAL = '" . hash( 'sha256', $json ) . "';",
-				$this->read( 'tests/unit/fixtures/nsfs-net-metadata-transition.php' ), $replaced
+				Wstm167HostPrerequisiteTransition::restore( 'tests/unit/fixtures/nsfs-net-metadata-transition.php', $this->read( 'tests/unit/fixtures/nsfs-net-metadata-transition.php' ) ), $replaced
 			);
 			self::assertSame( 1, $replaced );
 			$older = Wstm167NsfsNetMetadataTransition::restore( 'tests/unit/fixtures/mount-root-net-transition.php', $this->read( 'tests/unit/fixtures/mount-root-net-transition.php' ) );
@@ -129,9 +129,9 @@ final class NsfsNetMetadataTransitionTest extends TestCase {
 			$outer_class = $namespace . '\\Wstm167NsfsNetMetadataTransition';
 			$older_class = $namespace . '\\Wstm167MountRootNetTransition';
 			try {
-				self::assertSame( $wrong, $outer_class::restore( $path, $current ) );
+				self::assertSame( $wrong, $outer_class::restore( $path, Wstm167HostPrerequisiteTransition::restore( $path, $current ) ) );
 				try {
-					$older_class::verify_dependencies( fn( $entry ) => $outer_class::restore( $entry, $this->read( $entry ) ) );
+					$older_class::verify_dependencies( fn( $entry ) => $outer_class::restore( $entry, Wstm167HostPrerequisiteTransition::restore( $entry, $this->read( $entry ) ) ) );
 					self::fail( 'Resealed c7 baseline replaced the unchanged e41c witness.' );
 				} catch ( RuntimeException $error ) {
 					self::assertSame(

@@ -16,7 +16,7 @@ See the [Software Development Lifecycle](sdlc-overview.md) for where CI/CD conne
 
 | Workflow | Primary trigger | Purpose |
 | --- | --- | --- |
-| `1 - Static QA` | `pull_request`, `push`, `workflow_dispatch` | PHP lint, WPCS, PHPStan, Composer audit, E2E manifest validation, security QA validation, and diff whitespace checks. |
+| `1 - Static QA` | `pull_request`, `push`, `workflow_dispatch` | PHP/Python AST lint, mock-only prerequisite controls, WPCS, PHPStan, Composer audit, E2E manifest validation, security QA validation, and diff whitespace checks. |
 | `2 - Unit Tests` | `pull_request`, `push`, `workflow_dispatch` | Fast PHPUnit helper tests. |
 | `3-4 - Docker QA` | `pull_request`, `push`, `workflow_dispatch` | Runtime-impact detection, Ability Contract QA, Full MCP E2E QA, failure artifacts, and PR comment summaries. |
 | `5 - Release Package QA` | release-impacting `pull_request`, `workflow_dispatch` | Contract + transport Docker QA, package validation, and WordPress Plugin Check without publishing. |
@@ -245,7 +245,7 @@ PR comments should summarize runtime facts rather than static success claims:
 
 Cancel superseded PR runs using workflow/ref-scoped concurrency. Production publication uses one shared group across tags and never cancels an active publish. Required checks explicitly evaluate prerequisite results instead of relying on implicit skipped-job success.
 
-Pipeline linting is a separate opt-in local toolchain and GitHub workflow; PHP-only `composer qa` does not acquire a Docker dependency. Lint success does not prove live environment protections, bot PR permissions, or release provenance policy.
+Pipeline linting is a separate opt-in local toolchain and GitHub workflow; `composer qa` includes Python AST and mock-only prerequisite controls but does not acquire a Docker dependency or execute native hardening. Lint success does not prove live environment protections, bot PR permissions, or release provenance policy.
 
 ## Failure handling
 

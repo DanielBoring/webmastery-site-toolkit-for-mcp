@@ -11,6 +11,7 @@ $paths     = array(
 );
 
 $files = array();
+$python_files = array();
 foreach ( $paths as $path ) {
 	if ( is_file( $path ) && 'php' === pathinfo( $path, PATHINFO_EXTENSION ) ) {
 		$files[] = $path;
@@ -28,6 +29,9 @@ foreach ( $paths as $path ) {
 	foreach ( $iterator as $file ) {
 		if ( $file->isFile() && 'php' === $file->getExtension() ) {
 			$files[] = $file->getPathname();
+		}
+		if ( $file->isFile() && 'py' === $file->getExtension() ) {
+			$python_files[] = $file->getPathname();
 		}
 	}
 }
@@ -48,3 +52,16 @@ if ( $failed ) {
 }
 
 printf( "PASS PHP lint: %d files\n", count( $files ) );
+
+sort( $python_files );
+// Parse source only: inventory/provisioning entry points must not run in static QA.
+$python_code = 'import ast,pathlib,sys; [ast.parse(pathlib.Path(p).read_bytes(), filename=p) for p in sys.argv[1:]]';
+$command = 'python3 -I -B -c ' . escapeshellarg( $python_code );
+foreach ( $python_files as $file ) {
+	$command .= ' ' . escapeshellarg( $file );
+}
+passthru( $command, $exit_code );
+if ( 0 !== $exit_code ) {
+	exit( $exit_code );
+}
+printf( "PASS Python AST lint: %d files\n", count( $python_files ) );

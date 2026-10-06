@@ -91,3 +91,6 @@ tests/unit/fixtures/nsfs-net-metadata-transition.php -text whitespace=cr-at-eol
 tests/unit/fixtures/nsfs-net-metadata-transition.json -text whitespace=cr-at-eol
 tests/unit/NsfsNetMetadataTransitionTest.php -text whitespace=cr-at-eol
 tests/unit/NsfsNetMetadataCompatibilityTest.php -text whitespace=cr-at-eol
+tests/unit/fixtures/host-prerequisite-transition.php -text whitespace=cr-at-eol
+tests/unit/fixtures/host-prerequisite-transition.json -text whitespace=cr-at-eol
+tests/unit/HostPrerequisiteTransitionTest.php -text whitespace=cr-at-eol

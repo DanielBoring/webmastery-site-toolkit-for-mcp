@@ -16,7 +16,7 @@ final class CurrentMainIntegrationTest extends TestCase {
 		foreach ( array( 'Maintainers: equivalent permission', 'Production PHP uses PHPCS-enforced short', 'WordPress 7.1.2 with MCP Adapter', 'declared WordPress 6.9 / PHP 8.0 plugin minimums are unchanged' ) as $text ) {
 			self::assertStringContainsString( $text, $readme );
 		}
-		$strategy = $this->read( 'docs/qa-strategy.md' );
+		$strategy = Wstm167HostPrerequisiteTransition::restore( 'docs/qa-strategy.md', $this->read( 'docs/qa-strategy.md' ) );
 		foreach ( array( 'synthetic controller-component job', 'exact ten', 'Local `composer qa` remains PHP-only.', 'wordpress:7.1.2-php8.2-apache', 'not genuine PHP 8.0 runtime evidence' ) as $text ) {
 			self::assertStringContainsString( $text, $strategy );
 		}

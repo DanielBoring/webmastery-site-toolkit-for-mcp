@@ -20,6 +20,12 @@ on:
       - 'scripts/release-*.sh'
       - 'scripts/test-release-*'
       - 'scripts/compatibility-baselines.php'
+      - 'scripts/host-prerequisite-inventory.py'
+      - 'scripts/provision-php82-permissions.py'
+      - 'scripts/host-prerequisite-setup.py'
+      - 'tests/unit/test_host_prerequisite_inventory.py'
+      - 'tests/unit/test_provision_php82_permissions.py'
+      - 'tests/unit/test_host_prerequisite_setup.py'
       - 'composer.json'
       - 'composer.lock'
       - '.wordpress-org/**'
@@ -58,6 +64,16 @@ jobs:
           extensions: zip
           coverage: none
 
+      - name: Test shared HOST prerequisite controls
+        run: /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py units 8.2
+
+      - name: Guard and acquire selected HOST prerequisites
+        id: php-permissions
+        env:
+          WSTM_HOST_SETUP_ROOT: ${{ runner.temp }}
+          WSTM_HOST_SETUP_RUNNER: ${{ runner.environment }}
+        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT="$WSTM_HOST_SETUP_ROOT" WSTM_HOST_SETUP_RUNNER="$WSTM_HOST_SETUP_RUNNER" GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_JOB="$GITHUB_JOB" /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py 8.2
+
       - name: Record executed workflow identity
         if: github.repository == 'DanielBoring/webmastery-site-toolkit-for-mcp'
         env:
@@ -92,7 +108,7 @@ jobs:
         run: bash scripts/release-qa.sh
 
       - name: Show closed admission refusal diagnostic (not acceptance)
-        if: ${{ always() }}
+        if: ${{ always() && steps.php-permissions.outcome == 'success' }}
         continue-on-error: true
         env:
           WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}
@@ -119,7 +135,7 @@ jobs:
 
       - name: Verify independently published untrusted export
         id: untrusted-export-check
-        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
+        if: ${{ always() && steps.php-permissions.outcome == 'success' && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
         env:
           WSTM108_EXPORT_ROOT: ${{ steps.qa.outputs.untrusted_export_root }}
           WSTM108_EXPORT_SHA256: ${{ steps.qa.outputs.untrusted_export_manifest_sha256 }}

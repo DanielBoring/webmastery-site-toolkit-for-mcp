@@ -6,6 +6,42 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Compose the approved three-surface prerequisite/provisioning gate onto the
+  current PR167 generation without replacing its nsfs/net correction or
+  historical witnesses. Add an exact current-source outer witness, complete
+  Python AST lint and mock-only static/CI safeguards coverage; retain raw
+  historical seals and fail-closed omission, helper-drift and resealing controls.
+  This prepares genuine hosted acquisition, not a native HOST success or a
+  resolution of the runtime process-execution refusal.
+
+- Retain a source-bound, finite G1/G2 acquisition projection in the existing
+  Package/Contract/Full MCP job logs before later QA can refuse admission.
+  Bind closed tool/API availability facts to privately retained original
+  inventory, wait/EOF and source hashes; keep all raw operands and inventories
+  private. Reject malformed, changed or unretained input without a success
+  fallback, new capture/deadline pool, upload, probe or privilege grant.
+
+- Inventory actual HOST launcher/interpreter/PHP prerequisites before Release
+  Package QA without running a launcher, NNP, sudo or a peer protocol.
+  Retain bounded private original tool/API/package evidence, reject missing
+  or changed prerequisites, and keep public output closed. Preserve the
+  plugin floor, existing admission predicates and historical source proofs.
+  Charge configuration pins against the same pre-read file/byte ledger as
+  tools, reject changed cache identities, and retain failed reservations.
+  Correct the pinned PHP action's writable-configuration postcondition with
+  an explicitly approved guarded setup-only two-file system chmod on disposable
+  CI runners, before candidate configured PHP. Preserve content/identity,
+  private original exit/EOF custody and finite budgets; never add runtime
+  root permission changes or weaken the read-only inventory.
+  Recheck the original absolute deadline after private command reservation
+  and before root/setup or read-only system launch; exhausted reservation
+  cannot launch a child or refund its failed command debit.
+  Apply the shared guarded provisioning and read-only acquisition to all
+  three runtime QA surfaces using only the approved literal PHP8.2 package
+  and PHP8.4 Contract/Full MCP pairs. Refuse missing/foreign selections or
+  interpreter/job mismatches and withhold failure-path PHP if acquisition
+  fails, without changing extensions, plugin floors or runtime root authority.
+
 - Add an immutable outer proof for the reviewed nsfs/net metadata correction, restoring the exact published 514-path generation before every unchanged historical witness; bind the approved runtime and all current source bytes with omission, forgery, wrong-generation and post-cache rejection controls. This proof changes no physical-root or process admission gate.
 
 - Retain the reviewed nsfs network-namespace root token as opaque mount-table

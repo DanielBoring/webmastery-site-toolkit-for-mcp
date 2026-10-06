@@ -92,7 +92,7 @@ composer qa
 
 PHPStan runs at level 5 with a reviewed, file/message/identifier/count-scoped baseline and a PHP 8.0 analysis target. New diagnostics must be fixed rather than added to the baseline. When fixing existing debt, lower the matching count or remove the resolved entry in the same PR; unmatched entries fail full-project analysis. Run `composer phpstan` without individual-file arguments and `composer test:phpstan-baseline` to verify the ratchet. See the [baseline review and regeneration policy](docs/qa-strategy.md#phpstan-level-5-and-baseline-ratchet).
 
-Workflow and shell changes also need the dedicated workflow lint checks. These tools are separate from the PHP-only `composer qa` path. Docker validation must use a disposable, uniquely named Compose project; do not run cleanup commands against a shared development stack.
+Workflow and shell changes also need the dedicated workflow lint checks. These tools are separate from the normal `composer qa` path, which now includes Python AST and mock-only prerequisite controls. Docker validation must use a disposable, uniquely named Compose project; do not run cleanup commands against a shared development stack.
 
 Controller CI changes must retain the required Ubuntu synthetic-component job:
 operational Linux pidfd/P_PIDFD, exactly ten started/finished/passing component
@@ -267,6 +267,7 @@ requirements apply together:
 - [ ] Use narrow capability checks, object/status filtering and sensitive-field omissions; preserve effective delegated and metadata authorization.
 - [ ] Sanitize/validate inputs without rewriting existing response values merely to add markers.
 - [ ] Scoped privileged native observations are explicitly enabled only on approved disposable CI hosts; keep controller/capture/PHP nonroot, fixed verified system argv/proc targets, clean environment/closed stdin, bounded exit/EOF/original retention, complete fd/listener/namespace/mount/start-identity/race predicates, unchanged grants/custody and a reviewed exact-byte outer projection; distinguish adapters from native sudo/runtime/CI acceptance and cooperative I/O deadlines from a root-child cleanup certificate
+- [ ] HOST setup selects only the approved PHP8.2 package or PHP8.4 Contract/Full MCP two-file chmod on an owned disposable runner; guard precedes inventory, failed acquisition withholds candidate PHP, and Python AST plus all three mock-only prerequisite suites pass without local native provisioning.
 - [ ] Successful values/types are preserved except for documented contract changes; failures use canonical code/reason/message/object-details, native permissions retain `WP_Error`, and MCP gateway/individual-tool errors plus foreign-namespace isolation are covered (real HTTP errors have `isError:true`, one JSON text block, and omitted wire `structuredContent`, internally null)
 - [ ] Untrusted-field changes preserve exact values/types/markup, use unique present-only record-local names, retain privacy omissions and unavailable SEO fields, and never mark canonical errors or diagnostic error subrecords.
 - [ ] Annotation changes compare registered hints with actual Adapter 0.6.1 individual `tools/list` output; distinguish gateway/get-info metadata, unit/source checks, and pending runtime evidence.
@@ -294,11 +295,12 @@ Environment-specific notes for GitHub Actions, Windows PowerShell, and Windows G
 | Command | What it runs |
 | --- | --- |
 | `composer qa` | Fast local default: Static QA plus Unit Tests |
-| `composer qa:static` | PHP lint, PHPCS, PHPStan level 5 plus baseline regression guards, Composer audit, manifest structure validation, security QA validation, and `git diff --check` |
+| `composer qa:static` | PHP/Python AST lint, mock-only HOST prerequisite controls, PHPCS, PHPStan level 5 plus baseline regression guards, Composer audit, manifest structure validation, security QA validation, and `git diff --check` |
+| `composer test:host-prerequisites` | Three fixed mock-only prerequisite/provisioning/driver suites; never native hardening or HOST acquisition |
 | `composer qa:unit` | PHPUnit unit tests |
 | `composer lint:workflows` | Actionlint, ShellCheck, and offline zizmor using the required versions already on `PATH` |
 | `composer test:release-safeguards` | Package/metadata/artifact, package-runtime orchestration and checker regressions plus local Git tag/ancestry fixtures; requires PHP ZipArchive and Bash, not Docker |
-| `composer test:ci-safeguards` | PHPStan baseline guards, all release safeguards, and verified-download and pinned/floating dependency tests; also runs in the PHP 8.0/8.4 CI unit jobs |
+| `composer test:ci-safeguards` | Python prerequisite mocks, existing Python controls, PHPStan baseline guards, all release safeguards, and verified-download and pinned/floating dependency tests; also runs in the PHP 8.0/8.4 CI unit jobs |
 | `composer test:phpstan-baseline` | Isolated inherited-config proof that new type errors, excess counts, and stale baseline entries fail; resolved debt can be ratcheted down |
 | `composer validate:security-qa` | Static security QA policy checks for risky permission callbacks and required permission-hardening manifest cases |
 | `composer qa:contract` | Docker Ability Contract QA against an already-running Compose stack |
