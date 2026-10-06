@@ -1,0 +1,900 @@
+{
+  "schema": 1,
+  "base_commit": "9d1eb1447c982866ab77b2dc0c1fd5d24926f931",
+  "predecessor_seal": "d9c69cd85ca6132b2999357c397cb70cb91ecb91f4f856016809bdcd1a18bd13",
+  "files": {
+    ".gitattributes": {
+      "current_raw_sha256": "44b11b1ae938b9376499155b4adb61b294f6f341f79386ec5a89e99c4e35990a",
+      "baseline_raw_sha256": "12188a555ba62fef003378f3a8d523370441cf997cca352525e70fd156757f8e",
+      "hunks": [
+        {
+          "start": 46,
+          "before": [],
+          "after": [
+            "scripts/untrusted-kernel-mount-holder.py -text whitespace=cr-at-eol",
+            "scripts/untrusted-kernel-mount-model.php -text whitespace=cr-at-eol",
+            "scripts/untrusted-kernel-mounts.php -text whitespace=cr-at-eol",
+            "scripts/untrusted-kernel-authority-owner.php -text whitespace=cr-at-eol",
+            "tests/unit/UntrustedKernelMountTest.php -text whitespace=cr-at-eol",
+            "tests/unit/test_kernel_mount_holder.py -text whitespace=cr-at-eol",
+            "tests/native/kernel-mount-boundary.php -text whitespace=cr-at-eol",
+            "tests/unit/UntrustedKernelReservationTest.php -text whitespace=cr-at-eol",
+            "tests/unit/UntrustedKernelRecordOwnerTest.php -text whitespace=cr-at-eol",
+            "tests/unit/fixtures/kernel-mount-transition.php -text whitespace=cr-at-eol",
+            "tests/unit/KernelMountTransitionTest.php -text whitespace=cr-at-eol",
+            "tests/unit/fixtures/kernel-mount-transition.json -text whitespace=cr-at-eol"
+          ]
+        }
+      ]
+    },
+    ".github/REPOSITORY_CHANGELOG.md": {
+      "current_raw_sha256": "ab4f945019dc738531b66fe675b69b038ae335c98f58e0a72352f470af93f9ed",
+      "baseline_raw_sha256": "4c34ada43f22a93881b445946d8db0c4a00bb785235429997e959bb15477f77c",
+      "hunks": [
+        {
+          "start": 7,
+          "before": [],
+          "after": [
+            "",
+            "- Make helper reservation attempts terminal within their original query pass,",
+            "  including partially failed query-slot reservations. Prevent retry debits or",
+            "  allowance redistribution while retaining disjoint upfront parent slots and",
+            "  their once-only consumption; add interleaved parent-dispatch controls.",
+            "",
+            "- Register completed kernel captures through an exact private named owner method,",
+            "  avoiding PHP 8.4's changed closure backtrace names without accepting arbitrary",
+            "  closures or caller metadata. Preserve custody, once-only registration, durable",
+            "  finalization and cleanup order; add portable owner-identity regression controls.",
+            "",
+            "- Bind current synthetic-admission fixtures to the complete kernel visibility",
+            "  guard and probe, retaining exact reversible LF/CRLF substitutions and rejecting",
+            "  either guard removal or probe changes. Keep CI command expectations and",
+            "  admission-only collector-finalization assertions aligned with current code.",
+            "",
+            "- Make kernel-holder parent query-slot reservations explicit and consume them",
+            "  once after helper capture, retaining the original query-count ceiling and",
+            "  shared launch allowance. Dispose failed running process resources without",
+            "  indefinite static retention or a blocking unknown-exit reap.",
+            "",
+            "- Add a source-bound nonroot kernel mount holder for independently resolving",
+            "  stacked mount visibility and physical bind aliases. Require a kernel-proved",
+            "  safe pre-exec lane, live independent credential/descriptor checks, shared",
+            "  decreasing verification limits and complete private originals before release.",
+            "  Preserve strict pure-parser refusal and the existing closed reason schema.",
+            "  Portable controls and explicit native unique-boundary definitions do not",
+            "  establish stacked, hosted Contract, Full MCP or original-package acceptance."
+          ]
+        }
+      ]
+    },
+    "composer.json": {
+      "current_raw_sha256": "e5f67920170e9c62ed04ef212948139fc09ad36b74ebdadce51b21725e7af4ac",
+      "baseline_raw_sha256": "3a231c527e8f04c6cec07edaac76b6c3611060dac97ec3ac90c1809dfa453506",
+      "hunks": [
+        {
+          "start": 47,
+          "before": [],
+          "after": [
+            "\t\t\t\"python3 -B -m unittest discover -s tests/unit -p test_kernel_mount_holder.py -v\","
+          ]
+        }
+      ]
+    },
+    "docs/qa-strategy.md": {
+      "current_raw_sha256": "9d2cf13cb60a3ee08c252bb628782246da85e5361922c85a658a75e70ba36aee",
+      "baseline_raw_sha256": "c5edf6e2cad1f15ce44519f9835c61d043448961b513838966af5c1b2e7501fb",
+      "hunks": [
+        {
+          "start": 66,
+          "before": [],
+          "after": [
+            "",
+            "### Kernel mount verification",
+            "",
+            "Strict `mounts()`, `coordinate()` and `outside()` models still refuse stacked",
+            "tables without live native evidence. Structural parsing preserves all rows and",
+            "their order; it is not admission. Native stacked admission observes `/` and",
+            "every duplicate mountpoint with a fixed source-bound nonroot Python `O_PATH`",
+            "holder. Independent PHP reads of the actual child's status, start identity,",
+            "task set, namespace, held fdinfo, device/inode and point anchor select the exact",
+            "kernel mount ID. There is no first-row, maximum-ID or lexical fallback.",
+            "",
+            "Before Python exec, the existing actor must have matching nonroot real,",
+            "effective, saved and filesystem credentials, exact supplementary groups and",
+            "zero effective/permitted/inheritable/ambient capabilities. The kernel must",
+            "already enforce either `NoNewPrivs=1` or a zero bounding set. The latter lane",
+            "also requires a pinned ordinary non-set-ID interpreter. Missing or malformed",
+            "fields refuse before launch; no capability, privilege or namespace changes",
+            "are made. This does not enable no-new-privileges globally or alter the existing",
+            "fixed read-only sudo scope. Child credentials are independently verified before",
+            "target paths are sent and at every live boundary.",
+            "",
+            "Visibility-only observations accept any filesystem or inode type and never",
+            "read contents. Physical authority/source checks retain ext4/tmpfs coordinates",
+            "and reacquire the complete checkout, Docker storage, bind/volume and relevant",
+            "nested mountpoint closure. Same-device whole, root-relative and nested bind",
+            "aliases remain exposures even when mount IDs differ. File sources expose only",
+            "their exact coordinate. Hidden points must be observable; they are not inferred",
+            "invisible from row order or location.",
+            "",
+            "Each controller action shares at most eight seconds of charged holder work,",
+            "eight launches and sixteen MiB of retained originals. A contiguous native",
+            "verification scope pins the first existing observation deadline and clips it",
+            "to any governing original discovery deadline. Later admits only tighten it;",
+            "the additional 64-read ceiling does not reset within that scope. Chunks,",
+            "shutdown and receipt persistence consume the same allowance. Trusted helpers",
+            "receive an up-front debited share through an original mode-0600 read-only fd 5,",
+            "bound to parent PID/start/namespace, action, context, source and private custody.",
+            "There is no reported-unused refund. Candidate captures replace fd 5 with",
+            "`/dev/null` and strip kernel metadata.",
+            "",
+            "A private once-per-original-pass marker is set before helper reservation work,",
+            "not inferred from the remaining parent-slot count. Even a partial reservation",
+            "failure consumes the attempt: retry cannot charge another slot or redistribute",
+            "the remaining allowance. Interleaved repeat requests and the actual private",
+            "launch engine used by parent collect dispatch retain the original query count.",
+            "Only the existing controller query-pass lifecycle resets this marker.",
+            "",
+            "Discovery is not a whole-runner timeout. The live holder finishes before a",
+            "long runner; original post-capture admission supplies its own existing clock",
+            "but uses the same remaining allocation. Controller returned-state and terminal",
+            "checks use the pre-reserved remainder. Exhaustion refuses, including receipt",
+            "or finalization failure. Direct stacked calls without a source-owned governing",
+            "scope refuse instead of minting an implicit per-method budget.",
+            "",
+            "Input/output/kernel originals are independently bound, hashed and flushed",
+            "before parsing and checked again on completion. Final live credential/fd",
+            "checks, known exit zero, EOF and a durable receipt precede inventory acceptance.",
+            "Failed intent/originals remain private. Receipts, JSON, booleans, callbacks and",
+            "retained nonces cannot construct a live session. All collectors and final",
+            "capture checks finish before final companion unlink; nothing new runs after",
+            "successful commit. Synchronous filesystem limits remain cooperative.",
+            "",
+            "Portable controls (no native acceptance):",
+            "",
+            "```text",
+            "php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist tests/unit/UntrustedKernelMountTest.php",
+            "python -B -m unittest discover -s tests/unit -p test_kernel_mount_holder.py -v",
+            "```",
+            "",
+            "Current synthetic-admission fixtures match the complete admission body exactly,",
+            "including the stacked-mount observation guard and kernel visibility probe.",
+            "LF/CRLF, reversible substitution, source-binding, already-installed and Windows",
+            "refusal controls remain separate from native acceptance. Removing the guard or",
+            "changing the probe must refuse substitution, not select a looser source model.",
+            "The admission-only pipeline assertion requires collector finalization before",
+            "stream verification and return; the CI safeguard assertion includes the Python",
+            "holder controls in its exact command sequence.",
+            "",
+            "Completed capture registration uses a private named collector method and an",
+            "exact class/function owner check, not PHP's version-dependent closure backtrace",
+            "name. Portable owner controls run on PHP 8.0 and newer without kernel reads or",
+            "`fsync`; they verify bookkeeping and rejection of arbitrary scoped closures,",
+            "external receipt/caller data, changed custody and duplicate registration.",
+            "They cannot establish live proof. Run the same controls on PHP 8.0 and PHP 8.4,",
+            "then separately rerun the genuine PHP 8.4 unique boundary below to verify the",
+            "actual holder-to-durable-finalization path.",
+            "",
+            "Native definitions must be run separately by the owner of an already-approved",
+            "nonroot Linux environment. Supply a fresh, pre-existing, empty mode-0700 owned",
+            "directory and the existing approved inspection environment:",
+            "",
+            "```text",
+            "php tests/native/kernel-mount-boundary.php ABSOLUTE_PRIVATE_DIRECTORY unique",
+            "php tests/native/kernel-mount-boundary.php ABSOLUTE_PRIVATE_DIRECTORY unsafe-exec",
+            "```",
+            "",
+            "Use separate directories and existing credential lanes; do not manufacture a",
+            "lane, install tools or change privileges for these controls. `unique` exercises",
+            "the current live holder and original controller query clock, independent proc",
+            "checks and complete private receipt. It refuses a stacked fixture rather than",
+            "claiming stacked coverage. `unsafe-exec` requires genuine pre-existing unsafe",
+            "credentials and verifies refusal with empty holder transport before exec.",
+            "Neither definition calls Docker, proves daemon admission or runs candidate QA.",
+            "",
+            "Native acceptance still requires independently observed proc/sysfs identity",
+            "nodes, genuine pre-existing stacked-positive fixtures (including a visible",
+            "row neither first nor maximum, hidden parents and same-device aliases), races",
+            "and exact current source/floor/original-ZIP consumers. Missing genuine stacks",
+            "block that acceptance, not portable controls. Required hosted Contract, Full",
+            "MCP and package checks remain separate; a different exit or synthetic success",
+            "does not replace them. Existing historical proof generations remain immutable;",
+            "the publisher must compose a new additive outer source seal before running",
+            "historical source-bound safeguards."
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-authority.php": {
+      "current_raw_sha256": "7e739c3b3b2738695fa6e8258849d0d1ea0956e5d84e0f47d967990e162e0169",
+      "baseline_raw_sha256": "2b51459e0dd3f29fce6573e0970bb3ccfa720011c64e8784863024ea4b85abb2",
+      "hunks": [
+        {
+          "start": 42,
+          "before": [
+            "\t\tWstm108_HostTopology::native_coordinates( array_merge( array( $authority ), $sources ), $topology['mounts'] );",
+            "\t\tWstm108_HostTopology::outside( $authority, $sources, $topology['mounts'] );"
+          ],
+          "after": [
+            "\t\tif ( Wstm108_HostTopology::stacked( $topology['mounts'] ) ) {",
+            "\t\t\trequire_once __DIR__ . '/untrusted-kernel-mounts.php';",
+            "\t\t\t\\Wstm108_KernelMounts::outside( $authority, $sources, $topology['mounts'] );",
+            "\t\t} else {",
+            "\t\t\tWstm108_HostTopology::native_coordinates( array_merge( array( $authority ), $sources ), $topology['mounts'] );",
+            "\t\t\tWstm108_HostTopology::outside( $authority, $sources, $topology['mounts'] );",
+            "\t\t}"
+          ]
+        },
+        {
+          "start": 89,
+          "before": [],
+          "after": [
+            "\t\tif ( class_exists( 'Wstm108_KernelMounts', false ) ) { \\Wstm108_KernelMounts::finish_scope(); }"
+          ]
+        },
+        {
+          "start": 142,
+          "before": [],
+          "after": [
+            "\t\tif ( class_exists( 'Wstm108_KernelMounts', false ) ) { \\Wstm108_KernelMounts::finish_scope(); }"
+          ]
+        },
+        {
+          "start": 195,
+          "before": [],
+          "after": [
+            "\t\t\tif ( self::class === \\Wstm108_HostAuthority::class && class_exists( 'Wstm108_KernelMounts', false ) ) { \\Wstm108_KernelMounts::pause_for_capture(); }"
+          ]
+        },
+        {
+          "start": 197,
+          "before": [
+            "\t\t\t\t3 => array( 'file', '/dev/null', 'w' ), 4 => array( 'file', '/dev/null', 'w' ), 9 => array( 'file', '/dev/null', 'w' ) ), $pipes, $cwd, $environment );"
+          ],
+          "after": [
+            "\t\t\t\t3 => array( 'file', '/dev/null', 'w' ), 4 => array( 'file', '/dev/null', 'w' ),",
+            "\t\t\t\t5 => array( 'file', '/dev/null', 'w' ), 9 => array( 'file', '/dev/null', 'w' ) ), $pipes, $cwd, $environment );"
+          ]
+        },
+        {
+          "start": 469,
+          "before": [],
+          "after": [
+            "\t\tif ( '--kernel-allocation' === end( $argv ) ) {",
+            "\t\t\trequire_once __DIR__ . '/untrusted-kernel-mounts.php';",
+            "\t\t\t\\Wstm108_KernelMounts::authority_entry( $context, 'reserve' === $mode ? 'reserve' : ( $argv[3] ?? '' ) );",
+            "\t\t}"
+          ]
+        },
+        {
+          "start": 581,
+          "before": [],
+          "after": [
+            "\t\tif ( class_exists( 'Wstm108_KernelMounts', false ) ) { \\Wstm108_KernelMounts::finish_scope(); }"
+          ]
+        },
+        {
+          "start": 584,
+          "before": [],
+          "after": [
+            "\t\tif ( class_exists( 'Wstm108_KernelMounts', false ) ) {",
+            "\t\t\ttry { \\Wstm108_KernelMounts::fail_scope(); } catch ( Throwable $finalization_error ) {}",
+            "\t\t}"
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-host-controller.php": {
+      "current_raw_sha256": "8edf43b667c169135f92d72b27565fb70e4870229064061250a6011595544c82",
+      "baseline_raw_sha256": "d9dff922cda71ccf12310fa88ff0c97f358d5f80c58b0ff3df7964c1535a2d05",
+      "hunks": [
+        {
+          "start": 76,
+          "before": [],
+          "after": [
+            "\tprivate ?array $kernel_directory = null;",
+            "\tprivate array $kernel_captures = array();",
+            "\tprivate array $kernel_allocations = array();"
+          ]
+        },
+        {
+          "start": 139,
+          "before": [],
+          "after": [
+            "\t\t\t\t|| 0 === strpos( $key, 'WSTM108_KERNEL_' )"
+          ]
+        },
+        {
+          "start": 209,
+          "before": [
+            "\tpublic function capture( string $name, array $command, string $cwd, array $environment, array $query_streams = array() ): array {"
+          ],
+          "after": [
+            "\tpublic function capture( string $name, array $command, string $cwd, array $environment, array $query_streams = array(), $kernel_allocation = null ): array {"
+          ]
+        },
+        {
+          "start": 214,
+          "before": [],
+          "after": [
+            "\t\tself::require( null === $kernel_allocation || ( is_resource( $kernel_allocation ) && array() === $query_streams",
+            "\t\t\t&& PHP_BINARY === $command[0] && __DIR__ . '/untrusted-authority.php' === ( $command[1] ?? null )",
+            "\t\t\t&& '--kernel-allocation' === end( $command ) ), 'kernel-allocation-descriptor-scope' );"
+          ]
+        },
+        {
+          "start": 243,
+          "before": [
+            "\t\t\t\t3 => array( 'file', '/dev/null', 'w' ), 4 => array( 'file', '/dev/null', 'w' ), 5 => array( 'file', '/dev/null', 'w' ), 9 => array( 'file', '/dev/null', 'w' ) ), $query_streams ),"
+          ],
+          "after": [
+            "\t\t\t\t3 => array( 'file', '/dev/null', 'w' ), 4 => array( 'file', '/dev/null', 'w' ), 5 => array( 'file', '/dev/null', 'w' ), 9 => array( 'file', '/dev/null', 'w' ) ),",
+            "\t\t\t\t\t$query_streams, null === $kernel_allocation ? array() : array( 5 => $kernel_allocation ) ),"
+          ]
+        },
+        {
+          "start": 381,
+          "before": [],
+          "after": [
+            "\t\trequire_once __DIR__ . '/untrusted-kernel-mounts.php';",
+            "\t\tif ( self::class === \\Wstm108_HostController::class ) { \\Wstm108_KernelMounts::controller_pass( $this ); }",
+            "\t}",
+            "",
+            "\tpublic function kernel_query_deadline(): int {",
+            "\t\tself::require( $this->query_deadline > 0, 'admission-query-budget' );",
+            "\t\treturn $this->query_deadline;",
+            "\t}",
+            "",
+            "\tpublic function kernel_query_slot(): void {",
+            "\t\tself::require( ++$this->query_count <= 64 && hrtime( true ) < $this->query_deadline, 'admission-query-budget' );",
+            "\t}",
+            "",
+            "\tpublic function kernel_custody(): array {",
+            "\t\t$this->verify();",
+            "\t\tif ( null === $this->kernel_directory ) {",
+            "\t\t\t$directory = $this->directory . '/kernel-mounts';",
+            "\t\t\tself::require( mkdir( $directory, 0700 ), 'exclusive-kernel-mount-reservation' );",
+            "\t\t\t$child = Wstm108_Files::directory( $directory );",
+            "\t\t\t$updated = Wstm108_Files::directory( $this->directory );",
+            "\t\t\tWstm108_HostTopology::owned_child_transition( $this->identity, $updated, $child );",
+            "\t\t\t$this->identity = $updated;",
+            "\t\t\t$this->kernel_directory = array( 'directory' => $directory, 'identity' => $child );",
+            "\t\t}",
+            "\t\tself::require( $this->kernel_directory['identity'] === Wstm108_Files::directory( $this->kernel_directory['directory'] ),",
+            "\t\t\t'kernel-mount-custody-changed' );",
+            "\t\treturn $this->kernel_directory;",
+            "\t}",
+            "",
+            "\tpublic function kernel_record( string $stem, array $custody, array $files, array $intent ): void {",
+            "\t\t$caller = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 2 )[1] ?? array();",
+            "\t\tself::require( 'Wstm108_KernelMounts' === ( $caller['class'] ?? null ) && 'record_completed_capture' === ( $caller['function'] ?? null )",
+            "\t\t\t&& $custody === $this->kernel_directory && ! isset( $this->kernel_captures[ $stem ] )",
+            "\t\t\t&& 1 === preg_match( '/^kernel-[a-f0-9]{32}$/D', $stem ), 'kernel-mount-record-owner' );",
+            "\t\t$this->kernel_captures[ $stem ] = array( 'files' => $files, 'intent' => $intent );"
+          ]
+        },
+        {
+          "start": 432,
+          "before": [
+            "\t\t$capture = $this->capture( 'helper-' . $action, $arguments, dirname( __DIR__ ), $environment );"
+          ],
+          "after": [
+            "\t\t$allocation = null;",
+            "\t\tif ( Wstm108_HostTopology::stacked( $mounts['topology']['mounts'] ) ) {",
+            "\t\t\t$share = \\Wstm108_KernelMounts::reserve_helper();",
+            "\t\t\t$allocation_started = hrtime( true );",
+            "\t\t\ttry {",
+            "\t\t\t$custody = $this->kernel_custody();",
+            "\t\t\t$stat = file_get_contents( '/proc/self/stat' );",
+            "\t\t\tself::require( is_string( $stat ) && strlen( $stat ) <= 65536",
+            "\t\t\t\t&& 1 === preg_match( '/^([0-9]+) \\(.+\\) (.+)\\n?$/D', $stat, $fields ), 'kernel-parent-start' );",
+            "\t\t\t$fields = explode( ' ', rtrim( $fields[2], \"\\n\" ) );",
+            "\t\t\tself::require( isset( $fields[19] ) && ctype_digit( $fields[19] ), 'kernel-parent-start' );",
+            "\t\t\t$name = 'allocation-' . bin2hex( random_bytes( 16 ) ) . '.private.json';",
+            "\t\t\t$path = $custody['directory'] . '/' . $name;",
+            "\t\t\t$file = Wstm108_Files::create( $path, json_encode( array( 'version' => 1, 'action' => $action,",
+            "\t\t\t\t'parent_pid' => getmypid(), 'parent_start' => $fields[19],",
+            "\t\t\t\t'parent_namespace' => array_intersect_key( stat( '/proc/self/ns/mnt' ),",
+            "\t\t\t\t\tarray_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode', 'nlink' ) ) ),",
+            "\t\t\t\t'context_sha256' => hash( 'sha256', json_encode( $this->context, JSON_THROW_ON_ERROR ) ),",
+            "\t\t\t\t'authority_sha256' => hash_file( 'sha256', __DIR__ . '/untrusted-authority.php' ),",
+            "\t\t\t\t'custody' => $custody, 'remaining' => $share ), JSON_THROW_ON_ERROR ) );",
+            "\t\t\tself::require( strlen( $file['bytes'] ) <= 4096, 'kernel-allocation-limit' );",
+            "\t\t\tself::sync_file( $path, $file );",
+            "\t\t\t$this->kernel_allocations[ $name ] = $file;",
+            "\t\t\t$allocation = fopen( $path, 'rb' );",
+            "\t\t\tself::require( is_resource( $allocation ), 'kernel-allocation-open' );",
+            "\t\t\t$opened = fstat( $allocation );",
+            "\t\t\tself::require( is_array( $opened ) && 0 === ftell( $allocation )",
+            "\t\t\t\t&& $file['identity'] === array_intersect_key( $opened,",
+            "\t\t\t\t\tarray_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode', 'nlink' ) ) ), 'kernel-allocation-original' );",
+            "\t\t\tWstm108_Files::assert_file( $path, $file );",
+            "\t\t\t$arguments[] = '--kernel-allocation';",
+            "\t\t\t} finally {",
+            "\t\t\t\t\\Wstm108_KernelMounts::storage_interval( $allocation_started, isset( $file['bytes'] ) ? strlen( $file['bytes'] ) : 0 );",
+            "\t\t\t}",
+            "\t\t}",
+            "\t\tif ( self::class === \\Wstm108_HostController::class ) { \\Wstm108_KernelMounts::pause_for_capture(); }",
+            "\t\ttry { $capture = $this->capture( 'helper-' . $action, $arguments, dirname( __DIR__ ), $environment, array(), $allocation ); }",
+            "\t\tfinally { if ( is_resource( $allocation ) ) { fclose( $allocation ); } }",
+            "\t\tif ( null !== $this->kernel_directory ) { $this->import_kernel_captures(); }"
+          ]
+        },
+        {
+          "start": 490,
+          "before": [],
+          "after": [
+            "\t}",
+            "",
+            "\tprivate function import_kernel_captures(): void {",
+            "\t\t$started = hrtime( true );",
+            "\t\ttry {",
+            "\t\t$directory = $this->kernel_custody()['directory'];",
+            "\t\t$names = scandir( $directory );",
+            "\t\tself::require( is_array( $names ) && count( $names ) <= 8192, 'kernel-original-inventory-limit' );",
+            "\t\tforeach ( $names as $name ) {",
+            "\t\t\tif ( '.' === $name || '..' === $name || isset( $this->kernel_allocations[ $name ] ) ) { continue; }",
+            "\t\t\tself::require( 1 === preg_match( '/^(kernel-[a-f0-9]{32})\\.(stdout\\.private|stderr\\.private|input\\.private|kernel\\.private|intent\\.private\\.json)$/D', $name, $match ),",
+            "\t\t\t\t'foreign-kernel-original' );",
+            "\t\t\t$stem = $match[1];",
+            "\t\t\tif ( isset( $this->kernel_captures[ $stem ] ) ) { continue; }",
+            "\t\t\t$intent = Wstm108_Files::file( $directory . '/' . $stem . '.intent.private.json' );",
+            "\t\t\t$record = json_decode( $intent['bytes'], true, 32, JSON_THROW_ON_ERROR );",
+            "\t\t\tself::require( is_array( $record ) && array_keys( $record ) === array( 'version', 'state', 'exit', 'eof', 'argv', 'executable', 'deadline', 'streams' )",
+            "\t\t\t\t&& 1 === $record['version'] && 'complete' === $record['state'] && 0 === $record['exit']",
+            "\t\t\t\t&& array( 1 => true, 2 => true ) === $record['eof'] && is_array( $record['streams'] )",
+            "\t\t\t\t&& array( 'stdout', 'stderr', 'input', 'kernel' ) === array_keys( $record['streams'] ), 'kernel-helper-capture-incomplete' );",
+            "\t\t\t$files = array();",
+            "\t\t\tforeach ( $record['streams'] as $suffix => $metadata ) {",
+            "\t\t\t\tself::require( is_array( $metadata ) && array_keys( $metadata ) === array( 'identity', 'sha256', 'length' ), 'kernel-helper-capture-shape' );",
+            "\t\t\t\t$file = Wstm108_Files::read_bound( $directory . '/' . $stem . '.' . $suffix . '.private', $metadata['identity'] );",
+            "\t\t\t\tself::require( self::metadata( $file ) === $metadata && strlen( $file['bytes'] ) <= 16777216, 'kernel-helper-original-drift' );",
+            "\t\t\t\t$files[ $suffix ] = $file;",
+            "\t\t\t}",
+            "\t\t\t$this->kernel_captures[ $stem ] = array( 'files' => $files, 'intent' => $intent );",
+            "\t\t}",
+            "\t\t} finally { \\Wstm108_KernelMounts::storage_interval( $started ); }"
+          ]
+        },
+        {
+          "start": 565,
+          "before": [],
+          "after": [
+            "\t\tif ( self::class === \\Wstm108_HostController::class && class_exists( 'Wstm108_KernelMounts', false ) ) {",
+            "\t\t\t\\Wstm108_KernelMounts::finish_scope();",
+            "\t\t}"
+          ]
+        },
+        {
+          "start": 575,
+          "before": [],
+          "after": [
+            "\t\t}",
+            "\t\tif ( null !== $this->kernel_directory ) {",
+            "\t\t\t$kernel_started = hrtime( true );",
+            "\t\t\ttry {",
+            "\t\t\t$names[] = 'kernel-mounts';",
+            "\t\t\tself::require( $this->kernel_directory['identity'] === Wstm108_Files::directory( $this->kernel_directory['directory'] ),",
+            "\t\t\t\t'kernel-mount-custody-changed' );",
+            "\t\t\t$kernel_names = array( '.', '..' );",
+            "\t\t\tforeach ( $this->kernel_allocations as $name => $file ) {",
+            "\t\t\t\t$kernel_names[] = $name;",
+            "\t\t\t\tWstm108_Files::assert_file( $this->kernel_directory['directory'] . '/' . $name, $file );",
+            "\t\t\t}",
+            "\t\t\tforeach ( $this->kernel_captures as $stem => $capture ) {",
+            "\t\t\t\t$kernel_names[] = $stem . '.intent.private.json';",
+            "\t\t\t\tWstm108_Files::assert_file( $this->kernel_directory['directory'] . '/' . $stem . '.intent.private.json', $capture['intent'] );",
+            "\t\t\t\t$record = json_decode( $capture['intent']['bytes'], true, 32, JSON_THROW_ON_ERROR );",
+            "\t\t\t\tself::require( 'complete' === ( $record['state'] ?? null ) && 0 === ( $record['exit'] ?? null )",
+            "\t\t\t\t\t&& array( 1 => true, 2 => true ) === ( $record['eof'] ?? null ), 'kernel-mount-capture-incomplete' );",
+            "\t\t\t\tforeach ( $capture['files'] as $suffix => $file ) {",
+            "\t\t\t\t\t$kernel_names[] = $stem . '.' . $suffix . '.private';",
+            "\t\t\t\t\tWstm108_Files::assert_file( $this->kernel_directory['directory'] . '/' . $stem . '.' . $suffix . '.private', $file );",
+            "\t\t\t\t\tself::require( self::metadata( $file ) === $record['streams'][ $suffix ], 'kernel-mount-original-drift' );",
+            "\t\t\t\t}",
+            "\t\t\t}",
+            "\t\t\tsort( $kernel_names, SORT_STRING );",
+            "\t\t\tself::require( $kernel_names === scandir( $this->kernel_directory['directory'] ), 'foreign-or-missing-kernel-mount-capture' );",
+            "\t\t\t} finally { \\Wstm108_KernelMounts::storage_interval( $kernel_started ); }"
+          ]
+        },
+        {
+          "start": 671,
+          "before": [],
+          "after": [
+            "\t\t\t\\Wstm108_KernelMounts::finish_scope();"
+          ]
+        },
+        {
+          "start": 675,
+          "before": [],
+          "after": [
+            "\t\t\\Wstm108_KernelMounts::finish_scope();"
+          ]
+        },
+        {
+          "start": 711,
+          "before": [],
+          "after": [
+            "\t\t\ttry { \\Wstm108_KernelMounts::fail_scope(); } catch ( Throwable $finalization_error ) {}"
+          ]
+        },
+        {
+          "start": 736,
+          "before": [],
+          "after": [
+            "\t\t\t\\Wstm108_KernelMounts::finish_scope();"
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-host-observation.php": {
+      "current_raw_sha256": "5f1482089f510b9ccf9fd8a5bdfe483efd0d5b8a405a8f38959489cbdf8ac1fc",
+      "baseline_raw_sha256": "faa638da75049961ed062b9e66a227fc833a10caf0955e422d36e9adefcbf13f",
+      "hunks": [
+        {
+          "start": 15,
+          "before": [],
+          "after": [
+            "\t\tif ( class_exists( 'Wstm108_KernelMounts', false ) ) {\r",
+            "\t\t\tself::$deadline = \\Wstm108_KernelMounts::restrict_observation( self::$deadline );\r",
+            "\t\t}\r"
+          ]
+        },
+        {
+          "start": 150,
+          "before": [],
+          "after": [
+            "\t\tif ( class_exists( 'Wstm108_KernelMounts', false ) ) { $deadline = \\Wstm108_KernelMounts::observation_deadline( $deadline ); }\r"
+          ]
+        },
+        {
+          "start": 297,
+          "before": [],
+          "after": [
+            "\t\tif ( class_exists( 'Wstm108_KernelMounts', false ) ) { \\Wstm108_KernelMounts::observation_read(); }\r"
+          ]
+        },
+        {
+          "start": 375,
+          "before": [
+            "\t\t\telse { Wstm108_HostTopology::mounts( $bytes ); }\r"
+          ],
+          "after": [
+            "\t\t\telse { Wstm108_HostTopology::structural_mounts( $bytes ); }\r"
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-host-topology.php": {
+      "current_raw_sha256": "c7969996265b1913fe63e4542f33bf2badc452a93ed734faecd89a509bc5077f",
+      "baseline_raw_sha256": "ad2e85a9535ba08df2f8b478778d6369ef07fcd2b83876bcdc54d2c1a3cb18dc",
+      "hunks": [
+        {
+          "start": 64,
+          "before": [],
+          "after": [
+            "\t\treturn self::parse_mounts( $bytes, false );",
+            "\t}",
+            "",
+            "\t/** Syntax only: this result does not establish visibility or grant admission. */",
+            "\tpublic static function structural_mounts( string $bytes ): array {",
+            "\t\treturn self::parse_mounts( $bytes, true );",
+            "\t}",
+            "",
+            "\tprivate static function parse_mounts( string $bytes, bool $structural ): array {"
+          ]
+        },
+        {
+          "start": 87,
+          "before": [
+            "\t\t\tself::require( $id > 0 && ! isset( $records[ $id ] ) && ! isset( $points[ $point ] ), 'ambiguous-stacked-mount' );"
+          ],
+          "after": [
+            "\t\t\tself::require( $id > 0 && ( ! $structural || (string) $id === ltrim( $fields[0], '0' ) ) && ! isset( $records[ $id ] )",
+            "\t\t\t\t&& ( $structural || ! isset( $points[ $point ] ) ), 'ambiguous-stacked-mount' );"
+          ]
+        },
+        {
+          "start": 100,
+          "before": [],
+          "after": [
+            "\tpublic static function stacked( array $mounts ): bool {",
+            "\t\t$points = array();",
+            "\t\tforeach ( $mounts as $mount ) {",
+            "\t\t\tif ( isset( $points[ $mount['point'] ] ) ) { return true; }",
+            "\t\t\t$points[ $mount['point'] ] = true;",
+            "\t\t}",
+            "\t\treturn false;",
+            "\t}",
+            ""
+          ]
+        },
+        {
+          "start": 111,
+          "before": [],
+          "after": [
+            "\t\tself::require( ! self::stacked( $mounts ), 'ambiguous-stacked-mount' );"
+          ]
+        },
+        {
+          "start": 282,
+          "before": [
+            "\t\t$mounts = self::mounts( $mountinfo );"
+          ],
+          "after": [
+            "\t\t$mounts = self::structural_mounts( $mountinfo );",
+            "\t\tif ( self::stacked( $mounts ) ) {",
+            "\t\t\tself::require( Wstm108_HostObservation::enabled( getenv() ), 'ambiguous-stacked-mount' );",
+            "\t\t\trequire_once __DIR__ . '/untrusted-kernel-mounts.php';",
+            "\t\t\t\\Wstm108_KernelMounts::visibility( $mountinfo );",
+            "\t\t}"
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-provenance.php": {
+      "current_raw_sha256": "42b7e52747b6344317992f70ac6987a1d16352b308d074c3d805b33c3a5b4dcf",
+      "baseline_raw_sha256": "07ce87a65e54a022ad371a49783ad25486138df4e1f141f77600afd940258beb",
+      "hunks": [
+        {
+          "start": 64,
+          "before": [],
+          "after": [
+            "\t'scripts/untrusted-kernel-mount-holder.py', 'scripts/untrusted-kernel-mount-model.php',",
+            "\t'scripts/untrusted-kernel-mounts.php', 'scripts/untrusted-kernel-authority-owner.php',"
+          ]
+        }
+      ]
+    },
+    "tests/e2e/README.md": {
+      "current_raw_sha256": "1b93464bd60b9f023c9582c6f0d44663c309fac1b95629a373231b3e81c0e88b",
+      "baseline_raw_sha256": "f6a4a4d89eaad25bfa25483dbebf402e9ddb1433b3c996b3f5be9aa3de946867",
+      "hunks": [
+        {
+          "start": 30,
+          "before": [],
+          "after": [
+            "",
+            "Stacked mount resolution additionally requires the source-bound nonroot",
+            "`O_PATH` holder and independently observed safe pre-exec credentials. It",
+            "observes `/` and every duplicate point without reading inode contents; only",
+            "physical authority/source coordinates impose the existing ext4/tmpfs rule.",
+            "Kernel mount IDs, never row order or maximum IDs, select mappings. Private",
+            "fd-5 helper allocations restrict the same aggregate allowance; candidate",
+            "children receive neither that channel nor kernel metadata. See",
+            "[kernel mount verification](../../docs/qa-strategy.md#kernel-mount-verification)",
+            "for portable commands, native boundary definitions and acceptance limits."
+          ]
+        }
+      ]
+    },
+    "tests/unit/GithubSafeguardsTest.php": {
+      "current_raw_sha256": "69d5d0f089e13019ad8926a0c58818fb9169ecdca0d8ae5650286b6c618b26b5",
+      "baseline_raw_sha256": "7d7798541612def45a2ba3301d280de509fad4e5e80f8a947408bd73b308fb51",
+      "hunks": [
+        {
+          "start": 73,
+          "before": [
+            "\t\t\tarray('python3 -B -m unittest discover -s tests/unit -p test_untrusted_query.py -v', '@test:phpstan-baseline', '@test:release-safeguards', 'bash tests/destructive-stage-test.sh', 'bash tests/input-schema-stage-test.sh', 'bash tests/untrusted-stage-test.sh', 'bash tests/compatibility-download-test.sh', 'bash tests/compatibility-dependency-policy-test.sh'),"
+          ],
+          "after": [
+            "\t\t\tarray('python3 -B -m unittest discover -s tests/unit -p test_untrusted_query.py -v', 'python3 -B -m unittest discover -s tests/unit -p test_kernel_mount_holder.py -v', '@test:phpstan-baseline', '@test:release-safeguards', 'bash tests/destructive-stage-test.sh', 'bash tests/input-schema-stage-test.sh', 'bash tests/untrusted-stage-test.sh', 'bash tests/compatibility-download-test.sh', 'bash tests/compatibility-dependency-policy-test.sh'),"
+          ]
+        }
+      ]
+    },
+    "tests/unit/ScopedHostObservationTransitionTest.php": {
+      "current_raw_sha256": "9572ecde0b047bbffafc864c4f526de139f7e06c6f5d042fc011f6c113c1acec",
+      "baseline_raw_sha256": "c89d02e4e0375fddd4b5d5da317381ae36c53210c04f4b7b561debdd8af53715",
+      "hunks": [
+        {
+          "start": 20,
+          "before": [
+            "\t\t\tself::assertSame( $binding['current_raw_sha256'], hash( 'sha256', $this->read( $path ) ), $path );\r"
+          ],
+          "after": [
+            "\t\t\tself::assertSame( $binding['current_raw_sha256'], hash( 'sha256', Wstm167KernelMountTransition::restore( $path, $this->read( $path ) ) ), $path );\r"
+          ]
+        },
+        {
+          "start": 24,
+          "before": [
+            "\t\t\tself::assertSame( $hash, hash( 'sha256', $this->read( $path ) ), $path );\r"
+          ],
+          "after": [
+            "\t\t\tself::assertSame( $hash, hash( 'sha256', Wstm167KernelMountTransition::restore( $path, $this->read( $path ) ) ), $path );\r"
+          ]
+        },
+        {
+          "start": 79,
+          "before": [
+            "\t\t$current = $this->read( $path );\r",
+            "\t\t$wrong = Wstm167ScopedHostObservationTransition::restore( $path, $current ) . \"\\nforeign_guard\";\r"
+          ],
+          "after": [
+            "\t\t$raw_current = $this->read( $path );\r",
+            "\t\t$current = Wstm167KernelMountTransition::restore( $path, $raw_current );\r",
+            "\t\t$wrong = Wstm167ScopedHostObservationTransition::restore( $path, $raw_current ) . \"\\nforeign_guard\";\r"
+          ]
+        },
+        {
+          "start": 99,
+          "before": [],
+          "after": [
+            "\t\t\t$outer_source = Wstm167KernelMountTransition::restore( 'tests/unit/fixtures/scoped-host-observation-transition.php', $outer_source );\r"
+          ]
+        },
+        {
+          "start": 124,
+          "before": [
+            "\t\t\t\t\t$main_class::verify_dependencies( fn( $entry ) => $this->read( $entry ) );\r"
+          ],
+          "after": [
+            "\t\t\t\t\t$main_class::verify_dependencies( fn( $entry ) => Wstm167KernelMountTransition::restore( $entry, $this->read( $entry ) ) );\r"
+          ]
+        }
+      ]
+    },
+    "tests/unit/UntrustedAdmissionPipelineTest.php": {
+      "current_raw_sha256": "af0b4d15bb5c3cec895ba7e9d9796a533335d7e664bc788c74886a3489841981",
+      "baseline_raw_sha256": "5bf908f4c1a315fe05d5359fe103553674fa1d0231721339fd52c12c772cd95e",
+      "hunks": [
+        {
+          "start": 44,
+          "before": [
+            "\t\tself::assertStringContainsString( \"if ( 'admission' === \\$mode ) {\\n\\t\\t\\t\\$this->verify_controller_streams();\\n\\t\\t\\treturn 0;\\n\\t\\t}\", $run );"
+          ],
+          "after": [
+            "\t\tself::assertStringContainsString( \"if ( 'admission' === \\$mode ) {\\n\\t\\t\\t\\\\Wstm108_KernelMounts::finish_scope();\\n\\t\\t\\t\\$this->verify_controller_streams();\\n\\t\\t\\treturn 0;\\n\\t\\t}\", $run );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/UntrustedSyntheticTopologyTest.php": {
+      "current_raw_sha256": "389a3b3310a8db5e1c106d51547e024804cd7145a5b476b1007fe7e06138d072",
+      "baseline_raw_sha256": "37231efd860d26dfe94ddd5a793c8f6a090e976dfc88e4450c3762e69bec78c6",
+      "hunks": [
+        {
+          "start": 128,
+          "before": [
+            "\t\treturn array( array( 'changed' ), array( 'duplicate' ), array( 'already-installed' ), array( 'mixed-ending' ) );"
+          ],
+          "after": [
+            "\t\treturn array( array( 'changed' ), array( 'duplicate' ), array( 'already-installed' ), array( 'mixed-ending' ),",
+            "\t\t\tarray( 'kernel-guard-removed' ), array( 'kernel-probe-changed' ) );"
+          ]
+        },
+        {
+          "start": 136,
+          "before": [],
+          "after": [
+            "\t\tif ( 'kernel-guard-removed' === $case ) {",
+            "\t\t\t$guard = \"self::require( Wstm108_HostObservation::enabled( getenv() ), 'ambiguous-stacked-mount' );\";",
+            "\t\t\tself::assertSame( 1, substr_count( $source, $guard ) );",
+            "\t\t\t$source = str_replace( $guard, '', $source );",
+            "\t\t}",
+            "\t\tif ( 'kernel-probe-changed' === $case ) {",
+            "\t\t\t$probe = '\\\\Wstm108_KernelMounts::visibility( $mountinfo );';",
+            "\t\t\tself::assertSame( 1, substr_count( $source, $probe ) );",
+            "\t\t\t$source = str_replace( $probe, '\\\\Wstm108_KernelMounts::visibility( \"forged\" );', $source );",
+            "\t\t}"
+          ]
+        }
+      ]
+    },
+    "tests/unit/fixtures/scoped-host-observation-transition.php": {
+      "current_raw_sha256": "ea979176c7f7de13ccff683594d7193bd8fa6cec89c2c99c1262b5403d16ef89",
+      "baseline_raw_sha256": "22c75e7736f55831b309b07aad5a36056a7ddac254b436f93e895a95b8399960",
+      "hunks": [
+        {
+          "start": 3,
+          "before": [],
+          "after": [
+            "\r",
+            "require_once __DIR__ . '/kernel-mount-transition.php';\r"
+          ]
+        },
+        {
+          "start": 24,
+          "before": [],
+          "after": [
+            "\t\tWstm167KernelMountTransition::verify_dependencies( $read );\r"
+          ]
+        },
+        {
+          "start": 28,
+          "before": [],
+          "after": [
+            "\t\t\tif ( is_string( $source ) ) {\r",
+            "\t\t\t\t$source = Wstm167KernelMountTransition::restore( $path, $source );\r",
+            "\t\t\t}\r"
+          ]
+        },
+        {
+          "start": 45,
+          "before": [],
+          "after": [
+            "\t\t$source = Wstm167KernelMountTransition::restore( $path, $source, $context );\r"
+          ]
+        }
+      ]
+    },
+    "tests/unit/fixtures/untrusted-host-boundaries.php": {
+      "current_raw_sha256": "83d54815edf0b540a4f3c15b3e08f5dc650d27b3878dc549e8e69ab897e2740c",
+      "baseline_raw_sha256": "e10109d0401612da2d50c70430fa163d41a9252e0c835c1a8ea9ac70173873e7",
+      "hunks": [
+        {
+          "start": 194,
+          "before": [
+            "\t\t$mounts = self::mounts( $mountinfo );"
+          ],
+          "after": [
+            "\t\t$mounts = self::structural_mounts( $mountinfo );",
+            "\t\tif ( self::stacked( $mounts ) ) {",
+            "\t\t\tself::require( Wstm108_HostObservation::enabled( getenv() ), 'ambiguous-stacked-mount' );",
+            "\t\t\trequire_once __DIR__ . '/untrusted-kernel-mounts.php';",
+            "\t\t\t\\Wstm108_KernelMounts::visibility( $mountinfo );",
+            "\t\t}"
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    ".github/compatibility-versions.json": "73865b94ad6ac10cbed9bec8a31b41911cbb35014b4a904734d9258f0718c19a",
+    ".github/workflows/coding-standards.yml": "1778f0179b3713aece5a60e14b734eeb3ce7416942cf00393635fe5dea260000",
+    ".github/workflows/import-issue-backlog.yml": "4a4a785a6e72a10f661ce4e52412ab1d8563a3000de8c9605ffb91e0ee1262fe",
+    ".github/workflows/unit-tests.yml": "588fe8eb8d437bdaedf84a18dc930f73c317671f061f355f5bbe08380d620917",
+    ".github/workflows/workflow-lint.yml": "0bda65329c2716fb19471ae5e1a464900c9d64ac9791ce4d2817ea35c595206c",
+    "composer.lock": "26699eda230d588c6895dfabd39c2362a22d84b9bbb0e69f15b11f8fe970de2a",
+    "docker-compose.yml": "cade04bfa0c3708c1f68e968a73e2ba7582730b48802fa9d3067f8b67dcf42a8",
+    "phpstan-baseline.neon": "d64cf0922b3cf04f83728bb3b14575e154a08fa714abe38cdc325660ab450382",
+    "phpstan.neon.dist": "8d5bd7a3d1ce85011c9eec064b8f9c07c895c4119e7ab9d07c141cd73f18b8f4",
+    "readme.txt": "239326e16a5675027865eeddbd863f5a99fb01e8e23fb46d28c7c6ddb5a640d7",
+    "scripts/untrusted-admission-diagnostic.php": "0d0b3d993753e2a09016d75e7802797ddc40959511e22dcbe713193e1f4e3b4a",
+    "scripts/untrusted-kernel-authority-owner.php": "62fcea5363cdec6347ee1a1ce01559bd3d52c636934235c04fc2509bf0d556d7",
+    "scripts/untrusted-kernel-mount-holder.py": "7258b8a9e0ca9d2de24b86dee108f57488aadb6898226ca5681251eabfdcca72",
+    "scripts/untrusted-kernel-mount-model.php": "da7ec4349d161a5267b739c495d8217bef0bdeb01cf28c6cdebb6e9253616d43",
+    "scripts/untrusted-kernel-mounts.php": "11360a8fde7da571eb903bbf6edc7e1e92d5de18b71d680ef752ea40134985ad",
+    "tests/e2e/abilities-manifest.json": "f09633e8e6e2fe88b18eefe5748e3eafd3a55ff62c17b54ec9cae76bd776029d",
+    "tests/native/kernel-mount-boundary.php": "b32826d20c08bb4da5643b4c26b11ab9c30a6acc2e53a3b92e2073123f75e864",
+    "tests/unit/CiAdmissionDiagnosticTest.php": "adb252540738114447833e99f07ba3cbc4484447064582b01bfcbdedfbe282c7",
+    "tests/unit/CompatibilityBaselinesTest.php": "7007e97ef0496d62322b2fc82660d9f4c8712170497a5e6b43af35fed54b6a99",
+    "tests/unit/KernelMountTransitionTest.php": "c9160d85012dd4ccc53422468f2281dce6913cbeca32564b61a3c244585dd8b9",
+    "tests/unit/ScopedHostObservationTest.php": "68dbf065d76df78c2318aa5755e1b329b0fffac2a2e1f6ba5831ddbe5f8f0ee7",
+    "tests/unit/ScopedHostObservationTransportTest.php": "5c48ac998278b9288748c1bc4d1605be296d9bc726cbc4b43f129e636468ef5c",
+    "tests/unit/UntrustedKernelMountTest.php": "871a576ec2a3d78e1c2684bd041342ec9ef00cf347f15516d19e98add956c272",
+    "tests/unit/UntrustedKernelRecordOwnerTest.php": "2cb30a03acf078b3d8ba496a8d0a2506ce39a39de107d41b263bb325f0a0c377",
+    "tests/unit/UntrustedKernelReservationTest.php": "771c5c49ab2579b87215190b627e5498641b5bf84fca2205ab152dbabee906cc",
+    "tests/unit/fixtures/admission-native-fixture-transition.json": "08cc480bd501c8a190699ef5a114fffd694332b4485bbc595ed13e0b87a8e99e",
+    "tests/unit/fixtures/array-syntax-transition.json": "b8d2ad18c87ee97c8eeb86f8601b6d1fce5af16842b7a4c4de9e886138ba53e0",
+    "tests/unit/fixtures/authority-observer-transition.json": "88ff7a6b1d42d7839c793aa481b9099dd4631a49eabf39aa87100600b96fef58",
+    "tests/unit/fixtures/bounded-admission-transition.json": "a45c96be6790c0380788529adc509955ffc9de64b472a5fae24bb46a9e13df5f",
+    "tests/unit/fixtures/bounded-integration-transition.json": "e847ac561c95854f66b5b04af627e992fa8886dd76eab018b730b07f42d290fa",
+    "tests/unit/fixtures/ci-budget-control-transition.json": "6126a718e4a19904fa4ee64c2b6cc159ee0cb82239a391dbb0ac73c1a10e0591",
+    "tests/unit/fixtures/ci-diagnostic-transition.json": "a1e215abbc4e0f8ae3bf47a7becda2ab474740a8b8192ca0223afc668aeae201",
+    "tests/unit/fixtures/comments-calibration-ledger.json": "c350dd9f4915c4b4f84940fa083ab46a807dac285d40007a536ddc041adf3b2d",
+    "tests/unit/fixtures/current-main-transition.json": "21ab59664f8a249323e9c94bbcf197965a3a42c562f6c271cc98b330a38007c7",
+    "tests/unit/fixtures/floor-selector-transition.json": "204877c9ff0325b4a6a90f040de918759d9ec45ed22b75a29a075de3451c2d78",
+    "tests/unit/fixtures/legacy-runtime-transition.json": "e713a22640ae27f2b3fc9de235fc32620cb6270b77a6bc3527d661dfa48b5b9d",
+    "tests/unit/fixtures/posts-extraction-transition.json": "2be14f26642f28014a9df9e99df36cb6697520b158938f1b3bad23e9da44c4f5",
+    "tests/unit/fixtures/scheduling-calibration-ledger.json": "30cad4e6931b82edb1ccf63c2fc429b02a1e9ccb79306d38b37a09d497a0a8a5",
+    "tests/unit/fixtures/scoped-host-observation-transition.json": "d9c69cd85ca6132b2999357c397cb70cb91ecb91f4f856016809bdcd1a18bd13",
+    "tests/unit/fixtures/score-marker-transition.json": "bbc14f6fdf5184f515a93dedd19b29d707245e52bd4d17207a61b5fbfd8e2076",
+    "tests/unit/fixtures/score-proof-entry-transition.json": "e79abfdb00bcb85deff22b30c836b2bfbc2ac1e343a8b20dc9ba1311aaeb8ca8",
+    "tests/unit/fixtures/selected-listener-transition.json": "d6bbca72dcd3f823bffee69b3cd03e4ff51232cc324d919b05191103d11c53ee",
+    "tests/unit/fixtures/selected-listener-transition.php": "a84165581f3b373ef5b41a8098e294d74c0f36c1a8a512efc9c5b3a4ded5512f",
+    "tests/unit/fixtures/selector-import-transition.json": "67e7fc5b92b672b8e56c6346c121f5837f9a1cb62257e31b4ae494c23c34f539",
+    "tests/unit/fixtures/shared-helper-transition.json": "1bdd69f8b930f9c744afe557800eeafd195f30eeaa9b61c9b81fff5267e426d6",
+    "tests/unit/fixtures/taxonomy-calibration-ledger.json": "e389a6346d111c7ac72e83083b4eeee8d396a4aa33b11ce6ca1942e80734022c",
+    "tests/unit/fixtures/untrusted-bounded-manifest-transition.json": "a86d8850ca345db59302cde04f14f1f75b1b06baf41e9f72df41db9e3954ed88",
+    "tests/unit/fixtures/untrusted-compact-delete-calibration.json": "3011a23c2ddd947127caccd4149ca85d17c2b532d97e5cf4e1dce0c7145e0544",
+    "tests/unit/fixtures/untrusted-import-inventory.json": "78211008ad27e0ec44c4241bfc621edf6b882f2b0605a2dea0d180dcdd578bae",
+    "tests/unit/fixtures/untrusted-manifest-inventory.json": "7fb86639b203b4b8f36aabd6a1893bd13eaec55fb2201c44a29ebd806dfc3db2",
+    "tests/unit/fixtures/untrusted-schema-integration-ledger.json": "6f7612776a8efef97c776e03277ace03bd8f013b1938dace1d737efc42ce5f15",
+    "tests/unit/fixtures/untrusted-typed-oracle-ledger.json": "1c91d8f3bf003057026aa13f8d0cbbfa44d80a94f2a5390abc8ac7e1a965f352",
+    "tests/unit/fixtures/untrusted-workflow-transition.json": "f30822cfc6eb489c3993ffaacdc89862d87780335ff64e222e04cdf5c3a5e64e",
+    "tests/unit/test_kernel_mount_holder.py": "27f37613bbe4e5850c195f0c002b51632b24a3d27178989ef61c2e17217a8df0"
+  }
+}

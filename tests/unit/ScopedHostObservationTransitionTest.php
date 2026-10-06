@@ -18,11 +18,11 @@ final class ScopedHostObservationTransitionTest extends TestCase {
 		self::assertSame( Wstm167CurrentMainTransition::SEAL, hash( 'sha256', $this->read( 'tests/unit/fixtures/current-main-transition.json' ) ) );
 		Wstm167CurrentMainTransition::verify_dependencies( fn( $path ) => $this->read( $path ) );
 		foreach ( $map['files'] as $path => $binding ) {
-			self::assertSame( $binding['current_raw_sha256'], hash( 'sha256', $this->read( $path ) ), $path );
+			self::assertSame( $binding['current_raw_sha256'], hash( 'sha256', Wstm167KernelMountTransition::restore( $path, $this->read( $path ) ) ), $path );
 			self::assertSame( $binding['baseline_raw_sha256'], hash( 'sha256', Wstm167ScopedHostObservationTransition::restore( $path, $this->read( $path ) ) ), $path );
 		}
 		foreach ( $map['dependencies'] as $path => $hash ) {
-			self::assertSame( $hash, hash( 'sha256', $this->read( $path ) ), $path );
+			self::assertSame( $hash, hash( 'sha256', Wstm167KernelMountTransition::restore( $path, $this->read( $path ) ) ), $path );
 		}
 	}
 
@@ -77,8 +77,9 @@ final class ScopedHostObservationTransitionTest extends TestCase {
 	public function test_even_a_resealed_wrong_outer_baseline_cannot_change_the_frozen_older_witness(): void {
 		$path = 'scripts/untrusted-host-topology.php';
 		$map = Wstm167ScopedHostObservationTransition::load();
-		$current = $this->read( $path );
-		$wrong = Wstm167ScopedHostObservationTransition::restore( $path, $current ) . "\nforeign_guard";
+		$raw_current = $this->read( $path );
+		$current = Wstm167KernelMountTransition::restore( $path, $raw_current );
+		$wrong = Wstm167ScopedHostObservationTransition::restore( $path, $raw_current ) . "\nforeign_guard";
 		$map['files'][ $path ]['hunks'][] = array(
 			'start' => count( explode( "\n", $current ) ),
 			'before' => array( 'foreign_guard' ),
@@ -96,6 +97,7 @@ final class ScopedHostObservationTransitionTest extends TestCase {
 				'current-main-transition.json' => $older_json,
 			);
 			$outer_source = $this->read( 'tests/unit/fixtures/scoped-host-observation-transition.php' );
+			$outer_source = Wstm167KernelMountTransition::restore( 'tests/unit/fixtures/scoped-host-observation-transition.php', $outer_source );
 			$outer_source = str_replace(
 				"public const SEAL = '" . Wstm167ScopedHostObservationTransition::SEAL . "';",
 				"public const SEAL = '" . hash( 'sha256', $outer_json ) . "';",
@@ -120,7 +122,7 @@ final class ScopedHostObservationTransitionTest extends TestCase {
 			try {
 				self::assertSame( $wrong, $outer_class::restore( $path, $current ) );
 				try {
-					$main_class::verify_dependencies( fn( $entry ) => $this->read( $entry ) );
+					$main_class::verify_dependencies( fn( $entry ) => Wstm167KernelMountTransition::restore( $entry, $this->read( $entry ) ) );
 					self::fail( 'Resealed foreign baseline replaced the accepted older witness.' );
 				} catch ( RuntimeException $error ) {
 					self::assertSame(

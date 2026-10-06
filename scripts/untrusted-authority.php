@@ -40,8 +40,13 @@ final class Wstm108_HostAuthority {
 			Wstm108_Files::directory( is_dir( $source ) ? $source : dirname( $source ) );
 			self::require( ! is_link( $source ) && ! self::contains( self::normalized( $source ), self::normalized( $authority ) ), 'authority overlaps an effective bind source.' );
 		}
-		Wstm108_HostTopology::native_coordinates( array_merge( array( $authority ), $sources ), $topology['mounts'] );
-		Wstm108_HostTopology::outside( $authority, $sources, $topology['mounts'] );
+		if ( Wstm108_HostTopology::stacked( $topology['mounts'] ) ) {
+			require_once __DIR__ . '/untrusted-kernel-mounts.php';
+			\Wstm108_KernelMounts::outside( $authority, $sources, $topology['mounts'] );
+		} else {
+			Wstm108_HostTopology::native_coordinates( array_merge( array( $authority ), $sources ), $topology['mounts'] );
+			Wstm108_HostTopology::outside( $authority, $sources, $topology['mounts'] );
+		}
 	}
 
 	private static function private_directory( string $path ): array {
@@ -82,6 +87,7 @@ final class Wstm108_HostAuthority {
 		$intent = Wstm108_Files::create( $root . '/wstm108-create-' . $binding['owner'] . '.private.json',
 			json_encode( array( 'root_identity' => $root_identity, 'child' => $directory, 'binding' => $binding ), JSON_THROW_ON_ERROR ) );
 		self::require( $root_identity === self::root( $root ), 'root changed before the owned mkdir.' );
+		if ( class_exists( 'Wstm108_KernelMounts', false ) ) { \Wstm108_KernelMounts::finish_scope(); }
 		self::require( @mkdir( $directory, 0700 ), 'exclusive authority directory collision.' );
 		$identity = self::private_directory( $directory );
 		$transition = Wstm108_HostTopology::owned_child_transition( $root_identity, self::root( $root ), $identity );
@@ -134,6 +140,7 @@ final class Wstm108_HostAuthority {
 			'clear-primary.process.receipt.json',
 		), true ), 'unknown receipt basename.' );
 		$this->verify();
+		if ( class_exists( 'Wstm108_KernelMounts', false ) ) { \Wstm108_KernelMounts::finish_scope(); }
 		$file = Wstm108_Files::create( $this->handle['directory'] . '/' . $name, json_encode( $data, JSON_THROW_ON_ERROR ) );
 		self::require( 0600 === ( $file['identity']['mode'] & 0777 ), 'receipt is not private.' );
 		return self::metadata( $file );
@@ -186,8 +193,10 @@ final class Wstm108_HostAuthority {
 		$captured = array();
 		try {
 			$this->verify();
+			if ( self::class === \Wstm108_HostAuthority::class && class_exists( 'Wstm108_KernelMounts', false ) ) { \Wstm108_KernelMounts::pause_for_capture(); }
 			$process = proc_open( $command, array( 0 => array( 'pipe', 'r' ), 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ),
-				3 => array( 'file', '/dev/null', 'w' ), 4 => array( 'file', '/dev/null', 'w' ), 9 => array( 'file', '/dev/null', 'w' ) ), $pipes, $cwd, $environment );
+				3 => array( 'file', '/dev/null', 'w' ), 4 => array( 'file', '/dev/null', 'w' ),
+				5 => array( 'file', '/dev/null', 'w' ), 9 => array( 'file', '/dev/null', 'w' ) ), $pipes, $cwd, $environment );
 			self::require( is_resource( $process ), 'owned process could not start after reservation.' );
 			fclose( $pipes[0] );
 			$lengths = array( 'stdout' => 0, 'stderr' => 0 );
@@ -458,6 +467,10 @@ if ( realpath( $_SERVER['SCRIPT_FILENAME'] ?? '' ) === __FILE__ ) {
 			}
 		}
 		$binding = $context['binding'];
+		if ( '--kernel-allocation' === end( $argv ) ) {
+			require_once __DIR__ . '/untrusted-kernel-mounts.php';
+			\Wstm108_KernelMounts::authority_entry( $context, 'reserve' === $mode ? 'reserve' : ( $argv[3] ?? '' ) );
+		}
 		$compose = array( 'docker', 'compose', '--project-name', $binding['project'] );
 		if ( null !== $binding['package_sha256'] ) {
 			$compose = array_merge( $compose, array( '-f', 'docker-compose.yml', '-f', 'docker-compose.release.yml' ) );
@@ -566,8 +579,12 @@ if ( realpath( $_SERVER['SCRIPT_FILENAME'] ?? '' ) === __FILE__ ) {
 			}
 			}
 		}
+		if ( class_exists( 'Wstm108_KernelMounts', false ) ) { \Wstm108_KernelMounts::finish_scope(); }
 		echo 'WSTM108_HOST ' . base64_encode( json_encode( $result, JSON_THROW_ON_ERROR ) ) . "\n";
 	} catch ( Throwable $error ) {
+		if ( class_exists( 'Wstm108_KernelMounts', false ) ) {
+			try { \Wstm108_KernelMounts::fail_scope(); } catch ( Throwable $finalization_error ) {}
+		}
 		$status = is_int( $observed_child ) && 0 !== $observed_child ? $observed_child : ( $error->getCode() > 0 && $error->getCode() < 256 ? $error->getCode() : 1 );
 		fwrite( STDERR, 'WSTM108 host action refused; status=' . $status . '; diagnostic_sha256=' . hash( 'sha256', $error->getMessage() )
 			. ( $release_attempted ? '; release_outcome=unknown; no assertion of a remaining guard' : '; no transcript or receipt is adopted' ) . ".\n" );

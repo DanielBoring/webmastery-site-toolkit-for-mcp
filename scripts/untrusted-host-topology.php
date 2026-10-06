@@ -62,6 +62,15 @@ final class Wstm108_HostTopology {
 	}
 
 	public static function mounts( string $bytes ): array {
+		return self::parse_mounts( $bytes, false );
+	}
+
+	/** Syntax only: this result does not establish visibility or grant admission. */
+	public static function structural_mounts( string $bytes ): array {
+		return self::parse_mounts( $bytes, true );
+	}
+
+	private static function parse_mounts( string $bytes, bool $structural ): array {
 		self::require( '' !== $bytes && strlen( $bytes ) <= 4194304 && "\n" === substr( $bytes, -1 ), 'partial-mount-table' );
 		$records = array();
 		$points = array();
@@ -76,7 +85,8 @@ final class Wstm108_HostTopology {
 			$id = (int) $fields[0];
 			$root = self::path( self::unescape( $fields[3] ) );
 			$point = self::path( self::unescape( $fields[4] ) );
-			self::require( $id > 0 && ! isset( $records[ $id ] ) && ! isset( $points[ $point ] ), 'ambiguous-stacked-mount' );
+			self::require( $id > 0 && ( ! $structural || (string) $id === ltrim( $fields[0], '0' ) ) && ! isset( $records[ $id ] )
+				&& ( $structural || ! isset( $points[ $point ] ) ), 'ambiguous-stacked-mount' );
 			foreach ( array_slice( $fields, 6, $separator - 6 ) as $optional ) {
 				self::require( 'unbindable' === $optional || 1 === preg_match( '/^(shared|master|propagate_from):[0-9]+$/D', $optional ), 'unsupported-mount-mapping' );
 			}
@@ -88,8 +98,18 @@ final class Wstm108_HostTopology {
 		return array_values( $records );
 	}
 
+	public static function stacked( array $mounts ): bool {
+		$points = array();
+		foreach ( $mounts as $mount ) {
+			if ( isset( $points[ $mount['point'] ] ) ) { return true; }
+			$points[ $mount['point'] ] = true;
+		}
+		return false;
+	}
+
 	public static function coordinate( string $path, array $mounts ): array {
 		$path = self::path( $path );
+		self::require( ! self::stacked( $mounts ), 'ambiguous-stacked-mount' );
 		$selected = null;
 		foreach ( $mounts as $mount ) {
 			if ( self::contains( $mount['point'], $path )
@@ -260,7 +280,12 @@ final class Wstm108_HostTopology {
 		$daemon_mountinfo = Wstm108_HostObservation::enabled( getenv() )
 			? Wstm108_HostObservation::read( 'mountinfo', $pid ) : self::read( '/proc/' . $pid . '/mountinfo', 4194304 );
 		self::require( $mountinfo === $daemon_mountinfo, 'daemon-mount-table-differs' );
-		$mounts = self::mounts( $mountinfo );
+		$mounts = self::structural_mounts( $mountinfo );
+		if ( self::stacked( $mounts ) ) {
+			self::require( Wstm108_HostObservation::enabled( getenv() ), 'ambiguous-stacked-mount' );
+			require_once __DIR__ . '/untrusted-kernel-mounts.php';
+			\Wstm108_KernelMounts::visibility( $mountinfo );
+		}
 		self::require( $before === self::peer( $socket, $pid ) && $socket_before === self::stat( $socket )
 			&& $mountinfo === self::read( '/proc/self/mountinfo', 4194304 ), 'peer-or-topology-changed-during-admission' );
 		if ( Wstm108_HostObservation::enabled( getenv() ) ) {

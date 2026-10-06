@@ -13,6 +13,9 @@ final class Wstm108_HostObservation {
 	public static function begin_pass(): void {
 		self::$count = 0;
 		self::$deadline = hrtime( true ) + 120000000000;
+		if ( class_exists( 'Wstm108_KernelMounts', false ) ) {
+			self::$deadline = \Wstm108_KernelMounts::restrict_observation( self::$deadline );
+		}
 	}
 
 	private static function require( bool $condition, string $reason = 'unreadable-kernel-evidence' ): void {
@@ -145,6 +148,7 @@ final class Wstm108_HostObservation {
 	/** Pipes bound transport; originals are flushed privately before any parser. */
 	private static function capture( array $command, array $handle ): string {
 		$deadline = min( self::$deadline, hrtime( true ) + 8000000000 );
+		if ( class_exists( 'Wstm108_KernelMounts', false ) ) { $deadline = \Wstm108_KernelMounts::observation_deadline( $deadline ); }
 		self::require( hrtime( true ) < $deadline );
 		$tools = self::tools( $command );
 		self::verify_custody( $handle );
@@ -291,6 +295,7 @@ final class Wstm108_HostObservation {
 		$command = self::command( $operation, $pid );
 		if ( 0 === self::$deadline ) { self::$deadline = hrtime( true ) + 120000000000; }
 		self::require( ++self::$count <= 64 && hrtime( true ) < self::$deadline );
+		if ( class_exists( 'Wstm108_KernelMounts', false ) ) { \Wstm108_KernelMounts::observation_read(); }
 		$scope = self::scope( $pid );
 		$bytes = self::capture( $command, self::custody( $environment ) );
 		self::require( $scope === self::scope( $pid ), 'daemon-identity-changed-during-read' );
@@ -368,7 +373,7 @@ final class Wstm108_HostObservation {
 			$bytes = $streams['stdout.private']['bytes'];
 			if ( 'descriptors' === $operation ) { self::descriptors( $bytes ); }
 			elseif ( 'namespace' === $operation ) { self::namespace_identity( $bytes ); }
-			else { Wstm108_HostTopology::mounts( $bytes ); }
+			else { Wstm108_HostTopology::structural_mounts( $bytes ); }
 		}
 		self::require( $names === scandir( $handle['directory'] ) );
 		self::verify_custody( $handle );

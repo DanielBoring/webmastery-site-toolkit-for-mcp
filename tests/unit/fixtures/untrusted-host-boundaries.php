@@ -192,7 +192,12 @@ PHP;
 		$daemon_mountinfo = Wstm108_HostObservation::enabled( getenv() )
 			? Wstm108_HostObservation::read( 'mountinfo', $pid ) : self::read( '/proc/' . $pid . '/mountinfo', 4194304 );
 		self::require( $mountinfo === $daemon_mountinfo, 'daemon-mount-table-differs' );
-		$mounts = self::mounts( $mountinfo );
+		$mounts = self::structural_mounts( $mountinfo );
+		if ( self::stacked( $mounts ) ) {
+			self::require( Wstm108_HostObservation::enabled( getenv() ), 'ambiguous-stacked-mount' );
+			require_once __DIR__ . '/untrusted-kernel-mounts.php';
+			\Wstm108_KernelMounts::visibility( $mountinfo );
+		}
 		self::require( $before === self::peer( $socket, $pid ) && $socket_before === self::stat( $socket )
 			&& $mountinfo === self::read( '/proc/self/mountinfo', 4194304 ), 'peer-or-topology-changed-during-admission' );
 		if ( Wstm108_HostObservation::enabled( getenv() ) ) {

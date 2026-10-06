@@ -29,6 +29,16 @@ source/floor/original-ZIP, provider, benchmark or custody evidence. See the
 including cooperative filesystem deadlines and the absence of a root-child
 cleanup certificate.
 
+Stacked mount resolution additionally requires the source-bound nonroot
+`O_PATH` holder and independently observed safe pre-exec credentials. It
+observes `/` and every duplicate point without reading inode contents; only
+physical authority/source coordinates impose the existing ext4/tmpfs rule.
+Kernel mount IDs, never row order or maximum IDs, select mappings. Private
+fd-5 helper allocations restrict the same aggregate allowance; candidate
+children receive neither that channel nor kernel metadata. See
+[kernel mount verification](../../docs/qa-strategy.md#kernel-mount-verification)
+for portable commands, native boundary definitions and acceptance limits.
+
 Synthetic stage-proof unit fixtures release their runner graphs in per-case
 teardown because PHPUnit retains completed test instances. Phase fixtures build
 only their catalog/schema witnesses, not a complete runner proof. The ordinary

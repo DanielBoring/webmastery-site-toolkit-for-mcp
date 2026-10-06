@@ -65,6 +65,119 @@ stack. The harness checks native admission before clearing artifacts or managed
 reset, then checks the changed inventory again before installing fixtures or
 arming their cleanup. Contract-only lifecycle behavior remains separate.
 
+### Kernel mount verification
+
+Strict `mounts()`, `coordinate()` and `outside()` models still refuse stacked
+tables without live native evidence. Structural parsing preserves all rows and
+their order; it is not admission. Native stacked admission observes `/` and
+every duplicate mountpoint with a fixed source-bound nonroot Python `O_PATH`
+holder. Independent PHP reads of the actual child's status, start identity,
+task set, namespace, held fdinfo, device/inode and point anchor select the exact
+kernel mount ID. There is no first-row, maximum-ID or lexical fallback.
+
+Before Python exec, the existing actor must have matching nonroot real,
+effective, saved and filesystem credentials, exact supplementary groups and
+zero effective/permitted/inheritable/ambient capabilities. The kernel must
+already enforce either `NoNewPrivs=1` or a zero bounding set. The latter lane
+also requires a pinned ordinary non-set-ID interpreter. Missing or malformed
+fields refuse before launch; no capability, privilege or namespace changes
+are made. This does not enable no-new-privileges globally or alter the existing
+fixed read-only sudo scope. Child credentials are independently verified before
+target paths are sent and at every live boundary.
+
+Visibility-only observations accept any filesystem or inode type and never
+read contents. Physical authority/source checks retain ext4/tmpfs coordinates
+and reacquire the complete checkout, Docker storage, bind/volume and relevant
+nested mountpoint closure. Same-device whole, root-relative and nested bind
+aliases remain exposures even when mount IDs differ. File sources expose only
+their exact coordinate. Hidden points must be observable; they are not inferred
+invisible from row order or location.
+
+Each controller action shares at most eight seconds of charged holder work,
+eight launches and sixteen MiB of retained originals. A contiguous native
+verification scope pins the first existing observation deadline and clips it
+to any governing original discovery deadline. Later admits only tighten it;
+the additional 64-read ceiling does not reset within that scope. Chunks,
+shutdown and receipt persistence consume the same allowance. Trusted helpers
+receive an up-front debited share through an original mode-0600 read-only fd 5,
+bound to parent PID/start/namespace, action, context, source and private custody.
+There is no reported-unused refund. Candidate captures replace fd 5 with
+`/dev/null` and strip kernel metadata.
+
+A private once-per-original-pass marker is set before helper reservation work,
+not inferred from the remaining parent-slot count. Even a partial reservation
+failure consumes the attempt: retry cannot charge another slot or redistribute
+the remaining allowance. Interleaved repeat requests and the actual private
+launch engine used by parent collect dispatch retain the original query count.
+Only the existing controller query-pass lifecycle resets this marker.
+
+Discovery is not a whole-runner timeout. The live holder finishes before a
+long runner; original post-capture admission supplies its own existing clock
+but uses the same remaining allocation. Controller returned-state and terminal
+checks use the pre-reserved remainder. Exhaustion refuses, including receipt
+or finalization failure. Direct stacked calls without a source-owned governing
+scope refuse instead of minting an implicit per-method budget.
+
+Input/output/kernel originals are independently bound, hashed and flushed
+before parsing and checked again on completion. Final live credential/fd
+checks, known exit zero, EOF and a durable receipt precede inventory acceptance.
+Failed intent/originals remain private. Receipts, JSON, booleans, callbacks and
+retained nonces cannot construct a live session. All collectors and final
+capture checks finish before final companion unlink; nothing new runs after
+successful commit. Synchronous filesystem limits remain cooperative.
+
+Portable controls (no native acceptance):
+
+```text
+php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist tests/unit/UntrustedKernelMountTest.php
+python -B -m unittest discover -s tests/unit -p test_kernel_mount_holder.py -v
+```
+
+Current synthetic-admission fixtures match the complete admission body exactly,
+including the stacked-mount observation guard and kernel visibility probe.
+LF/CRLF, reversible substitution, source-binding, already-installed and Windows
+refusal controls remain separate from native acceptance. Removing the guard or
+changing the probe must refuse substitution, not select a looser source model.
+The admission-only pipeline assertion requires collector finalization before
+stream verification and return; the CI safeguard assertion includes the Python
+holder controls in its exact command sequence.
+
+Completed capture registration uses a private named collector method and an
+exact class/function owner check, not PHP's version-dependent closure backtrace
+name. Portable owner controls run on PHP 8.0 and newer without kernel reads or
+`fsync`; they verify bookkeeping and rejection of arbitrary scoped closures,
+external receipt/caller data, changed custody and duplicate registration.
+They cannot establish live proof. Run the same controls on PHP 8.0 and PHP 8.4,
+then separately rerun the genuine PHP 8.4 unique boundary below to verify the
+actual holder-to-durable-finalization path.
+
+Native definitions must be run separately by the owner of an already-approved
+nonroot Linux environment. Supply a fresh, pre-existing, empty mode-0700 owned
+directory and the existing approved inspection environment:
+
+```text
+php tests/native/kernel-mount-boundary.php ABSOLUTE_PRIVATE_DIRECTORY unique
+php tests/native/kernel-mount-boundary.php ABSOLUTE_PRIVATE_DIRECTORY unsafe-exec
+```
+
+Use separate directories and existing credential lanes; do not manufacture a
+lane, install tools or change privileges for these controls. `unique` exercises
+the current live holder and original controller query clock, independent proc
+checks and complete private receipt. It refuses a stacked fixture rather than
+claiming stacked coverage. `unsafe-exec` requires genuine pre-existing unsafe
+credentials and verifies refusal with empty holder transport before exec.
+Neither definition calls Docker, proves daemon admission or runs candidate QA.
+
+Native acceptance still requires independently observed proc/sysfs identity
+nodes, genuine pre-existing stacked-positive fixtures (including a visible
+row neither first nor maximum, hidden parents and same-device aliases), races
+and exact current source/floor/original-ZIP consumers. Missing genuine stacks
+block that acceptance, not portable controls. Required hosted Contract, Full
+MCP and package checks remain separate; a different exit or synthetic success
+does not replace them. Existing historical proof generations remain immutable;
+the publisher must compose a new additive outer source seal before running
+historical source-bound safeguards.
+
 Native discovery and original floor selection use the existing Linux pidfd
 supervisor: ten seconds per query, at most 64 queries/120 seconds per discovery
 pass, and four MiB per original stream. Captures and failures remain private;

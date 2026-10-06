@@ -6,6 +6,34 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Make helper reservation attempts terminal within their original query pass,
+  including partially failed query-slot reservations. Prevent retry debits or
+  allowance redistribution while retaining disjoint upfront parent slots and
+  their once-only consumption; add interleaved parent-dispatch controls.
+
+- Register completed kernel captures through an exact private named owner method,
+  avoiding PHP 8.4's changed closure backtrace names without accepting arbitrary
+  closures or caller metadata. Preserve custody, once-only registration, durable
+  finalization and cleanup order; add portable owner-identity regression controls.
+
+- Bind current synthetic-admission fixtures to the complete kernel visibility
+  guard and probe, retaining exact reversible LF/CRLF substitutions and rejecting
+  either guard removal or probe changes. Keep CI command expectations and
+  admission-only collector-finalization assertions aligned with current code.
+
+- Make kernel-holder parent query-slot reservations explicit and consume them
+  once after helper capture, retaining the original query-count ceiling and
+  shared launch allowance. Dispose failed running process resources without
+  indefinite static retention or a blocking unknown-exit reap.
+
+- Add a source-bound nonroot kernel mount holder for independently resolving
+  stacked mount visibility and physical bind aliases. Require a kernel-proved
+  safe pre-exec lane, live independent credential/descriptor checks, shared
+  decreasing verification limits and complete private originals before release.
+  Preserve strict pure-parser refusal and the existing closed reason schema.
+  Portable controls and explicit native unique-boundary definitions do not
+  establish stacked, hosted Contract, Full MCP or original-package acceptance.
+
 - Add explicitly opted-in read-only system observation for inaccessible
   Docker-daemon proc evidence on approved disposable CI hosts. Controller,
   capture and PHP remain nonroot; only verified fixed system reads and

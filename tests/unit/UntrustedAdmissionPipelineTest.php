@@ -42,7 +42,7 @@ final class UntrustedAdmissionPipelineTest extends TestCase {
 		$admission = strpos( $run, "if ( 'admission' === \$mode ) {" );
 		self::assertGreaterThan( strpos( $run, 'WstmQaRuntime::discover(' ), $admission );
 		self::assertLessThan( strpos( $run, "'exclusive-export-reservation'" ), $admission );
-		self::assertStringContainsString( "if ( 'admission' === \$mode ) {\n\t\t\t\$this->verify_controller_streams();\n\t\t\treturn 0;\n\t\t}", $run );
+		self::assertStringContainsString( "if ( 'admission' === \$mode ) {\n\t\t\t\\Wstm108_KernelMounts::finish_scope();\n\t\t\t\$this->verify_controller_streams();\n\t\t\treturn 0;\n\t\t}", $run );
 		$stage = $this->source( 'scripts/untrusted-stage.sh' );
 		self::assertStringContainsString( "QA_MODE=admission\n\trun_untrusted_content_qa", $stage );
 		self::assertStringNotContainsString( 'compose ', substr( $stage, 0, strpos( $stage, 'run_untrusted_content_qa()' ) ) );

@@ -74,6 +74,9 @@ final class Wstm108_HostController {
 	private array $controller_streams = array();
 	private int $query_deadline = 0;
 	private int $query_count = 0;
+	private ?array $kernel_directory = null;
+	private array $kernel_captures = array();
+	private array $kernel_allocations = array();
 
 	public function __construct( string $directory, array $identity, array $environment ) {
 		Wstm108_Export::require_host();
@@ -134,6 +137,7 @@ final class Wstm108_HostController {
 	public static function child_environment( array $environment ): array {
 		foreach ( array_keys( $environment ) as $key ) {
 			if ( 0 === strpos( $key, 'GITHUB_' ) || 0 === strpos( $key, 'WSTM108_EXPORT_' )
+				|| 0 === strpos( $key, 'WSTM108_KERNEL_' )
 				|| in_array( $key, array( 'BASH_ENV', 'ENV', 'SHELLOPTS', 'BASHOPTS', 'BASH_XTRACEFD', 'PS4' ), true ) ) {
 				unset( $environment[ $key ] );
 			}
@@ -203,11 +207,14 @@ final class Wstm108_HostController {
 		throw new RuntimeException( 'WSTM108 controller refused: ' . $reason, $code );
 	}
 
-	public function capture( string $name, array $command, string $cwd, array $environment, array $query_streams = array() ): array {
+	public function capture( string $name, array $command, string $cwd, array $environment, array $query_streams = array(), $kernel_allocation = null ): array {
 		self::require( 1 === preg_match( '/^[a-z][a-z0-9-]{0,95}$/D', $name ) && array() !== $command, 'capture-action' );
 		self::require( array() === $query_streams || ( array( 10, 11 ) === array_keys( $query_streams )
 			&& is_resource( $query_streams[10] ) && is_resource( $query_streams[11] )
 			&& 1 === preg_match( '/-query-[1-9][0-9]*$/D', $name ) ), 'query-original-descriptors' );
+		self::require( null === $kernel_allocation || ( is_resource( $kernel_allocation ) && array() === $query_streams
+			&& PHP_BINARY === $command[0] && __DIR__ . '/untrusted-authority.php' === ( $command[1] ?? null )
+			&& '--kernel-allocation' === end( $command ) ), 'kernel-allocation-descriptor-scope' );
 		$this->verify();
 		if ( array() !== $this->controller_streams ) { $this->verify_controller_streams(); }
 		$streams = array();
@@ -234,7 +241,8 @@ final class Wstm108_HostController {
 			$this->verify();
 			// Direct inherited file descriptors preserve startup/fatal bytes too.
 			$process = proc_open( $command, array_replace( array( 0 => array( 'file', '/dev/null', 'r' ), 1 => $streams['stdout'], 2 => $streams['stderr'],
-				3 => array( 'file', '/dev/null', 'w' ), 4 => array( 'file', '/dev/null', 'w' ), 5 => array( 'file', '/dev/null', 'w' ), 9 => array( 'file', '/dev/null', 'w' ) ), $query_streams ),
+				3 => array( 'file', '/dev/null', 'w' ), 4 => array( 'file', '/dev/null', 'w' ), 5 => array( 'file', '/dev/null', 'w' ), 9 => array( 'file', '/dev/null', 'w' ) ),
+					$query_streams, null === $kernel_allocation ? array() : array( 5 => $kernel_allocation ) ),
 				$pipes, $cwd, self::child_environment( $environment ) );
 			self::require( is_resource( $process ), 'capture-launch' );
 			$exit = proc_close( $process );
@@ -371,6 +379,41 @@ final class Wstm108_HostController {
 	private function begin_query_pass(): void {
 		$this->query_deadline = hrtime( true ) + 120000000000;
 		$this->query_count = 0;
+		require_once __DIR__ . '/untrusted-kernel-mounts.php';
+		if ( self::class === \Wstm108_HostController::class ) { \Wstm108_KernelMounts::controller_pass( $this ); }
+	}
+
+	public function kernel_query_deadline(): int {
+		self::require( $this->query_deadline > 0, 'admission-query-budget' );
+		return $this->query_deadline;
+	}
+
+	public function kernel_query_slot(): void {
+		self::require( ++$this->query_count <= 64 && hrtime( true ) < $this->query_deadline, 'admission-query-budget' );
+	}
+
+	public function kernel_custody(): array {
+		$this->verify();
+		if ( null === $this->kernel_directory ) {
+			$directory = $this->directory . '/kernel-mounts';
+			self::require( mkdir( $directory, 0700 ), 'exclusive-kernel-mount-reservation' );
+			$child = Wstm108_Files::directory( $directory );
+			$updated = Wstm108_Files::directory( $this->directory );
+			Wstm108_HostTopology::owned_child_transition( $this->identity, $updated, $child );
+			$this->identity = $updated;
+			$this->kernel_directory = array( 'directory' => $directory, 'identity' => $child );
+		}
+		self::require( $this->kernel_directory['identity'] === Wstm108_Files::directory( $this->kernel_directory['directory'] ),
+			'kernel-mount-custody-changed' );
+		return $this->kernel_directory;
+	}
+
+	public function kernel_record( string $stem, array $custody, array $files, array $intent ): void {
+		$caller = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 2 )[1] ?? array();
+		self::require( 'Wstm108_KernelMounts' === ( $caller['class'] ?? null ) && 'record_completed_capture' === ( $caller['function'] ?? null )
+			&& $custody === $this->kernel_directory && ! isset( $this->kernel_captures[ $stem ] )
+			&& 1 === preg_match( '/^kernel-[a-f0-9]{32}$/D', $stem ), 'kernel-mount-record-owner' );
+		$this->kernel_captures[ $stem ] = array( 'files' => $files, 'intent' => $intent );
 	}
 
 	private function action( string $action ): void {
@@ -387,7 +430,45 @@ final class Wstm108_HostController {
 			dirname( __DIR__ ) . '/' . $this->context['artifact_directory'] . '/context.json' );
 		if ( 'reserve' !== $action ) { $arguments[] = $action; }
 		$this->reserving_authority_child = 'reserve' === $action;
-		$capture = $this->capture( 'helper-' . $action, $arguments, dirname( __DIR__ ), $environment );
+		$allocation = null;
+		if ( Wstm108_HostTopology::stacked( $mounts['topology']['mounts'] ) ) {
+			$share = \Wstm108_KernelMounts::reserve_helper();
+			$allocation_started = hrtime( true );
+			try {
+			$custody = $this->kernel_custody();
+			$stat = file_get_contents( '/proc/self/stat' );
+			self::require( is_string( $stat ) && strlen( $stat ) <= 65536
+				&& 1 === preg_match( '/^([0-9]+) \(.+\) (.+)\n?$/D', $stat, $fields ), 'kernel-parent-start' );
+			$fields = explode( ' ', rtrim( $fields[2], "\n" ) );
+			self::require( isset( $fields[19] ) && ctype_digit( $fields[19] ), 'kernel-parent-start' );
+			$name = 'allocation-' . bin2hex( random_bytes( 16 ) ) . '.private.json';
+			$path = $custody['directory'] . '/' . $name;
+			$file = Wstm108_Files::create( $path, json_encode( array( 'version' => 1, 'action' => $action,
+				'parent_pid' => getmypid(), 'parent_start' => $fields[19],
+				'parent_namespace' => array_intersect_key( stat( '/proc/self/ns/mnt' ),
+					array_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode', 'nlink' ) ) ),
+				'context_sha256' => hash( 'sha256', json_encode( $this->context, JSON_THROW_ON_ERROR ) ),
+				'authority_sha256' => hash_file( 'sha256', __DIR__ . '/untrusted-authority.php' ),
+				'custody' => $custody, 'remaining' => $share ), JSON_THROW_ON_ERROR ) );
+			self::require( strlen( $file['bytes'] ) <= 4096, 'kernel-allocation-limit' );
+			self::sync_file( $path, $file );
+			$this->kernel_allocations[ $name ] = $file;
+			$allocation = fopen( $path, 'rb' );
+			self::require( is_resource( $allocation ), 'kernel-allocation-open' );
+			$opened = fstat( $allocation );
+			self::require( is_array( $opened ) && 0 === ftell( $allocation )
+				&& $file['identity'] === array_intersect_key( $opened,
+					array_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode', 'nlink' ) ) ), 'kernel-allocation-original' );
+			Wstm108_Files::assert_file( $path, $file );
+			$arguments[] = '--kernel-allocation';
+			} finally {
+				\Wstm108_KernelMounts::storage_interval( $allocation_started, isset( $file['bytes'] ) ? strlen( $file['bytes'] ) : 0 );
+			}
+		}
+		if ( self::class === \Wstm108_HostController::class ) { \Wstm108_KernelMounts::pause_for_capture(); }
+		try { $capture = $this->capture( 'helper-' . $action, $arguments, dirname( __DIR__ ), $environment, array(), $allocation ); }
+		finally { if ( is_resource( $allocation ) ) { fclose( $allocation ); } }
+		if ( null !== $this->kernel_directory ) { $this->import_kernel_captures(); }
 		try {
 			$state = self::exact_frame( $capture, 'WSTM108_HOST ' );
 			self::require( array_keys( $state ) === array( 'host', 'anchor', 'prepared', 'processes', 'companion', 'retirement_receipt', 'release_authorization' )
@@ -407,6 +488,36 @@ final class Wstm108_HostController {
 				'child_exit' => $capture['child_exit'], 'capture_complete' => $capture['capture_complete'] );
 			throw new RuntimeException( 'Helper action refused; original streams retained.', $code, $error );
 		}
+	}
+
+	private function import_kernel_captures(): void {
+		$started = hrtime( true );
+		try {
+		$directory = $this->kernel_custody()['directory'];
+		$names = scandir( $directory );
+		self::require( is_array( $names ) && count( $names ) <= 8192, 'kernel-original-inventory-limit' );
+		foreach ( $names as $name ) {
+			if ( '.' === $name || '..' === $name || isset( $this->kernel_allocations[ $name ] ) ) { continue; }
+			self::require( 1 === preg_match( '/^(kernel-[a-f0-9]{32})\.(stdout\.private|stderr\.private|input\.private|kernel\.private|intent\.private\.json)$/D', $name, $match ),
+				'foreign-kernel-original' );
+			$stem = $match[1];
+			if ( isset( $this->kernel_captures[ $stem ] ) ) { continue; }
+			$intent = Wstm108_Files::file( $directory . '/' . $stem . '.intent.private.json' );
+			$record = json_decode( $intent['bytes'], true, 32, JSON_THROW_ON_ERROR );
+			self::require( is_array( $record ) && array_keys( $record ) === array( 'version', 'state', 'exit', 'eof', 'argv', 'executable', 'deadline', 'streams' )
+				&& 1 === $record['version'] && 'complete' === $record['state'] && 0 === $record['exit']
+				&& array( 1 => true, 2 => true ) === $record['eof'] && is_array( $record['streams'] )
+				&& array( 'stdout', 'stderr', 'input', 'kernel' ) === array_keys( $record['streams'] ), 'kernel-helper-capture-incomplete' );
+			$files = array();
+			foreach ( $record['streams'] as $suffix => $metadata ) {
+				self::require( is_array( $metadata ) && array_keys( $metadata ) === array( 'identity', 'sha256', 'length' ), 'kernel-helper-capture-shape' );
+				$file = Wstm108_Files::read_bound( $directory . '/' . $stem . '.' . $suffix . '.private', $metadata['identity'] );
+				self::require( self::metadata( $file ) === $metadata && strlen( $file['bytes'] ) <= 16777216, 'kernel-helper-original-drift' );
+				$files[ $suffix ] = $file;
+			}
+			$this->kernel_captures[ $stem ] = array( 'files' => $files, 'intent' => $intent );
+		}
+		} finally { \Wstm108_KernelMounts::storage_interval( $started ); }
 	}
 
 	private function export( array $export_identity, array $run, string $status ): void {
@@ -452,6 +563,9 @@ final class Wstm108_HostController {
 	}
 
 	private function verify_captures(): void {
+		if ( self::class === \Wstm108_HostController::class && class_exists( 'Wstm108_KernelMounts', false ) ) {
+			\Wstm108_KernelMounts::finish_scope();
+		}
 		$this->verify();
 		$this->verify_controller_streams();
 		self::require( 0 === $this->first_failure && array() === $this->failures, 'failed-producer-cannot-release' );
@@ -459,6 +573,33 @@ final class Wstm108_HostController {
 		if ( Wstm108_HostObservation::enabled( $this->environment ) ) {
 			$names[] = 'host-observations';
 			$this->observation_captures = Wstm108_HostObservation::retained( $this->environment, $this->observation_captures );
+		}
+		if ( null !== $this->kernel_directory ) {
+			$kernel_started = hrtime( true );
+			try {
+			$names[] = 'kernel-mounts';
+			self::require( $this->kernel_directory['identity'] === Wstm108_Files::directory( $this->kernel_directory['directory'] ),
+				'kernel-mount-custody-changed' );
+			$kernel_names = array( '.', '..' );
+			foreach ( $this->kernel_allocations as $name => $file ) {
+				$kernel_names[] = $name;
+				Wstm108_Files::assert_file( $this->kernel_directory['directory'] . '/' . $name, $file );
+			}
+			foreach ( $this->kernel_captures as $stem => $capture ) {
+				$kernel_names[] = $stem . '.intent.private.json';
+				Wstm108_Files::assert_file( $this->kernel_directory['directory'] . '/' . $stem . '.intent.private.json', $capture['intent'] );
+				$record = json_decode( $capture['intent']['bytes'], true, 32, JSON_THROW_ON_ERROR );
+				self::require( 'complete' === ( $record['state'] ?? null ) && 0 === ( $record['exit'] ?? null )
+					&& array( 1 => true, 2 => true ) === ( $record['eof'] ?? null ), 'kernel-mount-capture-incomplete' );
+				foreach ( $capture['files'] as $suffix => $file ) {
+					$kernel_names[] = $stem . '.' . $suffix . '.private';
+					Wstm108_Files::assert_file( $this->kernel_directory['directory'] . '/' . $stem . '.' . $suffix . '.private', $file );
+					self::require( self::metadata( $file ) === $record['streams'][ $suffix ], 'kernel-mount-original-drift' );
+				}
+			}
+			sort( $kernel_names, SORT_STRING );
+			self::require( $kernel_names === scandir( $this->kernel_directory['directory'] ), 'foreign-or-missing-kernel-mount-capture' );
+			} finally { \Wstm108_KernelMounts::storage_interval( $kernel_started ); }
 		}
 		foreach ( $this->helper_captures as $name => $capture ) {
 			self::require( true === $capture['capture_complete'] && 0 === $capture['child_exit'], 'incomplete-producer-chain' );
@@ -528,9 +669,11 @@ final class Wstm108_HostController {
 		Wstm108_HostAuthority::outside( dirname( $output_path ), $mounts['bind_sources'], $mounts['topology'] );
 		$this->verify();
 		if ( 'admission' === $mode ) {
+			\Wstm108_KernelMounts::finish_scope();
 			$this->verify_controller_streams();
 			return 0;
 		}
+		\Wstm108_KernelMounts::finish_scope();
 		self::require( mkdir( $this->directory . '/export', 0700 ), 'exclusive-export-reservation' );
 		$export_identity = Wstm108_Files::directory( $this->directory . '/export' );
 		$updated = Wstm108_Files::directory( $this->directory );
@@ -566,6 +709,7 @@ final class Wstm108_HostController {
 			$this->export( $export_identity, $run, 'passed' );
 			$this->publish_output( $output_identity, $output_path );
 		} catch ( Throwable $error ) {
+			try { \Wstm108_KernelMounts::fail_scope(); } catch ( Throwable $finalization_error ) {}
 			$this->first_failure = 0 === $this->first_failure ? ( $error->getCode() > 0 && $error->getCode() <= 255 ? $error->getCode() : 1 ) : $this->first_failure;
 			if ( $acquired ) {
 				try { $this->action( 'restored' ); }
@@ -590,6 +734,7 @@ final class Wstm108_HostController {
 		Wstm108_Export::verify_published( $this->publication['root'], $this->publication['manifest_sha256'], $this->publication['custody'],
 			array( 'source' => $this->context['binding']['source_sha'], 'project' => $project, 'run' => $run ) );
 		$precommit = function (): bool {
+			\Wstm108_KernelMounts::finish_scope();
 			$this->verify_captures();
 			Wstm108_Files::assert_file( $this->publication_channel['path'], $this->publication_channel['file'] );
 			Wstm108_Export::verify_published( $this->publication['root'], $this->publication['manifest_sha256'], $this->publication['custody'],

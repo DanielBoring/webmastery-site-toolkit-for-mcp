@@ -126,13 +126,24 @@ final class UntrustedSyntheticTopologyTest extends TestCase {
 	}
 
 	public static function bad_sites(): array {
-		return array( array( 'changed' ), array( 'duplicate' ), array( 'already-installed' ), array( 'mixed-ending' ) );
+		return array( array( 'changed' ), array( 'duplicate' ), array( 'already-installed' ), array( 'mixed-ending' ),
+			array( 'kernel-guard-removed' ), array( 'kernel-probe-changed' ) );
 	}
 
 	/** @dataProvider bad_sites */
 	public function test_mount_installer_refuses_changed_ambiguous_or_already_installed_source( string $case ): void {
 		$source = self::source();
 		if ( 'changed' === $case ) { $source = str_replace( 'native-linux-prerequisite', 'changed-prerequisite', $source ); }
+		if ( 'kernel-guard-removed' === $case ) {
+			$guard = "self::require( Wstm108_HostObservation::enabled( getenv() ), 'ambiguous-stacked-mount' );";
+			self::assertSame( 1, substr_count( $source, $guard ) );
+			$source = str_replace( $guard, '', $source );
+		}
+		if ( 'kernel-probe-changed' === $case ) {
+			$probe = '\\Wstm108_KernelMounts::visibility( $mountinfo );';
+			self::assertSame( 1, substr_count( $source, $probe ) );
+			$source = str_replace( $probe, '\\Wstm108_KernelMounts::visibility( "forged" );', $source );
+		}
 		if ( 'duplicate' === $case ) { $source .= $source; }
 		if ( 'already-installed' === $case ) { $source = self::fixture( 'topology_admission', array( $source, '/synthetic', self::identity() ) ); }
 		if ( 'mixed-ending' === $case ) { $source = "<?php\r\n" . $source; }
