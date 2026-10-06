@@ -43,7 +43,7 @@ final class CurrentMainIntegrationTest extends TestCase {
 		self::assertStringNotContainsString( 'nullCoalesce.offset', $phpstan );
 		self::assertStringNotContainsString( 'path: includes/class-posts.php', $phpstan );
 		$lock = json_decode( $this->read( 'composer.lock' ), true, 512, JSON_THROW_ON_ERROR );
-		$versions = array_column( $lock['packages-dev'], 'version', 'name' ); self::assertSame( '2.2.15', $versions['phpstan/phpstan'] );
+		$versions = array_column( $lock['packages-dev'], 'version', 'name' ); self::assertSame( '2.2.16', $versions['phpstan/phpstan'] );
 	}
 
 	public function test_exact_additive_bridge_retains_every_historical_seal_and_guard_dependency(): void {

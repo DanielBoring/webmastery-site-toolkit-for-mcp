@@ -6,6 +6,10 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Integrate the latest main PHPStan 2.2.16 lock and unchanged database privacy
+  expiration admission harness through a new exact outer proof ledger. Restore
+  the reviewed kernel generation before its unchanged seal; retain every older
+  ledger, native boundary, and scoped observation witness.
 - Make helper reservation attempts terminal within their original query pass,
   including partially failed query-slot reservations. Prevent retry debits or
   allowance redistribution while retaining disjoint upfront parent slots and
@@ -181,6 +185,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 - Surface only closed topology reason/phase witnesses on controller admission refusal. Check diagnostic opens, partial/zero writes, stream exceptions and flush failures; retain exit 78 and explicit non-success receipts when channels fail. Raw private diagnostics and all admission/custody policies remain unchanged.
 - Fix five ShellCheck findings in runtime safeguards and host bootstrap without changing executable identity/mode checks, literal PHP snippets, refusal exits or private trap handling.
 
+
+- Admit database privacy parity probes only inside a bounded, read-only transient expiration horizon, with one shared 90-second admission budget and unchanged exact payload comparisons. Retain original responses and fail on read errors, exhausted admission, window overruns, or genuine metric drift; add boundary and failure regressions without changing production clocks, queries, privacy policy, or downstream artifact requirements.
 
 - Promote the current compatibility QA baseline and default Docker image to
   WordPress 7.1.2, retaining MCP Adapter 0.6.1 and all dependency digests.

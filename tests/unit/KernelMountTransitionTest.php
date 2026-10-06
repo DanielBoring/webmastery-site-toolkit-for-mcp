@@ -18,11 +18,11 @@ final class KernelMountTransitionTest extends TestCase {
 		self::assertSame( $map['predecessor_seal'], hash( 'sha256', $this->read( 'tests/unit/fixtures/scoped-host-observation-transition.json' ) ) );
 		Wstm167ScopedHostObservationTransition::verify_dependencies( fn( $path ) => $this->read( $path ) );
 		foreach ( $map['files'] as $path => $binding ) {
-			self::assertSame( $binding['current_raw_sha256'], hash( 'sha256', $this->read( $path ) ), $path );
+			self::assertSame( $binding['current_raw_sha256'], hash( 'sha256', Wstm167LatestMainTransition::restore( $path, $this->read( $path ) ) ), $path );
 			self::assertSame( $binding['baseline_raw_sha256'], hash( 'sha256', Wstm167KernelMountTransition::restore( $path, $this->read( $path ) ) ), $path );
 		}
 		foreach ( $map['dependencies'] as $path => $hash ) {
-			self::assertSame( $hash, hash( 'sha256', $this->read( $path ) ), $path );
+			self::assertSame( $hash, hash( 'sha256', Wstm167LatestMainTransition::restore( $path, $this->read( $path ) ) ), $path );
 		}
 	}
 
@@ -94,11 +94,11 @@ final class KernelMountTransitionTest extends TestCase {
 				$outer = str_replace(
 					"public const SEAL = '" . Wstm167KernelMountTransition::SEAL . "';",
 					"public const SEAL = '" . hash( 'sha256', $json ) . "';",
-					$this->read( 'tests/unit/fixtures/kernel-mount-transition.php' ),
+					Wstm167LatestMainTransition::restore( 'tests/unit/fixtures/kernel-mount-transition.php', $this->read( 'tests/unit/fixtures/kernel-mount-transition.php' ) ),
 					$replaced
 				);
 				self::assertSame( 1, $replaced );
-				$older = $this->read( 'tests/unit/fixtures/scoped-host-observation-transition.php' );
+				$older = Wstm167LatestMainTransition::restore( 'tests/unit/fixtures/scoped-host-observation-transition.php', $this->read( 'tests/unit/fixtures/scoped-host-observation-transition.php' ) );
 				$import = "require_once __DIR__ . '/kernel-mount-transition.php';";
 				self::assertSame( 1, substr_count( $older, $import ) );
 				$older = str_replace( $import, '', $older );
@@ -115,7 +115,7 @@ final class KernelMountTransitionTest extends TestCase {
 				try {
 					self::assertSame( $wrong, $outer_class::restore( $path, $current ) );
 					try {
-						$older_class::verify_dependencies( fn( $entry ) => $this->read( $entry ) );
+						$older_class::verify_dependencies( fn( $entry ) => Wstm167LatestMainTransition::restore( $entry, $this->read( $entry ) ) );
 						self::fail( 'Forged kernel baseline replaced the frozen observation witness.' );
 					} catch ( RuntimeException $error ) {
 						self::assertSame(
