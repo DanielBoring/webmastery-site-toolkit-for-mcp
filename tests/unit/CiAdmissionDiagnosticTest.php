@@ -15,7 +15,7 @@ final class CiAdmissionDiagnosticTest extends TestCase {
 		return file_get_contents( dirname( __DIR__, 2 ) . '/' . $path );
 	}
 
-	private function format( ?string $payload, bool $observe = false ): array {
+	private function format( ?string $payload, bool $observe = false, ?string $site = null ): array {
 		$root = dirname( __DIR__, 2 );
 		$disabled = 'exec,shell_exec,system,passthru,popen,proc_open,file_get_contents,file_put_contents,'
 			. 'fopen,glob,scandir,stat,lstat,realpath,readlink,getmypid,socket_create,stream_socket_client,curl_init';
@@ -28,6 +28,7 @@ final class CiAdmissionDiagnosticTest extends TestCase {
 			$command[] = $root . '/scripts/untrusted-admission-diagnostic.php';
 		}
 		$environment = null === $payload ? array() : array( 'WSTM108_ADMISSION_FAILURE' => $payload );
+		if ( null !== $site ) { $environment['WSTM108_ADMISSION_CALLSITE_V1'] = $site; }
 		$process = proc_open( $command, array( 0 => array( 'pipe', 'r' ), 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ), $pipes, $root, $environment );
 		self::assertIsResource( $process );
 		fclose( $pipes[0] );
@@ -41,7 +42,7 @@ final class CiAdmissionDiagnosticTest extends TestCase {
 	public function test_every_existing_allowlisted_reason_formats_without_admission_or_evidence_reads(): void {
 		foreach ( Wstm108_HostTopology::REFUSAL_REASONS as $reason ) {
 			$expected = 'Untrusted admission refused: phase=topology reason=' . $reason
-				. "; diagnostic formatting only, not admission success; QA outcome remains authoritative.\n";
+				. " callsite=unknown; diagnostic formatting only, not admission success; QA outcome remains authoritative.\n";
 			self::assertSame( array( 0, $expected, '' ), $this->format( json_encode( array( 'phase' => 'topology', 'reason' => $reason ), JSON_THROW_ON_ERROR ) ) );
 			self::assertSame( array( 0, $expected, '' ), $this->format( ' { "reason" : "' . $reason . '", "phase" : "topology" } ' ) );
 		}
@@ -84,7 +85,7 @@ final class CiAdmissionDiagnosticTest extends TestCase {
 			self::assertSame( array( 0, self::INVALID, '' ), $this->format( $payload ) );
 		}
 		self::assertSame( array( 0, 'Untrusted admission refused: phase=topology reason=' . $reason
-			. "; diagnostic formatting only, not admission success; QA outcome remains authoritative.\n", '' ),
+			. " callsite=unknown; diagnostic formatting only, not admission success; QA outcome remains authoritative.\n", '' ),
 			$this->format( $valid . str_repeat( ' ', 256 - strlen( $valid ) ) ) );
 	}
 
@@ -98,7 +99,7 @@ final class CiAdmissionDiagnosticTest extends TestCase {
 			$root . '/tests/e2e/untrusted-content-files.php',
 		), array_map( static fn( $path ) => str_replace( '\\', '/', $path ), json_decode( $result[2], true, 4, JSON_THROW_ON_ERROR ) ) );
 		$source = $this->read( 'scripts/untrusted-admission-diagnostic.php' );
-		self::assertSame( 1, substr_count( $source, 'getenv(' ) );
+		self::assertSame( 2, substr_count( $source, 'getenv(' ) );
 		self::assertStringContainsString( "getenv( 'WSTM108_ADMISSION_FAILURE' )", $source );
 		self::assertStringContainsString( 'Wstm108_HostTopology::REFUSAL_REASONS', $source );
 		self::assertDoesNotMatchRegularExpression( '/(?:\\$argv|GITHUB_OUTPUT|WSTM108_HOST_AUTHORITY_ROOT|Wstm108_HostTopology::(?!REFUSAL_REASONS)|(?:file_get_contents|fopen|exec|proc_open|shell_exec|realpath)\\s*\\()/', $source );
@@ -108,19 +109,56 @@ final class CiAdmissionDiagnosticTest extends TestCase {
 		$step = "      - name: Show closed admission refusal diagnostic (not acceptance)\n"
 			. "        if: \${{ always() }}\n        continue-on-error: true\n        env:\n"
 			. "          WSTM108_ADMISSION_FAILURE: \${{ steps.qa.outputs.untrusted_admission_failure }}\n"
+			. "          WSTM108_ADMISSION_CALLSITE_V1: \${{ steps.qa.outputs.untrusted_admission_callsite_v1 }}\n"
 			. "        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php\n";
 		foreach ( array( 'e2e-qa.yml' => 2, 'release-package-qa.yml' => 1, 'release.yml' => 1, 'compatibility-qa.yml' => 4 ) as $name => $count ) {
 			$path = '.github/workflows/' . $name;
-			$source = Wstm167CiBudgetControlTransition::restore( $path, $this->read( $path ) );
+			$source = $this->read( $path );
 			self::assertSame( $count, substr_count( $source, '        id: qa' ), $name );
-			self::assertSame( $count, substr_count( $source, $step ), $name );
+			$floor_step = str_replace( "diagnostic (not acceptance)\n", "diagnostic (not acceptance)\n"
+				. "        working-directory: \${{ github.workspace }}/candidate-floor-tools\n", $step );
+			$floor_count = 'compatibility-qa.yml' === $name ? 1 : 0;
+			self::assertSame( $count - $floor_count, substr_count( $source, $step ), $name );
+			self::assertSame( $floor_count, substr_count( $source, $floor_step ), $name );
 			self::assertSame( $count, substr_count( $source, 'untrusted_admission_failure' ), $name );
-			self::assertSame( $count, preg_match_all( '/        id: qa\n(?:(?!      - name:).)*?        run: bash scripts\/(?:e2e-test|release-qa)\.sh[^\n]*\n\n?' . preg_quote( $step, '/' ) . '/s', $source ), $name );
-			self::assertSame( str_replace( $step, '', str_replace( $step . "\n", '', $source ) ), Wstm167CiDiagnosticTransition::restore( $path, $this->read( $path ) ), $name );
+			self::assertSame( $count, preg_match_all( '/        id: qa\n(?:(?!      - name:).)*?        run: bash scripts\/(?:e2e-test|release-qa)\.sh[^\n]*\n\n?(?:'
+				. preg_quote( $step, '/' ) . '|' . preg_quote( $floor_step, '/' ) . ')/s', $source ), $name );
+			$historical = Wstm167CiBudgetControlTransition::restore( $path, $this->read( $path ) );
+			$old_step = str_replace( "          WSTM108_ADMISSION_CALLSITE_V1: \${{ steps.qa.outputs.untrusted_admission_callsite_v1 }}\n", '', $step );
+			self::assertSame( str_replace( $old_step, '', str_replace( $old_step . "\n", '', $historical ) ),
+				Wstm167CiDiagnosticTransition::restore( $path, $this->read( $path ) ), $name );
 		}
+
 		foreach ( array( 'unit-tests.yml', 'coding-standards.yml', 'workflow-lint.yml' ) as $name ) {
 			self::assertStringNotContainsString( 'untrusted-admission-diagnostic', $this->read( '.github/workflows/' . $name ) );
 		}
+	}
+
+	public function test_scalar_is_finite_and_malformed_private_or_unpaired_values_are_unknown(): void {
+		$payload = '{"phase":"topology","reason":"noncanonical-path"}';
+		foreach ( Wstm108_AdmissionCallsite::IDS as $site ) {
+			$result = $this->format( $payload, false, $site );
+			self::assertSame( 0, $result[0] );
+			self::assertSame( '', $result[2] );
+			self::assertStringContainsString( ' callsite=' . $site . ';', $result[1] );
+		}
+		foreach ( array( '', 'PRIVATE_SENTINEL', '/private/mount-root', 'mount-root ', "mount-root\n::error::PRIVATE_SENTINEL",
+			'{"site":"mount-root"}', str_repeat( 'PRIVATE_SENTINEL', 20 ), 'kernel-physical-length-extra' ) as $site ) {
+			$result = $this->format( $payload, false, $site );
+			self::assertStringContainsString( ' callsite=unknown;', $result[1] );
+			self::assertStringNotContainsString( 'PRIVATE_SENTINEL', $result[1] . $result[2] );
+		}
+		self::assertStringContainsString( ' callsite=unknown;',
+			$this->format( '{"phase":"topology","reason":"malformed-mount-record"}', false, 'mount-root' )[1] );
+		self::assertSame( self::INVALID, $this->format( 'PRIVATE_SENTINEL', false, 'mount-root' )[1] );
+		foreach ( Wstm108_AdmissionCallsite::PREREQUISITE_IDS as $site ) {
+			$result = $this->format( '{"phase":"topology","reason":"native-coordinate-prerequisite"}', false, $site );
+			self::assertStringContainsString( ' callsite=' . $site . ';', $result[1] );
+			self::assertSame( '', $result[2] );
+			self::assertStringContainsString( ' callsite=unknown;', $this->format( $payload, false, $site )[1] );
+		}
+		self::assertStringContainsString( ' callsite=unknown;',
+			$this->format( '{"phase":"topology","reason":"native-coordinate-prerequisite"}', false, 'mount-root' )[1] );
 	}
 
 	public function test_outer_reversal_preserves_original_bytes_seals_and_source_fixes(): void {

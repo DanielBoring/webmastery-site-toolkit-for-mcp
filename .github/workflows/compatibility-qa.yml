@@ -122,6 +122,7 @@ jobs:
         continue-on-error: true
         env:
           WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}
+          WSTM108_ADMISSION_CALLSITE_V1: ${{ steps.qa.outputs.untrusted_admission_callsite_v1 }}
         run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php
       - name: Observe exact candidate compatibility (PHP 8.0 remains required)
         id: runtime
@@ -389,6 +390,7 @@ jobs:
         continue-on-error: true
         env:
           WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}
+          WSTM108_ADMISSION_CALLSITE_V1: ${{ steps.qa.outputs.untrusted_admission_callsite_v1 }}
         run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php
       - name: Verify independently published untrusted export
         id: untrusted-export-check
@@ -599,6 +601,7 @@ jobs:
         continue-on-error: true
         env:
           WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}
+          WSTM108_ADMISSION_CALLSITE_V1: ${{ steps.qa.outputs.untrusted_admission_callsite_v1 }}
         run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php
       - name: Verify independently published untrusted export
         id: untrusted-export-check
@@ -772,6 +775,7 @@ jobs:
         continue-on-error: true
         env:
           WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}
+          WSTM108_ADMISSION_CALLSITE_V1: ${{ steps.qa.outputs.untrusted_admission_callsite_v1 }}
         run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php
       - name: Verify independently published untrusted export
         id: untrusted-export-check

@@ -363,4 +363,31 @@ final class UntrustedRuntimeDiagnosticTest extends TestCase {
 			'native-authority-reader-failure-original23',
 		), $result['passed'] );
 	}
+
+	public function test_outer_terminal_capture_accepts_only_exact_current_unknown_scalar(): void {
+		$method = new ReflectionMethod( Wstm108_DiagnosticControls::class, 'terminal_output_matches' );
+		$method->setAccessible( true );
+		$output = fopen( 'php://memory', 'w+b' ); $diagnostic = fopen( 'php://memory', 'w+b' );
+		self::assertIsResource( $output ); self::assertIsResource( $diagnostic );
+		try {
+			$result = Wstm108_HostController::report_terminal_failure(
+				new RuntimeException( 'WSTM108 BLOCKED topology: partial-mount-table', 78 ), $diagnostic, $output );
+			self::assertSame( 'reported', $result['status'] );
+			self::assertTrue( rewind( $output ) );
+			$scalar = stream_get_contents( $output );
+			self::assertSame( "untrusted_admission_callsite_v1=unknown\n", $scalar );
+			self::assertTrue( $method->invoke( null, $scalar, true ) );
+			self::assertTrue( $method->invoke( null, '', false ) );
+			self::assertFalse( $method->invoke( null, '', true ) );
+			self::assertFalse( $method->invoke( null, $scalar, false ) );
+			foreach ( array( 'PRIVATE_SENTINEL', $scalar . 'PRIVATE_SENTINEL', $scalar . $scalar,
+				str_replace( "\n", "\r\n", $scalar ), str_replace( "\n", '', $scalar ),
+				"\0" . $scalar, "\x1b" . $scalar, 'untrusted_admission_callsite_v1=mount-root' . "\n",
+				'untrusted_admission_failure={"phase":"topology","reason":"partial-mount-table"}' . "\n" . $scalar ) as $bad ) {
+				self::assertFalse( $method->invoke( null, $bad, true ), 'Malformed, private or false-provenance output must remain rejected.' );
+			}
+		} finally {
+			self::assertTrue( fclose( $output ) && fclose( $diagnostic ) );
+		}
+	}
 }

@@ -44,12 +44,14 @@ final class CiBudgetControlFollowupTest extends TestCase {
 		self::assertSame( 1, preg_match( '/      - name: Show closed admission refusal diagnostic \(not acceptance\)\n(.*?)(?=      - name:)/s', $job[1], $diagnostic ) );
 		self::assertSame( $override . "        if: \${{ always() }}\n        continue-on-error: true\n        env:\n"
 			. '          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}' . "\n"
+			. '          WSTM108_ADMISSION_CALLSITE_V1: ${{ steps.qa.outputs.untrusted_admission_callsite_v1 }}' . "\n"
 			. "        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php\n", $diagnostic[1] );
 		self::assertSame( 1, preg_match( '/      - name: Run unchanged full candidate E2E harness\n(.*?)(?=      - name:)/s', $job[1], $qa ) );
 		self::assertStringNotContainsString( 'working-directory:', $qa[1] );
 		self::assertStringContainsString( 'run: bash scripts/e2e-test.sh all', $qa[1] );
 		self::assertStringNotContainsString( 'candidate-floor-tools', $qa[1] );
 		self::assertStringNotContainsString( 'untrusted_admission_failure', $qa[1] );
+		self::assertStringNotContainsString( 'untrusted_admission_callsite_v1', $qa[1] );
 		self::assertSame( 4, substr_count( $current, 'scripts/untrusted-admission-diagnostic.php' ) );
 	}
 

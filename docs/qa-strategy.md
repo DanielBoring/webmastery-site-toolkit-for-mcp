@@ -67,6 +67,69 @@ arming their cleanup. Contract-only lifecycle behavior remains separate.
 
 ### Kernel mount verification
 
+Terminal `noncanonical-path` diagnostics distinguish decoded mount roots/points,
+legacy source/input/physical callers and kernel selected/input/source/held/path/
+chunk callers. Kernel IDs end in `length` or `canonical`; only the existing
+model length/canonical conjunction is split, in its original evaluation order.
+Neither validator accepts new paths. A valid decoded root longer than 4096
+and a shorter valid root whose computed backing coordinate exceeds 4096 both
+remain reproducible model refusals. Both computed-coordinate controls report
+`kernel-physical-length`; that ID distinguishes the predicate, not the root
+length or private bytes, and neither control attributes a hosted failure.
+
+The original controller entry sets `zend.exception_ignore_args=1` once and
+requires the exact read-back value. Classification requires weak object-identity
+custody from argument-free exception creation, exact trusted guard/caller
+file/line/class/function metadata and a matching terminal classification.
+Unverified settings, foreign entries, unfamiliar frames, altered traces and
+unregistered objects produce `unknown`; they do not authorize admission.
+No argument/object/message/path values are serialized. Each terminal channel's
+combined old witness and new scalar payload is at most 256 bytes, and each
+scalar is at most 32 bytes. Both use the existing terminal writer, without
+additional evidence reads, files, budgets, retries, grants or cleanup exemptions.
+The passive classifier resides in the already-hashed topology source file;
+it does not add a provenance leaf, capture file or source-copy dependency.
+
+One ordinary controller invocation exits after its one terminal failure.
+GitHub jobs and their `qa` steps have separate output channels. A repeated
+report nevertheless overwrites the scalar with `unknown` when unassignable;
+the formatter never pairs a noncanonical callsite with a different reason.
+Original controller stdout/stderr remain exclusively retained in the private
+bootstrap child before PHP starts; public diagnostics do not upload those
+originals. The formatter and its eight ENV-only steps cannot replace exit 78
+or any original runtime/release gate.
+
+The same provenance-gated classifier also maps every existing
+`native-coordinate-prerequisite` guard, including constant-default inherited
+owner guards and direct serialization refusals. IDs distinguish platform,
+scope/reservation, safe-exec schema/process/credentials/current-capsets/lane,
+deadlines, executable checks, parent/child coherence and inherited fd5 custody.
+Compound predicates and loop bodies retain one guard ID: an ID is not a report
+of which credential, capset, path, loop member or subcondition failed. The
+public reason alone is not unique and cannot establish an unsafe credential
+configuration. Caller files and invocation lines must match the finite reviewed
+source bindings. Direct serialization guards have finite reserved IDs, but no
+current reviewed source caller: they remain `unknown` rather than accepting a
+new or builtin caller merely because it points somewhere inside a source file;
+uninitialized authority subprocesses and non-source calls remain `unknown`.
+No prerequisite predicate or control flow, launcher, credential transition,
+evidence read or authority was changed.
+
+Synthetic outer diagnostic controls bind the controller's fixed output fd9
+to their own exclusive private0600 capture, independently of stdout/stderr.
+Untyped synthetic terminal exceptions must emit exactly the current
+`untrusted_admission_callsite_v1=unknown` line there; cases that never invoke
+the terminal must leave it empty. Unknown is not mapping proof. Extra bytes,
+known IDs without provenance, private sentinels or typed witnesses are refused.
+Existing empty-stderr, original-exit, reader-noise, privacy and I/O-fault
+assertions remain unchanged. This prevents incidental inherited descriptors
+from routing a finite public diagnostic into another synthetic channel.
+Guard coordinates are compiler-specific, not line ranges or aliases: PHP8.0's
+exact closing-token line is mapped to the reviewed opening-token guard; later
+engines retain the exact opening-token binding. Tests verify both coordinates
+against source tokens, reject the other compiler's multiline coordinate and
+keep unchanged full native trace/creation custody checks.
+
 Strict `mounts()`, `coordinate()` and `outside()` models still refuse stacked
 tables without live native evidence. Structural parsing preserves all rows and
 their order; it is not admission. Native stacked admission observes `/` and

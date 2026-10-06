@@ -29,18 +29,25 @@ final class Wstm108_DiagnosticControls {
 		throw new LogicException( 'Expected diagnostic refusal did not occur.' );
 	}
 
-	private static function run( array $arguments, string $cwd, array $environment, string $stem, bool $stdout_full = false ): array {
+	private static function run( array $arguments, string $cwd, array $environment, string $stem, bool $stdout_full = false, ?string $terminal_output = null ): array {
 		$mask = umask( 0077 );
 		try {
 			$stdout = $stdout_full ? fopen( '/dev/full', 'wb' ) : fopen( $stem . '.stdout.private', 'x+b' );
 			$stderr = fopen( $stem . '.stderr.private', 'x+b' );
+			$output = null === $terminal_output ? null : fopen( $terminal_output, 'x+b' );
 		} finally { umask( $mask ); }
 		self::require( is_resource( $stdout ) && is_resource( $stderr ) );
-		$process = proc_open( $arguments, array( 0 => array( 'file', '/dev/null', 'r' ), 1 => $stdout, 2 => $stderr ), $pipes, $cwd, $environment );
+		self::require( null === $terminal_output || is_resource( $output ) );
+		$descriptors = array( 0 => array( 'file', '/dev/null', 'r' ), 1 => $stdout, 2 => $stderr );
+		if ( null !== $terminal_output ) { $descriptors[9] = $output; }
+		$process = proc_open( $arguments, $descriptors, $pipes, $cwd, $environment );
 		self::require( is_resource( $process ) );
 		$status = proc_close( $process );
 		self::require( fclose( $stdout ) && fclose( $stderr ) );
-		return array( 'exit' => $status, 'stdout' => $stdout_full ? null : file_get_contents( $stem . '.stdout.private' ), 'stderr' => file_get_contents( $stem . '.stderr.private' ) );
+		if ( null !== $terminal_output ) { self::require( fclose( $output ) ); }
+		$result = array( 'exit' => $status, 'stdout' => $stdout_full ? null : file_get_contents( $stem . '.stdout.private' ), 'stderr' => file_get_contents( $stem . '.stderr.private' ) );
+		if ( null !== $terminal_output ) { $result['terminal_output'] = file_get_contents( $terminal_output ); }
+		return $result;
 	}
 
 	private static function fault_helper( string $root ): string {
@@ -159,7 +166,11 @@ PHP;
 			$environment['WSTM108_MOCK_PHP'] = $case . '/reader';
 		}
 		$stdout_full = 'outer-diagnostic-stdout-full' === $name;
-		$result = self::run( array( '/bin/bash', $case . '/outer.sh' ), $case, $environment, $case . '/outer', $stdout_full );
+		$result = self::run( array( '/bin/bash', $case . '/outer.sh' ), $case, $environment, $case . '/outer', $stdout_full,
+			$case . '/terminal-output.private' );
+		$terminal_ran = in_array( $name, array( 'outer-mapped', 'outer-unmapped', 'outer-write-collision',
+			'outer-mapped-exit43', 'outer-diagnostic-stdout-full' ), true );
+		self::require( self::terminal_output_matches( $result['terminal_output'], $terminal_ran ) );
 		$labels = array(
 			'outer-mapped' => 'topology_code=3; original_exit=78',
 			'outer-unmapped' => 'unmapped; original_exit=78',
@@ -190,6 +201,11 @@ PHP;
 		if ( 'outer-success' === $name ) {
 			self::require( array( '.', '..' ) === scandir( $case . '/first-package-diagnostic' ) );
 		}
+	}
+
+	private static function terminal_output_matches( string $bytes, bool $terminal_ran ): bool {
+		// These controls throw untyped synthetic exceptions, never source-owned mapping proof.
+		return ( $terminal_ran ? "untrusted_admission_callsite_v1=unknown\n" : '' ) === $bytes;
 	}
 
 	private static function native_authority_boundary( string $root, int $exit, string $fault = '' ): void {

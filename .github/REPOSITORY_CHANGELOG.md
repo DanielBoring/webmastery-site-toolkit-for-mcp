@@ -6,6 +6,42 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add an exact-byte outer proof for synthetic terminal-output descriptor binding.
+  Restore the approved 505-path callsite baseline before its unchanged seal
+  and older witnesses; keep actual execution on current source and retain
+  malformed-output, privacy, I/O-fault and wrong-baseline rejection controls.
+
+- Bind synthetic outer diagnostic controls' fixed terminal output descriptor
+  to an exclusive private capture and validate its exact unknown scalar.
+  Preserve stdout/stderr, privacy, I/O-fault and original-exit assertions;
+  do not depend on incidental inherited descriptor allocation after the
+  bounded callsite diagnostic was introduced.
+
+- Bind terminal callsite diagnostics through a new exact outer source proof.
+  Preserve every accepted ledger and seal, restore the published 499-path
+  generation for historical comparisons only, and retain current-source runtime
+  execution and diagnostic controls unchanged.
+
+- Correct terminal prerequisite attribution on PHP8.0 by binding its exact
+  closing-token call coordinates separately from later engines' opening-token
+  coordinates. Keep source ownership, full native creation/trace custody and
+  every original admission predicate unchanged; do not accept line ranges or
+  both compiler forms as aliases.
+
+- Extend the same bounded, provenance-checked terminal diagnostic to every
+  existing native-coordinate prerequisite guard, including inherited owner
+  defaults. Keep compound predicates, authority, credentials, all 37 reasons
+  and terminal I/O unchanged; reject cross-reason or forged attribution rather
+  than inferring a host cause from the public reason alone.
+
+- Add finite source-bound terminal callsite diagnostics for existing canonical
+  path refusals, including kernel length versus computed-physical cases.
+  Require independently verified argument-free exception creation; report
+  unknown on missing or changed provenance. Retain all 37 closed reasons,
+  two-key witnesses, original terminal I/O outcomes and authoritative QA gates.
+  Pass only bounded allowlisted scalars through the eight ENV-only diagnostic
+  steps; preserve private original streams and every historical proof seal.
+
 - Integrate the latest main PHPStan 2.2.16 lock and unchanged database privacy
   expiration admission harness through a new exact outer proof ledger. Restore
   the reviewed kernel generation before its unchanged seal; retain every older

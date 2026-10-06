@@ -76,8 +76,9 @@ final class KernelMountTransitionTest extends TestCase {
 		public function test_resealing_a_wrong_kernel_baseline_cannot_replace_the_frozen_observation_witness(): void {
 			$path = 'scripts/untrusted-host-topology.php';
 			$map = Wstm167KernelMountTransition::load();
-			$current = $this->read( $path );
-			$wrong = Wstm167KernelMountTransition::restore( $path, $current ) . "\nforeign_guard";
+			$raw_current = $this->read( $path );
+			$current = Wstm167LatestMainTransition::restore( $path, $raw_current );
+			$wrong = Wstm167KernelMountTransition::restore( $path, $raw_current ) . "\nforeign_guard";
 			$map['files'][ $path ]['hunks'][] = array(
 				'start' => count( explode( "\n", $current ) ),
 				'before' => array( 'foreign_guard' ),

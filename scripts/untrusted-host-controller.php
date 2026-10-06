@@ -36,13 +36,17 @@ final class Wstm108_HostController {
 			$json = json_encode( $witness, JSON_THROW_ON_ERROR );
 			$private .= 'WSTM108_ADMISSION_REFUSAL_V1 ' . $json . "\n";
 		}
+		$site = \Wstm108_AdmissionCallsite::identify( $error );
+		$private .= 'WSTM108_ADMISSION_CALLSITE_V1 ' . $site . "\n";
+		$public = ( null === $witness ? '' : 'untrusted_admission_failure=' . $json . "\n" )
+			. 'untrusted_admission_callsite_v1=' . $site . "\n";
 		$channels = array( 'diagnostic' => self::write_terminal_record( $diagnostic, $private ), 'output' => 'not-requested' );
 		if ( in_array( $output_status, array( 'open-refused', 'open-exception' ), true ) ) {
 			$channels['output'] = $output_status;
 		} elseif ( 'opened' !== $output_status ) {
 			$channels['output'] = 'unavailable';
-		} elseif ( null !== $witness ) {
-			$channels['output'] = self::write_terminal_record( $output, 'untrusted_admission_failure=' . $json . "\n" );
+		} elseif ( null !== $witness || is_resource( $output ) ) {
+			$channels['output'] = self::write_terminal_record( $output, $public );
 		}
 		$result = array( 'status' => 'reported', 'channels' => $channels, 'outcome_delivery' => array() );
 		if ( 'written' === $channels['diagnostic'] && in_array( $channels['output'], array( 'written', 'not-requested' ), true ) ) { return $result; }
@@ -749,6 +753,7 @@ final class Wstm108_HostController {
 }
 
 if ( realpath( $_SERVER['SCRIPT_FILENAME'] ?? '' ) === __FILE__ ) {
+	\Wstm108_AdmissionCallsite::initialize();
 	try {
 		if ( count( $argv ) !== 9 ) { throw new RuntimeException( 'Explicit bootstrap arguments required.' ); }
 		$controller = new Wstm108_HostController( $argv[1], Wstm108_HostController::identity( $argv[4] ), getenv() );

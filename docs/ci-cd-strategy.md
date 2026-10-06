@@ -134,7 +134,9 @@ The production environment, main-history/PR rules, and tag protections were last
 
 Every runtime `qa` step in Docker E2E, release/package QA and compatibility
 jobs is followed by an `always()` diagnostic step. It passes only the existing
-`untrusted_admission_failure` output via `WSTM108_ADMISSION_FAILURE`, never
+`untrusted_admission_failure` output via `WSTM108_ADMISSION_FAILURE` and the
+finite `untrusted_admission_callsite_v1` scalar via
+`WSTM108_ADMISSION_CALLSITE_V1`, never
 interpolates that value into a shell command, and uses the topology allowlist
 already approved by the controller. The formatter accepts only a two-string
 `phase`/`reason` JSON object (at most 256 bytes, unescaped members), with phase
@@ -142,6 +144,22 @@ already approved by the controller. The formatter accepts only a two-string
 phases/reasons, malformed or oversized payloads produce a fixed invalid message;
 absent output produces a fixed unavailable message. No raw payload, private
 stream, authority path or exception is logged or uploaded.
+
+The callsite scalar accepts only the fixed controller-owned IDs (32 bytes
+maximum). Missing, foreign or malformed values become `unknown`; a known site
+is displayed only alongside its unchanged `noncanonical-path` or
+`native-coordinate-prerequisite` witness, never
+inferred from its phase or exception class. See
+[terminal kernel diagnostics](qa-strategy.md#kernel-mount-verification) for the
+argument-free creation and exact trusted-callsite requirements. The scalar
+shares the existing bounded terminal write with the old witness; it is not
+another evidence file or authority channel. Original bootstrap stdout/stderr
+remain private. Each ordinary controller exits after one terminal report;
+repeated reports clear unattributable scalars, and jobs/steps do not share
+their output channels.
+Prerequisite IDs map exact existing guards, not individual members of compound
+conditions. A package refusal's reason does not itself identify credentials,
+fsync, a deadline or another prerequisite; unknown attribution is not guessed.
 
 Formatter exit zero means only formatting completed, not that admission passed.
 The best-effort diagnostic cannot override the original QA failure (including

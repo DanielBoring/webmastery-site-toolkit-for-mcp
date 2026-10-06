@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/terminal-callsite-transition.php';
+
 /** Exact latest-main integration before the immutable kernel-mount proof. */
 final class Wstm167LatestMainTransition {
 	public const SEAL = '88cb8434798ed0030deba5d3ee14ded9930f38800734f1f56b2e0b75e592ff09';
@@ -22,9 +24,13 @@ final class Wstm167LatestMainTransition {
 	}
 
 	public static function verify_dependencies( callable $read ): void {
+		Wstm167TerminalCallsiteTransition::verify_dependencies( $read );
 		$map = self::load();
 		foreach ( $map['dependencies'] as $path => $hash ) {
 			$source = $read( $path );
+			if ( is_string( $source ) ) {
+				$source = Wstm167TerminalCallsiteTransition::restore( $path, $source );
+			}
 			if ( ! is_string( $source ) || ! hash_equals( $hash, hash( 'sha256', $source ) ) ) {
 				$context = is_string( $source ) && in_array( $path, $map['source_dependencies'], true )
 					? 'CI diagnostic current source drift: ' : 'CI diagnostic dependency drift: ';
@@ -42,6 +48,7 @@ final class Wstm167LatestMainTransition {
 	}
 
 	public static function restore( string $path, string $source, string $context = 'CI diagnostic current source drift' ): string {
+		$source = Wstm167TerminalCallsiteTransition::restore( $path, $source, $context );
 		$map = self::load();
 		if ( ! isset( $map['files'][ $path ] ) ) { return $source; }
 		$binding = $map['files'][ $path ];

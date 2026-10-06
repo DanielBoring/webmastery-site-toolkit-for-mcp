@@ -109,7 +109,7 @@ final class LatestMainIntegrationTest extends TestCase {
 			$outer = str_replace(
 				"public const SEAL = '" . Wstm167LatestMainTransition::SEAL . "';",
 				"public const SEAL = '" . hash( 'sha256', $json ) . "';",
-				$this->read( 'tests/unit/fixtures/latest-main-transition.php' ),
+				Wstm167TerminalCallsiteTransition::restore( 'tests/unit/fixtures/latest-main-transition.php', $this->read( 'tests/unit/fixtures/latest-main-transition.php' ) ),
 				$replaced
 			);
 			self::assertSame( 1, $replaced );
@@ -127,7 +127,7 @@ final class LatestMainIntegrationTest extends TestCase {
 			try {
 				self::assertSame( $wrong, $outer_class::restore( $path, $current ) );
 				try {
-					$kernel_class::verify_dependencies( fn( $entry ) => $outer_class::restore( $entry, $this->read( $entry ) ) );
+					$kernel_class::verify_dependencies( fn( $entry ) => $outer_class::restore( $entry, Wstm167TerminalCallsiteTransition::restore( $entry, $this->read( $entry ) ) ) );
 					self::fail( 'Resealed latest baseline replaced frozen kernel proof.' );
 				} catch ( RuntimeException $error ) {
 					self::assertSame(

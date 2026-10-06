@@ -59,8 +59,10 @@ final class UntrustedHostControllerTest extends TestCase {
 		fclose( $pipes[1] ); fclose( $pipes[2] ); fclose( $pipes[9] );
 		self::assertSame( 1, proc_close( $process ) );
 		self::assertSame( '', $output );
-		self::assertSame( '', $fd9, 'Unknown exceptions must not publish an admission witness.' );
-		$generic = "WSTM108 controller refused; private diagnostic channel retained; terminal release outcome must not be inferred.\n";
+		self::assertSame( 'Linux' === PHP_OS_FAMILY ? "untrusted_admission_callsite_v1=unknown\n" : '', $fd9,
+			'Unknown exceptions must not publish an admission witness.' );
+		$generic = "WSTM108 controller refused; private diagnostic channel retained; terminal release outcome must not be inferred.\n"
+			. "WSTM108_ADMISSION_CALLSITE_V1 unknown\n";
 		if ( 'Linux' === PHP_OS_FAMILY ) {
 			self::assertSame( $generic, $diagnostic );
 		} else {
@@ -96,6 +98,7 @@ final class UntrustedHostControllerTest extends TestCase {
 		self::assertSame( '', $output );
 		self::assertSame(
 			"WSTM108 controller refused; private diagnostic channel retained; terminal release outcome must not be inferred.\n"
+			. "WSTM108_ADMISSION_CALLSITE_V1 unknown\n"
 			. "\nWSTM108_DIAGNOSTIC_IO_REFUSAL_V1 {\"phase\":\"diagnostic-report\",\"status\":\"diagnostic-io-refused\",\"diagnostic\":\"written\",\"output\":\"open-refused\"}\n",
 			$diagnostic );
 	}
@@ -111,10 +114,12 @@ final class UntrustedHostControllerTest extends TestCase {
 		$diagnostic = stream_get_contents( $pipes[2] );
 		fclose( $pipes[1] ); fclose( $pipes[2] );
 		self::assertSame( 78, proc_close( $process ) );
-		self::assertSame( "untrusted_admission_failure={\"phase\":\"topology\",\"reason\":\"malformed-mount-record\"}\n", $output );
+		self::assertSame( "untrusted_admission_failure={\"phase\":\"topology\",\"reason\":\"malformed-mount-record\"}\n"
+			. "untrusted_admission_callsite_v1=unknown\n", $output );
 		self::assertSame(
 			"WSTM108 controller refused; private diagnostic channel retained; terminal release outcome must not be inferred.\n"
-			. "WSTM108_ADMISSION_REFUSAL_V1 {\"phase\":\"topology\",\"reason\":\"malformed-mount-record\"}\n",
+			. "WSTM108_ADMISSION_REFUSAL_V1 {\"phase\":\"topology\",\"reason\":\"malformed-mount-record\"}\n"
+			. "WSTM108_ADMISSION_CALLSITE_V1 unknown\n",
 			$diagnostic );
 		self::assertStringNotContainsString( 'PRIVATE_SECRET_SENTINEL', $output . $diagnostic );
 	}
@@ -129,7 +134,8 @@ final class UntrustedHostControllerTest extends TestCase {
 			"WSTM108_ADMISSION_REFUSAL_V1 {\"phase\":\"topology\",\"reason\":\"daemon-descriptors-inaccessible\"}\n",
 			stream_get_contents( $diagnostic ) );
 		self::assertSame(
-			"untrusted_admission_failure={\"phase\":\"topology\",\"reason\":\"daemon-descriptors-inaccessible\"}\n",
+			"untrusted_admission_failure={\"phase\":\"topology\",\"reason\":\"daemon-descriptors-inaccessible\"}\n"
+			. "untrusted_admission_callsite_v1=unknown\n",
 			stream_get_contents( $output ) );
 		self::assertSame( 78, $error->getCode() );
 		fclose( $diagnostic ); fclose( $output );
@@ -146,9 +152,10 @@ final class UntrustedHostControllerTest extends TestCase {
 			Wstm108_HostController::report_terminal_failure( $error, $diagnostic, $output );
 			rewind( $diagnostic ); rewind( $output );
 			self::assertSame(
-				"WSTM108 controller refused; private diagnostic channel retained; terminal release outcome must not be inferred.\n",
+				"WSTM108 controller refused; private diagnostic channel retained; terminal release outcome must not be inferred.\n"
+				. "WSTM108_ADMISSION_CALLSITE_V1 unknown\n",
 				stream_get_contents( $diagnostic ) );
-			self::assertSame( '', stream_get_contents( $output ) );
+			self::assertSame( "untrusted_admission_callsite_v1=unknown\n", stream_get_contents( $output ) );
 			fclose( $diagnostic ); fclose( $output );
 		}
 	}
@@ -215,9 +222,11 @@ final class UntrustedHostControllerTest extends TestCase {
 		$result = Wstm108_HostController::report_terminal_failure( new Wstm108_TopologyRefusal( 'nonlocal-endpoint' ), $diagnostic, $output );
 		self::assertSame( array( 'status' => 'reported', 'channels' => array( 'diagnostic' => 'written', 'output' => 'written' ),
 			'outcome_delivery' => array() ), $result );
-		self::assertStringEndsWith( "WSTM108_ADMISSION_REFUSAL_V1 {\"phase\":\"topology\",\"reason\":\"nonlocal-endpoint\"}\n",
+		self::assertStringEndsWith( "WSTM108_ADMISSION_REFUSAL_V1 {\"phase\":\"topology\",\"reason\":\"nonlocal-endpoint\"}\n"
+			. "WSTM108_ADMISSION_CALLSITE_V1 unknown\n",
 			Wstm108_TerminalReportStream::$states[ $private_key ]['bytes'] );
-		self::assertSame( "untrusted_admission_failure={\"phase\":\"topology\",\"reason\":\"nonlocal-endpoint\"}\n",
+		self::assertSame( "untrusted_admission_failure={\"phase\":\"topology\",\"reason\":\"nonlocal-endpoint\"}\n"
+			. "untrusted_admission_callsite_v1=unknown\n",
 			Wstm108_TerminalReportStream::$states[ $output_key ]['bytes'] );
 		fclose( $diagnostic ); fclose( $output );
 	}

@@ -104,7 +104,8 @@ final class Wstm108_KernelMountModel {
 	}
 
 	public static function path( string $path ): string {
-		self::require( strlen( $path ) <= 4096 && '' !== $path && '/' === $path[0]
+		self::require( strlen( $path ) <= 4096, 'noncanonical-path' );
+		self::require( '' !== $path && '/' === $path[0]
 			&& ! preg_match( '/[\x00-\x1f\x7f]|\/\/|(?:^|\/)\.\.?(?:\/|$)/', $path ), 'noncanonical-path' );
 		return '/' === $path ? '/' : rtrim( $path, '/' );
 	}

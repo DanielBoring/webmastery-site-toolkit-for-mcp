@@ -20,8 +20,11 @@ try {
 			&& in_array( $witness->reason, Wstm108_HostTopology::REFUSAL_REASONS, true )
 			&& 1 === preg_match( '/\A\s*\{\s*"(phase|reason)"\s*:\s*"[a-z-]+"\s*,\s*"(phase|reason)"\s*:\s*"[a-z-]+"\s*\}\s*\z/D', $payload );
 		if ( $valid ) {
+			$site = getenv( 'WSTM108_ADMISSION_CALLSITE_V1' );
+			$site = is_string( $site ) && strlen( $site ) <= Wstm108_AdmissionCallsite::MAX_SCALAR_BYTES
+				&& Wstm108_AdmissionCallsite::allows( $witness->reason, $site ) ? $site : 'unknown';
 			echo 'Untrusted admission refused: phase=topology reason=' . $witness->reason
-				. "; diagnostic formatting only, not admission success; QA outcome remains authoritative.\n";
+				. ' callsite=' . $site . "; diagnostic formatting only, not admission success; QA outcome remains authoritative.\n";
 		} else {
 			echo "Untrusted admission diagnostic invalid; QA outcome remains authoritative.\n";
 		}
