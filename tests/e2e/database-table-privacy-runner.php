@@ -28,13 +28,41 @@ function wstm111_privacy_check( string $id, array $predicates, $response ): void
 
 function wstm111_privacy_pair( string $boundary, callable $execute, array $private_names ): array {
 	global $wpdb;
+	$remaining = $GLOBALS['wstm111_privacy_admission_deadline'] - time();
+	if ( $remaining < 15 ) {
+		throw new RuntimeException( 'The shared expiration admission budget is exhausted.' );
+	}
+	$window = Webmastery_MCP_Database_Table_Privacy_Fixture::expiration_window(
+		static function ( int $now, int $end ) use ( $wpdb ) {
+			$deadline = $wpdb->get_var( $wpdb->prepare(
+				"SELECT MIN(CAST(option_value AS UNSIGNED)) FROM {$wpdb->options}
+				WHERE option_name LIKE %s AND CAST(option_value AS UNSIGNED) BETWEEN %d AND %d",
+				$wpdb->esc_like( '_transient_timeout_' ) . '%',
+				$now,
+				$end
+			) );
+			if ( '' !== $wpdb->last_error ) {
+				throw new RuntimeException( 'Could not inspect the transient expiration admission window.' );
+			}
+			return $deadline;
+		},
+		'time',
+		'sleep',
+		15,
+		$remaining - 15
+	);
+	if ( ! Webmastery_MCP_Database_Table_Privacy_Fixture::in_expiration_window( $window, time() ) ) {
+		throw new RuntimeException( 'The expiration admission window elapsed before the first call.' );
+	}
 	$default = $execute( array() );
 	$explicit = $execute( array( 'include_table_names' => false ) );
 	$raw = $execute( array( 'include_table_names' => true ) );
+	$finished = time();
 	$rows = $default['data']['table_sizes'] ?? array();
 	$raw_rows = $raw['data']['table_sizes'] ?? array();
 	$mapping = $wpdb->tables( 'all', true );
 	$predicates = array(
+		'completed_in_expiration_window' => Webmastery_MCP_Database_Table_Privacy_Fixture::in_expiration_window( $window, $finished ),
 		'default_success' => true === ( $default['success'] ?? false ),
 		'explicit_false_success' => true === ( $explicit['success'] ?? false ),
 		'opt_in_success' => true === ( $raw['success'] ?? false ),
@@ -67,7 +95,7 @@ function wstm111_privacy_pair( string $boundary, callable $execute, array $priva
 		}
 		$predicates[ "owned_table_{$index}_opt_in_present" ] = in_array( $name, array_column( $raw_rows, 'table' ), true );
 	}
-	wstm111_privacy_check( "{$boundary}/default-explicit-opt-in", $predicates, array( 'default' => $default, 'explicit_false' => $explicit, 'raw_opt_in' => $raw ) );
+	wstm111_privacy_check( "{$boundary}/default-explicit-opt-in", $predicates, array( 'expiration_window' => $window, 'finished' => $finished, 'default' => $default, 'explicit_false' => $explicit, 'raw_opt_in' => $raw ) );
 	return array_column( $raw_rows, 'table' );
 }
 
@@ -186,6 +214,7 @@ $GLOBALS['wstm111_privacy_report'] = array(
 $queries = array();
 $actors = array();
 $run = 'wstm111-' . wp_generate_uuid4();
+$GLOBALS['wstm111_privacy_admission_deadline'] = time() + 90;
 $observe = static function ( $query ) use ( &$queries ) {
 	$queries[] = $query;
 	return $query;

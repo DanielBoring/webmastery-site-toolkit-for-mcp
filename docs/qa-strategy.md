@@ -25,6 +25,8 @@ Related strategy guides:
 
 Static QA runs the full toolchain on PHP 8.0 and syntax checks on PHP 8.4; Unit Tests run on both versions. Each workflow has a stable aggregate result. `Docker QA gate` reports successful change detection and the required Docker results; failure-induced skips cannot pass it. A separate workflow lint check runs actionlint, ShellCheck, and zizmor without making local PHP QA depend on Docker.
 
+Database privacy's three real responses retain exact full-payload metric/order parity. To avoid comparing opposite sides of an existing transient's natural expiration, the disposable runner first admits a read-only 15-second expiration horizon, bounded by one shared 90-second run deadline. It uses production timeout conversion and the strict expiration boundary, records no transient identities/values, and never retries failed payloads. Exhaustion, SQL failure, clock/window overrun, newly changed expirations, and other metric drift remain failures with original responses retained. Synthetic expiration tests supplement, rather than replace, the genuine native/HTTP original-package proofs described in `tests/e2e/README.md`.
+
 The current compatibility baseline is WordPress 7.1.2 with MCP Adapter 0.6.1.
 The default Docker image is `wordpress:7.1.2-php8.2-apache`; other pinned
 dependencies and their digests are unchanged. `readme.txt` retains the
