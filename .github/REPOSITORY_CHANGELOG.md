@@ -6,6 +6,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Admit database privacy parity probes only inside a bounded, read-only transient expiration horizon, with one shared 90-second admission budget and unchanged exact payload comparisons. Retain original responses and fail on read errors, exhausted admission, window overruns, or genuine metric drift; add boundary and failure regressions without changing production clocks, queries, privacy policy, or downstream artifact requirements.
+
 - Promote the current compatibility QA baseline and default Docker image to
   WordPress 7.1.2, retaining MCP Adapter 0.6.1 and all dependency digests.
   Document the unchanged support floor and add a regression keeping baseline
