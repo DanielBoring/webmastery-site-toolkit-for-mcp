@@ -177,6 +177,20 @@ def tool_facts(receipts):
     return result
 
 
+def origin_failure(receipts):
+    failures = [receipt["origin_failure"] for receipt in receipts if "origin_failure" in receipt]
+    require(len(failures) <= 1, "inventory-shape")
+    if not failures:
+        return None
+    value = failures[0]
+    require(type(value) is dict and set(value) == {"tool", "subject", "check"}
+            and value["tool"] in set(BASE.ORIGIN_TOOL_IDS.values()) | {"unknown"}
+            and value["subject"] in BASE.ORIGIN_SUBJECT_IDS
+            and value["check"] in BASE.ORIGIN_CHECK_IDS, "inventory-shape")
+    require(any(receipt.get("reason") == "tool-origin" for receipt in receipts), "inventory-shape")
+    return {key: value[key] for key in ("tool", "subject", "check")}
+
+
 def project(captures, version, job, expected, input_sha):
     require(version in GUARD.ROOT_ARGVS and job in GUARD.APPROVED_JOBS[version],
             "inventory-shape")
@@ -218,13 +232,14 @@ def project(captures, version, job, expected, input_sha):
             "python_bare": {"state": "unknown",
                             "functions": {name: None for name in PY_FUNCTIONS},
                             "constants": {name: None for name in PY_CONSTANTS}},
-            "not_host_or_fd_proof": True}
+            "not_host_or_fd_proof": True, "origin_failure": origin_failure(receipts)}
 
 
 def validate_public(value):
     require(set(value) == {"schema", "state", "selected_php", "job", "sources", "input_sha256",
                           "inventory_sha256", "guard_inventory_sha256", "phases", "tools",
-                          "php_configured", "php_bare", "python_bare", "not_host_or_fd_proof"},
+                          "php_configured", "php_bare", "python_bare", "not_host_or_fd_proof",
+                          "origin_failure"},
             "inventory-shape")
     require(value["schema"] == "g1g2-acquisition-v1" and value["state"] in ("observed", "refused")
             and value["selected_php"] in GUARD.ROOT_ARGVS
@@ -272,6 +287,9 @@ def validate_public(value):
     require(value["python_bare"] == {"state": "unknown",
             "functions": {name: None for name in PY_FUNCTIONS},
             "constants": {name: None for name in PY_CONSTANTS}}, "inventory-shape")
+    if value["origin_failure"] is not None:
+        require(value["state"] == "refused", "inventory-shape")
+        origin_failure([{"origin_failure": value["origin_failure"], "reason": "tool-origin"}])
 
 
 def projection_input(captures, version, job, expected):

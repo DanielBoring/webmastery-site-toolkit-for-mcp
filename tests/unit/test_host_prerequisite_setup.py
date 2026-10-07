@@ -21,6 +21,148 @@ BASE = GUARD.BASE
 
 
 class HostPrerequisiteSetupTest(unittest.TestCase):
+    def php_module_failure_after_python_context(self, dependency):
+        inventory = BASE.Inventory("8.4")
+        module = str(Path("/usr/lib/php/20240924") / "sockets.so")
+        library = str(Path(BASE.LIBRARIES[0]) / "libfixture.so")
+        inventory.files[module] = {"elf": True}
+        prior_python = "/usr/lib/python3.12/example.py"
+        trace = []
+        checked_origin = inventory.checked_origin
+        original_dependencies = inventory.dependencies
+
+        def checked(path):
+            trace.append((path, inventory.origin_tool))
+            if path == (library if dependency else module):
+                return checked_origin(path)
+
+        def dependencies(path):
+            if dependency and path == module:
+                return original_dependencies(path)
+
+        def system(path):
+            return "/usr/bin/php8.4" if path == "/usr/bin/php" else path
+
+        bare = {"binary": "/usr/bin/php8.4", "version": "8.4.26",
+                "extension_dir": "/usr/lib/php/20240924"}
+        with patch.object(inventory, "system", side_effect=system), \
+                patch.object(inventory, "checked_origin", side_effect=checked), \
+                patch.object(inventory, "dependencies", side_effect=dependencies), \
+                patch.object(inventory, "command", side_effect=lambda operation, argument:
+                             json.dumps(bare).encode() if operation == "php-bare" else b""), \
+                patch.object(inventory, "configuration", return_value=(
+                    "/etc/php/8.4/cli/php.ini", self.info(0o644), b"extension=sockets")), \
+                patch.object(BASE.sys, "modules", {"fixture": SimpleNamespace(__file__=prior_python)}), \
+                patch.object(BASE.os.path, "realpath", side_effect=str), \
+                patch.object(BASE.os.path, "exists", return_value=False), \
+                patch.object(BASE.os.path, "isfile", side_effect=lambda path: str(path) == library), \
+                patch.object(BASE.os, "lstat", return_value=SimpleNamespace(
+                    st_mode=stat.S_IFDIR | 0o755, st_uid=0)), \
+                patch.object(BASE.Path, "is_dir", return_value=True), \
+                patch.object(BASE.Path, "glob", return_value=[]), \
+                patch.object(BASE, "parse_dynamic", return_value=(["libfixture.so"], [])), \
+                patch.object(BASE.subprocess, "Popen", side_effect=AssertionError("native forbidden")):
+            with self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
+                inventory.collect()
+        self.assertIn((prior_python, "python"), trace)
+        self.assertIn((module, "php"), trace)
+        if dependency:
+            self.assertIn((library, "php"), trace)
+        self.assertEqual({"tool": "php", "subject": "dependency", "check": "owner-missing"},
+                         inventory.receipt["origin_failure"])
+
+    def test_php_native_module_origin_refusal_resets_prior_python_context(self):
+        self.php_module_failure_after_python_context(False)
+
+    def test_php_native_module_elf_dependency_refusal_keeps_php_context(self):
+        self.php_module_failure_after_python_context(True)
+
+    def test_origin_disambiguator_actual_owner_branches_keep_original_refusal(self):
+        for response, check in ((b"", "owner-missing"),
+                                (b"bad\nbad\n", "owner-response-shape"),
+                                (b"package: /wrong\n", "owner-target"),
+                                (b"package: /usr/bin/php8.4\n", "package-metadata")):
+            inventory = BASE.Inventory("8.4")
+            with patch.object(inventory, "system", return_value="/usr/bin/php8.4"), \
+                    patch.object(BASE.os.path, "exists", return_value=False), \
+                    patch.object(BASE.os.path, "realpath", side_effect=lambda p: p), \
+                    patch.object(inventory, "command", side_effect=lambda op, arg:
+                                 response if op == "owner" else b"bad"), \
+                    patch.object(BASE.subprocess, "Popen", side_effect=AssertionError("native forbidden")):
+                with self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
+                    inventory.origin("/usr/bin/php")
+                self.assertEqual({"tool": "php", "subject": "tool", "check": check},
+                                 inventory.receipt["origin_failure"])
+
+    def test_origin_disambiguator_dependency_and_loaded_module_do_not_claim_php(self):
+        for path, tool, subject in (("/usr/lib/example.so", "python", "dependency"),
+                                    ("/usr/lib/python3.12/example.py", "python", "python-module")):
+            inventory = BASE.Inventory("8.4")
+            inventory.origin_tool = tool
+            with patch.object(inventory, "system", return_value=path), \
+                    patch.object(BASE.os.path, "exists", return_value=False), \
+                    patch.object(inventory, "command", return_value=b""):
+                with self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
+                    inventory.origin(path)
+            self.assertEqual({"tool": tool, "subject": subject, "check": "owner-missing"},
+                             inventory.receipt["origin_failure"])
+
+    def test_origin_disambiguator_manifest_branches_and_ambiguity_preserve_trust_checks(self):
+        canonical = "/usr/bin/php8.4"
+        metadata = b"package\t1.0\tamd64\tpackage\t1.0"
+        for kind, check in (("link", "manifest-link"), ("identity", "manifest-identity"),
+                            ("encoding", "manifest-encoding"), ("ambiguous", "owner-ambiguous"),
+                            ("owner-command", "owner-command")):
+            inventory = BASE.Inventory("8.4")
+            inventory.files[canonical] = {"md5": "a" * 32}
+            def realpath(path):
+                if kind == "link" and path.startswith("/var/lib/dpkg/info/"):
+                    return "/wrong"
+                if path == "/bin/php8.4":
+                    return canonical
+                return path
+            def command(operation, argument):
+                if kind == "owner-command":
+                    raise BASE.Refusal("tool-origin")
+                if operation == "package":
+                    return metadata
+                package = "other" if argument.startswith("/bin/") else "package"
+                return (package + ": " + argument + "\n").encode()
+            with patch.object(inventory, "system", return_value=canonical), \
+                    patch.object(BASE.os.path, "exists", return_value=kind == "ambiguous"), \
+                    patch.object(BASE.os.path, "realpath", side_effect=realpath), \
+                    patch.object(inventory, "command", side_effect=command), \
+                    patch.object(inventory, "read", return_value=(
+                        "/var/lib/dpkg/info/package.md5sums", self.info(0o644), b"\xff")), \
+                    patch.object(BASE.os, "lstat", return_value=self.info(
+                        0o600 if kind == "identity" else 0o644)):
+                with self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
+                    inventory.origin("/usr/bin/php")
+            self.assertEqual(check, inventory.receipt["origin_failure"]["check"])
+
+    def test_origin_disambiguator_never_relabels_other_refusals_or_exports_raw_operands(self):
+        inventory = BASE.Inventory("8.4")
+        with patch.object(inventory, "checked_origin", side_effect=BASE.Refusal("tool-hash")):
+            with self.assertRaisesRegex(BASE.Refusal, "^tool-hash$"):
+                inventory.origin("/usr/bin/php")
+        self.assertNotIn("origin_failure", inventory.receipt)
+        expected, receipts = self.projection_fixture()
+        receipts[0][0]["reason"] = "tool-origin"
+        receipts[0][0]["origin_failure"] = {
+            "tool": "php", "subject": "tool", "check": "owner-missing"}
+        value = self.projected(expected, receipts)
+        DRIVER.validate_public(value)
+        self.assertEqual("refused", value["state"])
+        self.assertEqual(receipts[0][0]["origin_failure"], value["origin_failure"])
+        self.assertNotIn("SECRET_CANARY", json.dumps(value))
+        for mutation in ({"tool": "/secret"}, {"subject": "SECRET_CANARY"},
+                         {"check": "raw dpkg output"}, {"path": "/secret"}):
+            invalid = dict(value["origin_failure"], **mutation)
+            with self.assertRaises(BASE.Refusal):
+                DRIVER.origin_failure([{"reason": "tool-origin", "origin_failure": invalid}])
+        with self.assertRaises(BASE.Refusal):
+            DRIVER.origin_failure([{"reason": None, "origin_failure": value["origin_failure"]}])
+
     def projection_fixture(self, version="8.4"):
         expected, sources, pins = {}, [], {}
         for number, (name, filename) in enumerate(BASE.SOURCE_NAMES.items(), 10):

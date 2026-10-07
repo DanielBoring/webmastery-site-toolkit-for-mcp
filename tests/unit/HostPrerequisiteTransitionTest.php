@@ -41,13 +41,13 @@ final class HostPrerequisiteTransitionTest extends TestCase {
 			'provision-php82-permissions.py' => 'b4d886163e156239c58358fd473099debfc6b9b186d1e341ba42ecfbd18cc6d5',
 			'host-prerequisite-setup.py' => 'f7582b1d1e17c8cc8edb5b84e2d7b42ce7615488cdcf46382d31404c5e6bc10a',
 		) as $path => $hash ) {
-			self::assertSame( $hash, hash( 'sha256', $this->read( 'scripts/' . $path ) ), $path );
+			self::assertSame( $hash, hash( 'sha256', Wstm167OriginFailureTransition::restore( 'scripts/' . $path, $this->read( 'scripts/' . $path ) ) ), $path );
 			self::assertSame( $hash, $map['dependencies'][ 'scripts/' . $path ] );
 		}
 		self::assertCount( 527, array_merge( $map['files'], $map['dependencies'], array( $map['helper_path'] => true, 'tests/unit/fixtures/host-prerequisite-transition.json' => true ) ) );
 		$helper = preg_replace( "/^\tpublic const SEAL = 'HOST_PREREQUISITE_SEAL_PENDING';(?=\\r?$)/m", "\tpublic const SEAL = '" . Wstm167HostPrerequisiteTransition::SEAL . "';", $map['helper_raw_template'], 1, $replaced );
 		self::assertSame( 1, $replaced );
-		self::assertSame( $helper, $this->read( $map['helper_path'] ) );
+		self::assertSame( $helper, Wstm167OriginFailureTransition::restore( $map['helper_path'], $this->read( $map['helper_path'] ) ) );
 	}
 
 	public function test_missing_truncated_foreign_crlf_old_raw_and_helper_body_drift_refuse(): void {
@@ -146,7 +146,7 @@ final class HostPrerequisiteTransitionTest extends TestCase {
 			$outer = str_replace(
 				"public const SEAL = '" . Wstm167HostPrerequisiteTransition::SEAL . "';",
 				"public const SEAL = '" . hash( 'sha256', $json ) . "';",
-				$this->read( 'tests/unit/fixtures/host-prerequisite-transition.php' ), $replaced
+				Wstm167OriginFailureTransition::restore( 'tests/unit/fixtures/host-prerequisite-transition.php', $this->read( 'tests/unit/fixtures/host-prerequisite-transition.php' ) ), $replaced
 			);
 			self::assertSame( 1, $replaced );
 			$older = Wstm167HostPrerequisiteTransition::restore( 'tests/unit/fixtures/nsfs-net-metadata-transition.php', $this->read( 'tests/unit/fixtures/nsfs-net-metadata-transition.php' ) );
@@ -163,7 +163,7 @@ final class HostPrerequisiteTransitionTest extends TestCase {
 			try {
 				self::assertSame( $wrong, $outer_class::restore( $path, $current ) );
 				try {
-					$older_class::verify_dependencies( fn( $entry ) => $outer_class::restore( $entry, $this->read( $entry ) ) );
+					$older_class::verify_dependencies( fn( $entry ) => $outer_class::restore( $entry, Wstm167OriginFailureTransition::restore( $entry, $this->read( $entry ) ) ) );
 					self::fail( 'Resealed prerequisite baseline replaced the unchanged 3876 witness.' );
 				} catch ( RuntimeException $error ) {
 					self::assertSame(

@@ -23,6 +23,14 @@ STDERR_LIMIT = 8192
 RECEIPT_LIMIT = 16777216
 TOOLS = ("/usr/bin/setpriv", "/usr/bin/python3", "/usr/bin/php",
          "/usr/bin/dpkg-query", "/usr/bin/readelf")
+ORIGIN_TOOL_IDS = {"/usr/bin/setpriv": "setpriv", "/usr/bin/python3": "python",
+                   "/usr/bin/php": "php", "/usr/bin/dpkg-query": "dpkg-query",
+                   "/usr/bin/readelf": "readelf", "/usr/bin/sudo": "sudo",
+                   "/usr/bin/chmod": "chmod"}
+ORIGIN_CHECK_IDS = frozenset(("unknown", "owner-command", "owner-response-shape",
+    "owner-target", "owner-missing", "owner-ambiguous", "manifest-link",
+    "package-metadata", "manifest-identity", "manifest-encoding"))
+ORIGIN_SUBJECT_IDS = frozenset(("tool", "dependency", "python-module"))
 PHP_PROFILES = {
     "8.2": {"binary": "/usr/bin/php8.2", "targets": (
         "/etc/php/8.2/cli/php.ini", "/etc/php/8.2/cli/conf.d/99-pecl.ini")},
@@ -558,6 +566,25 @@ class Inventory:
         return bytes(buffers[1])
 
     def origin(self, path):
+        if path in ORIGIN_TOOL_IDS:
+            self.origin_tool = ORIGIN_TOOL_IDS[path]
+            subject = "tool"
+        elif path.startswith("/usr/lib/python"):
+            self.origin_tool = "python"
+            subject = "python-module"
+        else:
+            subject = "dependency"
+        self.origin_check = "unknown"
+        try:
+            self.checked_origin(path)
+        except Refusal as error:
+            if str(error) == "tool-origin":
+                self.receipt["origin_failure"] = {
+                    "tool": getattr(self, "origin_tool", "unknown"),
+                    "subject": subject, "check": self.origin_check}
+            raise
+
+    def checked_origin(self, path):
         canonical = self.system(path)
         if canonical in self.origins:
             return
@@ -568,20 +595,27 @@ class Inventory:
                 queries.append(alias)
         owners = set()
         for query in queries:
+            self.origin_check = "owner-command"
             raw = self.command("owner", query)
             lines = raw.decode("utf-8").strip().splitlines()
             if not lines:
                 continue
+            self.origin_check = "owner-response-shape"
             require(len(lines) == 1 and ": " in lines[0], "tool-origin")
             package, owned = lines[0].split(": ", 1)
+            self.origin_check = "owner-target"
             require(owned == query and os.path.realpath(owned) == canonical, "tool-origin")
             owners.add(package)
+        self.origin_check = "owner-missing" if not owners else "owner-ambiguous"
         require(len(owners) == 1, "tool-origin")
         package = owners.pop()
         manifest = "/var/lib/dpkg/info/" + package + ".md5sums"
+        self.origin_check = "manifest-link"
         require(os.path.realpath(manifest) == manifest, "tool-origin")
         if package not in self.packages:
+            self.origin_check = "unknown"
             metadata = self.command("package", package).decode("utf-8").strip().split("\t")
+            self.origin_check = "package-metadata"
             require(len(metadata) == 5 and all(re.fullmatch(r"[A-Za-z0-9.:+~_-]{1,128}", field)
                                               for field in metadata), "tool-origin")
             actual, info, raw = self.read(manifest, limit=4194304)
@@ -589,7 +623,9 @@ class Inventory:
             require(self.package_bytes <= RECEIPT_LIMIT, "file-budget")
             self.packages[package] = (metadata, actual, info, raw)
         metadata, actual, info, raw = self.packages[package]
+        self.origin_check = "manifest-identity"
         require(identity(os.lstat(manifest)) == identity(info), "tool-origin")
+        self.origin_check = "manifest-encoding"
         verify_manifest(raw, canonical, self.files[canonical]["md5"])
         self.origins[canonical] = {
             "package": metadata, "manifest": actual, "manifest_identity": identity(info),
@@ -655,6 +691,7 @@ class Inventory:
             modules.update(configured_modules(raw, extension_dir))
         self.receipt["php_configuration_pins"] = pins
         self.receipt["php_configured_native_modules"] = sorted(modules)
+        self.origin_tool = "php"
         for module in sorted(modules):
             file = str(Path(extension_dir) / module)
             self.origin(file)

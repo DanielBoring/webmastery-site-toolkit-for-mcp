@@ -6,6 +6,11 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Disambiguate a retained HOST tool-origin refusal with only closed tool,
+  dependency/module subject and origin-check IDs. Preserve exit78, unknown
+  native observations, private original custody and all package-provenance
+  predicates; do not substitute unverified packaging or broaden trust.
+
 - Compose the approved three-surface prerequisite/provisioning gate onto the
   current PR167 generation without replacing its nsfs/net correction or
   historical witnesses. Add an exact current-source outer witness, complete

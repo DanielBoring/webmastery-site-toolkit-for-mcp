@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/origin-failure-transition.php';
+
 /** Exact orthogonal prerequisite composition before the immutable current nsfs/net proof. */
 final class Wstm167HostPrerequisiteTransition {
 	public const SEAL = 'f9b67aeec14035aa364dd9b49f8edfe1d32337d80b40a7f07e1a202d1ffe18a4';
@@ -27,6 +29,12 @@ final class Wstm167HostPrerequisiteTransition {
 	}
 
 	public static function verify_dependencies( callable $read ): void {
+		Wstm167OriginFailureTransition::verify_dependencies( $read );
+		$current_read = $read;
+		$read = static function ( string $path ) use ( $current_read ) {
+			$source = $current_read( $path );
+			return is_string( $source ) ? Wstm167OriginFailureTransition::restore( $path, $source ) : $source;
+		};
 		$map = self::load();
 		$expected_helper = preg_replace( "/^\tpublic const SEAL = 'HOST_PREREQUISITE_SEAL_PENDING';(?=\\r?$)/m", "\tpublic const SEAL = '" . self::SEAL . "';", $map['helper_raw_template'], 1, $replaced );
 		$helper = $read( $map['helper_path'] );
@@ -56,6 +64,7 @@ final class Wstm167HostPrerequisiteTransition {
 	}
 
 	public static function restore( string $path, string $source, string $context = 'CI diagnostic current source drift' ): string {
+		$source = Wstm167OriginFailureTransition::reader_once( $path, $source );
 		$map = self::load();
 		if ( ! isset( $map['files'][ $path ] ) ) { return $source; }
 		$binding = $map['files'][ $path ];

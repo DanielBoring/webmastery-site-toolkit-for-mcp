@@ -25,7 +25,7 @@ three Python scripts, three mock test files, workflows and documentation.
 
 `composer lint:php` also AST-parses every Python source under scripts/tests
 without executing inventory or provisioning. `composer test:host-prerequisites`
-runs the three fixed mock-only suites (31 inventory,22 provisioning,26 shared
+runs the three fixed mock-only suites (31 inventory,22 provisioning,32 shared
 driver/projection controls). Both static QA and the existing CI safeguards entry run
 those controls; their existing scripts/tests path coverage includes every
 new file. None of these checks is native HOST acquisition or protocol
@@ -85,6 +85,13 @@ never a success fallback, raw diagnostic or traceback. Either failure returns78
 and prevents downstream candidate PHP. Original failure prefixes remain private.
 The availability projection is explicitly **not HOST admission, native FD
 behavior, protocol acceptance or a privileged-child cleanup certificate**.
+An optional `origin_failure` object is null unless a retained `tool-origin`
+refusal supplies its closed tool ID, subject (tool/dependency/python-module)
+and exact origin-check ID. No package, operand, path or command text is included.
+Dependency checks retain the actual top-level tool context; successful Python
+origin alone does not prove that its dependencies completed or PHP was reached.
+This diagnostic preserves the original refusal and every provenance predicate;
+it does not admit unmanaged PHP installs or infer the cause from setup output.
 The read-only gate uses fixed public Linux tool/package paths and an
 isolated, scrubbed nonroot interpreter. It never executes setpriv (including
 `--version`), sudo, a launcher, NNP, socketpair/send/receive, Docker or a daemon.

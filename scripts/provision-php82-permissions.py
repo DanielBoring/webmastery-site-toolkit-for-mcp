@@ -230,6 +230,7 @@ class Provision(BASE.Inventory):
         for path in BASE.TOOLS + SYSTEM:
             self.origin(path)
             self.dependencies(path)
+        self.origin_tool = "sudo"
         self.pin_sudo_configuration()
         # Pin the ordinary guard interpreter's isolated loaded modules as well.
         for module in tuple(sys.modules.values()):
