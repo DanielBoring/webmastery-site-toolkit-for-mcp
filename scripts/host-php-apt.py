@@ -1542,16 +1542,358 @@ class Provider(CAPTURE.Capture):
                     "package-%d-%s" % (len(report["packages"]), suffix), raw)}
         return result
 
+    def gpg_diagnostic_identity(self, value, original=False):
+        fields = {"dev", "ino", "uid", "gid", "mode", "nlink"}
+        if not original:
+            fields.update(("size", "mtime_ns", "ctime_ns"))
+        require(type(value) is dict and set(value) == fields
+                and all(type(value[key]) is int for key in fields), "retention")
+
+    def gpg_diagnostic_sources(self, sources):
+        require(type(sources) is dict and set(sources) == set(SOURCES), "retention")
+        for row in sources.values():
+            require(type(row) is dict and {"identity", "sha256"} <= set(row)
+                    and type(row["sha256"]) is str
+                    and re.fullmatch(r"[a-f0-9]{64}", row["sha256"]), "retention")
+            self.gpg_diagnostic_identity(row["identity"])
+        return {name: row["sha256"] for name, row in sources.items()}
+
+    def gpg_diagnostic_record(self, record, phase):
+        fields = {
+            "operation", "argv", "environment", "exit", "stdout_eof", "stderr_eof", "failure",
+            "producer_pid", "wait_owner", "root_cleanup_certified", "privileged", "source_sha256",
+            "stdout_bytes", "stderr_bytes", "capture_prefix", "requested_child_umask"}
+        require(phase in ("intent", "reserved", "observed")
+                and type(record) is dict and fields <= set(record), "retention")
+        require(type(record["operation"]) is str and record["operation"] in ("owner", "package", "elf")
+                and type(record["argv"]) is list and bool(record["argv"])
+                and all(type(value) is str and 0 < len(value) <= 4096 for value in record["argv"])
+                and type(record["environment"]) is dict
+                and record["environment"] == {"PATH": "/usr/bin:/bin", "LC_ALL": "C"}
+                and type(record["capture_prefix"]) is str
+                and re.fullmatch(r"gpg-diagnostic-command-[1-9][0-9]*", record["capture_prefix"])
+                and type(record["privileged"]) is bool and record["privileged"] is False
+                and type(record["stdout_eof"]) is bool and type(record["stderr_eof"]) is bool
+                and type(record["root_cleanup_certified"]) is bool
+                and record["root_cleanup_certified"] is False
+                and type(record["wait_owner"]) is str
+                and record["wait_owner"] == "original-direct-child"
+                and record["requested_child_umask"] is None and record["failure"] is None,
+                "retention")
+        self.gpg_diagnostic_sources(record["source_sha256"])
+        for stream, limit in (("stdout", CAPTURE.STDOUT), ("stderr", CAPTURE.STDERR)):
+            require(type(record[stream + "_bytes"]) is int
+                    and 0 <= record[stream + "_bytes"] <= limit, "retention")
+            if phase != "intent":
+                require(stream + "_identity" in record, "retention")
+                self.gpg_diagnostic_identity(record[stream + "_identity"], original=True)
+            if phase == "observed":
+                require(stream + "_sha256" in record
+                        and type(record[stream + "_sha256"]) is str
+                        and re.fullmatch(r"[a-f0-9]{64}", record[stream + "_sha256"]), "retention")
+        if phase == "observed":
+            require(type(record["exit"]) is int and record["exit"] in (0, 1)
+                    and "retention_failed" in record and type(record["retention_failed"]) is bool
+                    and (record["producer_pid"] is None or (
+                        type(record["producer_pid"]) is int and record["producer_pid"] > 0)),
+                    "retention")
+        else:
+            require(record["exit"] is None and record["producer_pid"] is None
+                    and record["stdout_eof"] is False and record["stderr_eof"] is False
+                    and record["stdout_bytes"] == record["stderr_bytes"] == 0, "retention")
+
+    def gpg_diagnostic_query_capture(self, number, command, report):
+        self.check()
+        require(type(number) is int and 1 <= number <= len(self.commands)
+                and type(report) is dict and "commands" in report
+                and type(report["commands"]) is list, "retention")
+        self.gpg_diagnostic_record(command, "observed")
+        for row in report["commands"]:
+            require(type(row) is dict and {"file", "bytes", "sha256", "identity"} <= set(row)
+                    and type(row["file"]) is str and type(row["bytes"]) is int
+                    and row["bytes"] >= 0 and type(row["sha256"]) is str
+                    and re.fullmatch(r"[a-f0-9]{64}", row["sha256"]), "retention")
+            self.gpg_diagnostic_identity(row["identity"])
+        prefix = "gpg-diagnostic-command-" + str(number)
+        require(self.commands[number - 1] == command and command.get("capture_prefix") == prefix
+                and command["operation"] in ("owner", "package", "elf")
+                and command["privileged"] is False
+                and command["environment"] == {"PATH": "/usr/bin:/bin", "LC_ALL": "C"}
+                and command["source_sha256"] == self.receipt["producer_sources"]
+                and command["wait_owner"] == "original-direct-child"
+                and command["root_cleanup_certified"] is False
+                and command["requested_child_umask"] is None
+                and command["exit"] == 0 and command["failure"] is None
+                and command["retention_failed"] is False
+                and command["stdout_eof"] is True and command["stderr_eof"] is True,
+                "retention")
+        captures = {}
+        for suffix in ("intent.private.json", "reserved.private.json", "observed.private.json",
+                       "stdout.private", "stderr.private"):
+            name = prefix + "." + suffix
+            path = str(self.directory / name)
+            require(os.path.realpath(path) == path, "retention")
+            info = os.lstat(path)
+            BASE.validate_file(info, os.geteuid(), CAPTURE.RECORDS)
+            require(stat.S_IMODE(info.st_mode) == 0o600, "retention")
+            reservation = {"kind": "gpg-command-data", "identity": BASE.identity(info),
+                           "bytes": info.st_size}
+            pin = self.session_data_pins.get(path)
+            fresh = pin is None
+            if fresh:
+                pin = dict(reservation, state="reserved")
+                self.session_data_pin(path, pin, info.st_size)
+            else:
+                require(pin.get("state") == "pinned"
+                        and all(pin.get(key) == value for key, value in reservation.items()), "retention")
+            actual, current, raw = self.read(path, os.geteuid(), info.st_size)
+            require(actual == path and BASE.identity(current) == pin["identity"]
+                    and BASE.identity(os.lstat(path)) == pin["identity"]
+                    and os.path.realpath(path) == path and len(raw) == pin["bytes"], "retention")
+            if fresh:
+                pin.update(state="pinned", sha256=POLICY.digest(raw))
+            else:
+                require(pin["sha256"] == POLICY.digest(raw), "retention")
+            captures[suffix] = raw
+            observation = {"file": name, "bytes": len(raw), "sha256": POLICY.digest(raw),
+                           "identity": BASE.identity(info)}
+            before = [row for row in report["commands"] if row["file"] == name]
+            require(not before or before == [observation], "retention")
+            if not before:
+                report["commands"].append(observation)
+        records = {}
+        for phase in ("intent", "reserved", "observed"):
+            try:
+                record = BASE.decode_object(captures[phase + ".private.json"])
+            except BASE.Refusal as error:
+                raise BASE.Refusal("retention") from error
+            self.gpg_diagnostic_record(record, phase)
+            records[phase] = record
+        intent, reserved = records["intent"], records["reserved"]
+        require(records["observed"] == command, "retention")
+        for record in (intent, reserved):
+            require(all(record.get(key) == command[key] for key in (
+                "operation", "argv", "environment", "privileged", "source_sha256", "capture_prefix",
+                "wait_owner", "root_cleanup_certified", "requested_child_umask"))
+                and record["exit"] is None and record["failure"] is None
+                and record["producer_pid"] is None and record["stdout_eof"] is False
+                and record["stderr_eof"] is False
+                and record["stdout_bytes"] == record["stderr_bytes"] == 0, "retention")
+        for stream in ("stdout", "stderr"):
+            raw = captures[stream + ".private"]
+            require(len(raw) == command[stream + "_bytes"]
+                    and POLICY.digest(raw) == command[stream + "_sha256"]
+                    and reserved[stream + "_identity"] == command[stream + "_identity"],
+                    "retention")
+            identity = next(row["identity"] for row in report["commands"]
+                            if row["file"] == prefix + "." + stream + ".private")
+            require(all(identity[key] == value for key, value
+                        in command[stream + "_identity"].items()), "retention")
+        BASE.validate_native_result(command, captures["stderr.private"])
+        return captures["stdout.private"]
+
+    def gpg_diagnostic_dependency_file(self, path, canonical, allow_absent=False):
+        self.check()
+        require(os.path.realpath(path) == canonical, "tool-link")
+        parents = BASE.parent_pins(canonical)
+        alias_parents = {}
+        if path.startswith("/lib/"):
+            for parent in ("/", "/lib", "/lib/x86_64-linux-gnu"):
+                info = os.lstat(parent)
+                if parent == "/lib":
+                    require(stat.S_ISLNK(info.st_mode) and info.st_uid == 0
+                            and info.st_nlink == 1 and os.path.realpath(parent) == "/usr/lib",
+                            "tool-parent")
+                else:
+                    BASE.validate_parent(info)
+                alias_parents[parent] = BASE.identity(info)
+        try:
+            requested = os.lstat(path)
+        except FileNotFoundError:
+            require(allow_absent, "tool-missing")
+            try:
+                os.lstat(canonical)
+            except FileNotFoundError:
+                observation = {"present": False, "canonical": canonical, "parents": parents,
+                               "alias_parents": alias_parents}
+            else:
+                raise BASE.Refusal("tool-link")
+        else:
+            actual, info, raw = self.acquire(path)
+            current, current_info, current_raw = self.read(path, limit=info.st_size)
+            require(actual == current == canonical and current_raw == raw
+                    and BASE.identity(info) == BASE.identity(current_info)
+                    and BASE.identity(os.lstat(path)) == BASE.identity(requested)
+                    and BASE.parent_pins(canonical) == parents, "tool-link")
+            GUARD.no_capabilities(canonical)
+            require(BASE.identity(requested) == BASE.identity(info), "tool-link")
+            observation = {
+                "present": True, "canonical": canonical, "identity": BASE.identity(info),
+                "requested_identity": BASE.identity(requested), "parents": parents,
+                "alias_parents": alias_parents, "sha256": POLICY.digest(raw),
+                "md5": hashlib.md5(raw).hexdigest(), "bytes": len(raw),
+                "elf": raw.startswith(b"\x7fELF")}
+            if observation["elf"]:
+                BASE.parse_elf(raw)
+                observation["ELF_header_status"] = "complete"
+                kind, machine, version = BASE.struct.unpack_from("<HHI", raw, 16)
+                observation["ELF_header"] = {
+                    "class": 64, "byte_order": "little", "kind": kind,
+                    "machine": machine, "version": version, "os_abi": raw[7]}
+        for parent, before in alias_parents.items():
+            require(BASE.identity(os.lstat(parent)) == before, "tool-parent")
+        require(os.path.realpath(path) == canonical
+                and BASE.parent_pins(canonical) == parents, "tool-link")
+        self.session_data_pin("gpg-dependency-data:" + path, observation)
+        return observation
+
+    def gpg_dependency_diagnostic(self, report):
+        canonical = "/usr/lib/x86_64-linux-gnu/libreadline.so.8.2"
+        alias = "/" + canonical[5:]
+        require(self.receipt.get("origin_failure", {}).get("check") == "owner-response-shape"
+                and canonical in self.files and self.files[canonical]["elf"]
+                and canonical in self.files[self.system("/usr/bin/gpg")].get(
+                    "declared_dependencies", []), "tool-origin")
+        failed = [(number, command) for number, command in enumerate(self.commands, 1)
+                  if command["operation"] == "owner"
+                  and command["argv"] == ["/usr/bin/dpkg-query", "-S", alias]]
+        paired = [(number, command) for number, command in enumerate(self.commands, 1)
+                  if command["operation"] == "owner"
+                  and command["argv"] == ["/usr/bin/dpkg-query", "-S", canonical]]
+        require(len(failed) == len(paired) == 1
+                and failed[0][0] == len(self.commands)
+                and paired[0][0] + 1 == failed[0][0], "retention")
+        pair_raw = self.gpg_diagnostic_query_capture(*paired[0], report)
+        failed_raw = self.gpg_diagnostic_query_capture(*failed[0], report)
+        require(BASE.owner_response_shape(failed_raw.decode("utf-8").strip().splitlines(), alias)
+                == self.receipt["preflight_refusal"]["owner_response_shape"], "tool-origin")
+        report["requested"] = "/usr/bin/gpg"
+        report["subject"] = {"kind": "dependency", "canonical": canonical, "alias": alias,
+                             "failed_command": failed[0][0], "paired_command": paired[0][0]}
+        self.write("gpg-diagnostic-intent.private.json", json.dumps(report, sort_keys=True).encode())
+        self.gpg_diagnostic_active = True
+        report["phase"] = "diversion-table"
+        table = "/var/lib/dpkg/diversions"
+        raw = self.protected(table)
+        report["diversion_table"] = {"pin": self.pins[table],
+                                    "retained": self.gpg_diagnostic_export("diversions", raw)}
+        lines = raw.decode("utf-8").splitlines()
+        require(b"\r" not in raw and b"\x00" not in raw and len(lines) % 3 == 0, "inventory-shape")
+        triples = [lines[index:index + 3] for index in range(0, len(lines), 3)]
+        for original, saved, package in triples:
+            self.check()
+            require(all(path.startswith("/") and len(path) <= 4096
+                        and not re.search(r"[\x00-\x1f\x7f]", path)
+                        and all(part not in ("", ".", "..") for part in path[1:].split("/"))
+                        for path in (original, saved))
+                    and (package == ":" or re.fullmatch(
+                        r"[a-z0-9][a-z0-9+.-]{0,127}(?::[a-z0-9-]{1,128})?", package)),
+                    "inventory-shape")
+        selected = [row for row in triples if {alias, canonical, alias + ".usr-is-merged",
+                    canonical + ".usr-is-merged"} & set(row[:2])]
+        require(selected == [[alias, alias + ".usr-is-merged", "libreadline8t64"]], "tool-origin")
+        original, saved, declaring = selected[0]
+        require(failed_raw == ("diversion by " + declaring + " from: " + original + "\n"
+                              "diversion by " + declaring + " to: " + saved + "\n").encode(),
+                "tool-origin")
+        report["mapping"] = {"original": original, "saved": saved,
+                             "declaring_package": declaring, "local": False}
+        report["phase"] = "package-observation"
+        status = self.protected("/var/lib/dpkg/status", 16777216)
+        require(POLICY.deb822(status) == self.installed_records, "tool-origin")
+        owner = TRUST.installed_control_basename(self, declaring)
+        require(pair_raw == (owner + ": " + canonical + "\n").encode(), "tool-origin")
+        observation = self.gpg_diagnostic_package(owner, report)
+        package_capture = (len(self.commands), self.commands[-1])
+        require(package_capture[1]["operation"] == "package"
+                and package_capture[1]["argv"][-1] == owner
+                and self.gpg_diagnostic_query_capture(*package_capture, report).decode(
+                    "ascii").strip().split("\t") == observation["query_metadata"], "retention")
+        report["installed_association"] = {"declaring_package": declaring,
+                                           "owning_binary_package": owner}
+        stanzas = []
+        offset = 0
+        for stanza in status.split(b"\n\n"):
+            self.check()
+            if POLICY.deb822(stanza) == [next(row for row in self.installed_records
+                                             if row.get("Package") == declaring)]:
+                stanzas.append((offset, stanza))
+            offset += len(stanza) + 2
+        require(len(stanzas) == 1, "tool-origin")
+        report["status_record"] = {
+            "offset": stanzas[0][0], "pin": self.pins["/var/lib/dpkg/status"],
+            "retained": self.gpg_diagnostic_export("installed-status", stanzas[0][1])}
+        report["phase"] = "file-observation"
+        paths = ((canonical, canonical, False), (alias, canonical, False),
+                 (saved, canonical + ".usr-is-merged", True))
+        for path, actual, optional in paths:
+            report["files"][path] = self.gpg_diagnostic_dependency_file(path, actual, optional)
+        listing = self._pin_bytes[observation["files"]["list"]["path"]].decode("utf-8").splitlines()
+        require(listing.count(canonical) + listing.count(alias) == 1, "tool-origin")
+        BASE.verify_manifest(self._pin_bytes[observation["files"]["md5sums"]["path"]],
+                             canonical, report["files"][canonical]["md5"])
+        report["manifest_association"] = {
+            "package": owner, "canonical_digest_matches": True,
+            "canonical_listing_occurrences": listing.count(canonical),
+            "alias_listing_occurrences": listing.count(alias)}
+        report["original_package_authority"] = "unresolved"
+        report["phase"] = "loader-observation"
+        dynamic = self.command("elf", canonical)
+        elf_capture = (len(self.commands), self.commands[-1])
+        require(elf_capture[1]["operation"] == "elf" and elf_capture[1]["argv"]
+                == ["/usr/bin/readelf", "-l", "-d", canonical]
+                and self.gpg_diagnostic_query_capture(*elf_capture, report) == dynamic, "retention")
+        names, loaders = BASE.parse_dynamic(dynamic)
+        report["static_loader_facts"] = {"needed_names": names, "interpreter_paths": loaders,
+                                         "ELF_header_status": "complete",
+                                         "dependency_resolution_state": "unresolved"}
+        report["live_loader_state"] = report["loader_configuration_state"] = "unresolved"
+        report["phase"] = "custody-recheck"
+        for path in (table, "/var/lib/dpkg/status", observation["files"]["list"]["path"],
+                     observation["files"]["md5sums"]["path"]):
+            self.protected(path, self.pins[path]["bytes"])
+        require(POLICY.deb822(self._pin_bytes["/var/lib/dpkg/status"]) == self.installed_records,
+                "tool-origin")
+        require(self.command("package", owner).decode("ascii").strip().split("\t")
+                == observation["query_metadata"], "tool-origin")
+        final_package_capture = (len(self.commands), self.commands[-1])
+        require(final_package_capture[1]["operation"] == "package"
+                and final_package_capture[1]["argv"][-1] == owner, "retention")
+        for path, actual, optional in paths:
+            require(self.gpg_diagnostic_dependency_file(path, actual, optional)
+                    == report["files"][path], "tool-link")
+        for capture, expected in (
+                (paired[0], pair_raw), (failed[0], failed_raw),
+                (package_capture, ("\t".join(observation["query_metadata"]) + "\n").encode()),
+                (elf_capture, dynamic),
+                (final_package_capture, ("\t".join(observation["query_metadata"]) + "\n").encode())):
+            require(self.gpg_diagnostic_query_capture(*capture, report) == expected, "retention")
+        require(self.system("/usr/bin/gpg") in self.files
+                and canonical in self.files[self.system("/usr/bin/gpg")].get(
+                    "declared_dependencies", []), "tool-origin")
+        self.verify_sources()
+        report["status_pin"] = self.pins["/var/lib/dpkg/status"]
+        report["diagnostic_observation_status"] = "complete"
+
     def gpg_diversion_diagnostic(self):
         summary = {"state": "collecting", "reason": None}
         self.receipt["gpg_diversion_diagnostic"] = summary
         report = {"schema": "gpg-diversion-diagnostic-v1", "observation": "current-invocation",
                   "historical_state_reconstructed": False, "runtime_authorized": False,
-                  "source_sha256": {name: row["sha256"] for name, row in
-                                    self.receipt["producer_sources"].items()},
+                  "source_sha256": {},
                   "phase": "initial-owner", "packages": {}, "files": {}, "commands": [],
                   "state": "collecting", "reason": None}
         try:
+            report["source_sha256"] = self.gpg_diagnostic_sources(
+                self.receipt.get("producer_sources"))
+            for command in self.commands:
+                require(type(command) is dict and {"operation", "argv"} <= set(command)
+                        and type(command["operation"]) is str and type(command["argv"]) is list
+                        and all(type(value) is str for value in command["argv"]), "retention")
+                if ("capture_prefix" in command or command["argv"] in (
+                        ["/usr/bin/dpkg-query", "-S", "/lib/x86_64-linux-gnu/libreadline.so.8.2"],
+                        ["/usr/bin/dpkg-query", "-S", "/usr/lib/x86_64-linux-gnu/libreadline.so.8.2"])):
+                    self.gpg_diagnostic_record(command, "observed")
             require(self.stage == "preflight" and self._preflight_context == ("tool-origin", "gpg")
                     and not self.setup_ready and not self.root_launches
                     and not self.receipt["apt_original_accepted"]
@@ -1562,6 +1904,13 @@ class Provider(CAPTURE.Capture):
                         "row_count": "many", "owner_rows": "zero", "owner_domain": "zero",
                         "target_relation": "none", "diversion_rows": "many", "other_rows": "zero"},
                     "unsafe-input")
+            if (self.receipt.get("origin_failure", {}).get("subject") == "dependency"
+                    and any(command["operation"] == "owner" and command["argv"] == [
+                        "/usr/bin/dpkg-query", "-S", "/lib/x86_64-linux-gnu/libreadline.so.8.2"]
+                        for command in self.commands)):
+                self.gpg_dependency_diagnostic(report)
+                summary["state"] = report["state"] = "collected"
+                return
             canonical = self.system("/usr/bin/gpg")
             report["requested"] = "/usr/bin/gpg"
             report["canonical"] = canonical
@@ -1744,10 +2093,10 @@ class Provider(CAPTURE.Capture):
         finally:
             self.gpg_diagnostic_active = False
             self._gpg_diagnostic_paths = ()
-        try:
-            self.write("gpg-diagnostic-result.private.json", json.dumps(report, sort_keys=True).encode())
-        except (BASE.Refusal, OSError):
-            summary.update(state="retention-failed", reason="retention")
+            try:
+                self.write("gpg-diagnostic-result.private.json", json.dumps(report, sort_keys=True).encode())
+            except (BASE.Refusal, OSError):
+                summary.update(state="retention-failed", reason="retention")
 
     def _preflight(self):
         self.pin_sources()

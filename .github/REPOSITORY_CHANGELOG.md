@@ -6,6 +6,14 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Reserve diagnostic capture-body slots and bytes before acquisition, retain
+  failed reservations without duplicate reuse charges, and reject malformed
+  record fields/types explicitly while preserving the original preflight refusal.
+- Bind read-only GPG dependency diagnostics to the actual failed usrmerge
+  alias-owner capture and its canonical counterpart. Retain installed package,
+  physical/parent, protected absence and static loader observations with final
+  custody checks; preserve the original refusal, origin parser, complete-table
+  guard, fixed GPG consumers and false runtime authority.
 - Retain bounded, read-only GPG diversion and associated installed-package
   diagnostics in the three signed HOST QA jobs, including scoped original
   command receipts after early failure. Preserve the original refusal and all

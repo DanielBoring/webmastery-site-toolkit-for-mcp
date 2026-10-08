@@ -150,8 +150,26 @@ The collector does not select or execute a replacement, follow unrelated
 diversion paths, scan for alternative binaries, or reconstruct an earlier
 job's state. Live loader/configuration closure remains unresolved.
 
+The requested root-tool label also covers failures inside that tool's dependency
+closure. For the observed GPG/readline usrmerge boundary, collection binds the
+exact failed alias-owner command and its unique adjacent canonical-owner command
+through their original intent, reservation, observed receipt and stream bytes.
+It follows only the source-fixed dependency and matching protected declaration,
+not the earlier successful GPG query or an arbitrary final path. Installed
+qualification, selected original status bytes, list/MD5 association, physical
+and alias-parent custody, and saved-file presence or protected absence are
+rechecked before the diagnostic observation is complete. Unreadability is not
+absence. Byte-parsed ELF headers and static loader facts do not establish live
+loader resolution or executable authority. The origin parser, complete-table
+refusal, fixed GPG consumers and ROOT argv remain unchanged.
+
 Diagnostic queries reuse the existing owner/package/ELF capture operations and
 deadline, command, pin, acquisition, metadata, stream and record accounting.
+Capture-body slots and validated byte sizes are reserved before any body read;
+failed acquisitions keep their debit, and completed reuse is not charged again.
+Required record fields, scalar types, nested stream identities and source
+ledgers are validated before access. Malformed records explicitly refuse
+retention and preserve the original preflight exception and partial summary.
 Only the two protected table-derived names may add a literal owner query for
 an already pinned alias during collection; ordinary alias-query policy is
 unchanged. Prefix originals survive collection failure or budget exhaustion.
