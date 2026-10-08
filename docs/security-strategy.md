@@ -36,6 +36,22 @@ Only the approved fixed installation/selection operations and their original
 ROOT, time, command and acquisition limits apply. A missing owner is not
 permission to invent provenance or whitelist a foreign binary.
 
+The retained Perl tool may use only the complete two-name hard-link domain
+declared by the installed `perl-base` package: `/usr/bin/perl` and its exact
+installed upstream-version name. Protected installed metadata, the package
+listing and both manifest entries must agree with both owner queries and package
+source/version/architecture. Both canonical root-owned files must share the
+same physical identity and exactly two links, safe modes, protected parents and
+verified ELF bytes. Held-descriptor reads and subsequent domain checks reject
+extra links, substitutions, digest or metadata drift and exhausted original
+budgets. Generic files still require a single link. This installed-package
+binding does not prove a signed source archive or loader closure; existing
+dependency checks remain required before execution eligibility.
+Only the authenticated successful post-install refresh may update directory
+timestamp snapshots for both Perl names and their package metadata. Directory
+identity, ownership and modes, exact file identities, bytes, association and
+capabilities remain unchanged; ordinary reads cannot refresh these snapshots.
+
 Normal signed-package maintainer and housekeeping behavior is authorized on
 those three machines, including background cleanup of expired PHP sessions
 for other PHP versions. This authorizes the standard behavior; it does not

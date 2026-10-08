@@ -115,6 +115,370 @@ class FileSystem:
 
 
 class SessionLoopTest(unittest.TestCase):
+    @contextmanager
+    def perl_model(self, version="5.38.2-3.2ubuntu0.2"):
+        with self.model() as (item, fs), ExitStack() as stack:
+            row = {"Package": "perl-base", "Status": "install ok installed",
+                   "Architecture": "amd64", "Version": version, "Source": "perl",
+                   "Multi-Arch": "foreign"}
+            item.installed_records.append(row)
+            item.installed["perl-base"] = version
+            peer = "/usr/bin/perl" + version.split(":")[-1].split("-")[0]
+            info, raw, _ = fs.nodes["/usr/bin/perl"]
+            info.st_nlink = 2
+            fs.nodes[peer] = (info, raw, None)
+            fs.packages["/usr/bin/perl"] = "perl-base"
+            fs.packages[peer] = "perl-base"
+            fs.add("/var/lib/dpkg/info/perl-base.list",
+                   ("/.\n/usr\n/usr/bin\n/usr/bin/perl\n" + peer + "\n").encode())
+            fs.add("/var/lib/dpkg/info/perl-base.md5sums",
+                   b"".join((hashlib.md5(raw).hexdigest() + "  " + path[1:] + "\n").encode()
+                            for path in ("/usr/bin/perl", peer)))
+            old_command = item.command.side_effect
+            queries = []
+            def command(operation, argument):
+                queries.append((operation, argument))
+                if operation == "package" and argument == "perl-base":
+                    return ("\t".join(item.perl_installed_package()) + "\n").encode()
+                return old_command(operation, argument)
+            stack.enter_context(patch.object(item, "command", side_effect=command))
+            def read(path, owner=0, limit=BASE.FILE_LIMIT):
+                if item.perl_alias_binding is not None and path in item.perl_alias_binding["paths"]:
+                    return MODULE.Provider.read(item, path, owner, limit)
+                return fs.read(path, owner, limit)
+            stack.enter_context(patch.object(item, "read", side_effect=read))
+            descriptors = {}
+            acquisitions = []
+            def opening(path, flags):
+                self.assertEqual(os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC, flags)
+                acquisitions.append(path)
+                descriptor = len(acquisitions) + 10
+                node = fs.nodes[path]
+                descriptors[descriptor] = [node[0], node[1], 0]
+                return descriptor
+            def reading(descriptor, size):
+                held = descriptors[descriptor]
+                raw = held[1][held[2]:held[2] + size]
+                held[2] += len(raw)
+                return raw
+            stack.enter_context(patch.object(os, "O_NOFOLLOW", 0x20000, create=True))
+            stack.enter_context(patch.object(os, "O_CLOEXEC", 0x80000, create=True))
+            stack.enter_context(patch.object(os, "open", side_effect=opening))
+            stack.enter_context(patch.object(os, "fstat", side_effect=lambda fd: descriptors[fd][0]))
+            stack.enter_context(patch.object(os, "read", side_effect=reading))
+            stack.enter_context(patch.object(os, "close", side_effect=lambda fd: descriptors.pop(fd)))
+            yield item, fs, peer, acquisitions, queries
+            self.assertEqual({}, descriptors)
+
+    def test_perl_alias_actual_preflight_pins_both_then_requires_origin_and_loader(self):
+        with self.perl_model() as (item, fs, peer, acquisitions, queries):
+            self.preflight_inputs(item, fs)
+            command = item.command.side_effect
+            def failed_loader(operation, argument):
+                if (operation, argument) == ("elf", "/usr/bin/perl"):
+                    raise BASE.Refusal("tool-loader")
+                return command(operation, argument)
+            deadline = item.deadline
+            with patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                    patch.object(item, "command", side_effect=failed_loader), \
+                    self.assertRaisesRegex(BASE.Refusal, "^tool-loader$"):
+                item.preflight()
+            self.assertEqual(["/usr/bin/perl", peer], acquisitions)
+            self.assertTrue(item.receipt["perl_alias_domain"]["installed_origin_verified"])
+            for path in ("/usr/bin/perl", peer):
+                self.assertIn(("owner", path), queries)
+                self.assertEqual(item.perl_installed_package(), item.origins[path]["package"])
+                self.assertIsNone(item.origins[path]["source_archive_sha256"])
+            self.assertEqual(deadline, item.deadline)
+            self.assertFalse(item.setup_ready or item.receipt["signed_transaction_authorized"]
+                             or item.receipt["installed_authority_verified"])
+            self.assertEqual(0, item.root_launches)
+            self.assertEqual([], item.commands)
+
+    def test_perl_alias_binding_is_data_until_both_owner_and_package_checks(self):
+        for version in ("5.38.2-3.2ubuntu0.2", "1:5.40.1-2"):
+            with self.subTest(version=version), self.perl_model(version) as (
+                    item, fs, peer, acquisitions, queries):
+                item.system("/usr/bin/perl")
+                self.assertFalse(item.receipt["perl_alias_domain"]["installed_origin_verified"])
+                self.assertNotIn("/usr/bin/perl", item.origins)
+                self.assertEqual(fs.nodes[peer][1], item.read(peer)[2])
+                item.origin("/usr/bin/perl")
+                self.assertTrue(item.receipt["perl_alias_domain"]["installed_origin_verified"])
+                self.assertEqual(2, len([q for q in queries if q[0] == "owner"]))
+                self.assertEqual(1, len([q for q in queries if q[0] == "package"]))
+                self.assertEqual(fs.nodes[peer][1], item.acquire(peer)[2])
+                with self.assertRaisesRegex(BASE.Refusal, "^tool-identity$"):
+                    BASE.validate_file(fs.info(peer), 0, BASE.FILE_LIMIT)
+
+    def test_perl_alias_rejects_unbound_owner_and_metadata(self):
+        for fault in ("missing-owner", "foreign-owner", "foreign-source", "wrong-version",
+                      "wrong-arch", "duplicate-installed", "qualified", "malformed-version"):
+            with self.subTest(fault=fault), self.perl_model() as (item, fs, peer, _, _):
+                if fault == "missing-owner":
+                    del fs.packages[peer]
+                elif fault == "foreign-owner":
+                    fs.packages[peer] = "coreutils"
+                    fs.add("/var/lib/dpkg/info/coreutils.md5sums",
+                           (hashlib.md5(elf()).hexdigest() + "  " + peer[1:] + "\n").encode())
+                elif fault in ("foreign-source", "wrong-arch", "qualified", "malformed-version"):
+                    row = next(r for r in item.installed_records if r["Package"] == "perl-base")
+                    key, value = {"foreign-source": ("Source", "foreign"),
+                                  "wrong-arch": ("Architecture", "arm64"),
+                                  "qualified": ("Multi-Arch", "same"),
+                                  "malformed-version": ("Version", "../5.38.2")}[fault]
+                    row[key] = value
+                elif fault == "duplicate-installed":
+                    item.installed_records.append(dict(
+                        next(r for r in item.installed_records if r["Package"] == "perl-base")))
+                else:
+                    command = item.command.side_effect
+                    def wrong_version(operation, argument):
+                        if (operation, argument) == ("package", "perl-base"):
+                            return b"perl-base\t5.38.2-foreign\tamd64\tperl\t5.38.2-foreign\n"
+                        return command(operation, argument)
+                    item.command.side_effect = wrong_version
+                with self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
+                    item.origin("/usr/bin/perl")
+                self.assertFalse(item.receipt.get("perl_alias_domain", {}).get(
+                    "installed_origin_verified", False))
+
+    def test_perl_alias_rejects_incomplete_or_foreign_listing_and_digest(self):
+        for fault in ("missing", "extra", "duplicate", "whitespace", "dotdot",
+                      "nonascii", "foreign-md5", "missing-md5", "duplicate-md5"):
+            with self.subTest(fault=fault), self.perl_model() as (item, fs, peer, _, _):
+                path = "/var/lib/dpkg/info/perl-base.list"
+                raw = fs.nodes[path][1]
+                if fault == "missing":
+                    raw = raw.replace((peer + "\n").encode(), b"")
+                elif fault == "extra":
+                    raw += b"/usr/bin/perl-foreign\n"
+                elif fault == "duplicate":
+                    raw += (peer + "\n").encode()
+                elif fault == "whitespace":
+                    raw += b"/usr/bin/perl foreign\n"
+                elif fault == "dotdot":
+                    raw += b"/usr/bin/../perl\n"
+                elif fault == "nonascii":
+                    raw += b"/usr/bin/\xff\n"
+                else:
+                    path = "/var/lib/dpkg/info/perl-base.md5sums"
+                    raw = fs.nodes[path][1]
+                    if fault == "foreign-md5":
+                        raw = raw.replace(hashlib.md5(elf()).hexdigest().encode(), b"0" * 32)
+                    elif fault == "missing-md5":
+                        raw = raw.splitlines(keepends=True)[0]
+                    else:
+                        raw += raw.splitlines(keepends=True)[0]
+                fs.add(path, raw)
+                with self.assertRaises(BASE.Refusal):
+                    item.system("/usr/bin/perl")
+
+    def test_perl_alias_rejects_identity_parent_capability_and_architecture_faults(self):
+        for fault in ("third-link", "different-inode", "symlink", "owner", "mode",
+                      "parent", "capability", "elf-arch"):
+            with self.subTest(fault=fault), self.perl_model() as (item, fs, peer, _, _):
+                if fault == "third-link":
+                    fs.info(peer).st_nlink = 3
+                elif fault == "different-inode":
+                    fs.add(peer, elf(), mode=stat.S_IFREG | 0o755).st_nlink = 2
+                elif fault == "symlink":
+                    fs.nodes[peer] = (fs.info(peer), elf(), "/usr/bin/perl")
+                elif fault == "owner":
+                    fs.info(peer).st_uid = 1000
+                elif fault == "mode":
+                    fs.info(peer).st_mode |= 0o2000
+                elif fault == "parent":
+                    fs.info("/usr/bin").st_mode |= 0o002
+                elif fault == "elf-arch":
+                    raw = bytearray(elf())
+                    struct.pack_into("<H", raw, 18, 183)
+                    for path in ("/usr/bin/perl", peer):
+                        fs.nodes[path] = (fs.info(path), bytes(raw), None)
+                    md5 = hashlib.md5(raw).hexdigest()
+                    fs.add("/var/lib/dpkg/info/perl-base.md5sums",
+                           (md5 + "  usr/bin/perl\n" + md5 + "  " + peer[1:] + "\n").encode())
+                with ExitStack() as stack:
+                    if fault == "capability":
+                        stack.enter_context(patch.object(os, "getxattr", return_value=b"cap"))
+                    with self.assertRaises(BASE.Refusal):
+                        item.system("/usr/bin/perl")
+
+    def test_perl_alias_rechecks_body_metadata_members_and_absence_of_extra_links(self):
+        for fault in ("body", "manifest", "list", "metadata", "identity", "parent",
+                      "extra-link", "retired-pin"):
+            with self.subTest(fault=fault), self.perl_model() as (item, fs, peer, _, _):
+                item.origin("/usr/bin/perl")
+                if fault == "body":
+                    info, raw, target = fs.nodes[peer]
+                    fs.nodes[peer] = (info, raw[:-1] + b"x", target)
+                elif fault in ("manifest", "list"):
+                    path = "/var/lib/dpkg/info/perl-base." + (
+                        "md5sums" if fault == "manifest" else "list")
+                    info, raw, target = fs.nodes[path]
+                    fs.nodes[path] = (info, raw[:-1] + b"x", target)
+                elif fault == "metadata":
+                    next(r for r in item.installed_records if r["Package"] == "perl-base")[
+                        "Version"] = "5.38.2-foreign"
+                elif fault == "identity":
+                    fs.info(peer).st_ctime_ns += 1
+                elif fault == "parent":
+                    fs.info("/usr/bin").st_ctime_ns += 1
+                elif fault == "extra-link":
+                    fs.info(peer).st_nlink = 3
+                else:
+                    item.pins.pop(peer)
+                with self.assertRaises(BASE.Refusal):
+                    item.read(peer)
+                self.assertEqual(0, item.root_launches)
+
+    def test_perl_alias_reserves_original_budgets_before_body_reads_without_refunds(self):
+        for fault in ("bytes", "pins", "deadline"):
+            with self.subTest(fault=fault), self.perl_model() as (item, fs, peer, reads, _):
+                for suffix in ("list", "md5sums"):
+                    item.protected("/var/lib/dpkg/info/perl-base." + suffix, 4194304)
+                if fault == "bytes":
+                    item.bytes = BASE.TOTAL_LIMIT - 127
+                elif fault == "pins":
+                    item._retired_pins = BASE.FILE_COUNT - len(item.pins) - len(item.session_data_pins) - 1
+                else:
+                    item.deadline = 0
+                before = item.bytes
+                with self.assertRaises(BASE.Refusal):
+                    item.system("/usr/bin/perl")
+                self.assertEqual([], reads)
+                self.assertGreaterEqual(item.bytes, before)
+                self.assertNotIn(peer, item.pins)
+        with self.perl_model() as (item, fs, peer, reads, _):
+            path = "/var/lib/dpkg/info/perl-base.md5sums"
+            fs.add(path, b"0" * 32 + b"  usr/bin/perl\n")
+            before = item.bytes
+            with self.assertRaises(BASE.Refusal):
+                item.system("/usr/bin/perl")
+            self.assertEqual(["/usr/bin/perl"], reads)
+            self.assertEqual("reserved", item.pins[peer]["state"])
+            self.assertGreaterEqual(item.bytes - before, 128)
+            self.assertFalse(item.receipt.get("perl_alias_domain", {}).get(
+                "installed_origin_verified", False))
+
+    def test_perl_alias_never_admits_unrelated_multilink_tools(self):
+        for path in ("/usr/bin/python3", "/usr/bin/perl-foreign"):
+            with self.subTest(path=path), self.perl_model() as (item, fs, _, _, _):
+                fs.add(path, elf(), mode=stat.S_IFREG | 0o755).st_nlink = 2
+                with self.assertRaisesRegex(BASE.Refusal, "^tool-identity$"):
+                    item.system(path)
+
+    def test_perl_parent_timestamps_refresh_only_after_actual_authorized_install(self):
+        for changed in (("/usr/bin",), ("/var/lib/dpkg/info",),
+                        ("/usr/bin", "/var/lib/dpkg/info")):
+            with self.subTest(changed=changed), self.perl_model() as (
+                    item, fs, peer, _, _), self.transaction(item):
+                self.scan_transaction(item)
+                deadline, acquired = item.deadline, item.bytes
+                identity = dict(item.pins[peer]["identity"])
+                with self.modeled_apt_capture(item, fs):
+                    capture = item.capture.side_effect
+                    def installed(operation, argv, stdin=None):
+                        result = capture(operation, argv, stdin)
+                        if operation == "apt-install":
+                            records = MODULE.POLICY.deb822(fs.nodes["/var/lib/dpkg/status"][1])
+                            perl = next(row for row in records if row["Package"] == "perl-base")
+                            perl.update(Architecture="amd64", Source="perl",
+                                        **{"Multi-Arch": "foreign"})
+                            raw = "\n\n".join("\n".join(k + ": " + v for k, v in row.items())
+                                              for row in records).encode() + b"\n"
+                            fs.add("/var/lib/dpkg/status", raw)
+                            for parent in changed:
+                                fs.info(parent).st_ctime_ns += 1
+                                fs.info(parent).st_mtime_ns += 1
+                        return result
+                    with patch.object(item, "capture", side_effect=installed):
+                        item.configure()
+                self.assertTrue(item.receipt["installed_authority_verified"])
+                self.assertEqual(identity, item.pins[peer]["identity"])
+                self.assertEqual(deadline, item.deadline)
+                self.assertGreaterEqual(item.bytes, acquired)
+                self.assertEqual(["apt-install", "select-php"],
+                                 [row["operation"] for row in item.commands])
+                self.assertEqual(2, item.root_launches)
+                self.assertTrue(all(row["producer_pid"] is None for row in item.commands))
+                for path in (*item.perl_alias_binding["paths"], *item.perl_alias_binding["metadata"]):
+                    self.assertEqual(fs.parents(path), item.pins[path]["parents"])
+                item.read(peer)
+                item.origin("/usr/bin/perl")
+                fs.info("/usr/bin").st_ctime_ns += 1
+                with self.assertRaisesRegex(BASE.Refusal, "^tool-link$"):
+                    item.read(peer)
+
+    def test_perl_parent_refresh_rejects_unauthorized_or_unconsumed_scope(self):
+        for scope in ("none", "unconsumed", "wrong-operation"):
+            with self.subTest(scope=scope), self.perl_model() as (item, fs, peer, _, _):
+                with ExitStack() as stack:
+                    if scope != "none":
+                        stack.enter_context(self.transaction(item))
+                        self.scan_transaction(item)
+                    else:
+                        item.origin("/usr/bin/perl")
+                    if scope == "wrong-operation":
+                        with self.modeled_apt_capture(item, fs), item.transaction_admission("apt-install"):
+                            item.root("apt-install")
+                        item.root_cursor += 1
+                    before = item.pins[peer]["parents"]
+                    fs.info("/usr/bin").st_ctime_ns += 1
+                    fs.info("/var/lib/dpkg/info").st_ctime_ns += 1
+                    with self.assertRaisesRegex(BASE.Refusal, "^tool-link$"):
+                        item.read(peer)
+                    with self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
+                        item.refresh_install_parents()
+                    self.assertIs(before, item.pins[peer]["parents"])
+                    self.assertFalse(item.receipt["installed_authority_verified"])
+
+    def test_perl_authorized_parent_refresh_retains_substitution_and_drift_rejections(self):
+        faults = ("body", "manifest", "listing", "inode", "symlink", "nlink",
+                  "capability", "metadata", "parent-inode", "parent-mode", "parent-owner")
+        for fault in faults:
+            with self.subTest(fault=fault), self.perl_model() as (
+                    item, fs, peer, _, _), self.transaction(item):
+                self.scan_transaction(item)
+                with self.modeled_apt_capture(item, fs), item.transaction_admission("apt-install"):
+                    item.root("apt-install")
+                paths = (*item.perl_alias_binding["paths"], *item.perl_alias_binding["metadata"])
+                before = {path: item.pins[path]["parents"] for path in paths}
+                old_metadata = {path: data["parents"] for path, data in
+                                item.perl_alias_binding["metadata"].items()}
+                fs.info("/usr/bin").st_ctime_ns += 1
+                fs.info("/var/lib/dpkg/info").st_ctime_ns += 1
+                if fault in ("body", "manifest", "listing"):
+                    path = (peer if fault == "body" else "/var/lib/dpkg/info/perl-base."
+                            + ("md5sums" if fault == "manifest" else "list"))
+                    info, raw, target = fs.nodes[path]
+                    fs.nodes[path] = (info, raw[:-1] + b"x", target)
+                elif fault == "inode":
+                    fs.add(peer, elf(), mode=stat.S_IFREG | 0o755).st_nlink = 2
+                elif fault == "symlink":
+                    fs.nodes[peer] = (fs.info(peer), elf(), "/usr/bin/perl")
+                elif fault == "nlink":
+                    fs.info(peer).st_nlink = 3
+                elif fault == "metadata":
+                    next(row for row in item.installed_records if row["Package"] == "perl-base")[
+                        "Version"] = "5.38.2-foreign"
+                elif fault == "parent-inode":
+                    fs.info("/var/lib/dpkg/info").st_ino += 1
+                elif fault == "parent-mode":
+                    fs.info("/usr/bin").st_mode |= 0o002
+                elif fault == "parent-owner":
+                    fs.info("/usr/bin").st_uid = 1000
+                with ExitStack() as stack:
+                    if fault == "capability":
+                        stack.enter_context(patch.object(os, "getxattr", return_value=b"cap"))
+                    with self.assertRaises(BASE.Refusal):
+                        item.refresh_install_parents()
+                for path in paths:
+                    self.assertIs(before[path], item.pins[path]["parents"])
+                for path, data in item.perl_alias_binding["metadata"].items():
+                    self.assertIs(old_metadata[path], data["parents"])
+                self.assertFalse(item.receipt["installed_authority_verified"])
+
     def preflight_inputs(self, item, fs):
         raw = "\n\n".join("\n".join(key + ": " + value for key, value in row.items())
                           for row in item.installed_records).encode() + b"\n"

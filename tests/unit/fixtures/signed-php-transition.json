@@ -543,7 +543,7 @@
     ".github/ISSUE_TEMPLATE/config.yml": "a6b12f327fe7490036740b7e0590f41da474c4c991092da034444fb1414d9aa4",
     ".github/ISSUE_TEMPLATE/feature_request.md": "8ea25177279b0f97e06df9b38a407359d9c4279964b05787b76a1054641727b3",
     ".github/PULL_REQUEST_TEMPLATE.md": "1df3b3949c72e2382c6c85b59b185d0dfb382c64424f42dd835965db2f4f30ce",
-    ".github/REPOSITORY_CHANGELOG.md": "a0b49a6e6cda4c1aa3e463d5563d98e836658adec8e25d12c9111811b142ab48",
+    ".github/REPOSITORY_CHANGELOG.md": "8dede25d9beeec602256b9eb080f148032da6b9a831a44dfdd84741b48b3f9a9",
     ".github/SETUP-COMPLETE.md": "95cfe50cb68612e693f9f7a994ccded1fe32b1521521067aa1311b990f979e55",
     ".github/compatibility-versions.json": "73865b94ad6ac10cbed9bec8a31b41911cbb35014b4a904734d9258f0718c19a",
     ".github/copilot-instructions.md": "fa4db4dd09a39499480614f0e06fc71203072db81148eaadf40b45d79a5ec2bf",
@@ -604,7 +604,7 @@
     "docs/qa-strategy.md": "c68016253523588142109ab6cf21861ed4b5b6fcab3a3f2611f556503f65e3bc",
     "docs/release-strategy.md": "a452483fa102d4db3fea59e91a0a9344ba47d9fd63acfd8049fa7277629a790d",
     "docs/sdlc-overview.md": "687d277b66a1f0b062f8b1cef8f0e4f38f9cfe810bfca3f1b75673bfad50caf0",
-    "docs/security-strategy.md": "923c3a87f8233bf4654c90e1499ca3a224e87bc46d8485cd73944f32652923c4",
+    "docs/security-strategy.md": "20efd4d697a2172b6d1af627e9d807b8d767134c038c38bcf6e8ec8b97113bf1",
     "docs/shared-helpers.md": "03dfee0305d3058546b60427cc2fe5869b824f84b1b1995093ddb363605f095b",
     "includes/class-ability.php": "9a237e25baa11fc823fcdaee45277d1ca9462ca04af462e33dede511bdb0edf5",
     "includes/class-backup-status.php": "d521e5caf92c422325a0fa2bf85e7f393bd36cc584b250facc5264eeeb759840",
@@ -1066,13 +1066,13 @@
     "tests/unit/test_untrusted_query.py": "17551baee77beb3da127d743e3ce029ff577917487b40567bd23b923df4477a8",
     "tests/untrusted-stage-test.sh": "17a99df2bbb5e39171ef6bff72675fe8894942cb152c14283e9de01b0ff55ce7",
     "webmastery-site-toolkit-for-mcp.php": "66ad568ed9018670c30ceda128af3c67cf18b63c62eb5bf6a76ddcdff3386ab2",
-    "scripts/host-php-apt.py": "68c9c509ef1f3624e68d2a9cd24b1489ac430e75d4156d07312e736e1638af94",
+    "scripts/host-php-apt.py": "43843fb213d86d751c363d33c34dc0eef4729f703b383319a7d08be1e9885db0",
     "scripts/host-php-apt-policy.py": "389170dc2ec9c0ce205128484a9f9b8febc7173294454a733f5f2665371890fb",
     "scripts/host-php-apt-capture.py": "db8173b5265a6f22f44f494848f57e1763893a31f6c89b108997a1d9c7df4103",
     "scripts/host-php-apt-signature.py": "6207a2c61f6c0122a23b71797bf8c2c222cb6e03ad06ae4f8b6928a758b5861d",
     "scripts/host-php-apt-trust.py": "9ab753bf123d6f813c4eb77c1c8492a508f444bf4091c950fcb60889d945d0ab",
     "scripts/host-php-apt-ca.py": "3a5e54d85d467ddd17f06b4704754265d22e425d15727685672fa2e59017b753",
-    "tests/unit/test_host_php_apt_session_loop.py": "974756412fc54af82a0697b55eef6e7f07b9c5249502f143c23e98f0d0ea6cef",
+    "tests/unit/test_host_php_apt_session_loop.py": "f6fa955a26b8311424abcabfcdceb24e19e22e52ad424b4df53ea959f8bb4240",
     "tests/unit/test_standard_php_config.py": "8a84480c2fb94ebe72dfa2468c1995d7610e11db55d6cb29fcc4c80e47ce8c17",
     "tests/unit/fixtures/signed-php-producers/phpquery": "0e9daa717d1af9b4e069c1976e0aad9cb07141b26b7b9a680009fe322e1e0c89",
     "tests/unit/fixtures/signed-php-producers/php-helper": "72445eb0e4d94093f9f5b78038370b01741222cb7498f15ccb5cf8d476dbd83a",
@@ -1129,13 +1129,20 @@
     },
     ".github/REPOSITORY_CHANGELOG.md": {
       "baseline_raw_sha256": "be511c50bbec7bb87bc4067778065fb7801efef97a02bf50442b35863a3bce0d",
-      "current_raw_sha256": "a0b49a6e6cda4c1aa3e463d5563d98e836658adec8e25d12c9111811b142ab48",
+      "current_raw_sha256": "8dede25d9beeec602256b9eb080f148032da6b9a831a44dfdd84741b48b3f9a9",
       "hunks": [
         {
           "start": 7,
           "before": [],
           "after": [
             "",
+            "- Refresh Perl alias and package-metadata directory timestamp snapshots only",
+            "  after authenticated installation, retaining exact file, digest, association,",
+            "  capability and stable directory checks. Ordinary reads remain strict.",
+            "- Bind the retained Perl tool's complete package-declared hard-link pair to",
+            "  installed owner, source/version, manifest digests and shared physical custody.",
+            "  Keep generic single-link rejection, dependency checks and original limits;",
+            "  reject extra aliases, substitutions and provenance drift.",
             "- Attribute refused signed-provider preflight to closed step/tool labels and",
             "  ordinary-file identity predicates without exposing paths or changing guards,",
             "  provenance, operations or budgets.",
@@ -1443,7 +1450,7 @@
     },
     "docs/security-strategy.md": {
       "baseline_raw_sha256": "99059483a77c0166fc719a8e88b46502e91fc910b88b4b8242a4d73c54a344f3",
-      "current_raw_sha256": "923c3a87f8233bf4654c90e1499ca3a224e87bc46d8485cd73944f32652923c4",
+      "current_raw_sha256": "20efd4d697a2172b6d1af627e9d807b8d767134c038c38bcf6e8ec8b97113bf1",
       "hunks": [
         {
           "start": 27,
@@ -1461,6 +1468,22 @@
             "Only the approved fixed installation/selection operations and their original",
             "ROOT, time, command and acquisition limits apply. A missing owner is not",
             "permission to invent provenance or whitelist a foreign binary.",
+            "",
+            "The retained Perl tool may use only the complete two-name hard-link domain",
+            "declared by the installed `perl-base` package: `/usr/bin/perl` and its exact",
+            "installed upstream-version name. Protected installed metadata, the package",
+            "listing and both manifest entries must agree with both owner queries and package",
+            "source/version/architecture. Both canonical root-owned files must share the",
+            "same physical identity and exactly two links, safe modes, protected parents and",
+            "verified ELF bytes. Held-descriptor reads and subsequent domain checks reject",
+            "extra links, substitutions, digest or metadata drift and exhausted original",
+            "budgets. Generic files still require a single link. This installed-package",
+            "binding does not prove a signed source archive or loader closure; existing",
+            "dependency checks remain required before execution eligibility.",
+            "Only the authenticated successful post-install refresh may update directory",
+            "timestamp snapshots for both Perl names and their package metadata. Directory",
+            "identity, ownership and modes, exact file identities, bytes, association and",
+            "capabilities remain unchanged; ordinary reads cannot refresh these snapshots.",
             "",
             "Normal signed-package maintainer and housekeeping behavior is authorized on",
             "those three machines, including background cleanup of expired PHP sessions",
@@ -1509,7 +1532,7 @@
           ]
         },
         {
-          "start": 85,
+          "start": 101,
           "before": [
             "guard follows the final pinned PHP setup action and precedes every candidate"
           ],
@@ -1518,7 +1541,7 @@
           ]
         },
         {
-          "start": 89,
+          "start": 105,
           "before": [
             "No candidate/config writer may run in this provisioning",
             "interval. Workflow context is a scope assertion, not an authorization token"
@@ -1530,7 +1553,7 @@
           ]
         },
         {
-          "start": 94,
+          "start": 110,
           "before": [
             "Its only elevated argv is the fixed system sudo/chmod0644 command for the",
             "selected literal php.ini/99-pecl.ini pair:8.2 in Package,8.4 in Contract/Full MCP."
@@ -1543,7 +1566,7 @@
           ]
         },
         {
-          "start": 104,
+          "start": 120,
           "before": [
             "No root repository/PHP/Python/shell script, dynamic path/argv, directory/glob,"
           ],
@@ -1560,7 +1583,7 @@
           ]
         },
         {
-          "start": 122,
+          "start": 138,
           "before": [
             "All originals stay in exclusive owned private custody. One setup deadline and",
             "conserved file/byte/command/output ledgers cover the complete operation, including",

@@ -6,6 +6,13 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Refresh Perl alias and package-metadata directory timestamp snapshots only
+  after authenticated installation, retaining exact file, digest, association,
+  capability and stable directory checks. Ordinary reads remain strict.
+- Bind the retained Perl tool's complete package-declared hard-link pair to
+  installed owner, source/version, manifest digests and shared physical custody.
+  Keep generic single-link rejection, dependency checks and original limits;
+  reject extra aliases, substitutions and provenance drift.
 - Attribute refused signed-provider preflight to closed step/tool labels and
   ordinary-file identity predicates without exposing paths or changing guards,
   provenance, operations or budgets.

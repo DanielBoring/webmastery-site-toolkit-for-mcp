@@ -112,6 +112,7 @@ class Provider(CAPTURE.Capture):
         self._transaction = None
         self._transaction_scope = None
         self._retired_pins = 0
+        self.perl_alias_binding = None
         self.stage = "preflight"
         self.receipt.update(state="reserved", historical_chmod_performed=False,
                             standard_configuration_hardened=False,
@@ -137,10 +138,150 @@ class Provider(CAPTURE.Capture):
         self.session_data_pins[path] = binding
 
     def acquire(self, path, limit=BASE.FILE_LIMIT):
+        if self.perl_alias_binding is not None and path in self.perl_alias_binding["paths"]:
+            require(self.perl_alias_binding["state"] == "pinned", "tool-link")
+            self.verify_perl_aliases()
+            info = os.lstat(path)
+            require(info.st_size <= limit, "file-budget")
+            return path, info, self._pin_bytes[path]
         if os.path.realpath(path) not in self.pins:
             require(len(self.pins) + len(self.session_data_pins) + self._retired_pins < BASE.FILE_COUNT,
                     "file-budget")
         return super().acquire(path, limit)
+
+    def perl_installed_package(self):
+        rows = [row for row in self.installed_records if row.get("Package") == "perl-base"]
+        require(len(rows) == 1, "tool-origin")
+        row = rows[0]
+        version = row.get("Version", "")
+        require(row.get("Status") == "install ok installed"
+                and row.get("Architecture") == "amd64"
+                and row.get("Multi-Arch", "no") in ("no", "allowed", "foreign")
+                and re.fullmatch(r"(?:[0-9]+:)?5\.[0-9]{1,3}\.[0-9]{1,3}(?:-[A-Za-z0-9.+~]+)?",
+                                 version), "tool-origin")
+        source = re.fullmatch(r"perl(?: \(([A-Za-z0-9.+:~_-]{1,128})\))?",
+                             row.get("Source", ""))
+        require(source is not None, "tool-origin")
+        return ["perl-base", version, "amd64", "perl", source[1] or version]
+
+    def verify_perl_aliases(self):
+        self.check()
+        binding = self.perl_alias_binding
+        require(binding is not None and binding["package"] == self.perl_installed_package(),
+                "tool-origin")
+        for path, before in binding["metadata"].items():
+            actual, info, raw = self.read(path, limit=before["bytes"])
+            require(actual == path and BASE.identity(info) == before["identity"]
+                    and POLICY.digest(raw) == before["sha256"]
+                    and BASE.parent_pins(path) == before["parents"], "tool-link")
+        for path in binding["paths"]:
+            require(path in self.pins
+                    and (binding["state"] != "pinned" or path in self._pin_bytes), "tool-link")
+            pin = self.pins[path]
+            require(os.path.realpath(path) == path
+                    and BASE.identity(os.lstat(path)) == pin["identity"]
+                    and BASE.parent_pins(path) == pin["parents"], "tool-link")
+            GUARD.no_capabilities(path)
+        self.check()
+
+    def read_perl_alias(self, path):
+        binding = self.perl_alias_binding
+        require(binding is not None and path in binding["paths"], "unsafe-input")
+        self.verify_perl_aliases()
+        before = self.pins[path]
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        try:
+            require(BASE.identity(os.fstat(descriptor)) == before["identity"], "tool-link")
+            raw = bytearray()
+            while len(raw) < before["bytes"]:
+                self.check()
+                chunk = os.read(descriptor, min(65536, before["bytes"] - len(raw)))
+                require(bool(chunk), "tool-link")
+                raw.extend(chunk)
+            observed = os.fstat(descriptor)
+            require(BASE.identity(observed) == before["identity"], "tool-link")
+            self.verify_perl_aliases()
+            BASE.verify_manifest(binding["manifest"], path, hashlib.md5(raw).hexdigest())
+            if binding["state"] == "pinned":
+                require(POLICY.digest(raw) == before["sha256"], "tool-link")
+            return path, observed, bytes(raw)
+        finally:
+            os.close(descriptor)
+
+    def read(self, path, owner=0, limit=BASE.FILE_LIMIT):
+        if self.perl_alias_binding is not None and path in self.perl_alias_binding["paths"]:
+            require(owner == 0 and self.perl_alias_binding["state"] == "pinned"
+                    and path in self.pins, "tool-link")
+            require(self.pins[path]["bytes"] <= limit, "file-budget")
+            return self.read_perl_alias(path)
+        return super().read(path, owner, limit)
+
+    def bind_perl_aliases(self):
+        require(self.perl_alias_binding is None, "tool-link")
+        package = self.perl_installed_package()
+        upstream = package[1].split(":", 1)[-1].split("-", 1)[0]
+        paths = ("/usr/bin/perl", "/usr/bin/perl" + upstream)
+        metadata = {}
+        contents = {}
+        for suffix in ("list", "md5sums"):
+            path = "/var/lib/dpkg/info/perl-base." + suffix
+            raw = self.protected(path, 4194304)
+            pin = self.pins[path]
+            metadata[path] = {"identity": pin["identity"], "parents": pin["parents"],
+                              "bytes": len(raw), "sha256": POLICY.digest(raw)}
+            contents[suffix] = raw
+        try:
+            names = contents["list"].decode("ascii").splitlines()
+        except UnicodeError:
+            raise BASE.Refusal("tool-origin") from None
+        require(names and len(names) == len(set(names))
+                and all(name.startswith("/") and not re.search(r"[\s\x00-\x1f\x7f]", name)
+                        and ".." not in name.split("/") for name in names), "tool-origin")
+        declared = [name for name in names if name.startswith(("/usr/bin/perl", "/bin/perl"))]
+        require(set(declared) == set(paths) and len(declared) == 2, "tool-origin")
+        infos = {}
+        parents = {}
+        for path in paths:
+            require(os.path.realpath(path) == path, "tool-link")
+            info = os.lstat(path)
+            require(stat.S_ISREG(info.st_mode) and info.st_uid == 0
+                    and not info.st_mode & 0o6022 and info.st_nlink == 2, "tool-link")
+            require(0 <= info.st_size <= BASE.FILE_LIMIT, "file-budget")
+            infos[path] = BASE.identity(info)
+            parents[path] = BASE.parent_pins(path)
+            GUARD.no_capabilities(path)
+        require(infos[paths[0]] == infos[paths[1]], "tool-link")
+        self.check()
+        require(all(path not in self.pins for path in paths)
+                and len(self.pins) + len(self.session_data_pins) + self._retired_pins + 2 <= BASE.FILE_COUNT
+                and self.bytes + sum(info["size"] for info in infos.values()) <= BASE.TOTAL_LIMIT,
+                "file-budget")
+        for path in paths:
+            self.bytes += infos[path]["size"]
+            self.pins[path] = {"state": "reserved", "identity": infos[path],
+                               "parents": parents[path], "bytes": infos[path]["size"],
+                               "aliases": {path: infos[path]}}
+        self.perl_alias_binding = {"state": "reserved", "paths": paths, "package": package,
+                                  "metadata": metadata, "manifest": contents["md5sums"]}
+        for path in paths:
+            _, _, raw = self.read_perl_alias(path)
+            BASE.parse_elf(raw)
+            require(raw[18:20] == b"\x3e\x00", "tool-elf")
+            self._pin_bytes[path] = raw
+            self.pins[path].update(state="pinned", sha256=POLICY.digest(raw))
+            self.files[path] = {"identity": infos[path], "parents": parents[path],
+                                "sha256": POLICY.digest(raw), "md5": hashlib.md5(raw).hexdigest(),
+                                "elf": True, "header64_hex": raw[:64].hex(),
+                                "aliases": {path: infos[path]}}
+        require(self.files[paths[0]]["sha256"] == self.files[paths[1]]["sha256"], "tool-link")
+        self.perl_alias_binding["state"] = "pinned"
+        self.verify_perl_aliases()
+        self.receipt["perl_alias_domain"] = {
+            "package": package, "paths": list(paths), "identity": infos[paths[0]],
+            "sha256": self.files[paths[0]]["sha256"],
+            "manifest_sha256": POLICY.digest(contents["md5sums"]),
+            "listing_sha256": POLICY.digest(contents["list"]),
+            "installed_origin_verified": False}
 
     def extraction_parents(self, path, root):
         self.custody()
@@ -830,6 +971,13 @@ class Provider(CAPTURE.Capture):
         return paths
 
     def system(self, path):
+        if (self.perl_alias_binding is not None and path in self.perl_alias_binding["paths"]):
+            require(self.perl_alias_binding["state"] == "pinned", "tool-link")
+            self.verify_perl_aliases()
+            return path
+        if path == "/usr/bin/perl" and os.lstat(path).st_nlink != 1:
+            self.bind_perl_aliases()
+            return path
         special = path.startswith(("/usr/sbin/", "/usr/share/ca-certificates/",
                                    "/usr/share/debconf/", "/usr/share/perl",
                                    "/usr/share/ucf/", "/usr/share/keyrings/"))
@@ -1217,6 +1365,16 @@ class Provider(CAPTURE.Capture):
 
     def checked_origin(self, path):
         canonical = self.system(path)
+        if self.perl_alias_binding is not None and canonical in self.perl_alias_binding["paths"]:
+            self.verify_perl_aliases()
+            for member in self.perl_alias_binding["paths"]:
+                super().checked_origin(member)
+                require(self.origins[member]["package"] == self.perl_alias_binding["package"]
+                        and self.origins[member]["manifest_sha256"]
+                        == POLICY.digest(self.perl_alias_binding["manifest"]), "tool-origin")
+            self.verify_perl_aliases()
+            self.receipt["perl_alias_domain"]["installed_origin_verified"] = True
+            return
         if canonical in self.origins:
             before = self.origins[canonical]
             manifest = before["manifest"]
@@ -1724,6 +1882,40 @@ class Provider(CAPTURE.Capture):
         # Only the successful authenticated installation interval may change
         # directory timestamps and authenticated incoming helper replacements.
         # Unchanged tools/aliases and directory custody remain immutable.
+        if self.perl_alias_binding is not None:
+            binding = self.perl_alias_binding
+            require(binding["state"] == "pinned"
+                    and binding["package"] == self.perl_installed_package(), "tool-origin")
+            snapshots = []
+            for path in (*binding["paths"], *binding["metadata"]):
+                require(path in self.pins, "tool-link")
+                pin = self.pins[path]
+                current = BASE.parent_pins(path)
+                before = pin["parents"]
+                require(set(current) == set(before)
+                        and all(all(current[parent][key] == old[key]
+                                    for key in ("dev", "ino", "uid", "gid", "mode"))
+                                for parent, old in before.items()), "tool-parent")
+                snapshots.append((pin, before, current))
+                if path in binding["metadata"]:
+                    metadata = binding["metadata"][path]
+                    require(metadata["parents"] == before, "tool-link")
+                    snapshots.append((metadata, metadata["parents"], current))
+            verified = False
+            try:
+                for record, before, current in snapshots:
+                    record["parents"] = current
+                self.verify_perl_aliases()
+                for path in binding["paths"]:
+                    _, _, raw = self.read_perl_alias(path)
+                    require(POLICY.digest(raw) == self.files[path]["sha256"], "tool-link")
+                verified = True
+            finally:
+                if not verified:
+                    for record, before, current in snapshots:
+                        record["parents"] = before
+            for path in binding["paths"]:
+                self.files[path]["parents"] = self.pins[path]["parents"]
         for path, entry in self.files.items():
             owner = self.origins[path]["package"][0].split(":")[0]
             if owner in {row["package"] for row in self.lock}:
