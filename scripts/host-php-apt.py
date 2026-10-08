@@ -46,6 +46,31 @@ PREFLIGHT_STEPS = frozenset((
     "python-module", "sudo-policy", "apt-credentials", "apt-configuration",
     "loader", "apt-method", "ca-trust", "keyring", "install-paths",
     "dpkg-state", "apt-hooks", "source-recheck"))
+PREFLIGHT_TOOLS = {
+    "tool-file": frozenset(TOOL_IDS.values()), "tool-origin": frozenset(TOOL_IDS.values()),
+    "python-module": frozenset(("python3",)), "sudo-policy": frozenset(("sudo",)),
+    "apt-method": frozenset(("apt-http", "apt-https", "apt-gpgv", "apt-store")),
+    "ca-trust": frozenset(("update-ca-certificates",)),
+    "apt-hooks": frozenset(("apt-config",)),
+}
+ORIGIN_CHECKS = BASE.ORIGIN_CHECK_IDS | frozenset((
+    "perl-installed-record", "perl-installed-metadata", "perl-installed-source",
+    "perl-domain-package", "perl-list-encoding", "perl-list-shape", "perl-list-domain",
+    "bound-package", "bound-retained-association", "owner-exit-output",
+    "conffile-association", "ca-owner-stderr", "ca-owner-shape", "ca-owner-target",
+    "ca-owner-domain", "perl-owner-association", "cached-manifest", "cached-package",
+    "cached-association", "ca-canonical", "ca-helper-owner", "ca-cached-owner",
+    "ca-package-metadata", "ca-package-association", "ca-manifest-projection",
+    "sudo-policy-package", "python-support-domain", "perl-support-domain", "apt-hook-owner",
+    "ca-bound-metadata", "ca-bound-source", "ca-bound-digest", "ca-installed-generation",
+    "ca-generated-selection", "ca-generation-manifest", "ca-manifest-row",
+    "ca-manifest-name-encoding", "ca-manifest-name", "ca-manifest-domain",
+    "ca-generated-content", "ca-debconf-row", "ca-debconf-value", "ca-debconf-variables",
+    "ca-debconf-source", "ca-debconf-template", "ca-generation-helper",
+    "ca-local-domain", "ca-anchor-association", "ca-bundle-content",
+    "future-helper-alias-package", "future-helper-alias-source", "future-helper-domain",
+    "future-helper-package", "future-helper-lock", "future-helper-manifest",
+))
 SOURCES = ("host-php-apt.py", "host-php-apt-capture.py", "host-php-apt-policy.py",
            "host-php-apt-signature.py", "host-prerequisite-setup.py",
            "host-prerequisite-inventory.py", "provision-php82-permissions.py",
@@ -151,24 +176,24 @@ class Provider(CAPTURE.Capture):
 
     def perl_installed_package(self):
         rows = [row for row in self.installed_records if row.get("Package") == "perl-base"]
-        require(len(rows) == 1, "tool-origin")
+        require(len(rows) == 1, "tool-origin", origin_check="perl-installed-record")
         row = rows[0]
         version = row.get("Version", "")
         require(row.get("Status") == "install ok installed"
                 and row.get("Architecture") == "amd64"
                 and row.get("Multi-Arch", "no") in ("no", "allowed", "foreign")
                 and re.fullmatch(r"(?:[0-9]+:)?5\.[0-9]{1,3}\.[0-9]{1,3}(?:-[A-Za-z0-9.+~]+)?",
-                                 version), "tool-origin")
+                                 version), "tool-origin", origin_check="perl-installed-metadata")
         source = re.fullmatch(r"perl(?: \(([A-Za-z0-9.+:~_-]{1,128})\))?",
                              row.get("Source", ""))
-        require(source is not None, "tool-origin")
+        require(source is not None, "tool-origin", origin_check="perl-installed-source")
         return ["perl-base", version, "amd64", "perl", source[1] or version]
 
     def verify_perl_aliases(self):
         self.check()
         binding = self.perl_alias_binding
         require(binding is not None and binding["package"] == self.perl_installed_package(),
-                "tool-origin")
+                "tool-origin", origin_check="perl-domain-package")
         for path, before in binding["metadata"].items():
             actual, info, raw = self.read(path, limit=before["bytes"])
             require(actual == path and BASE.identity(info) == before["identity"]
@@ -233,12 +258,16 @@ class Provider(CAPTURE.Capture):
         try:
             names = contents["list"].decode("ascii").splitlines()
         except UnicodeError:
-            raise BASE.Refusal("tool-origin") from None
+            error = BASE.Refusal("tool-origin")
+            error.origin_check = "perl-list-encoding"
+            raise error from None
         require(names and len(names) == len(set(names))
                 and all(name.startswith("/") and not re.search(r"[\s\x00-\x1f\x7f]", name)
-                        and ".." not in name.split("/") for name in names), "tool-origin")
+                        and ".." not in name.split("/") for name in names), "tool-origin",
+                origin_check="perl-list-shape")
         declared = [name for name in names if name.startswith(("/usr/bin/perl", "/bin/perl"))]
-        require(set(declared) == set(paths) and len(declared) == 2, "tool-origin")
+        require(set(declared) == set(paths) and len(declared) == 2, "tool-origin",
+                origin_check="perl-list-domain")
         infos = {}
         parents = {}
         for path in paths:
@@ -1015,7 +1044,8 @@ class Provider(CAPTURE.Capture):
         origin = self.origins[canonical]
         package = origin["package"]
         if expected_package is not None:
-            require(package[0].split(":")[0] == expected_package, "tool-origin")
+            require(package[0].split(":")[0] == expected_package, "tool-origin",
+                    origin_check="bound-package")
         _, info, raw = self.read(canonical, limit=BASE.FILE_LIMIT)
         require(BASE.identity(info) == entry["identity"]
                 and POLICY.digest(raw) == entry["sha256"], "tool-link")
@@ -1029,7 +1059,7 @@ class Provider(CAPTURE.Capture):
             label = "bound-file-" + str(len(self.originals))
             self.retain(label, raw)
         else:
-            require(before["pin"] == pin, "tool-origin")
+            require(before["pin"] == pin, "tool-origin", origin_check="bound-retained-association")
             label = before["label"]
         retained_identity, retained = self.retained_metadata(label)
         require(self.originals.get(label) == raw and retained == raw, "retention")
@@ -1303,7 +1333,8 @@ class Provider(CAPTURE.Capture):
                 and record["stdout_eof"] is True and record["stderr_eof"] is True
                 and record["failure"] is None and record["retention_failed"] is False,
                 "native-command")
-        require(operation != "owner" or record["exit"] != 1 or not stdout, "tool-origin")
+        require(operation != "owner" or record["exit"] != 1 or not stdout, "tool-origin",
+                origin_check="owner-exit-output")
         self.check()
         return stdout
 
@@ -1335,7 +1366,8 @@ class Provider(CAPTURE.Capture):
                 fields = line.split()
                 if len(fields) == 2 and fields[0] == path:
                     matches.append((fields[1], row["Package"]))
-        require(len(matches) == 1 and matches[0][0] == hashlib.md5(raw).hexdigest(), "tool-origin")
+        require(len(matches) == 1 and matches[0][0] == hashlib.md5(raw).hexdigest(), "tool-origin",
+                origin_check="conffile-association")
         self.default_configuration[path] = {
             "package": matches[0][1], "sha256": POLICY.digest(raw),
             "text": raw.decode("utf-8")}
@@ -1351,15 +1383,16 @@ class Provider(CAPTURE.Capture):
             batch = paths[start:start + 32]
             self.ca_owner_ticket = ("/usr/bin/dpkg-query", "-S", *batch)
             stdout, stderr, _ = self.native("ca-owner-batch", self.ca_owner_ticket)
-            require(not stderr, "tool-origin")
+            require(not stderr, "tool-origin", origin_check="ca-owner-stderr")
             observed = {}
             for line in stdout.decode("utf-8").splitlines():
-                require(": " in line, "tool-origin")
+                require(": " in line, "tool-origin", origin_check="ca-owner-shape")
                 package, path = line.split(": ", 1)
                 require(package == "ca-certificates" and path in batch
-                        and path not in observed and os.path.realpath(path) == path, "tool-origin")
+                        and path not in observed and os.path.realpath(path) == path, "tool-origin",
+                        origin_check="ca-owner-target")
                 observed[path] = package
-            require(set(observed) == set(batch), "tool-origin")
+            require(set(observed) == set(batch), "tool-origin", origin_check="ca-owner-domain")
             self.ca_owners.update(observed)
             self.check()
 
@@ -1371,7 +1404,8 @@ class Provider(CAPTURE.Capture):
                 super().checked_origin(member)
                 require(self.origins[member]["package"] == self.perl_alias_binding["package"]
                         and self.origins[member]["manifest_sha256"]
-                        == POLICY.digest(self.perl_alias_binding["manifest"]), "tool-origin")
+                        == POLICY.digest(self.perl_alias_binding["manifest"]), "tool-origin",
+                        origin_check="perl-owner-association")
             self.verify_perl_aliases()
             self.receipt["perl_alias_domain"]["installed_origin_verified"] = True
             return
@@ -1381,32 +1415,34 @@ class Provider(CAPTURE.Capture):
             actual, info, raw = self.read(manifest, limit=4194304)
             require(actual == manifest and os.path.realpath(manifest) == manifest
                     and BASE.identity(info) == before["manifest_identity"]
-                    and POLICY.digest(raw) == before["manifest_sha256"], "tool-origin")
+                    and POLICY.digest(raw) == before["manifest_sha256"], "tool-origin",
+                    origin_check="cached-manifest")
             package = before["package"][0]
-            require(package in self.packages, "tool-origin")
+            require(package in self.packages, "tool-origin", origin_check="cached-package")
             metadata, cached_path, cached_info, cached_raw = self.packages[package]
             require(list(metadata) == list(before["package"])
                     and cached_path == manifest and BASE.identity(cached_info) == BASE.identity(info)
-                    and cached_raw == raw, "tool-origin")
+                    and cached_raw == raw, "tool-origin", origin_check="cached-association")
             self.check()
             return
         helper = "/usr/sbin/update-ca-certificates"
         if path not in self.ca_owners and path != helper:
             return super().checked_origin(path)
-        require(canonical == path, "tool-origin")
+        require(canonical == path, "tool-origin", origin_check="ca-canonical")
         package = "ca-certificates"
         manifest = "/var/lib/dpkg/info/ca-certificates.md5sums"
         if path == helper:
             owner = self.command("owner", canonical)
             require(owner == ("ca-certificates: " + canonical + "\n").encode("ascii"),
-                    "tool-origin")
+                    "tool-origin", origin_check="ca-helper-owner")
         else:
             require(self.ca_owners[canonical] == package and package in self.packages,
-                    "tool-origin")
+                    "tool-origin", origin_check="ca-cached-owner")
         if package not in self.packages:
             metadata = self.command("package", package).decode("ascii").strip().split("\t")
             require(len(metadata) == 5 and all(re.fullmatch(r"[A-Za-z0-9.:+~_-]{1,128}", field)
-                                              for field in metadata), "tool-origin")
+                                              for field in metadata), "tool-origin",
+                    origin_check="ca-package-metadata")
             actual, info, raw = self.read(manifest, limit=4194304)
             self.package_bytes += len(raw)
             require(self.package_bytes <= BASE.RECEIPT_LIMIT, "file-budget")
@@ -1414,10 +1450,12 @@ class Provider(CAPTURE.Capture):
         metadata, actual, info, raw = self.packages[package]
         require(metadata[0] == package and metadata[3] == package
                 and actual == manifest and os.path.realpath(actual) == actual
-                and BASE.identity(os.lstat(actual)) == BASE.identity(info), "tool-origin")
+                and BASE.identity(os.lstat(actual)) == BASE.identity(info), "tool-origin",
+                origin_check="ca-package-association")
         original_name = (CA.SHARE + "/" + CA.NETLOCK_ANCHOR).lstrip("/")
         surrogate = "usr/share/ca-certificates/mozilla/wstm-netlock-manifest-projection.crt"
-        require(surrogate.encode("ascii") not in raw and surrogate not in canonical, "tool-origin")
+        require(surrogate.encode("ascii") not in raw and surrogate not in canonical, "tool-origin",
+                origin_check="ca-manifest-projection")
         # Preserve original manifest bytes and digests; project only this exact
         # package path into the unchanged ASCII manifest checker.
         projected = raw.replace(original_name.encode("utf-8"), surrogate.encode("ascii"))
@@ -1434,12 +1472,15 @@ class Provider(CAPTURE.Capture):
         self.receipt["preflight_refusal"] = None
         try:
             self._preflight()
-        except BASE.Refusal as error:
-            if str(error) == "tool-identity":
+        except (BASE.Refusal, TRUST.TrustError) as error:
+            if str(error) in ("tool-identity", "tool-origin"):
                 step, tool = self._preflight_context
                 self.receipt["preflight_refusal"] = {
                     "step": step, "requested_tool": tool,
                     "identity_check": getattr(error, "identity_check", None)}
+                if str(error) == "tool-origin":
+                    self.receipt["preflight_refusal"]["origin_check"] = getattr(
+                        error, "origin_check", "unknown")
             raise
 
     def _preflight(self):
@@ -1463,9 +1504,9 @@ class Provider(CAPTURE.Capture):
             self._preflight_context = ("tool-origin", TOOL_IDS[tool])
             self.origin(tool)
             self.dependencies(tool)
-        self._preflight_context = ("sudo-policy", None)
+        self._preflight_context = ("sudo-policy", "sudo")
         self.pin_sudo_configuration()
-        self._preflight_context = ("python-module", None)
+        self._preflight_context = ("python-module", "python3")
         for module in tuple(sys.modules.values()):
             path = getattr(module, "__file__", None)
             if path and os.path.realpath(path).startswith(("/usr/lib/python", "/usr/lib/x86_64-linux-gnu/")):
@@ -1473,7 +1514,7 @@ class Provider(CAPTURE.Capture):
                 self.dependencies(path)
         # Reuse the historical protected sudo-policy boundary, including the
         # image-generated runner rule; it is not an APT package-default claim.
-        self._preflight_context = ("sudo-policy", None)
+        self._preflight_context = ("sudo-policy", "sudo")
         self.protected("/etc/sudoers")
         for path in sorted(Path("/etc/sudoers.d").iterdir()):
             require(path.is_file() and not path.is_symlink(), "tool-link")
@@ -1499,12 +1540,12 @@ class Provider(CAPTURE.Capture):
         for path in sorted(Path("/etc/ld.so.conf.d").iterdir()):
             self.conffile(str(path))
         TRUST.verify_loader(self)
-        self._preflight_context = ("apt-method", None)
         for method in ("/usr/lib/apt/methods/http", "/usr/lib/apt/methods/https",
                        "/usr/lib/apt/methods/gpgv", "/usr/lib/apt/methods/store"):
+            self._preflight_context = ("apt-method", "apt-" + method.rsplit("/", 1)[1])
             self.origin(method)
             self.dependencies(method)
-        self._preflight_context = ("ca-trust", None)
+        self._preflight_context = ("ca-trust", "update-ca-certificates")
         self.prime_ca_owners(CA)
         self.receipt["ca_trust"] = CA.verify_ca(self)
         self._preflight_context = ("keyring", None)
@@ -1519,7 +1560,7 @@ class Provider(CAPTURE.Capture):
             if os.path.lexists(path):
                 raw = self.protected(path, 1048576)
                 require(not raw.strip(), "tool-loader")
-        self._preflight_context = ("apt-hooks", None)
+        self._preflight_context = ("apt-hooks", "apt-config")
         config, stderr, _ = self.native("apt-config", ("/usr/bin/apt-config", "dump"))
         require(not stderr, "tool-loader")
         TRUST.verify_hooks(self, config, self.default_configuration)
@@ -2183,8 +2224,10 @@ class Provider(CAPTURE.Capture):
     def future_helper(self, path, expected_package=None):
         require(path.startswith(("/usr/bin/", "/usr/sbin/") + DATA_PREFIXES), "unsafe-input")
         if path == "/usr/sbin/phpdismod":
-            require(expected_package in (None, "php-common"), "tool-origin")
-            require("php-common" in self.extractions, "tool-origin")
+            require(expected_package in (None, "php-common"), "tool-origin",
+                    origin_check="future-helper-alias-package")
+            require("php-common" in self.extractions, "tool-origin",
+                    origin_check="future-helper-alias-source")
             root = self.extractions["php-common"]
             alias = str(root / path.removeprefix("/"))
             target = "/usr/sbin/phpenmod"
@@ -2217,17 +2260,19 @@ class Provider(CAPTURE.Capture):
                       for name, root in self.extractions.items()
                       if (root / path.removeprefix("/")).is_file()
                       and not (root / path.removeprefix("/")).is_symlink()]
-        require(len(candidates) == 1, "tool-origin")
+        require(len(candidates) == 1, "tool-origin", origin_check="future-helper-domain")
         name, file = candidates[0]
-        require(expected_package is None or name == expected_package, "tool-origin")
+        require(expected_package is None or name == expected_package, "tool-origin",
+                origin_check="future-helper-package")
         rows = [row for row in self.lock if row["package"] == name]
-        require(len(rows) == 1, "tool-origin")
+        require(len(rows) == 1, "tool-origin", origin_check="future-helper-lock")
         row = rows[0]
         raw = self.extracted_file(file)
         control = self.archives[name][2]
         require("md5sums" in control and any(
             line.split() == [hashlib.md5(raw).hexdigest(), path.removeprefix("/")]
-            for line in control["md5sums"].decode("ascii").splitlines()), "tool-origin")
+            for line in control["md5sums"].decode("ascii").splitlines()), "tool-origin",
+                origin_check="future-helper-manifest")
         self.retain("future-helper-" + str(len(self.originals)), raw)
         return {"canonical": path, "raw": raw, "sha256": POLICY.digest(raw), "future": True,
                 "package": [name, row["version"], row["architecture"],
@@ -2400,18 +2445,24 @@ class Provider(CAPTURE.Capture):
 def preflight_witness(value, stage, reason):
     if value is None:
         return None
-    require(stage == "preflight" and reason == "tool-identity"
+    require(stage == "preflight" and reason in ("tool-identity", "tool-origin")
             and type(value) is dict
-            and set(value) == {"step", "requested_tool", "identity_check"}, "inventory-shape")
+            and set(value) == ({"step", "requested_tool", "identity_check"}
+                               | ({"origin_check"} if reason == "tool-origin" else set())),
+            "inventory-shape")
     require(type(value["step"]) is str and value["step"] in PREFLIGHT_STEPS
             and (value["requested_tool"] is None or (
                 type(value["requested_tool"]) is str
-                and value["requested_tool"] in TOOL_IDS.values()))
+                and value["requested_tool"] in PREFLIGHT_TOOLS.get(value["step"], ())))
             and (value["identity_check"] is None or (
                 type(value["identity_check"]) is str
                 and value["identity_check"] in BASE.IDENTITY_CHECKS)), "inventory-shape")
     require((value["requested_tool"] is not None)
-            == (value["step"] in ("tool-file", "tool-origin")), "inventory-shape")
+            == (value["step"] in PREFLIGHT_TOOLS), "inventory-shape")
+    if reason == "tool-origin":
+        require(value["identity_check"] is None
+                and type(value["origin_check"]) is str
+                and value["origin_check"] in ORIGIN_CHECKS, "inventory-shape")
     return dict(value)
 
 

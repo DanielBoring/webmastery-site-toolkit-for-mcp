@@ -38,8 +38,8 @@ def _json(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("ascii")
 
 
-def _require(provider, condition, reason="tool-origin"):
-    provider.BASE.require(condition, reason)
+def _require(provider, condition, reason="tool-origin", *, origin_check=None):
+    provider.BASE.require(condition, reason, origin_check=origin_check)
 
 
 def _no_caps(provider, path):
@@ -117,8 +117,9 @@ def _bound(provider, path, package):
     _require(provider, type(raw) is bytes and 0 < len(raw) <= BUNDLE_LIMIT, "file-budget")
     _require(provider, type(metadata) in (tuple, list) and len(metadata) == 5
              and all(type(field) is str and re.fullmatch(r"[A-Za-z0-9.:+~_-]{1,128}", field)
-                     for field in metadata), "tool-origin")
-    _require(provider, metadata[0].split(":")[0] == package and metadata[3] == package)
+                     for field in metadata), "tool-origin", origin_check="ca-bound-metadata")
+    _require(provider, metadata[0].split(":")[0] == package and metadata[3] == package,
+             origin_check="ca-bound-source")
     _require(provider, type(identity) is dict and all(
         key in identity and type(identity[key]) is int for key in (
             "dev", "ino", "uid", "gid", "mode", "nlink", "size", "mtime_ns", "ctime_ns")),
@@ -132,7 +133,8 @@ def _bound(provider, path, package):
              and provider.BASE.identity(os.lstat(entry["canonical"])) == identity, "tool-link")
     _require(provider, type(entry["sha256"]) is str and HEX.fullmatch(entry["sha256"])
              and entry["sha256"] == _digest(raw) and type(entry["manifest_sha256"]) is str
-             and HEX.fullmatch(entry["manifest_sha256"]), "tool-origin")
+             and HEX.fullmatch(entry["manifest_sha256"]), "tool-origin",
+             origin_check="ca-bound-digest")
     _no_caps(provider, entry["canonical"])
     return dict(entry, package=list(metadata),
                 parents=provider.BASE.parent_pins(entry["canonical"]))
@@ -246,7 +248,7 @@ def verify_generation(provider, raw, helper, policy, trust):
              and installed[0].get("Source", "ca-certificates") in (
                  "ca-certificates", "ca-certificates (" + package[4] + ")")
              and package[0] == package[3] == "ca-certificates"
-             and package[1] == package[4], "tool-origin")
+             and package[1] == package[4], "tool-origin", origin_check="ca-installed-generation")
     controls = {}
     for name in ("postinst", "config", "templates"):
         path = "/var/lib/dpkg/info/ca-certificates." + name
@@ -260,7 +262,7 @@ def verify_generation(provider, raw, helper, policy, trust):
     _require(provider, b", ".join(names) == literal, "inventory-shape")
     selected, disabled = _configuration(provider, b"\n".join(names) + b"\n")
     _require(provider, not disabled and selected == sorted(selected, key=lambda s: s.encode("utf-8")),
-             "tool-origin")
+             "tool-origin", origin_check="ca-generated-selection")
     skeleton = (controls["config"][:lists[0].start()] + b'CERTS_LIST=""'
                 + controls["config"][lists[0].end():])
     _require(provider, _digest(skeleton) == GENERATION_HASHES["config_skeleton"], "tool-loader")
@@ -268,25 +270,28 @@ def verify_generation(provider, raw, helper, policy, trust):
     _, live_info, live_manifest = provider.read(manifest_path, limit=4194304)
     _require(provider, provider.BASE.identity(live_info) == provider.BASE.identity(manifest_info)
              and live_manifest == manifest and _digest(manifest) == helper["manifest_sha256"],
-             "tool-origin")
+             "tool-origin", origin_check="ca-generation-manifest")
     manifest_names = []
     prefix = (SHARE.lstrip("/") + "/").encode("ascii")
     for line in manifest.splitlines():
         fields = line.split(b"  ", 1)
         _require(provider, len(fields) == 2 and re.fullmatch(rb"[0-9a-f]{32}", fields[0]),
-                 "tool-origin")
+                 "tool-origin", origin_check="ca-manifest-row")
         if fields[1].startswith(prefix):
             try:
                 name = fields[1][len(prefix):].decode("utf-8", errors="strict")
             except UnicodeError:
-                _require(provider, False, "tool-origin")
-            _require(provider, name not in manifest_names and name in selected, "tool-origin")
+                _require(provider, False, "tool-origin", origin_check="ca-manifest-name-encoding")
+            _require(provider, name not in manifest_names and name in selected, "tool-origin",
+                     origin_check="ca-manifest-name")
             manifest_names.append(name)
-    _require(provider, set(manifest_names) == set(selected), "tool-origin")
+    _require(provider, set(manifest_names) == set(selected), "tool-origin",
+             origin_check="ca-manifest-domain")
     marker = b"cat > /etc/ca-certificates.conf <<EOF\n"
     _require(provider, controls["postinst"].count(marker) == 1, "tool-loader")
     header = controls["postinst"].split(marker, 1)[1].split(b"\nEOF\n", 1)[0] + b"\n"
-    _require(provider, raw == header + b"\n".join(names) + b"\n", "tool-origin")
+    _require(provider, raw == header + b"\n".join(names) + b"\n", "tool-origin",
+             origin_check="ca-generated-content")
     debconf = provider.conffile("/etc/debconf.conf")
     logical = b"\n".join(line for line in debconf.splitlines()
                          if not line.lstrip().startswith(b"#"))
@@ -322,7 +327,7 @@ def verify_generation(provider, raw, helper, policy, trust):
 
     def one(rows, name):
         matches = [row for row in rows if row.get("Name") == name]
-        _require(provider, len(matches) == 1, "tool-origin")
+        _require(provider, len(matches) == 1, "tool-origin", origin_check="ca-debconf-row")
         return matches[0]
 
     available = ", ".join(selected)
@@ -330,17 +335,17 @@ def verify_generation(provider, raw, helper, policy, trust):
         question = "ca-certificates/" + name
         row = one(state_rows, question)
         _require(provider, row.get("Template") == question and row.get("Owners") == "ca-certificates"
-                 and row.get("Value") == value, "tool-origin")
+                 and row.get("Value") == value, "tool-origin", origin_check="ca-debconf-value")
         if name == "enable_crts":
             _require(provider, row.get("Variables", "").strip() == "enable_crts = " + available,
-                     "tool-origin")
+                     "tool-origin", origin_check="ca-debconf-variables")
         source = [entry for entry in policy.deb822(controls["templates"], debconf=True)
                   if entry.get("Template") == question]
-        _require(provider, len(source) == 1, "tool-origin")
+        _require(provider, len(source) == 1, "tool-origin", origin_check="ca-debconf-source")
         template = one(template_rows, question)
         _require(provider, template.get("Owners") == question
                  and all(template.get(key) == value for key, value in source[0].items()
-                         if key != "Template"), "tool-origin")
+                         if key != "Template"), "tool-origin", origin_check="ca-debconf-template")
     for name in ("postinst", "config"):
         trust.script_dependencies(provider, controls[name])
     for path, owner in (
@@ -360,7 +365,8 @@ def verify_generation(provider, raw, helper, policy, trust):
              and provider.protected("/var/cache/debconf/templates.dat", 4194304) == templates,
              "tool-link")
     _require(provider, provider.bound_file("/usr/sbin/update-ca-certificates",
-                                          "ca-certificates") == helper, "tool-origin")
+                                          "ca-certificates") == helper, "tool-origin",
+             origin_check="ca-generation-helper")
     provider.check()
     return {"schema": "installed-default-ca-generation-v1",
             "trust_boundary": "unchanged-protected-initial-dpkg-bootstrap",
@@ -385,7 +391,7 @@ def verify_ca(provider):
     initial = {path: _directory(provider, path, retain, "before", optional=path == LOCAL)
                for path in (SHARE, MOZILLA, LOCAL, CERTS)}
     _require(provider, set(initial[SHARE]["entries"]) == {"mozilla"}, "tool-link")
-    _require(provider, not initial[LOCAL]["entries"], "tool-origin")
+    _require(provider, not initial[LOCAL]["entries"], "tool-origin", origin_check="ca-local-domain")
     config = provider.conffile(CONFIG)
     retain("default-config", config)
     selected, disabled = _configuration(provider, config)
@@ -412,7 +418,8 @@ def verify_ca(provider):
         entry = _bound(provider, path, "ca-certificates")
         _require(provider, entry["canonical"] == path, "tool-link")
         _require(provider, entry["package"] == helper["package"]
-                 and entry["manifest_sha256"] == helper["manifest_sha256"], "tool-origin")
+                 and entry["manifest_sha256"] == helper["manifest_sha256"], "tool-origin",
+                 origin_check="ca-anchor-association")
         der_sha = _certificate(provider, entry["raw"])
         bindings[path] = entry
         active = name in selected
@@ -423,7 +430,7 @@ def verify_ca(provider):
         anchors.append({"name": name, "enabled": active, "sha256": entry["sha256"],
                         "der_sha256": der_sha})
     bundle = provider.protected(BUNDLE, limit=BUNDLE_LIMIT)
-    _require(provider, bundle == bytes(expected), "tool-origin")
+    _require(provider, bundle == bytes(expected), "tool-origin", origin_check="ca-bundle-content")
     links, pem_names, hashes, covered = [], set(), {}, set()
     for name, pin in initial[CERTS]["entries"].items():
         provider.check()

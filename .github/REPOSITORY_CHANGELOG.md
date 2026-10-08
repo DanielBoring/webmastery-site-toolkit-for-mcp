@@ -6,6 +6,10 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Attribute preflight origin refusals through the existing finite witness,
+  including installed/cached/Perl/configuration/sudo/support/APT/CA predicates
+  and requested root tools. Preserve refusal classes, checks and budgets;
+  exclude raw paths, argv, exceptions and package data.
 - Refresh Perl alias and package-metadata directory timestamp snapshots only
   after authenticated installation, retaining exact file, digest, association,
   capability and stable directory checks. Ordinary reads remain strict.

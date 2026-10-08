@@ -14,9 +14,12 @@ class TrustError(Exception):
     pass
 
 
-def require(value, reason="tool-loader"):
+def require(value, reason="tool-loader", *, origin_check=None):
     if not value:
-        raise TrustError(reason)
+        error = TrustError(reason)
+        if reason == "tool-origin" and origin_check is not None:
+            error.origin_check = origin_check
+        raise error
 
 
 DPKG_PATH = "/usr/sbin:/usr/bin:/sbin:/bin"
@@ -146,7 +149,7 @@ def python_support(provider, raw, seen, package_name=""):
                     candidates.add(os.path.realpath(path))
             for path in root.glob(relative + ".*.so"):
                 candidates.add(os.path.realpath(path))
-        require(len(candidates) == 1, "tool-origin")
+        require(len(candidates) == 1, "tool-origin", origin_check="python-support-domain")
         path = candidates.pop()
         if path in seen:
             continue
@@ -174,7 +177,7 @@ def perl_support(provider, raw, seen):
         relative = module.replace("::", "/") + ".pm"
         candidates = {os.path.realpath(root / relative) for root in roots
                       if (root / relative).is_file()}
-        require(len(candidates) == 1, "tool-origin")
+        require(len(candidates) == 1, "tool-origin", origin_check="perl-support-domain")
         path = candidates.pop()
         if path in seen:
             continue
@@ -470,7 +473,7 @@ def verify_hooks(provider, raw, conffiles):
         rule = HOOKS[value]
         owners = [row for row in conffiles.values()
                   if row["package"] == rule["package"] and value in row["text"]]
-        require(len(owners) == 1, "tool-origin")
+        require(len(owners) == 1, "tool-origin", origin_check="apt-hook-owner")
         for path in rule["helpers"]:
             helper(provider, path)
         accepted.append({"key": key, "text_sha256": hashlib.sha256(value.encode()).hexdigest(),

@@ -125,6 +125,13 @@ unresolved; dependency phases name the requested root tool, not an inferred
 failing dependency. No paths, argv, exception text, file bytes, owners or inode
 values enter this witness. It neither authorizes execution nor changes any
 identity check, provenance requirement, operation or acquisition budget.
+Origin refusals add a closed `origin_check` label for owner response, installed
+package/manifest association, cached binding, Perl domain, configuration, sudo,
+support-module, APT-hook or CA-generation/selection checks. The identity field
+is null for these refusals; `unknown` explicitly means an unannotated predicate.
+Fixed APT-method and later preflight phases retain their requested root-tool
+labels where applicable. A diagnostic label is not proof of owner repair,
+signed installation, loader closure or native acceptance.
 Within this configuration-hardening grant, no root repository/PHP/Python/shell
 script, dynamic path/argv, directory/glob,
 unapproved version/SAPI, ownership change, extra extension, namespace operation or

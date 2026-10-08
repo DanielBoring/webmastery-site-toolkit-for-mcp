@@ -1,6 +1,7 @@
 """Finite source-bound cleanup admission; filesystem/native acquisitions only."""
 
 from contextlib import ExitStack, contextmanager
+import ast
 import hashlib
 import importlib.util
 import json
@@ -525,9 +526,189 @@ class SessionLoopTest(unittest.TestCase):
                     self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
                 item.preflight()
             self.assertTrue(all(os.path.realpath(path) in item.files for path in MODULE.TOOLS))
-            self.assertIsNone(item.receipt["preflight_refusal"])
+            self.assertEqual({"step": "tool-origin", "requested_tool": "python3",
+                              "identity_check": None, "origin_check": "owner-command"},
+                             item.receipt["preflight_refusal"])
             self.assertFalse(item.setup_ready)
             self.assertEqual(0, item.root_launches)
+
+    def test_origin_witness_attributes_every_fixed_root_tool_without_launches(self):
+        for path in MODULE.TOOLS:
+            with self.subTest(tool=MODULE.TOOL_IDS[path]), self.model() as (item, fs):
+                self.preflight_inputs(item, fs)
+                fs.packages.pop(path, None)
+                deadline = item.deadline
+                with patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                        self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
+                    item.preflight()
+                self.assertEqual({"step": "tool-origin", "requested_tool": MODULE.TOOL_IDS[path],
+                                  "identity_check": None, "origin_check": "owner-missing"},
+                                 item.receipt["preflight_refusal"])
+                self.assertEqual(deadline, item.deadline)
+                self.assertEqual(0, item.root_launches)
+                self.assertFalse(item.setup_ready or item.receipt["signed_transaction_authorized"])
+
+    def test_standard_and_cached_origin_checks_retain_exact_predicates(self):
+        cases = ("owner-response-shape", "owner-target", "owner-ambiguous",
+                 "package-metadata", "manifest-link", "manifest-identity",
+                 "cached-manifest", "cached-package", "cached-association")
+        for check in cases:
+            with self.subTest(check=check), self.model() as (item, fs):
+                path = "/usr/bin/python3"
+                package = fs.packages[path]
+                manifest = "/var/lib/dpkg/info/" + package + ".md5sums"
+                command = item.command.side_effect
+                if check.startswith("cached-"):
+                    item.origin(path)
+                    if check == "cached-manifest":
+                        item.origins[path]["manifest_identity"] = dict(
+                            item.origins[path]["manifest_identity"], ino=-1)
+                    elif check == "cached-package":
+                        item.packages.pop(package)
+                    else:
+                        data = item.packages[package]
+                        item.packages[package] = (["foreign", *data[0][1:]], *data[1:])
+                elif check == "manifest-link":
+                    fs.nodes[manifest] = (*fs.nodes[manifest][:2], "/foreign-manifest")
+                elif check == "manifest-identity":
+                    metadata = [package, "1", "amd64", "source", "1"]
+                    info, raw, _ = fs.nodes[manifest]
+                    item.packages[package] = (metadata, manifest, info, raw)
+                    fs.add(manifest, raw)
+                else:
+                    if check == "owner-ambiguous":
+                        fs.add("/bin/python3", mode=stat.S_IFLNK | 0o777, target=path)
+                    def query(operation, argument):
+                        if operation == "owner":
+                            if check == "owner-response-shape":
+                                return b"not-an-owner-row\n"
+                            if check == "owner-target":
+                                return (package + ": /PRIVATE_SENTINEL\n").encode()
+                            if check == "owner-ambiguous" and argument == "/bin/python3":
+                                return b"foreign: /bin/python3\n"
+                        if operation == "package" and check == "package-metadata":
+                            return b"not-five-fields\n"
+                        return command(operation, argument)
+                    item.command.side_effect = query
+                with self.assertRaisesRegex(BASE.Refusal, "^tool-origin$") as caught:
+                    item.origin(path)
+                self.assertEqual(check, caught.exception.origin_check)
+
+    def test_actual_perl_preflight_origin_predicates_remain_distinct(self):
+        for check in ("perl-installed-metadata", "perl-installed-source",
+                      "perl-list-shape", "perl-list-domain"):
+            with self.subTest(check=check), self.perl_model() as (item, fs, peer, _, _):
+                row = next(r for r in item.installed_records if r["Package"] == "perl-base")
+                if check == "perl-installed-metadata":
+                    row["Architecture"] = "arm64"
+                elif check == "perl-installed-source":
+                    row["Source"] = "foreign"
+                else:
+                    path = "/var/lib/dpkg/info/perl-base.list"
+                    fs.add(path, fs.nodes[path][1] + (
+                        b"/usr/bin/perl foreign\n" if check == "perl-list-shape"
+                        else b"/usr/bin/perl-foreign\n"))
+                self.preflight_inputs(item, fs)
+                with patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                        self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
+                    item.preflight()
+                self.assertEqual({"step": "tool-file", "requested_tool": "perl",
+                                  "identity_check": None, "origin_check": check},
+                                 item.receipt["preflight_refusal"])
+                self.assertFalse(item.setup_ready or item.receipt["signed_transaction_authorized"])
+                self.assertEqual(0, item.root_launches)
+
+    def test_origin_labels_preserve_exception_classes_reasons_and_success(self):
+        for check in MODULE.ORIGIN_CHECKS:
+            with self.subTest(check=check):
+                self.assertIsNone(BASE.require(True, "tool-origin", origin_check=check))
+                with self.assertRaisesRegex(BASE.Refusal, "^tool-origin$") as base_error:
+                    BASE.require(False, "tool-origin", origin_check=check)
+                self.assertEqual(check, base_error.exception.origin_check)
+                with self.assertRaisesRegex(TRUST.TrustError, "^tool-origin$") as trust_error:
+                    TRUST.require(False, "tool-origin", origin_check=check)
+                self.assertEqual(check, trust_error.exception.origin_check)
+                with self.assertRaisesRegex(BASE.Refusal, "^tool-origin$") as ca_error:
+                    MODULE.CA._require(SimpleNamespace(BASE=BASE), False, origin_check=check)
+                self.assertEqual(check, ca_error.exception.origin_check)
+        with self.assertRaisesRegex(BASE.Refusal, "^file-budget$") as budget:
+            BASE.require(False, "file-budget", origin_check="owner-target")
+        self.assertFalse(hasattr(budget.exception, "origin_check"))
+
+    def test_origin_witness_schema_is_closed_for_all_phases_tools_and_predicates(self):
+        for step in MODULE.PREFLIGHT_STEPS:
+            tools = MODULE.PREFLIGHT_TOOLS.get(step, (None,))
+            for tool in tools:
+                for check in MODULE.ORIGIN_CHECKS:
+                    value = {"step": step, "requested_tool": tool, "identity_check": None,
+                             "origin_check": check}
+                    self.assertEqual(value, MODULE.preflight_witness(value, "preflight", "tool-origin"))
+        value = {"step": "tool-origin", "requested_tool": "perl", "identity_check": None,
+                 "origin_check": "owner-missing"}
+        for foreign in (dict(value, path="/PRIVATE_SENTINEL"), dict(value, argv=["secret"]),
+                        dict(value, package="SECRET_PACKAGE"), dict(value, origin_check="/PRIVATE_SENTINEL"),
+                        dict(value, origin_check=None), dict(value, origin_check=[]),
+                        dict(value, identity_check="single-link"), dict(value, requested_tool="/usr/bin/perl"),
+                        dict(value, step="ca-trust", requested_tool="perl")):
+            with self.subTest(value=foreign), self.assertRaisesRegex(BASE.Refusal, "^inventory-shape$"):
+                MODULE.preflight_witness(foreign, "preflight", "tool-origin")
+        for stage, reason in (("configuration", "tool-origin"), ("preflight", "tool-identity"),
+                              ("preflight", None)):
+            with self.assertRaisesRegex(BASE.Refusal, "^inventory-shape$"):
+                MODULE.preflight_witness(value, stage, reason)
+
+    def test_actual_origin_refusal_projection_has_no_private_data_or_authority(self):
+        with self.model() as (item, fs):
+            self.preflight_inputs(item, fs)
+            del fs.packages["/usr/bin/python3"]
+            with patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                    self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
+                item.preflight()
+            def store(name, raw):
+                fs.add(str(item.directory / name), raw, mode=stat.S_IFREG | 0o600, uid=1000)
+            with patch.object(item, "write", side_effect=store), patch("builtins.print") as output:
+                self.assertFalse(MODULE.projection(item, None, "tool-origin"))
+            public = json.loads(output.call_args.args[0].split(" ", 1)[1])
+            self.assertEqual(item.receipt["preflight_refusal"], public["preflight_refusal"])
+            self.assertEqual("owner-missing", public["preflight_refusal"]["origin_check"])
+            self.assertFalse(any(public[name] for name in ("apt_original_accepted",
+                "selected_signature_verified", "signed_transaction_authorized",
+                "installed_authority_verified", "native_inventory_completed")))
+            for private in ("/owned", "/usr/bin/", "SECRET_PACKAGE", "stderr", "argv"):
+                self.assertNotIn(private, output.call_args.args[0])
+
+    def test_preflight_origin_guard_annotations_cover_source_local_branches(self):
+        targets = {
+            "host-php-apt.py": {"perl_installed_package", "verify_perl_aliases", "bind_perl_aliases",
+                "bound_file", "command", "conffile", "prime_ca_owners", "checked_origin", "future_helper"},
+            "host-php-apt-trust.py": {"python_support", "perl_support", "verify_hooks"},
+            "host-php-apt-ca.py": {"_bound", "verify_generation", "verify_ca", "one"},
+            "provision-php82-permissions.py": {"pin_sudo_configuration"},
+        }
+        observed = set()
+        for filename, functions in targets.items():
+            tree = ast.parse(SOURCE.with_name(filename).read_bytes())
+            for function in ast.walk(tree):
+                if not isinstance(function, ast.FunctionDef) or function.name not in functions:
+                    continue
+                for call in ast.walk(function):
+                    if not isinstance(call, ast.Call) or not isinstance(call.func, ast.Name):
+                        continue
+                    if call.func.id not in ("require", "_require"):
+                        continue
+                    index = 2 if call.func.id == "_require" else 1
+                    reason = call.args[index] if len(call.args) > index else ast.Constant(
+                        "tool-origin" if call.func.id == "_require" else "tool-loader")
+                    if not isinstance(reason, ast.Constant) or reason.value != "tool-origin":
+                        continue
+                    markers = [kw.value for kw in call.keywords if kw.arg == "origin_check"]
+                    self.assertEqual(1, len(markers), (filename, function.name, call.lineno))
+                    self.assertIsInstance(markers[0], ast.Constant)
+                    self.assertIn(markers[0].value, MODULE.ORIGIN_CHECKS)
+                    observed.add(markers[0].value)
+        self.assertTrue({"ca-bundle-content", "ca-generated-content", "sudo-policy-package",
+                         "perl-list-domain", "cached-association", "apt-hook-owner",
+                         "future-helper-domain"} <= observed)
 
     def test_identity_annotation_preserves_file_budget_and_unannotated_refusal(self):
         info = FileSystem().add("/file", b"data")

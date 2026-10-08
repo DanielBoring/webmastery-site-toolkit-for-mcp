@@ -89,9 +89,12 @@ class Refusal(Exception):
     pass
 
 
-def require(condition, reason):
+def require(condition, reason, *, origin_check=None):
     if not condition:
-        raise Refusal(reason)
+        error = Refusal(reason)
+        if reason == "tool-origin" and origin_check is not None:
+            error.origin_check = origin_check
+        raise error
 
 
 def identity(info):
@@ -586,6 +589,8 @@ class Inventory:
             self.checked_origin(path)
         except Refusal as error:
             if str(error) == "tool-origin":
+                if not hasattr(error, "origin_check"):
+                    error.origin_check = self.origin_check
                 self.receipt["origin_failure"] = {
                     "tool": getattr(self, "origin_tool", "unknown"),
                     "subject": subject, "check": self.origin_check}

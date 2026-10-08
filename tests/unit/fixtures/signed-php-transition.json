@@ -543,7 +543,7 @@
     ".github/ISSUE_TEMPLATE/config.yml": "a6b12f327fe7490036740b7e0590f41da474c4c991092da034444fb1414d9aa4",
     ".github/ISSUE_TEMPLATE/feature_request.md": "8ea25177279b0f97e06df9b38a407359d9c4279964b05787b76a1054641727b3",
     ".github/PULL_REQUEST_TEMPLATE.md": "1df3b3949c72e2382c6c85b59b185d0dfb382c64424f42dd835965db2f4f30ce",
-    ".github/REPOSITORY_CHANGELOG.md": "8dede25d9beeec602256b9eb080f148032da6b9a831a44dfdd84741b48b3f9a9",
+    ".github/REPOSITORY_CHANGELOG.md": "7ecbe4f413d0b3f5cd32236e8b8b46895ab7a8ef37216965a2fc85f37d0c353c",
     ".github/SETUP-COMPLETE.md": "95cfe50cb68612e693f9f7a994ccded1fe32b1521521067aa1311b990f979e55",
     ".github/compatibility-versions.json": "73865b94ad6ac10cbed9bec8a31b41911cbb35014b4a904734d9258f0718c19a",
     ".github/copilot-instructions.md": "fa4db4dd09a39499480614f0e06fc71203072db81148eaadf40b45d79a5ec2bf",
@@ -604,7 +604,7 @@
     "docs/qa-strategy.md": "c68016253523588142109ab6cf21861ed4b5b6fcab3a3f2611f556503f65e3bc",
     "docs/release-strategy.md": "a452483fa102d4db3fea59e91a0a9344ba47d9fd63acfd8049fa7277629a790d",
     "docs/sdlc-overview.md": "687d277b66a1f0b062f8b1cef8f0e4f38f9cfe810bfca3f1b75673bfad50caf0",
-    "docs/security-strategy.md": "20efd4d697a2172b6d1af627e9d807b8d767134c038c38bcf6e8ec8b97113bf1",
+    "docs/security-strategy.md": "133d482483a231804d62d737a50d753f787610244f14e31be02a06c9784dde68",
     "docs/shared-helpers.md": "03dfee0305d3058546b60427cc2fe5869b824f84b1b1995093ddb363605f095b",
     "includes/class-ability.php": "9a237e25baa11fc823fcdaee45277d1ca9462ca04af462e33dede511bdb0edf5",
     "includes/class-backup-status.php": "d521e5caf92c422325a0fa2bf85e7f393bd36cc584b250facc5264eeeb759840",
@@ -657,12 +657,12 @@
     "scripts/docker-qa-gate.php": "ac1bbc7fac0f0ce04d9533e64f72b5d6e0157450e984f85c83fadf204a59d0ea",
     "scripts/docker-qa-summary.php": "fda21833dd7142384a2008e3d38321a1f7645ccad3a4d241f75a8b06db77fcab",
     "scripts/e2e-test.sh": "6c54d14155070437909b744efa08f6198aa3e370a2f6a11ab78f1893ccfac9d8",
-    "scripts/host-prerequisite-inventory.py": "aa5241e6b16c36d54d21ecc0e0870f7be7ab5400da801c17277425fccc8e8f43",
+    "scripts/host-prerequisite-inventory.py": "d4f4bf667aa68c1d7079ba9e0188c3ee913507fda9672317ff2d7d8ee782a6c1",
     "scripts/host-prerequisite-setup.py": "89ed6f8a38602292fb8a0c7f4f4ff1a545a393e6568072711e1e8426df092a95",
     "scripts/import-issues.sh": "573a9c683e60107be1f47dca1f5723b7b22d40a252800af8ff8f3feb9f5e9614",
     "scripts/input-schema-proof.php": "8c9a89b34da1158102e1b513431fcb11091e8ce47ebcbb5195c60a4ce853a612",
     "scripts/php-lint.php": "b5223d605d4da888150aa7f87ad6aa67b636f52dbc3ca663b679d65a1aeb1b2a",
-    "scripts/provision-php82-permissions.py": "7ed54955f91d7091491ea3f37cf694b27ae313384b035a823307632301745739",
+    "scripts/provision-php82-permissions.py": "d81031857c40eb870dddb4504273d4df28ca4c89930eb26556116a29c587351d",
     "scripts/qa-compose.sh": "e940bafe1fe200bbabb96d6fa59ed44608e0f164c63b507fadc6faea600e8b84",
     "scripts/qa-local.ps1": "1d045827ca85a4615647d3ccaf20250604ac8f56ea11f9ad464ea7d2d4c0b8ee",
     "scripts/qa-local.sh": "5fb820cb02b2e2e7a5738377485716ee89f4d11eca0de4fa712a7154b2f74c16",
@@ -1066,13 +1066,13 @@
     "tests/unit/test_untrusted_query.py": "17551baee77beb3da127d743e3ce029ff577917487b40567bd23b923df4477a8",
     "tests/untrusted-stage-test.sh": "17a99df2bbb5e39171ef6bff72675fe8894942cb152c14283e9de01b0ff55ce7",
     "webmastery-site-toolkit-for-mcp.php": "66ad568ed9018670c30ceda128af3c67cf18b63c62eb5bf6a76ddcdff3386ab2",
-    "scripts/host-php-apt.py": "43843fb213d86d751c363d33c34dc0eef4729f703b383319a7d08be1e9885db0",
+    "scripts/host-php-apt.py": "eb4df77d03e3b7b901c716699db310e552d36d1f7901a115fe565abdfc92377d",
     "scripts/host-php-apt-policy.py": "389170dc2ec9c0ce205128484a9f9b8febc7173294454a733f5f2665371890fb",
     "scripts/host-php-apt-capture.py": "db8173b5265a6f22f44f494848f57e1763893a31f6c89b108997a1d9c7df4103",
     "scripts/host-php-apt-signature.py": "6207a2c61f6c0122a23b71797bf8c2c222cb6e03ad06ae4f8b6928a758b5861d",
-    "scripts/host-php-apt-trust.py": "9ab753bf123d6f813c4eb77c1c8492a508f444bf4091c950fcb60889d945d0ab",
-    "scripts/host-php-apt-ca.py": "3a5e54d85d467ddd17f06b4704754265d22e425d15727685672fa2e59017b753",
-    "tests/unit/test_host_php_apt_session_loop.py": "f6fa955a26b8311424abcabfcdceb24e19e22e52ad424b4df53ea959f8bb4240",
+    "scripts/host-php-apt-trust.py": "783c0c7a10556d05f9375b98dca2142169bbb743a09bd5548ab350d83d8edf19",
+    "scripts/host-php-apt-ca.py": "9946e480d5cb05644ae0170e19472596c5fd62a00ab173af065d3dc216a16d4a",
+    "tests/unit/test_host_php_apt_session_loop.py": "57cae3f9e04de10f1ba3d9d03b087f2ab4d9d89d35f8f3ab9a5002b134e6ca84",
     "tests/unit/test_standard_php_config.py": "8a84480c2fb94ebe72dfa2468c1995d7610e11db55d6cb29fcc4c80e47ce8c17",
     "tests/unit/fixtures/signed-php-producers/phpquery": "0e9daa717d1af9b4e069c1976e0aad9cb07141b26b7b9a680009fe322e1e0c89",
     "tests/unit/fixtures/signed-php-producers/php-helper": "72445eb0e4d94093f9f5b78038370b01741222cb7498f15ccb5cf8d476dbd83a",
@@ -1129,13 +1129,17 @@
     },
     ".github/REPOSITORY_CHANGELOG.md": {
       "baseline_raw_sha256": "be511c50bbec7bb87bc4067778065fb7801efef97a02bf50442b35863a3bce0d",
-      "current_raw_sha256": "8dede25d9beeec602256b9eb080f148032da6b9a831a44dfdd84741b48b3f9a9",
+      "current_raw_sha256": "7ecbe4f413d0b3f5cd32236e8b8b46895ab7a8ef37216965a2fc85f37d0c353c",
       "hunks": [
         {
           "start": 7,
           "before": [],
           "after": [
             "",
+            "- Attribute preflight origin refusals through the existing finite witness,",
+            "  including installed/cached/Perl/configuration/sudo/support/APT/CA predicates",
+            "  and requested root tools. Preserve refusal classes, checks and budgets;",
+            "  exclude raw paths, argv, exceptions and package data.",
             "- Refresh Perl alias and package-metadata directory timestamp snapshots only",
             "  after authenticated installation, retaining exact file, digest, association,",
             "  capability and stable directory checks. Ordinary reads remain strict.",
@@ -1450,7 +1454,7 @@
     },
     "docs/security-strategy.md": {
       "baseline_raw_sha256": "99059483a77c0166fc719a8e88b46502e91fc910b88b4b8242a4d73c54a344f3",
-      "current_raw_sha256": "20efd4d697a2172b6d1af627e9d807b8d767134c038c38bcf6e8ec8b97113bf1",
+      "current_raw_sha256": "133d482483a231804d62d737a50d753f787610244f14e31be02a06c9784dde68",
       "hunks": [
         {
           "start": 27,
@@ -1578,12 +1582,19 @@
             "failing dependency. No paths, argv, exception text, file bytes, owners or inode",
             "values enter this witness. It neither authorizes execution nor changes any",
             "identity check, provenance requirement, operation or acquisition budget.",
+            "Origin refusals add a closed `origin_check` label for owner response, installed",
+            "package/manifest association, cached binding, Perl domain, configuration, sudo,",
+            "support-module, APT-hook or CA-generation/selection checks. The identity field",
+            "is null for these refusals; `unknown` explicitly means an unannotated predicate.",
+            "Fixed APT-method and later preflight phases retain their requested root-tool",
+            "labels where applicable. A diagnostic label is not proof of owner repair,",
+            "signed installation, loader closure or native acceptance.",
             "Within this configuration-hardening grant, no root repository/PHP/Python/shell",
             "script, dynamic path/argv, directory/glob,"
           ]
         },
         {
-          "start": 138,
+          "start": 145,
           "before": [
             "All originals stay in exclusive owned private custody. One setup deadline and",
             "conserved file/byte/command/output ledgers cover the complete operation, including",
@@ -1601,7 +1612,7 @@
     },
     "scripts/host-prerequisite-inventory.py": {
       "baseline_raw_sha256": "85b7e83fb13eeb8bcea67471d11c4cd620a54c8376d432d8d27753c2ce992a95",
-      "current_raw_sha256": "aa5241e6b16c36d54d21ecc0e0870f7be7ab5400da801c17277425fccc8e8f43",
+      "current_raw_sha256": "d4f4bf667aa68c1d7079ba9e0188c3ee913507fda9672317ff2d7d8ee782a6c1",
       "hunks": [
         {
           "start": 35,
@@ -1622,7 +1633,28 @@
           ]
         },
         {
-          "start": 111,
+          "start": 91,
+          "before": [
+            "def require(condition, reason):"
+          ],
+          "after": [
+            "def require(condition, reason, *, origin_check=None):"
+          ]
+        },
+        {
+          "start": 93,
+          "before": [
+            "        raise Refusal(reason)"
+          ],
+          "after": [
+            "        error = Refusal(reason)",
+            "        if reason == \"tool-origin\" and origin_check is not None:",
+            "            error.origin_check = origin_check",
+            "        raise error"
+          ]
+        },
+        {
+          "start": 114,
           "before": [],
           "after": [
             "IDENTITY_CHECKS = (\"regular-file\", \"expected-owner\", \"safe-mode\", \"single-link\")",
@@ -1631,7 +1663,7 @@
           ]
         },
         {
-          "start": 115,
+          "start": 118,
           "before": [
             "    require(stat.S_ISREG(info.st_mode) and info.st_uid == owner",
             "            and not info.st_mode & 0o6022 and info.st_nlink == 1,",
@@ -1645,6 +1677,14 @@
             "            error = Refusal(\"tool-identity\")",
             "            error.identity_check = check",
             "            raise error"
+          ]
+        },
+        {
+          "start": 591,
+          "before": [],
+          "after": [
+            "                if not hasattr(error, \"origin_check\"):",
+            "                    error.origin_check = self.origin_check"
           ]
         }
       ]
@@ -1674,7 +1714,7 @@
     },
     "scripts/provision-php82-permissions.py": {
       "baseline_raw_sha256": "8bd450bf25243e4138c9e8ff801a421823687ca40a476b44e02e6167ac6e834c",
-      "current_raw_sha256": "7ed54955f91d7091491ea3f37cf694b27ae313384b035a823307632301745739",
+      "current_raw_sha256": "d81031857c40eb870dddb4504273d4df28ca4c89930eb26556116a29c587351d",
       "hunks": [
         {
           "start": 25,
@@ -1750,6 +1790,15 @@
             "        else:",
             "            require(binding == self.receipt[\"socket_configuration\"], \"tool-link\")",
             "        self.check()"
+          ]
+        },
+        {
+          "start": 301,
+          "before": [
+            "                \"tool-origin\")"
+          ],
+          "after": [
+            "                \"tool-origin\", origin_check=\"sudo-policy-package\")"
           ]
         },
         {

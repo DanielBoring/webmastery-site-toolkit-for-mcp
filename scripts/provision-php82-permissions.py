@@ -299,7 +299,7 @@ class Provision(BASE.Inventory):
         self.origin(module)
         self.dependencies(module)
         require(self.origins[module]["package"] == self.origins[SYSTEM[0]]["package"],
-                "tool-origin")
+                "tool-origin", origin_check="sudo-policy-package")
         self.receipt["sudo_policy_module"] = module
 
     def recheck_before(self):
