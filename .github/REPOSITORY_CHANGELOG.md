@@ -6,6 +6,34 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Preserve prerequisite dependency error classification before verifying the
+  additional signed-package source binding; retain both sets of drift checks.
+- Preserve the established PHP setup step names in the three signed-package HOST
+  QA jobs so workflow receipt consumers retain their exact readiness ordering.
+- Resolve retained dpkg maintainer and trigger controls from protected installed
+  package identifiers and Multi-Arch metadata, including native architecture
+  qualifiers. Pin and recheck exact old control files and absence guards before
+  APT; reject inconsistent metadata, source changes and aliases without changing
+  ROOT operations, privileges or budgets.
+- Add source-bound handling for the genuine PHP-session cleanup version loop,
+  retaining the full query domain and active/inactive worker guards. Distinguish
+  incoming archive-bound producers from unchanged installed producers.
+- Authorize bootstrap and replacement only inside the closed signed APT
+  transaction, with authenticated incoming code and verified retained
+  maintainers/triggers. Refresh installed provenance, loaders, UCF INIs, modules
+  and aliases before candidate eligibility. Prospective archives remain
+  ineligible for direct helper execution; reject arbitrary expansions, foreign
+  sources, drift and exhausted budgets without refunding acquisition ledgers.
+- Use fixed CLI php.ini and package-native sockets.ini permission targets,
+  verified socket-template provenance and the exact conf.d alias. Wire signed
+  package provisioning into the permission/inventory/projection chain for the
+  three disposable HOST QA jobs without setup-php interference. Retain ordinary
+  signed-package housekeeping, existing limits and nonroot candidate code;
+  local controls do not establish native HOST acceptance.
+- Synchronize contributor/PR acceptance criteria and CI/security/QA/E2E policy.
+  Preserve narrower unrelated grants and frozen predecessor guarantees through
+  additive source bindings rather than rewritten historical maps.
+
 - Disambiguate a retained HOST tool-origin refusal with only closed tool,
   dependency/module subject and origin-check IDs. Preserve exit78, unknown
   native observations, private original custody and all package-provenance

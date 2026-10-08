@@ -16,6 +16,33 @@ Docker, provider, cleanup, original-ZIP or runtime acceptance.
 
 For the full repository QA posture, including static checks, unit tests, release checks, and GitHub Actions trigger policy, see [`docs/qa-strategy.md`](../../docs/qa-strategy.md).
 
+Signed OS-package PHP owner repair is approved only on owned disposable
+GitHub-hosted `release-package-qa` (PHP8.2), `ability-contract-qa` and
+`full-mcp-e2e-qa` (PHP8.4) machines, with verified signatures/fingerprint,
+source/archive and installed owner/version/digest bindings, fixed installation
+operations and unchanged budgets. Normal package housekeeping can expire
+sessions for other PHP versions there. This is authorization, not proof of
+scheduler nonexecution, candidate application elevation or root-child cleanup.
+It grants no local/shared/production access, arbitrary ROOT or service changes,
+new broker/discovery APIs or 3.0 release authority.
+
+The fixed configuration-hardening pair is CLI `php.ini` and
+`mods-available/sockets.ini`, with verified package-template provenance and the
+exact root-owned `20-sockets.ini` alias. The permission/inventory/projection chain
+follows signed provisioning without setup-php interference. Genuine cleanup
+commands use finite active-worker/configuration bindings within the full query
+domain, retaining inactive and absent guards. A verified closed signed APT
+transaction can bootstrap or replace PHP using authenticated incoming code and
+verified retained scripts/triggers. Incoming and unchanged producers require
+archive and installed bindings respectively. Prospective data does not license
+direct execution: refresh installed ownership, digests, loaders, generated UCF
+INIs, modules and aliases after APT before candidate eligibility. Mocked
+acquisitions do not establish native installation or HOST QA success.
+Preserve failure originals and unknown native fields, original prerequisite
+suites and frozen predecessor restoration, with additive current source
+bindings for changed public contracts. See the
+[security policy](../../docs/security-strategy.md#approved-signed-package-php-repair-and-configuration-hardening).
+
 Disposable hosted authority entries set
 `WSTM108_HOST_INSPECTION=system-readonly-v1` for otherwise inaccessible native
 Docker-daemon proc observations. The controller/capture/PHP remain nonroot;

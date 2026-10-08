@@ -436,13 +436,15 @@ class SetupPermissionGuardTest(unittest.TestCase):
 
     def test_workflow_hardening_before_first_candidate_php_and_failure_diagnostic_is_gated(self):
         workflow = (SOURCE.parents[1] / ".github/workflows/release-package-qa.yml").read_text()
-        setup = workflow.index("- name: Set up PHP")
-        provision = workflow.index("- name: Guard and acquire selected HOST prerequisites")
+        setup = workflow.index("- name: Test signed package and configuration controls")
+        self.assertEqual(1, workflow.count("- name: Set up PHP\n"))
+        provision = workflow.index("- name: Set up PHP\n")
         custody = workflow.index("run: php tests/support/private-custody-context.php")
         self.assertLess(setup, provision)
         self.assertLess(provision, custody)
         self.assertIn("always() && steps.php-permissions.outcome == 'success'", workflow)
-        self.assertIn("extensions: zip", workflow)
+        self.assertIn("scripts/host-php-apt.py 8.2", workflow)
+        self.assertNotIn("setup-php@", workflow)
         self.assertNotIn("extensions: zip, sockets", workflow)
         self.assertEqual(GUARD.ROOT_ARGV,
                          ("/usr/bin/sudo", "-n", "--user=root", "--", "/usr/bin/chmod",

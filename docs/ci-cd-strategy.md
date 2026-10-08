@@ -27,6 +27,41 @@ See the [Software Development Lifecycle](sdlc-overview.md) for where CI/CD conne
 
 ## Pull request policy
 
+### Signed-package HOST interpreter repair
+
+The approved repair scope is `release-package-qa` with PHP8.2 and
+`ability-contract-qa`/`full-mcp-e2e-qa` with PHP8.4 on owned disposable
+GitHub-hosted machines. Use the approved signed OS-package source and
+fingerprint; verify signatures, source/archive bindings and installed
+owner/version/digests. Preserve the fixed installation operations, original
+budgets, nonroot repository controllers and fail-closed permission/inventory
+chain. Package provisioning precedes the fixed CLI `php.ini` and
+`mods-available/sockets.ini` chmod hardening step, socket-template/alias
+verification, inventory and retained public projection. These jobs do not use
+setup-php to replace package-native configuration or the selected executable.
+
+Normal package housekeeping, including background expiration of other PHP
+versions' sessions, is authorized only there. Authorization is not a scheduler
+nonexecution observation, permission for arbitrary ROOT/service/broker work,
+candidate application elevation or a certified root-child cleanup. Local,
+shared/production hosts, other jobs and the 3.0 release receive no new grant.
+The [security strategy](security-strategy.md#approved-signed-package-php-repair-and-configuration-hardening)
+defines these separate boundaries.
+
+Required runtime jobs remain mandatory. The original three mock-only
+prerequisite suites and focused source-local provider/configuration controls run
+before provisioning without local native commands. The genuine cleanup loop
+uses the full observed query domain with active/inactive worker guards, not
+selected-version substitution. A closed authenticated APT transaction may
+bootstrap or replace PHP through approved signed maintainers and verified
+retained scripts/triggers; prospective code is transaction authorization, not
+installed authority. Refresh installed provenance, loaders, UCF configuration,
+modules and aliases after APT and before candidate eligibility. Incoming and
+unchanged query producers retain distinct archive/installed bindings. Keep
+additive current source bindings and
+unchanged frozen predecessor maps. Retain failure originals and unknown native
+facts; local source/data controls do not establish a passing new-head HOST run.
+
 ### Scoped system observation on disposable hosts
 
 Approved disposable GitHub-hosted authority entries explicitly select

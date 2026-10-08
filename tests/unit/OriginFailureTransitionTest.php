@@ -28,7 +28,7 @@ final class OriginFailureTransitionTest extends TestCase {
 	public function test_current_execution_and_prerequisite_controls_remain_exact_and_every_path_is_bound(): void {
 		$map = Wstm167OriginFailureTransition::load();
 		foreach ( $map['current_execution'] as $path => $hash ) {
-			self::assertSame( $hash, hash( 'sha256', $this->read( $path ) ), $path );
+			self::assertSame( $hash, hash( 'sha256', Wstm167SignedPhpTransition::restore( $path, $this->read( $path ) ) ), $path );
 			self::assertTrue( isset( $map['dependencies'][ $path ] ) || isset( $map['files'][ $path ] ), $path );
 		}
 		self::assertArrayHasKey( 'docs/qa-strategy.md', $map['files'] );
@@ -41,13 +41,13 @@ final class OriginFailureTransitionTest extends TestCase {
 			'provision-php82-permissions.py' => '8bd450bf25243e4138c9e8ff801a421823687ca40a476b44e02e6167ac6e834c',
 			'host-prerequisite-setup.py' => '62c304a0c3889fe5e4f4e670e17deddbd4ab7ab066955fcb6c46201b4c35d000',
 		) as $path => $hash ) {
-			self::assertSame( $hash, hash( 'sha256', $this->read( 'scripts/' . $path ) ), $path );
+			self::assertSame( $hash, hash( 'sha256', Wstm167SignedPhpTransition::restore( 'scripts/' . $path, $this->read( 'scripts/' . $path ) ) ), $path );
 			self::assertSame( $hash, $map['files'][ 'scripts/' . $path ]['current_raw_sha256'] );
 		}
 		self::assertCount( 530, array_merge( $map['files'], $map['dependencies'], array( $map['helper_path'] => true, 'tests/unit/fixtures/origin-failure-transition.json' => true ) ) );
 		$helper = preg_replace( "/^\tpublic const SEAL = 'ORIGIN_FAILURE_SEAL_PENDING';(?=\\r?$)/m", "\tpublic const SEAL = '" . Wstm167OriginFailureTransition::SEAL . "';", $map['helper_raw_template'], 1, $replaced );
 		self::assertSame( 1, $replaced );
-		self::assertSame( $helper, $this->read( $map['helper_path'] ) );
+		self::assertSame( $helper, Wstm167SignedPhpTransition::restore( $map['helper_path'], $this->read( $map['helper_path'] ) ) );
 	}
 
 	public function test_missing_truncated_foreign_crlf_old_raw_and_helper_body_drift_refuse(): void {
@@ -129,7 +129,7 @@ final class OriginFailureTransitionTest extends TestCase {
 
 	public function test_resealed_wrong_baseline_is_rejected_by_unchanged_f9_witness(): void {
 		$path = 'scripts/host-prerequisite-inventory.py';
-		$current = $this->read( $path );
+		$current = Wstm167SignedPhpTransition::restore( $path, $this->read( $path ) );
 		$map = Wstm167OriginFailureTransition::load();
 		$wrong = Wstm167OriginFailureTransition::restore( $path, $current ) . "\nforeign_guard";
 		$map['files'][ $path ]['hunks'][] = array(
@@ -146,7 +146,7 @@ final class OriginFailureTransitionTest extends TestCase {
 			$outer = str_replace(
 				"public const SEAL = '" . Wstm167OriginFailureTransition::SEAL . "';",
 				"public const SEAL = '" . hash( 'sha256', $json ) . "';",
-				$this->read( 'tests/unit/fixtures/origin-failure-transition.php' ), $replaced
+				Wstm167SignedPhpTransition::restore( 'tests/unit/fixtures/origin-failure-transition.php', $this->read( 'tests/unit/fixtures/origin-failure-transition.php' ) ), $replaced
 			);
 			self::assertSame( 1, $replaced );
 			$older = Wstm167OriginFailureTransition::restore( 'tests/unit/fixtures/host-prerequisite-transition.php', $this->read( 'tests/unit/fixtures/host-prerequisite-transition.php' ) );
@@ -163,7 +163,7 @@ final class OriginFailureTransitionTest extends TestCase {
 			try {
 				self::assertSame( $wrong, $outer_class::restore( $path, $current ) );
 				try {
-					$older_class::verify_dependencies( fn( $entry ) => $outer_class::restore( $entry, $this->read( $entry ) ) );
+					$older_class::verify_dependencies( fn( $entry ) => $outer_class::restore( $entry, Wstm167SignedPhpTransition::restore( $entry, $this->read( $entry ) ) ) );
 					self::fail( 'Resealed prerequisite baseline replaced the unchanged 3876 witness.' );
 				} catch ( RuntimeException $error ) {
 					self::assertSame(

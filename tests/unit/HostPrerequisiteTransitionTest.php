@@ -28,7 +28,7 @@ final class HostPrerequisiteTransitionTest extends TestCase {
 	public function test_current_execution_and_prerequisite_controls_remain_exact_and_every_path_is_bound(): void {
 		$map = Wstm167HostPrerequisiteTransition::load();
 		foreach ( $map['current_execution'] as $path => $hash ) {
-			self::assertSame( $hash, hash( 'sha256', $this->read( $path ) ), $path );
+			self::assertSame( $hash, hash( 'sha256', Wstm167SignedPhpTransition::restore( $path, $this->read( $path ) ) ), $path );
 			self::assertTrue( isset( $map['dependencies'][ $path ] ) || isset( $map['files'][ $path ] ), $path );
 		}
 		self::assertArrayHasKey( 'composer.json', $map['files'] );

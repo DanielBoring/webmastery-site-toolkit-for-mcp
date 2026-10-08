@@ -33,9 +33,9 @@ ORIGIN_CHECK_IDS = frozenset(("unknown", "owner-command", "owner-response-shape"
 ORIGIN_SUBJECT_IDS = frozenset(("tool", "dependency", "python-module"))
 PHP_PROFILES = {
     "8.2": {"binary": "/usr/bin/php8.2", "targets": (
-        "/etc/php/8.2/cli/php.ini", "/etc/php/8.2/cli/conf.d/99-pecl.ini")},
+        "/etc/php/8.2/cli/php.ini", "/etc/php/8.2/mods-available/sockets.ini")},
     "8.4": {"binary": "/usr/bin/php8.4", "targets": (
-        "/etc/php/8.4/cli/php.ini", "/etc/php/8.4/cli/conf.d/99-pecl.ini")},
+        "/etc/php/8.4/cli/php.ini", "/etc/php/8.4/mods-available/sockets.ini")},
 }
 SOURCE_NAMES = {"driver": "host-prerequisite-setup.py",
                 "guard": "provision-php82-permissions.py",

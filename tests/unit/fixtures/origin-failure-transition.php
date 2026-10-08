@@ -27,6 +27,11 @@ final class Wstm167OriginFailureTransition {
 	}
 
 	public static function verify_dependencies( callable $read ): void {
+		$read_current = $read;
+		$read = static function ( $path ) use ( $read_current ) {
+			$source = $read_current( $path );
+			return is_string( $source ) ? Wstm167SignedPhpTransition::restore( $path, $source ) : $source;
+		};
 		$map = self::load();
 		$expected_helper = preg_replace( "/^\tpublic const SEAL = 'ORIGIN_FAILURE_SEAL_PENDING';(?=\\r?$)/m", "\tpublic const SEAL = '" . self::SEAL . "';", $map['helper_raw_template'], 1, $replaced );
 		$helper = $read( $map['helper_path'] );
@@ -46,6 +51,8 @@ final class Wstm167OriginFailureTransition {
 			}
 			self::restore( $path, $source );
 		}
+		// Preserve predecessor dependency classification before the added source binding.
+		Wstm167SignedPhpTransition::verify_dependencies( $read_current );
 	}
 
 	private static function dependency_drift( string $path, $source, array $map ): void {
@@ -56,6 +63,11 @@ final class Wstm167OriginFailureTransition {
 	}
 
 	public static function reader_once( string $path, string $source ): string {
+		$outer = Wstm167SignedPhpTransition::load();
+		if ( isset( $outer['files'][ $path ] )
+			&& hash_equals( $outer['files'][ $path ]['current_raw_sha256'], hash( 'sha256', $source ) ) ) {
+			$source = Wstm167SignedPhpTransition::restore( $path, $source );
+		}
 		$map = self::load();
 		if ( ! isset( $map['files'][ $path ] ) ) { return $source; }
 		$binding = $map['files'][ $path ];
@@ -68,6 +80,11 @@ final class Wstm167OriginFailureTransition {
 	}
 
 	public static function restore( string $path, string $source, string $context = 'CI diagnostic current source drift' ): string {
+		$outer = Wstm167SignedPhpTransition::load();
+		if ( isset( $outer['files'][ $path ] )
+			&& hash_equals( $outer['files'][ $path ]['current_raw_sha256'], hash( 'sha256', $source ) ) ) {
+			$source = Wstm167SignedPhpTransition::restore( $path, $source );
+		}
 		$map = self::load();
 		if ( ! isset( $map['files'][ $path ] ) ) { return $source; }
 		$binding = $map['files'][ $path ];

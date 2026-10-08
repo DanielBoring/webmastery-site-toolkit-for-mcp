@@ -25,27 +25,85 @@ Primary risks for this plugin:
 
 ## Agent threat model
 
-### Approved setup-only PHP permission provisioning
+### Approved signed-package PHP repair and configuration hardening
+
+Signed OS-package repair is authorized only on the owned disposable
+GitHub-hosted `release-package-qa` (PHP8.2), `ability-contract-qa` and
+`full-mcp-e2e-qa` (PHP8.4) machines. It must verify repository signatures and
+the approved fingerprint, source/archive bindings, locked package versions
+and installed owner/version/digests before accepting the selected interpreter.
+Only the approved fixed installation/selection operations and their original
+ROOT, time, command and acquisition limits apply. A missing owner is not
+permission to invent provenance or whitelist a foreign binary.
+
+Normal signed-package maintainer and housekeeping behavior is authorized on
+those three machines, including background cleanup of expired PHP sessions
+for other PHP versions. This authorizes the standard behavior; it does not
+prove that a timer, cron job or service did or did not run. It does not certify
+root-child termination or extend the capture's deadline. Controllers, capture
+and candidate application/site PHP remain nonroot; trusted package scripts and
+their normal housekeeping are distinct from candidate application elevation.
+There is no grant for arbitrary ROOT commands, service killing/masking,
+broker/signal/privilege bypasses, new runtime/discovery APIs, or local, shared,
+self-hosted or production resources. The 3.0 release is outside this repair.
+
+The configuration guard selects only CLI `php.ini` and
+`mods-available/sockets.ini` for the approved version. It verifies the genuine
+socket template's installed package/source version and manifest digest, exact
+configuration digest and root-owned `cli/conf.d/20-sockets.ini` alias. The alias
+must resolve to that same file without retargeting. `99-pecl.ini` is not an
+approved target. Missing files, substituted targets, skipped guards and
+fabricated native captures refuse.
+
+Cleanup command admission recognizes only the genuine source-bound
+`sessionclean` version loop. Its finite domain comes from the authenticated
+query producer and read-only immediate `/usr/lib/php` observations. The complete
+query domain distinguishes active workers (an executable binary and existing
+SAPI INI) from inactive entries; absent guards are retained and rechecked.
+Incoming producers use authenticated archive bindings, while unchanged
+producers require exact installed owner, source, manifest and custody bindings.
+
+The closed signed APT transaction authorizes its incoming code and verified
+retained maintainers/triggers, including bootstrap or replacement of PHP.
+Retained dpkg control basenames come from protected installed package metadata:
+`Multi-Arch: same` uses the verified native architecture qualifier, while
+ordinary packages remain unqualified. Available binary-package identifiers
+must agree with installed version/architecture and Multi-Arch metadata.
+Exact script/trigger bytes, canonical paths and missing control guards are
+rechecked before APT; incoming metadata cannot choose an old control path.
+This transaction scope derives from the authenticated lock, archive/control
+custody, job and original operation sequence, not a caller flag. Prospective
+bytes never establish installed authority or license direct helper execution.
+After APT succeeds, refresh installed status, owners, versions, digests, ELF
+loaders, generated UCF INIs, modules and aliases before selection or candidate
+eligibility. Direct helper admission retains installed checks and future-ELF
+refusal. Arbitrary dollar expansions, foreign sources, alias/parent drift and
+exhausted original budgets refuse. Recheck observed files and missing guards
+before transaction admission; retain pre-install evidence without refunds.
 
 On the explicitly approved owned disposable GitHub-hosted QA runners, the
 ordinary-user `host-prerequisite-setup.py` driver with required8.2/8.4 selection
-guard follows the final pinned PHP setup action and precedes every candidate
+guard follows signed package provisioning and precedes every candidate
 configured-PHP script. Package selection8.2 is restricted to the release-package
 job; selection8.4 to Ability Contract and Full MCP. The same guard and
 read-only inventory implementation serve all three, with no version/env fallback.
-No candidate/config writer may run in this provisioning
-interval. Workflow context is a scope assertion, not an authorization token
+No candidate/config writer may run in this configuration-hardening interval;
+package maintainer work belongs to the separate approved installation step.
+Workflow context is a scope assertion, not an authorization token
 for a different machine or evidence that a hostile root administrator is absent.
 
-Its only elevated argv is the fixed system sudo/chmod0644 command for the
-selected literal php.ini/99-pecl.ini pair:8.2 in Package,8.4 in Contract/Full MCP.
+The configuration-hardening guard's only elevated argv is the fixed system
+sudo/chmod0644 command for the selected literal cli/php.ini and
+mods-available/sockets.ini pair:
+8.2 in Package,8.4 in Contract/Full MCP.
 No cross-version pair or other path can be constructed from input. The canonical
 interpreter and actual bare identity must agree with that SAME selection.
 Original root-owned/writable input remains ineligible for the read-only
 inventory until the guarded0644 postcondition; shared acquisition precedes
 candidate PHP on all three surfaces. Failed provisioning/acquisition also
 withholds always-running PHP diagnostics, summaries and export verification.
-No root repository/PHP/Python/shell script, dynamic path/argv, directory/glob,
+Within this configuration-hardening grant, no root repository/PHP/Python/shell
+script, dynamic path/argv, directory/glob,
 unapproved version/SAPI, ownership change, extra extension, namespace operation or
 runtime sudo policy is permitted. Before launch, full bounded content/identity
 and root-owned canonical parent checks protect both literal nonsymlink targets;
@@ -55,9 +113,11 @@ inode, ownership or parent replacement while accepting only the expected0644
 mode/ctime change. Source archive/build-chain and actual loaded-module behavior
 remain explicit evidence limits, not inferred guarantees.
 
-All originals stay in exclusive owned private custody. One setup deadline and
-conserved file/byte/command/output ledgers cover the complete operation, including
-rechecks and the single root launch. Failure retains prefixes/unknown tails;
+All originals stay in exclusive owned private custody. The configuration guard's
+one setup deadline and conserved file/byte/command/output ledgers cover its operation, including
+rechecks and its single root launch. Package installation is a separate scoped
+grant, not an expansion of this chmod argv or ledger. Failure retains prefixes
+and unknown tails;
 the nonroot guard never signals a privileged child, invents a drain allowance
 or claims root cleanup. The original read-only inventory and three runtime
 observer operations are unchanged. No local/WSL root execution is part of the

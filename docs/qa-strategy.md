@@ -33,9 +33,34 @@ approval. Real PHP8.0/8.4 and Docker acceptance remain new-head CI evidence.
 
 ### Read-only HOST prerequisite inventory before the three QA surfaces
 
+Signed OS-package owner repair is approved only for `release-package-qa`
+(PHP8.2), `ability-contract-qa` and `full-mcp-e2e-qa` (PHP8.4) on owned
+disposable GitHub-hosted machines. Verify signatures/the approved fingerprint,
+source/archive bindings and installed owner/version/digests through fixed
+installation operations and unchanged budgets. Normal signed-package
+housekeeping may clean expired sessions for other PHP versions on those
+machines. It is authorized behavior, not observed scheduler nonexecution,
+unlimited ROOT permission, candidate application elevation or certified
+root-child cleanup. No local/shared/production or release permission follows.
+
+The package-native guard uses regular CLI `php.ini` and
+`mods-available/sockets.ini` files. It verifies the socket template's installed
+package/source version and digest plus the exact root-owned `20-sockets.ini`
+alias. Cleanup observation retains the complete query domain and distinguishes
+active workers from entries missing an executable or SAPI INI. The verified
+closed APT transaction admits authenticated incoming code and verified retained
+maintainers/triggers without treating prospective data as installed authority.
+After installation, status, owner/version/digest, loaders, generated UCF INIs,
+modules and aliases must pass before candidate eligibility. Unchanged producers
+require installed bindings; incoming producers require archive bindings.
+Direct helper execution retains installed checks and future-ELF refusal.
+Original prerequisite suites and frozen restoration guarantees
+remain required with additive current bindings. Genuine small producer fixtures
+and bounded acquisition mocks do not establish native installation or HOST success.
+
 Release Package, Ability Contract and Full MCP QA use the same
 `scripts/host-prerequisite-setup.py` driver immediately after the final host
-PHP setup and shared unit controls, BEFORE candidate configured PHP, custody
+signed package provisioning and shared unit controls, BEFORE candidate configured PHP, custody
 probes, safeguards or runtime QA. Its required explicit selection is8.2 for
 the package job and8.4 for Contract/Full MCP; no version/environment fallback.
 The driver hardens the selected two files, then invokes
@@ -120,13 +145,12 @@ Every unique tool, dependency and PHP configuration pin shares the same
 bytes, retained on failure, and not charged again for a validated cached alias.
 Changed file, alias or parent identities invalidate that cache.
 
-The pinned setup-php action makes the selected php.ini and 99-pecl.ini writable
-with chmod777. Such input still refuses this read-only gate. A separate
+Writable PHP configuration still refuses this read-only gate. A separate
 approved setup-only guard, `scripts/provision-php82-permissions.py`, runs
-immediately after all setup-php changes and before the first candidate
+immediately after signed package provisioning and before the first candidate
 configured PHP invocation, including workflow custody and safeguard probes.
 It selects ONLY one of two literal pairs: `/etc/php/8.2/cli/php.ini` and
-`/etc/php/8.2/cli/conf.d/99-pecl.ini` for Release Package, or the equivalent
+`/etc/php/8.2/mods-available/sockets.ini` for Release Package, or the equivalent
 two literal8.4 files for Contract/Full MCP, through one fixed system
 sudo/chmod argv to0644. Other versions, mixed pairs, missing/extra selectors
 and mismatched canonical interpreters refuse. The legacy php82 script filename
@@ -136,7 +160,9 @@ The Python guard never runs as root; it is not an inventory
 or runtime observer sudo permission. The failure diagnostic is also withheld
 if the combined provisioning/acquisition fails. Always-running PHP summaries
 and export verifiers are gated too. No extension is added and no PHP-n controller
-substitution is made; only the identity query uses PHP-n before hardening.
+substitution is made; only the identity query uses PHP-n before hardening. These are the existing
+configuration-hardening constraints, not the complete authorization scope of
+the separately approved signed-package installation and housekeeping.
 
 The setup guard requires the owned disposable GitHub-hosted workflow interval,
 before any candidate/config writer is started; these workflow assertions are

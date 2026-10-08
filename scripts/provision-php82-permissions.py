@@ -23,15 +23,15 @@ SPEC = importlib.util.spec_from_file_location(
 BASE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(BASE)
 MODE = "setup-php82-permissions-v1"
-TARGETS = ("/etc/php/8.2/cli/php.ini", "/etc/php/8.2/cli/conf.d/99-pecl.ini")
+TARGETS = ("/etc/php/8.2/cli/php.ini", "/etc/php/8.2/mods-available/sockets.ini")
 ROOT_ARGV = ("/usr/bin/sudo", "-n", "--user=root", "--", "/usr/bin/chmod",
              "--", "0644", "/etc/php/8.2/cli/php.ini",
-             "/etc/php/8.2/cli/conf.d/99-pecl.ini")
+             "/etc/php/8.2/mods-available/sockets.ini")
 ROOT_ARGVS = {
     "8.2": ROOT_ARGV,
     "8.4": ("/usr/bin/sudo", "-n", "--user=root", "--", "/usr/bin/chmod",
             "--", "0644", "/etc/php/8.4/cli/php.ini",
-            "/etc/php/8.4/cli/conf.d/99-pecl.ini"),
+            "/etc/php/8.4/mods-available/sockets.ini"),
 }
 APPROVED_JOBS = {
     "8.2": ("release-package-qa",),
@@ -42,6 +42,7 @@ POLICY_MODULES = ("/usr/libexec/sudo/sudoers.so", "/usr/lib/sudo/sudoers.so")
 SUDO_LIBRARIES = ("/usr/libexec/sudo", "/usr/lib/sudo")
 require = BASE.require
 Refusal = BASE.Refusal
+SOCKETS_SHA256 = "eb31eeb6aeb34f31c1c695dbac0c9a69f909874f01341679382da0646641318c"
 
 
 def validate_setup_file(path, info, version="8.2"):
@@ -247,8 +248,38 @@ class Provision(BASE.Inventory):
         for path in self.targets:
             _, _, pins[path] = self.special_read(path)
         self.receipt["configuration_before"] = pins
+        self.verify_socket_configuration(initial=True)
         self.recheck_before()
         self.ready = True
+
+    def verify_socket_configuration(self, initial=False):
+        target = self.targets[1]
+        alias = "/etc/php/" + self.version + "/cli/conf.d/20-sockets.ini"
+        template = "/usr/share/php" + self.version + "-common/common/sockets.ini"
+        self.origin(template)
+        source = self.origins[os.path.realpath(template)]
+        binary_source = self.origins[self.profile["binary"]]
+        require(source["package"][0].split(":")[0] == "php" + self.version + "-common"
+                and source["package"][3] == "php" + self.version
+                and source["package"][3:5] == binary_source["package"][3:5],
+                "tool-origin")
+        _, _, raw = self.acquire(template, limit=1048576)
+        require(len(raw) == 73 and hashlib.sha256(raw).hexdigest() == SOCKETS_SHA256
+                and self.pins[target]["sha256"] == SOCKETS_SHA256, "php-config")
+        info = os.lstat(alias)
+        require(stat.S_ISLNK(info.st_mode) and info.st_uid == 0
+                and os.readlink(alias) == "../../mods-available/sockets.ini"
+                and os.path.realpath(alias) == target, "tool-link")
+        binding = {"alias": alias, "identity": BASE.identity(info),
+                   "parents": BASE.parent_pins(alias), "canonical": target,
+                   "template": template, "template_sha256": SOCKETS_SHA256,
+                   "package": source["package"], "manifest_sha256": source["manifest_sha256"]}
+        if initial:
+            require("socket_configuration" not in self.receipt, "tool-link")
+            self.receipt["socket_configuration"] = binding
+        else:
+            require(binding == self.receipt["socket_configuration"], "tool-link")
+        self.check()
 
     def pin_sudo_configuration(self):
         path = "/etc/sudo.conf"
@@ -278,6 +309,8 @@ class Provision(BASE.Inventory):
             require(current == before
                     and BASE.identity(os.fstat(self.target_handles[path])) == before["identity"],
                     "tool-link")
+        if "socket_configuration" in self.receipt:
+            self.verify_socket_configuration()
         self.recheck_tools()
         self.check()
 
@@ -299,6 +332,8 @@ class Provision(BASE.Inventory):
                     "tool-link")
             after[path] = current
         self.receipt["configuration_after"] = after
+        if "socket_configuration" in self.receipt:
+            self.verify_socket_configuration()
         self.recheck_tools()
         self.check()
 

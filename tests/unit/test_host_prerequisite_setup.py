@@ -522,7 +522,7 @@ class HostPrerequisiteSetupTest(unittest.TestCase):
         self.assertEqual({"8.2", "8.4"}, set(GUARD.ROOT_ARGVS))
         for version in ("8.2", "8.4"):
             targets = ("/etc/php/" + version + "/cli/php.ini",
-                       "/etc/php/" + version + "/cli/conf.d/99-pecl.ini")
+                       "/etc/php/" + version + "/mods-available/sockets.ini")
             guard = GUARD.Provision(version)
             self.assertEqual(targets, guard.targets)
             self.assertEqual(("/usr/bin/sudo", "-n", "--user=root", "--", "/usr/bin/chmod",
@@ -663,27 +663,30 @@ class HostPrerequisiteSetupTest(unittest.TestCase):
                 inventory.configuration(target, "8.4")
             read.assert_not_called()
 
-    def test_three_workflow_surfaces_keep_host_versions_extensions_and_first_php_order(self):
+    def test_three_workflow_surfaces_keep_standard_packages_and_first_php_order(self):
         package = (SOURCE.parents[1] / ".github/workflows/release-package-qa.yml").read_text()
         e2e = (SOURCE.parents[1] / ".github/workflows/e2e-qa.yml").read_text()
         contract = e2e.split("  ability-contract-qa:\n", 1)[1].split("  full-mcp-e2e-qa:\n", 1)[0]
         full = e2e.split("  full-mcp-e2e-qa:\n", 1)[1].split("  docker-qa-gate:\n", 1)[0]
         for body, version, extension in ((package, "8.2", "zip"),
                                          (contract, "8.4", "posix"), (full, "8.4", "posix")):
-            self.assertIn("php-version: '" + version + "'", body)
-            self.assertIn("extensions: " + extension, body)
-            setup = body.index("coverage: none")
+            self.assertIn("host-php-apt.py " + version, body)
+            self.assertNotIn("setup-php@", body)
+            self.assertNotIn("extensions: " + extension, body)
             units = body.index("host-prerequisite-setup.py units " + version)
-            guard = body.index("- name: Guard and acquire selected HOST prerequisites")
+            setup_name = "Set up PHP" if version == "8.2" else "Set up host QA PHP"
+            setup_step = "- name: " + setup_name + "\n"
+            guard = body.index(setup_step)
             custody = body.index("run: php tests/support/private-custody-context.php")
             qa = body.index("id: qa")
-            self.assertLess(setup, units)
+            signed_units = body.index("host-php-apt.py units")
+            self.assertLess(units, signed_units)
+            self.assertLess(signed_units, guard)
             self.assertLess(units, guard)
             self.assertLess(guard, custody)
             self.assertLess(custody, qa)
-            self.assertEqual(1, body.count("- name: Guard and acquire selected HOST prerequisites"))
-            self.assertEqual(1, body.count("setup-php@f3e473d116dcccaddc5834248c87452386958240"))
-            self.assertIn("host-prerequisite-setup.py " + version, body)
+            self.assertEqual(1, body.count(setup_step))
+            self.assertEqual(1, body.count("host-php-apt.py " + version))
             self.assertIn("always() && steps.php-permissions.outcome == 'success'", body)
             self.assertNotIn("extensions: " + extension + ", sockets", body)
             # Every always-running direct PHP diagnostic/summary has the explicit success gate.

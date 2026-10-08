@@ -384,7 +384,7 @@ def run_units():
     return 0 if unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful() else 1
 
 
-def main(argv=None):
+def main(argv=None, retained=None):
     argv = sys.argv if argv is None else argv
     units = len(argv) == 3 and argv[1] == "units"
     if (not units and len(argv) != 2) or argv[-1] not in GUARD.ROOT_ARGVS:
@@ -408,6 +408,8 @@ def main(argv=None):
     result = GUARD.main(["php-setup", GUARD.MODE, version], retained=phases)
     if result == 0:
         result = BASE.main(["readonly-inventory", version], retained=phases)
+    if retained is not None:
+        retained.extend(phases)
     try:
         observed = publish_projection(phases, version, environment["WSTM_PROVISION_JOB"])
     except Exception:

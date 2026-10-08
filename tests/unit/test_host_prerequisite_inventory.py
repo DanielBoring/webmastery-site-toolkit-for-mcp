@@ -280,11 +280,13 @@ class PrerequisiteInventoryTest(unittest.TestCase):
         workflow = (SOURCE.parents[1] / ".github" / "workflows" /
                     "release-package-qa.yml").read_text(encoding="utf-8")
         custody = workflow.index("run: php tests/support/private-custody-context.php")
-        gate = workflow.index("Guard and acquire selected HOST prerequisites")
+        self.assertEqual(1, workflow.count("- name: Set up PHP\n"))
+        gate = workflow.index("- name: Set up PHP\n")
         package = workflow.index("- name: Run Release Package QA")
         self.assertLess(gate, custody)
         self.assertLess(gate, package)
-        self.assertIn("extensions: zip", workflow)
+        self.assertIn("scripts/host-php-apt.py 8.2", workflow)
+        self.assertNotIn("setup-php@", workflow)
         self.assertIn("/usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C", workflow)
         self.assertNotIn("extensions: zip, sockets", workflow)
 

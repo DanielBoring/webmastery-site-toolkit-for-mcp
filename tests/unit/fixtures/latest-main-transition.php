@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/signed-php-transition.php';
 require_once __DIR__ . '/terminal-callsite-transition.php';
 
 /** Exact latest-main integration before the immutable kernel-mount proof. */

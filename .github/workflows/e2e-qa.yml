@@ -108,22 +108,18 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Set up host QA PHP
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
-        with:
-          php-version: '8.4'
-          extensions: posix
-          coverage: none
-
       - name: Test shared HOST prerequisite controls
         run: /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py units 8.4
 
-      - name: Guard and acquire selected HOST prerequisites
+      - name: Test signed package and configuration controls
+        run: /usr/bin/python3 -I -S -B scripts/host-php-apt.py units
+
+      - name: Set up host QA PHP
         id: php-permissions
         env:
           WSTM_HOST_SETUP_ROOT: ${{ runner.temp }}
           WSTM_HOST_SETUP_RUNNER: ${{ runner.environment }}
-        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT="$WSTM_HOST_SETUP_ROOT" WSTM_HOST_SETUP_RUNNER="$WSTM_HOST_SETUP_RUNNER" GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_JOB="$GITHUB_JOB" /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py 8.4
+        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT="$WSTM_HOST_SETUP_ROOT" WSTM_HOST_SETUP_RUNNER="$WSTM_HOST_SETUP_RUNNER" GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_JOB="$GITHUB_JOB" GITHUB_SHA="$GITHUB_SHA" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" RUNNER_OS="$RUNNER_OS" /usr/bin/python3 -I -S -B scripts/host-php-apt.py 8.4
 
       - name: Bind canonical host QA interpreter
         shell: bash
@@ -434,22 +430,18 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Set up host QA PHP
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
-        with:
-          php-version: '8.4'
-          extensions: posix
-          coverage: none
-
       - name: Test shared HOST prerequisite controls
         run: /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py units 8.4
 
-      - name: Guard and acquire selected HOST prerequisites
+      - name: Test signed package and configuration controls
+        run: /usr/bin/python3 -I -S -B scripts/host-php-apt.py units
+
+      - name: Set up host QA PHP
         id: php-permissions
         env:
           WSTM_HOST_SETUP_ROOT: ${{ runner.temp }}
           WSTM_HOST_SETUP_RUNNER: ${{ runner.environment }}
-        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT="$WSTM_HOST_SETUP_ROOT" WSTM_HOST_SETUP_RUNNER="$WSTM_HOST_SETUP_RUNNER" GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_JOB="$GITHUB_JOB" /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py 8.4
+        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT="$WSTM_HOST_SETUP_ROOT" WSTM_HOST_SETUP_RUNNER="$WSTM_HOST_SETUP_RUNNER" GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_JOB="$GITHUB_JOB" GITHUB_SHA="$GITHUB_SHA" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" RUNNER_OS="$RUNNER_OS" /usr/bin/python3 -I -S -B scripts/host-php-apt.py 8.4
 
       - name: Bind canonical host QA interpreter
         shell: bash
