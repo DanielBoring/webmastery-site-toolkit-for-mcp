@@ -6,6 +6,9 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Describe refused owner-query response structure through finite privacy-safe
+  categories in the existing preflight witness. Preserve exact row/owner/target
+  admission and diversion rejection; do not expose response text or package names.
 - Attribute preflight origin refusals through the existing finite witness,
   including installed/cached/Perl/configuration/sudo/support/APT/CA predicates
   and requested root tools. Preserve refusal classes, checks and budgets;

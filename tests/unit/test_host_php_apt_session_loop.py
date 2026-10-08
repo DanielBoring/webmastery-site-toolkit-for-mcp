@@ -710,6 +710,133 @@ class SessionLoopTest(unittest.TestCase):
                          "perl-list-domain", "cached-association", "apt-hook-owner",
                          "future-helper-domain"} <= observed)
 
+    def test_owner_shape_classifies_only_finite_structural_facts(self):
+        query = "/usr/bin/gpg"
+        cases = (
+            (["gpg: " + query], ("one", "one", "one", "all", "zero", "zero")),
+            (["gpg: " + query, "gpg: " + query], ("many", "many", "one", "all", "zero", "zero")),
+            (["gpg: " + query, "foreign: " + query], ("many", "many", "many", "all", "zero", "zero")),
+            (["gpg, foreign: " + query], ("one", "one", "many", "all", "zero", "zero")),
+            (["gpg: " + query, "foreign: /PRIVATE_SENTINEL"],
+             ("many", "many", "many", "mixed", "zero", "zero")),
+            (["gpg: /PRIVATE_SENTINEL"], ("one", "one", "one", "foreign", "zero", "zero")),
+            (["diversion by SECRET_PACKAGE from: " + query,
+              "diversion by SECRET_PACKAGE to: /PRIVATE_SENTINEL", "gpg: " + query],
+             ("many", "one", "one", "all", "many", "zero")),
+            (["local diversion from: " + query, "local diversion to: /PRIVATE_SENTINEL"],
+             ("many", "zero", "zero", "none", "many", "zero")),
+            (["unknown SECRET_PACKAGE /PRIVATE_SENTINEL"],
+             ("one", "zero", "zero", "none", "zero", "one")),
+            (["gpg: " + query, "unknown row"], ("many", "one", "one", "all", "zero", "one")),
+            ([], ("zero", "zero", "zero", "none", "zero", "zero")),
+            (["gpg:amd64: " + query], ("one", "one", "one", "all", "zero", "zero")),
+        )
+        keys = tuple(BASE.OWNER_SHAPE_VALUES)
+        for lines, expected in cases:
+            with self.subTest(expected=expected):
+                shape = BASE.owner_response_shape(lines, query)
+                self.assertEqual(dict(zip(keys, expected)), shape)
+                for key, value in shape.items():
+                    self.assertIn(value, BASE.OWNER_SHAPE_VALUES[key])
+                for secret in ("SECRET_PACKAGE", "/PRIVATE_SENTINEL", "/usr/bin/gpg", "gpg:amd64"):
+                    self.assertNotIn(secret, json.dumps(shape))
+
+    def test_actual_gpg_shape_refusals_are_not_normalized_or_admitted(self):
+        query = "/usr/bin/gpg"
+        responses = (
+            b"gpg: /usr/bin/gpg\ngpg: /usr/bin/gpg\n",
+            b"gpg: /usr/bin/gpg\nforeign: /usr/bin/gpg\n",
+            b"diversion by SECRET_PACKAGE from: /usr/bin/gpg\n"
+            b"diversion by SECRET_PACKAGE to: /PRIVATE_SENTINEL\ngpg: /usr/bin/gpg\n",
+            b"local diversion from: /usr/bin/gpg\nlocal diversion to: /PRIVATE_SENTINEL\n",
+            b"not an owner response SECRET_PACKAGE\n",
+            b"gpg: /usr/bin/gpg\nforeign: /PRIVATE_SENTINEL\n",
+            b"gpg: /usr/bin/gpg\nunknown row\n",
+        )
+        for raw in responses:
+            with self.subTest(raw=raw), self.model() as (item, fs):
+                self.preflight_inputs(item, fs)
+                command = item.command.side_effect
+                def query_response(operation, argument):
+                    if (operation, argument) == ("owner", query):
+                        return raw
+                    return command(operation, argument)
+                deadline, roots = item.deadline, item.root_launches
+                with patch.object(item, "command", side_effect=query_response), \
+                        patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                        self.assertRaisesRegex(BASE.Refusal, "^tool-origin$") as caught:
+                    item.preflight()
+                expected = BASE.owner_response_shape(raw.decode().strip().splitlines(), query)
+                self.assertEqual(expected, caught.exception.owner_response_shape)
+                self.assertEqual({"step": "tool-origin", "requested_tool": "gpg",
+                                  "identity_check": None, "origin_check": "owner-response-shape",
+                                  "owner_response_shape": expected}, item.receipt["preflight_refusal"])
+                self.assertNotIn(query, item.origins)
+                self.assertEqual(deadline, item.deadline)
+                self.assertEqual(roots, item.root_launches)
+                self.assertFalse(item.setup_ready or item.receipt["signed_transaction_authorized"])
+
+    def test_owner_shape_annotation_preserves_valid_missing_and_foreign_target_checks(self):
+        for raw, expected in ((b"coreutils: /usr/bin/gpg\n", None),
+                              (b"", "owner-missing"),
+                              (b"coreutils: /PRIVATE_SENTINEL\n", "owner-target")):
+            with self.subTest(expected=expected), self.model() as (item, fs):
+                command = item.command.side_effect
+                def query_response(operation, argument):
+                    if (operation, argument) == ("owner", "/usr/bin/gpg"):
+                        return raw
+                    return command(operation, argument)
+                with patch.object(item, "command", side_effect=query_response):
+                    if expected is None:
+                        item.origin("/usr/bin/gpg")
+                        self.assertTrue(item.origins["/usr/bin/gpg"]["installed_digest_matches"])
+                    else:
+                        with self.assertRaisesRegex(BASE.Refusal, "^tool-origin$") as caught:
+                            item.origin("/usr/bin/gpg")
+                        self.assertEqual(expected, caught.exception.origin_check)
+                        self.assertFalse(hasattr(caught.exception, "owner_response_shape"))
+
+    def test_owner_shape_projection_is_closed_optional_and_privacy_safe(self):
+        value = {"step": "tool-origin", "requested_tool": "gpg", "identity_check": None,
+                 "origin_check": "owner-response-shape"}
+        shape = BASE.owner_response_shape(["gpg: /usr/bin/gpg", "unknown row"], "/usr/bin/gpg")
+        for extra in ({}, {"owner_response_shape": None}, {"owner_response_shape": shape}):
+            self.assertEqual(dict(value, **extra), MODULE.preflight_witness(
+                dict(value, **extra), "preflight", "tool-origin"))
+        for bad in (dict(shape, path="/PRIVATE_SENTINEL"), dict(shape, owner_rows=2),
+                    dict(shape, owner_domain="SECRET_PACKAGE"), dict(shape, target_relation=[]),
+                    dict(shape, row_count="one"), dict(shape, owner_domain="zero"),
+                    dict(shape, owner_rows="one", target_relation="mixed"),
+                    BASE.owner_response_shape([], "/usr/bin/gpg"),
+                    {key: val for key, val in shape.items() if key != "other_rows"}, [],
+                    "/PRIVATE_SENTINEL"):
+            with self.subTest(bad=bad), self.assertRaisesRegex(BASE.Refusal, "^inventory-shape$"):
+                MODULE.preflight_witness(dict(value, owner_response_shape=bad), "preflight", "tool-origin")
+        with self.assertRaisesRegex(BASE.Refusal, "^inventory-shape$"):
+            MODULE.preflight_witness(dict(value, origin_check="owner-missing", owner_response_shape=shape),
+                                     "preflight", "tool-origin")
+        with self.model() as (item, fs):
+            self.preflight_inputs(item, fs)
+            command = item.command.side_effect
+            def response(operation, argument):
+                if (operation, argument) == ("owner", "/usr/bin/gpg"):
+                    return b"gpg: /usr/bin/gpg\nunknown SECRET_PACKAGE /PRIVATE_SENTINEL\n"
+                return command(operation, argument)
+            with patch.object(item, "command", side_effect=response), \
+                    patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                    self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
+                item.preflight()
+            def store(name, raw):
+                fs.add(str(item.directory / name), raw, mode=stat.S_IFREG | 0o600, uid=1000)
+            with patch.object(item, "write", side_effect=store), patch("builtins.print") as output:
+                self.assertFalse(MODULE.projection(item, None, "tool-origin"))
+            public = json.loads(output.call_args.args[0].split(" ", 1)[1])
+            self.assertEqual(item.receipt["preflight_refusal"], public["preflight_refusal"])
+            for private in ("/PRIVATE_SENTINEL", "SECRET_PACKAGE", "/usr/bin/gpg", "argv", "stdout"):
+                self.assertNotIn(private, output.call_args.args[0])
+            self.assertFalse(any(public[key] for key in ("apt_original_accepted",
+                "selected_signature_verified", "signed_transaction_authorized", "installed_authority_verified")))
+
     def test_identity_annotation_preserves_file_budget_and_unannotated_refusal(self):
         info = FileSystem().add("/file", b"data")
         BASE.validate_file(info, 0, 4)

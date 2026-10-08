@@ -543,7 +543,7 @@
     ".github/ISSUE_TEMPLATE/config.yml": "a6b12f327fe7490036740b7e0590f41da474c4c991092da034444fb1414d9aa4",
     ".github/ISSUE_TEMPLATE/feature_request.md": "8ea25177279b0f97e06df9b38a407359d9c4279964b05787b76a1054641727b3",
     ".github/PULL_REQUEST_TEMPLATE.md": "1df3b3949c72e2382c6c85b59b185d0dfb382c64424f42dd835965db2f4f30ce",
-    ".github/REPOSITORY_CHANGELOG.md": "7ecbe4f413d0b3f5cd32236e8b8b46895ab7a8ef37216965a2fc85f37d0c353c",
+    ".github/REPOSITORY_CHANGELOG.md": "f96c153adf30afe380a39bb399d87883bb8f8ed4eba950f99c7ff921ecac573d",
     ".github/SETUP-COMPLETE.md": "95cfe50cb68612e693f9f7a994ccded1fe32b1521521067aa1311b990f979e55",
     ".github/compatibility-versions.json": "73865b94ad6ac10cbed9bec8a31b41911cbb35014b4a904734d9258f0718c19a",
     ".github/copilot-instructions.md": "fa4db4dd09a39499480614f0e06fc71203072db81148eaadf40b45d79a5ec2bf",
@@ -604,7 +604,7 @@
     "docs/qa-strategy.md": "c68016253523588142109ab6cf21861ed4b5b6fcab3a3f2611f556503f65e3bc",
     "docs/release-strategy.md": "a452483fa102d4db3fea59e91a0a9344ba47d9fd63acfd8049fa7277629a790d",
     "docs/sdlc-overview.md": "687d277b66a1f0b062f8b1cef8f0e4f38f9cfe810bfca3f1b75673bfad50caf0",
-    "docs/security-strategy.md": "133d482483a231804d62d737a50d753f787610244f14e31be02a06c9784dde68",
+    "docs/security-strategy.md": "a2e1ea24e1ad01af1dea173b0e994a294937854cec4f6975c0278305cdc5b412",
     "docs/shared-helpers.md": "03dfee0305d3058546b60427cc2fe5869b824f84b1b1995093ddb363605f095b",
     "includes/class-ability.php": "9a237e25baa11fc823fcdaee45277d1ca9462ca04af462e33dede511bdb0edf5",
     "includes/class-backup-status.php": "d521e5caf92c422325a0fa2bf85e7f393bd36cc584b250facc5264eeeb759840",
@@ -657,7 +657,7 @@
     "scripts/docker-qa-gate.php": "ac1bbc7fac0f0ce04d9533e64f72b5d6e0157450e984f85c83fadf204a59d0ea",
     "scripts/docker-qa-summary.php": "fda21833dd7142384a2008e3d38321a1f7645ccad3a4d241f75a8b06db77fcab",
     "scripts/e2e-test.sh": "6c54d14155070437909b744efa08f6198aa3e370a2f6a11ab78f1893ccfac9d8",
-    "scripts/host-prerequisite-inventory.py": "d4f4bf667aa68c1d7079ba9e0188c3ee913507fda9672317ff2d7d8ee782a6c1",
+    "scripts/host-prerequisite-inventory.py": "869f008d74a4a2a216761ba8d33bf818e14e8a50df09ec67fee0bee7437613bb",
     "scripts/host-prerequisite-setup.py": "89ed6f8a38602292fb8a0c7f4f4ff1a545a393e6568072711e1e8426df092a95",
     "scripts/import-issues.sh": "573a9c683e60107be1f47dca1f5723b7b22d40a252800af8ff8f3feb9f5e9614",
     "scripts/input-schema-proof.php": "8c9a89b34da1158102e1b513431fcb11091e8ce47ebcbb5195c60a4ce853a612",
@@ -1066,13 +1066,13 @@
     "tests/unit/test_untrusted_query.py": "17551baee77beb3da127d743e3ce029ff577917487b40567bd23b923df4477a8",
     "tests/untrusted-stage-test.sh": "17a99df2bbb5e39171ef6bff72675fe8894942cb152c14283e9de01b0ff55ce7",
     "webmastery-site-toolkit-for-mcp.php": "66ad568ed9018670c30ceda128af3c67cf18b63c62eb5bf6a76ddcdff3386ab2",
-    "scripts/host-php-apt.py": "eb4df77d03e3b7b901c716699db310e552d36d1f7901a115fe565abdfc92377d",
+    "scripts/host-php-apt.py": "8a3cea263362ba54b96d4b8e31322d790ba362a26c7728c179b48665a0689586",
     "scripts/host-php-apt-policy.py": "389170dc2ec9c0ce205128484a9f9b8febc7173294454a733f5f2665371890fb",
     "scripts/host-php-apt-capture.py": "db8173b5265a6f22f44f494848f57e1763893a31f6c89b108997a1d9c7df4103",
     "scripts/host-php-apt-signature.py": "6207a2c61f6c0122a23b71797bf8c2c222cb6e03ad06ae4f8b6928a758b5861d",
     "scripts/host-php-apt-trust.py": "783c0c7a10556d05f9375b98dca2142169bbb743a09bd5548ab350d83d8edf19",
     "scripts/host-php-apt-ca.py": "9946e480d5cb05644ae0170e19472596c5fd62a00ab173af065d3dc216a16d4a",
-    "tests/unit/test_host_php_apt_session_loop.py": "57cae3f9e04de10f1ba3d9d03b087f2ab4d9d89d35f8f3ab9a5002b134e6ca84",
+    "tests/unit/test_host_php_apt_session_loop.py": "8431ce1ca91d5c2827cb1dc59fc7fa174a1707b68247bee91a856a8897f7bfb9",
     "tests/unit/test_standard_php_config.py": "8a84480c2fb94ebe72dfa2468c1995d7610e11db55d6cb29fcc4c80e47ce8c17",
     "tests/unit/fixtures/signed-php-producers/phpquery": "0e9daa717d1af9b4e069c1976e0aad9cb07141b26b7b9a680009fe322e1e0c89",
     "tests/unit/fixtures/signed-php-producers/php-helper": "72445eb0e4d94093f9f5b78038370b01741222cb7498f15ccb5cf8d476dbd83a",
@@ -1129,13 +1129,16 @@
     },
     ".github/REPOSITORY_CHANGELOG.md": {
       "baseline_raw_sha256": "be511c50bbec7bb87bc4067778065fb7801efef97a02bf50442b35863a3bce0d",
-      "current_raw_sha256": "7ecbe4f413d0b3f5cd32236e8b8b46895ab7a8ef37216965a2fc85f37d0c353c",
+      "current_raw_sha256": "f96c153adf30afe380a39bb399d87883bb8f8ed4eba950f99c7ff921ecac573d",
       "hunks": [
         {
           "start": 7,
           "before": [],
           "after": [
             "",
+            "- Describe refused owner-query response structure through finite privacy-safe",
+            "  categories in the existing preflight witness. Preserve exact row/owner/target",
+            "  admission and diversion rejection; do not expose response text or package names.",
             "- Attribute preflight origin refusals through the existing finite witness,",
             "  including installed/cached/Perl/configuration/sudo/support/APT/CA predicates",
             "  and requested root tools. Preserve refusal classes, checks and budgets;",
@@ -1454,7 +1457,7 @@
     },
     "docs/security-strategy.md": {
       "baseline_raw_sha256": "99059483a77c0166fc719a8e88b46502e91fc910b88b4b8242a4d73c54a344f3",
-      "current_raw_sha256": "133d482483a231804d62d737a50d753f787610244f14e31be02a06c9784dde68",
+      "current_raw_sha256": "a2e1ea24e1ad01af1dea173b0e994a294937854cec4f6975c0278305cdc5b412",
       "hunks": [
         {
           "start": 27,
@@ -1589,12 +1592,18 @@
             "Fixed APT-method and later preflight phases retain their requested root-tool",
             "labels where applicable. A diagnostic label is not proof of owner repair,",
             "signed installation, loader closure or native acceptance.",
+            "An owner-response-shape refusal may also include finite row-count, potential",
+            "owner-row/domain, target-relation, diversion-row and other-row categories from",
+            "the already acquired response. These categories disclose no row text or names",
+            "and do not admit, discard or normalize any response row. Null means unavailable",
+            "structural evidence. Multiple, diverted, malformed or ambiguous responses",
+            "remain subject to the same owner and provenance refusals.",
             "Within this configuration-hardening grant, no root repository/PHP/Python/shell",
             "script, dynamic path/argv, directory/glob,"
           ]
         },
         {
-          "start": 145,
+          "start": 151,
           "before": [
             "All originals stay in exclusive owned private custody. One setup deadline and",
             "conserved file/byte/command/output ledgers cover the complete operation, including",
@@ -1612,10 +1621,24 @@
     },
     "scripts/host-prerequisite-inventory.py": {
       "baseline_raw_sha256": "85b7e83fb13eeb8bcea67471d11c4cd620a54c8376d432d8d27753c2ce992a95",
-      "current_raw_sha256": "d4f4bf667aa68c1d7079ba9e0188c3ee913507fda9672317ff2d7d8ee782a6c1",
+      "current_raw_sha256": "869f008d74a4a2a216761ba8d33bf818e14e8a50df09ec67fee0bee7437613bb",
       "hunks": [
         {
-          "start": 35,
+          "start": 33,
+          "before": [],
+          "after": [
+            "OWNER_SHAPE_VALUES = {",
+            "    \"row_count\": frozenset((\"zero\", \"one\", \"many\")),",
+            "    \"owner_rows\": frozenset((\"zero\", \"one\", \"many\")),",
+            "    \"owner_domain\": frozenset((\"zero\", \"one\", \"many\")),",
+            "    \"target_relation\": frozenset((\"none\", \"all\", \"mixed\", \"foreign\")),",
+            "    \"diversion_rows\": frozenset((\"zero\", \"one\", \"many\")),",
+            "    \"other_rows\": frozenset((\"zero\", \"one\", \"many\")),",
+            "}"
+          ]
+        },
+        {
+          "start": 43,
           "before": [
             "        \"/etc/php/8.2/cli/php.ini\", \"/etc/php/8.2/cli/conf.d/99-pecl.ini\")},"
           ],
@@ -1624,7 +1647,7 @@
           ]
         },
         {
-          "start": 37,
+          "start": 45,
           "before": [
             "        \"/etc/php/8.4/cli/php.ini\", \"/etc/php/8.4/cli/conf.d/99-pecl.ini\")},"
           ],
@@ -1633,16 +1656,16 @@
           ]
         },
         {
-          "start": 91,
+          "start": 99,
           "before": [
             "def require(condition, reason):"
           ],
           "after": [
-            "def require(condition, reason, *, origin_check=None):"
+            "def require(condition, reason, *, origin_check=None, owner_response_shape=None):"
           ]
         },
         {
-          "start": 93,
+          "start": 101,
           "before": [
             "        raise Refusal(reason)"
           ],
@@ -1650,11 +1673,39 @@
             "        error = Refusal(reason)",
             "        if reason == \"tool-origin\" and origin_check is not None:",
             "            error.origin_check = origin_check",
-            "        raise error"
+            "        if reason == \"tool-origin\" and owner_response_shape is not None:",
+            "            error.owner_response_shape = owner_response_shape",
+            "        raise error",
+            "",
+            "",
+            "def owner_response_shape(lines, query):",
+            "    \"\"\"Describe acquired rows without accepting any owner or exposing their text.\"\"\"",
+            "    def count(value):",
+            "        return \"zero\" if value == 0 else \"one\" if value == 1 else \"many\"",
+            "    owners, targets = set(), []",
+            "    diversions = other = 0",
+            "    for line in lines:",
+            "        if line.startswith((\"diversion by \", \"local diversion \")):",
+            "            diversions += 1",
+            "            continue",
+            "        if \": \" in line:",
+            "            names, target = line.split(\": \", 1)",
+            "            names = names.split(\", \")",
+            "            if all(re.fullmatch(r\"[a-z0-9][a-z0-9+.-]{0,127}(?::[a-z0-9-]{1,128})?\", name)",
+            "                   for name in names):",
+            "                owners.update(names)",
+            "                targets.append(target == query)",
+            "                continue",
+            "        other += 1",
+            "    relation = (\"none\" if not targets else \"all\" if all(targets)",
+            "                else \"mixed\" if any(targets) else \"foreign\")",
+            "    return {\"row_count\": count(len(lines)), \"owner_rows\": count(len(targets)),",
+            "            \"owner_domain\": count(len(owners)), \"target_relation\": relation,",
+            "            \"diversion_rows\": count(diversions), \"other_rows\": count(other)}"
           ]
         },
         {
-          "start": 114,
+          "start": 150,
           "before": [],
           "after": [
             "IDENTITY_CHECKS = (\"regular-file\", \"expected-owner\", \"safe-mode\", \"single-link\")",
@@ -1663,7 +1714,7 @@
           ]
         },
         {
-          "start": 118,
+          "start": 154,
           "before": [
             "    require(stat.S_ISREG(info.st_mode) and info.st_uid == owner",
             "            and not info.st_mode & 0o6022 and info.st_nlink == 1,",
@@ -1680,11 +1731,21 @@
           ]
         },
         {
-          "start": 591,
+          "start": 627,
           "before": [],
           "after": [
             "                if not hasattr(error, \"origin_check\"):",
             "                    error.origin_check = self.origin_check"
+          ]
+        },
+        {
+          "start": 651,
+          "before": [
+            "            require(len(lines) == 1 and \": \" in lines[0], \"tool-origin\")"
+          ],
+          "after": [
+            "            require(len(lines) == 1 and \": \" in lines[0], \"tool-origin\",",
+            "                    owner_response_shape=owner_response_shape(lines, query))"
           ]
         }
       ]

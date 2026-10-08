@@ -31,6 +31,14 @@ ORIGIN_CHECK_IDS = frozenset(("unknown", "owner-command", "owner-response-shape"
     "owner-target", "owner-missing", "owner-ambiguous", "manifest-link",
     "package-metadata", "manifest-identity", "manifest-encoding"))
 ORIGIN_SUBJECT_IDS = frozenset(("tool", "dependency", "python-module"))
+OWNER_SHAPE_VALUES = {
+    "row_count": frozenset(("zero", "one", "many")),
+    "owner_rows": frozenset(("zero", "one", "many")),
+    "owner_domain": frozenset(("zero", "one", "many")),
+    "target_relation": frozenset(("none", "all", "mixed", "foreign")),
+    "diversion_rows": frozenset(("zero", "one", "many")),
+    "other_rows": frozenset(("zero", "one", "many")),
+}
 PHP_PROFILES = {
     "8.2": {"binary": "/usr/bin/php8.2", "targets": (
         "/etc/php/8.2/cli/php.ini", "/etc/php/8.2/mods-available/sockets.ini")},
@@ -89,12 +97,40 @@ class Refusal(Exception):
     pass
 
 
-def require(condition, reason, *, origin_check=None):
+def require(condition, reason, *, origin_check=None, owner_response_shape=None):
     if not condition:
         error = Refusal(reason)
         if reason == "tool-origin" and origin_check is not None:
             error.origin_check = origin_check
+        if reason == "tool-origin" and owner_response_shape is not None:
+            error.owner_response_shape = owner_response_shape
         raise error
+
+
+def owner_response_shape(lines, query):
+    """Describe acquired rows without accepting any owner or exposing their text."""
+    def count(value):
+        return "zero" if value == 0 else "one" if value == 1 else "many"
+    owners, targets = set(), []
+    diversions = other = 0
+    for line in lines:
+        if line.startswith(("diversion by ", "local diversion ")):
+            diversions += 1
+            continue
+        if ": " in line:
+            names, target = line.split(": ", 1)
+            names = names.split(", ")
+            if all(re.fullmatch(r"[a-z0-9][a-z0-9+.-]{0,127}(?::[a-z0-9-]{1,128})?", name)
+                   for name in names):
+                owners.update(names)
+                targets.append(target == query)
+                continue
+        other += 1
+    relation = ("none" if not targets else "all" if all(targets)
+                else "mixed" if any(targets) else "foreign")
+    return {"row_count": count(len(lines)), "owner_rows": count(len(targets)),
+            "owner_domain": count(len(owners)), "target_relation": relation,
+            "diversion_rows": count(diversions), "other_rows": count(other)}
 
 
 def identity(info):
@@ -613,7 +649,8 @@ class Inventory:
             if not lines:
                 continue
             self.origin_check = "owner-response-shape"
-            require(len(lines) == 1 and ": " in lines[0], "tool-origin")
+            require(len(lines) == 1 and ": " in lines[0], "tool-origin",
+                    owner_response_shape=owner_response_shape(lines, query))
             package, owned = lines[0].split(": ", 1)
             self.origin_check = "owner-target"
             require(owned == query and os.path.realpath(owned) == canonical, "tool-origin")

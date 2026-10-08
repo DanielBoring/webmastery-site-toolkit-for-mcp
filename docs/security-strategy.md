@@ -132,6 +132,12 @@ is null for these refusals; `unknown` explicitly means an unannotated predicate.
 Fixed APT-method and later preflight phases retain their requested root-tool
 labels where applicable. A diagnostic label is not proof of owner repair,
 signed installation, loader closure or native acceptance.
+An owner-response-shape refusal may also include finite row-count, potential
+owner-row/domain, target-relation, diversion-row and other-row categories from
+the already acquired response. These categories disclose no row text or names
+and do not admit, discard or normalize any response row. Null means unavailable
+structural evidence. Multiple, diverted, malformed or ambiguous responses
+remain subject to the same owner and provenance refusals.
 Within this configuration-hardening grant, no root repository/PHP/Python/shell
 script, dynamic path/argv, directory/glob,
 unapproved version/SAPI, ownership change, extra extension, namespace operation or

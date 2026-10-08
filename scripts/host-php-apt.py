@@ -1481,6 +1481,9 @@ class Provider(CAPTURE.Capture):
                 if str(error) == "tool-origin":
                     self.receipt["preflight_refusal"]["origin_check"] = getattr(
                         error, "origin_check", "unknown")
+                    if self.receipt["preflight_refusal"]["origin_check"] == "owner-response-shape":
+                        self.receipt["preflight_refusal"]["owner_response_shape"] = getattr(
+                            error, "owner_response_shape", None)
             raise
 
     def _preflight(self):
@@ -2445,10 +2448,12 @@ class Provider(CAPTURE.Capture):
 def preflight_witness(value, stage, reason):
     if value is None:
         return None
+    extended = type(value) is dict and "owner_response_shape" in value
     require(stage == "preflight" and reason in ("tool-identity", "tool-origin")
             and type(value) is dict
             and set(value) == ({"step", "requested_tool", "identity_check"}
-                               | ({"origin_check"} if reason == "tool-origin" else set())),
+                               | ({"origin_check"} if reason == "tool-origin" else set())
+                               | ({"owner_response_shape"} if extended else set())),
             "inventory-shape")
     require(type(value["step"]) is str and value["step"] in PREFLIGHT_STEPS
             and (value["requested_tool"] is None or (
@@ -2463,6 +2468,25 @@ def preflight_witness(value, stage, reason):
         require(value["identity_check"] is None
                 and type(value["origin_check"]) is str
                 and value["origin_check"] in ORIGIN_CHECKS, "inventory-shape")
+    if extended:
+        require(reason == "tool-origin" and value["origin_check"] == "owner-response-shape",
+                "inventory-shape")
+        shape = value["owner_response_shape"]
+        require(shape is None or (
+            type(shape) is dict and set(shape) == set(BASE.OWNER_SHAPE_VALUES)
+            and all(type(shape[key]) is str and shape[key] in allowed
+                    for key, allowed in BASE.OWNER_SHAPE_VALUES.items())), "inventory-shape")
+        if shape is not None:
+            buckets = [shape[key] for key in ("owner_rows", "diversion_rows", "other_rows")]
+            require(shape["row_count"] != "zero"
+                    and (shape["row_count"] == "many" if "many" in buckets or buckets.count("one") > 1
+                         else shape["row_count"] == "one" and buckets.count("one") == 1)
+                    and ((shape["owner_rows"] == "zero")
+                         == (shape["owner_domain"] == "zero" and shape["target_relation"] == "none"))
+                    and (shape["owner_rows"] == "zero" or (
+                        shape["owner_domain"] != "zero" and shape["target_relation"] != "none"))
+                    and (shape["owner_rows"] != "one" or shape["target_relation"] != "mixed"),
+                    "inventory-shape")
     return dict(value)
 
 
