@@ -121,6 +121,15 @@ jobs:
           WSTM_HOST_SETUP_RUNNER: ${{ runner.environment }}
         run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT="$WSTM_HOST_SETUP_ROOT" WSTM_HOST_SETUP_RUNNER="$WSTM_HOST_SETUP_RUNNER" GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_JOB="$GITHUB_JOB" GITHUB_SHA="$GITHUB_SHA" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" RUNNER_OS="$RUNNER_OS" /usr/bin/python3 -I -S -B scripts/host-php-apt.py 8.4
 
+      - name: Retain scoped private GPG diagnostic evidence
+        if: ${{ always() && steps.php-permissions.outcome == 'failure' && github.repository == 'DanielBoring/webmastery-site-toolkit-for-mcp' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: private-gpg-diagnostic-contract
+          path: ${{ runner.temp }}/wstm-prerequisite-*/gpg-diagnostic-*.private*
+          if-no-files-found: ignore
+          retention-days: 1
+
       - name: Bind canonical host QA interpreter
         shell: bash
         run: |
@@ -442,6 +451,15 @@ jobs:
           WSTM_HOST_SETUP_ROOT: ${{ runner.temp }}
           WSTM_HOST_SETUP_RUNNER: ${{ runner.environment }}
         run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT="$WSTM_HOST_SETUP_ROOT" WSTM_HOST_SETUP_RUNNER="$WSTM_HOST_SETUP_RUNNER" GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_JOB="$GITHUB_JOB" GITHUB_SHA="$GITHUB_SHA" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" RUNNER_OS="$RUNNER_OS" /usr/bin/python3 -I -S -B scripts/host-php-apt.py 8.4
+
+      - name: Retain scoped private GPG diagnostic evidence
+        if: ${{ always() && steps.php-permissions.outcome == 'failure' && github.repository == 'DanielBoring/webmastery-site-toolkit-for-mcp' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: private-gpg-diagnostic-http
+          path: ${{ runner.temp }}/wstm-prerequisite-*/gpg-diagnostic-*.private*
+          if-no-files-found: ignore
+          retention-days: 1
 
       - name: Bind canonical host QA interpreter
         shell: bash

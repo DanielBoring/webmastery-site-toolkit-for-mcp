@@ -145,7 +145,10 @@ class Capture(GUARD.Provision):
                                  and stdin == POLICY.DESCRIPTOR), "unsafe-input")
         self.system(argv[0])
         number = len(self.commands) + 1
-        prefix = "command-%d" % number
+        diagnostic = (getattr(self, "gpg_diagnostic_active", False)
+                      or (operation == "owner" and getattr(self, "_preflight_context", None)
+                          == ("tool-origin", "gpg")))
+        prefix = ("gpg-diagnostic-command-" if diagnostic else "command-") + str(number)
         record = {"operation": operation, "argv": list(argv),
                   "environment": {"PATH": "/usr/bin:/bin", "LC_ALL": "C"},
                   "exit": None, "stdout_eof": False, "stderr_eof": False,
@@ -153,6 +156,9 @@ class Capture(GUARD.Provision):
                   "root_cleanup_certified": False, "privileged": privileged,
                   "source_sha256": self.receipt.get("producer_sources", {}),
                   "stdout_bytes": 0, "stderr_bytes": 0}
+        if diagnostic:
+            require(not privileged and operation in ("owner", "package", "elf"), "unsafe-input")
+            record["capture_prefix"] = prefix
         record["requested_child_umask"] = (
             0o022 if privileged and operation in
             ("key-download", "key-dearmor", "source-descriptor") else None)
@@ -164,7 +170,7 @@ class Capture(GUARD.Provision):
         """Only callers with a closed argv policy may use this non-public primitive."""
         record = self.reserve_capture(operation, argv, stdin)
         privileged = record["privileged"]
-        prefix = "command-%d" % len(self.commands)
+        prefix = record.get("capture_prefix", "command-%d" % len(self.commands))
         streams, pipes, buffers = {}, {}, {1: bytearray(), 2: bytearray()}
         process = input_stream = None
         selector = selectors.DefaultSelector()

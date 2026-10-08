@@ -138,6 +138,8 @@ class Provider(CAPTURE.Capture):
         self._transaction_scope = None
         self._retired_pins = 0
         self.perl_alias_binding = None
+        self.gpg_diagnostic_active = False
+        self._gpg_diagnostic_paths = ()
         self.stage = "preflight"
         self.receipt.update(state="reserved", historical_chmod_performed=False,
                             standard_configuration_hardened=False,
@@ -1314,7 +1316,11 @@ class Provider(CAPTURE.Capture):
         if operation == "owner":
             require(argument in self.files or (
                 argument.startswith(("/lib/", "/bin/"))
-                and os.path.realpath(argument) in self.files), "unsafe-input")
+                and os.path.realpath(argument) in self.files) or (
+                    self.gpg_diagnostic_active and argument in self._gpg_diagnostic_paths
+                    and os.path.realpath(argument) in self.files
+                    and argument in self.files[os.path.realpath(argument)]["aliases"]),
+                    "unsafe-input")
             argv = ("/usr/bin/dpkg-query", "-S", argument)
         elif operation == "package":
             require(re.fullmatch(r"[a-z0-9][a-z0-9+.-]{0,127}(?::[a-z0-9-]+)?",
@@ -1484,7 +1490,264 @@ class Provider(CAPTURE.Capture):
                     if self.receipt["preflight_refusal"]["origin_check"] == "owner-response-shape":
                         self.receipt["preflight_refusal"]["owner_response_shape"] = getattr(
                             error, "owner_response_shape", None)
+                if ((step, tool) == ("tool-origin", "gpg") and str(error) == "tool-origin"
+                        and self.receipt["preflight_refusal"].get("owner_response_shape") == {
+                            "row_count": "many", "owner_rows": "zero", "owner_domain": "zero",
+                            "target_relation": "none", "diversion_rows": "many", "other_rows": "zero"}):
+                    self.gpg_diversion_diagnostic()
             raise
+
+    def gpg_diagnostic_export(self, label, raw):
+        require(re.fullmatch(r"[a-z0-9.-]+", label) is not None, "retention")
+        self.retain("gpg-diagnostic-" + label, raw)
+        require(self.record_bytes + len(raw) <= CAPTURE.RECORDS, "retention-budget")
+        self.record_bytes += len(raw)
+        name = "gpg-diagnostic-" + label + ".original.private"
+        self.write(name, raw)
+        actual, info, observed = self.read(str(self.directory / name), os.geteuid(), len(raw))
+        require(actual == str(self.directory / name) and observed == raw
+                and stat.S_IMODE(info.st_mode) == 0o600, "retention")
+        return {"file": name, "bytes": len(raw), "sha256": POLICY.digest(raw),
+                "identity": BASE.identity(info)}
+
+    def gpg_diagnostic_package(self, package, report):
+        report["package_cursor"] = package
+        base = package.split(":")[0]
+        basename = TRUST.installed_control_basename(self, base)
+        require(package == basename, "tool-origin")
+        rows = [row for row in self.installed_records if row.get("Package") == base]
+        require(len(rows) == 1, "tool-origin")
+        row = rows[0]
+        source = re.fullmatch(r"([a-z0-9][a-z0-9+.-]{0,127})(?: \(([A-Za-z0-9.+:~_-]{1,128})\))?",
+                             row.get("Source", base))
+        require(source is not None, "tool-origin")
+        metadata = self.command("package", package).decode("ascii").strip().split("\t")
+        require(metadata == [basename, row["Version"], row["Architecture"],
+                             source[1], source[2] or row["Version"]], "tool-origin")
+        result = {"installed_record": {key: row[key] for key in (
+            "Package", "Status", "Version", "Architecture", "Multi-Arch", "Source") if key in row},
+                  "query_metadata": metadata, "files": {}}
+        report["packages"][package] = result
+        for suffix in ("list", "md5sums"):
+            path = "/var/lib/dpkg/info/" + basename + "." + suffix
+            report["metadata_cursor"] = path
+            raw = self.protected(path, 4194304)
+            if suffix == "md5sums" and package in self.packages:
+                _, before_path, before_info, before_raw = self.packages[package]
+                require(before_path == path and before_raw == raw
+                        and BASE.identity(before_info) == self.pins[path]["identity"], "tool-link")
+            result["files"][suffix] = {
+                "path": path, "pin": self.pins[path],
+                "retained": self.gpg_diagnostic_export(
+                    "package-%d-%s" % (len(report["packages"]), suffix), raw)}
+        return result
+
+    def gpg_diversion_diagnostic(self):
+        summary = {"state": "collecting", "reason": None}
+        self.receipt["gpg_diversion_diagnostic"] = summary
+        report = {"schema": "gpg-diversion-diagnostic-v1", "observation": "current-invocation",
+                  "historical_state_reconstructed": False, "runtime_authorized": False,
+                  "source_sha256": {name: row["sha256"] for name, row in
+                                    self.receipt["producer_sources"].items()},
+                  "phase": "initial-owner", "packages": {}, "files": {}, "commands": [],
+                  "state": "collecting", "reason": None}
+        try:
+            require(self.stage == "preflight" and self._preflight_context == ("tool-origin", "gpg")
+                    and not self.setup_ready and not self.root_launches
+                    and not self.receipt["apt_original_accepted"]
+                    and not self.receipt["selected_signature_verified"]
+                    and not self.receipt["signed_transaction_authorized"]
+                    and not self.receipt["installed_authority_verified"]
+                    and self.receipt.get("preflight_refusal", {}).get("owner_response_shape") == {
+                        "row_count": "many", "owner_rows": "zero", "owner_domain": "zero",
+                        "target_relation": "none", "diversion_rows": "many", "other_rows": "zero"},
+                    "unsafe-input")
+            canonical = self.system("/usr/bin/gpg")
+            report["requested"] = "/usr/bin/gpg"
+            report["canonical"] = canonical
+            self.write("gpg-diagnostic-intent.private.json", json.dumps(report, sort_keys=True).encode())
+            initial = [(number, command) for number, command in enumerate(self.commands, 1)
+                       if command["operation"] == "owner"
+                       and command["argv"] == ["/usr/bin/dpkg-query", "-S", canonical]]
+            require(len(initial) == 1, "retention")
+            number, command = initial[0]
+            prefix = command.get("capture_prefix", "command-%d" % number)
+            for suffix in ("intent.private.json", "observed.private.json",
+                           "stdout.private", "stderr.private"):
+                name = prefix + "." + suffix
+                path = str(self.directory / name)
+                actual, info, raw = self.read(path, os.geteuid(), CAPTURE.RECORDS)
+                require(actual == path and stat.S_IMODE(info.st_mode) == 0o600, "retention")
+                if suffix == "observed.private.json":
+                    require(BASE.decode_object(raw) == command, "retention")
+                elif suffix == "intent.private.json":
+                    intent = BASE.decode_object(raw)
+                    require({"operation", "argv", "environment"} <= set(intent)
+                            and intent["operation"] == "owner"
+                            and intent["argv"] == command["argv"]
+                            and intent["environment"] == {"PATH": "/usr/bin:/bin", "LC_ALL": "C"},
+                            "retention")
+                elif suffix in ("stdout.private", "stderr.private"):
+                    stream = suffix.split(".")[0]
+                    require(len(raw) == command[stream + "_bytes"]
+                            and POLICY.digest(raw) == command[stream + "_sha256"]
+                            and BASE.original_identity(info) == command[stream + "_identity"],
+                            "retention")
+                require(prefix.startswith("gpg-diagnostic-command-"), "retention")
+                report["commands"].append({
+                    "file": name, "bytes": len(raw), "sha256": POLICY.digest(raw),
+                    "identity": BASE.identity(info)})
+            self.gpg_diagnostic_active = True
+            report["phase"] = "diversion-table"
+            table = "/var/lib/dpkg/diversions"
+            raw = self.protected(table, 1048576)
+            report["diversion_table"] = {
+                "pin": self.pins[table],
+                "retained": self.gpg_diagnostic_export("diversions", raw)}
+            lines = raw.decode("utf-8").splitlines()
+            require(b"\r" not in raw and b"\x00" not in raw and len(lines) % 3 == 0, "inventory-shape")
+            triples = []
+            for start in range(0, len(lines), 3):
+                self.check()
+                original, saved, package = lines[start:start + 3]
+                require(all(path.startswith("/") and len(path) <= 4096
+                            and not re.search(r"[\x00-\x1f\x7f]", path)
+                            and all(part not in ("", ".", "..") for part in path[1:].split("/"))
+                            for path in (original, saved))
+                        and (package == ":" or re.fullmatch(
+                            r"[a-z0-9][a-z0-9+.-]{0,127}(?::[a-z0-9-]{1,128})?", package)),
+                        "inventory-shape")
+                triples.append((original, saved, package))
+            selected = [row for row in triples if {row[0], row[1]} & {"/usr/bin/gpg", canonical}]
+            require(len(selected) == 1, "tool-origin")
+            original, saved, declaring = selected[0]
+            require(original != saved and all(re.fullmatch(
+                r"/usr/bin/[A-Za-z0-9][A-Za-z0-9.+_-]{0,127}", path)
+                for path in (original, saved)), "unsafe-input")
+            require(sum(bool({row[0], row[1]} & {original, saved}) for row in triples) == 1,
+                    "tool-origin")
+            report["mapping"] = {"original": original, "saved": saved,
+                                 "declaring_package": declaring, "local": declaring == ":"}
+            self._gpg_diagnostic_paths = (original, saved)
+            report["phase"] = "file-observation"
+            packages = set() if declaring == ":" else {declaring}
+            for path in self._gpg_diagnostic_paths:
+                actual = os.path.realpath(path)
+                require(re.fullmatch(r"/usr/bin/[A-Za-z0-9][A-Za-z0-9.+_-]{0,127}", actual),
+                        "tool-link")
+                report["files"][path] = {
+                    "canonical": actual, "requested_identity": BASE.identity(os.lstat(path)),
+                    "physical_identity": BASE.identity(os.lstat(actual)), "guard_state": "pending"}
+                require(self.system(path) == actual, "tool-link")
+                entry = self.files[actual]
+                report["files"][path].update({
+                    "guard_state": "pinned", **{key: entry[key] for key in
+                        ("identity", "parents", "aliases", "sha256", "md5", "elf")},
+                    "owner_rows": [], "loader_state": "unresolved"})
+                owners = self.command("owner", path).decode("utf-8").splitlines()
+                for line in owners:
+                    if line.startswith(("diversion by ", "local diversion ")):
+                        continue
+                    require(": " in line, "tool-origin")
+                    owner, target = line.split(": ", 1)
+                    require(re.fullmatch(r"[a-z0-9][a-z0-9+.-]{0,127}(?::[a-z0-9-]{1,128})?", owner)
+                            and target == path, "tool-origin")
+                    report["files"][path]["owner_rows"].append({"package": owner, "target": target})
+                    packages.add(owner)
+                require(len(report["files"][path]["owner_rows"]) <= 1, "tool-origin")
+            report["phase"] = "package-observation"
+            for package in sorted(packages):
+                self.gpg_diagnostic_package(package, report)
+            report["manifest_associations"] = []
+            for package, observation in report["packages"].items():
+                listing = self._pin_bytes[observation["files"]["list"]["path"]].decode("utf-8").splitlines()
+                manifest = self._pin_bytes[observation["files"]["md5sums"]["path"]].decode("ascii")
+                for logical in self._gpg_diagnostic_paths:
+                    for physical in self._gpg_diagnostic_paths:
+                        expected = report["files"][physical]["md5"]
+                        entries = [line.split() for line in manifest.splitlines()]
+                        require(all(len(fields) == 2 and re.fullmatch(r"[a-f0-9]{32}", fields[0])
+                                    for fields in entries), "tool-origin")
+                        matches = [fields[0] for fields in entries if fields[1] == logical[1:]]
+                        report["manifest_associations"].append({
+                            "package": package, "logical_path": logical, "physical_path": physical,
+                            "listing_occurrences": listing.count(logical),
+                            "manifest_occurrences": len(matches),
+                            "digest_matches": matches == [expected]})
+            report["original_package_authority"] = "unresolved"
+            report["phase"] = "loader-observation"
+            for path in self._gpg_diagnostic_paths:
+                actual = self.system(path)
+                self.dependencies(actual)
+                report["files"][path]["loader_state"] = (
+                    "static-dependencies-verified" if self.files[actual]["elf"] else "not-elf")
+                report["files"][path]["declared_dependencies"] = self.files[actual].get(
+                    "declared_dependencies", [])
+            loaders = set()
+            pending = [child for path in self._gpg_diagnostic_paths
+                       for child in self.files[self.system(path)].get("declared_dependencies", [])]
+            while pending:
+                self.check()
+                child = self.system(pending.pop())
+                if child not in loaders:
+                    loaders.add(child)
+                    pending.extend(self.files[child].get("declared_dependencies", []))
+            report["loader_files"] = {
+                path: {**{key: self.files[path][key] for key in
+                          ("identity", "parents", "aliases", "sha256", "md5", "elf")},
+                       "origin": self.origins.get(path)}
+                for path in sorted(loaders)}
+            for path in sorted(loaders):
+                require(path in self.origins, "tool-origin")
+                expected = self.origins[path]["package"][0]
+                owners = set()
+                queries = [path]
+                if path.startswith(("/usr/lib/", "/usr/bin/")):
+                    alias = "/" + path[5:]
+                    if os.path.exists(alias) and os.path.realpath(alias) == path:
+                        self.system(alias)
+                        queries.append(alias)
+                for query in queries:
+                    rows = self.command("owner", query).decode("utf-8").strip().splitlines()
+                    require(rows in ([], [expected + ": " + query]), "tool-origin")
+                    if rows:
+                        owners.add(expected)
+                require(owners == {expected}, "tool-origin")
+                if expected not in report["packages"]:
+                    self.gpg_diagnostic_package(expected, report)
+            report["live_loader_state"] = "unresolved"
+            report["loader_configuration_state"] = "unresolved"
+            report["phase"] = "custody-recheck"
+            data_paths = {table, "/var/lib/dpkg/status"}
+            for package in report["packages"].values():
+                data_paths.update(entry["path"] for entry in package["files"].values())
+            for path in sorted(data_paths) + list(self._gpg_diagnostic_paths) + sorted(loaders):
+                actual, info, observed = self.acquire(path)
+                current, current_info, current_raw = self.read(path, limit=info.st_size)
+                require(current == actual and BASE.identity(current_info) == BASE.identity(info)
+                        and current_raw == observed
+                        and POLICY.digest(observed) == self.pins[actual]["sha256"], "tool-link")
+            for path in set(loaders) | {self.system(name) for name in self._gpg_diagnostic_paths}:
+                for alias in self.files[path]["aliases"]:
+                    require(self.system(alias) == path, "tool-link")
+            report["status_pin"] = self.pins["/var/lib/dpkg/status"]
+            self.verify_sources()
+            summary["state"] = report["state"] = "collected"
+        except (BASE.Refusal, TRUST.TrustError, POLICY.PolicyError, OSError, UnicodeError) as error:
+            reason = str(error) if str(error) in BASE.REASONS else "inventory-io"
+            summary.update(state="partial", reason=reason)
+            report.update(state="partial", reason=reason)
+            report["failure_kind"] = (
+                "absent" if isinstance(error, FileNotFoundError)
+                else "unreadable" if isinstance(error, PermissionError)
+                else "io" if isinstance(error, OSError) else "refusal")
+        finally:
+            self.gpg_diagnostic_active = False
+            self._gpg_diagnostic_paths = ()
+        try:
+            self.write("gpg-diagnostic-result.private.json", json.dumps(report, sort_keys=True).encode())
+        except (BASE.Refusal, OSError):
+            summary.update(state="retention-failed", reason="retention")
 
     def _preflight(self):
         self.pin_sources()
@@ -2490,6 +2753,18 @@ def preflight_witness(value, stage, reason):
     return dict(value)
 
 
+def gpg_diagnostic_summary(value):
+    if value is None:
+        return None
+    require(type(value) is dict and set(value) == {"state", "reason"}
+            and value["state"] in ("collected", "partial", "retention-failed")
+            and (value["reason"] is None or (
+                type(value["reason"]) is str and value["reason"] in BASE.REASONS))
+            and ((value["state"] == "collected") == (value["reason"] is None)), "inventory-shape")
+    return dict(value, observation="current-invocation", historical_state_reconstructed=False,
+                runtime_authorized=False)
+
+
 def projection(provider, inventory, reason):
     provider.verify_sources()
     receipt = dict(provider.receipt, reason=reason, stage=provider.stage)
@@ -2586,6 +2861,7 @@ def projection(provider, inventory, reason):
         "stage": provider.stage, "reason": reason,
         "preflight_refusal": preflight_witness(value.get("preflight_refusal"),
                                               provider.stage, reason),
+        "gpg_diversion_diagnostic": gpg_diagnostic_summary(value.get("gpg_diversion_diagnostic")),
         "source_sha256": {name: sources[filename] for name, filename in zip(
             ("provider", "capture", "policy", "signature", "driver", "gate", "guard",
              "trust", "ca"), SOURCES)},

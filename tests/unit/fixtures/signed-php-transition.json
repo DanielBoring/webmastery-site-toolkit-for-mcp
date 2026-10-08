@@ -543,16 +543,16 @@
     ".github/ISSUE_TEMPLATE/config.yml": "a6b12f327fe7490036740b7e0590f41da474c4c991092da034444fb1414d9aa4",
     ".github/ISSUE_TEMPLATE/feature_request.md": "8ea25177279b0f97e06df9b38a407359d9c4279964b05787b76a1054641727b3",
     ".github/PULL_REQUEST_TEMPLATE.md": "1df3b3949c72e2382c6c85b59b185d0dfb382c64424f42dd835965db2f4f30ce",
-    ".github/REPOSITORY_CHANGELOG.md": "f96c153adf30afe380a39bb399d87883bb8f8ed4eba950f99c7ff921ecac573d",
+    ".github/REPOSITORY_CHANGELOG.md": "d39fa530acb237bb0770ce8fd610213511df2a087118b400124528c313608fc9",
     ".github/SETUP-COMPLETE.md": "95cfe50cb68612e693f9f7a994ccded1fe32b1521521067aa1311b990f979e55",
     ".github/compatibility-versions.json": "73865b94ad6ac10cbed9bec8a31b41911cbb35014b4a904734d9258f0718c19a",
     ".github/copilot-instructions.md": "fa4db4dd09a39499480614f0e06fc71203072db81148eaadf40b45d79a5ec2bf",
     ".github/dependabot.yml": "e8b830aee5fa68db842ba3cd86e6580c7ac57badf884bce44282462a19760140",
     ".github/workflows/coding-standards.yml": "1778f0179b3713aece5a60e14b734eeb3ce7416942cf00393635fe5dea260000",
     ".github/workflows/compatibility-qa.yml": "2fbc545deb40299b05cc539c55608e509c8481bc4f46535bb3d0df098f151d49",
-    ".github/workflows/e2e-qa.yml": "16a4d2dcac419f274c7b4a622cf2471667a9f42e838486a514b4f083f557a919",
+    ".github/workflows/e2e-qa.yml": "fa2e2ee0b439e25ead6fbafff612b1c10a775df09c8a065e0351cd2cec935426",
     ".github/workflows/import-issue-backlog.yml": "4a4a785a6e72a10f661ce4e52412ab1d8563a3000de8c9605ffb91e0ee1262fe",
-    ".github/workflows/release-package-qa.yml": "e5af82e2348ca051641242d9da3e0227d1d6017bd64034b67dd10b92d7ed1a1f",
+    ".github/workflows/release-package-qa.yml": "b8602ffd3b011d770ad5b00a3f67a42aa91eb9d4e0cdfe9bb292bd1826e25c1d",
     ".github/workflows/release.yml": "1f1bb84b59c47af32c425843323e4126c57266355eb607d7c9d1c6675ce3d5fb",
     ".github/workflows/unit-tests.yml": "588fe8eb8d437bdaedf84a18dc930f73c317671f061f355f5bbe08380d620917",
     ".github/workflows/workflow-lint.yml": "0bda65329c2716fb19471ae5e1a464900c9d64ac9791ce4d2817ea35c595206c",
@@ -604,7 +604,7 @@
     "docs/qa-strategy.md": "c68016253523588142109ab6cf21861ed4b5b6fcab3a3f2611f556503f65e3bc",
     "docs/release-strategy.md": "a452483fa102d4db3fea59e91a0a9344ba47d9fd63acfd8049fa7277629a790d",
     "docs/sdlc-overview.md": "687d277b66a1f0b062f8b1cef8f0e4f38f9cfe810bfca3f1b75673bfad50caf0",
-    "docs/security-strategy.md": "a2e1ea24e1ad01af1dea173b0e994a294937854cec4f6975c0278305cdc5b412",
+    "docs/security-strategy.md": "4c48692cf931681afbaa967f85a66f23231260a448b725e5fb860b2c286400f3",
     "docs/shared-helpers.md": "03dfee0305d3058546b60427cc2fe5869b824f84b1b1995093ddb363605f095b",
     "includes/class-ability.php": "9a237e25baa11fc823fcdaee45277d1ca9462ca04af462e33dede511bdb0edf5",
     "includes/class-backup-status.php": "d521e5caf92c422325a0fa2bf85e7f393bd36cc584b250facc5264eeeb759840",
@@ -1066,13 +1066,13 @@
     "tests/unit/test_untrusted_query.py": "17551baee77beb3da127d743e3ce029ff577917487b40567bd23b923df4477a8",
     "tests/untrusted-stage-test.sh": "17a99df2bbb5e39171ef6bff72675fe8894942cb152c14283e9de01b0ff55ce7",
     "webmastery-site-toolkit-for-mcp.php": "66ad568ed9018670c30ceda128af3c67cf18b63c62eb5bf6a76ddcdff3386ab2",
-    "scripts/host-php-apt.py": "8a3cea263362ba54b96d4b8e31322d790ba362a26c7728c179b48665a0689586",
+    "scripts/host-php-apt.py": "d1c0b9f0a33c2d5727f40bea2f5276e906ca0dce2c0e4cd0608618a3cbe1074f",
     "scripts/host-php-apt-policy.py": "389170dc2ec9c0ce205128484a9f9b8febc7173294454a733f5f2665371890fb",
-    "scripts/host-php-apt-capture.py": "db8173b5265a6f22f44f494848f57e1763893a31f6c89b108997a1d9c7df4103",
+    "scripts/host-php-apt-capture.py": "cdf4e8d7f22def9e6a5de144c469ddb1e883d487132d8f1a34bbbce36d35ad50",
     "scripts/host-php-apt-signature.py": "6207a2c61f6c0122a23b71797bf8c2c222cb6e03ad06ae4f8b6928a758b5861d",
     "scripts/host-php-apt-trust.py": "783c0c7a10556d05f9375b98dca2142169bbb743a09bd5548ab350d83d8edf19",
     "scripts/host-php-apt-ca.py": "9946e480d5cb05644ae0170e19472596c5fd62a00ab173af065d3dc216a16d4a",
-    "tests/unit/test_host_php_apt_session_loop.py": "8431ce1ca91d5c2827cb1dc59fc7fa174a1707b68247bee91a856a8897f7bfb9",
+    "tests/unit/test_host_php_apt_session_loop.py": "6e3b7f7988a7bb5a4ceb41e335fb0a94e91a785d140ffca016d9fafa9f2b21dd",
     "tests/unit/test_standard_php_config.py": "8a84480c2fb94ebe72dfa2468c1995d7610e11db55d6cb29fcc4c80e47ce8c17",
     "tests/unit/fixtures/signed-php-producers/phpquery": "0e9daa717d1af9b4e069c1976e0aad9cb07141b26b7b9a680009fe322e1e0c89",
     "tests/unit/fixtures/signed-php-producers/php-helper": "72445eb0e4d94093f9f5b78038370b01741222cb7498f15ccb5cf8d476dbd83a",
@@ -1129,12 +1129,18 @@
     },
     ".github/REPOSITORY_CHANGELOG.md": {
       "baseline_raw_sha256": "be511c50bbec7bb87bc4067778065fb7801efef97a02bf50442b35863a3bce0d",
-      "current_raw_sha256": "f96c153adf30afe380a39bb399d87883bb8f8ed4eba950f99c7ff921ecac573d",
+      "current_raw_sha256": "d39fa530acb237bb0770ce8fd610213511df2a087118b400124528c313608fc9",
       "hunks": [
         {
           "start": 7,
           "before": [],
           "after": [
+            "",
+            "- Retain bounded, read-only GPG diversion and associated installed-package",
+            "  diagnostics in the three signed HOST QA jobs, including scoped original",
+            "  command receipts after early failure. Preserve the original refusal and all",
+            "  runtime gates; expose only a closed collection summary in logs and keep raw",
+            "  evidence in failure-only, one-day artifacts.",
             "",
             "- Describe refused owner-query response structure through finite privacy-safe",
             "  categories in the existing preflight witness. Preserve exact row/owner/target",
@@ -1186,7 +1192,7 @@
     },
     ".github/workflows/e2e-qa.yml": {
       "baseline_raw_sha256": "68c144468ba7e376e042eb8f1db5cf44ee309887378d2e94a7d0a5fed7a126ef",
-      "current_raw_sha256": "16a4d2dcac419f274c7b4a622cf2471667a9f42e838486a514b4f083f557a919",
+      "current_raw_sha256": "fa2e2ee0b439e25ead6fbafff612b1c10a775df09c8a065e0351cd2cec935426",
       "hunks": [
         {
           "start": 110,
@@ -1219,11 +1225,20 @@
             "        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT=\"$WSTM_HOST_SETUP_ROOT\" WSTM_HOST_SETUP_RUNNER=\"$WSTM_HOST_SETUP_RUNNER\" GITHUB_ACTIONS=\"$GITHUB_ACTIONS\" GITHUB_JOB=\"$GITHUB_JOB\" /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py 8.4"
           ],
           "after": [
-            "        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT=\"$WSTM_HOST_SETUP_ROOT\" WSTM_HOST_SETUP_RUNNER=\"$WSTM_HOST_SETUP_RUNNER\" GITHUB_ACTIONS=\"$GITHUB_ACTIONS\" GITHUB_JOB=\"$GITHUB_JOB\" GITHUB_SHA=\"$GITHUB_SHA\" GITHUB_EVENT_NAME=\"$GITHUB_EVENT_NAME\" RUNNER_ENVIRONMENT=\"$RUNNER_ENVIRONMENT\" RUNNER_OS=\"$RUNNER_OS\" /usr/bin/python3 -I -S -B scripts/host-php-apt.py 8.4"
+            "        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT=\"$WSTM_HOST_SETUP_ROOT\" WSTM_HOST_SETUP_RUNNER=\"$WSTM_HOST_SETUP_RUNNER\" GITHUB_ACTIONS=\"$GITHUB_ACTIONS\" GITHUB_JOB=\"$GITHUB_JOB\" GITHUB_SHA=\"$GITHUB_SHA\" GITHUB_EVENT_NAME=\"$GITHUB_EVENT_NAME\" RUNNER_ENVIRONMENT=\"$RUNNER_ENVIRONMENT\" RUNNER_OS=\"$RUNNER_OS\" /usr/bin/python3 -I -S -B scripts/host-php-apt.py 8.4",
+            "",
+            "      - name: Retain scoped private GPG diagnostic evidence",
+            "        if: ${{ always() && steps.php-permissions.outcome == 'failure' && github.repository == 'DanielBoring/webmastery-site-toolkit-for-mcp' }}",
+            "        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+            "        with:",
+            "          name: private-gpg-diagnostic-contract",
+            "          path: ${{ runner.temp }}/wstm-prerequisite-*/gpg-diagnostic-*.private*",
+            "          if-no-files-found: ignore",
+            "          retention-days: 1"
           ]
         },
         {
-          "start": 432,
+          "start": 441,
           "before": [
             "      - name: Set up host QA PHP",
             "        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2",
@@ -1236,7 +1251,7 @@
           "after": []
         },
         {
-          "start": 435,
+          "start": 444,
           "before": [
             "      - name: Guard and acquire selected HOST prerequisites"
           ],
@@ -1248,19 +1263,28 @@
           ]
         },
         {
-          "start": 443,
+          "start": 452,
           "before": [
             "        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT=\"$WSTM_HOST_SETUP_ROOT\" WSTM_HOST_SETUP_RUNNER=\"$WSTM_HOST_SETUP_RUNNER\" GITHUB_ACTIONS=\"$GITHUB_ACTIONS\" GITHUB_JOB=\"$GITHUB_JOB\" /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py 8.4"
           ],
           "after": [
-            "        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT=\"$WSTM_HOST_SETUP_ROOT\" WSTM_HOST_SETUP_RUNNER=\"$WSTM_HOST_SETUP_RUNNER\" GITHUB_ACTIONS=\"$GITHUB_ACTIONS\" GITHUB_JOB=\"$GITHUB_JOB\" GITHUB_SHA=\"$GITHUB_SHA\" GITHUB_EVENT_NAME=\"$GITHUB_EVENT_NAME\" RUNNER_ENVIRONMENT=\"$RUNNER_ENVIRONMENT\" RUNNER_OS=\"$RUNNER_OS\" /usr/bin/python3 -I -S -B scripts/host-php-apt.py 8.4"
+            "        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT=\"$WSTM_HOST_SETUP_ROOT\" WSTM_HOST_SETUP_RUNNER=\"$WSTM_HOST_SETUP_RUNNER\" GITHUB_ACTIONS=\"$GITHUB_ACTIONS\" GITHUB_JOB=\"$GITHUB_JOB\" GITHUB_SHA=\"$GITHUB_SHA\" GITHUB_EVENT_NAME=\"$GITHUB_EVENT_NAME\" RUNNER_ENVIRONMENT=\"$RUNNER_ENVIRONMENT\" RUNNER_OS=\"$RUNNER_OS\" /usr/bin/python3 -I -S -B scripts/host-php-apt.py 8.4",
+            "",
+            "      - name: Retain scoped private GPG diagnostic evidence",
+            "        if: ${{ always() && steps.php-permissions.outcome == 'failure' && github.repository == 'DanielBoring/webmastery-site-toolkit-for-mcp' }}",
+            "        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+            "        with:",
+            "          name: private-gpg-diagnostic-http",
+            "          path: ${{ runner.temp }}/wstm-prerequisite-*/gpg-diagnostic-*.private*",
+            "          if-no-files-found: ignore",
+            "          retention-days: 1"
           ]
         }
       ]
     },
     ".github/workflows/release-package-qa.yml": {
       "baseline_raw_sha256": "87ecba01603a269336291964b641fb3826e1f66b7385f554570aa4bba950ffb7",
-      "current_raw_sha256": "e5af82e2348ca051641242d9da3e0227d1d6017bd64034b67dd10b92d7ed1a1f",
+      "current_raw_sha256": "b8602ffd3b011d770ad5b00a3f67a42aa91eb9d4e0cdfe9bb292bd1826e25c1d",
       "hunks": [
         {
           "start": 25,
@@ -1303,7 +1327,16 @@
             "        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT=\"$WSTM_HOST_SETUP_ROOT\" WSTM_HOST_SETUP_RUNNER=\"$WSTM_HOST_SETUP_RUNNER\" GITHUB_ACTIONS=\"$GITHUB_ACTIONS\" GITHUB_JOB=\"$GITHUB_JOB\" /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py 8.2"
           ],
           "after": [
-            "        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT=\"$WSTM_HOST_SETUP_ROOT\" WSTM_HOST_SETUP_RUNNER=\"$WSTM_HOST_SETUP_RUNNER\" GITHUB_ACTIONS=\"$GITHUB_ACTIONS\" GITHUB_JOB=\"$GITHUB_JOB\" GITHUB_SHA=\"$GITHUB_SHA\" GITHUB_EVENT_NAME=\"$GITHUB_EVENT_NAME\" RUNNER_ENVIRONMENT=\"$RUNNER_ENVIRONMENT\" RUNNER_OS=\"$RUNNER_OS\" /usr/bin/python3 -I -S -B scripts/host-php-apt.py 8.2"
+            "        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT=\"$WSTM_HOST_SETUP_ROOT\" WSTM_HOST_SETUP_RUNNER=\"$WSTM_HOST_SETUP_RUNNER\" GITHUB_ACTIONS=\"$GITHUB_ACTIONS\" GITHUB_JOB=\"$GITHUB_JOB\" GITHUB_SHA=\"$GITHUB_SHA\" GITHUB_EVENT_NAME=\"$GITHUB_EVENT_NAME\" RUNNER_ENVIRONMENT=\"$RUNNER_ENVIRONMENT\" RUNNER_OS=\"$RUNNER_OS\" /usr/bin/python3 -I -S -B scripts/host-php-apt.py 8.2",
+            "",
+            "      - name: Retain scoped private GPG diagnostic evidence",
+            "        if: ${{ always() && steps.php-permissions.outcome == 'failure' && github.repository == 'DanielBoring/webmastery-site-toolkit-for-mcp' }}",
+            "        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+            "        with:",
+            "          name: private-gpg-diagnostic-package",
+            "          path: ${{ runner.temp }}/wstm-prerequisite-*/gpg-diagnostic-*.private*",
+            "          if-no-files-found: ignore",
+            "          retention-days: 1"
           ]
         }
       ]
@@ -1457,7 +1490,7 @@
     },
     "docs/security-strategy.md": {
       "baseline_raw_sha256": "99059483a77c0166fc719a8e88b46502e91fc910b88b4b8242a4d73c54a344f3",
-      "current_raw_sha256": "a2e1ea24e1ad01af1dea173b0e994a294937854cec4f6975c0278305cdc5b412",
+      "current_raw_sha256": "4c48692cf931681afbaa967f85a66f23231260a448b725e5fb860b2c286400f3",
       "hunks": [
         {
           "start": 27,
@@ -1598,12 +1631,38 @@
             "and do not admit, discard or normalize any response row. Null means unavailable",
             "structural evidence. Multiple, diverted, malformed or ambiguous responses",
             "remain subject to the same owner and provenance refusals.",
+            "",
+            "Only the three signed HOST QA jobs collect the user-approved read-only GPG",
+            "diversion diagnostic after the exact multiple-diversion/no-owner refusal.",
+            "The original refusal and exit 78 remain in force. The current invocation's",
+            "owner command originals, protected complete diversion table, exact table-bound",
+            "original/saved file identities and aliases, involved installed package records,",
+            "file lists and manifests, and static ELF dependency observations are retained",
+            "privately. Local declarations are observations, not executable authorization.",
+            "The collector does not select or execute a replacement, follow unrelated",
+            "diversion paths, scan for alternative binaries, or reconstruct an earlier",
+            "job's state. Live loader/configuration closure remains unresolved.",
+            "",
+            "Diagnostic queries reuse the existing owner/package/ELF capture operations and",
+            "deadline, command, pin, acquisition, metadata, stream and record accounting.",
+            "Only the two protected table-derived names may add a literal owner query for",
+            "an already pinned alias during collection; ordinary alias-query policy is",
+            "unchanged. Prefix originals survive collection failure or budget exhaustion.",
+            "The public projection exposes only closed collection state/reason labels,",
+            "current-invocation attribution and false runtime/historical-state claims.",
+            "",
+            "Failure-only, repository-scoped artifact steps retain only",
+            "`gpg-diagnostic-*.private*` files from reserved capture directories for one day.",
+            "They do not upload complete capture directories, source frames, executable",
+            "bytes, ambient environment, home files, credentials or user payloads. Raw",
+            "metadata and command details are artifact evidence, never public log output;",
+            "reviewers should handle these short-lived artifacts as private evidence.",
             "Within this configuration-hardening grant, no root repository/PHP/Python/shell",
             "script, dynamic path/argv, directory/glob,"
           ]
         },
         {
-          "start": 151,
+          "start": 177,
           "before": [
             "All originals stay in exclusive owned private custody. One setup deadline and",
             "conserved file/byte/command/output ledgers cover the complete operation, including",

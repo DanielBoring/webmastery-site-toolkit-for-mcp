@@ -138,6 +138,32 @@ the already acquired response. These categories disclose no row text or names
 and do not admit, discard or normalize any response row. Null means unavailable
 structural evidence. Multiple, diverted, malformed or ambiguous responses
 remain subject to the same owner and provenance refusals.
+
+Only the three signed HOST QA jobs collect the user-approved read-only GPG
+diversion diagnostic after the exact multiple-diversion/no-owner refusal.
+The original refusal and exit 78 remain in force. The current invocation's
+owner command originals, protected complete diversion table, exact table-bound
+original/saved file identities and aliases, involved installed package records,
+file lists and manifests, and static ELF dependency observations are retained
+privately. Local declarations are observations, not executable authorization.
+The collector does not select or execute a replacement, follow unrelated
+diversion paths, scan for alternative binaries, or reconstruct an earlier
+job's state. Live loader/configuration closure remains unresolved.
+
+Diagnostic queries reuse the existing owner/package/ELF capture operations and
+deadline, command, pin, acquisition, metadata, stream and record accounting.
+Only the two protected table-derived names may add a literal owner query for
+an already pinned alias during collection; ordinary alias-query policy is
+unchanged. Prefix originals survive collection failure or budget exhaustion.
+The public projection exposes only closed collection state/reason labels,
+current-invocation attribution and false runtime/historical-state claims.
+
+Failure-only, repository-scoped artifact steps retain only
+`gpg-diagnostic-*.private*` files from reserved capture directories for one day.
+They do not upload complete capture directories, source frames, executable
+bytes, ambient environment, home files, credentials or user payloads. Raw
+metadata and command details are artifact evidence, never public log output;
+reviewers should handle these short-lived artifacts as private evidence.
 Within this configuration-hardening grant, no root repository/PHP/Python/shell
 script, dynamic path/argv, directory/glob,
 unapproved version/SAPI, ownership change, extra extension, namespace operation or

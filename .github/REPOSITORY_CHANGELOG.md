@@ -6,6 +6,12 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Retain bounded, read-only GPG diversion and associated installed-package
+  diagnostics in the three signed HOST QA jobs, including scoped original
+  command receipts after early failure. Preserve the original refusal and all
+  runtime gates; expose only a closed collection summary in logs and keep raw
+  evidence in failure-only, one-day artifacts.
+
 - Describe refused owner-query response structure through finite privacy-safe
   categories in the existing preflight witness. Preserve exact row/owner/target
   admission and diversion rejection; do not expose response text or package names.

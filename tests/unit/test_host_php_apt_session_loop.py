@@ -117,6 +117,310 @@ class FileSystem:
 
 class SessionLoopTest(unittest.TestCase):
     @contextmanager
+    def gpg_diagnostic_model(self, local=False):
+        with self.model() as (item, fs):
+            self.preflight_inputs(item, fs)
+            saved = "/usr/bin/gpg.saved"
+            fs.add(saved, elf() + b"original", mode=stat.S_IFREG | 0o755)
+            fs.packages[saved] = "gpg"
+            for package in ("gpg", "image-diverter"):
+                item.installed[package] = "1"
+                item.installed_records.append({"Package": package, "Version": "1",
+                    "Architecture": "amd64", "Status": "install ok installed"})
+                fs.add("/var/lib/dpkg/info/" + package + ".list", b"/usr/bin/gpg\n")
+                fs.add("/var/lib/dpkg/info/" + package + ".md5sums",
+                    (hashlib.md5(fs.nodes[saved][1]).hexdigest() + "  usr/bin/gpg\n").encode())
+            fs.add("/var/lib/dpkg/status", b"".join(
+                ("\n".join(key + ": " + value for key, value in row.items()) + "\n\n").encode()
+                for row in item.installed_records))
+            declaring = ":" if local else "image-diverter"
+            fs.add("/var/lib/dpkg/diversions",
+                   ("/usr/bin/gpg\n" + saved + "\n" + declaring + "\n").encode())
+            def store(name, raw):
+                if name.endswith((".json", ".sha256.private")):
+                    BASE.require(item.record_bytes + len(raw) <= MODULE.CAPTURE.RECORDS,
+                                 "retention-budget")
+                    item.record_bytes += len(raw)
+                fs.add(str(item.directory / name), raw, mode=stat.S_IFREG | 0o600, uid=1000)
+            def capture(operation, argv, stdin=None):
+                record = MODULE.CAPTURE.Capture.reserve_capture(item, operation, argv, stdin)
+                if operation == "owner":
+                    argument = argv[-1]
+                    if argument == "/usr/bin/gpg":
+                        stdout = (("local diversion " if local else "diversion by image-diverter ")
+                                  + "from: /usr/bin/gpg\n"
+                                  + ("local diversion " if local else "diversion by image-diverter ")
+                                  + "to: " + saved + "\n").encode()
+                    else:
+                        owner = fs.packages.get(argument)
+                        stdout = (owner + ": " + argument + "\n").encode() if owner else b""
+                    stdout = getattr(fs, "owner_responses", {}).get(argument, stdout)
+                elif operation == "package":
+                    package = argv[-1]
+                    row = next(row for row in item.installed_records if row["Package"] == package)
+                    stdout = ("\t".join((package, row["Version"], row["Architecture"],
+                                         package, row["Version"])) + "\n").encode()
+                    if package == "gpg" and getattr(fs, "bad_metadata", False):
+                        stdout = b"gpg\t2\tamd64\tgpg\t2\n"
+                elif operation == "elf":
+                    stdout = getattr(fs, "elf_responses", {}).get(argv[-1], b"")
+                else:
+                    raise AssertionError("Unapproved diagnostic operation")
+                prefix = record.get("capture_prefix", "command-%d" % len(item.commands))
+                record.update(exit=0, stdout_eof=True, stderr_eof=True, retention_failed=False)
+                for label, raw in (("stdout", stdout), ("stderr", b"")):
+                    store(prefix + "." + label + ".private", raw)
+                    record[label + "_identity"] = BASE.original_identity(
+                        fs.info(str(item.directory / (prefix + "." + label + ".private"))))
+                    record[label + "_bytes"] = len(raw)
+                    record[label + "_sha256"] = MODULE.POLICY.digest(raw)
+                store(prefix + ".observed.private.json", json.dumps(record, sort_keys=True).encode())
+                return record, stdout, b""
+            with patch.object(item, "write", side_effect=store), \
+                    patch.object(item, "capture", side_effect=capture), \
+                    patch.object(item, "command", side_effect=lambda op, arg:
+                                 MODULE.Provider.command(item, op, arg)):
+                yield item, fs, saved
+
+    def diagnostic_refusal(self, item, fs):
+        with patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                self.assertRaisesRegex(BASE.Refusal, "^tool-origin$") as refusal:
+            item.preflight()
+        self.assertEqual("owner-response-shape", refusal.exception.origin_check)
+        return json.loads(fs.nodes[str(item.directory / "gpg-diagnostic-result.private.json")][1])
+
+    def test_gpg_diagnostic_collects_current_bound_data_without_admission(self):
+        with self.gpg_diagnostic_model() as (item, fs, saved):
+            deadline = item.deadline
+            report = self.diagnostic_refusal(item, fs)
+            self.assertEqual("collected", report["state"])
+            self.assertEqual(saved, report["mapping"]["saved"])
+            self.assertEqual({"gpg", "image-diverter"}, set(report["packages"]))
+            self.assertEqual("current-invocation", report["observation"])
+            self.assertFalse(report["historical_state_reconstructed"] or report["runtime_authorized"])
+            self.assertEqual("unresolved", report["original_package_authority"])
+            self.assertTrue(any(row["digest_matches"] for row in report["manifest_associations"]))
+            self.assertEqual(deadline, item.deadline)
+            self.assertEqual(0, item.root_launches)
+            self.assertFalse(item.setup_ready or item.receipt["installed_authority_verified"]
+                             or item.receipt["signed_transaction_authorized"])
+            self.assertEqual(4, len(report["commands"]))
+            self.assertTrue(any("capture_prefix" in command for command in item.commands))
+            self.assertFalse(item.gpg_diagnostic_active)
+            self.assertEqual((), item._gpg_diagnostic_paths)
+
+    def test_gpg_diagnostic_local_mapping_is_observation_not_authority(self):
+        with self.gpg_diagnostic_model(local=True) as (item, fs, _):
+            report = self.diagnostic_refusal(item, fs)
+            self.assertEqual("collected", report["state"])
+            self.assertTrue(report["mapping"]["local"])
+            self.assertEqual({"gpg"}, set(report["packages"]))
+            self.assertFalse(report["runtime_authorized"] or item.setup_ready)
+
+    def test_gpg_diagnostic_rejects_malformed_ambiguous_and_escaping_domains(self):
+        cases = (
+            b"/usr/bin/gpg\n/saved\n",
+            b"/usr/bin/gpg\n/usr/bin/gpg\n:\n",
+            b"/usr/bin/gpg\n/PRIVATE_SENTINEL\n:\n",
+            b"/usr/bin/gpg\n/usr/bin/../gpg.saved\n:\n",
+            b"/usr/bin/gpg\n/usr/bin/gpg.saved\n:\n" * 2,
+            b"/usr/bin/gpg\n/usr/bin/gpg.saved\nbad package\n",
+            b"/usr/bin/gpg\n/usr/bin/gpg.saved\n:\n/usr/bin/gpg.saved\n/usr/bin/chain\n:\n",
+            b"/usr/bin/foreign\n/usr/bin/foreign.saved\n:\n",
+        )
+        for table in cases:
+            with self.subTest(table=table), self.gpg_diagnostic_model() as (item, fs, _):
+                fs.add("/var/lib/dpkg/diversions", table)
+                report = self.diagnostic_refusal(item, fs)
+                self.assertEqual("partial", report["state"])
+                self.assertEqual("diversion-table", report["phase"])
+                self.assertIn("diversion_table", report)
+                self.assertFalse(report["runtime_authorized"])
+                self.assertEqual({}, report["packages"])
+
+    def test_gpg_diagnostic_preserves_prefix_on_metadata_and_identity_failure(self):
+        for fault in ("missing-list", "metadata-version", "symlink", "unsafe-mode"):
+            with self.subTest(fault=fault), self.gpg_diagnostic_model() as (item, fs, saved):
+                if fault == "missing-list":
+                    del fs.nodes["/var/lib/dpkg/info/gpg.list"]
+                elif fault == "metadata-version":
+                    fs.bad_metadata = True
+                elif fault == "symlink":
+                    fs.add(saved, mode=stat.S_IFLNK | 0o777, target="/PRIVATE_SENTINEL")
+                else:
+                    fs.info(saved).st_mode |= 0o002
+                report = self.diagnostic_refusal(item, fs)
+                self.assertEqual("partial", report["state"])
+                self.assertEqual(4, len(report["commands"]))
+                self.assertIn("diversion_table", report)
+                self.assertTrue(all(str(item.directory / row["file"]) in fs.nodes
+                                    for row in report["commands"]))
+                self.assertFalse(item.setup_ready or item.root_launches)
+
+    def test_gpg_diagnostic_rejects_drift_at_final_recheck(self):
+        with self.gpg_diagnostic_model() as (item, fs, saved):
+            read = item.read.side_effect
+            def drift(path, owner=0, limit=BASE.FILE_LIMIT):
+                if path == saved and item.gpg_diagnostic_active:
+                    fs.info(saved).st_ctime_ns += 1
+                return read(path, owner, limit)
+            with patch.object(item, "read", side_effect=drift):
+                report = self.diagnostic_refusal(item, fs)
+            self.assertEqual("partial", report["state"])
+            self.assertFalse(item.setup_ready or item.root_launches)
+
+    def test_gpg_diagnostic_limits_are_conserved_and_native_prefix_retained(self):
+        for budget in ("commands", "pins", "records", "metadata"):
+            with self.subTest(budget=budget), self.gpg_diagnostic_model() as (item, fs, _):
+                original = item.gpg_diversion_diagnostic
+                def constrained():
+                    if budget == "commands":
+                        while len(item.commands) < MODULE.CAPTURE.COMMANDS:
+                            item.commands.append({"operation": "placeholder", "argv": []})
+                    elif budget == "pins":
+                        item._retired_pins = BASE.FILE_COUNT - len(item.pins)
+                    else:
+                        if budget == "records":
+                            item.record_bytes = MODULE.CAPTURE.RECORDS
+                        else:
+                            item.metadata_bytes = 67108864
+                    if budget == "metadata":
+                        with patch.object(item, "retain", side_effect=lambda label, raw:
+                                          MODULE.Provider.retain_metadata(item, label, raw)):
+                            original()
+                    else:
+                        original()
+                with patch.object(item, "gpg_diversion_diagnostic", side_effect=constrained):
+                    with patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                            self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
+                        item.preflight()
+                self.assertIn(item.receipt["gpg_diversion_diagnostic"]["state"],
+                              ("partial", "retention-failed"))
+                self.assertEqual(0, item.root_launches)
+                self.assertFalse(item.setup_ready)
+                self.assertTrue(any(name.endswith(".stdout.private") for name in fs.nodes))
+
+    def test_gpg_diagnostic_capture_rejects_root_and_foreign_alias_queries(self):
+        with self.gpg_diagnostic_model() as (item, fs, _):
+            item.gpg_diagnostic_active = True
+            item._gpg_diagnostic_paths = ("/usr/bin/gpg", "/usr/bin/gpg.saved")
+            with self.assertRaisesRegex(BASE.Refusal, "^unsafe-input$"):
+                item.command("owner", "/usr/bin/unbound")
+            for operation in MODULE.POLICY.OPERATIONS:
+                with self.subTest(operation=operation), self.assertRaises(BASE.Refusal):
+                    MODULE.CAPTURE.Capture.reserve_capture(item, operation, ("/usr/bin/sudo",))
+            self.assertEqual(0, item.root_launches)
+            self.assertEqual([], item.commands)
+
+    def test_gpg_diagnostic_exact_table_alias_query_does_not_change_normal_owner_policy(self):
+        with self.gpg_diagnostic_model() as (item, fs, saved):
+            fs.add("/usr/bin/gpg", mode=stat.S_IFLNK | 0o777, target=saved)
+            fs.owner_responses = {
+                saved: ("diversion by image-diverter from: /usr/bin/gpg\n"
+                        "diversion by image-diverter to: " + saved + "\n").encode(),
+                "/usr/bin/gpg": b"gpg: /usr/bin/gpg\n",
+            }
+            report = self.diagnostic_refusal(item, fs)
+            self.assertEqual("collected", report["state"])
+            self.assertEqual(saved, report["files"]["/usr/bin/gpg"]["canonical"])
+            self.assertIn("/usr/bin/gpg", report["files"]["/usr/bin/gpg"]["aliases"])
+            with self.assertRaisesRegex(BASE.Refusal, "^unsafe-input$"):
+                item.command("owner", "/usr/bin/gpg")
+            self.assertFalse(item.setup_ready or item.root_launches)
+
+    def test_gpg_diagnostic_deadline_failure_keeps_original_scoped_capture(self):
+        with self.gpg_diagnostic_model() as (item, fs, _):
+            collect = item.gpg_diversion_diagnostic
+            def expire():
+                item.deadline = 0
+                collect()
+            with patch.object(item, "gpg_diversion_diagnostic", side_effect=expire):
+                with patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                        self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
+                    item.preflight()
+            self.assertEqual(0, item.deadline)
+            self.assertEqual("partial", item.receipt["gpg_diversion_diagnostic"]["state"])
+            self.assertTrue(any("gpg-diagnostic-command-" in name and name.endswith(".stdout.private")
+                                for name in fs.nodes))
+            self.assertFalse(item.setup_ready or item.root_launches)
+
+    def test_gpg_diagnostic_static_loader_records_reuse_owner_manifest_and_package_checks(self):
+        with self.gpg_diagnostic_model() as (item, fs, saved):
+            library = "/usr/lib/x86_64-linux-gnu/libdiagnostic.so.1"
+            fs.add(library, elf() + b"library", mode=stat.S_IFREG | 0o755)
+            fs.packages[library] = "test-library"
+            row = {"Package": "test-library", "Status": "install ok installed",
+                   "Version": "1", "Architecture": "amd64"}
+            item.installed_records.append(row)
+            item.installed["test-library"] = "1"
+            fs.add("/var/lib/dpkg/info/test-library.list", (library + "\n").encode())
+            fs.add("/var/lib/dpkg/info/test-library.md5sums",
+                   (hashlib.md5(fs.nodes[library][1]).hexdigest() + "  " + library[1:] + "\n").encode())
+            fs.add("/var/lib/dpkg/status", b"".join(
+                ("\n".join(key + ": " + value for key, value in record.items()) + "\n\n").encode()
+                for record in item.installed_records))
+            fs.elf_responses = {saved: b"(NEEDED) Shared library: [libdiagnostic.so.1]\n"}
+            report = self.diagnostic_refusal(item, fs)
+            self.assertEqual("collected", report["state"], report)
+            self.assertIn(library, report["loader_files"])
+            self.assertIn("test-library", report["packages"])
+            self.assertEqual("unresolved", report["live_loader_state"])
+            self.assertFalse(report["runtime_authorized"] or item.root_launches)
+
+    def test_gpg_diagnostic_loader_refusal_does_not_replace_original_refusal(self):
+        with self.gpg_diagnostic_model() as (item, fs, saved):
+            fs.elf_responses = {saved: b"(RPATH) Library rpath: [/PRIVATE_SENTINEL]\n"}
+            report = self.diagnostic_refusal(item, fs)
+            self.assertEqual("partial", report["state"])
+            self.assertEqual("tool-loader", report["reason"])
+            self.assertEqual("loader-observation", report["phase"])
+            self.assertEqual(4, len(report["commands"]))
+            self.assertFalse(item.setup_ready or item.root_launches)
+
+    def test_gpg_diagnostic_public_summary_and_projection_are_closed(self):
+        for state, reason in (("collected", None), ("partial", "file-budget"),
+                              ("retention-failed", "retention")):
+            public = MODULE.gpg_diagnostic_summary({"state": state, "reason": reason})
+            self.assertFalse(public["runtime_authorized"] or public["historical_state_reconstructed"])
+            self.assertNotIn("/usr/bin", json.dumps(public))
+        for foreign in ({"state": "collected", "reason": "tool-origin"},
+                        {"state": "partial", "reason": None},
+                        {"state": "/PRIVATE_SENTINEL", "reason": None},
+                        {"state": "partial", "reason": "file-budget", "path": "/PRIVATE_SENTINEL"}):
+            with self.assertRaisesRegex(BASE.Refusal, "^inventory-shape$"):
+                MODULE.gpg_diagnostic_summary(foreign)
+        with self.gpg_diagnostic_model() as (item, fs, _):
+            self.diagnostic_refusal(item, fs)
+            with patch("builtins.print") as output:
+                self.assertFalse(MODULE.projection(item, None, "tool-origin"))
+            text = output.call_args.args[0]
+            public = json.loads(text.split(" ", 1)[1])
+            self.assertEqual("collected", public["gpg_diversion_diagnostic"]["state"])
+            for secret in ("gpg.saved", "image-diverter", "/usr/bin", "raw", "argv"):
+                self.assertNotIn(secret, text)
+            self.assertFalse(public["signed_transaction_authorized"]
+                             or public["installed_authority_verified"]
+                             or public["native_inventory_completed"])
+
+    def test_gpg_diagnostic_is_only_wired_to_exact_diversion_refusal(self):
+        with self.model() as (item, fs):
+            self.preflight_inputs(item, fs)
+            del fs.packages["/usr/bin/gpg"]
+            with patch.object(item, "gpg_diversion_diagnostic") as collect:
+                with patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                        self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
+                    item.preflight()
+                collect.assert_not_called()
+        workflow_root = SOURCE.parents[1] / ".github" / "workflows"
+        e2e = (workflow_root / "e2e-qa.yml").read_text()
+        package = (workflow_root / "release-package-qa.yml").read_text()
+        self.assertEqual(2, e2e.count("name: Retain scoped private GPG diagnostic evidence"))
+        self.assertEqual(1, package.count("name: Retain scoped private GPG diagnostic evidence"))
+        for text in (e2e, package):
+            self.assertIn("always() && steps.php-permissions.outcome == 'failure'", text)
+            self.assertNotIn("path: ${{ runner.temp }}/wstm-prerequisite-*/\n", text)
+
+    @contextmanager
     def perl_model(self, version="5.38.2-3.2ubuntu0.2"):
         with self.model() as (item, fs), ExitStack() as stack:
             row = {"Package": "perl-base", "Status": "install ok installed",
