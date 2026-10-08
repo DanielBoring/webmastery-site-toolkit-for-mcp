@@ -6,6 +6,9 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Attribute refused signed-provider preflight to closed step/tool labels and
+  ordinary-file identity predicates without exposing paths or changing guards,
+  provenance, operations or budgets.
 - Preserve prerequisite dependency error classification before verifying the
   additional signed-package source binding; retain both sets of drift checks.
 - Preserve the established PHP setup step names in the three signed-package HOST

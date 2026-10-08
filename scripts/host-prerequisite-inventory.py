@@ -109,10 +109,17 @@ def verify_original(stream, path, expected):
             and os.path.realpath(path) == str(path), "retention")
 
 
+IDENTITY_CHECKS = ("regular-file", "expected-owner", "safe-mode", "single-link")
+
+
 def validate_file(info, owner, limit):
-    require(stat.S_ISREG(info.st_mode) and info.st_uid == owner
-            and not info.st_mode & 0o6022 and info.st_nlink == 1,
-            "tool-identity")
+    for check, accepted in zip(IDENTITY_CHECKS, (
+            stat.S_ISREG(info.st_mode), info.st_uid == owner,
+            not info.st_mode & 0o6022, info.st_nlink == 1)):
+        if not accepted:
+            error = Refusal("tool-identity")
+            error.identity_check = check
+            raise error
     require(0 <= info.st_size <= limit, "file-budget")
 
 

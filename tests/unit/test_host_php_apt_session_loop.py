@@ -3,6 +3,7 @@
 from contextlib import ExitStack, contextmanager
 import hashlib
 import importlib.util
+import json
 import os
 from pathlib import Path, PurePosixPath
 import stat
@@ -91,6 +92,8 @@ class FileSystem:
     def path_class(self):
         fs = self
         class FixturePath(PurePosixPath):
+            def resolve(self):
+                return FixturePath(fs.canonical(self))
             def exists(self):
                 return str(self) in fs.nodes
             def is_dir(self):
@@ -112,6 +115,111 @@ class FileSystem:
 
 
 class SessionLoopTest(unittest.TestCase):
+    def preflight_inputs(self, item, fs):
+        raw = "\n\n".join("\n".join(key + ": " + value for key, value in row.items())
+                          for row in item.installed_records).encode() + b"\n"
+        fs.add("/var/lib/dpkg/status", raw)
+        fs.add("/usr/lib/os-release", b'ID=ubuntu\nVERSION_ID="24.04"\n')
+
+    def test_actual_preflight_attributes_identity_predicates_without_launches(self):
+        faults = (("st_mode", stat.S_IFDIR | 0o755, "regular-file"),
+                  ("st_mode", stat.S_IFREG | 0o4755, "safe-mode"),
+                  ("st_nlink", 2, "single-link"))
+        for field, value, check in faults:
+            with self.subTest(check=check), self.model() as (item, fs):
+                self.preflight_inputs(item, fs)
+                path = MODULE.TOOLS[0]
+                self.assertNotIn(path, item.files)
+                setattr(fs.info(path), field, value)
+                deadline = item.deadline
+                with patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                        self.assertRaisesRegex(BASE.Refusal, "^tool-identity$"):
+                    item.preflight()
+                self.assertEqual({"step": "tool-file", "requested_tool": "python3",
+                                  "identity_check": check}, item.receipt["preflight_refusal"])
+                self.assertEqual(deadline, item.deadline)
+                self.assertEqual(0, item.root_launches)
+                self.assertEqual([], item.commands)
+                self.assertFalse(item.setup_ready)
+                self.assertFalse(item.receipt["signed_transaction_authorized"])
+
+    def test_requested_tool_owner_guard_is_not_relaxed_for_attribution(self):
+        with self.model() as (item, fs):
+            self.preflight_inputs(item, fs)
+            fs.info(MODULE.TOOLS[0]).st_uid = 1000
+            with patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                    self.assertRaisesRegex(BASE.Refusal, "^tool-link$"):
+                item.preflight()
+            self.assertIsNone(item.receipt["preflight_refusal"])
+            self.assertEqual(0, item.root_launches)
+
+    def test_normal_tool_identity_continues_to_existing_origin_boundary(self):
+        with self.model() as (item, fs):
+            self.preflight_inputs(item, fs)
+            with patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                    patch.object(item, "command", side_effect=BASE.Refusal("tool-origin")), \
+                    self.assertRaisesRegex(BASE.Refusal, "^tool-origin$"):
+                item.preflight()
+            self.assertTrue(all(os.path.realpath(path) in item.files for path in MODULE.TOOLS))
+            self.assertIsNone(item.receipt["preflight_refusal"])
+            self.assertFalse(item.setup_ready)
+            self.assertEqual(0, item.root_launches)
+
+    def test_identity_annotation_preserves_file_budget_and_unannotated_refusal(self):
+        info = FileSystem().add("/file", b"data")
+        BASE.validate_file(info, 0, 4)
+        with self.assertRaisesRegex(BASE.Refusal, "^tool-identity$") as owner:
+            BASE.validate_file(info, 1000, 4)
+        self.assertEqual("expected-owner", owner.exception.identity_check)
+        with self.assertRaisesRegex(BASE.Refusal, "^file-budget$") as caught:
+            BASE.validate_file(info, 0, 3)
+        self.assertFalse(hasattr(caught.exception, "identity_check"))
+        with self.model() as (item, fs):
+            self.preflight_inputs(item, fs)
+            item.deadline = 0
+            with patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                    self.assertRaisesRegex(BASE.Refusal, "^inventory-deadline$"):
+                item.preflight()
+            self.assertIsNone(item.receipt["preflight_refusal"])
+
+    def test_preflight_witness_is_closed_and_unresolved_predicate_is_explicit(self):
+        value = {"step": "tool-file", "requested_tool": "perl", "identity_check": "single-link"}
+        self.assertEqual(value, MODULE.preflight_witness(value, "preflight", "tool-identity"))
+        unresolved = dict(value, identity_check=None)
+        self.assertEqual(unresolved, MODULE.preflight_witness(unresolved, "preflight", "tool-identity"))
+        self.assertIsNone(MODULE.preflight_witness(None, "configuration", None))
+        for foreign in (dict(value, path="/PRIVATE_SENTINEL"), dict(value, step="/PRIVATE_SENTINEL"),
+                        dict(value, requested_tool="/usr/bin/perl"),
+                        dict(value, identity_check="SECRET_EXCEPTION"),
+                        dict(value, step="ca-trust"), dict(value, requested_tool=None),
+                        dict(value, identity_check=[])):
+            with self.subTest(value=foreign), self.assertRaisesRegex(BASE.Refusal, "^inventory-shape$"):
+                MODULE.preflight_witness(foreign, "preflight", "tool-identity")
+        for stage, reason in (("configuration", "tool-identity"), ("preflight", None),
+                              ("preflight", "tool-origin")):
+            with self.subTest(stage=stage, reason=reason), self.assertRaisesRegex(BASE.Refusal, "^inventory-shape$"):
+                MODULE.preflight_witness(value, stage, reason)
+
+    def test_real_projection_emits_only_closed_refusal_witness_and_no_authority(self):
+        with self.model() as (item, fs):
+            self.preflight_inputs(item, fs)
+            fs.info(MODULE.TOOLS[0]).st_nlink = 2
+            with patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                    self.assertRaisesRegex(BASE.Refusal, "^tool-identity$"):
+                item.preflight()
+            def store(name, raw):
+                fs.add(str(item.directory / name), raw, mode=stat.S_IFREG | 0o600, uid=1000)
+            with patch.object(item, "write", side_effect=store), patch("builtins.print") as output:
+                self.assertFalse(MODULE.projection(item, None, "tool-identity"))
+            public = json.loads(output.call_args.args[0].split(" ", 1)[1])
+            self.assertEqual(item.receipt["preflight_refusal"], public["preflight_refusal"])
+            self.assertEqual("refused", public["state"])
+            self.assertFalse(public["apt_original_accepted"] or public["selected_signature_verified"]
+                             or public["signed_transaction_authorized"] or public["installed_authority_verified"])
+            self.assertIsNone(public["php_api_presence"])
+            self.assertNotIn("/owned", output.call_args.args[0])
+            self.assertEqual(0, item.root_launches)
+
     @contextmanager
     def model(self, versions=("8.2",), planned=("8.2",), unowned=None, future_binary=None,
               future_template=b"; production\n", common_selected=True, inactive=()):

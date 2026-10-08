@@ -40,6 +40,12 @@ TOOLS = ("/usr/bin/python3", "/usr/bin/setpriv", "/usr/bin/readelf", "/usr/bin/d
          "/usr/bin/dpkg-deb", "/usr/bin/update-alternatives", "/usr/bin/dpkg",
          "/usr/bin/ucf", "/usr/bin/ucfr", "/usr/bin/perl", "/usr/bin/systemctl",
          "/usr/bin/dash", "/usr/sbin/ldconfig", "/usr/sbin/start-stop-daemon")
+TOOL_IDS = {path: path.rsplit("/", 1)[1] for path in TOOLS}
+PREFLIGHT_STEPS = frozenset((
+    "source-pins", "package-status", "platform", "tool-file", "tool-origin",
+    "python-module", "sudo-policy", "apt-credentials", "apt-configuration",
+    "loader", "apt-method", "ca-trust", "keyring", "install-paths",
+    "dpkg-state", "apt-hooks", "source-recheck"))
 SOURCES = ("host-php-apt.py", "host-php-apt-capture.py", "host-php-apt-policy.py",
            "host-php-apt-signature.py", "host-prerequisite-setup.py",
            "host-prerequisite-inventory.py", "provision-php82-permissions.py",
@@ -1266,7 +1272,21 @@ class Provider(CAPTURE.Capture):
         self.check()
 
     def preflight(self):
+        self._preflight_context = ("source-pins", None)
+        self.receipt["preflight_refusal"] = None
+        try:
+            self._preflight()
+        except BASE.Refusal as error:
+            if str(error) == "tool-identity":
+                step, tool = self._preflight_context
+                self.receipt["preflight_refusal"] = {
+                    "step": step, "requested_tool": tool,
+                    "identity_check": getattr(error, "identity_check", None)}
+            raise
+
+    def _preflight(self):
         self.pin_sources()
+        self._preflight_context = ("package-status", None)
         status = self.protected("/var/lib/dpkg/status", 16777216)
         self.installed_records = POLICY.deb822(status)
         self.installed = {}
@@ -1274,15 +1294,20 @@ class Provider(CAPTURE.Capture):
             if row.get("Status") == "install ok installed":
                 require(row["Package"] not in self.installed, "inventory-shape")
                 self.installed[row["Package"]] = row["Version"]
+        self._preflight_context = ("platform", None)
         _, _, os_release = self.acquire("/usr/lib/os-release", limit=65536)
         require(b"ID=ubuntu\n" in os_release and b'VERSION_ID="24.04"\n' in os_release,
                 "platform")
         for tool in TOOLS:
+            self._preflight_context = ("tool-file", TOOL_IDS[tool])
             self.system(tool)
         for tool in TOOLS:
+            self._preflight_context = ("tool-origin", TOOL_IDS[tool])
             self.origin(tool)
             self.dependencies(tool)
+        self._preflight_context = ("sudo-policy", None)
         self.pin_sudo_configuration()
+        self._preflight_context = ("python-module", None)
         for module in tuple(sys.modules.values()):
             path = getattr(module, "__file__", None)
             if path and os.path.realpath(path).startswith(("/usr/lib/python", "/usr/lib/x86_64-linux-gnu/")):
@@ -1290,16 +1315,19 @@ class Provider(CAPTURE.Capture):
                 self.dependencies(path)
         # Reuse the historical protected sudo-policy boundary, including the
         # image-generated runner rule; it is not an APT package-default claim.
+        self._preflight_context = ("sudo-policy", None)
         self.protected("/etc/sudoers")
         for path in sorted(Path("/etc/sudoers.d").iterdir()):
             require(path.is_file() and not path.is_symlink(), "tool-link")
             self.protected(str(path))
+        self._preflight_context = ("apt-credentials", None)
         authfiles = [Path("/etc/apt/auth.conf")]
         if Path("/etc/apt/auth.conf.d").exists():
             authfiles.extend(sorted(Path("/etc/apt/auth.conf.d").iterdir()))
         for path in authfiles:
             if os.path.lexists(path):
                 require(not self.protected(str(path)).strip(), "tool-loader")
+        self._preflight_context = ("apt-configuration", None)
         for path in sorted(Path("/etc/apt/apt.conf.d").iterdir()):
             require(path.is_file() and not path.is_symlink(), "tool-link")
             self.conffile(str(path))
@@ -1307,32 +1335,40 @@ class Provider(CAPTURE.Capture):
             self.conffile("/etc/apt/apt.conf")
         if os.path.lexists("/etc/ucf.conf"):
             self.conffile("/etc/ucf.conf")
+        self._preflight_context = ("loader", None)
         for path in ("/etc/ld.so.conf", "/etc/ca-certificates.conf"):
             self.conffile(path)
         for path in sorted(Path("/etc/ld.so.conf.d").iterdir()):
             self.conffile(str(path))
         TRUST.verify_loader(self)
+        self._preflight_context = ("apt-method", None)
         for method in ("/usr/lib/apt/methods/http", "/usr/lib/apt/methods/https",
                        "/usr/lib/apt/methods/gpgv", "/usr/lib/apt/methods/store"):
             self.origin(method)
             self.dependencies(method)
+        self._preflight_context = ("ca-trust", None)
         self.prime_ca_owners(CA)
         self.receipt["ca_trust"] = CA.verify_ca(self)
+        self._preflight_context = ("keyring", None)
         self.system("/usr/share/keyrings/ubuntu-archive-keyring.gpg")
         self.origin("/usr/share/keyrings/ubuntu-archive-keyring.gpg")
+        self._preflight_context = ("install-paths", None)
         for path in (POLICY.ROOT, POLICY.KEYRING, POLICY.SOURCE):
             require(not os.path.lexists(path), "tool-link")
             BASE.parent_pins(path)
+        self._preflight_context = ("dpkg-state", None)
         for path in ("/var/lib/dpkg/diversions", "/var/lib/dpkg/statoverride"):
             if os.path.lexists(path):
                 raw = self.protected(path, 1048576)
                 require(not raw.strip(), "tool-loader")
+        self._preflight_context = ("apt-hooks", None)
         config, stderr, _ = self.native("apt-config", ("/usr/bin/apt-config", "dump"))
         require(not stderr, "tool-loader")
         TRUST.verify_hooks(self, config, self.default_configuration)
         self.receipt["effective_apt_config_sha256"] = POLICY.digest(config)
         for entry in self.origins.values():
             self.protected_packages.add(entry["package"][0].split(":")[0])
+        self._preflight_context = ("source-recheck", None)
         self.verify_sources()
         self.setup_ready = True
 
@@ -2169,6 +2205,24 @@ class Provider(CAPTURE.Capture):
         self.configure()
 
 
+def preflight_witness(value, stage, reason):
+    if value is None:
+        return None
+    require(stage == "preflight" and reason == "tool-identity"
+            and type(value) is dict
+            and set(value) == {"step", "requested_tool", "identity_check"}, "inventory-shape")
+    require(type(value["step"]) is str and value["step"] in PREFLIGHT_STEPS
+            and (value["requested_tool"] is None or (
+                type(value["requested_tool"]) is str
+                and value["requested_tool"] in TOOL_IDS.values()))
+            and (value["identity_check"] is None or (
+                type(value["identity_check"]) is str
+                and value["identity_check"] in BASE.IDENTITY_CHECKS)), "inventory-shape")
+    require((value["requested_tool"] is not None)
+            == (value["step"] in ("tool-file", "tool-origin")), "inventory-shape")
+    return dict(value)
+
+
 def projection(provider, inventory, reason):
     provider.verify_sources()
     receipt = dict(provider.receipt, reason=reason, stage=provider.stage)
@@ -2263,6 +2317,8 @@ def projection(provider, inventory, reason):
         "schema": "signed-host-php-acquisition-v1", "selected_php": provider.version,
         "state": "observed" if complete else "refused",
         "stage": provider.stage, "reason": reason,
+        "preflight_refusal": preflight_witness(value.get("preflight_refusal"),
+                                              provider.stage, reason),
         "source_sha256": {name: sources[filename] for name, filename in zip(
             ("provider", "capture", "policy", "signature", "driver", "gate", "guard",
              "trust", "ca"), SOURCES)},

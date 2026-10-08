@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Current signed-package sources before the unchanged public predecessor. */
 final class Wstm167SignedPhpTransition {
-	public const SEAL = 'b61d54fad5d85af44b7090782a292967d76367c797ecc175a5b46563c6fcbe12';
+	public const SEAL = 'ac12c249bf9a31782e44943b3c0d72d48b94582d12e34707386db5a45d1e6848';
 
 	public static function load( ?string $json = null ): array {
 		$json = $json ?? file_get_contents( __DIR__ . '/signed-php-transition.json' );

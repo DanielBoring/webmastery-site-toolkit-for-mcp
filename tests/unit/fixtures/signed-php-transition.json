@@ -543,7 +543,7 @@
     ".github/ISSUE_TEMPLATE/config.yml": "a6b12f327fe7490036740b7e0590f41da474c4c991092da034444fb1414d9aa4",
     ".github/ISSUE_TEMPLATE/feature_request.md": "8ea25177279b0f97e06df9b38a407359d9c4279964b05787b76a1054641727b3",
     ".github/PULL_REQUEST_TEMPLATE.md": "1df3b3949c72e2382c6c85b59b185d0dfb382c64424f42dd835965db2f4f30ce",
-    ".github/REPOSITORY_CHANGELOG.md": "db02f3d679be556dbc45d1a16a1196acadafc438c162d7fe4c162fe70a41f233",
+    ".github/REPOSITORY_CHANGELOG.md": "a0b49a6e6cda4c1aa3e463d5563d98e836658adec8e25d12c9111811b142ab48",
     ".github/SETUP-COMPLETE.md": "95cfe50cb68612e693f9f7a994ccded1fe32b1521521067aa1311b990f979e55",
     ".github/compatibility-versions.json": "73865b94ad6ac10cbed9bec8a31b41911cbb35014b4a904734d9258f0718c19a",
     ".github/copilot-instructions.md": "fa4db4dd09a39499480614f0e06fc71203072db81148eaadf40b45d79a5ec2bf",
@@ -604,7 +604,7 @@
     "docs/qa-strategy.md": "c68016253523588142109ab6cf21861ed4b5b6fcab3a3f2611f556503f65e3bc",
     "docs/release-strategy.md": "a452483fa102d4db3fea59e91a0a9344ba47d9fd63acfd8049fa7277629a790d",
     "docs/sdlc-overview.md": "687d277b66a1f0b062f8b1cef8f0e4f38f9cfe810bfca3f1b75673bfad50caf0",
-    "docs/security-strategy.md": "17e00dc5b89765f69fbe88aac19677c51e1336f8ae55d36ddd2a69961736c6e4",
+    "docs/security-strategy.md": "923c3a87f8233bf4654c90e1499ca3a224e87bc46d8485cd73944f32652923c4",
     "docs/shared-helpers.md": "03dfee0305d3058546b60427cc2fe5869b824f84b1b1995093ddb363605f095b",
     "includes/class-ability.php": "9a237e25baa11fc823fcdaee45277d1ca9462ca04af462e33dede511bdb0edf5",
     "includes/class-backup-status.php": "d521e5caf92c422325a0fa2bf85e7f393bd36cc584b250facc5264eeeb759840",
@@ -657,7 +657,7 @@
     "scripts/docker-qa-gate.php": "ac1bbc7fac0f0ce04d9533e64f72b5d6e0157450e984f85c83fadf204a59d0ea",
     "scripts/docker-qa-summary.php": "fda21833dd7142384a2008e3d38321a1f7645ccad3a4d241f75a8b06db77fcab",
     "scripts/e2e-test.sh": "6c54d14155070437909b744efa08f6198aa3e370a2f6a11ab78f1893ccfac9d8",
-    "scripts/host-prerequisite-inventory.py": "12a069a56e8818223544cab33e27aa7dd674c2b3228dd4c7f9b01c1d406dfb59",
+    "scripts/host-prerequisite-inventory.py": "aa5241e6b16c36d54d21ecc0e0870f7be7ab5400da801c17277425fccc8e8f43",
     "scripts/host-prerequisite-setup.py": "89ed6f8a38602292fb8a0c7f4f4ff1a545a393e6568072711e1e8426df092a95",
     "scripts/import-issues.sh": "573a9c683e60107be1f47dca1f5723b7b22d40a252800af8ff8f3feb9f5e9614",
     "scripts/input-schema-proof.php": "8c9a89b34da1158102e1b513431fcb11091e8ce47ebcbb5195c60a4ce853a612",
@@ -1066,13 +1066,13 @@
     "tests/unit/test_untrusted_query.py": "17551baee77beb3da127d743e3ce029ff577917487b40567bd23b923df4477a8",
     "tests/untrusted-stage-test.sh": "17a99df2bbb5e39171ef6bff72675fe8894942cb152c14283e9de01b0ff55ce7",
     "webmastery-site-toolkit-for-mcp.php": "66ad568ed9018670c30ceda128af3c67cf18b63c62eb5bf6a76ddcdff3386ab2",
-    "scripts/host-php-apt.py": "39afa97ea3104537e94fb55c05d63516d8199563f6410c2f169068966bcb8eb3",
+    "scripts/host-php-apt.py": "68c9c509ef1f3624e68d2a9cd24b1489ac430e75d4156d07312e736e1638af94",
     "scripts/host-php-apt-policy.py": "389170dc2ec9c0ce205128484a9f9b8febc7173294454a733f5f2665371890fb",
     "scripts/host-php-apt-capture.py": "db8173b5265a6f22f44f494848f57e1763893a31f6c89b108997a1d9c7df4103",
     "scripts/host-php-apt-signature.py": "6207a2c61f6c0122a23b71797bf8c2c222cb6e03ad06ae4f8b6928a758b5861d",
     "scripts/host-php-apt-trust.py": "9ab753bf123d6f813c4eb77c1c8492a508f444bf4091c950fcb60889d945d0ab",
     "scripts/host-php-apt-ca.py": "3a5e54d85d467ddd17f06b4704754265d22e425d15727685672fa2e59017b753",
-    "tests/unit/test_host_php_apt_session_loop.py": "05ce78e37f948b81123b508e5d6025c308ac5a38d89f63edada9327aba42cb07",
+    "tests/unit/test_host_php_apt_session_loop.py": "974756412fc54af82a0697b55eef6e7f07b9c5249502f143c23e98f0d0ea6cef",
     "tests/unit/test_standard_php_config.py": "8a84480c2fb94ebe72dfa2468c1995d7610e11db55d6cb29fcc4c80e47ce8c17",
     "tests/unit/fixtures/signed-php-producers/phpquery": "0e9daa717d1af9b4e069c1976e0aad9cb07141b26b7b9a680009fe322e1e0c89",
     "tests/unit/fixtures/signed-php-producers/php-helper": "72445eb0e4d94093f9f5b78038370b01741222cb7498f15ccb5cf8d476dbd83a",
@@ -1129,13 +1129,16 @@
     },
     ".github/REPOSITORY_CHANGELOG.md": {
       "baseline_raw_sha256": "be511c50bbec7bb87bc4067778065fb7801efef97a02bf50442b35863a3bce0d",
-      "current_raw_sha256": "db02f3d679be556dbc45d1a16a1196acadafc438c162d7fe4c162fe70a41f233",
+      "current_raw_sha256": "a0b49a6e6cda4c1aa3e463d5563d98e836658adec8e25d12c9111811b142ab48",
       "hunks": [
         {
           "start": 7,
           "before": [],
           "after": [
             "",
+            "- Attribute refused signed-provider preflight to closed step/tool labels and",
+            "  ordinary-file identity predicates without exposing paths or changing guards,",
+            "  provenance, operations or budgets.",
             "- Preserve prerequisite dependency error classification before verifying the",
             "  additional signed-package source binding; retain both sets of drift checks.",
             "- Preserve the established PHP setup step names in the three signed-package HOST",
@@ -1440,7 +1443,7 @@
     },
     "docs/security-strategy.md": {
       "baseline_raw_sha256": "99059483a77c0166fc719a8e88b46502e91fc910b88b4b8242a4d73c54a344f3",
-      "current_raw_sha256": "17e00dc5b89765f69fbe88aac19677c51e1336f8ae55d36ddd2a69961736c6e4",
+      "current_raw_sha256": "923c3a87f8233bf4654c90e1499ca3a224e87bc46d8485cd73944f32652923c4",
       "hunks": [
         {
           "start": 27,
@@ -1545,12 +1548,19 @@
             "No root repository/PHP/Python/shell script, dynamic path/argv, directory/glob,"
           ],
           "after": [
+            "The signed provider's refused preflight projection includes only a finite step",
+            "label, the fixed requested-tool identifier when applicable, and the failed",
+            "ordinary-file identity predicate when available. A null predicate remains",
+            "unresolved; dependency phases name the requested root tool, not an inferred",
+            "failing dependency. No paths, argv, exception text, file bytes, owners or inode",
+            "values enter this witness. It neither authorizes execution nor changes any",
+            "identity check, provenance requirement, operation or acquisition budget.",
             "Within this configuration-hardening grant, no root repository/PHP/Python/shell",
             "script, dynamic path/argv, directory/glob,"
           ]
         },
         {
-          "start": 115,
+          "start": 122,
           "before": [
             "All originals stay in exclusive owned private custody. One setup deadline and",
             "conserved file/byte/command/output ledgers cover the complete operation, including",
@@ -1568,7 +1578,7 @@
     },
     "scripts/host-prerequisite-inventory.py": {
       "baseline_raw_sha256": "85b7e83fb13eeb8bcea67471d11c4cd620a54c8376d432d8d27753c2ce992a95",
-      "current_raw_sha256": "12a069a56e8818223544cab33e27aa7dd674c2b3228dd4c7f9b01c1d406dfb59",
+      "current_raw_sha256": "aa5241e6b16c36d54d21ecc0e0870f7be7ab5400da801c17277425fccc8e8f43",
       "hunks": [
         {
           "start": 35,
@@ -1586,6 +1596,32 @@
           ],
           "after": [
             "        \"/etc/php/8.4/cli/php.ini\", \"/etc/php/8.4/mods-available/sockets.ini\")},"
+          ]
+        },
+        {
+          "start": 111,
+          "before": [],
+          "after": [
+            "IDENTITY_CHECKS = (\"regular-file\", \"expected-owner\", \"safe-mode\", \"single-link\")",
+            "",
+            ""
+          ]
+        },
+        {
+          "start": 115,
+          "before": [
+            "    require(stat.S_ISREG(info.st_mode) and info.st_uid == owner",
+            "            and not info.st_mode & 0o6022 and info.st_nlink == 1,",
+            "            \"tool-identity\")"
+          ],
+          "after": [
+            "    for check, accepted in zip(IDENTITY_CHECKS, (",
+            "            stat.S_ISREG(info.st_mode), info.st_uid == owner,",
+            "            not info.st_mode & 0o6022, info.st_nlink == 1)):",
+            "        if not accepted:",
+            "            error = Refusal(\"tool-identity\")",
+            "            error.identity_check = check",
+            "            raise error"
           ]
         }
       ]

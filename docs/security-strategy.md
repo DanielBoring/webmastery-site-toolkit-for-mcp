@@ -102,6 +102,13 @@ Original root-owned/writable input remains ineligible for the read-only
 inventory until the guarded0644 postcondition; shared acquisition precedes
 candidate PHP on all three surfaces. Failed provisioning/acquisition also
 withholds always-running PHP diagnostics, summaries and export verification.
+The signed provider's refused preflight projection includes only a finite step
+label, the fixed requested-tool identifier when applicable, and the failed
+ordinary-file identity predicate when available. A null predicate remains
+unresolved; dependency phases name the requested root tool, not an inferred
+failing dependency. No paths, argv, exception text, file bytes, owners or inode
+values enter this witness. It neither authorizes execution nor changes any
+identity check, provenance requirement, operation or acquisition budget.
 Within this configuration-hardening grant, no root repository/PHP/Python/shell
 script, dynamic path/argv, directory/glob,
 unapproved version/SAPI, ownership change, extra extension, namespace operation or
