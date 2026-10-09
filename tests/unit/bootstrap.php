@@ -48,7 +48,17 @@ function wp_json_encode( $value, $flags = 0 ) {
 }
 
 require_once dirname(__DIR__, 2) . '/includes/class-response.php';
+require_once dirname(__DIR__, 2) . '/includes/class-untrusted.php';
 require_once dirname(__DIR__, 2) . '/includes/class-permissions.php';
+require_once dirname(__DIR__, 2) . '/includes/class-input.php';
+require_once dirname(__DIR__, 2) . '/includes/class-post-access.php';
+require_once dirname(__DIR__, 2) . '/includes/class-post-content.php';
+require_once dirname(__DIR__, 2) . '/includes/class-post-meta.php';
+require_once dirname(__DIR__, 2) . '/includes/class-post-writes.php';
+require_once dirname(__DIR__, 2) . '/includes/class-bulk-posts.php';
+require_once dirname(__DIR__, 2) . '/includes/class-post-revisions.php';
+require_once dirname(__DIR__, 2) . '/includes/class-featured-image.php';
+require_once dirname(__DIR__, 2) . '/includes/class-content-patch.php';
 
 function sanitize_key( $key ): string {
 	$key = strtolower( (string) $key );
@@ -146,6 +156,9 @@ function current_user_can( $capability, ...$args ) {
 }
 
 function get_post( $id ) {
+	if ( is_object( $id ) ) {
+		return $id;
+	}
 	return $GLOBALS['wstm_test_posts'][ $id ] ?? null;
 }
 
@@ -170,6 +183,7 @@ function wp_delete_term( $id, $taxonomy ) {
 }
 
 require_once dirname(__DIR__, 2) . '/includes/class-post-scheduling.php';
+require_once dirname(__DIR__, 2) . '/includes/class-list-query.php';
 require_once dirname(__DIR__, 2) . '/includes/class-posts.php';
 require_once dirname(__DIR__, 2) . '/includes/class-custom-post-types.php';
 require_once dirname(__DIR__, 2) . '/includes/class-taxonomy.php';

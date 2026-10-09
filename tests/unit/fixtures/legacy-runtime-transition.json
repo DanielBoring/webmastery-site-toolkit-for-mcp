@@ -1,0 +1,179 @@
+{
+  "schema": 1,
+  "scope": "Copied legacy teardown controls only",
+  "predecessor_seal": "08cc480bd501c8a190699ef5a114fffd694332b4485bbc595ed13e0b87a8e99e",
+  "base_inventory_sha256": "b63527acc6ceb18f2950cd020b283d074844206ec19eaef061e19f81f75b9881",
+  "files": {
+    "scripts/test-release-runtime.sh": {
+      "baseline_raw_sha256": "c84c4bcfb954f40ec7eeab15c539af7ce7d74341267b4041e6e0bfd9d633242d",
+      "current_raw_sha256": "74dc0685e96c0d0b186b7d05a85247b6d02fb2d3a913cb54e1eced5675132f8f",
+      "hunks": [
+        {
+          "start": 556,
+          "before": [],
+          "after": [
+            "\texport WSTM108_MOCK_LIVE=\"$WORK/legacy-retention-$outer\"",
+            "\tmkdir -m 700 \"$WSTM108_MOCK_LIVE\""
+          ]
+        },
+        {
+          "start": 561,
+          "before": [
+            "\tsed 's/if ! wstm116_require_no_retention; then/if false; then/' \"$WORK/fixed-retention-$outer.sh\" > \"$script\""
+          ],
+          "after": [
+            "\t# Parent cleanup is now armed only after a successful child. Restore that",
+            "\t# old trap ownership as well as the guard, exclusively in this RED copy.",
+            "\tphp tests/unit/fixtures/untrusted-legacy-retention.php \"$script\" > \"$WORK/legacy-retention-$outer.sh\"",
+            "\tcp \"$WORK/legacy-retention-$outer.sh\" \"$script\""
+          ]
+        },
+        {
+          "start": 577,
+          "before": [
+            "\t[[ \"$status\" == 47 ]]",
+            "\t[[ \"$(grep -c ' down -v --remove-orphans$' \"$TRACE\")\" == 2 ]]"
+          ],
+          "after": [
+            "\t[[ \"$status\" == 47 ]] || {",
+            "\t\tprintf 'FAIL legacy teardown outer=%s expected_status=47 actual_status=%s\\n' \"$outer\" \"$status\" >&2",
+            "\t\texit 1",
+            "\t}",
+            "\t[[ \"$(grep -c ' down -v --remove-orphans$' \"$TRACE\")\" == 2 ]] || {",
+            "\t\tprintf 'FAIL legacy teardown outer=%s: expected start reset and unconditional failure cleanup\\n' \"$outer\" >&2",
+            "\t\texit 1",
+            "\t}"
+          ]
+        },
+        {
+          "start": 614,
+          "before": [
+            "\tsed 's/if ! wstm116_require_no_retention; then/if false; then/' \"$WORK/fixed-schema-retention-$outer.sh\" > \"$script\""
+          ],
+          "after": [
+            "\tphp tests/unit/fixtures/untrusted-legacy-retention.php \"$script\" > \"$WORK/legacy-schema-retention-$outer.sh\"",
+            "\tcp \"$WORK/legacy-schema-retention-$outer.sh\" \"$script\""
+          ]
+        }
+      ]
+    },
+    "tests/unit/AdmissionNativeFixtureTransitionTest.php": {
+      "baseline_raw_sha256": "65e3964732e7c7a859f756a76f56e4115a4c0a0b9f420750916ef9cb3d93b0be",
+      "current_raw_sha256": "2dde3e5f9ee1d8a671878424b3f1b9d034ff74331f7de46a8931cd25f6ce2a14",
+      "hunks": [
+        {
+          "start": 5,
+          "before": [],
+          "after": [
+            "",
+            "require_once __DIR__ . '/fixtures/legacy-runtime-transition.php';"
+          ]
+        },
+        {
+          "start": 49,
+          "before": [
+            "\t\tforeach ( $map['frozen_files'] as $path => $hash ) { self::assertSame( $hash, hash( 'sha256', file_get_contents( $root . '/' . $path ) ) ); }"
+          ],
+          "after": [
+            "\t\tforeach ( $map['frozen_files'] as $path => $hash ) {",
+            "\t\t\t$current = file_get_contents( $root . '/' . $path );",
+            "\t\t\tself::assertSame( $hash, hash( 'sha256', Wstm166LegacyRuntimeTransition::restore( $path, $current ) ) );",
+            "\t\t}"
+          ]
+        }
+      ]
+    },
+    "tests/unit/GithubSafeguardsTest.php": {
+      "baseline_raw_sha256": "6ffb08f7d3cc15477ecff926ce8139e11b76201ce9b7acb7fc916c15836a1856",
+      "current_raw_sha256": "7d7798541612def45a2ba3301d280de509fad4e5e80f8a947408bd73b308fb51",
+      "hunks": [
+        {
+          "start": 138,
+          "before": [
+            "\t\tself::assertStringContainsString('> \"$script\"' . \"\\n\\t# Attest this deliberate RED mutation instead of failing before schema acquisition.\\n\\t\" . 'commit_mock_outer \"$script\"', $section);"
+          ],
+          "after": [
+            "\t\tself::assertStringContainsString(",
+            "\t\t\t'php tests/unit/fixtures/untrusted-legacy-retention.php \"$script\" > \"$WORK/legacy-schema-retention-$outer.sh\"' . \"\\n\\t\"",
+            "\t\t\t. 'cp \"$WORK/legacy-schema-retention-$outer.sh\" \"$script\"' . \"\\n\\t\"",
+            "\t\t\t. \"# Attest this deliberate RED mutation instead of failing before schema acquisition.\\n\\t\"",
+            "\t\t\t. 'commit_mock_outer \"$script\"',",
+            "\t\t\t$section",
+            "\t\t);"
+          ]
+        }
+      ]
+    }
+  },
+  "frozen_files": {
+    "scripts/build-release.sh": "23b8d9d51318096b6d1565f2fbdeb37cd452071e056884546393cbc3f6afb4a2",
+    "scripts/compatibility-baselines.php": "724eb07f9917190157ddce7be8a95db630a81a316b99778238675bc244b2b56a",
+    "scripts/compatibility-download.sh": "0c5f8584eede15a3faef25b3cb92e743fcb003d4fd77b23e27ad18ff5d68e229",
+    "scripts/compatibility-matrix.php": "9b258ffcac7e439d12af0772748bb72635c37e32313c9ca73c6e5a9099b0f9b7",
+    "scripts/create-release-zip.php": "eeba1e6c31a99530d39e25f6a95486548dba5913c0084e22247cb50d58eab89b",
+    "scripts/destructive-cleanup-proof.php": "1da2f8bfae3709b75128d3e7e433ba7b57a1d0a867871f311612059e54784a43",
+    "scripts/destructive-retention.sh": "6afccaf5f145b94f15bf0dd6a317286ded1ca5756e9d5b5801a4b0f08134a20b",
+    "scripts/discover-compatibility.sh": "f405e8591d0fd3d059f3e19a7bcf91422ed6857fb5da94782ed09aef9421c30a",
+    "scripts/docker-qa-gate.php": "ac1bbc7fac0f0ce04d9533e64f72b5d6e0157450e984f85c83fadf204a59d0ea",
+    "scripts/docker-qa-summary.php": "fda21833dd7142384a2008e3d38321a1f7645ccad3a4d241f75a8b06db77fcab",
+    "scripts/e2e-test.sh": "6c54d14155070437909b744efa08f6198aa3e370a2f6a11ab78f1893ccfac9d8",
+    "scripts/import-issues.sh": "573a9c683e60107be1f47dca1f5723b7b22d40a252800af8ff8f3feb9f5e9614",
+    "scripts/input-schema-proof.php": "8c9a89b34da1158102e1b513431fcb11091e8ce47ebcbb5195c60a4ce853a612",
+    "scripts/php-lint.php": "e8e07d27e7de19cd3a8a82b660b48fa616a9f1a633a867edcb04526f7b0f4235",
+    "scripts/qa-compose.sh": "e940bafe1fe200bbabb96d6fa59ed44608e0f164c63b507fadc6faea600e8b84",
+    "scripts/qa-local.ps1": "1d045827ca85a4615647d3ccaf20250604ac8f56ea11f9ad464ea7d2d4c0b8ee",
+    "scripts/qa-local.sh": "5fb820cb02b2e2e7a5738377485716ee89f4d11eca0de4fa712a7154b2f74c16",
+    "scripts/qa-runtime.php": "553b29dc69d0acf8d4ef5a068b0eaa7084bf71fdf0017d5b2a9e6a9bc586ce0a",
+    "scripts/release-control-check.sh": "c56c4a3216d16efba398581dc03dec77e2ff3e977978f80897028d4ae8d7b294",
+    "scripts/release-lib.php": "aa07ba3f6b1ead0e0129bdd4c827b05ba9ce5e52a314b3ffc44b959771570bb0",
+    "scripts/release-plugin-check.sh": "92086cd817a35d64965bfca90ad59bd37355f975b3724c9c659d6fe708af4c17",
+    "scripts/release-publish-check.sh": "9116169aeded23b108f2b3a4c3be451164cd988571cc211189a813e8c2b829be",
+    "scripts/release-qa.sh": "bf816ab7aabf96e1acd1f3ddc7284736980a7ebb09e59068ea7aff76c649f3c3",
+    "scripts/release-recovery.php": "98e0ec3959982bd4a5f310a008ea7b46891fb05d398b85210bb7b7fb093e5bbe",
+    "scripts/release-tag-check.sh": "756e785214bfa68ef412f947973a586634cb5d8e55fe8f21165d011785ad917b",
+    "scripts/release-tools.php": "f2340e514cbabc4044fb76750d0ab633be3871db2edb380ed01f1623913b17cd",
+    "scripts/test-controller-components.py": "8cd4bf49fa112b67e787bbf4aa47364aadac5903cd068afed145f9134dc1fc61",
+    "scripts/test-phpstan-baseline.php": "662e339f29813ebb78ec9432a72bcd6b78fd8482146cd62e101e12031eb1838e",
+    "scripts/test-release-control-check.sh": "130954a54aa6ae07373f375fdfff4cfb023262ac5dce43a2c1ea9a5f58bf4dcb",
+    "scripts/test-release-plugin-check.sh": "4b8ad3a936a9ff640b02e0187d8b371da18488ffd27a0b9f202daca4d26c436b",
+    "scripts/test-release-publish-prerequisites.sh": "e0fc945963de3644ae101e142c3d6069d70495b028ff5df26669a5b5ab21f7ed",
+    "scripts/test-release-recovery.php": "94a4b352b1aaa75b694f5ce9108643c7424a33c0dd9dad5042734101377778a2",
+    "scripts/test-release-safeguards.php": "5fa75d6d3bb403d6dd88165a65f1d330dd8179573bde6fe6027e79bdc8eb5542",
+    "scripts/test-release-tag-check.sh": "8ad52245e5992507a7328f46e40ec99e5e189d12bc43ee2b7a2184c641f1bf53",
+    "scripts/untrusted-authority.php": "0ec215878619cf588ace74446132ab44859bc291289818895db8513a06aeeb65",
+    "scripts/untrusted-cleanup-proof.php": "77c9fae683ceb91044a8a03af6849b19b7ac45df3c8c746a440a39f2d06ecdd4",
+    "scripts/untrusted-export.php": "207d04f46a20fe23c79e2a1f52b2376c66ebe478baae0fa5f99afb679ee6eb48",
+    "scripts/untrusted-host-bootstrap.sh": "21de117d566440e6ee924f4cc9d7f7098918eba3b5fe70cf0d49d6ca21332868",
+    "scripts/untrusted-host-controller.php": "6fd0adb5f62aa3746293cc4f849897799991d4f86cfbb095cee9c1b25b6332af",
+    "scripts/untrusted-host-topology.php": "acf569cce5b595e01d5f8208ec88159e511214f0697b97552ad0a79af9ed97aa",
+    "scripts/untrusted-provenance.php": "a29778e37416d68a31613e213b7508ae9facfac5964d8b7a6627c277f4660f9d",
+    "scripts/untrusted-query.py": "5747b31c142c2cc364687442e97546ac4e3c25d9d6082d70514165d6db96f855",
+    "scripts/untrusted-release.php": "ed6cc46b5fcbe89bdecf34452e8e34f9ea2b3f5614e5ffd2161244989f5af3bd",
+    "scripts/untrusted-stage.sh": "857c5170e7d24bb9b7ab3c606507159d26d0e65d136953ab24e6e8cfd02bb28d",
+    "scripts/update-compatibility-baselines.php": "7bbb1b8d3258cd1dd31de4c1474853f9b931cb64e4f9391ab262f4874c1b5a1c",
+    "scripts/validate-e2e-manifest.php": "f974b17266e6f28e0b8952f9c81b146edf1ef79af5f624a49a95be5d9cb5c27d",
+    "scripts/validate-release-package.php": "5e05ccec3365849297559552af0d65621473e6ba8cc33510918becc1e3bdf1f5",
+    "scripts/validate-security-qa.php": "7238d3058e9cd33e344faa2e71442fc9e5fb2ec6acb816a70390808e405d24ac",
+    "scripts/verify-candidate-floor.php": "0b95dd54141a9cfbd07816b437da0cef67175af83b1de5bd8b78629a3a449223",
+    "scripts/workflow-lint.php": "adbbc42c2735e01ec8ebfd3371a05bb954bd935e27994b71a55695fba3712cc5",
+    "tests/unit/fixtures/admission-native-fixture-transition.json": "08cc480bd501c8a190699ef5a114fffd694332b4485bbc595ed13e0b87a8e99e",
+    "tests/unit/fixtures/array-syntax-transition.json": "b8d2ad18c87ee97c8eeb86f8601b6d1fce5af16842b7a4c4de9e886138ba53e0",
+    "tests/unit/fixtures/array-syntax-transition.php": "0f6b4d31ea7213c52b92f120350c28fcc559b580944787a8ff766bc381a18e41",
+    "tests/unit/fixtures/authority-observer-transition.json": "88ff7a6b1d42d7839c793aa481b9099dd4631a49eabf39aa87100600b96fef58",
+    "tests/unit/fixtures/bounded-admission-transition.json": "a45c96be6790c0380788529adc509955ffc9de64b472a5fae24bb46a9e13df5f",
+    "tests/unit/fixtures/bounded-admission-transition.php": "c88a4fcab2fa45d3468f8acb6292cb7f2bae8cdb410e11f52f9a5dfc831412f2",
+    "tests/unit/fixtures/bounded-integration-transition.json": "e847ac561c95854f66b5b04af627e992fa8886dd76eab018b730b07f42d290fa",
+    "tests/unit/fixtures/bounded-integration-transition.php": "ea9d55ffbccb4bc7938a9ee4cedc4ce9ebfd6dc9eacef802060f61191f1c3243",
+    "tests/unit/fixtures/floor-selector-transition.json": "204877c9ff0325b4a6a90f040de918759d9ec45ed22b75a29a075de3451c2d78",
+    "tests/unit/fixtures/floor-selector-transition.php": "445d3fa5f1294e7bd61df7a9ad5de79e14ab59236efd5528e497a2d6fd0e1c90",
+    "tests/unit/fixtures/posts-extraction-transition.json": "2be14f26642f28014a9df9e99df36cb6697520b158938f1b3bad23e9da44c4f5",
+    "tests/unit/fixtures/posts-extraction-transition.php": "81f4ca40d0476065754032837beba465732f8fab9e4e6b5cde9e46d35889a6b6",
+    "tests/unit/fixtures/selector-import-transition.json": "67e7fc5b92b672b8e56c6346c121f5837f9a1cb62257e31b4ae494c23c34f539",
+    "tests/unit/fixtures/shared-helper-transition.json": "1bdd69f8b930f9c744afe557800eeafd195f30eeaa9b61c9b81fff5267e426d6",
+    "tests/unit/fixtures/shared-helper-transition.php": "8a588b0216308725fb81618dbaa09067b5b9d168a026aedd4ce842d499a4e0bb",
+    "tests/unit/fixtures/untrusted-bounded-manifest-transition.json": "a86d8850ca345db59302cde04f14f1f75b1b06baf41e9f72df41db9e3954ed88",
+    "tests/unit/fixtures/untrusted-bounded-manifest-transition.php": "7f135692aedca0178dd9af8565bffe933a34a88926b6c553c05af2f47bfc517e",
+    "tests/unit/fixtures/untrusted-workflow-transition.json": "f30822cfc6eb489c3993ffaacdc89862d87780335ff64e222e04cdf5c3a5e64e",
+    "tests/unit/fixtures/untrusted-workflow-transition.php": "00745f0dc143ca9a292496113a52fe050ae62f20ca6be96ff1c02aa37274c62a"
+  }
+}

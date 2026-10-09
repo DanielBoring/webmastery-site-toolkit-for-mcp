@@ -14,6 +14,516 @@ Related strategy guides:
 
 ## QA checks
 
+### Current-source composition witness and mock-only static coverage
+
+The three-surface gate is composed onto published PR167 head
+`29f76178ceed3cf49eea02122defe7524eb2b555`, not substituted from its older
+511-path input baseline. The outer host-prerequisite transition reverses
+only additive composition and QA changes to the exact published518 bytes
+before the unchanged nsfs/net and older witnesses. Its closure includes the
+three Python scripts, three mock test files, workflows and documentation.
+
+`composer lint:php` also AST-parses every Python source under scripts/tests
+without executing inventory or provisioning. `composer test:host-prerequisites`
+runs the three fixed mock-only suites (31 inventory,22 provisioning,32 shared
+driver/projection controls). Both static QA and the existing CI safeguards entry run
+those controls; their existing scripts/tests path coverage includes every
+new file. None of these checks is native HOST acquisition or protocol
+approval. Real PHP8.0/8.4 and Docker acceptance remain new-head CI evidence.
+
+### Read-only HOST prerequisite inventory before the three QA surfaces
+
+Signed OS-package owner repair is approved only for `release-package-qa`
+(PHP8.2), `ability-contract-qa` and `full-mcp-e2e-qa` (PHP8.4) on owned
+disposable GitHub-hosted machines. Verify signatures/the approved fingerprint,
+source/archive bindings and installed owner/version/digests through fixed
+installation operations and unchanged budgets. Normal signed-package
+housekeeping may clean expired sessions for other PHP versions on those
+machines. It is authorized behavior, not observed scheduler nonexecution,
+unlimited ROOT permission, candidate application elevation or certified
+root-child cleanup. No local/shared/production or release permission follows.
+
+The package-native guard uses regular CLI `php.ini` and
+`mods-available/sockets.ini` files. It verifies the socket template's installed
+package/source version and digest plus the exact root-owned `20-sockets.ini`
+alias. Cleanup observation retains the complete query domain and distinguishes
+active workers from entries missing an executable or SAPI INI. The verified
+closed APT transaction admits authenticated incoming code and verified retained
+maintainers/triggers without treating prospective data as installed authority.
+After installation, status, owner/version/digest, loaders, generated UCF INIs,
+modules and aliases must pass before candidate eligibility. Unchanged producers
+require installed bindings; incoming producers require archive bindings.
+Direct helper execution retains installed checks and future-ELF refusal.
+Original prerequisite suites and frozen restoration guarantees
+remain required with additive current bindings. Genuine small producer fixtures
+and bounded acquisition mocks do not establish native installation or HOST success.
+
+Release Package, Ability Contract and Full MCP QA use the same
+`scripts/host-prerequisite-setup.py` driver immediately after the final host
+signed package provisioning and shared unit controls, BEFORE candidate configured PHP, custody
+probes, safeguards or runtime QA. Its required explicit selection is8.2 for
+the package job and8.4 for Contract/Full MCP; no version/environment fallback.
+The driver hardens the selected two files, then invokes
+`scripts/host-prerequisite-inventory.py` with the SAME closed selection.
+After acquisition it retains and validates a finite public projection, then
+logs exactly one `WSTM_G1G2_ACQUISITION_V1 ` marker followed by compact JSON.
+The existing Actions job log retains this line even if later runtime QA
+refuses admission with exit78. Unit-only execution never emits that marker.
+Retrieve the original job/attempt log and compare its three `sources` digests
+(`driver`, `guard`, `gate`) with the reviewed candidate; step completion alone
+is not availability evidence. Log metadata supplies run/attempt/head context,
+not a fabricated field or standalone attestation in the projection.
+
+The closed `g1g2-acquisition-v1` schema contains only the selected8.2/8.4,
+the corresponding finite job ID, canonical SHA256 strings, enumerated tool/API
+IDs, strict booleans, nulls and finite observed/refused/unknown states.
+Tool IDs are setpriv, python, php, dpkg-query, readelf, sudo and chmod.
+PHP facts use all seven function and thirteen constant IDs in the existing
+no-argument presence query, including optional fcntl/CLOEXEC IDs. False optional
+facts do not change the existing six-function/nine-constant eligibility checks.
+Python socket facts are explicitly unknown: this collector has not probed them.
+Configured PHP presence is distinct from the bare PHP original-capture flags.
+No raw paths, argv, environment, package/module/version strings, configuration,
+process data, stdout/stderr or error details are public.
+
+The guard and inventory snapshot their original private inventory, retention
+index and closed native-command observed/stdout/stderr bytes before projection.
+The last retained phase rechecks all three own-source identities and full hashes
+against its existing ledger, charging re-read bytes to that same ledger.
+It writes/fsyncs `projection-input.private.json` and its SHA256 file before
+parsing their verified readback. Each inventory/event/pipe is bound to the
+retained index's original identity, size and digest, and the original direct
+child exit plus both EOF flags. No inferred wait or mock result supplies a fact.
+`projection.public.json` is also retained and read back before closed-schema
+validation and log emission. These new files remain private; there is no upload,
+recipient, secret, new transport or export of the full inventory.
+
+The input's exact base64-expanded size is bounded before encoding. Input/hash
+and projected bytes share the last phase's existing16MiB aggregate capture
+ledger, rather than a new pool; individual records retain their existing16MiB
+bound, and the entire public line is limited to16384 bytes. All checks use the
+last phase's original absolute deadline, including before and after log flush.
+No deadline reset, retry, refunded failed debit or drain allowance is added.
+Missing APIs can yield a validated `refused` projection; malformed/partial
+source/capture bindings or retention failures instead emit only a fixed refusal,
+never a success fallback, raw diagnostic or traceback. Either failure returns78
+and prevents downstream candidate PHP. Original failure prefixes remain private.
+The availability projection is explicitly **not HOST admission, native FD
+behavior, protocol acceptance or a privileged-child cleanup certificate**.
+An optional `origin_failure` object is null unless a retained `tool-origin`
+refusal supplies its closed tool ID, subject (tool/dependency/python-module)
+and exact origin-check ID. No package, operand, path or command text is included.
+Dependency checks retain the actual top-level tool context; successful Python
+origin alone does not prove that its dependencies completed or PHP was reached.
+This diagnostic preserves the original refusal and every provenance predicate;
+it does not admit unmanaged PHP installs or infer the cause from setup output.
+The read-only gate uses fixed public Linux tool/package paths and an
+isolated, scrubbed nonroot interpreter. It never executes setpriv (including
+`--version`), sudo, a launcher, NNP, socketpair/send/receive, Docker or a daemon.
+PHP is queried for actual sockets functions/constants; requesting only `zip`
+in package PHP setup, or only posix in E2E host setup, is not evidence that
+sockets exists. No extension is installed
+automatically, and the plugin's PHP8.0 floor is unchanged.
+
+The gate pins complete root-owned non-set-ID ELF bytes, canonical parent modes,
+installed package/source-version metadata and installed-manifest digests.
+It recursively inventories declared ELF loader/library dependencies, isolated
+Python modules, and the fixed root-owned PHP CLI configuration/native modules
+before the configured PHP query. Private hashes pin actual configuration;
+arbitrary extension paths, preload/prepend scripts and ambient loader/PHP
+environment overrides are rejected. Only a finite standard module catalog
+may be queried; CLI session startup, opcode file caching, logging and Xdebug
+profiling/tracing are disabled for the inventory query. This neither installs
+nor pretends to enable missing sockets. Source archive digests and actual loaded
+module/duplicate-FD behavior are not inferred from package names or OS versions.
+
+The gate has one30s absolute clock, at most256 pinned files/256MiB,512 fixed
+read-only native commands,64KiB stdout/8KiB stderr per command and16MiB total
+command bytes; cached installed manifests are also limited to16MiB.
+Every unique tool, dependency and PHP configuration pin shares the same
+256-file/256MiB ledger. File size and a slot are reserved before acquiring
+bytes, retained on failure, and not charged again for a validated cached alias.
+Changed file, alias or parent identities invalidate that cache.
+
+Writable PHP configuration still refuses this read-only gate. A separate
+approved setup-only guard, `scripts/provision-php82-permissions.py`, runs
+immediately after signed package provisioning and before the first candidate
+configured PHP invocation, including workflow custody and safeguard probes.
+It selects ONLY one of two literal pairs: `/etc/php/8.2/cli/php.ini` and
+`/etc/php/8.2/mods-available/sockets.ini` for Release Package, or the equivalent
+two literal8.4 files for Contract/Full MCP, through one fixed system
+sudo/chmod argv to0644. Other versions, mixed pairs, missing/extra selectors
+and mismatched canonical interpreters refuse. The legacy php82 script filename
+and setup mode remain compatibility labels; one shared guard implementation
+uses the explicit approved version/job allowlist, not path/version inference.
+The Python guard never runs as root; it is not an inventory
+or runtime observer sudo permission. The failure diagnostic is also withheld
+if the combined provisioning/acquisition fails. Always-running PHP summaries
+and export verifiers are gated too. No extension is added and no PHP-n controller
+substitution is made; only the identity query uses PHP-n before hardening. These are the existing
+configuration-hardening constraints, not the complete authorization scope of
+the separately approved signed-package installation and housekeeping.
+
+The setup guard requires the owned disposable GitHub-hosted workflow interval,
+before any candidate/config writer is started; these workflow assertions are
+scope checks, not standalone credentials or proof against a hostile root
+administrator. Unexpected layout refuses. It checks root-owned nonsymlink,
+single-link non-set-ID targets with no file capabilities, canonical nonwritable
+root-owned parents and full content hashes. Original read handles remain held
+across chmod; postchecks require identical device/inode/ownership/parents/
+length/content/mtime and mode0644. Only the expected mode/ctime change is
+permitted. Sudo alone may be set-UID. Complete sudo/chmod ELF, installed
+package/source-version/manifests, declared loader dependencies and the fixed
+sudo policy module are pinned. Custom sudo.conf plugins/paths refuse;
+sudo-private loader paths are limited to the two fixed root-owned package
+directories, not arbitrary RPATH or environment paths. Actual loaded-module
+behavior and source-build provenance are not inferred.
+
+Setup owns one30s absolute admission/capture clock WITHIN the unchanged
+55-minute package or30-minute Contract/Full MCP job, not a kernel/helper pass.
+It has the same ceilings of256 pins/256MiB
+acquisition bytes,512 native commands INCLUDING at most ONE root invocation,
+64KiB/8KiB per command and16MiB aggregate command capture; cached public
+manifests remain bounded to16MiB. All repeated target hash reads debit the
+same256MiB setup ledger before bytes. The two targets are read at most four
+times (initial, prepared guard, immediate prelaunch, postcheck), at most8MiB
+total, WITHIN that ledger, not an added pool. There is no retry or fresh
+per-hop clock. The separate read-only inventory retains its original30s and
+budgets; kernel/controller/observer/helper budgets are unchanged.
+Both setup-root and read-only system launches recheck that same absolute
+deadline immediately after private reservation is retained, before Popen.
+Reservation/fsync reaching exactly the deadline refuses without a child;
+the command debit and failed originals remain retained, not refunded.
+
+Original private intent, capture and actual direct-child exit/both EOF records
+precede interpretation and postcondition success. A privileged child is never
+signaled by the guard. Deadline/retention/failure leaves original prefixes and
+unknown exit/EOF honestly; no detach/drain clock, hard wall-time guarantee or
+root-cleanup certificate is invented. The existing enclosing runner/job
+lifecycle remains responsible for administration. Full native provisioning
+execution is pending independent review and genuine existing PR-runner evidence;
+unit/mock0644 postconditions do not prove a real chmod occurred.
+
+Original0600 command streams/intents precede parsing in an
+exclusive0700 `wstm-prerequisite-*` child of the owned runner custody root.
+Failures retain original prefixes and observed exits/EOFs where available;
+missing tools, package mismatch, sockets/constants, changed identities,
+over-limit output, deadlines or retention failures close the gate with exit78.
+Synchronous I/O/scheduling still cannot be certified as hard-preemptible.
+
+Public output is a finite summary only. Full inventories, native output and
+private paths are not uploaded to public artifacts or printed. Originals are
+job-local; durable encrypted retrieval requires the existing separately bound
+private-custody mechanism, not an automatic plaintext upload or key generation.
+An inventory pass is not HOST admission, remote-wait authority, FD isolation,
+root cleanup, package/release acceptance or a source-transition proof. Genuine
+runner evidence must not be replaced by WSL tool hashes or unit mocks.
+
+Portable controls:
+`python -B -m unittest discover -s tests/unit -p test_host_prerequisite_inventory.py -v`.
+Provisioning and shared-driver selectors are
+`test_provision_php82_permissions.py` and `test_host_prerequisite_setup.py`.
+CI uses the shared driver's closed `units 8.2` or `units 8.4` entry to load
+exactly these three test files; that mode never runs provisioning/acquisition.
+These cover actual missing PHP APIs, tool/parent/link/origin/hash refusal,
+unsafe inputs/configuration, original-prefix retention, finite output, exit/
+EOF failure, deadline exhaustion and closed public summaries.
+
+### Opt-in read-only system observation on disposable CI hosts
+
+Disposable GitHub-hosted source, package and PHP-floor QA entries explicitly set
+`WSTM108_HOST_INSPECTION=system-readonly-v1`. Unset preserves native unprivileged
+reads; an unknown value refuses admission. Do not enable it on shared, live or
+self-hosted systems. Inspection does not provision fixtures, reset a stack,
+grant a lease or bypass any admission predicate.
+
+The controller, PHP and private capture remain nonroot. Verified absolute,
+root-owned, non-group/world-writable system tools alone run through
+`/usr/bin/sudo -n --user=root --`: a fixed root `/usr/bin/timeout` supervises
+`/usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C` and one fixed `/usr/bin/find -P`,
+`/usr/bin/stat` or `/usr/bin/head` read of the validated Docker PID's descriptors,
+mount namespace or mount table. Tools require a matching native ELF64
+little-endian Linux/System-V x86-64 or AArch64 header; only sudo may have set-ID
+bits. No candidate PHP, Python, shell or script is elevated. A fixed nonroot
+system timeout also bounds the sudo-entry transport.
+
+The positive PID/root hint, process/start identity, canonical root-owned socket,
+unique listening inode, descriptor ownership, namespace identity, equal complete
+mount tables and before/after identities remain mandatory. Missing tools, sudo
+denial, partial/over-limit bytes, stderr, nonzero exit, deadline expiry and races
+refuse without a success fallback. Stdin is closed and environments contain
+only fixed `PATH` and `LC_ALL`; the native env entry clears sudo-added variables.
+
+Private originals precede parsing. An exclusively reserved observation child
+uses the existing owned-child transition; helpers retain its handle and mode,
+while candidate child environments receive neither. Release checks the complete
+original inventory, identities, hashes, lengths, fixed argv and parsers.
+Incomplete or changed observations retain private evidence and block release.
+Public diagnostics expose only closed reasons, never raw process/filesystem data.
+
+One capture deadline starts before reservation/tool checks and covers streams,
+exit/EOF, persistence and identity completion. Refusal uses nonblocking PHP
+process-resource disposal, not a blocking reap or a signal to a possibly reused
+PID; fixed system timers remain intact. These deadlines do not certify
+root-child cleanup or hard preemption of synchronous filesystem/kernel I/O.
+Late completion cannot be accepted, but blocked storage operations can return
+after the deadline. Parser and nonprivileged transport adapters are not native
+sudo, Docker admission, custody, owned runtime or required-check acceptance.
+
+The additive exact-byte outer projection restores the reviewed current-main
+generation before its unchanged historical bridge. It does not regenerate any
+accepted ledger or change original dependency hash assertions.
+
+Full source/package QA requires a separately approved bare owned stack before
+fixture execution. Read-only admission does not provision or tear down that
+stack. The harness checks native admission before clearing artifacts or managed
+reset, then checks the changed inventory again before installing fixtures or
+arming their cleanup. Contract-only lifecycle behavior remains separate.
+
+### Kernel mount verification
+
+The parser retains the exact decoded root as opaque metadata only for the
+reviewed joint pair: type exactly `nsfs`, root `net:[inode]` with canonical
+positive decimal inode at most 4294967295. Both parser modes use the same
+bounded, 32-bit-safe recognizer as the relative-root diagnostic. Every other
+root still uses the original canonical path validator. Mount points and caller
+lookup paths never receive this exception. No row, key or table ordering is
+changed, and structural decoding, EOF, IDs, optional tags and limits still apply.
+
+This is not physical authority. Both coordinate implementations keep their
+ext4/tmpfs gate before joining a root with a suffix. Nested nsfs mounts under
+authority or source remain in the physical closure and refuse as unsupported;
+they are not filtered out. Whole-table comparisons, duplicate-point visibility,
+descriptor mount/device/inode checks, namespace/process identity, race checks,
+capture custody and shared budgets remain mandatory. Parsed/model rows never
+mint native proof. Tests cover exact minimum/maximum metadata rows, all rejected
+near-matches, unchanged lookup paths, unsupported coordinates in both models,
+nested closure, complete-table equality and duplicate visibility.
+
+For the original relative-root row only, failure diagnostics distinguish
+`mount-root-net-true`, `mount-root-net-false` and `mount-root-net-unknown`.
+True requires the complete joint predicate: the existing row's exact type is
+`nsfs`, its decoded root is a canonical positive `net:[inode]` token, and the
+decimal inode is at most 4294967295. Decimal string comparison is 32-bit safe.
+False is a known nonmatch, not a filesystem inference; missing, malformed or
+inconsistent row context and unverifiable native birth remain unknown. The
+original parser row is bound through five exact argument-free native source
+frames and the existing private birth/full-trace custody, not a caller Boolean
+or receipt. The longest new label is 22 ASCII bytes. No operand is reflected.
+The failure helper still refuses for all three outcomes. A genuine reviewed
+true pair is now retained by the parser before calling the path validator, so
+it produces no refusal diagnostic. A reflected helper or forged true frame
+cannot establish attribution. False/unknown pairs still reach the unchanged
+path refusal. No physical-coordinate allowance, new read, grant or privilege
+transition accompanies the metadata exception.
+
+Decoded mount-root refusals refine only the exact, source-bound parser caller.
+The original host canonical predicate is evaluated once, unchanged; its success
+return and all admission decisions remain unchanged. Failure-only sites report
+ordered empty, relative or NUL prefixes; the relative case reports the joint
+fact above instead of the generic legacy `mount-root-relative` label.
+Otherwise `mount-root-rx-c`, `-s`, `-d`, `-cs`, `-cd`, `-sd` or `-csd` identify
+the exact combination of control-byte, double-slash and dot-component matches,
+without ranking overlapping matches or disclosing matched bytes. Inconsistent
+classification or unverifiable native birth remains `unknown`. Other reviewed
+callers retain their IDs. These diagnostics do not identify a filesystem,
+namespace owner, mount row or physical coordinate and cannot establish that a
+hosted root uses cgroup namespace semantics. A canonical host-parser root longer
+than 4096 remains accepted by that parser; the separate physical-coordinate
+limit is unchanged. The longest refined ID is 19 ASCII bytes; existing scalar
+and terminal-channel limits remain 32 and 256 bytes.
+
+Terminal `noncanonical-path` diagnostics distinguish decoded mount roots/points,
+legacy source/input/physical callers and kernel selected/input/source/held/path/
+chunk callers. Kernel IDs end in `length` or `canonical`; only the existing
+model length/canonical conjunction is split, in its original evaluation order.
+Neither validator accepts new paths. A valid decoded root longer than 4096
+and a shorter valid root whose computed backing coordinate exceeds 4096 both
+remain reproducible model refusals. Both computed-coordinate controls report
+`kernel-physical-length`; that ID distinguishes the predicate, not the root
+length or private bytes, and neither control attributes a hosted failure.
+
+The original controller entry sets `zend.exception_ignore_args=1` once and
+requires the exact read-back value. Classification requires weak object-identity
+custody from argument-free exception creation, exact trusted guard/caller
+file/line/class/function metadata and a matching terminal classification.
+Unverified settings, foreign entries, unfamiliar frames, altered traces and
+unregistered objects produce `unknown`; they do not authorize admission.
+No argument/object/message/path values are serialized. Each terminal channel's
+combined old witness and new scalar payload is at most 256 bytes, and each
+scalar is at most 32 bytes. Both use the existing terminal writer, without
+additional evidence reads, files, budgets, retries, grants or cleanup exemptions.
+The passive classifier resides in the already-hashed topology source file;
+it does not add a provenance leaf, capture file or source-copy dependency.
+
+One ordinary controller invocation exits after its one terminal failure.
+GitHub jobs and their `qa` steps have separate output channels. A repeated
+report nevertheless overwrites the scalar with `unknown` when unassignable;
+the formatter never pairs a noncanonical callsite with a different reason.
+Original controller stdout/stderr remain exclusively retained in the private
+bootstrap child before PHP starts; public diagnostics do not upload those
+originals. The formatter and its eight ENV-only steps cannot replace exit 78
+or any original runtime/release gate.
+
+The same provenance-gated classifier also maps every existing
+`native-coordinate-prerequisite` guard, including constant-default inherited
+owner guards and direct serialization refusals. IDs distinguish platform,
+scope/reservation, safe-exec schema/process/credentials/current-capsets/lane,
+deadlines, executable checks, parent/child coherence and inherited fd5 custody.
+Compound predicates and loop bodies retain one guard ID: an ID is not a report
+of which credential, capset, path, loop member or subcondition failed. The
+public reason alone is not unique and cannot establish an unsafe credential
+configuration. Caller files and invocation lines must match the finite reviewed
+source bindings. Direct serialization guards have finite reserved IDs, but no
+current reviewed source caller: they remain `unknown` rather than accepting a
+new or builtin caller merely because it points somewhere inside a source file;
+uninitialized authority subprocesses and non-source calls remain `unknown`.
+No prerequisite predicate or control flow, launcher, credential transition,
+evidence read or authority was changed.
+
+Synthetic outer diagnostic controls bind the controller's fixed output fd9
+to their own exclusive private0600 capture, independently of stdout/stderr.
+Untyped synthetic terminal exceptions must emit exactly the current
+`untrusted_admission_callsite_v1=unknown` line there; cases that never invoke
+the terminal must leave it empty. Unknown is not mapping proof. Extra bytes,
+known IDs without provenance, private sentinels or typed witnesses are refused.
+Existing empty-stderr, original-exit, reader-noise, privacy and I/O-fault
+assertions remain unchanged. This prevents incidental inherited descriptors
+from routing a finite public diagnostic into another synthetic channel.
+Guard coordinates are compiler-specific, not line ranges or aliases: PHP8.0's
+exact closing-token line is mapped to the reviewed opening-token guard; later
+engines retain the exact opening-token binding. Tests verify both coordinates
+against source tokens, reject the other compiler's multiline coordinate and
+keep unchanged full native trace/creation custody checks.
+
+Strict `mounts()`, `coordinate()` and `outside()` models still refuse stacked
+tables without live native evidence. Structural parsing preserves all rows and
+their order; it is not admission. Native stacked admission observes `/` and
+every duplicate mountpoint with a fixed source-bound nonroot Python `O_PATH`
+holder. Independent PHP reads of the actual child's status, start identity,
+task set, namespace, held fdinfo, device/inode and point anchor select the exact
+kernel mount ID. There is no first-row, maximum-ID or lexical fallback.
+
+Before Python exec, the existing actor must have matching nonroot real,
+effective, saved and filesystem credentials, exact supplementary groups and
+zero effective/permitted/inheritable/ambient capabilities. The kernel must
+already enforce either `NoNewPrivs=1` or a zero bounding set. The latter lane
+also requires a pinned ordinary non-set-ID interpreter. Missing or malformed
+fields refuse before launch; no capability, privilege or namespace changes
+are made. This does not enable no-new-privileges globally or alter the existing
+fixed read-only sudo scope. Child credentials are independently verified before
+target paths are sent and at every live boundary.
+
+Visibility-only observations accept any filesystem or inode type and never
+read contents. Physical authority/source checks retain ext4/tmpfs coordinates
+and reacquire the complete checkout, Docker storage, bind/volume and relevant
+nested mountpoint closure. Same-device whole, root-relative and nested bind
+aliases remain exposures even when mount IDs differ. File sources expose only
+their exact coordinate. Hidden points must be observable; they are not inferred
+invisible from row order or location.
+
+Each controller action shares at most eight seconds of charged holder work,
+eight launches and sixteen MiB of retained originals. A contiguous native
+verification scope pins the first existing observation deadline and clips it
+to any governing original discovery deadline. Later admits only tighten it;
+the additional 64-read ceiling does not reset within that scope. Chunks,
+shutdown and receipt persistence consume the same allowance. Trusted helpers
+receive an up-front debited share through an original mode-0600 read-only fd 5,
+bound to parent PID/start/namespace, action, context, source and private custody.
+There is no reported-unused refund. Candidate captures replace fd 5 with
+`/dev/null` and strip kernel metadata.
+
+A private once-per-original-pass marker is set before helper reservation work,
+not inferred from the remaining parent-slot count. Even a partial reservation
+failure consumes the attempt: retry cannot charge another slot or redistribute
+the remaining allowance. Interleaved repeat requests and the actual private
+launch engine used by parent collect dispatch retain the original query count.
+Only the existing controller query-pass lifecycle resets this marker.
+
+Discovery is not a whole-runner timeout. The live holder finishes before a
+long runner; original post-capture admission supplies its own existing clock
+but uses the same remaining allocation. Controller returned-state and terminal
+checks use the pre-reserved remainder. Exhaustion refuses, including receipt
+or finalization failure. Direct stacked calls without a source-owned governing
+scope refuse instead of minting an implicit per-method budget.
+
+Input/output/kernel originals are independently bound, hashed and flushed
+before parsing and checked again on completion. Final live credential/fd
+checks, known exit zero, EOF and a durable receipt precede inventory acceptance.
+Failed intent/originals remain private. Receipts, JSON, booleans, callbacks and
+retained nonces cannot construct a live session. All collectors and final
+capture checks finish before final companion unlink; nothing new runs after
+successful commit. Synchronous filesystem limits remain cooperative.
+
+Portable controls (no native acceptance):
+
+```text
+php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist tests/unit/UntrustedKernelMountTest.php
+python -B -m unittest discover -s tests/unit -p test_kernel_mount_holder.py -v
+```
+
+Current synthetic-admission fixtures match the complete admission body exactly,
+including the stacked-mount observation guard and kernel visibility probe.
+LF/CRLF, reversible substitution, source-binding, already-installed and Windows
+refusal controls remain separate from native acceptance. Removing the guard or
+changing the probe must refuse substitution, not select a looser source model.
+The admission-only pipeline assertion requires collector finalization before
+stream verification and return; the CI safeguard assertion includes the Python
+holder controls in its exact command sequence.
+
+Completed capture registration uses a private named collector method and an
+exact class/function owner check, not PHP's version-dependent closure backtrace
+name. Portable owner controls run on PHP 8.0 and newer without kernel reads or
+`fsync`; they verify bookkeeping and rejection of arbitrary scoped closures,
+external receipt/caller data, changed custody and duplicate registration.
+They cannot establish live proof. Run the same controls on PHP 8.0 and PHP 8.4,
+then separately rerun the genuine PHP 8.4 unique boundary below to verify the
+actual holder-to-durable-finalization path.
+
+Native definitions must be run separately by the owner of an already-approved
+nonroot Linux environment. Supply a fresh, pre-existing, empty mode-0700 owned
+directory and the existing approved inspection environment:
+
+```text
+php tests/native/kernel-mount-boundary.php ABSOLUTE_PRIVATE_DIRECTORY unique
+php tests/native/kernel-mount-boundary.php ABSOLUTE_PRIVATE_DIRECTORY unsafe-exec
+```
+
+Use separate directories and existing credential lanes; do not manufacture a
+lane, install tools or change privileges for these controls. `unique` exercises
+the current live holder and original controller query clock, independent proc
+checks and complete private receipt. It refuses a stacked fixture rather than
+claiming stacked coverage. `unsafe-exec` requires genuine pre-existing unsafe
+credentials and verifies refusal with empty holder transport before exec.
+Neither definition calls Docker, proves daemon admission or runs candidate QA.
+
+Native acceptance still requires independently observed proc/sysfs identity
+nodes, genuine pre-existing stacked-positive fixtures (including a visible
+row neither first nor maximum, hidden parents and same-device aliases), races
+and exact current source/floor/original-ZIP consumers. Missing genuine stacks
+block that acceptance, not portable controls. Required hosted Contract, Full
+MCP and package checks remain separate; a different exit or synthetic success
+does not replace them. Existing historical proof generations remain immutable;
+the publisher must compose a new additive outer source seal before running
+historical source-bound safeguards.
+
+Native discovery and original floor selection use the existing Linux pidfd
+supervisor: ten seconds per query, at most 64 queries/120 seconds per discovery
+pass, and four MiB per original stream. Captures and failures remain private;
+closed diagnostics never publish exception text or originals. Filesystem
+verification is cooperative, not a hard storage-I/O deadline. The floor
+selector preserves original config/hash and conflicting inputs through the
+bootstrap. Source-only floor selection is incompatible with original-ZIP
+package QA, including offline package mode; its early refusal is captured
+before any build/extraction. Successful selection never substitutes for native
+admission, fixture authority, cleanup leases, custody or publication approval.
+
+The synthetic native-authority exception observer disables all observers before
+attempting its closed location record. A failed writer reports once and rethrows
+the original Throwable into PHP's default fatal handler, retaining the native
+255 exit and original private trace rather than delegating into another observer.
+This test-only behavior does not change production diagnostic channels.
+
 | GitHub Actions check | Command | What it proves | When it should run |
 | --- | --- | --- | --- |
 | 1 - Static QA | `composer qa:static` | PHP files parse, WordPress Coding Standards pass, PHPStan level 5 passes against reviewed baseline debt with working regression/ratchet guards, Composer dependencies have no known locked advisories, the E2E manifest is structurally valid, security-sensitive QA policy checks pass, and the diff has no whitespace errors. | Every PR and every push to `main`. |
@@ -24,6 +534,27 @@ Related strategy guides:
 | 6 - Compatibility QA | `.github/workflows/compatibility-qa.yml` | Scheduled/manual Docker QA discovers official upstream releases, isolates pinned and candidate WordPress/MCP Adapter combinations, and promotes passing versions through a maintainer-reviewed PR while exercising ability contracts, MCP transport, and debug-log cleanliness. | Weekly schedule, manual dispatch after an upstream release, release-candidate investigation, and upstream-breakage triage. |
 
 Static QA runs the full toolchain on PHP 8.0 and syntax checks on PHP 8.4; Unit Tests run on both versions. Each workflow has a stable aggregate result. `Docker QA gate` reports successful change detection and the required Docker results; failure-induced skips cannot pass it. A separate workflow lint check runs actionlint, ShellCheck, and zizmor without making local PHP QA depend on Docker.
+
+The `2 - Unit Tests` gate also requires a separate ten-minute Ubuntu 24.04
+synthetic controller-component job using preinstalled Python 3.11 or newer.
+`scripts/test-controller-components.py` fails unsupported/denied pidfd hosts
+rather than accepting skipped tests. Its result ledger requires the exact ten
+component IDs to start, finish and pass; skips, expected failures, substitutions
+and partial execution fail. Eight additional in-process harness regressions
+check that accounting and scoped retention; they are not part of the ten
+controller cases and do not launch children.
+
+The job reserves a fresh mode-0700 namespace under runner temporary storage.
+The test class, not the launcher, creates its absent capture child. Always-run
+retention copies only allowlisted synthetic regular files, hashes their original
+bytes and records intentional symlinks as metadata without following targets.
+The synthetic bundle/result ledger is retained for seven days even when tests
+fail. File/count/byte retention limits are synthetic CI safeguards, not the
+WordPress benchmark's payload or memory budgets. This job neither starts
+WordPress/Docker nor invokes the benchmark entrypoint, reads private producer
+directories, or proves durable private custody, receiver completion, floor,
+transport or original-package correctness. Local `composer qa` includes Python
+AST and mock-only prerequisite controls, but no native provisioning or Docker dependency.
 
 Database privacy's three real responses retain exact full-payload metric/order parity. To avoid comparing opposite sides of an existing transient's natural expiration, the disposable runner first admits a read-only 15-second expiration horizon, bounded by one shared 90-second run deadline. It uses production timeout conversion and the strict expiration boundary, records no transient identities/values, and never retries failed payloads. Exhaustion, SQL failure, clock/window overrun, newly changed expirations, and other metric drift remain failures with original responses retained. Synthetic expiration tests supplement, rather than replace, the genuine native/HTTP original-package proofs described in `tests/e2e/README.md`.
 
@@ -52,6 +583,11 @@ The initial reviewed baseline contains 35 diagnostics in 21 entries across nine 
 A green run means no diagnostics beyond that reviewed debt, not that these findings are fixed or that all mixed input/output types are sound. The baseline matches counts per message/identifier/file, not line or expression identity: replacing a removed error with the same error elsewhere in the same file can evade the count ratchet and still needs human diff review. This tooling change does not validate ability schemas, enums, output contracts, or runtime permissions.
 
 The PHPStan 2.2.15 update removes the now-unmatched sitemap offset entry. With `treatPhpDocTypesAsCertain: false`, the updated regex output inference no longer reports the null-coalescing fallback as redundant. The source fallback is unchanged; this is a baseline compatibility adjustment, not a runtime fix or proof that the sitemap debt was resolved.
+
+The current-main integration also retains the branch's later post-extraction
+debt reductions: the pinned 2.2.15 baseline remains exactly 17 entries / 30 errors.
+The initial table above is historical, not the current ignore inventory. Neither
+the removed sitemap offset nor removed posts entries are restored by the merge.
 
 ### Reducing debt
 
@@ -249,7 +785,14 @@ At the September 17, 2026 verification, `main` at `3dae8aa` pinned MCP Adapter 0
 
 ### Runtime coverage limitation
 
-The advertised plugin minimum remains PHP 8.0. Syntax and unit tests exercise that version, but the supported-floor WordPress Docker lane uses PHP 8.1. This is a documented integration-coverage gap, not authorization to raise the plugin minimum or claim PHP 8.0 WordPress integration was tested. Add a maintained PHP 8.0 integration fixture or make a separate support-policy decision before changing that claim.
+The advertised plugin minimum remains PHP 8.0. Syntax and unit tests exercise that version, but the `wp69-php81-compatibility` WordPress Docker lane uses PHP 8.1 and is not actual PHP 8.0 floor proof. The candidate verifier defaults to strict `php80-floor`; the hosted lane explicitly uses strict `php81-compatibility` and reports the remaining minimum-runtime requirement. Proof-tool hosts requiring `fsync` need PHP 8.1+, independently of the plugin minimum. This is an integration-coverage gap, not authorization to raise the minimum, weaken evidence checks or invent an unsupported Docker tag. Add a maintained genuine PHP 8.0 WordPress integration fixture with separately supported proof hosts before claiming that floor.
+
+The exact-candidate job uses the sibling jobs' pinned PHP 8.4/POSIX proof host
+and canonical interpreter binding independently of the WordPress image. Its
+full E2E step supplies `runner.temp` to the existing authority bootstrap, which
+still requires a canonical owned root, exclusive private reservation and actual
+topology/custody admission. Wiring or synthetic checks do not establish those
+runtime prerequisites or the separate PHP 8.0 floor.
 
 PHPCompatibilityWP's available stable rules depend on the older PHPCompatibility engine. Installing those rules alone does not establish PHP 8.4 compatibility. Runtime evidence remains necessary; a future compatibility-sniff dependency must be reviewed for its actual supported language versions.
 

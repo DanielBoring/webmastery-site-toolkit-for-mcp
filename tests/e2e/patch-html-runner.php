@@ -215,7 +215,9 @@ final class WSTM115_Patch_HTML_Tests {
 		$summary = array(
 			'wordpress_version' => get_bloginfo( 'version' ),
 			'php_version' => PHP_VERSION,
-			'source_sha256' => hash_file( 'sha256', dirname( __DIR__, 2 ) . '/includes/class-posts.php' ),
+			'source_sha256' => hash_file( 'sha256', dirname( __DIR__, 2 ) . '/includes/class-content-patch.php' ),
+			'access_sha256' => hash_file( 'sha256', dirname( __DIR__, 2 ) . '/includes/class-post-access.php' ),
+			'writes_sha256' => hash_file( 'sha256', dirname( __DIR__, 2 ) . '/includes/class-post-writes.php' ),
 			'test_cases' => count( $this->cases ),
 			'passed' => count( $this->cases ) - $failed,
 			'failed' => $failed,

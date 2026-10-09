@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Performance_Status {
 
-	private const KNOWN_PAGE_CACHE_PLUGINS = array(
+	private const KNOWN_PAGE_CACHE_PLUGINS = [
 		'wp-super-cache/wp-cache.php'                       => 'WP Super Cache',
 		'w3-total-cache/w3-total-cache.php'                 => 'W3 Total Cache',
 		'wp-rocket/wp-rocket.php'                           => 'WP Rocket',
@@ -19,106 +19,102 @@ class Webmastery_MCP_Performance_Status {
 		'hummingbird-performance/wp-hummingbird.php'        => 'Hummingbird',
 		'sg-cachepress/sg-cachepress.php'                   => 'Speed Optimizer',
 		'wp-cloudflare-page-cache/wp-cloudflare-super-page-cache.php' => 'Super Page Cache for Cloudflare',
-	);
+	];
 
 	public static function register() {
-		wp_register_ability( 'webmastery-site-toolkit-for-mcp/performance-status', array(
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/performance-status', [
 			'label'               => 'Performance Status',
 			'description'         => 'Inspect WordPress caching and performance-related configuration including object cache, page cache plugins, memory limits, revision limits, autosave interval, and script concatenation.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
-			'execute_callback'    => array( self::class, 'execute' ),
-			'permission_callback' => array( self::class, 'permission' ),
-			'meta'                => array(
-				'annotations' => array( 'readonly' => true, 'destructive' => false, 'idempotent' => true ),
-				'mcp'         => array( 'public' => true, 'type' => 'tool' ),
-			),
-		) );
+			'execute_callback'    => [ self::class, 'execute' ],
+			'permission_callback' => [ self::class, 'permission' ],
+			'meta'                => [
+				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
 	}
 
 	public static function permission() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
-		}
-
-		return true;
+		return Webmastery_MCP_Permissions::check( 'manage_options' );
 	}
 
-	public static function execute( $input = array() ) {
-		return array(
+	public static function execute( $input = [] ) {
+		return [
 			'success' => true,
-			'data'    => array(
+			'data'    => [
 				'object_cache'        => self::get_object_cache_status(),
 				'page_cache'          => self::get_page_cache_status(),
 				'memory'              => self::get_memory_status(),
 				'post_revisions'      => self::get_post_revisions_status(),
 				'autosave'            => self::get_autosave_status(),
 				'concatenate_scripts' => self::get_concatenate_scripts_status(),
-			),
-		);
+			],
+		];
 	}
 
 	private static function get_object_cache_status() {
 		$dropin_path = WP_CONTENT_DIR . '/object-cache.php';
 
-		return array(
+		return [
 			'external_object_cache_active' => wp_using_ext_object_cache(),
 			'object_cache_dropin_present' => file_exists( $dropin_path ),
-		);
+		];
 	}
 
 	private static function get_page_cache_status() {
 		$active_plugins = self::get_active_plugin_basenames();
-		$plugins        = array();
+		$plugins        = [];
 
 		foreach ( self::KNOWN_PAGE_CACHE_PLUGINS as $basename => $name ) {
 			if ( in_array( $basename, $active_plugins, true ) ) {
-				$plugins[] = array(
+				$plugins[] = [
 					'name'     => $name,
 					'basename' => $basename,
-				);
+				];
 			}
 		}
 
-		return array(
+		return [
 			'known_page_cache_active'       => ! empty( $plugins ),
 			'active_known_plugins'          => $plugins,
 			'advanced_cache_dropin_present' => file_exists( WP_CONTENT_DIR . '/advanced-cache.php' ),
-		);
+		];
 	}
 
 	private static function get_memory_status() {
 		$server_memory_limit = ini_get( 'memory_limit' );
 
-		return array(
+		return [
 			'wp_memory_limit'     => defined( 'WP_MEMORY_LIMIT' ) ? (string) WP_MEMORY_LIMIT : null,
 			'server_memory_limit' => false === $server_memory_limit ? null : (string) $server_memory_limit,
-		);
+		];
 	}
 
 	private static function get_post_revisions_status() {
 		$value = self::get_constant_value( 'WP_POST_REVISIONS' );
 
-		return array(
+		return [
 			'defined' => defined( 'WP_POST_REVISIONS' ),
 			'value'   => $value,
-		);
+		];
 	}
 
 	private static function get_autosave_status() {
-		return array(
+		return [
 			'defined'          => defined( 'AUTOSAVE_INTERVAL' ),
 			'interval_seconds' => defined( 'AUTOSAVE_INTERVAL' ) ? absint( AUTOSAVE_INTERVAL ) : 60,
-		);
+		];
 	}
 
 	private static function get_concatenate_scripts_status() {
 		$value = self::get_constant_value( 'CONCATENATE_SCRIPTS' );
 
-		return array(
+		return [
 			'defined'  => defined( 'CONCATENATE_SCRIPTS' ),
 			'value'    => $value,
 			'disabled' => defined( 'CONCATENATE_SCRIPTS' ) && ! (bool) CONCATENATE_SCRIPTS,
-		);
+		];
 	}
 
 	private static function get_active_plugin_basenames() {

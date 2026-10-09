@@ -16,7 +16,7 @@ See the [Software Development Lifecycle](sdlc-overview.md) for where CI/CD conne
 
 | Workflow | Primary trigger | Purpose |
 | --- | --- | --- |
-| `1 - Static QA` | `pull_request`, `push`, `workflow_dispatch` | PHP lint, WPCS, PHPStan, Composer audit, E2E manifest validation, security QA validation, and diff whitespace checks. |
+| `1 - Static QA` | `pull_request`, `push`, `workflow_dispatch` | PHP/Python AST lint, mock-only prerequisite controls, WPCS, PHPStan, Composer audit, E2E manifest validation, security QA validation, and diff whitespace checks. |
 | `2 - Unit Tests` | `pull_request`, `push`, `workflow_dispatch` | Fast PHPUnit helper tests. |
 | `3-4 - Docker QA` | `pull_request`, `push`, `workflow_dispatch` | Runtime-impact detection, Ability Contract QA, Full MCP E2E QA, failure artifacts, and PR comment summaries. |
 | `5 - Release Package QA` | release-impacting `pull_request`, `workflow_dispatch` | Contract + transport Docker QA, package validation, and WordPress Plugin Check without publishing. |
@@ -26,6 +26,103 @@ See the [Software Development Lifecycle](sdlc-overview.md) for where CI/CD conne
 | Workflow lint | `pull_request`, `push` to `main`, `workflow_dispatch` | Checks Actions syntax, shell scripts, and workflow security with pinned lint tools. |
 
 ## Pull request policy
+
+### Signed-package HOST interpreter repair
+
+The approved repair scope is `release-package-qa` with PHP8.2 and
+`ability-contract-qa`/`full-mcp-e2e-qa` with PHP8.4 on owned disposable
+GitHub-hosted machines. Use the approved signed OS-package source and
+fingerprint; verify signatures, source/archive bindings and installed
+owner/version/digests. Preserve the fixed installation operations, original
+budgets, nonroot repository controllers and fail-closed permission/inventory
+chain. Package provisioning precedes the fixed CLI `php.ini` and
+`mods-available/sockets.ini` chmod hardening step, socket-template/alias
+verification, inventory and retained public projection. These jobs do not use
+setup-php to replace package-native configuration or the selected executable.
+
+Normal package housekeeping, including background expiration of other PHP
+versions' sessions, is authorized only there. Authorization is not a scheduler
+nonexecution observation, permission for arbitrary ROOT/service/broker work,
+candidate application elevation or a certified root-child cleanup. Local,
+shared/production hosts, other jobs and the 3.0 release receive no new grant.
+The [security strategy](security-strategy.md#approved-signed-package-php-repair-and-configuration-hardening)
+defines these separate boundaries.
+
+Required runtime jobs remain mandatory. The original three mock-only
+prerequisite suites and focused source-local provider/configuration controls run
+before provisioning without local native commands. The genuine cleanup loop
+uses the full observed query domain with active/inactive worker guards, not
+selected-version substitution. A closed authenticated APT transaction may
+bootstrap or replace PHP through approved signed maintainers and verified
+retained scripts/triggers; prospective code is transaction authorization, not
+installed authority. Refresh installed provenance, loaders, UCF configuration,
+modules and aliases after APT and before candidate eligibility. Incoming and
+unchanged query producers retain distinct archive/installed bindings. Keep
+additive current source bindings and
+unchanged frozen predecessor maps. Retain failure originals and unknown native
+facts; local source/data controls do not establish a passing new-head HOST run.
+
+### Scoped system observation on disposable hosts
+
+Approved disposable GitHub-hosted authority entries explicitly select
+`WSTM108_HOST_INSPECTION=system-readonly-v1`; shared/live/self-hosted runners
+must not select it. The [QA strategy](qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts)
+defines the fixed sudo/system-read boundary, native executable/target checks,
+private originals and supervision limitations. Controller/capture/PHP remain
+nonroot, candidate code is never elevated, and inspection changes no grants,
+fixtures, permissions, namespaces or mounts. All actual required runtime gates
+remain mandatory; synthetic adapters and older CI cannot substitute. Preserve
+the reviewed exact-byte outer projection ahead of every frozen seal.
+
+### Selected Unix listener classification
+
+Exact-b5 PR-event run `36817024600` reported closed refusals:
+E2E job `110224240488` (`topology/daemon-descriptors-inaccessible`) and Contract
+job `110224240544` (`topology/ambiguous-selected-listener`). These witnesses do
+not expose private hosted rows or establish their contents.
+
+A separate owned, nonroot Linux socket probe (read-only, network-none; no daemon
+or site access) reproduced a parser assumption: one canonical pathname may have
+both a listening stream row (`Flags=00010000`, `Type=0001`, `St=01`) and a normal
+accepted connected stream row (`00000000`, `0001`, `03`). The controller now
+classifies only these two exact shapes, counting only listening inodes. It still
+requires exactly one listener, rejects malformed/unknown selected-path records,
+and preserves canonical alias/realpath, bounded reads, PID-hint socket-fd ownership,
+descriptor readlink/access, process identity/start time and namespace continuity.
+Synthetic differential tests show the old predicate rejects the normal pair;
+they do not prove this pair occurred in hosted Contract evidence.
+
+The independent descriptor-access refusal remains blocked. No privileges,
+runtime configuration, grants, custody, deadlines or workflow changes are part
+of this correction. Parser validation is not WordPress/daemon admission.
+
+### Bounded unit and safeguard budget
+
+Both PHP 8.0/8.4 unit jobs are configured with a bounded 60-minute limit, retaining
+the original matrix, `fail-fast: false`, every command, permissions and aggregate
+gates. This new budget is not CI-verified until the next genuine PR run.
+
+The evidence differs by environment and scope:
+
+- Both original 1d1f hosted unit jobs completed their unit suites, then were
+  cancelled during safeguards with explicit 15-minute maximum-execution-time
+  annotations. They do not establish a completed safeguard duration.
+- The parent measured all 14 original safeguard commands, including Python, on
+  frozen 1d1f under native PHP 8.4: all passed in 16m38s, including release-runtime
+  700s and untrusted-stage 284s. That local measurement used a 2-CPU/3-GiB,
+  network-none, read-only image without a Docker socket.
+- Original 1d1f hosted Release Package job `110204613200` completed its
+  seven-command "Test release safeguard regressions" subset successfully from
+  03:27:55 to 04:04:33: 36m38s. Only that subset was measured; subsequent actual
+  package QA immediately refused with exit 78 and no known closed reason.
+
+The hosted subset already exceeds 30 minutes, so the native measurement cannot
+justify that budget. The bounded 60-minute choice allows the observed 36m38s
+subset, about 2m24s units/setup and headroom for remaining controls without
+skipping any checks. It is a budget decision, not proof that a complete hosted
+unit/safeguard job will finish within it. Release job limits, runtime deadlines
+and admission policies remain unchanged. None of these timings establishes
+WordPress/runtime/custody acceptance or explains the unknown refusal.
 
 All pull requests should pass:
 
@@ -68,6 +165,52 @@ The production environment, main-history/PR rules, and tag protections were last
 
 ## Workflow permissions
 
+### Closed admission refusal diagnostics
+
+Every runtime `qa` step in Docker E2E, release/package QA and compatibility
+jobs is followed by an `always()` diagnostic step. It passes only the existing
+`untrusted_admission_failure` output via `WSTM108_ADMISSION_FAILURE` and the
+finite `untrusted_admission_callsite_v1` scalar via
+`WSTM108_ADMISSION_CALLSITE_V1`, never
+interpolates that value into a shell command, and uses the topology allowlist
+already approved by the controller. The formatter accepts only a two-string
+`phase`/`reason` JSON object (at most 256 bytes, unescaped members), with phase
+`topology` and an approved refusal reason. Duplicate or extra keys, foreign
+phases/reasons, malformed or oversized payloads produce a fixed invalid message;
+absent output produces a fixed unavailable message. No raw payload, private
+stream, authority path or exception is logged or uploaded.
+
+The callsite scalar accepts only the fixed controller-owned IDs (32 bytes
+maximum). Missing, foreign or malformed values become `unknown`; a known site
+is displayed only alongside its unchanged `noncanonical-path` or
+`native-coordinate-prerequisite` witness, never
+inferred from its phase or exception class. See
+[terminal kernel diagnostics](qa-strategy.md#kernel-mount-verification) for the
+argument-free creation and exact trusted-callsite requirements. The scalar
+shares the existing bounded terminal write with the old witness; it is not
+another evidence file or authority channel. Original bootstrap stdout/stderr
+remain private. Each ordinary controller exits after one terminal report;
+repeated reports clear unattributable scalars, and jobs/steps do not share
+their output channels.
+Prerequisite IDs map exact existing guards, not individual members of compound
+conditions. A package refusal's reason does not itself identify credentials,
+fsync, a deadline or another prerequisite; unknown attribution is not guessed.
+
+Formatter exit zero means only formatting completed, not that admission passed.
+The best-effort diagnostic cannot override the original QA failure (including
+exit 78), export/artifact eligibility, cleanup, custody or release gates. An
+unavailable witness is not evidence of a missing grant, missing bare stack or
+unsupported host. Runtime acceptance and native/Composer QA remain separate.
+Existing sealed workflow and proof expectations are retained through an exact,
+reversible outer CI-only transition; historical ledgers are not regenerated.
+
+The exact-candidate compatibility job keeps QA and all source observations in
+`candidate`. Only its diagnostic step overrides that default working directory
+to `${{ github.workspace }}/candidate-floor-tools`, the separate approved tools
+checkout at `github.workflow_sha`. This permits arbitrary older candidate SHAs
+that lack the formatter, without trusting candidate diagnostic code or overlaying
+tools onto the candidate. The other seven diagnostic placements are unchanged.
+
 Use least privilege per job:
 
 - Read-only jobs use `contents: read`.
@@ -106,6 +249,8 @@ Scheduled jobs should detect drift that a PR did not cause:
 - Scheduled failures should create maintainer follow-up work only after triage confirms the failure is not transient infrastructure noise.
 - Compatibility failures are release blockers only when they affect the supported floor, current WordPress line, or another supported version combination.
 
+For an independently reviewed frozen source, the same registered compatibility workflow has an explicit `candidate_sha` dispatch path. It runs only pinned WordPress 6.9/PHP 8.1 full E2E compatibility on that exact commit, not PHP 8.0 minimum-runtime proof, with read-only repository permissions and separately pinned workflow/evidence tools; it never substitutes current main or discovered dependency pins. Candidate mode rejects `open_update_pr=true` and excludes discovery, the ordinary matrix/checker/promotion chain, and the issue-writing reporter. Empty `candidate_sha` retains the existing scheduled/manual pipeline and its default-branch freshness guards. See [exact-candidate compatibility and the pending PHP 8.0 floor](../tests/e2e/README.md#exact-candidate-compatibility-ci-and-pending-php-80-floor) for inputs and retained source/runtime/cleanup evidence. The independent pinned PHP 8.4/POSIX proof host and canonical interpreter binding match sibling jobs; the full harness supplies `runner.temp` to the existing private authority bootstrap. Canonical ownership, exclusive reservation and actual topology/custody admission still apply. This job does not run the large-library private receiver, replace genuine PHP 8.0 integration, PR checks or original-package QA, or satisfy the benchmark's numerical and private-custody requirements.
+
 ## Artifact and reporting policy
 
 Docker jobs retain available contract/MCP summary JSON on success and failure, with bounded retention, and write readable job summaries.
@@ -135,7 +280,7 @@ PR comments should summarize runtime facts rather than static success claims:
 
 Cancel superseded PR runs using workflow/ref-scoped concurrency. Production publication uses one shared group across tags and never cancels an active publish. Required checks explicitly evaluate prerequisite results instead of relying on implicit skipped-job success.
 
-Pipeline linting is a separate opt-in local toolchain and GitHub workflow; PHP-only `composer qa` does not acquire a Docker dependency. Lint success does not prove live environment protections, bot PR permissions, or release provenance policy.
+Pipeline linting is a separate opt-in local toolchain and GitHub workflow; `composer qa` includes Python AST and mock-only prerequisite controls but does not acquire a Docker dependency or execute native hardening. Lint success does not prove live environment protections, bot PR permissions, or release provenance policy.
 
 ## Failure handling
 

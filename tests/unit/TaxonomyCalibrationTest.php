@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Wstm117Calibration\Probe;
 
 require_once __DIR__ . '/fixtures/taxonomy-calibration.php';
+require_once __DIR__ . '/fixtures/shared-helper-transition.php';
 require_once dirname( __DIR__ ) . '/e2e/error-contract-assertions.php';
 
 /**
@@ -44,7 +45,7 @@ final class TaxonomyCalibrationTest extends TestCase {
 			foreach ( $files as $path => $hash ) {
 				$source = 'tests/e2e/taxonomy-write-runner.php' === $path ? $ledger->original_source
 					: str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) );
-				self::assertSame( $hash, hash( 'sha256', $source ), $path );
+				self::assertSame( $hash, hash( 'sha256', Wstm119SourceTransition::restore( $path, $source ) ), $path );
 			}
 		}
 		self::assertInstanceOf( stdClass::class, $ledger->calibration_pairs[0]->new_original_oracle->error->details );
@@ -85,6 +86,8 @@ final class TaxonomyCalibrationTest extends TestCase {
 				self::assertSame( $pair->capability->name, $evidence['capability'] );
 				self::assertTrue( $evidence['can_delete'] );
 				self::assertTrue( $evidence['persisted_unchanged'] );
+				self::assertSame( array(), $evidence['write_hooks'] );
+				self::assertNull( $evidence['oracle_failure'] );
 				self::assertSame( $evidence['before_sha256'], $evidence['after_sha256'] );
 				self::assertSame( $call['before'], $call['after'] );
 				if ( 'original' === $kind ) {
@@ -268,6 +271,29 @@ final class TaxonomyCalibrationTest extends TestCase {
 		$records = Wstm117Calibration\run_pairs();
 		$this->expectException( AssertionFailedError::class );
 		$this->assert_pairs( $records );
+	}
+
+	public function test_hook_only_write_is_rejected_even_when_persisted_state_matches(): void {
+		Wstm117Calibration\load_runner_helper();
+		$key = 'webmastery-site-toolkit-for-mcp/delete-category';
+		$callback = Probe::$abilities[ $key ]['execute_callback'];
+		Probe::$abilities[ $key ]['execute_callback'] = static function ( $input ) use ( $callback ) {
+			$result = $callback( $input );
+			Wstm117Calibration\do_action( 'edit_terms' );
+			return $result;
+		};
+		$observed = 0;
+		foreach ( Wstm117Calibration\run_pairs() as $row ) {
+			if ( array() !== $row['evidence']['write_hooks'] ) {
+				++$observed;
+				self::assertSame( array( 'edit_terms' ), $row['evidence']['write_hooks'] );
+				self::assertTrue( $row['evidence']['persisted_unchanged'] );
+				self::assertFalse( $row['passed'] );
+			}
+		}
+		self::assertGreaterThan( 0, $observed );
+		self::assertSame( '', Probe::$hook );
+		self::assertEmpty( Probe::$filters['edit_terms'] );
 	}
 
 	public static function provenance_mutants(): array {

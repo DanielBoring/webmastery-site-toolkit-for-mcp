@@ -88,8 +88,9 @@ class Webmastery_MCP_Site_Kit {
 	}
 
 	public static function permission_status() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires manage_options capability.' );
+		$permission = Webmastery_MCP_Permissions::check( 'manage_options' );
+		if ( is_wp_error( $permission ) ) {
+			return $permission;
 		}
 
 		$plugin = self::plugin_status();
@@ -101,16 +102,18 @@ class Webmastery_MCP_Site_Kit {
 	}
 
 	public static function permission_modules() {
-		if ( ! current_user_can( 'read' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
+		$permission = Webmastery_MCP_Permissions::check( 'read' );
+		if ( is_wp_error( $permission ) ) {
+			return $permission;
 		}
 
 		return self::check_route_permission( self::REST_ROOT . '/core/modules/data/list' );
 	}
 
 	public static function permission_permissions() {
-		if ( ! current_user_can( 'read' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
+		$permission = Webmastery_MCP_Permissions::check( 'read' );
+		if ( is_wp_error( $permission ) ) {
+			return $permission;
 		}
 
 		return self::check_route_permission(
@@ -121,8 +124,9 @@ class Webmastery_MCP_Site_Kit {
 	}
 
 	public static function permission_pagespeed( $input = [] ) {
-		if ( ! current_user_can( 'read' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
+		$permission = Webmastery_MCP_Permissions::check( 'read' );
+		if ( is_wp_error( $permission ) ) {
+			return $permission;
 		}
 
 		return self::check_route_permission(
@@ -182,8 +186,9 @@ class Webmastery_MCP_Site_Kit {
 	}
 
 	public static function execute_modules() {
-		if ( ! current_user_can( 'read' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
+		$permission = Webmastery_MCP_Permissions::check( 'read' );
+		if ( is_wp_error( $permission ) ) {
+			return $permission;
 		}
 
 		$modules = self::dispatch_route( self::REST_ROOT . '/core/modules/data/list', [], '', true );
@@ -203,8 +208,9 @@ class Webmastery_MCP_Site_Kit {
 	}
 
 	public static function execute_permissions() {
-		if ( ! current_user_can( 'read' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
+		$permission = Webmastery_MCP_Permissions::check( 'read' );
+		if ( is_wp_error( $permission ) ) {
+			return $permission;
 		}
 
 		$permissions = self::dispatch_route(
@@ -224,8 +230,9 @@ class Webmastery_MCP_Site_Kit {
 	}
 
 	public static function execute_pagespeed( $input = [] ) {
-		if ( ! current_user_can( 'read' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires read capability.' );
+		$permission = Webmastery_MCP_Permissions::check( 'read' );
+		if ( is_wp_error( $permission ) ) {
+			return $permission;
 		}
 
 		$validated = self::validate_pagespeed_input( $input );

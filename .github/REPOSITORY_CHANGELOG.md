@@ -6,6 +6,359 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Preserve whole-document status parser semantics when binding diagnostic raw
+  stanza offsets, including nonfinal continuation whitespace. Keep the shared
+  parser, admission policies, private retention and original refusal unchanged.
+- Complete associated-GPG diagnostic status selection with a bounded raw-offset
+  pass that handles valid terminal delimiters and binds the unique stanza to its
+  protected whole-file pin. Preserve malformed/duplicate/qualification refusals,
+  original preflight failure, accounting and all ordinary acceptance policies.
+- Reserve diagnostic capture-body slots and bytes before acquisition, retain
+  failed reservations without duplicate reuse charges, and reject malformed
+  record fields/types explicitly while preserving the original preflight refusal.
+- Bind read-only GPG dependency diagnostics to the actual failed usrmerge
+  alias-owner capture and its canonical counterpart. Retain installed package,
+  physical/parent, protected absence and static loader observations with final
+  custody checks; preserve the original refusal, origin parser, complete-table
+  guard, fixed GPG consumers and false runtime authority.
+- Retain bounded, read-only GPG diversion and associated installed-package
+  diagnostics in the three signed HOST QA jobs, including scoped original
+  command receipts after early failure. Preserve the original refusal and all
+  runtime gates; expose only a closed collection summary in logs and keep raw
+  evidence in failure-only, one-day artifacts.
+
+- Describe refused owner-query response structure through finite privacy-safe
+  categories in the existing preflight witness. Preserve exact row/owner/target
+  admission and diversion rejection; do not expose response text or package names.
+- Attribute preflight origin refusals through the existing finite witness,
+  including installed/cached/Perl/configuration/sudo/support/APT/CA predicates
+  and requested root tools. Preserve refusal classes, checks and budgets;
+  exclude raw paths, argv, exceptions and package data.
+- Refresh Perl alias and package-metadata directory timestamp snapshots only
+  after authenticated installation, retaining exact file, digest, association,
+  capability and stable directory checks. Ordinary reads remain strict.
+- Bind the retained Perl tool's complete package-declared hard-link pair to
+  installed owner, source/version, manifest digests and shared physical custody.
+  Keep generic single-link rejection, dependency checks and original limits;
+  reject extra aliases, substitutions and provenance drift.
+- Attribute refused signed-provider preflight to closed step/tool labels and
+  ordinary-file identity predicates without exposing paths or changing guards,
+  provenance, operations or budgets.
+- Preserve prerequisite dependency error classification before verifying the
+  additional signed-package source binding; retain both sets of drift checks.
+- Preserve the established PHP setup step names in the three signed-package HOST
+  QA jobs so workflow receipt consumers retain their exact readiness ordering.
+- Resolve retained dpkg maintainer and trigger controls from protected installed
+  package identifiers and Multi-Arch metadata, including native architecture
+  qualifiers. Pin and recheck exact old control files and absence guards before
+  APT; reject inconsistent metadata, source changes and aliases without changing
+  ROOT operations, privileges or budgets.
+- Add source-bound handling for the genuine PHP-session cleanup version loop,
+  retaining the full query domain and active/inactive worker guards. Distinguish
+  incoming archive-bound producers from unchanged installed producers.
+- Authorize bootstrap and replacement only inside the closed signed APT
+  transaction, with authenticated incoming code and verified retained
+  maintainers/triggers. Refresh installed provenance, loaders, UCF INIs, modules
+  and aliases before candidate eligibility. Prospective archives remain
+  ineligible for direct helper execution; reject arbitrary expansions, foreign
+  sources, drift and exhausted budgets without refunding acquisition ledgers.
+- Use fixed CLI php.ini and package-native sockets.ini permission targets,
+  verified socket-template provenance and the exact conf.d alias. Wire signed
+  package provisioning into the permission/inventory/projection chain for the
+  three disposable HOST QA jobs without setup-php interference. Retain ordinary
+  signed-package housekeeping, existing limits and nonroot candidate code;
+  local controls do not establish native HOST acceptance.
+- Synchronize contributor/PR acceptance criteria and CI/security/QA/E2E policy.
+  Preserve narrower unrelated grants and frozen predecessor guarantees through
+  additive source bindings rather than rewritten historical maps.
+
+- Disambiguate a retained HOST tool-origin refusal with only closed tool,
+  dependency/module subject and origin-check IDs. Preserve exit78, unknown
+  native observations, private original custody and all package-provenance
+  predicates; do not substitute unverified packaging or broaden trust.
+
+- Compose the approved three-surface prerequisite/provisioning gate onto the
+  current PR167 generation without replacing its nsfs/net correction or
+  historical witnesses. Add an exact current-source outer witness, complete
+  Python AST lint and mock-only static/CI safeguards coverage; retain raw
+  historical seals and fail-closed omission, helper-drift and resealing controls.
+  This prepares genuine hosted acquisition, not a native HOST success or a
+  resolution of the runtime process-execution refusal.
+
+- Retain a source-bound, finite G1/G2 acquisition projection in the existing
+  Package/Contract/Full MCP job logs before later QA can refuse admission.
+  Bind closed tool/API availability facts to privately retained original
+  inventory, wait/EOF and source hashes; keep all raw operands and inventories
+  private. Reject malformed, changed or unretained input without a success
+  fallback, new capture/deadline pool, upload, probe or privilege grant.
+
+- Inventory actual HOST launcher/interpreter/PHP prerequisites before Release
+  Package QA without running a launcher, NNP, sudo or a peer protocol.
+  Retain bounded private original tool/API/package evidence, reject missing
+  or changed prerequisites, and keep public output closed. Preserve the
+  plugin floor, existing admission predicates and historical source proofs.
+  Charge configuration pins against the same pre-read file/byte ledger as
+  tools, reject changed cache identities, and retain failed reservations.
+  Correct the pinned PHP action's writable-configuration postcondition with
+  an explicitly approved guarded setup-only two-file system chmod on disposable
+  CI runners, before candidate configured PHP. Preserve content/identity,
+  private original exit/EOF custody and finite budgets; never add runtime
+  root permission changes or weaken the read-only inventory.
+  Recheck the original absolute deadline after private command reservation
+  and before root/setup or read-only system launch; exhausted reservation
+  cannot launch a child or refund its failed command debit.
+  Apply the shared guarded provisioning and read-only acquisition to all
+  three runtime QA surfaces using only the approved literal PHP8.2 package
+  and PHP8.4 Contract/Full MCP pairs. Refuse missing/foreign selections or
+  interpreter/job mismatches and withhold failure-path PHP if acquisition
+  fails, without changing extensions, plugin floors or runtime root authority.
+
+- Add an immutable outer proof for the reviewed nsfs/net metadata correction, restoring the exact published 514-path generation before every unchanged historical witness; bind the approved runtime and all current source bytes with omission, forgery, wrong-generation and post-cache rejection controls. This proof changes no physical-root or process admission gate.
+
+- Retain the reviewed nsfs network-namespace root token as opaque mount-table
+  metadata in both QA parser modes after the genuine hosted joint diagnostic
+  established this compatibility case. Reuse the exact bounded positive-u32
+  recognizer; keep all other root and lookup checks, physical filesystem gates,
+  nested-mount closure, capture custody and budgets unchanged. This does not
+  grant native proof or introduce a privilege/process transition.
+
+- Add an immutable outer proof for the reviewed joint mount-root diagnostic, restoring the exact published 511-path generation before every unchanged historical witness; bind all current bytes and retain omission, forgery, wrong-generation and post-cache rejection controls. This adds no mount acceptance or hosted-root attribution.
+
+- Add a failure-only, source-bound true/false/unknown diagnostic for the original
+  relative mount root's exact nsfs/network-namespace/u32-token predicate.
+  Keep parsed-row provenance, argument-free native birth, all admission and
+  physical-coordinate rules, budgets, reasons, schema and terminal I/O intact.
+  This reports a finite joint fact; it does not accept namespace root metadata
+  or add a privilege transition.
+
+- Compose an exact-byte outer proof for the refined mount-root diagnostics
+  over the published 508-path generation. Preserve all older seals and
+  comparisons, keep runtime execution on current source, and reject missing,
+  reverted or forged diagnostic dependencies and resealed wrong baselines.
+
+- Refine source-bound decoded mount-root failure diagnostics into three ordered
+  prefix sites and seven exact control/slash/dot combinations. Evaluate the
+  original admission predicate once and preserve acceptance, source closure,
+  credentials, budgets, all 37 reasons, witness schema and terminal handling.
+  Unknown or inconsistent provenance remains unknown; finite labels do not
+  disclose private roots or attribute a hosted failure to a filesystem.
+
+- Add an exact-byte outer proof for synthetic terminal-output descriptor binding.
+  Restore the approved 505-path callsite baseline before its unchanged seal
+  and older witnesses; keep actual execution on current source and retain
+  malformed-output, privacy, I/O-fault and wrong-baseline rejection controls.
+
+- Bind synthetic outer diagnostic controls' fixed terminal output descriptor
+  to an exclusive private capture and validate its exact unknown scalar.
+  Preserve stdout/stderr, privacy, I/O-fault and original-exit assertions;
+  do not depend on incidental inherited descriptor allocation after the
+  bounded callsite diagnostic was introduced.
+
+- Bind terminal callsite diagnostics through a new exact outer source proof.
+  Preserve every accepted ledger and seal, restore the published 499-path
+  generation for historical comparisons only, and retain current-source runtime
+  execution and diagnostic controls unchanged.
+
+- Correct terminal prerequisite attribution on PHP8.0 by binding its exact
+  closing-token call coordinates separately from later engines' opening-token
+  coordinates. Keep source ownership, full native creation/trace custody and
+  every original admission predicate unchanged; do not accept line ranges or
+  both compiler forms as aliases.
+
+- Extend the same bounded, provenance-checked terminal diagnostic to every
+  existing native-coordinate prerequisite guard, including inherited owner
+  defaults. Keep compound predicates, authority, credentials, all 37 reasons
+  and terminal I/O unchanged; reject cross-reason or forged attribution rather
+  than inferring a host cause from the public reason alone.
+
+- Add finite source-bound terminal callsite diagnostics for existing canonical
+  path refusals, including kernel length versus computed-physical cases.
+  Require independently verified argument-free exception creation; report
+  unknown on missing or changed provenance. Retain all 37 closed reasons,
+  two-key witnesses, original terminal I/O outcomes and authoritative QA gates.
+  Pass only bounded allowlisted scalars through the eight ENV-only diagnostic
+  steps; preserve private original streams and every historical proof seal.
+
+- Integrate the latest main PHPStan 2.2.16 lock and unchanged database privacy
+  expiration admission harness through a new exact outer proof ledger. Restore
+  the reviewed kernel generation before its unchanged seal; retain every older
+  ledger, native boundary, and scoped observation witness.
+- Make helper reservation attempts terminal within their original query pass,
+  including partially failed query-slot reservations. Prevent retry debits or
+  allowance redistribution while retaining disjoint upfront parent slots and
+  their once-only consumption; add interleaved parent-dispatch controls.
+
+- Register completed kernel captures through an exact private named owner method,
+  avoiding PHP 8.4's changed closure backtrace names without accepting arbitrary
+  closures or caller metadata. Preserve custody, once-only registration, durable
+  finalization and cleanup order; add portable owner-identity regression controls.
+
+- Bind current synthetic-admission fixtures to the complete kernel visibility
+  guard and probe, retaining exact reversible LF/CRLF substitutions and rejecting
+  either guard removal or probe changes. Keep CI command expectations and
+  admission-only collector-finalization assertions aligned with current code.
+
+- Make kernel-holder parent query-slot reservations explicit and consume them
+  once after helper capture, retaining the original query-count ceiling and
+  shared launch allowance. Dispose failed running process resources without
+  indefinite static retention or a blocking unknown-exit reap.
+
+- Add a source-bound nonroot kernel mount holder for independently resolving
+  stacked mount visibility and physical bind aliases. Require a kernel-proved
+  safe pre-exec lane, live independent credential/descriptor checks, shared
+  decreasing verification limits and complete private originals before release.
+  Preserve strict pure-parser refusal and the existing closed reason schema.
+  Portable controls and explicit native unique-boundary definitions do not
+  establish stacked, hosted Contract, Full MCP or original-package acceptance.
+
+- Add explicitly opted-in read-only system observation for inaccessible
+  Docker-daemon proc evidence on approved disposable CI hosts. Controller,
+  capture and PHP remain nonroot; only verified fixed system reads and
+  supervision are elevated. Preserve complete native admission, bounded
+  original retention, grants and release checks through an exact outer
+  source transition. Native/runtime/CI acceptance remains separate from
+  parser or nonprivileged adapter results; filesystem deadlines are
+  cooperative and do not certify root-child cleanup. Explicit Git attributes
+  preserve all six added source-bound files without incidental newline
+  conversion.
+
+- Integrate approved current-main compatibility documentation additively with the
+  existing extraction, controller-component and provenance guidance. Retain the
+  exact WordPress 7.1.2 / MCP Adapter 0.6.1 defaults and alignment regression
+  already present on this branch, the PHPStan 2.2.15 lock and the stricter
+  17-entry / 30-error baseline; do not restore removed sitemap or posts debt.
+  Preserve every accepted proof seal with a reviewed exact outer integration.
+
+- Classify normal connected Unix stream rows separately from the unique selected
+  listening inode in the QA host-topology controller. Reject malformed or unknown
+  selected-path rows and preserve descriptor/PID/namespace/identity checks.
+  An owned nonroot socket probe reproduces the parser bug; hosted descriptor
+  access remains independently blocked, and no runtime acceptance is implied.
+  Preserve all accepted proof seals through an exact outer source reversal.
+
+- Give both unit/safeguard lanes a bounded 60-minute budget without skipping any
+  controls or changing matrix, permissions or aggregate gates. Original hosted
+  unit jobs passed units but were cancelled at the 15-minute limit; local native
+  PHP 8.4 completed all 14 guards in 16m38s, while the original hosted release
+  job's seven-command safeguard subset alone passed in 36m38s. Thirty minutes is
+  therefore unsupported by hosted evidence. The new 60-minute setting still
+  requires a genuine PR run; release limits, runtime deadlines and admission
+  policies are unchanged, and the subsequent package refusal reason is unknown.
+- Run only the exact-candidate compatibility diagnostic from the separately
+  approved workflow-tools checkout, not potentially older candidate code.
+  Preserve the eight closed, environment-only diagnostics, candidate isolation
+  and all accepted seals through a reviewed exact outer correction.
+
+- Surface only the controller's approved closed topology refusal witness after
+  runtime CI QA, including compatibility and release/package jobs. Treat absent
+  or invalid witnesses explicitly without exposing private streams or changing
+  QA, admission, artifact, cleanup or publishing conclusions. Preserve historical
+  workflow/proof seals through a minimal reviewed outer reversal.
+
+- Add integer/null and permission-denial regressions for SEO/readability score
+  markers, with a two-path reviewed outer source reversal at the existing
+  bounded source/dependency entry points. Keep historical seals, manifest
+  expectations and ledgers unchanged; reject source/proof omission or forgery.
+
+- Make the controller's missing-output-descriptor test clear explicitly occupied
+  fd3 through fd9 before launching native PHP, leaving lower slots for startup
+  allocations instead of reusing fd9. Keep production reporting, loaded extensions
+  and exact diagnostic-I/O refusal assertions.
+
+- Preserve reviewed source-bound fixture and configuration bytes during Git
+  staging and checkout instead of silently normalizing their line endings.
+  Keep the normal whitespace checks, allowing existing CRLF terminators only
+  for the explicitly byte-preserved paths.
+
+- Repair copied legacy teardown RED controls after package cleanup moved to the
+  child: restore the old parent EXIT trap before the failed child as well as
+  the old unconditional guard. Keep original failure exits, two-down and
+  evidence-loss assertions, fresh private case roots, native admission and all
+  production wrapper bytes. Reverse this test-only repair ahead of the unchanged
+  native-fixture seal; reject altered seams, sources, hunks and ledgers.
+
+- Repair native admission tests without changing runtime policy: explicitly
+  access the private uninitialized-directory property on PHP 8.0, and stage the
+  query adapter plus unchanged supervisor in the owned installer graph.
+  Retain LF/CRLF, altered-core and original-byte controls; require the nine
+  existing substitution sites and both newly introduced query sites.
+  Keep copied query paths valid Python literals and limit the fixture-owner
+  substitution to its copied Docker executable, retaining trusted native PHP
+  identity. Exercise real PHP-to-Python descriptor capture on supported native
+  hosts; unsupported engines prove refusal only. Update the isolated cron
+  ordering model to distinguish admission from later fixture execution.
+
+- Compose bounded native admission with exact PHP 8.0 selection before reset and
+  fixtures; capture original streams privately, preserve refusal inputs through
+  bootstrap and transfer package cleanup only after child success. Add exact
+  outer reversals without changing frozen history or supplying runtime grants.
+- Make the synthetic native-authority observer terminal before private reporting,
+  retaining the original Throwable and native fatal exit rather than recursively
+  invoking an earlier observer. Preserve the accepted selector imports/map and
+  verify their regression through the bounded-admission projection.
+
+- Restore native synthetic release fault controls by importing the floor
+  selector in all four extracted namespaces. Add an executable missing-import
+  regression and exact additive import-only reversal; preserve production
+  behavior, fault expectations and prior sealed source.
+
+- Add an opt-in exact-source PHP 8.0 fixture selector to shared Compose routing
+  and retention/release checks. Bind original config/image/source identities,
+  refuse conflicting profiles and preserve frozen source history through an
+  additive reversal. Native controller and bounded pre-fixture call sites now
+  share that selection; offline routing is not runtime acceptance.
+
+- Clarify that the shared-helper extraction preserved 589 historical manifest
+  cases, while the composed marker/bounded-list coverage contains 601 cases;
+  historical oracles remain unchanged.
+
+- Add opt-in genuine PHP 8.0 WordPress floor fixture build, CLI-server routing
+  and actual CLI/HTTP ELF/version verification support. Reuse verified archive
+  downloads and strict candidate dependency/full-E2E gates without inventing an
+  unsupported WordPress image tag or changing current/compatibility lanes.
+  Independent admission, grants and reviewed shared-harness selection remain
+  required.
+
+- Complete shared-helper array-style enforcement for packaged production PHP:
+  require short literals using the installed PHPCS rule, convert 88 long literals
+  in five files with PHPCBF, and add exact reversible source proofs plus token,
+  lint and forgery regressions without changing historical seals or runtime policy.
+
+- Bind deliberate legacy-schema RED wrapper mutations and their restoration to the existing disposable Git fixture. Keep committed-host provenance checks intact so the controls reach their injected schema failure instead of stopping at source drift; restrict binding to the two copied wrappers in the isolated mock checkout and preserve every exit, teardown and retention assertion.
+
+- Bind synthetic failed-runner retention assertions to the actual source planner instead of an obsolete fixed case total. Require the full ordered case inventory, exact passed/failed counts and one strictly typed injected failure; preserve private capture/body checks, cleanup, public exclusion, refusal exits and frozen production proofs.
+
+- Give each synthetic schema source/package fault and legacy-schema negative control its own private untrusted-stage root. Retain completed context pointers and exclusive-create collision refusals rather than reusing or clearing prior evidence; preserve all injected exits, retention assertions and production/historical seals.
+
+- Wire the exact-candidate PHP 8.1 compatibility job to the same pinned PHP 8.4 proof host, canonical interpreter binding and native authority-root input as its sibling jobs. Preserve private exclusive bootstrap reservation, topology/custody refusals, candidate pins and the separate genuine PHP 8.0 runtime requirement; existing workflow/manifest historical seals remain unchanged.
+
+- Load the real host-controller owner in standalone synthetic terminal fixtures before exercising the extracted final catch. Add cross-platform subprocess regressions for mapped/unmapped refusals and original exits 78/43; preserve every native filesystem/I/O fault control and production source/seal.
+
+- Release synthetic stage-proof runner graphs during per-case teardown and build phase schema digests without allocating full runner evidence. Preserve exact fixture JSON, all forgery controls, production source/seals and the default 128 MiB unit-test limit; add lifetime and independent-mutation regressions instead of raising QA memory.
+
+- Pin LF checkout bytes for the new bounded recovery launcher and its regression tests so Windows newline conversion cannot drift their verified source identity. Leave historical controller and proof bytes unchanged.
+
+- Compose the remaining content-marker stage/pipeline and lint/admission-diagnostic repairs onto the immutable bounded-list integration. Retain all 28 bound production dependency sources and frozen bounded/extraction/helper seals; preserve all 601 manifest cases and 313 negatives with 188 additive marker-assertion changes and exact typed historical reversals. Use explicit full-content requests plus separate default/explicit-summary HTTP proofs. Retain refusal exit 78, private custody and explicit diagnostic-write failure reporting; isolated/source validation is not real runtime or GitHub acceptance.
+
+- Retarget bounded lists, strict summary/full projection and attachment reference batches onto the completed Post Access, Post Content, Post Meta, Post Revisions and Content Patch owners. Preserve PHPStan 2.2.15, WordPress 7.1.2, prerequisite overrides and every preexisting manifest control; add a sealed exact-source transition ahead of the byte-identical #127/#119 fixtures and owner/provenance drift regressions. The composition above adds content-marker pipeline and admission-diagnostic repairs without changing these owners; live runtime acceptance remains outstanding.
+- Supply separately bounded interrupted-benchmark cleanup recovery using the original environment, ownership state, namespace, invocation lock and append-only byte journal. Retain all original outputs/failures, refuse source/receipt/ownership drift and concurrent or completed custody, and record every outcome as an unsuccessful benchmark shard.
+- Distinguish the real PHP 8.1 exact-candidate compatibility lane and PHP 8.1+ durability-tool host requirements from the unchanged PHP 8.0 plugin minimum. Keep exact source/pin/version/E2E checks and require genuine PHP 8.0 runtime proof separately; no unsupported image tag or permissive floor acceptance.
+
+- Align the pinned WordPress compatibility baseline and default Docker QA image with 7.1.2. Preserve the PHP image version, dependency hashes and environment overrides; required PR-event and runtime checks remain separate acceptance gates.
+
+- Complete the behavior-preserving Posts extraction into Post Access, Post Meta, Bulk Posts, Post Revisions, Featured Image and Content Patch, leaving a slim dispatcher with post/page CRUD, taxonomy-aware responses and the three stable metadata/bulk facades. Preserve all ability contracts, capability ordering, raw content, localized sanitization, provider/core failures and historical oracles. Update bootstrap, namespaced/reflection fixtures, runtime source evidence and package/file maps; add exact registration/permission/owner comparisons and a sealed additive reverse-source transition ahead of the unchanged #119 bridge. No plugin version, SEO aliases, summaries, markers, bounded queries or new permission policy.
+
+- Preserve the earlier untrusted-record marker and lint/admission-reporting retarget to the immutable #175/#176/#119/#127 snapshot as separate evidence. That retarget preserved WordPress 7.1.2 and the extracted owners with an exact reverse transition before the unchanged #127/#119 JSON seals. The composition above now uses the newer bounded-list integration.
+
+- Consolidate equivalent simple/object permission factories, post/CPT readable lists and common fields, author restrictions, legacy pagination clamps, SEO key eligibility, and exactly-once post/metadata persistence boundaries. Retain object/delegated policies, schemas, errors, authorized totals, provider readiness and all historical ledgers. Add actual-source comparison, namespace-spy, package-map and sealed reversible-provenance regressions, plus the requirement and follow-on extraction map. Remove only the two newly unmatched post-write PHPStan baseline entries; no new suppression, plugin version change, array-style rewrite, content markers or bounded-list feature.
+
+- Update PHPStan from 2.2.14 to 2.2.15 and remove only the now-unmatched sitemap offset baseline entry. Preserve the sitemap fallback, PHP 8.0 analysis target, PHPDoc certainty policy, and strict unmatched-ignore ratchet; all other dependency pins and baseline entries are unchanged.
+
+- Integrate the untrusted-record contract with the current 589-case closed-schema suite using an additional exact typed source ledger. Preserve both historical ledgers, four native parent rejections, and all role/no-write oracles; add marker assertions to the omitted-filter success control. Update synthetic source-prefix fixtures for explicit executable refusal conditionals and keep both schema and untrusted QA stages.
+- Surface only closed topology reason/phase witnesses on controller admission refusal. Check diagnostic opens, partial/zero writes, stream exceptions and flush failures; retain exit 78 and explicit non-success receipts when channels fail. Raw private diagnostics and all admission/custody policies remain unchanged.
+- Fix five ShellCheck findings in runtime safeguards and host bootstrap without changing executable identity/mode checks, literal PHP snippets, refusal exits or private trap handling.
+
+
 - Admit database privacy parity probes only inside a bounded, read-only transient expiration horizon, with one shared 90-second admission budget and unchanged exact payload comparisons. Retain original responses and fail on read errors, exhausted admission, window overruns, or genuine metric drift; add boundary and failure regressions without changing production clocks, queries, privacy policy, or downstream artifact requirements.
 
 - Promote the current compatibility QA baseline and default Docker image to
@@ -51,6 +404,31 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 - Integrated exact frozen safety parent `f93b7d1` into the schema candidate without changing shared startup/retention/orchestration. Added native validation lifecycle and mutation controls, explicit 16 safety/two privacy error-layer calibrations, and a typed ordered ledger that reconstructs the unchanged parent manifest/goldens from every reviewed schema delta. Schema proof now hashes the owned ability class and observes native numeric-string/boolean rejection before permission callbacks; actual integrated runtime acceptance remains pending.
 
+- Reuse the existing nonsecret server-context receipt in Ability Contract, Full MCP E2E and Release Package QA before runtime work, binding each actual workflow commit/ref independently of checkout. Retain Unit coverage and add exact job/field/order, unchanged-workflow and receipt-CLI regressions; PHP selection, runtime/export policies and unresolved native/private-custody acceptance remain unchanged.
+- Generate the native partial-write fixture's large stdout/stderr payloads inside its PHP child instead of exceeding Linux per-argument limits. Preserve ordinary binary payloads, exit 73, the four-byte write fault and all capture assertions; bind argv-size and exact child-output regressions to the actual fixture factory and call. This repairs the test launcher; the historical private failure and next-head Linux authority result remain unverified.
+- Add test-only native-authority failure locations through an exact source/control/case allowlist and bounded line/class codes, never exception text, paths or stacks. Keep the original Throwable/native exit, private child streams and retention; explicitly distinguish missing/unknown locations and diagnostic I/O refusal. Extend existing projection and actual-wrapper controls for malicious data and secondary failures. This localizes failures without fixing or certifying the unresolved native authority cause.
+- Distinguish native-authority control failures from later untrusted-stage failures with fixed boundary messages and the original numeric exit, keeping child output private and retention unchanged. Exercise the actual wrapper and EXIT trap for exits 0, 23, 47 and 255; this adds diagnostics, not a fix or acceptance claim for the unresolved native failure.
+- Inject release-runtime tampering after untrusted-content QA so the final package-integrity guard remains the regression target. Keep all four mutations and existing integrity/status oracles; report missing expected diagnostics and native-checker status mismatches using fixed messages and numeric exits, without exposing private child logs or command arguments. Make three earlier PHP calls explicitly use the owned PATH executable, leaving the later temporary checker-failure function scoped to its intended case. Earlier CI failures remain failures pending validation.
+- Give each remaining release-runtime checker, cleanup, native-PHP, tamper and ZIP-mutation regression its own private mock live root. Preserve earlier case evidence and exclusive creation, along with every existing expected diagnostic, exit-status and package-integrity assertion; the original CI failures remain failures until the corrected suite is validated.
+- Isolate mock custody and live roots between legacy package/source retention cases, and report the case and expected/actual exit status on mismatch. Preserve negative expectations, retention and teardown guards; synthetic checks do not establish real WordPress or durable-custody acceptance.
+- Isolate the disposable host-boundary fixture from ambient mount tables with a closed synthetic namespace bound to its owned WORK identity and actual filesystem device. Keep production topology parsing, native identity/device checks, physical non-overlap, capture/export shapes and negative controls unchanged; add copied-source inversion, namespace-boundary and code-6 predicate regressions. Modeled namespace/type acceptance is not real host, daemon, WordPress or durable custody evidence.
+- Retain finite, private-safe failure classifications for the first positive synthetic package-runtime fixture, without changing its original exit, production admission guards, publication channels or three-file export. Cover allowlist drift, malformed/private diagnostics, checked I/O failures and copied-source/outer-exit behavior; synthetic observations are not real daemon, WordPress or durable custody acceptance.
+- Make the two private resource-helper reflection tests accessible on PHP 8.0 without changing production visibility, assertions or test cases.
+
+- Bind test-custody origin to a dedicated server-context receipt carrying the exact executed workflow commit/ref, separate from event/PR/run heads and checkout. Fetch reviewed workflow bytes at that commit; reject missing/substituted receipts and retain completed-run/job checks. Exercise the receipt CLI with mock context inputs without claiming real GitHub provenance or resolving durable producer/receiver-ack custody.
+- Represent an intentionally absent PR head with a nonempty environment sentinel so receipt CLI checks work across Windows process boundaries. Preserve JSON null in non-PR receipts, reject missing/empty fields and PR-event sentinels, and cover push/dispatch plus rejection cases without skipping platform checks.
+- Keep the compatibility dependency-policy ordering test offline by mocking the untrusted-content stage alongside the existing stage mocks. Require cron isolation and exactly one call in each contract, E2E and combined mode without invoking or weakening the real host-authority and custody checks.
+
+- Require record-local markers in all four existing content-hygiene success cases while preserving their data/privacy assertions and Subscriber denials. Add a closed four-marker projection and mutation coverage before the unchanged compact-delete and 190-case/200-marker historical ledgers; current stored-content coverage is 189 cases/199 assertions.
+
+- Add a separate test-only private-custody library and mocked protocol/ZIP regressions. Require independently authenticated exact GitHub attempt/job/artifact provenance and fatal digest checks before standard native-X25519 age decryption; do not interpret partial plaintext or recreate links. Keep public untrusted exports, cleanup and authority contracts unchanged. Native capture/API integration, vetted binaries, actual Windows private-directory ACLs, real encryption and receiver-ack survival evidence remain separate prerequisites.
+
+- Keep the exact ordered CI safeguard assertion aligned with the required untrusted-content stage regression, preserving every existing safeguard and rejecting missing, reordered or extra commands.
+
+- Commit only allowlisted generated compatibility inputs in each disposable runtime/checker checkout before source-bound QA. Reject unexpected changes, preserve explicit no-delta HEADs, and record discovery-base versus tested commit/tree identities separately without changing final update-PR promotion or release policy.
+
+- Gate tag-release bundle sealing, upload and approval readiness on successful package QA and original-custody verification/upload of the separate closed three-file untrusted export. Supply the explicit host authority root without changing PHP 8.2 provisioning, the build-once ZIP, release artifact outputs, production approval or historical recovery policy; safe failure witnesses cannot promote a release.
+
 - Retain destructive-QA recovery evidence across stage, managed-source, package and workflow cleanup boundaries using an exclusive host owner/project/source guard. Block teardown and re-entry until actual restoration and explicit source-bound runner cleanup are proven; preserve original failures and keep private configuration out of artifacts. Validate attachment references before cleanup and retain files plus ownership proof after refusal/veto, with full outer-orchestration and actual cleanup-flow regressions.
 
 - Require an explicit disposable Compose project before runtime startup or cleanup, and wire unique job/run/attempt names into package CI and pre-publication QA. Add zero-Docker missing-name checks, unchanged offline-only validation and same-project startup/teardown regressions; leave publication policy and immutable artifacts unchanged.
@@ -60,10 +438,37 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ### Added
 
+- Select no PHP configuration for the three pre-WordPress error-runner refusal subprocesses. Preserve their disposable-only environment, exact denial text and exit assertions; root test-runner INI binding is not treated as child startup evidence.
+- Expose the core empty-schema accessor in the legacy callback test double for the composed permission-default guard; preserve callback counts, native permission failures, exception privacy, and all original assertions.
+- Compose strict SEO metric-key and sealed comment-source assertions with the reviewed record-relative markers: assert markers before comparing historical values, and reverse only the exact pinned comment wrapper without regenerating its provenance ledger.
+- Align the security manifest validator with the accepted native boolean-input rejection layer for destructive confirmations. Keep exact input, canonical error and unchanged-state requirements; add ten label-specific regressions rejecting the old callback-layer error pair without changing manifest evidence.
+- Repair the existing destructive manifest wrong-layer and wrong-code mutants after native boolean rejection moved to the input boundary. Require an exact native target/preimage and a real mutation while retaining all original rejection diagnostics and other mutants.
+- Compose the reviewed record-relative marker helper and normalizers surgically with bounded queries, authorization and reference failures. Preserve original marker test purposes through an explicit summary/full/window migration ledger and a closed four-case hygiene manifest layer, with typed mutation controls and unchanged 594/589/570 historical projections.
+- Prepare seven exhaustive large-library shards with Linux pidfd process bounds, raw reference/force/cache/projection probes, allocator and payload counters, write reservations and externally pinned original-file custody. Verify original JSON shapes and recompute budgets/inventories independently; retain exact approved storage/durability receipts. Native process, recovery, platform, package and runtime acceptance remain separate requirements, not consequences of source-only tests.
+- Align contributor and PR guidance with the bounded attachment-reference checker: narrowly permit prepared, authorization-preserving reference batches for non-administrator callers while retaining the diagnostic-only rule elsewhere, reference scope, fail-closed force behavior, and explicit regression/runtime evidence requirements.
+- Compose the 601-case bounded/schema candidate with accepted main through exact two-way migration projections. Preserve the earlier 563/570-case safety goldens, all original input types, seven inherited privacy cases, and 16 accepted boolean error corrections; pin the 12 existing bounded additions and add typed negative controls. Evaluate the real shared permission helper inside the existing input-boundary probe namespace without replacing its implementation. Native wrapper calibration and runtime/package acceptance remain separate requirements.
+- Preserve accepted metadata transport, ranked coverage and release safeguards alongside bounded-list/schema regressions. Document a separate lease-gated large-fixture stage proposal without changing shared orchestration or claiming runtime acceptance.
+- Correct six integrated metadata permission/schema oracles while retaining original payloads and exact stored sentinels. Add three separate plain permission-denial controls, typed before/after provenance, all-registration batch probes, and canonical-code-versus-reason validator mutations; preserve the earlier migrations and shared runners.
+- Added bounded-list red/green regressions over 20,000 synthetic candidates, sparse/empty continuation, tied sorting, exact stored projections, and batched per-attachment reference/failure probes. Preserved all 563 baseline manifest cases with an explicit before/after oracle ledger; migrated obsolete total assertions to membership, continuation, and absent-total assertions.
+- Prepared an opt-in owned large-library benchmark with raw operation counters, controlled payload/memory budgets, and retained cleanup evidence. Runtime execution remains lease-gated; unit/static success is not runtime or package evidence. Contributor/PR guidance now requires explicit pagination migrations and preservation of authorization/value oracles.
+- Add exact platform-integer pagination boundaries, all-list failure propagation, stale-error warm-cache controls, fresh priming failures, and failed-query cache/retry regressions. Preserve approved metadata error vocabulary and confirmed bulk proof inputs when integrating the accepted error-contract baseline.
+- Make owned benchmark cleanup retryable after its actor is already absent, retaining token/ID/marker checks and rejecting replacement actors. Add crash-phase, failed control-deletion, ownership, and lookup-error controls without broad cleanup or runtime execution.
+- Added all-registered-ability strict input probes, type/enum/unknown-key mutation controls, and opt-in direct/native/raw-permission/gateway/individual runtime proof with callback-scoped query/capability counters and persisted-state/mutation-hook evidence. Runtime execution and shared orchestration integration remain separately gated.
 - Integrated the frozen destructive-safety parent and its accepted metadata, error, inventory, coverage, and release safeguards into the schema candidate; retained exact schema/permission-layer oracles and original JSON container types. Documented the proposed five-boundary source/package proof without adding shared runtime wiring or claiming parent/runtime acceptance.
 - Corrected six combined-metadata manifest cases at their actual rejection layer: four raw permission codes and three additional native schema errors, with three separate plain-input object-authorization controls. Preserved every original input and metadata sentinel; added zero-original-callback probes and strict permission-code validator mutations. The case-level ledger distinguishes these changes from the earlier 31 native migrations and 16 additions.
-- Added all-registered-ability strict input probes, type/enum/unknown-key mutation controls, and opt-in direct/native/raw-permission/gateway/individual runtime proof with callback-scoped query/capability counters and persisted-state/mutation-hook evidence. Runtime execution and shared orchestration integration remain separately gated.
 - Migrated native metadata manifest errors to the exact closed-schema reason and nonhierarchical parent cases to rejection, preserving original labels and remaining assertions. Corrected two incidental empty-object-to-array input drifts in checkpoint `1c460f1`, restored the original JSON objects, and added non-associative container-identity regression coverage and explicit before/source/corrected provenance. Retained the parent and metadata runtime matrices with exact boundary-specific oracles; aligned contributor/PR schema guidance without expanding PHPStan baseline debt.
+- Harden the owned untrusted-content proof against partial actor setup, credential-ownership vetoes, failed-wire retirement and replacement journals. Bind independently captured filesystem identities across processes; capture original wire and process streams privately before parsing; publish only validated contract projections or safe witnesses. Require exact prepared-generation/target binding, complete process verdicts and final proof before guard clearing. Keep original host receipts outside all project binds and private even when a collision/refusal occurs. Native Windows positive authority remains blocked; synthetic/refusal checks do not establish genuine Ubuntu source/floor/original-ZIP proof.
+- Add finite pre-PHP dual-stream custody, original root/link-transition and physical nested-bind admission, corroborated local daemon identity and explicit Docker endpoint pinning. Replace raw untrusted artifact selectors with a separately owned closed three-file export and original-custody verification; safe failure publication never promotes QA. Preserve terminal companion-unlink semantics and keep genuine native admission separate from exact copied-checkout synthetic boundary controls.
+- Separate host-only Linux PHP 8.1+/builtin-fsync requirements from unchanged PHP 8.0 plugin/model coverage, explicitly bind companion QA interpreters, and assert unsupported-host refusal rather than a new platform skip. Retain original controller stream identities and writer state through a mandatory last pre-unlink guard; contain pre-descriptor diagnostics without claiming a transcript before custody. Keep private resource list validation PHP 8.0 compatible without changing its ownership or cleanup contract.
+- Admit the native PHP executable before either outer mock caller invokes a selected target, including capability probes; reject invalid explicit selections without fallback. Preserve native-platform `BLOCKED`/78 refusal before any PHP invocation or fixture creation, with additive source-model ordering and no-invocation controls.
+- Protect the unchanged destructive-retention primary clear's unlink/output interval with an independently bound companion. Complete private clear capture, source/evidence checks and one nonsecret precommit authorization receipt before the companion's terminal unlink commits release. Preserve precommit guards and observed failures; distinguish postcommit lost acknowledgment from retained protection or green QA.
+- Persist exact private-wire removal intent before unlink and confirm removal only after successful guarded inventory validation and journal persistence. Refuse fresh partial-retirement resume; retain remaining originals and distinguish unconfirmed removal from durable confirmation after interruption.
+- Wire a separately owned untrusted-content proof stage through source, compatibility and original-ZIP QA, preserving the existing destructive lifecycle and retention helper. Bind complete gateway/individual case plans, actual catalogs/annotations, source/package hashes and typed raw wire evidence; use exclusive MU loaders instead of config edits, bounded owner-authenticated GET readiness, durable private resource ownership, strict cleanup/restoration proofs and always-retained public artifacts. Keep dedicated runtime acceptance separate from local/mock validation and predecessor CI.
+- Preserve original JSON objects, lists and scalar types in the untrusted proof. Pin exactly two legacy empty-diagnostic `details` corrections to canonical objects with an immutable source ledger and negative controls; preserve all legitimate empty lists and existing response/value assertions.
+- Calibrate five compact post/page/CPT trash manifest cases against genuine package responses: remove phantom content markers and assert the complete unchanged `id`/`status` data map. Preserve every prior input, permission, state and metadata oracle, all other 565 typed cases, and immutable historical marker/safety inventories through an exact five-row before/after ledger. That calibration retained 185 cases/195 markers before the later four-case hygiene addition; real callback and mutation tests protect compact response shape and the historical projection.
+- Preserve the accepted 570-case typed destructive/privacy manifest through an immutable, source-pinned inventory of the 190 reviewed cases and 200 untrusted-field assertions. Validate exact marker locations and ordered field lists before shallow projection, retain historical safety goldens unchanged, and reject marker, input, role, type, ordering, no-write, error and imported-case mutations.
+- Made the opt-in untrusted-content proof reserve its summary and raw HTTP journal exclusively before WordPress bootstrap or credentials. Existing evidence and concurrent creators fail closed without overwrites; regression cases preserve preexisting bytes and partial reservations while retaining failed-response and cleanup evidence.
+- Documented the #108 unreleased 3.0 record-local marker contract, coverage and privacy table, agent threat model, and migration examples without changing 2.6.0 release notes. Aligned contributor/PR requirements for value-preservation, omission/error checks, and actual Adapter 0.6.1 annotation evidence. Documented the explicitly opted-in disposable runtime probes separately from pending HTTP/annotation proof.
 - Added destructive-operation red/green unit coverage and strict manifest policy for confirmation, raw bulk bounds, previews, canonical per-item failures, unchanged state, and preserved permission denials. Migrated existing bulk/error/trash/taxonomy callers without dropping their assertions.
 - Added opt-in disposable direct/registered/gateway/individual-tool proof runners with collision checks, persisted post/meta/term/file/cron snapshots, mutation observers, request-scoped database/capability faults, retained wire evidence, and owned-resource cleanup verification.
 - Wire destructive safety through eight serial boundary/trash-mode combinations in full source and original-package QA. Audit native registration and bootstrap denials before temporary MU fixtures; attest actual matching CLI/HTTP configuration, reserve evidence before credentials, and restore exact owned configuration/fixtures on failure. Add filesystem/mocked orchestration and package regressions plus always-retained CI reports; source/unit evidence does not establish real runtime acceptance.

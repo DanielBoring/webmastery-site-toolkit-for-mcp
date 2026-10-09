@@ -159,7 +159,9 @@ $summary = array( 'boundary' => $boundary, 'wordpress' => get_bloginfo( 'version
 	'fixture_sha256' => hash_file( 'sha256', __DIR__ . '/post-meta-authorization-fixture.php' ),
 	'yoast' => defined( 'WPSEO_VERSION' ) ? WPSEO_VERSION : null,
 	'seopress' => defined( 'SEOPRESS_VERSION' ) ? SEOPRESS_VERSION : null,
-	'production_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-posts.php' ),
+	'production_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-post-meta.php' ),
+	'access_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-post-access.php' ),
+	'writes_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-post-writes.php' ),
 	'passed' => 0, 'failed' => 0, 'cases' => array() );
 $credentials = array();
 $sessions = array();
@@ -297,7 +299,7 @@ try {
 	update_option( 'wstm110_policy', $config, false );
 	$saved = wstm110_setup( $config );
 	try {
-		$method = new ReflectionMethod( Webmastery_MCP_Posts::class, 'can_edit_post_meta_key' );
+		$method = new ReflectionMethod( Webmastery_MCP_Post_Meta::class, 'can_edit_post_meta_key' );
 		$method->setAccessible( true );
 		try {
 			$method->invoke( null, $id, $config['key'] );
@@ -317,7 +319,7 @@ try {
 		wp_set_current_user( 0 );
 		wp_set_current_user( $actors['author']->ID );
 		$page = end( $posts );
-		$method = new ReflectionMethod( Webmastery_MCP_Posts::class, 'can_edit_post_meta_key' );
+		$method = new ReflectionMethod( Webmastery_MCP_Post_Meta::class, 'can_edit_post_meta_key' );
 		$method->setAccessible( true );
 		wstm110_assert( false === $method->invoke( null, $page, 'wstm110_restricted' ), 'Primitive grant bypassed object edit floor.' );
 		$summary['passed']++;
