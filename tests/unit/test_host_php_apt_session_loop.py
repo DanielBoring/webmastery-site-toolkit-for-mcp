@@ -116,6 +116,256 @@ class FileSystem:
 
 
 class SessionLoopTest(unittest.TestCase):
+    def test_gpg_status_nonfinal_continuation_space_preserves_canonical_records(self):
+        for selected in (False, True):
+            with self.subTest(selected=selected), self.gpg_dependency_model() as (item, fs, _, _, _):
+                rows = [dict(row) for row in item.installed_records]
+                row = next(value for value in rows if (
+                    value["Package"] == "libreadline8t64") == selected)
+                rows.remove(row)
+                rows.insert(0, row)
+                row["Description"] = "description\n continuation "
+                chunks = ["\n".join(key + ": " + value for key, value in record.items()).encode()
+                          for record in rows]
+                raw = b"\n\n".join(chunks) + b"\n\n"
+                canonical = MODULE.POLICY.deb822(raw)
+                self.assertEqual("description\ncontinuation ", canonical[0]["Description"])
+                self.assertNotEqual(canonical[0], MODULE.POLICY.deb822(chunks[0])[0])
+                fs.add("/var/lib/dpkg/status", raw)
+                report = self.diagnostic_refusal(item, fs)
+                self.assertEqual("collected", report["state"], report)
+                self.assertEqual(canonical, item.installed_records)
+                record = report["status_record"]
+                exported = fs.nodes[str(item.directory / record["retained"]["file"])][1]
+                self.assertEqual(exported, raw[record["offset"]:record["offset"] + record["bytes"]])
+                self.assertEqual(MODULE.POLICY.digest(exported), record["sha256"])
+                if selected:
+                    self.assertEqual(chunks[0], exported)
+                self.assertEqual("complete", report["diagnostic_observation_status"])
+                self.assertFalse(report["runtime_authorized"] or item.root_launches or item.setup_ready)
+
+    def test_gpg_status_nonfinal_space_only_continuation_preserves_canonical_records(self):
+        for selected in (False, True):
+            with self.subTest(selected=selected), self.gpg_dependency_model() as (item, fs, _, _, _):
+                rows = [dict(row) for row in item.installed_records]
+                row = next(value for value in rows if (
+                    value["Package"] == "libreadline8t64") == selected)
+                rows.remove(row)
+                rows.insert(0, row)
+                row["Description"] = "description\n "
+                chunks = ["\n".join(key + ": " + value for key, value in record.items()).encode()
+                          for record in rows]
+                raw = b"\n\n".join(chunks) + b"\n\n"
+                canonical = MODULE.POLICY.deb822(raw)
+                self.assertEqual("description\n", canonical[0]["Description"])
+                self.assertNotEqual(canonical[0], MODULE.POLICY.deb822(chunks[0])[0])
+                fs.add("/var/lib/dpkg/status", raw)
+                report = self.diagnostic_refusal(item, fs)
+                self.assertEqual("collected", report["state"], report)
+                self.assertEqual(canonical, item.installed_records)
+                record = report["status_record"]
+                exported = fs.nodes[str(item.directory / record["retained"]["file"])][1]
+                self.assertEqual(exported, raw[record["offset"]:record["offset"] + record["bytes"]])
+                self.assertEqual(MODULE.POLICY.digest(raw), record["whole_file_sha256"])
+                if selected:
+                    self.assertEqual(chunks[0], exported)
+                self.assertEqual("complete", report["diagnostic_observation_status"])
+                self.assertFalse(report["runtime_authorized"] or item.root_launches or item.setup_ready)
+
+    def test_gpg_status_terminal_forms_preserve_raw_offsets_and_whole_file_binding(self):
+        for ending in (b"", b"\n", b"\n\n", b"\n\n\n\n", b"\n\n \t\n"):
+            for position in ("first", "middle", "last"):
+                with self.subTest(ending=ending, position=position), \
+                        self.gpg_dependency_model() as (item, fs, canonical, alias, saved):
+                    rows = [dict(row) for row in item.installed_records]
+                    selected = next(row for row in rows if row["Package"] == "libreadline8t64")
+                    rows.remove(selected)
+                    rows[0]["Description"] = "caf\u00e9"
+                    index = 0 if position == "first" else len(rows) if position == "last" else len(rows) // 2
+                    rows.insert(index, selected)
+                    chunks = ["\n".join(key + ": " + value for key, value in row.items()).encode()
+                              for row in rows]
+                    raw = b"\n\n".join(chunks) + ending
+                    fs.add("/var/lib/dpkg/status", raw)
+                    report = self.diagnostic_refusal(item, fs)
+                    self.assertEqual("collected", report["state"], report)
+                    record = report["status_record"]
+                    offset = sum(len(chunk) + 2 for chunk in chunks[:index])
+                    expected = chunks[index]
+                    if position == "last" and b"\n\n" not in ending:
+                        expected += ending
+                    self.assertEqual(offset, record["offset"])
+                    self.assertEqual(expected, raw[offset:offset + record["bytes"]])
+                    self.assertEqual(MODULE.POLICY.digest(expected), record["sha256"])
+                    self.assertEqual(MODULE.POLICY.digest(raw), record["whole_file_sha256"])
+                    self.assertEqual(record["whole_file_sha256"], record["pin"]["sha256"])
+                    retained = record["retained"]
+                    self.assertEqual(expected, fs.nodes[str(item.directory / retained["file"])][1])
+                    self.assertEqual(record["sha256"], retained["sha256"])
+                    self.assertEqual(record["bytes"], retained["bytes"])
+                    self.assertEqual("complete", report["diagnostic_observation_status"])
+                    self.assertEqual(report["files"][canonical]["identity"], report["files"][alias]["identity"])
+                    self.assertFalse(report["files"][saved]["present"])
+                    self.assertFalse(report["runtime_authorized"] or item.setup_ready or item.root_launches)
+                    before = (item.bytes, len(item.session_data_pins), len(report["commands"]))
+                    number = report["subject"]["failed_command"]
+                    item.gpg_diagnostic_query_capture(number, item.commands[number - 1], report)
+                    self.assertEqual(before, (item.bytes, len(item.session_data_pins), len(report["commands"])))
+
+    def test_gpg_status_malformed_interior_and_duplicate_fields_keep_original_refusal(self):
+        for fault in ("interior", "empty-interior", "duplicate-field", "bad-terminal"):
+            with self.subTest(fault=fault), self.gpg_dependency_model() as (item, fs, _, _, _):
+                collect = item.gpg_diversion_diagnostic
+                def corrupt():
+                    raw = fs.nodes["/var/lib/dpkg/status"][1]
+                    if fault == "interior":
+                        raw = raw.replace(b"\n\n", b"\n\nMALFORMED_PRIVATE\n\n", 1)
+                    elif fault == "empty-interior":
+                        raw = raw.replace(b"\n\n", b"\n\n\n\n", 1)
+                    elif fault == "duplicate-field":
+                        raw = raw.replace(b"Package: libreadline8t64\n",
+                                          b"Package: libreadline8t64\nPackage: libreadline8t64\n")
+                    else:
+                        raw += b"\nMALFORMED_PRIVATE"
+                    protected = item.protected
+                    with patch.object(item, "protected", side_effect=lambda path, limit=BASE.FILE_LIMIT:
+                                      raw if path == "/var/lib/dpkg/status" else protected(path, limit)):
+                        collect()
+                with patch.object(item, "gpg_diversion_diagnostic", side_effect=corrupt):
+                    report = self.diagnostic_refusal(item, fs)
+                self.assertEqual("partial", report["state"])
+                self.assertEqual("inventory-shape", report["reason"])
+                self.assertNotIn("status_record", report)
+                self.assertNotIn("diagnostic_observation_status", report)
+                self.assertTrue(report["commands"])
+                self.assertFalse(report["runtime_authorized"] or item.root_launches)
+
+    def test_gpg_status_duplicate_mismatched_and_qualified_records_refuse(self):
+        for fault in ("duplicate", "mismatch", "qualified-name", "architecture", "multi-arch"):
+            with self.subTest(fault=fault), self.gpg_dependency_model() as (item, fs, _, _, _):
+                collect = item.gpg_diversion_diagnostic
+                def corrupt():
+                    rows = [dict(row) for row in item.installed_records]
+                    selected = next(row for row in rows if row["Package"] == "libreadline8t64")
+                    if fault == "duplicate":
+                        rows.append(dict(selected))
+                    elif fault == "mismatch":
+                        selected["Version"] = "2"
+                    elif fault == "qualified-name":
+                        selected["Package"] += ":amd64"
+                    elif fault == "architecture":
+                        selected["Architecture"] = "arm64"
+                    else:
+                        selected["Multi-Arch"] = "no"
+                    raw = b"\n\n".join(
+                        "\n".join(key + ": " + value for key, value in row.items()).encode()
+                        for row in rows) + b"\n\n"
+                    if fault != "mismatch":
+                        item.installed_records = MODULE.POLICY.deb822(raw)
+                    protected = item.protected
+                    with patch.object(item, "protected", side_effect=lambda path, limit=BASE.FILE_LIMIT:
+                                      raw if path == "/var/lib/dpkg/status" else protected(path, limit)):
+                        collect()
+                with patch.object(item, "gpg_diversion_diagnostic", side_effect=corrupt):
+                    report = self.diagnostic_refusal(item, fs)
+                self.assertEqual("partial", report["state"])
+                self.assertEqual("tool-origin", report["reason"])
+                self.assertNotIn("status_record", report)
+                self.assertFalse(report["runtime_authorized"] or item.setup_ready or item.root_launches)
+
+    def test_gpg_status_stanza_pass_obeys_shared_deadline(self):
+        with self.gpg_dependency_model() as (item, fs, _, _, _):
+            fs.add("/var/lib/dpkg/status", fs.nodes["/var/lib/dpkg/status"][1] + b"\n")
+            parse = MODULE.POLICY.deb822
+            hit = []
+            whole_document_calls = []
+            def expire(raw, *args, **kwargs):
+                result = parse(raw, *args, **kwargs)
+                if raw == fs.nodes["/var/lib/dpkg/status"][1]:
+                    whole_document_calls.append(True)
+                    if len(whole_document_calls) == 3:
+                        hit.append(True)
+                        item.deadline = 0
+                return result
+            with patch.object(MODULE.POLICY, "deb822", side_effect=expire):
+                report = self.diagnostic_refusal(item, fs)
+            self.assertEqual([True], hit)
+            self.assertEqual("partial", report["state"])
+            self.assertEqual("inventory-deadline", report["reason"])
+            self.assertNotIn("status_record", report)
+            self.assertFalse(report["runtime_authorized"] or item.root_launches)
+
+    def test_gpg_status_export_exhaustion_and_write_failure_retain_debits_and_captures(self):
+        for fault in ("records", "metadata", "write"):
+            with self.subTest(fault=fault), self.gpg_dependency_model() as (item, fs, _, _, _):
+                export = item.gpg_diagnostic_export
+                held = {}
+                def fail(label, raw):
+                    if label == "installed-status":
+                        if fault == "records":
+                            item.record_bytes = MODULE.CAPTURE.RECORDS
+                        elif fault == "metadata":
+                            item.metadata_bytes = 67108864
+                        held["before"] = (item.bytes, len(item.session_data_pins), item.record_bytes)
+                        held["size"] = len(raw)
+                        if fault == "write":
+                            write = item.write.side_effect
+                            def broken(name, body):
+                                if name == "gpg-diagnostic-installed-status.original.private":
+                                    raise PermissionError("PRIVATE_STATUS_SENTINEL")
+                                return write(name, body)
+                            with patch.object(item, "write", side_effect=broken):
+                                return export(label, raw)
+                        if fault == "metadata":
+                            with patch.object(item, "retain", side_effect=lambda name, body:
+                                              MODULE.Provider.retain_metadata(item, name, body)):
+                                return export(label, raw)
+                    return export(label, raw)
+                with patch.object(item, "gpg_diagnostic_export", side_effect=fail):
+                    if fault == "records":
+                        with patch.object(os.path, "abspath", side_effect=fs.canonical), \
+                                self.assertRaisesRegex(BASE.Refusal, "^tool-origin$") as refusal:
+                            item.preflight()
+                        self.assertEqual("owner-response-shape", refusal.exception.origin_check)
+                        self.assertEqual({"state": "retention-failed", "reason": "retention"},
+                                         item.receipt["gpg_diversion_diagnostic"])
+                        self.assertNotIn(str(item.directory / "gpg-diagnostic-result.private.json"), fs.nodes)
+                    else:
+                        report = self.diagnostic_refusal(item, fs)
+                self.assertEqual(held["before"][:2], (item.bytes, len(item.session_data_pins)))
+                self.assertTrue(any(path.endswith(".stdout.private") for path in fs.nodes))
+                self.assertFalse(item.setup_ready or item.root_launches)
+                if fault == "records":
+                    self.assertEqual(MODULE.CAPTURE.RECORDS, item.record_bytes)
+                    continue
+                self.assertEqual("partial", report["state"])
+                self.assertEqual(15, len(report["commands"]))
+                if fault == "write":
+                    self.assertGreaterEqual(item.record_bytes, held["before"][2] + held["size"])
+                self.assertNotIn("diagnostic_observation_status", report)
+                self.assertTrue(any(path.endswith(".stdout.private") for path in fs.nodes))
+                with patch("builtins.print") as output:
+                    self.assertFalse(MODULE.projection(item, None, "tool-origin"))
+                self.assertNotIn("PRIVATE_STATUS_SENTINEL", output.call_args.args[0])
+                self.assertNotIn("libreadline8t64", output.call_args.args[0])
+                self.assertFalse(report["runtime_authorized"] or item.setup_ready or item.root_launches)
+
+    def test_gpg_status_final_whole_file_drift_prevents_complete_observation(self):
+        with self.gpg_dependency_model() as (item, fs, canonical, _, _):
+            capture = item.capture.side_effect
+            def mutate(operation, argv, stdin=None):
+                result = capture(operation, argv, stdin)
+                if operation == "elf" and argv[-1] == canonical:
+                    fs.add("/var/lib/dpkg/status", fs.nodes["/var/lib/dpkg/status"][1] + b"\n")
+                return result
+            with patch.object(item, "capture", side_effect=mutate):
+                report = self.diagnostic_refusal(item, fs)
+            self.assertEqual("partial", report["state"])
+            self.assertEqual("custody-recheck", report["phase"])
+            self.assertIn("status_record", report)
+            self.assertNotIn("diagnostic_observation_status", report)
+            self.assertFalse(report["runtime_authorized"] or item.root_launches)
+
     def test_gpg_capture_exhaustion_reserves_before_any_body_read(self):
         for exhausted in ("slots", "bytes"):
             with self.subTest(exhausted=exhausted), self.gpg_dependency_model() as (item, fs, _, _, _):

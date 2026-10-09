@@ -163,6 +163,17 @@ absence. Byte-parsed ELF headers and static loader facts do not establish live
 loader resolution or executable authority. The origin parser, complete-table
 refusal, fixed GPG consumers and ROOT argv remain unchanged.
 
+The associated installed-status stanza is selected by a bounded, offset-preserving
+pass associated with canonical records from the whole protected document.
+Individual paragraphs are not reparsed or stripped, so internal continuation
+whitespace retains the shared parser's exact semantics. Only whole-document
+outer whitespace is excluded from record association; malformed interior
+paragraphs, duplicate or mismatched package records and invalid qualification
+still refuse.
+The private stanza export binds its exact offset, length and digest to the
+whole-file digest and protected pin. This closes a modeled terminal-paragraph
+defect; the earlier native status suffix was not retained or reconstructed.
+
 Diagnostic queries reuse the existing owner/package/ELF capture operations and
 deadline, command, pin, acquisition, metadata, stream and record accounting.
 Capture-body slots and validated byte sizes are reserved before any body read;

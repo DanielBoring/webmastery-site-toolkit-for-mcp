@@ -1812,16 +1812,32 @@ class Provider(CAPTURE.Capture):
         report["installed_association"] = {"declaring_package": declaring,
                                            "owning_binary_package": owner}
         stanzas = []
-        offset = 0
-        for stanza in status.split(b"\n\n"):
+        parsed = POLICY.deb822(status)
+        require(parsed == self.installed_records, "tool-origin")
+        text = status.decode("utf-8")
+        offset = len(text[:len(text) - len(text.lstrip())].encode("utf-8"))
+        content_end = offset + len(text.strip().encode("utf-8"))
+        index = 0
+        # Canonical records come only from the whole-document parser.
+        while offset < content_end:
             self.check()
-            if POLICY.deb822(stanza) == [next(row for row in self.installed_records
-                                             if row.get("Package") == declaring)]:
+            end = status.find(b"\n\n", offset)
+            end = len(status) if end < 0 else end
+            stanza = status[offset:end]
+            require(index < len(parsed), "inventory-shape")
+            if parsed[index].get("Package") == declaring:
                 stanzas.append((offset, stanza))
-            offset += len(stanza) + 2
-        require(len(stanzas) == 1, "tool-origin")
+            index += 1
+            offset = end + 2
+        require(index == len(parsed), "inventory-shape")
+        rows = [row for row in parsed if row.get("Package") == declaring]
+        require(len(stanzas) == len(rows) == 1, "tool-origin")
+        require(POLICY.digest(status) == self.pins["/var/lib/dpkg/status"]["sha256"],
+                "tool-link")
         report["status_record"] = {
             "offset": stanzas[0][0], "pin": self.pins["/var/lib/dpkg/status"],
+            "bytes": len(stanzas[0][1]), "sha256": POLICY.digest(stanzas[0][1]),
+            "whole_file_sha256": POLICY.digest(status),
             "retained": self.gpg_diagnostic_export("installed-status", stanzas[0][1])}
         report["phase"] = "file-observation"
         paths = ((canonical, canonical, False), (alias, canonical, False),

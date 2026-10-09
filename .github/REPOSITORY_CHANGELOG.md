@@ -6,6 +6,13 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Preserve whole-document status parser semantics when binding diagnostic raw
+  stanza offsets, including nonfinal continuation whitespace. Keep the shared
+  parser, admission policies, private retention and original refusal unchanged.
+- Complete associated-GPG diagnostic status selection with a bounded raw-offset
+  pass that handles valid terminal delimiters and binds the unique stanza to its
+  protected whole-file pin. Preserve malformed/duplicate/qualification refusals,
+  original preflight failure, accounting and all ordinary acceptance policies.
 - Reserve diagnostic capture-body slots and bytes before acquisition, retain
   failed reservations without duplicate reuse charges, and reject malformed
   record fields/types explicitly while preserving the original preflight refusal.
