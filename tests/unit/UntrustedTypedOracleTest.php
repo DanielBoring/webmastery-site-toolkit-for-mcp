@@ -20,7 +20,8 @@ function get_permalink( $id ): string {
 
 final class UntrustedTypedOracleTest extends TestCase {
 	private static function source_function( string $name ): string {
-		$source = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__ ) . '/e2e/untrusted-content-runner.php' ) );
+		$file = in_array( $name, array( 'wstm108_provider_keys', 'wstm108_unavailable' ), true ) ? 'untrusted-content-wire.php' : 'untrusted-content-runner.php';
+		$source = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__ ) . '/e2e/' . $file ) );
 		self::assertSame( 1, preg_match( '/^function ' . preg_quote( $name, '/' ) . '\b.*?^}/ms', $source, $match ) );
 		return $match[0];
 	}

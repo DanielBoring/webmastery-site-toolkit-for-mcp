@@ -7,6 +7,7 @@ if ( PHP_SAPI !== 'cli' ) {
 	exit( 'CLI only.' );
 }
 require_once __DIR__ . '/error-contract-assertions.php';
+require_once __DIR__ . '/legacy-artifacts.php';
 
 
 final class Webmastery_MCP_E2E_Failure extends RuntimeException {}
@@ -323,7 +324,7 @@ if ( defined( 'WEBMASTERY_MCP_E2E_CLIENT_ONLY' ) && WEBMASTERY_MCP_E2E_CLIENT_ON
 
 $wordpress_url = rtrim( webmastery_mcp_e2e_env( 'WORDPRESS_URL', 'http://localhost' ), '/' );
 $endpoint      = webmastery_mcp_e2e_env( 'MCP_CRUD_ENDPOINT', $wordpress_url . '/wp-json/mcp/mcp-adapter-default-server' );
-$artifact_path = webmastery_mcp_e2e_env( 'MCP_CRUD_ARTIFACT', __DIR__ . '/../../e2e-artifacts/mcp-crud-summary.json' );
+$artifact_path = webmastery_mcp_e2e_env( 'MCP_CRUD_ARTIFACT', Wstm_E2E_Artifacts::path( __DIR__ . '/../../e2e-artifacts/mcp-crud-summary.json' ) );
 
 $summary = array(
 	'endpoint'        => $endpoint,

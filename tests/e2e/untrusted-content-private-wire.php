@@ -6,6 +6,7 @@ require_once __DIR__ . '/untrusted-content-files.php';
 
 /** Original event frames are opaque private bytes, never deserialized or uploaded. */
 final class Wstm108_PrivateWire {
+	private int $reserved_bytes = 0;
 	private string $directory;
 	private array $binding;
 	private string $context_sha256;
@@ -13,6 +14,9 @@ final class Wstm108_PrivateWire {
 	private $guard;
 	private ?array $snapshot = null;
 	private ?string $expected_sha256 = null;
+	private bool $finalizing = false;
+	private const FINAL_BYTES = 33554432;
+	private const RETIREMENT_BYTES = 4096;
 	private const SCOPES = array( 'original', 'enabled', 'runner', 'restored', 'finalize' );
 	private const PARSERS = array( 'initialize', 'notification', 'catalog', 'canonical-tool', 'gateway-info', 'session-close', 'oracle', 'owned-current-get', 'owned-stale-get', 'cli-refusal', 'http-cli-refusal', 'convergence', 'case-result', 'local-summary' );
 
@@ -26,8 +30,8 @@ final class Wstm108_PrivateWire {
 
 	public static function create( string $directory, array $binding, string $context_sha256, callable $guard ): self {
 		$guard();
-		$state = array( 'version' => 1, 'binding' => $binding, 'context_sha256' => $context_sha256, 'events' => array(), 'scopes' => array(), 'retirement' => 'pending', 'removal_pending_id' => null );
-		$file = Wstm108_Files::create( $directory . '/private-wire.json', json_encode( $state, JSON_THROW_ON_ERROR ) );
+		$state = array( 'version' => 2, 'binding' => $binding, 'context_sha256' => $context_sha256, 'events' => array(), 'scopes' => array(), 'retirement' => 'pending', 'removal_pending_id' => null, 'journal_bytes' => 0, 'index_bytes' => 0 );
+		$file = Wstm108_Files::create( $directory . '/private-wire.json', self::index_bytes( $state ) );
 		$self = new self( $directory, $binding, $context_sha256, $file['identity'], $guard );
 		$self->expected_sha256 = $file['sha256'];
 		return $self;
@@ -37,6 +41,13 @@ final class Wstm108_PrivateWire {
 		$self = new self( $directory, $binding, $context_sha256, $identity, $guard );
 		$state = $self->state();
 		$self->require( 'pending' === $state['retirement'] && null === $state['removal_pending_id'], 'partial or complete retirement cannot resume; remaining evidence is retained.' );
+		foreach ( $state['events'] as $record ) {
+			$self->require( is_int( $record['length'] ?? null ) && $record['length'] > 0
+				&& $record['length'] <= 33554432, 'invalid retained byte reservation.' );
+			$self->reserved_bytes += $record['length'];
+			if ( 'local-summary' === ( $record['origin']['boundary'] ?? null ) ) { $self->finalizing = true; }
+		}
+		$self->require( count( $state['events'] ) <= 4096 && $self->reserved_bytes + $state['journal_bytes'] + $state['index_bytes'] <= 134217728, 'retained finite wire quota exceeded.' );
 		return $self;
 	}
 
@@ -56,8 +67,10 @@ final class Wstm108_PrivateWire {
 		$this->require( null === $this->expected_sha256 || $this->expected_sha256 === $file['sha256'], 'journal generation changed outside its verified writer.' );
 		$this->require( 'Windows' === PHP_OS_FAMILY || 0600 === ( $file['identity']['mode'] & 0777 ), 'private journal permissions differ.' );
 		$state = json_decode( $file['bytes'], true, 512, JSON_THROW_ON_ERROR );
-		$this->require( is_array( $state ) && array_keys( $state ) === array( 'version', 'binding', 'context_sha256', 'events', 'scopes', 'retirement', 'removal_pending_id' )
-			&& 1 === $state['version'] && $this->binding === $state['binding'] && $this->context_sha256 === $state['context_sha256']
+		$this->require( is_array( $state ) && array_keys( $state ) === array( 'version', 'binding', 'context_sha256', 'events', 'scopes', 'retirement', 'removal_pending_id', 'journal_bytes', 'index_bytes' )
+			&& 2 === $state['version'] && is_int( $state['journal_bytes'] ) && $state['journal_bytes'] >= 0 && $state['journal_bytes'] <= 33554432
+			&& is_int( $state['index_bytes'] ) && $state['index_bytes'] >= strlen( $file['bytes'] ) && $state['index_bytes'] <= 33554432
+			&& $this->binding === $state['binding'] && $this->context_sha256 === $state['context_sha256']
 			&& is_array( $state['events'] ) && is_array( $state['scopes'] )
 			&& ( array() === $state['events'] || array_keys( $state['events'] ) === range( 0, count( $state['events'] ) - 1 ) )
 			&& in_array( $state['retirement'], array( 'pending', 'retiring', 'complete' ), true ), 'foreign, partial or malformed journal.' );
@@ -69,11 +82,24 @@ final class Wstm108_PrivateWire {
 
 	private function save( array $state ): void {
 		$this->validate_retirement( $state );
+		$bytes = self::index_bytes( $state );
+		$this->require( $this->reserved_bytes + $state['journal_bytes'] + $state['index_bytes'] + self::RETIREMENT_BYTES
+			+ ( $this->finalizing ? 0 : self::FINAL_BYTES ) <= 134217728,
+			'finite private wire/index quota or final reservation exhausted.' );
 		( $this->guard )();
 		$this->require( null !== $this->snapshot, 'no authoritative journal read precedes persistence.' );
-		$file = Wstm108_Files::update( $this->directory . '/private-wire.json', $this->snapshot, json_encode( $state, JSON_THROW_ON_ERROR ) );
+		$file = Wstm108_Files::update( $this->directory . '/private-wire.json', $this->snapshot, $bytes );
 		$this->expected_sha256 = $file['sha256'];
 		$this->snapshot = null;
+	}
+
+	private static function index_bytes( array &$state ): string {
+		do {
+			$bytes = json_encode( $state, JSON_THROW_ON_ERROR );
+			$previous = $state['index_bytes'];
+			$state['index_bytes'] = max( $previous, strlen( $bytes ) );
+		} while ( $state['index_bytes'] !== $previous );
+		return $bytes;
 	}
 
 	private function validate_retirement( array $state ): void {
@@ -98,6 +124,7 @@ final class Wstm108_PrivateWire {
 
 	public function begin( string $scope ): void {
 		$state = $this->state();
+		$this->finalizing = false;
 		$this->require( in_array( $scope, self::SCOPES, true ) && ! array_key_exists( $scope, $state['scopes'] )
 			&& 'pending' === $state['retirement'], 'scope is duplicate, foreign or already retiring.' );
 		$state['scopes'][ $scope ] = array( 'verdict' => 'pending', 'semantic_sha256' => null, 'cases' => array() );
@@ -107,8 +134,15 @@ final class Wstm108_PrivateWire {
 	public function capture( string $scope, array $event ): array {
 		$state = $this->state();
 		$this->require( 'pending' === ( $state['scopes'][ $scope ]['verdict'] ?? null ) && 'pending' === $state['retirement'], 'event has no open owned scope.' );
+		foreach ( $state['events'] as $record ) {
+			$this->require( $scope !== $record['scope'] || 'local-summary' !== ( $record['origin']['boundary'] ?? null ),
+				'terminal summary already captured; original scope cannot append or retry.' );
+		}
 		$id = count( $state['events'] ) + 1;
 		$bytes = "WSTM108-WIRE-1\n" . serialize( $event );
+		$this->require( $id <= ( $this->finalizing ? 4096 : 4095 ) && strlen( $bytes ) <= 33554432
+			&& $this->reserved_bytes + strlen( $bytes ) <= 134217728, 'finite private wire quota exhausted.' );
+		$this->reserved_bytes += strlen( $bytes );
 		$record = array(
 			'id' => $id, 'scope' => $scope, 'file' => sprintf( 'wire-%06d.bin', $id ),
 			'length' => strlen( $bytes ), 'sha256' => hash( 'sha256', $bytes ),
@@ -128,6 +162,24 @@ final class Wstm108_PrivateWire {
 		$state['events'][ $id - 1 ]['state'] = 'committed';
 		$this->save( $state );
 		return $this->witness( $state['events'][ $id - 1 ] );
+	}
+
+	public function capture_final( string $scope, array $event ): array {
+		$this->require( ! $this->finalizing && array_keys( $event ) === array( 'boundary', 'schema', 'summary', 'case_refs' )
+			&& 'local-summary' === $event['boundary'] && 'wstm108-final-summary-v2' === $event['schema']
+			&& is_array( $event['summary'] ) && ( ! array_key_exists( 'cases', $event['summary'] ) || null === $event['summary']['cases'] )
+			&& is_array( $event['case_refs'] ), 'duplicate or malformed final summary.' );
+		$this->require( strlen( "WSTM108-WIRE-1\n" . serialize( $event ) ) <= self::FINAL_BYTES - 8192, 'final summary exceeds reserved frame/index boundary.' );
+		$this->finalizing = true;
+		return $this->capture( $scope, $event );
+	}
+
+	public function reserve_journal( int $length ): void {
+		$this->require( $length > 0, 'invalid journal byte reservation.' );
+		$state = $this->state();
+		$state['journal_bytes'] += $length;
+		$this->require( $state['journal_bytes'] <= 33554432, 'journal per-file reservation exhausted.' );
+		$this->save( $state );
 	}
 
 	private function witness( array $record ): array {

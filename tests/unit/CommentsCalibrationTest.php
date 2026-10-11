@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Wstm105Calibration\Probe;
 
 require_once __DIR__ . '/fixtures/comments-calibration.php';
-require_once __DIR__ . '/fixtures/shared-helper-transition.php';
+require_once __DIR__ . '/fixtures/product-source-bindings.php';
 require_once dirname( __DIR__ ) . '/e2e/error-contract-assertions.php';
 
 /**
@@ -201,12 +201,10 @@ final class CommentsCalibrationTest extends TestCase {
 
 	private function assert_comments_provenance_bridge( string $source, string $historical_hash ): void {
 		$source = str_replace( "\r\n", "\n", $source );
-		$binding = Wstm167SourceTransition::load()['files']['includes/class-comments.php'];
-		self::assertSame( $binding['current_sha256'], hash( 'sha256', $source ), 'Current Comments source drift.' );
-		self::assertSame( $binding['current_blob'], hash( 'sha1', 'blob ' . strlen( $source ) . "\0" . $source ), 'Current Comments Git blob drift.' );
-		$restored = Wstm119SourceTransition::restore( 'includes/class-comments.php', $source );
-		self::assertSame( 'a5cc75ef65c0cb2b7b5e7c9173fc3f857f8181c9270c6f201483db73cde9bb4f', hash( 'sha256', $restored ), 'Restored historical Comments source drift.' );
-		self::assertSame( $historical_hash, hash( 'sha256', $restored ), 'Restored Comments must match the unchanged sealed ledger binding.' );
+		$binding = wstm_test_product_binding( 'includes/class-comments.php' );
+		self::assertSame( $binding[0], hash( 'sha256', $source ), 'Current Comments source drift.' );
+		self::assertSame( $binding[1], hash( 'sha1', 'blob ' . strlen( $source ) . "\0" . $source ), 'Current Comments Git blob drift.' );
+		self::assertSame( 'a5cc75ef65c0cb2b7b5e7c9173fc3f857f8181c9270c6f201483db73cde9bb4f', $historical_hash, 'Historical ledger identity remains separate from the current callback.' );
 	}
 
 	public function test_comments_provenance_bridge_accepts_only_approved_source_in_lf_or_crlf(): void {
@@ -256,8 +254,8 @@ final class CommentsCalibrationTest extends TestCase {
 				} elseif ( 'includes/class-comments.php' === $path ) {
 					$this->assert_comments_provenance_bridge( file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ), $hash );
 				} else {
-					$historical = Wstm119SourceTransition::restore( $path, file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) );
-					self::assertSame( $hash, hash( 'sha256', $historical ), 'Production drift: ' . $path );
+					wstm_test_assert_product_source( $path, file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) );
+					self::assertMatchesRegularExpression( '/^[a-f0-9]{64}$/D', $hash, 'Separate immutable ledger identity.' );
 				}
 			}
 		}

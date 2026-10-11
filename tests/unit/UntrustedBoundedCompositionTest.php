@@ -5,8 +5,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/fixtures/untrusted-bounded-manifest-transition.php';
-require_once __DIR__ . '/fixtures/untrusted-workflow-transition.php';
-require_once __DIR__ . '/fixtures/bounded-integration-transition.php';
+require_once __DIR__ . '/fixtures/product-source-bindings.php';
 
 final class UntrustedBoundedCompositionTest extends TestCase {
 	public function test_every_new_marker_assertion_is_additive_and_the_complete_bounded_view_is_preserved(): void {
@@ -39,17 +38,18 @@ final class UntrustedBoundedCompositionTest extends TestCase {
 		self::assertSame( 188, $changes );
 	}
 
-	public function test_composition_does_not_change_any_frozen_bounded_production_dependency(): void {
-		Wstm167SourceTransition::verify_dependencies();
-		self::assertSame( 'e847ac561c95854f66b5b04af627e992fa8886dd76eab018b730b07f42d290fa', Wstm167SourceTransition::SEAL );
-		self::assertSame( '2be14f26642f28014a9df9e99df36cb6697520b158938f1b3bad23e9da44c4f5', Wstm167SourceTransition::PREDECESSOR );
+	public function test_composition_preserves_current_bounded_and_marker_production_sources(): void {
+		foreach ( array( 'posts', 'custom-post-types', 'list-query', 'untrusted' ) as $name ) {
+			$path = 'includes/class-' . $name . '.php';
+			wstm_test_assert_product_source( $path, file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) );
+			$this->addToAssertionCount( 1 );
+		}
 	}
 
-	public function test_workflow_transition_rejects_source_drift_without_replacing_historical_hashes(): void {
-		$path = '.github/workflows/e2e-qa.yml';
+	public function test_finite_composition_binding_rejects_production_drift(): void {
+		$path = 'includes/class-list-query.php';
 		$source = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) );
-		self::assertNotSame( $source, Wstm108_Workflow_Transition::restore( $path, $source ) );
 		$this->expectException( RuntimeException::class );
-		Wstm108_Workflow_Transition::restore( $path, $source . "\n" );
+		wstm_test_assert_product_source( $path, $source . "\n" );
 	}
 }

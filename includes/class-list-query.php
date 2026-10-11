@@ -25,21 +25,17 @@ final class Webmastery_MCP_List_Query {
 		$args['no_found_rows']       = true;
 		$args['ignore_sticky_posts'] = true;
 
-		$query_count = $wpdb->num_queries;
-		$query       = new WP_Query( $args );
-		$error       = self::database_error_since( $query_count );
-		if ( null !== $error ) {
-			return $error;
+		$query = self::database_read( static fn() => new WP_Query( $args ) );
+		if ( is_wp_error( $query ) ) {
+			return $query;
 		}
 		$ids  = array_values( array_unique( array_map( 'intval', $query->posts ) ) );
 		$more = count( $ids ) > $per_page;
 		$ids  = array_slice( $ids, 0, $per_page );
 
 		// Prime only this window, never the lookahead or the rest of the library.
-		$query_count = $wpdb->num_queries;
-		_prime_post_caches( $ids, true, false );
-		$error = self::database_error_since( $query_count );
-		if ( null !== $error ) {
+		$error = self::database_read( static fn() => _prime_post_caches( $ids, true, false ) );
+		if ( is_wp_error( $error ) ) {
 			return $error;
 		}
 
@@ -51,16 +47,32 @@ final class Webmastery_MCP_List_Query {
 		];
 	}
 
-	private static function database_error_since( int $query_count ): ?WP_Error {
+	private static function database_read( callable $read ) {
 		global $wpdb;
 
-		// Cached queries/objects may leave an older, unrelated error untouched.
-		if ( $wpdb->num_queries > $query_count && '' !== $wpdb->last_error ) {
+		$query_count = $wpdb->num_queries;
+		$failed      = false;
+		$observe     = static function ( $sql ) use ( $wpdb, $query_count, &$failed ) {
+			// The query filter runs before wpdb flushes the previous read's error.
+			if ( $wpdb->num_queries > $query_count && '' !== $wpdb->last_error ) {
+				$failed = true;
+			}
+			return $sql;
+		};
+		add_filter( 'query', $observe, PHP_INT_MIN );
+		try {
+			$result = $read();
+			$observe( '' );
+		} finally {
+			remove_filter( 'query', $observe, PHP_INT_MIN );
+		}
+		// Cached reads can leave a stale error without executing any SQL.
+		if ( $failed ) {
 			// Core may already have cached a failed ID query as an empty result.
 			wp_cache_set_posts_last_changed();
 			return Webmastery_MCP_Response::local_error( 'upstream_failed', 'The list query could not be completed.' );
 		}
-		return null;
+		return $result;
 	}
 
 	public static function result( array $window, array $items ): array {

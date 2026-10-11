@@ -15,6 +15,7 @@ $_SERVER['HTTP_HOST'] = 'localhost';
 require_once '/var/www/html/wp-load.php';
 require_once __DIR__ . '/metadata-batch-fixture.php';
 require_once __DIR__ . '/error-contract-assertions.php';
+require_once __DIR__ . '/legacy-artifacts.php';
 require_once __DIR__ . '/metadata-transport.php';
 
 function wstm110_seo_assert( bool $condition, string $message ): void {
@@ -287,7 +288,7 @@ try {
 		$cleanup( 'actor', static function () use ( $user_id ): void { wstm110_seo_assert( wp_delete_user( $user_id ), 'Cannot remove SEO fixture actor.' ); } );
 	}
 	wp_set_current_user( $old_user );
-	$directory = dirname( __DIR__, 2 ) . '/e2e-artifacts';
+	$directory = Wstm_E2E_Artifacts::directory( dirname( __DIR__, 2 ) . '/e2e-artifacts' );
 	wstm110_seo_assert( is_dir( $directory ) || mkdir( $directory, 0777, true ), 'Cannot create SEO evidence directory.' );
 	$json = json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR ) . "\n";
 	wstm110_seo_assert( strlen( $json ) === file_put_contents( $directory . '/seo-metadata-' . $boundary . '.json', $json ), 'Cannot persist complete SEO evidence.' );

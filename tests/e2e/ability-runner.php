@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/diagnostics-fixture.php';
+require_once __DIR__ . '/legacy-artifacts.php';
 require_once __DIR__ . '/coverage-fixture.php';
 require_once dirname( __DIR__ ) . '/fixtures/seo-analysis.php';
 require_once __DIR__ . '/post-meta-authorization-fixture.php';
@@ -356,15 +357,15 @@ function e2e_get_path_value( $value, $path, &$exists = false ) {
 }
 
 function e2e_write_summary( $summary ) {
-	$artifact_dir = WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/e2e-artifacts';
-	if ( ! is_dir( $artifact_dir ) ) {
-		wp_mkdir_p( $artifact_dir );
+	$artifact_dir = Wstm_E2E_Artifacts::directory( WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/e2e-artifacts' );
+	if ( ! is_dir( $artifact_dir ) && ! wp_mkdir_p( $artifact_dir ) ) {
+		throw new RuntimeException( 'Could not create ability summary directory.' );
 	}
 
-	file_put_contents(
-		$artifact_dir . '/e2e-summary.json',
-		wp_json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n"
-	);
+	$json = wp_json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+	if ( false === $json || strlen( $json ) + 1 !== file_put_contents( $artifact_dir . '/e2e-summary.json', $json . "\n" ) ) {
+		throw new RuntimeException( 'Could not write complete ability summary.' );
+	}
 }
 
 function e2e_apply_case_setup( $case ) {

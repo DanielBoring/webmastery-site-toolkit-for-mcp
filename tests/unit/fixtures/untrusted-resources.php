@@ -123,6 +123,12 @@ namespace {
 		return '' === $key ? $meta : ( $single ? ( $meta[ $key ][0] ?? '' ) : ( $meta[ $key ] ?? array() ) );
 	}
 	function get_user_meta( $id, $key = '', $single = false ) { return fixture_meta( 'user_meta', $id, $key, $single ); }
+	function wp_cache_delete( $id, $group ): bool {
+		if ( 'user_meta' !== $group ) {
+			throw new RuntimeException( 'Unexpected fixture cache group.' );
+		}
+		return false;
+	}
 	function get_post_meta( $id, $key = '', $single = false ) { return fixture_meta( 'post_meta', $id, $key, $single ); }
 	function get_comment_meta( $id, $key = '', $single = false ) { return fixture_meta( 'comment_meta', $id, $key, $single ); }
 	function get_post( $id ) { return $GLOBALS['posts'][ $id ] ?? null; }

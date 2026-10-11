@@ -71,6 +71,13 @@ final class Wstm108_Resources {
 	}
 
 	private static function binding_schema( array $binding ): void {
+		if ( array_keys( $binding ) === array( 'owner', 'project', 'identity_kind', 'identity_sha256' ) ) {
+			self::ensure( is_string( $binding['owner'] ) && 1 === preg_match( '/^[a-f0-9]{32}$/D', $binding['owner'] )
+				&& is_string( $binding['project'] ) && 1 === preg_match( '/^[a-z0-9][a-z0-9_-]{0,62}$/D', $binding['project'] )
+				&& in_array( $binding['identity_kind'], array( 'source', 'package' ), true )
+				&& is_string( $binding['identity_sha256'] ) && 1 === preg_match( '/^[a-f0-9]{64}$/D', $binding['identity_sha256'] ) );
+			return;
+		}
 		self::ensure( array_keys( $binding ) === array( 'owner', 'project', 'source_sha', 'tree_sha', 'package_sha256' ) );
 		foreach ( array( 'owner' => '/^[a-f0-9]{32}$/D', 'project' => '/^[a-z0-9][a-z0-9_-]*$/D',
 			'source_sha' => '/^[a-f0-9]{40}$/D', 'tree_sha' => '/^[a-f0-9]{40}$/D' ) as $key => $pattern ) {
@@ -514,6 +521,8 @@ final class Wstm108_Resources {
 	}
 
 	private function session_list( int $id ): array {
+		self::ensure( $id > 0 && in_array( $id, $this->state['users'], true ) );
+		wp_cache_delete( $id, 'user_meta' );
 		$list = $this->session_api( 'get_all_user_sessions', array( $id ) );
 		self::ensure( is_array( $list ) );
 		return $list;
@@ -525,6 +534,7 @@ final class Wstm108_Resources {
 		$key = $boundary . ':' . $role;
 		self::ensure( '' !== $token && in_array( $boundary, self::BOUNDARIES, true ) && ! isset( $this->state['sessions'][ $key ] ) );
 		$list = $this->session_list( $id );
+		$this->role( $id );
 		self::ensure( isset( $list[ $token ] ) && $this->client_name( $role, $boundary ) === ( $list[ $token ]['client_params']['clientInfo']['name'] ?? null ) );
 		$this->resolve( 'session', array( 'id' => $id, 'boundary' => $boundary ) );
 		$this->state['sessions'][ $key ] = array( 'id' => $id, 'token' => $token, 'boundary' => $boundary );
@@ -1319,15 +1329,16 @@ final class Wstm108_Resources {
 	 */
 	public static function validate_proof( array $proof, array $binding ): void {
 		self::binding_schema( $binding );
+		$product = isset( $binding['identity_kind'] );
 		self::ensure( array_keys( $proof ) === array(
 			'version', 'source_sha', 'tree_sha', 'package_sha256', 'binding_sha256', 'resource_counts',
 			'cleanup_complete', 'cleanup', 'failed', 'first_error', 'inventory_sha256', 'cleanup_sha256',
 		) );
 		self::ensure( 1 === $proof['version'] && true === $proof['cleanup_complete']
 			&& 0 === $proof['failed'] && null === $proof['first_error']
-			&& $binding['source_sha'] === $proof['source_sha']
-			&& $binding['tree_sha'] === $proof['tree_sha']
-			&& $binding['package_sha256'] === $proof['package_sha256']
+			&& ( $product ? null === $proof['source_sha'] && null === $proof['tree_sha'] && null === $proof['package_sha256']
+				: $binding['source_sha'] === $proof['source_sha'] && $binding['tree_sha'] === $proof['tree_sha']
+					&& $binding['package_sha256'] === $proof['package_sha256'] )
 			&& hash( 'sha256', json_encode( $binding, JSON_THROW_ON_ERROR ) ) === $proof['binding_sha256'] );
 		self::ensure( is_array( $proof['resource_counts'] ) && array_keys( $proof['resource_counts'] ) === array( 'posts', 'comments', 'files' )
 			&& is_array( $proof['cleanup'] ) );
@@ -1383,8 +1394,9 @@ final class Wstm108_Resources {
 		$cleanup = $this->state['cleanup'];
 		ksort( $cleanup, SORT_STRING );
 		$proof = array(
-			'version' => 1, 'source_sha' => $this->state['binding']['source_sha'],
-			'tree_sha' => $this->state['binding']['tree_sha'], 'package_sha256' => $this->state['binding']['package_sha256'],
+			'version' => 1, 'source_sha' => isset( $this->state['binding']['identity_kind'] ) ? null : $this->state['binding']['source_sha'],
+			'tree_sha' => isset( $this->state['binding']['identity_kind'] ) ? null : $this->state['binding']['tree_sha'],
+			'package_sha256' => isset( $this->state['binding']['identity_kind'] ) ? null : $this->state['binding']['package_sha256'],
 			'binding_sha256' => hash( 'sha256', json_encode( $this->state['binding'], JSON_THROW_ON_ERROR ) ),
 			'resource_counts' => $this->resource_counts(),
 			'cleanup_complete' => $complete, 'cleanup' => $cleanup,

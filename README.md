@@ -30,15 +30,15 @@ For release history, see [CHANGELOG.md](CHANGELOG.md).
 Maintainers: equivalent permission, post-list, response-field, SEO-key and write-boundary code uses [shared helpers](docs/shared-helpers.md). Posts now dispatches metadata, bulk operations, revisions, featured images and content patches to cohesive owners, with domain authorization in Post Access. This extraction does not change ability names, schemas, roles, authorized totals, response fields, or client escaping requirements.
 
 Production PHP uses PHPCS-enforced short `[]` array literals. The
-[syntax/provenance policy](docs/shared-helpers.md#array-syntax-and-historical-provenance)
-documents the minimal conversion and exact preservation of historical source proofs.
+[array syntax policy](docs/shared-helpers.md#array-syntax-and-historical-provenance)
+documents the repository preference and behavior-preserving checks.
 
-Disposable hosted QA explicitly opts into read-only system observation when
-Docker-daemon proc evidence is inaccessible to the nonroot controller. Only
-fixed verified system read/supervision tools are elevated; candidate code,
-fixture authority and admission requirements are unchanged. Do not enable this
-mode on shared/live hosts. See the
-[inspection boundary and evidence limitations](docs/qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts).
+Local and hosted runtime QA use an owned disposable Docker project with
+loopback HTTP, no database host port, read-only source/package mounts and
+nonroot candidate CLI/HTTP workers. The Docker engine and reviewed images are
+trusted environment prerequisites, not whole-host attestation. Raw product
+evidence stays private; only validated summaries are uploaded. See
+[QA Strategy](docs/qa-strategy.md).
 
 The current development QA baseline is **WordPress 7.1.2 with MCP Adapter
 0.6.1**. The default Docker image and compatibility metadata use that baseline;
@@ -126,6 +126,9 @@ Unrepresentable integer offsets/continuations return `invalid_input` before a
 query. Candidate or priming SQL failures return `upstream_failed`, not an empty
 end-of-list. Only fresh SQL failures advance the current blog's post-query cache
 generation to prevent cached false EOFs; ordinary warm caches remain supported.
+Failures remain errors even when a later native priming read clears WordPress's
+last database error. The scoped check adds no queries and does not treat a stale
+error on a zero-query cache hit as a new failure.
 
 For example, start `list-posts` with `{"per_page":20,"page":1}`. Process the
 returned items, then request `{"per_page":20,"page":2}` only if `next_page` is 2.
@@ -140,37 +143,26 @@ payload/memory benchmarks are not universal limits on large titles/excerpts,
 metadata, taxonomy, or plugin filters. See the [typed migration contract and
 limitations](docs/3.0-migration.md#bounded-list-windows-and-summary-projection).
 
-The plugin minimum remains **PHP 8.0**. The exact-candidate WordPress 6.9 /
-PHP 8.1 compatibility lane is not PHP 8.0 integration proof. Proof-tool hosts
-that require `fsync` need PHP 8.1+, independently of the plugin minimum.
-The opt-in [PHP 8.0 fixture source](tests/fixtures/php80-floor/README.md)
-provides pinned WordPress 6.9.x builds and same-ELF CLI/HTTP probes. Reviewed
-source-only selection uses `WSTM_QA_RUNTIME_PROFILE=php80-floor`,
-`WSTM_PHP80_CONFIG` and its independently reviewed `WSTM_PHP80_CONFIG_SHA256`.
-Shared Compose and retention checks bind the original config, immutable image
-and candidate identity, rejecting conflicting profile/project/file overrides.
-Controller/bootstrap and pre-fixture calls use the same bounded original
-selection. Full runtime QA checks fresh native admission before artifact reset
-and again before fixtures. Supply the existing independent private authority
-root, trusted proof-host PHP and Linux Python 3.11+/pidfd, alongside the
-separately approved bare stack and existing runtime grants. These read-only
-checks neither provision a stack nor turn selection into admission or a grant.
-The source-only floor fixture cannot run original-ZIP package QA.
-Genuine PHP 8.0 candidate integration and leased bounded-list numeric acceptance
-remain separate requirements. Interrupted benchmark cleanup has a
-[bounded recovery launcher](tests/e2e/README.md#bounded-cleanup-recovery);
-recovery never turns an interrupted shard into a passing benchmark.
+The plugin minimum remains **PHP 8.0**. Genuine PHP 8.0/8.4 static and unit
+checks are separate from WordPress HTTP integration. The WordPress 6.9 /
+PHP 8.1 compatibility lane and local PHP 8.2 HTTP evidence do not prove PHP 8.0
+HTTP compatibility. See [QA scope and runtime requirements](docs/qa-strategy.md).
+Product QA uses an explicitly owned disposable Docker project, nonroot
+candidate execution, read-only source/package mounts and private evidence.
+The trusted engine and image initialization are environment assumptions, not
+whole-host attestation. Failed cleanup retains owned resources and original
+evidence; recovery does not turn an interrupted campaign into passing acceptance.
 
 The bounded implementation uses the shared Post Access and Post Content
 owners, with metadata, revisions and block patches in their extracted owners.
-The [owner/provenance map](docs/shared-helpers.md#166--167-and-provenance-integration)
-records the unchanged bounded/extraction transitions and the composed marker
-proofs. The ordinary manifest preserves all 601 cases and adds only reviewed
+The [product integration map](docs/shared-helpers.md#product-integration-and-evidence)
+records current owner contracts and separate source/package evidence
+requirements. The ordinary manifest preserves all 601 cases and adds only reviewed
 record-relative assertions. Full-content HTTP proofs request `fields:"full"`;
 separate default/explicit-summary cases require omitted content and its marker.
-Admission failures expose only closed topology phase/reason witnesses, including
-explicit diagnostic-write failures, while retaining exit 78 and private evidence.
-Source and isolated checks do not supply runtime authorization or custody acceptance.
+Source and installed original-ZIP acceptance remain separate. Unit or isolated
+controls do not replace actual runtime measurement, independent evidence replay
+or verified owned cleanup.
 
 ### Standalone post metadata authorization
 

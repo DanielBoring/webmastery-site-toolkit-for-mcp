@@ -1,16 +1,7 @@
 <?php
 /**
- * Real WordPress + actual MCP gateway/individual #108 proof, never a mock.
- *
- * Invoked only by the serial owned stage after actual CLI/HTTP attestation.
- * WSTM108_ALLOW_DISPOSABLE=1 and WSTM108_STAGE_CONTEXT identify that stage.
- * No wp-config edits or manually copied fixtures are supported.
- *
- * WSTM108_ARTIFACT selects the reserved summary path; <path>.http.jsonl keeps
- * safe witnesses only. Original frames remain in the independently anchored
- * private journal; unvalidated or failed cases veto evidence retirement.
- * This runner never provisions Docker, installs providers, or changes site roles.
- * Adapter 0.6.1 runtime proof is PENDING until this command actually succeeds.
+ * Real WordPress and MCP product checks in a parent-owned disposable fixture.
+ * Raw evidence remains private; this runner does not provision the host/stack.
  */
 
 declare(strict_types=1);
@@ -19,61 +10,65 @@ if ( 'cli' !== PHP_SAPI ) {
 	http_response_code( 403 );
 	exit( 'CLI only.' );
 }
-if ( '1' !== getenv( 'WSTM108_ALLOW_DISPOSABLE' ) ) {
-	fwrite( STDERR, "Refusing: WSTM108_ALLOW_DISPOSABLE=1 is required before WordPress, fixtures, credentials, or writes.\n" );
+if ( '1' !== getenv( 'E2E_OPT_IN' ) ) {
+	fwrite( STDERR, "Refusing: E2E_OPT_IN=1 is required before WordPress or mutation.\n" );
 	exit( 2 );
 }
 
 require_once __DIR__ . '/untrusted-content-evidence.php';
 require_once __DIR__ . '/untrusted-content-wire.php';
 require_once __DIR__ . '/untrusted-content-plan.php';
-require_once __DIR__ . '/untrusted-content-provenance.php';
-require_once __DIR__ . '/untrusted-content-lifecycle.php';
-require_once __DIR__ . '/untrusted-content-boot.php';
+require_once __DIR__ . '/product-runtime-context.php';
 require_once __DIR__ . '/untrusted-content-resources.php';
-$run = 'wstm108-' . bin2hex( random_bytes( 8 ) );
-$artifact = getenv( 'WSTM108_ARTIFACT' ) ?: dirname( __DIR__, 2 ) . '/e2e-artifacts/untrusted-content-' . $run . '.json';
 try {
-	Wstm108_Evidence::assert_available( $artifact );
-	if ( PHP_VERSION_ID < 80100 || ! function_exists( 'fsync' ) || ! ( new ReflectionFunction( 'fsync' ) )->isInternal() ) {
-		throw new RuntimeException( 'BLOCKED: container runner requires builtin fsync before fixture mutation; host PHP is not substituted for container PHP.' );
+	$product = Wstm167_Product_Context::open();
+	$directory = $product->stage( 'untrusted' );
+	$context = $product->data();
+	$context['binding'] = $product->binding();
+	$context_file = array( 'sha256' => $product->sha256() );
+	$run = 'wstm108-' . substr( $context['run'], 0, 16 );
+	$artifact = $directory . '/runner.json';
+	$verdict_path = $directory . '/product-verdict.private.json';
+	$verdict = Wstm108_Files::create( $verdict_path, json_encode( array(
+		'schema' => 'wstm-product-verdict-v1', 'context_sha256' => $product->sha256(), 'binding' => $product->binding(),
+		'php' => PHP_VERSION, 'uid' => posix_geteuid(), 'status' => 'bootstrapping', 'cleanup_complete' => false,
+	), JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR ) );
+	$wire_directory = $directory . '/wire';
+	if ( ! mkdir( $wire_directory, 0700 ) ) {
+		throw new RuntimeException( 'Cannot exclusively create private wire directory.' );
 	}
 	$evidence = new Wstm108_Evidence( $artifact );
+	$evidence->attach( Wstm108_PrivateWire::create( $wire_directory, $context['binding'], $product->sha256(),
+		static function () use ( $product ): void { $product->recheck(); } ), 'runner' );
 } catch ( Throwable $error ) {
-	fwrite( STDERR, 'Refusing: ' . $error->getMessage() . "\n" );
+	fwrite( STDERR, "Product untrusted context refused; no fixture mutation.\n" );
 	exit( 2 );
 }
 try {
-	$context_path = getenv( 'WSTM108_STAGE_CONTEXT' );
-	if ( ! is_string( $context_path ) || '' === $context_path || dirname( $context_path ) . '/runner.json' !== $artifact ) {
-		throw new RuntimeException( 'An exact owned stage context and its runner.json artifact are required before WordPress.' );
-	}
-	$context_file = Wstm108_Files::file( $context_path );
-	$context = json_decode( $context_file['bytes'], true, 512, JSON_THROW_ON_ERROR );
-	$plugin = str_replace( '\\', '/', realpath( dirname( __DIR__, 2 ) ) );
-	$actual_files = Wstm108_Provenance::verify( $plugin, $context['files'] );
-	$lifecycle = new Wstm108_Lifecycle( '/var/www/html', $plugin, '/tmp/wstm108-stage', $context['binding'], Wstm108_Lifecycle::decode_anchor( getenv( 'WSTM108_STATE_ANCHOR' ) ?: '' ) );
-	$lifecycle->bind_context( $context, $context_file['sha256'] );
-	$evidence->attach( $lifecycle->wire(), 'runner' );
+	$_SERVER['HTTP_HOST'] = 'localhost';
+	require_once $context['wordpress_root'] . '/wp-load.php';
+	$product->wordpress();
 } catch ( Throwable $error ) {
 	$evidence->save( array( 'status' => 'refused-before-bootstrap', 'error' => $error->getMessage() ) );
-	fwrite( STDERR, 'Refusing: ' . $error->getMessage() . "\n" );
+	Wstm108_Files::update( $verdict_path, $verdict, json_encode( array(
+		'schema' => 'wstm-product-verdict-v1', 'context_sha256' => $product->sha256(), 'binding' => $product->binding(),
+		'status' => 'refused-before-bootstrap', 'cleanup_complete' => false, 'phase' => 'bootstrap',
+		'private_error' => $error->getMessage(), 'exit' => 2,
+	), JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR ) );
+	fwrite( STDERR, "Product untrusted bootstrap refused; private evidence retained.\n" );
 	exit( 2 );
 }
 
-$_SERVER['HTTP_HOST'] = 'localhost';
-require_once '/var/www/html/wp-load.php';
 require_once __DIR__ . '/error-contract-assertions.php';
 if ( ! function_exists( 'wstm108_assert' ) ) {
 	require_once __DIR__ . '/untrusted-content-fixture.php';
 }
 require_once ABSPATH . 'wp-admin/includes/user.php';
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
-Wstm108_Provenance::loaded_root( $plugin );
-$actual_runtime = wstm108_runtime_snapshot();
-$lifecycle->require_enabled( $actual_runtime, $context_file['sha256'] );
-$resources = new Wstm108_Resources( '/tmp/wstm108-stage/resources.json', $context['binding'], $run );
-$lifecycle->bind_resources( $resources->journal_identity() );
+$actual_runtime = array( 'php' => PHP_VERSION, 'wordpress' => get_bloginfo( 'version' ) );
+$actual_files = array( 'plugin_root' => $product->data()['plugin_root'], 'parent_identity_kind' => $context['identity_kind'],
+	'parent_identity_sha256' => $context['identity_sha256'] );
+$resources = new Wstm108_Resources( $directory . '/resources.json', $context['binding'], $run );
 
 function wstm108_case( string $label, callable $action, array &$summary, Wstm108_Evidence $evidence, string $artifact ) {
 	wstm108_assert( $label === ( $summary['expected_labels'][ count( $summary['cases'] ) ] ?? null ), 'Case execution diverged from the complete frozen ordered plan.' );
@@ -157,45 +152,8 @@ function wstm108_seed_legacy_map( int $id, string $key, string $run ): void {
 	wstm108_assert( wstm108_nested() === get_post_meta( $id, $key, true ), 'Legacy map fixture did not round-trip through real core storage.' );
 }
 
-function wstm108_provider_keys( string $provider ): array {
-	$yoast = array(
-		'title' => '_yoast_wpseo_title', 'meta_description' => '_yoast_wpseo_metadesc',
-		'focus_keyphrase' => '_yoast_wpseo_focuskw', 'canonical_url' => '_yoast_wpseo_canonical',
-		'breadcrumb_title' => '_yoast_wpseo_bctitle', 'schema_page_type' => '_yoast_wpseo_schema_page_type',
-		'schema_article_type' => '_yoast_wpseo_schema_article_type', 'opengraph_title' => '_yoast_wpseo_opengraph-title',
-		'opengraph_description' => '_yoast_wpseo_opengraph-description', 'opengraph_image' => '_yoast_wpseo_opengraph-image',
-		'twitter_title' => '_yoast_wpseo_twitter-title', 'twitter_description' => '_yoast_wpseo_twitter-description',
-		'twitter_image' => '_yoast_wpseo_twitter-image', 'seo_score' => '_yoast_wpseo_linkdex',
-		'readability_score' => '_yoast_wpseo_content_score', 'inclusive_language_score' => '_yoast_wpseo_inclusive_language_score',
-		'primary_category' => '_yoast_wpseo_primary_category', 'cornerstone' => '_yoast_wpseo_is_cornerstone',
-		'robots_noindex' => '_yoast_wpseo_meta-robots-noindex', 'robots_nofollow' => '_yoast_wpseo_meta-robots-nofollow',
-		'robots_advanced' => '_yoast_wpseo_meta-robots-adv',
-	);
-	$seopress = array(
-		'title' => '_seopress_titles_title', 'meta_description' => '_seopress_titles_desc',
-		'focus_keywords' => '_seopress_analysis_target_kw', 'canonical_url' => '_seopress_robots_canonical',
-		'opengraph_title' => '_seopress_social_fb_title', 'opengraph_description' => '_seopress_social_fb_desc',
-		'opengraph_image' => '_seopress_social_fb_img', 'twitter_title' => '_seopress_social_twitter_title',
-		'twitter_description' => '_seopress_social_twitter_desc', 'twitter_image' => '_seopress_social_twitter_img',
-		'primary_category' => '_seopress_robots_primary_cat', 'robots_noindex' => '_seopress_robots_index',
-		'robots_nofollow' => '_seopress_robots_follow', 'robots_noimageindex' => '_seopress_robots_imageindex',
-		'robots_noarchive' => '_seopress_robots_archive', 'robots_nosnippet' => '_seopress_robots_snippet',
-		'breadcrumb_title' => '_seopress_robots_breadcrumbs', 'news_sitemap_disabled' => '_seopress_news_disabled',
-		'video_sitemap_disabled' => '_seopress_video_disabled',
-	);
-	return 'yoast' === $provider ? $yoast : $seopress;
-}
-
-function wstm108_unavailable(): array {
-	return array(
-		'code' => 'forbidden', 'reason' => 'metadata_not_readable',
-		'message' => 'This metadata field is unavailable under the effective key-level permission.',
-		'details' => (object) array(),
-	);
-}
-
 /**
- * Availability is observed separately through a standalone key read. Expected
+ * Availability is observed from native per-key checks at the HTTP boundary. Expected
  * record values/shapes still come only from core storage and this frozen oracle.
  * No auth hooks are replaced or permissions granted to force a passing result.
  */
@@ -313,7 +271,7 @@ try {
 		$resources->intent( 'user', array( 'role' => $role ) );
 		$id = wp_insert_user( array(
 			'user_login' => $login, 'user_pass' => wp_generate_password( 40 ), 'user_email' => $login . '@example.test',
-			'role' => 'reader' === $role ? 'subscriber' : $role, 'display_name' => $payload,
+			'role' => 'reader' === $role ? 'subscriber' : $role, 'display_name' => wp_slash( $payload ),
 			'user_nicename' => $login, 'user_url' => 'https://example.test/' . $run . '?literal=%22%5C%E9%9B%AA',
 			'meta_input' => array( 'wstm108_owner' => $context['binding']['owner'] ),
 		) );
@@ -330,14 +288,18 @@ try {
 		}
 		$resources->user( $role, (int) $id );
 		$actor = new WP_User( $id );
+		wstm108_assert( $actor->display_name === $payload, 'Native actor display name differs from original fixture bytes.' );
 		$summary['actors'][ $role ] = array( 'id' => (int) $id, 'roles' => array_values( $actor->roles ), 'caps' => (object) $actor->allcaps );
-		update_user_meta( $id, 'last_login', $payload );
-		$resources->intent( 'password', array( 'id' => (int) $id, 'name' => $run . ' ' . $payload ) );
-		$created = WP_Application_Passwords::create_new_application_password( $id, array( 'name' => $run . ' ' . $payload ) );
+		update_user_meta( $id, 'last_login', wp_slash( $payload ) );
+		wp_cache_delete( (int) $id, 'user_meta' );
+		wstm108_assert( array( $payload ) === get_user_meta( $id, 'last_login', false ), 'Native last-login seed differs from original fixture bytes.' );
+		$credential_name = wstm108_credential_name( $run );
+		$resources->intent( 'password', array( 'id' => (int) $id, 'name' => $credential_name ) );
+		$created = WP_Application_Passwords::create_new_application_password( $id, array( 'name' => wp_slash( $credential_name ) ) );
 		wstm108_assert( ! is_wp_error( $created ), 'Cannot create owned application password.' );
 		$passwords[ $id ] = $created[1]['uuid'];
 		$evidence->secret( $created[0] );
-		$resources->password( (int) $id, $created[1]['uuid'], $run . ' ' . $payload );
+		$resources->password( (int) $id, $created[1]['uuid'], $credential_name );
 		foreach ( array( false, true ) as $individual ) {
 			$boundary = $individual ? 'individual' : 'gateway';
 			$resources->intent( 'session', array( 'id' => (int) $id, 'boundary' => $boundary ) );
@@ -416,9 +378,10 @@ try {
 	) ) );
 	wstm108_assert( $comment_id > 0, 'Cannot seed comment.' );
 	$resources->comment( (int) $comment_id );
-	$upload = wp_upload_dir( null, false );
-	wstm108_assert( ! $upload['error'], 'No writable disposable upload directory.' );
-	$upload_directory = $resources->create_upload_directory( $upload['basedir'] );
+	$product->wordpress();
+	$upload_base = Wstm108_Files::native_upload_base( $context['wordpress_root'],
+		static fn( bool $create ): array => wp_upload_dir( null, $create, true ) );
+	$upload_directory = $resources->create_upload_directory( $upload_base );
 	$file = $upload_directory . '/' . $run . '-雪.png';
 	$image = base64_decode( 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZQmcAAAAASUVORK5CYII=', true );
 	wstm108_assert( is_string( $image ), 'Invalid owned PNG fixture.' );
@@ -434,7 +397,7 @@ try {
 	$resources->post( (int) $media_id );
 	$resources->intent( 'mutation', array( 'resource' => 'post', 'id' => (int) $media_id ) );
 	update_post_meta( $media_id, '_wp_attachment_image_alt', wp_slash( $payload ) );
-	wp_update_attachment_metadata( $media_id, array( 'width' => 1, 'height' => 1, 'file' => ltrim( substr( $file, strlen( $upload['basedir'] ) ), '/' ) ) );
+	wp_update_attachment_metadata( $media_id, array( 'width' => 1, 'height' => 1, 'file' => ltrim( substr( $file, strlen( $upload_base ) ), '/' ) ) );
 
 	// Seed only owned post metadata. Existing provider registrations/auth remain intact.
 	$resources->intent( 'mutation', array( 'resource' => 'post', 'id' => $post_id ) );
@@ -514,12 +477,16 @@ try {
 			wstm108_refresh( $post_id );
 			$after = get_post_field( 'post_content', $post_id );
 			$after_blocks = wstm108_expected_blocks( $after );
-			wstm108_compare_record( $data, array(
+			$case['semantic'] = array( 'schema' => 'wstm108-semantic-replay-v1', 'before' => $before, 'after' => $after,
+				'blocks_before' => $blocks, 'blocks_after' => $after_blocks );
+			$expected = array(
 				'id' => $post_id, 'type' => 'post', 'target' => array( 'type' => 'block_path', 'block_path' => '0' ),
 				'block_hash_before' => $blocks[0]['hash'], 'block_hash_after' => $after_blocks[0]['hash'],
 				'content_hash_before' => hash( 'sha256', $before ), 'content_hash_after' => hash( 'sha256', $after ),
 				'content' => $after,
-			), 'content-patch' );
+			);
+			$case['expected'] = $expected;
+			wstm108_compare_record( $data, $expected, 'content-patch' );
 		}, $summary, $evidence, $artifact );
 		foreach ( array( 'exact', 'heading' ) as $target_type ) {
 			wstm108_case( "{$boundary}:patch-post-content:{$target_type}", static function ( &$case ) use ( $client, $boundary, $target_type, $run, $payload, $content, $resources, $users ): void {
@@ -570,14 +537,21 @@ try {
 			wstm108_case( "{$boundary}:{$type}:revisions", static function ( &$case ) use ( $client, $id, $resources ): void {
 				$data = wstm108_success( $client, 'list-revisions', array( 'post_id' => $id, 'per_page' => 100, 'fields' => 'full' ), $case );
 				wstm108_assert( ! empty( $data->revisions ), 'No real revisions were created.' );
+				$expected_revisions = array();
 				foreach ( $data->revisions as $revision ) {
-					wstm108_compare_record( $revision, wstm108_expected_revision( $revision->id ), 'revision' );
+					$expected = wstm108_expected_revision( $revision->id );
+					$expected_revisions[] = $expected;
+					wstm108_compare_record( $revision, $expected, 'revision' );
 				}
 				$resources->intent( 'mutation', array( 'resource' => 'post', 'id' => (int) $id ) );
 				$restored = wstm108_success( $client, 'restore-revision', array( 'revision_id' => $data->revisions[0]->id ), $case );
 				wstm108_refresh( $id );
-				wstm108_compare_record( $restored->revision, wstm108_expected_revision( $data->revisions[0]->id ), 'revision' );
-				wstm108_compare_record( $restored->post, wstm108_expected_post( $id ), 'post' );
+				$expected_revision = wstm108_expected_revision( $data->revisions[0]->id );
+				$expected_post = wstm108_expected_post( $id );
+				$case['semantic'] = array( 'schema' => 'wstm108-semantic-replay-v1', 'revisions' => $expected_revisions,
+					'revision' => $expected_revision, 'post' => $expected_post );
+				wstm108_compare_record( $restored->revision, $expected_revision, 'revision' );
+				wstm108_compare_record( $restored->post, $expected_post, 'post' );
 			}, $summary, $evidence, $artifact );
 		}
 		foreach ( array( 'list', 'get', 'update' ) as $operation ) {
@@ -631,25 +605,33 @@ try {
 			clean_user_cache( $id );
 			$u = get_userdata( $id );
 			$account = wstm108_find_record( $data->admin_accounts, $id );
-			wstm108_compare_record( $account, array( 'id' => $id, 'login' => $u->user_login, 'email' => $u->user_email, 'registered' => $u->user_registered, 'last_login' => $payload ), 'account' );
+			$expected_account = array( 'id' => $id, 'login' => $u->user_login, 'email' => $u->user_email, 'registered' => $u->user_registered, 'last_login' => $payload );
+			wstm108_compare_record( $account, $expected_account, 'account' );
 			$entry = WP_Application_Passwords::get_user_application_password( $id, $passwords[ $id ] );
 			$last = $entry['last_used'] ?? null;
 			$app = wstm108_find_record( $data->application_passwords, $id, 'user_id' );
-			wstm108_compare_record( $app, array( 'user_id' => $id, 'user_login' => $u->user_login, 'app_name' => $entry['name'], 'last_used' => is_numeric( $last ) ? gmdate( 'c', (int) $last ) : ( $last ?: null ) ), 'application' );
+			$expected_app = array( 'user_id' => $id, 'user_login' => $u->user_login, 'app_name' => $entry['name'], 'last_used' => is_numeric( $last ) ? gmdate( 'c', (int) $last ) : ( $last ?: null ) );
+			$case['semantic'] = array( 'schema' => 'wstm108-semantic-replay-v1', 'account' => $expected_account, 'application' => $expected_app );
+			wstm108_compare_record( $app, $expected_app, 'application' );
 		}, $summary, $evidence, $artifact );
 
 		wstm108_case( "{$boundary}:standalone-meta-read-update", static function ( &$case ) use ( $client, $post_id, $boundary, $resources ): void {
 			wstm108_refresh( $post_id );
 			$before = get_post_meta( $post_id, 'wstm108_payload', true );
 			$data = wstm108_success( $client, 'get-post-meta', array( 'post_id' => $post_id, 'meta_key' => 'wstm108_payload' ), $case );
-			wstm108_compare_record( $data, array( 'post_id' => $post_id, 'meta' => array( 'wstm108_payload' => array( $before ) ) ), 'meta' );
+			$expected_read = array( 'post_id' => $post_id, 'meta' => array( 'wstm108_payload' => array( $before ) ) );
+			wstm108_compare_record( $data, $expected_read, 'meta' );
 			$value = wstm108_nested();
 			$value['boundary'] = $boundary;
 			$resources->intent( 'mutation', array( 'resource' => 'post', 'id' => $post_id ) );
 			$data = wstm108_success( $client, 'update-post-meta', array( 'post_id' => $post_id, 'meta_key' => 'wstm108_payload', 'meta_value' => $value ), $case );
-			wstm108_compare_record( $data, array( 'post_id' => $post_id, 'meta_key' => 'wstm108_payload', 'updated' => true, 'previous_value' => $before, 'current_value' => $value ), 'meta-update' );
+			$expected_update = array( 'post_id' => $post_id, 'meta_key' => 'wstm108_payload', 'updated' => true, 'previous_value' => $before, 'current_value' => $value );
+			wstm108_compare_record( $data, $expected_update, 'meta-update' );
 			wstm108_refresh( $post_id );
-			wstm108_assert( $value === get_post_meta( $post_id, 'wstm108_payload', true ), 'Stored map changed or lost nested literal untrusted_fields.' );
+			$after = get_post_meta( $post_id, 'wstm108_payload', true );
+			$case['semantic'] = array( 'schema' => 'wstm108-semantic-replay-v1', 'read' => $expected_read,
+				'update' => $expected_update, 'before' => $before, 'value' => $value, 'after' => $after );
+			wstm108_assert( $value === $after, 'Stored map changed or lost nested literal untrusted_fields.' );
 		}, $summary, $evidence, $artifact );
 		wstm108_case( "{$boundary}:standalone-meta-delete", static function ( &$case ) use ( $client, $post_id, $boundary, $resources ): void {
 			$key = 'wstm108_delete_' . $boundary;
@@ -663,7 +645,9 @@ try {
 			$case['expected'] = $expected;
 			wstm108_compare_record( $data, $expected, 'meta-delete' );
 			wstm108_refresh( $post_id );
-			wstm108_assert( array() === get_post_meta( $post_id, $key, false ), 'Deleted owned metadata remains.' );
+			$after = get_post_meta( $post_id, $key, false );
+			$case['semantic'] = array( 'schema' => 'wstm108-semantic-replay-v1', 'before' => $before, 'after' => $after );
+			wstm108_assert( array() === $after, 'Deleted owned metadata remains.' );
 		}, $summary, $evidence, $artifact );
 
 		// Seed legacy maps only after content mutations, avoiding provider indexers
@@ -675,39 +659,46 @@ try {
 				wstm108_seed_legacy_map( $post_id, $keys[ $field ], $run );
 			}
 		}
-		$readable = array();
 		foreach ( array_unique( array_merge( array_values( wstm108_provider_keys( 'yoast' ) ), array_values( wstm108_provider_keys( 'seopress' ) ) ) ) as $key ) {
-			wstm108_case( "{$boundary}:seo-key-policy:{$key}", static function ( &$case ) use ( $client, $post_id, $key, &$readable ): void {
+			wstm108_case( "{$boundary}:seo-key-policy:{$key}", static function ( &$case ) use ( $client, $post_id, $key ): void {
 				$result = $client->execute( 'webmastery-site-toolkit-for-mcp/get-post-meta', array( 'post_id' => $post_id, 'meta_key' => $key ) );
 				$case['response'] = $result;
-				$readable[ $key ] = true === $result['success'];
-				if ( ! $readable[ $key ] ) {
+				if ( true !== $result['success'] ) {
 					wstm118_error_envelope( $result );
 					wstm108_assert( 'forbidden' === $result['error']['code'], 'Unexpected SEO key error.' );
 					return;
 				}
-				wstm108_compare_record( $result['data'], array( 'post_id' => $post_id, 'meta' => array( $key => array( get_post_meta( $post_id, $key, true ) ) ) ), 'meta' );
+				$expected = wstm108_expected_post_meta( $post_id, $key );
+				$case['expected'] = $expected;
+				wstm108_compare_record( $result['data'], $expected, 'meta' );
 			}, $summary, $evidence, $artifact );
 		}
-		wstm108_case( "{$boundary}:seo-metrics", static function ( &$case ) use ( $client, $post_id, $readable, &$summary ): void {
+		wstm108_case( "{$boundary}:seo-metrics", static function ( &$case ) use ( $client, $post_id, &$summary ): void {
 			$data = wstm108_success( $client, 'seo-analyze-post', array( 'post_id' => $post_id ), $case );
+			$readable = $client->native_readability( $post_id, array( '_yoast_wpseo_metadesc', '_seopress_titles_desc', '_yoast_wpseo_focuskw', '_seopress_analysis_target_kw' ) );
 			$expected = wstm108_expected_metrics( $post_id, $readable, $summary['providers'] );
 			$case['expected_metrics'] = $expected;
+			$case['readable'] = $readable;
+			$case['providers'] = $summary['providers'];
 			wstm108_compare_record( $data->metrics, $expected, 'metrics' );
 			foreach ( array_merge( $data->issues, $data->good ) as $finding ) {
 				wstm108_assert( false === strpos( $finding->message, 'INERT TEST DATA' ), 'Stored SEO data was interpolated into an assessment message.' );
 			}
 		}, $summary, $evidence, $artifact );
 		foreach ( array( 'yoast', 'seopress' ) as $provider ) {
-			wstm108_case( "{$boundary}:{$provider}:metadata", static function ( &$case ) use ( $client, $post_id, $provider, $readable, &$summary ): void {
+			wstm108_case( "{$boundary}:{$provider}:metadata", static function ( &$case ) use ( $client, $post_id, $provider, &$summary ): void {
 				$data = wstm108_success( $client, 'get-' . $provider . '-metadata', array( 'post_id' => $post_id ), $case );
 				if ( ! $summary['providers'][ $provider ] ) {
 					wstm108_assert( false === ( $data->{ $provider . '_active' } ?? null ) && ! isset( $data->metadata, $data->untrusted_fields ), 'Inactive provider emitted content.' );
 					$summary['blocked'][ $provider ] = 'Real provider is not installed/active; active-provider proof remains pending.';
 					return;
 				}
+				$readable = $client->native_readability( $post_id, array_values( wstm108_provider_keys( $provider ) ) );
 				$expected = wstm108_expected_provider( $post_id, $provider, $readable );
 				$case['expected'] = $expected;
+				$case['readable'] = $readable;
+				$case['providers'] = $summary['providers'];
+				$case['nested_expected'] = wstm108_nested();
 				wstm108_compare_record( $data, $expected, 'provider' );
 				$keys = wstm108_provider_keys( $provider );
 				wstm108_assert( ! empty( $readable[ $keys['opengraph_title'] ] ), 'Real provider nested-map key is not authorized; cannot prove preservation.' );
@@ -722,8 +713,18 @@ try {
 					return;
 				}
 				$p = get_post( $post_id );
+				$observations = $client->native_observations();
+				foreach ( $observations as $record ) {
+					wstm108_assert( $key === $record['key'], 'Score native observation key changed.' );
+				}
+				wstm108_assert( true === ( $observations[ wstm108_native_observation_key( get_current_user_id(), $post_id, $key ) ]['allowed'] ?? null ),
+					'Owned score native observation missing or denied.' );
 				$actual = wstm108_find_record( $data->items, $post_id, 'post_id' );
-				wstm108_compare_record( $actual, array( 'post_id' => $post_id, 'title' => $p->post_title, 'url' => get_permalink( $post_id ), 'post_type' => 'post', 'modified_gmt' => $p->post_modified_gmt, 'score' => (int) get_post_meta( $post_id, $key, true ) ), 'score' );
+				$expected = array( 'post_id' => $post_id, 'title' => $p->post_title, 'url' => get_permalink( $post_id ), 'post_type' => 'post', 'modified_gmt' => $p->post_modified_gmt, 'score' => (int) get_post_meta( $post_id, $key, true ) );
+				$case['expected'] = $expected;
+				$case['providers'] = $summary['providers'];
+				$case['score_key'] = $key;
+				wstm108_compare_record( $actual, $expected, 'score' );
 			}, $summary, $evidence, $artifact );
 		}
 		foreach ( array(
@@ -732,17 +733,26 @@ try {
 			'yoast_focus_keyword' => array( 'yoast', '_yoast_wpseo_focuskw' ),
 			'seopress_focus_keywords' => array( 'seopress', '_seopress_analysis_target_kw' ),
 		) as $field => list( $provider, $key ) ) {
-			wstm108_case( "{$boundary}:seo-forbidden-read-trap:{$field}", static function ( &$case ) use ( $client, $post_id, $readable, $provider, $field, $key, &$summary ): void {
+			wstm108_case( "{$boundary}:seo-forbidden-read-trap:{$field}", static function ( &$case ) use ( $client, $post_id, $provider, $field, $key, &$summary ): void {
 				$client->deny_read( $post_id, $key );
 				try {
 					$data = wstm108_success( $client, 'seo-analyze-post', array( 'post_id' => $post_id ), $case );
-					$restricted = $readable;
-					$restricted[ $key ] = false;
-					wstm108_compare_record( $data->metrics, wstm108_expected_metrics( $post_id, $restricted, $summary['providers'] ), 'metrics' );
+					$restricted = $client->native_readability( $post_id, array( '_yoast_wpseo_metadesc', '_seopress_titles_desc', '_yoast_wpseo_focuskw', '_seopress_analysis_target_kw' ) );
+					$expected_metrics = wstm108_expected_metrics( $post_id, $restricted, $summary['providers'] );
+					$case['readable'] = $restricted;
+					$case['providers'] = $summary['providers'];
+					$case['semantic'] = array( 'schema' => 'wstm108-semantic-replay-v1', 'field' => $field, 'key' => $key,
+						'provider' => $provider, 'restricted' => $restricted, 'metrics' => $expected_metrics,
+						'unavailable' => wstm108_unavailable(), 'metadata' => null );
+					wstm108_compare_record( $data->metrics, $expected_metrics, 'metrics' );
 					wstm108_assert( wstm108_wire_canonical( wstm108_unavailable() ) === wstm108_wire_canonical( $data->unavailable_fields->$field ), 'Unavailable field policy changed.' );
 					if ( $summary['providers'][ $provider ] ) {
 						$data = wstm108_success( $client, 'get-' . $provider . '-metadata', array( 'post_id' => $post_id ), $case );
-						wstm108_compare_record( $data, wstm108_expected_provider( $post_id, $provider, $restricted ), 'provider' );
+						$provider_readable = $client->native_readability( $post_id, array_values( wstm108_provider_keys( $provider ) ) );
+						$expected_provider = wstm108_expected_provider( $post_id, $provider, $provider_readable );
+						$case['native_provider_readable'] = $provider_readable;
+						$case['semantic']['metadata'] = $expected_provider;
+						wstm108_compare_record( $data, $expected_provider, 'provider' );
 					}
 				} finally {
 					$client->deny_read();
@@ -763,7 +773,9 @@ try {
 			wstm118_error_envelope( $result );
 			wstm108_assert( 'metadata_requires_separate_call' === $result['error']['reason'], 'Combined alias-write policy changed.' );
 			wstm108_refresh( $post_id );
-			wstm108_assert( $before === get_post_meta( $post_id ), 'Denied combined alias mutated metadata.' );
+			$after = get_post_meta( $post_id );
+			$case['semantic'] = array( 'schema' => 'wstm108-semantic-replay-v1', 'before' => $before, 'after' => $after );
+			wstm108_assert( $before === $after, 'Denied combined alias mutated metadata.' );
 		}, $summary, $evidence, $artifact );
 		wstm108_case( "{$boundary}:private-image-url-still-denied", static function ( &$case ) use ( $client ): void {
 			$result = $client->execute( 'webmastery-site-toolkit-for-mcp/upload-image', array( 'image_url' => 'http://127.0.0.1/wstm108-must-not-fetch.png' ) );
@@ -822,7 +834,9 @@ try {
 					wstm108_assert( 'forbidden' === $result['error']['code'] && ! isset( $result['untrusted_fields'] ), 'Denial taxonomy or marker changed.' );
 					wstm108_refresh( $post_id );
 					clean_comment_cache( $comment_id );
-					wstm108_assert( $before === array( get_post( $post_id )->to_array(), (array) get_comment( $comment_id ) ), 'Denied call mutated owned records.' );
+					$after = array( get_post( $post_id )->to_array(), (array) get_comment( $comment_id ) );
+					$case['semantic'] = array( 'schema' => 'wstm108-semantic-replay-v1', 'before' => $before, 'after' => $after );
+					wstm108_assert( $before === $after, 'Denied call mutated owned records.' );
 				} finally {
 					wp_set_current_user( $users['administrator'] );
 				}
@@ -857,15 +871,29 @@ try {
 	wp_set_current_user( $old_user );
 	$summary['status'] = $summary['failed'] ? 'failed' : ( $summary['blocked'] ? 'incomplete' : 'passed' );
 	try {
-		$summary['wire_proof'] = $evidence->seal( 'passed' === $summary['status'] && true === $summary['completed'] && true === $summary['cleanup_complete'], $summary );
+		$product->wordpress();
+		$resources->verify_absent();
 	} catch ( Throwable $error ) {
 		++$summary['failed'];
 		$summary['status'] = 'failed';
 		$summary['wire_error'] = $error->getMessage();
 	}
-	$summary['http_journal_sha256'] = Wstm108_Files::file( $artifact . '.http.jsonl' )['sha256'];
-	$evidence->save( $summary );
+	try {
+		$summary = $evidence->finalize( $summary, 'passed' === $summary['status'] && true === $summary['completed'] && true === $summary['cleanup_complete'] );
+	} catch ( Throwable $error ) {
+		++$summary['failed'];
+		$summary['status'] = 'failed';
+		$summary['evidence_error'] = $error->getMessage();
+		error_log( 'WSTM108 Private evidence finalization refused: ' . $error->getMessage() );
+	}
+	Wstm108_Files::update( $verdict_path, $verdict, json_encode( array(
+		'schema' => 'wstm-product-verdict-v1', 'context_sha256' => $product->sha256(), 'binding' => $product->binding(),
+		'php' => PHP_VERSION, 'uid' => posix_geteuid(), 'status' => $summary['status'],
+		'expected_labels' => $summary['expected_labels'], 'observed_labels' => array_column( $summary['cases'], 'label' ),
+		'passed' => $summary['passed'], 'failed' => $summary['failed'], 'cleanup_complete' => $summary['cleanup_complete'],
+		'exit' => 'passed' === $summary['status'] ? 0 : 1,
+	), JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR ) );
 }
 
-echo "WSTM108 {$summary['status']}: {$summary['passed']} passed; {$summary['failed']} failed. Evidence: {$artifact}\n";
+echo "WSTM108 {$summary['status']}: {$summary['passed']} passed; {$summary['failed']} failed.\n";
 exit( 'passed' === $summary['status'] ? 0 : 1 );

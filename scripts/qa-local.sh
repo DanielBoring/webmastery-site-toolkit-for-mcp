@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set +x
 set -Eeuo pipefail
 
 RUN_E2E=0
@@ -108,18 +109,33 @@ if [ "$PREFLIGHT_ONLY" = "1" ]; then
 	exit 0
 fi
 
-run_step composer install --no-interaction --prefer-dist --no-progress
-run_step composer qa
-
-if [ "$RUN_CONTRACT" = "1" ]; then
-	E2E_MANAGE_COMPOSE=1 E2E_KEEP_COMPOSE="$KEEP_COMPOSE" run_step bash scripts/e2e-test.sh contract
+if [[ ! -f vendor/autoload.php ]]; then
+	run_step composer install --no-interaction --prefer-dist --no-progress
 fi
+COMPOSER_PROCESS_TIMEOUT=0 run_step composer qa
 
-if [ "$RUN_E2E" = "1" ]; then
-	E2E_MANAGE_COMPOSE=1 E2E_KEEP_COMPOSE="$KEEP_COMPOSE" run_step bash scripts/e2e-test.sh e2e
+if [[ "$RUN_CONTRACT" == 1 || "$RUN_E2E" == 1 || "$RUN_RELEASE" == 1 ]]; then
+	export MSYS_NO_PATHCONV="${MSYS_NO_PATHCONV:-1}"
+	docker info --format '{{.ServerVersion}}' >/dev/null
+	project_token="$(php -r 'echo bin2hex(random_bytes(8));')"
+	[[ "$project_token" =~ ^[a-f0-9]{16}$ ]] || exit 1
+	local_project="wstm-local-${project_token}"
+fi
+if [[ "$RUN_CONTRACT" == 1 || "$RUN_E2E" == 1 ]]; then
+	mode=contract
+	if [[ "$RUN_E2E" == 1 ]]; then mode=e2e; fi
+	if [[ "$RUN_CONTRACT" == 1 && "$RUN_E2E" == 1 ]]; then mode=all; fi
+	unset WSTM_QA_OWNER
+	export COMPOSE_PROJECT_NAME="${local_project}-source"
+	export E2E_ARTIFACTS_DIR="e2e-artifacts-${COMPOSE_PROJECT_NAME}"
+	export E2E_MANAGE_COMPOSE=1 E2E_KEEP_COMPOSE="$KEEP_COMPOSE"
+	run_step bash scripts/e2e-test.sh "$mode"
 fi
 
 if [ "$RUN_RELEASE" = "1" ]; then
+	unset WSTM_QA_OWNER
+	export COMPOSE_PROJECT_NAME="${local_project}-package"
+	export E2E_ARTIFACTS_DIR="e2e-artifacts-${COMPOSE_PROJECT_NAME}"
 	run_step bash scripts/release-qa.sh
 fi
 

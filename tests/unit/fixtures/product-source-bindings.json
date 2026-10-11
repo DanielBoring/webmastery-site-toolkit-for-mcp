@@ -1,0 +1,42 @@
+{
+    "includes/class-input.php": [
+        "dd09e139055284e5a58f3c55bd881148a2595083928b802857e00f71e79f82b0",
+        "805c386c50cf173aa7b42930da7cecbe4e2dbca0"
+    ],
+    "includes/class-response.php": [
+        "98c4dcd24f3ae2d82467c28ce28c05a271c587d8df2bfc1f1b80901de94a34ab",
+        "5821f823bf7843c2d21b681020379a32bbcd2e4a"
+    ],
+    "includes/class-ability.php": [
+        "9a237e25baa11fc823fcdaee45277d1ca9462ca04af462e33dede511bdb0edf5",
+        "2214514af8462ddefdf63a87f26040d990e21aa3"
+    ],
+    "includes/class-taxonomy.php": [
+        "fb1d2dfb87d1fd27e6d2a0e147583709a8f8e9872b92d108cf6d278dc14bb6da",
+        "4da82714c8849dda3ec3c0f5c1efe3ec2a2cbb94"
+    ],
+    "includes/class-comments.php": [
+        "508c1d5f0de4096e7e692b07e04620bd1dddcd37f95b7214c29fc2b5c4ce7977",
+        "34559ac117afeec6503473a1f660a180076d1ee9"
+    ],
+    "includes/class-posts.php": [
+        "6f916cde9d6f5d29d150ee0b3010abc38372c3b915b898af7280acde782246b4",
+        "26cf092695b0901fbed90ef012bc8fae1360a3ec"
+    ],
+    "includes/class-custom-post-types.php": [
+        "bae6b4f5842955a947a05cc89018352b7e4a955971ed24bd96eda0bd2b29e403",
+        "bafa69be4376e0dec55c8568892d68ae3568f318"
+    ],
+    "includes/class-list-query.php": [
+        "d6f267226522ddf267ec0497b997dcea1160ee15d0a353013fa51b46eefe9090",
+        "723b2e143f3f06163780bf6bb79e42d46ad62095"
+    ],
+    "includes/class-untrusted.php": [
+        "5a0ba6dffdf9c30b0ec7a01c6d7cbaa7c9f15c3707adc04e06255deb41104e20",
+        "dd504fd3eae59bc945768b2249f122026af8bdef"
+    ],
+    "includes/class-post-scheduling.php": [
+        "43b37d5742d4100eab15c71075d411c9cc2bc6ad7cbc5b366332a71b7ca85a7a",
+        "5e7085fa23d0182ac0e8549456f480031672ee6b"
+    ]
+}

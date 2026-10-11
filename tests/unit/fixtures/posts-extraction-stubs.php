@@ -3,7 +3,6 @@
 namespace Wstm127Proof;
 
 require_once __DIR__ . '/shared-helper-loader.php';
-require_once __DIR__ . '/posts-extraction-transition.php';
 require_once __DIR__ . '/shared-helpers-stubs.php';
 
 final class Registrations {
@@ -13,14 +12,13 @@ final class Registrations {
 }
 
 foreach ( array( 'Wstm127Before', 'Wstm127After' ) as $namespace ) {
-	\wstm_test_load_shared_helpers( $namespace, true );
+	\wstm_test_load_shared_helpers( $namespace );
 	$source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-posts.php' );
 	if ( 'Wstm127Before' === $namespace ) {
-		$source = \Wstm127SourceTransition::restore( 'includes/class-posts.php', $source );
+		\wstm_test_load_main_baseline( $namespace, 'includes/class-posts.php' );
 	} else {
-		$source = \Wstm167SourceTransition::restore( 'includes/class-posts.php', $source );
+		eval( 'namespace ' . $namespace . '; use \\WP_Error; use \\Webmastery_MCP_Response; use \\Webmastery_MCP_Post_Parent; use \\Webmastery_MCP_Post_Scheduling; ' . substr( $source, 5 ) );
 	}
-	eval( 'namespace ' . $namespace . '; use \\WP_Error; use \\Webmastery_MCP_Response; use \\Webmastery_MCP_Post_Parent; use \\Webmastery_MCP_Post_Scheduling; ' . substr( $source, 5 ) );
 }
 
 namespace Wstm127Before;

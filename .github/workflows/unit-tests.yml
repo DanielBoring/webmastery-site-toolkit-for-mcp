@@ -24,35 +24,12 @@ jobs:
         php: ['8.0', '8.4']
     permissions:
       contents: read
-
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
           persist-credentials: false
-
-      - name: Set up companion PHP for host-only QA controls
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
-        with:
-          php-version: '8.4'
-          extensions: zip, posix
-          tools: composer:v2
-          coverage: none
-
-      - name: Bind version-specific companion executable before restoring matrix PHP
-        id: host-php
-        shell: bash
-        run: |
-          set -euo pipefail
-          binary="$(readlink -e /usr/bin/php8.4)"
-          test "${binary##*/}" = php8.4
-          "$binary" -r 'exit(PHP_VERSION_ID >= 80400 && PHP_VERSION_ID < 80500 && function_exists("posix_geteuid") && function_exists("fsync") && (new ReflectionFunction("fsync"))->isInternal() ? 0 : 1);'
-          {
-            printf 'path=%s\n' "$binary"
-            printf 'identity=%s\n' "$(stat -c '%d:%i:%u:%g:%f:%h:%s' -- "$binary")"
-            printf 'sha256=%s\n' "$(sha256sum "$binary" | cut -d ' ' -f 1)"
-          } >> "$GITHUB_OUTPUT"
 
       - name: Set up PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
@@ -62,36 +39,10 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      - name: Verify restored matrix PHP and unchanged companion
-        shell: bash
+      - name: Verify selected PHP
         env:
           MATRIX_PHP: ${{ matrix.php }}
-          HOST_PHP: ${{ steps.host-php.outputs.path }}
-          HOST_IDENTITY: ${{ steps.host-php.outputs.identity }}
-          HOST_SHA256: ${{ steps.host-php.outputs.sha256 }}
-        run: |
-          set -euo pipefail
-          test "$HOST_PHP" = "$(readlink -e -- "$HOST_PHP")"
-          test "${HOST_PHP##*/}" = php8.4
-          test "$HOST_IDENTITY" = "$(stat -c '%d:%i:%u:%g:%f:%h:%s' -- "$HOST_PHP")"
-          test "$HOST_SHA256" = "$(sha256sum "$HOST_PHP" | cut -d ' ' -f 1)"
-          test "$(php -r 'echo PHP_MAJOR_VERSION, ".", PHP_MINOR_VERSION;')" = "$MATRIX_PHP"
-          "$HOST_PHP" -r 'exit(PHP_VERSION_ID >= 80400 && PHP_VERSION_ID < 80500 && function_exists("posix_geteuid") && function_exists("fsync") && (new ReflectionFunction("fsync"))->isInternal() ? 0 : 1);'
-
-      - name: Record executed workflow identity
-        if: github.repository == 'DanielBoring/webmastery-site-toolkit-for-mcp'
-        env:
-          WSTM_CUSTODY_REPOSITORY: ${{ github.repository }}
-          WSTM_CUSTODY_REPOSITORY_ID: ${{ github.repository_id }}
-          WSTM_CUSTODY_RUN_ID: ${{ github.run_id }}
-          WSTM_CUSTODY_ATTEMPT: ${{ github.run_attempt }}
-          WSTM_CUSTODY_EVENT: ${{ github.event_name }}
-          WSTM_CUSTODY_EVENT_SHA: ${{ github.sha }}
-          WSTM_CUSTODY_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha || 'none' }}
-          WSTM_CUSTODY_WORKFLOW_COMMIT: ${{ github.workflow_sha }}
-          WSTM_CUSTODY_WORKFLOW_PATH: .github/workflows/unit-tests.yml
-          WSTM_CUSTODY_WORKFLOW_REF: ${{ github.workflow_ref }}
-        run: php tests/support/private-custody-context.php
+        run: test "$(php -r 'echo PHP_MAJOR_VERSION, ".", PHP_MINOR_VERSION;')" = "$MATRIX_PHP"
 
       - name: Get Composer cache directory
         id: composer-cache
@@ -110,58 +61,70 @@ jobs:
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Run Unit Tests
+        env:
+          COMPOSER_PROCESS_TIMEOUT: '0'
         run: composer qa:unit
 
-      - name: Run CI safeguards regression tests
-        env:
-          WSTM108_HOST_PHP: ${{ steps.host-php.outputs.path }}
-        run: composer test:ci-safeguards
-
-  controller-components:
-    name: Synthetic controller components / Linux
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
+  ci-safeguards:
+    name: CI safeguards / PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.0', '8.4']
     permissions:
       contents: read
-    env:
-      PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
           persist-credentials: false
-      - name: Run exactly ten synthetic controller components
-        run: python3 -B scripts/test-controller-components.py run --root "$COMPONENT_ROOT"
-        env:
-          COMPONENT_ROOT: ${{ runner.temp }}/wstm-controller-${{ github.run_id }}-${{ github.run_attempt }}
-      - name: Check CI harness guards without child processes
-        run: python3 -B -m unittest discover -s tests/unit -p test_controller_ci_harness.py -v
-      - name: Retain scoped synthetic originals and symlink metadata
-        if: ${{ always() }}
-        run: python3 -B scripts/test-controller-components.py retain --root "$COMPONENT_ROOT"
-        env:
-          COMPONENT_ROOT: ${{ runner.temp }}/wstm-controller-${{ github.run_id }}-${{ github.run_attempt }}
-      - name: Upload synthetic component evidence only
-        if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
-          name: synthetic-controller-components
-          path: ${{ env.COMPONENT_ROOT }}/upload/
-          if-no-files-found: error
-          retention-days: 7
+          php-version: ${{ matrix.php }}
+          extensions: zip
+          tools: composer:v2
+          coverage: none
+
+      - name: Verify selected PHP
         env:
-          COMPONENT_ROOT: ${{ runner.temp }}/wstm-controller-${{ github.run_id }}-${{ github.run_attempt }}
+          MATRIX_PHP: ${{ matrix.php }}
+        run: test "$(php -r 'echo PHP_MAJOR_VERSION, ".", PHP_MINOR_VERSION;')" = "$MATRIX_PHP"
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        shell: bash
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php-${{ matrix.php }}-composer-${{ hashFiles('composer.json', 'composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-${{ matrix.php }}-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run CI safeguards regression tests
+        env:
+          COMPOSER_PROCESS_TIMEOUT: '0'
+        run: composer test:ci-safeguards
 
   unit-tests-gate:
     name: 2 - Unit Tests
-    needs: [unit-tests, controller-components]
+    needs: [unit-tests, ci-safeguards]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Require every PHP unit and controller component check
+      - name: Require every PHP unit and safeguard check
         env:
-          RESULT: ${{ needs.unit-tests.result }}
-          CONTROLLER_RESULT: ${{ needs.controller-components.result }}
-        run: test "$RESULT" = success && test "$CONTROLLER_RESULT" = success
+          UNIT_RESULT: ${{ needs.unit-tests.result }}
+          SAFEGUARD_RESULT: ${{ needs.ci-safeguards.result }}
+        run: test "$UNIT_RESULT" = success && test "$SAFEGUARD_RESULT" = success

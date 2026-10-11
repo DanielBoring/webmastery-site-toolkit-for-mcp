@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/legacy-artifacts.php';
 
 // Run with wp eval-file on the disposable Site Kit fixture installation.
 if ( ! function_exists( 'webmastery_mcp_e2e_site_kit_dashboard_permission' ) ) {
@@ -117,12 +118,20 @@ try {
 	wp_set_current_user( $wstm125_original_user );
 }
 $wstm125_failed = count( array_filter( $wstm125_results, static function ( $case ) { return ! $case['passed']; } ) );
-$wstm125_summary_path = WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/e2e-artifacts/issue125-permission-summary.json';
+$wstm125_summary_path = Wstm_E2E_Artifacts::path( WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/e2e-artifacts/issue125-permission-summary.json' );
+$wstm125_summary_directory = dirname( $wstm125_summary_path );
+if ( ! is_dir( $wstm125_summary_directory ) && ! wp_mkdir_p( $wstm125_summary_directory ) ) {
+	throw new RuntimeException( 'Could not create Site Kit permission summary directory.' );
+}
+$wstm125_json = wp_json_encode( array( 'passed' => count( $wstm125_results ) - $wstm125_failed, 'failed' => $wstm125_failed, 'cases' => $wstm125_results ), JSON_PRETTY_PRINT );
+if ( false === $wstm125_json ) {
+	throw new RuntimeException( 'Could not encode Site Kit permission regression summary.' );
+}
 $wstm125_written = file_put_contents(
 	$wstm125_summary_path,
-	wp_json_encode( array( 'passed' => count( $wstm125_results ) - $wstm125_failed, 'failed' => $wstm125_failed, 'cases' => $wstm125_results ), JSON_PRETTY_PRINT )
+	$wstm125_json
 );
-if ( false === $wstm125_written ) {
+if ( strlen( $wstm125_json ) !== $wstm125_written ) {
 	throw new RuntimeException( "Could not write Site Kit permission regression summary: {$wstm125_summary_path}" );
 }
 if ( $wstm125_failed ) {

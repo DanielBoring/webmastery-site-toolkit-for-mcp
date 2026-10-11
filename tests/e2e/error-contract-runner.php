@@ -214,7 +214,7 @@ try {
 			$summary['cleanup_errors'][] = array( 'resource' => 'post ' . $id, 'message' => 'Owned fixture deletion failed.' );
 		}
 	}
-	webmastery_mcp_e2e_write_summary( __DIR__ . '/../../e2e-artifacts/error-contract.json', $summary );
+	webmastery_mcp_e2e_write_summary( Wstm_E2E_Artifacts::path( __DIR__ . '/../../e2e-artifacts/error-contract.json' ), $summary );
 }
 echo "SUMMARY error contract {$summary['passed']} passed, {$summary['failed']} failed\n";
 exit( $summary['failed'] ? 1 : 0 );

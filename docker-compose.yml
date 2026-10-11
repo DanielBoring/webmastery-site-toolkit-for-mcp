@@ -4,10 +4,12 @@ services:
     environment:
       MYSQL_DATABASE: wordpress
       MYSQL_USER: wp
-      MYSQL_PASSWORD: wp
-      MYSQL_ROOT_PASSWORD: root
-    ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      MYSQL_PASSWORD: ${WSTM_QA_DB_PASSWORD:?Use scripts/qa-compose.sh for private QA credentials}
+      MYSQL_ROOT_PASSWORD: ${WSTM_QA_DB_ROOT_PASSWORD:?Use scripts/qa-compose.sh for private QA credentials}
+    labels:
+      io.webmastery.qa.owner: ${WSTM_QA_OWNER:?Use scripts/qa-compose.sh for owned QA resources}
+    volumes:
+      - mysql_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 20s
@@ -21,19 +23,57 @@ services:
     environment:
       WORDPRESS_DB_HOST: mysql
       WORDPRESS_DB_USER: wp
-      WORDPRESS_DB_PASSWORD: wp
+      WORDPRESS_DB_PASSWORD: ${WSTM_QA_DB_PASSWORD:?Use scripts/qa-compose.sh for private QA credentials}
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_DEBUG: "true"
       WORDPRESS_DEBUG_LOG: /var/www/html/wp-content/debug.log
+      E2E_OPT_IN: "1"
+      WSTM_E2E_ARTIFACTS_DIR: /qa-artifacts
+      WSTM_PRODUCT_CONTEXT: /qa-artifacts/context.json
+      WSTM_PRODUCT_RUN: ${WSTM_PRODUCT_RUN:?Use scripts/qa-compose.sh for the owned product context}
+      WSTM_PRODUCT_TOKEN: ${WSTM_PRODUCT_TOKEN:?Use scripts/qa-compose.sh for the owned product context}
+    labels:
+      io.webmastery.qa.owner: ${WSTM_QA_OWNER:?Use scripts/qa-compose.sh for owned QA resources}
     ports:
-      - "${WORDPRESS_PORT:-80}:80"
+      - "127.0.0.1:${WORDPRESS_PORT:-0}:80"
     volumes:
-      - ./:/var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp
+      - type: bind
+        source: ./
+        target: /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./scripts/product-artifacts.php
+        target: /qa-parent-support/scripts/product-artifacts.php
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./tests
+        target: /qa-parent-support/tests
+        read_only: true
+        bind:
+          create_host_path: false
       - wp_data:/var/www/html
+      - qa_artifacts:/qa-artifacts
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/wp-json/"]
       timeout: 20s
       retries: 10
 
 volumes:
+  mysql_data:
+    labels:
+      io.webmastery.qa.owner: ${WSTM_QA_OWNER:?Use scripts/qa-compose.sh for owned QA resources}
   wp_data:
+    labels:
+      io.webmastery.qa.owner: ${WSTM_QA_OWNER:?Use scripts/qa-compose.sh for owned QA resources}
+  qa_artifacts:
+    labels:
+      io.webmastery.qa.owner: ${WSTM_QA_OWNER:?Use scripts/qa-compose.sh for owned QA resources}
+
+networks:
+  default:
+    labels:
+      io.webmastery.qa.owner: ${WSTM_QA_OWNER:?Use scripts/qa-compose.sh for owned QA resources}

@@ -22,6 +22,7 @@ final class SharedHelpersTest extends TestCase {
 		State::$denied_ids = array();
 		State::$allowed = true;
 		State::$result = 42;
+		$GLOBALS['wpdb'] = (object) array( 'num_queries' => 0, 'last_error' => '' );
 	}
 
 	private static function invoke( string $namespace, string $class, string $method, array $args = array() ) {
@@ -145,16 +146,22 @@ final class SharedHelpersTest extends TestCase {
 		self::assertFalse( Access::can_read( 999 ) );
 	}
 
-	public function testAuthorizationPrecedesPaginationAndDisappearingItemsDoNotChangeTotals(): void {
+	public function testAuthorizationIsBoundedToTheCandidateWindowAndDisappearingItemsKeepContinuation(): void {
 		State::$ids = array( '1', '2', '3', '4', '5' );
 		State::$posts = array( 1 => self::post( 1 ), 3 => self::post( 3 ), 5 => self::post( 5 ) );
 		$seen = array();
 		$result = Access::query_readable( array( 'post_type' => 'post', 'paged' => 9, 'posts_per_page' => 4 ), 2, 2,
 			static function ( $id ) use ( &$seen ) { $seen[] = $id; return 0 !== $id % 2; },
 			static fn( $post ) => $post ? array( 'id' => $post->ID ) : null );
-		self::assertSame( array( 1, 2, 3, 4, 5 ), $seen );
-		self::assertSame( array( 'items' => array( array( 'id' => 5 ) ), 'total' => 3, 'total_pages' => 2 ), $result );
-		self::assertSame( array( 'post_type' => 'post', 'paged' => 1, 'posts_per_page' => -1, 'fields' => 'ids', 'no_found_rows' => true ), State::$queries[0] );
+		self::assertSame( array( 3, 4 ), $seen );
+		self::assertSame( array( 'items' => array( array( 'id' => 3 ) ), 'page' => 2, 'per_page' => 2, 'next_page' => 3 ), $result );
+		self::assertSame( array( 'post_type' => 'post', 'paged' => 1, 'posts_per_page' => 3,
+			'orderby' => array( 'date' => 'DESC', 'ID' => 'DESC' ), 'fields' => 'ids', 'offset' => 2,
+			'no_found_rows' => true, 'ignore_sticky_posts' => true ), State::$queries[0] );
+		unset( State::$posts[3] );
+		self::assertSame( array( 'items' => array(), 'page' => 2, 'per_page' => 2, 'next_page' => 3 ),
+			Access::query_readable( array( 'post_type' => 'post' ), 2, 2, static fn( $id ) => 0 !== $id % 2,
+				static fn( $post ) => $post ? array( 'id' => $post->ID ) : null ) );
 		unset( State::$posts[5] );
 		self::assertSame( array( 'items' => array(), 'total' => 3, 'total_pages' => 2 ), Access::paginate( array( 1, 3, 5 ), 2, 2, static fn( $post ) => $post ? array( 'id' => $post->ID ) : null ) );
 		self::assertSame( array( 'items' => array(), 'total' => 3, 'total_pages' => 2 ), Access::paginate( array( 1, 3, 5 ), 20, 2, static fn( $post ) => $post ) );
@@ -176,7 +183,7 @@ final class SharedHelpersTest extends TestCase {
 		self::assertSame( array( 'edit_others_books', 'edit_others_books', 'edit_others_books', 'edit_others_posts' ), array_column( State::$calls, 0 ) );
 	}
 
-	public function testActualPostCptAndMediaQueryFacadesRetainExactResultsAndCalls(): void {
+	public function testActualPostCptAndMediaQueryFacadesRetainWindowAuthorizationAndResults(): void {
 		$previous = $GLOBALS['wstm_test_posts'] ?? null;
 		try {
 			$type = (object) array( 'cap' => (object) array( 'read_post' => 'read_book', 'edit_post' => 'edit_book', 'delete_post' => 'delete_book' ) );
@@ -195,14 +202,17 @@ final class SharedHelpersTest extends TestCase {
 						array_unshift( $args, $type );
 					}
 					State::$calls = State::$queries = array();
-					$old = self::invoke( 'Wstm119Before', $class, $method, $args );
-					$calls = State::$calls;
-					$queries = State::$queries;
-					State::$calls = State::$queries = array();
-					self::assertSame( $old, self::invoke( 'Wstm119Shared', $class, $method, $args ) );
-					self::assertSame( $calls, State::$calls );
-					self::assertSame( $queries, State::$queries );
-					self::assertSame( 2, $old['total'] );
+					$result = self::invoke( 'Wstm119Shared', $class, $method, $args );
+					$p = max( 1, $per_page );
+					$window = array_slice( array( 1, 2, 3, 999 ), ( $page - 1 ) * $p, $p );
+					$expected = array_values( array_filter( $window, static fn( $id ) => in_array( $id, array( 1, 3 ), true ) ) );
+					self::assertSame( $expected, array_column( $result['items'], 'id' ) );
+					self::assertSame( $page, $result['page'] );
+					self::assertSame( $p, $result['per_page'] );
+					self::assertSame( ( $page - 1 ) * $p + $p < 4 ? $page + 1 : null, $result['next_page'] );
+					self::assertArrayNotHasKey( 'total', $result );
+					self::assertLessThanOrEqual( $p, count( State::$calls ) );
+					self::assertSame( $p + 1, State::$queries[0]['posts_per_page'] );
 				}
 			}
 		} finally {
@@ -232,12 +242,15 @@ final class SharedHelpersTest extends TestCase {
 			foreach ( array( 'Posts' => 'normalize', 'Custom_Post_Types' => 'normalize_post' ) as $class => $method ) {
 				foreach ( array( array( 5 ), new WP_Error( 'term_error', 'Provider failure.' ) ) as $terms ) {
 					State::$terms['genre'] = $terms;
-					self::assertSame( self::invoke( 'Wstm119Before', $class, $method, array( $post ) ), self::invoke( 'Wstm119Shared', $class, $method, array( $post ) ) );
+					$current = self::invoke( 'Wstm119Shared', $class, $method, array( $post ) );
+					self::assertSame( array( 'title', 'content', 'excerpt', 'slug', 'url', 'author_name' ), $current['untrusted_fields'] );
+					unset( $current['untrusted_fields'] );
+					self::assertSame( self::invoke( 'Wstm119Before', $class, $method, array( $post ) ), $current );
 				}
 			}
 		}
 		self::assertNull( Content::normalize( 999 ) );
-		self::assertSame( array( 'id', 'title', 'content', 'excerpt', 'status', 'slug', 'url', 'author', 'author_name', 'date_created', 'date_modified', 'type', 'featured_image_id' ), array_keys( Content::normalize( $post ) ) );
+		self::assertSame( array( 'id', 'title', 'content', 'excerpt', 'status', 'slug', 'url', 'author', 'author_name', 'date_created', 'date_modified', 'type', 'featured_image_id', 'untrusted_fields' ), array_keys( Content::normalize( $post ) ) );
 		self::assertSame( '<p>C:\\path\\</p>', Content::normalize( $post )['content'] );
 	}
 
@@ -271,29 +284,23 @@ final class SharedHelpersTest extends TestCase {
 		}
 	}
 
-	public function testEveryReviewedSourceTransitionIsReversibleAndRejectsSourceDrift(): void {
-		$map = Wstm119SourceTransition::load();
-		foreach ( $map['files'] as $path => $binding ) {
-			$source = file_get_contents( dirname( __DIR__, 2 ) . '/' . $path );
-			self::assertSame( $binding['baseline_sha256'], hash( 'sha256', Wstm119SourceTransition::restore( $path, $source ) ) );
-			try {
-				Wstm119SourceTransition::restore( $path, $source . "\n// unauthorized drift\n" );
-				self::fail( 'Source drift accepted: ' . $path );
-			} catch ( RuntimeException $error ) {
-				self::assertStringContainsString( 'current source drift', $error->getMessage() );
-			}
-		}
+	public function testIndependentMainOracleIsFiniteAndCurrentHelpersAreLoadedDirectly(): void {
+		$baseline = wstm_test_main_baseline();
+		self::assertCount( 10, $baseline['files'] );
+		self::assertSame( 'c135420c10615616a49e27eb703f955f1ea1f228', $baseline['main_commit'] );
+		self::assertArrayHasKey( 'permission', $baseline['files']['includes/class-posts.php']['methods'] );
+		self::assertStringNotContainsString( 'SourceTransition', file_get_contents( __DIR__ . '/fixtures/shared-helpers-stubs.php' ) );
 	}
 
-	public function testForgedHistoricalHashesReverseHunksAndDependencyBindingsAreRejected(): void {
-		$json = file_get_contents( __DIR__ . '/fixtures/shared-helper-transition.json' );
-		foreach ( array( 'baseline_sha256', 'baseline_blob', 'current_sha256', 'current_blob', 'hunks', 'helpers' ) as $key ) {
+	public function testForgedIndependentOracleBindingsAreRejected(): void {
+		$json = file_get_contents( __DIR__ . '/fixtures/product-main-baseline.json' );
+		foreach ( array( 'main_commit', 'main_file_sha256', 'class_sha256', 'class_source', 'methods' ) as $key ) {
 			$forged = str_replace( '"' . $key . '"', '"' . $key . '_forged"', $json );
 			try {
-				Wstm119SourceTransition::load( $forged );
+				wstm_test_main_baseline( $forged );
 				self::fail( 'Forged transition accepted: ' . $key );
 			} catch ( RuntimeException $error ) {
-				self::assertSame( 'Shared-helper transition seal mismatch.', $error->getMessage() );
+				self::assertSame( 'Independent main semantic baseline changed.', $error->getMessage() );
 			}
 		}
 	}

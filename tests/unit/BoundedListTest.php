@@ -7,6 +7,7 @@ use Wstm121\Probe;
 use Wstm121\Webmastery_MCP_Posts as Posts;
 
 require_once __DIR__ . '/fixtures/bounded-list-stubs.php';
+require_once dirname( __DIR__ ) . '/e2e/bounded-list-verifier.php';
 
 final class BoundedListTest extends TestCase {
 	protected function setUp(): void {
@@ -90,6 +91,85 @@ final class BoundedListTest extends TestCase {
 		self::assertSame( $count, $GLOBALS['wpdb']->num_queries );
 		self::assertSame( 'PRIVATE DATABASE ERROR', $GLOBALS['wpdb']->last_error );
 		self::assertSame( 0, Probe::$cache_invalidations );
+	}
+
+	/** @dataProvider list_surfaces */
+	public function test_native_multiquery_priming_failure_survives_successful_refills( string $slug, string $type ): void {
+		foreach ( array( array( true, false, false ), array( false, true, false ), array( false, false, true ) ) as $reads ) {
+			Probe::reset();
+			Probe::$type = $type;
+			Probe::$use_query_cache = true;
+			$this->register_lists();
+			$execute = Probe::$abilities[ 'webmastery-site-toolkit-for-mcp/' . $slug ]['execute_callback'];
+			Probe::$prime_reads = $reads;
+			$result = $execute( array( 'per_page' => 2 ) );
+			if ( is_wp_error( $result ) ) {
+				$result = Webmastery_MCP_Response::from_wp_error( $result );
+			}
+			self::assertFalse( $result['success'] );
+			self::assertSame( 'upstream_failed', $result['error']['code'] );
+			self::assertSame( 'The list query could not be completed.', $result['error']['message'] );
+			self::assertArrayNotHasKey( 'data', $result );
+			self::assertStringNotContainsString( 'PRIVATE', json_encode( $result, JSON_THROW_ON_ERROR ) );
+			self::assertSame( 4, $GLOBALS['wpdb']->num_queries );
+			self::assertSame( 1, Probe::$cache_invalidations );
+			self::assertSame( array( array( 20000, 19999 ) ), Probe::$primed );
+			foreach ( Probe::$caps as [ $cap, $args ] ) {
+				self::assertSame( array(), $args );
+			}
+			Probe::$prime_reads = array( false );
+			self::assertTrue( $execute( array( 'per_page' => 2 ) )['success'] );
+			self::assertSame( 6 + count( $GLOBALS['wpdb']->queries ), $GLOBALS['wpdb']->num_queries, 'Retry re-executes the candidate query; orphan checks remain separate reads.' );
+			Probe::$prime_reads = array();
+			$count = $GLOBALS['wpdb']->num_queries;
+			$GLOBALS['wpdb']->last_error = 'PRIVATE STALE ERROR';
+			self::assertTrue( $execute( array( 'per_page' => 2 ) )['success'] );
+			$reference_reads = 'list-orphaned-media' === $slug ? 2 : 0;
+			self::assertSame( $count + $reference_reads, $GLOBALS['wpdb']->num_queries );
+			self::assertSame( $reference_reads ? '' : 'PRIVATE STALE ERROR', $GLOBALS['wpdb']->last_error );
+			self::assertSame( 1, Probe::$cache_invalidations );
+			self::assertSame( array(), array_values( Probe::$filters['query'][PHP_INT_MIN] ) );
+		}
+	}
+
+	public function test_successful_partial_cache_reads_ignore_a_stale_error(): void {
+		Probe::$use_query_cache = true;
+		$first = $this->posts( 1, 2 );
+		Probe::$prime_reads = array( false, false );
+		$GLOBALS['wpdb']->last_error = 'PRIVATE STALE ERROR';
+		self::assertSame( $first, $this->posts( 1, 2 ) );
+		self::assertSame( '', $GLOBALS['wpdb']->last_error );
+		self::assertSame( 3, $GLOBALS['wpdb']->num_queries );
+		self::assertSame( 0, Probe::$cache_invalidations );
+	}
+
+	public function test_candidate_read_failure_is_retained_and_observer_is_removed_on_exception(): void {
+		$method = new ReflectionMethod( \Wstm121\Webmastery_MCP_List_Query::class, 'database_read' );
+		$method->setAccessible( true );
+		$result = $method->invoke( null, static function () {
+			\Wstm121\apply_filters( 'query', 'SELECT candidate' );
+			++$GLOBALS['wpdb']->num_queries;
+			$GLOBALS['wpdb']->last_error = 'PRIVATE CANDIDATE ERROR';
+			\Wstm121\apply_filters( 'query', 'SELECT successful follow-up' );
+			++$GLOBALS['wpdb']->num_queries;
+			$GLOBALS['wpdb']->last_error = '';
+			return new stdClass();
+		} );
+		self::assertInstanceOf( WP_Error::class, $result );
+		self::assertSame( 'upstream_failed', $result->get_error_code() );
+		self::assertSame( 1, Probe::$cache_invalidations );
+		$sentinel = static fn( $sql ) => $sql;
+		\Wstm121\add_filter( 'query', $sentinel, PHP_INT_MIN );
+		try {
+			$method->invoke( null, static function () {
+				throw new RuntimeException( 'Private test exception' );
+			} );
+			self::fail( 'The read exception must propagate.' );
+		} catch ( RuntimeException $error ) {
+			self::assertSame( 'Private test exception', $error->getMessage() );
+		}
+		self::assertSame( array( $sentinel ), array_values( Probe::$filters['query'][PHP_INT_MIN] ) );
+		\Wstm121\remove_filter( 'query', $sentinel, PHP_INT_MIN );
 	}
 
 	public function test_failed_id_query_cannot_poison_a_later_cached_eof(): void {
@@ -238,6 +318,23 @@ final class BoundedListTest extends TestCase {
 			'name' => 'test', 'label' => 'Test', 'labels' => (object) array( 'singular_name' => 'Test' ),
 			'hierarchical' => false, 'cap' => (object) array( 'read_post' => 'read_test', 'edit_posts' => 'edit_tests', 'edit_others_posts' => 'edit_others_tests' ),
 		), 'test' );
+	}
+
+	public function test_native_score_callback_preserves_authorized_values_and_exact_markers(): void {
+		Probe::$size = 2;
+		$this->register_lists();
+		$execute = Probe::$abilities['webmastery-site-toolkit-for-mcp/get-seo-scores']['execute_callback'];
+		$result = $execute( array( 'page' => 1, 'per_page' => 1 ) );
+		self::assertTrue( $result['success'] );
+		self::assertCount( 1, $result['data']['items'] );
+		$item = $result['data']['items'][0];
+		$original = $item;
+		Wstm121Verifier::markers( $item, array( 'title', 'url', 'score' ) );
+		self::assertSame( $original, $item );
+		self::assertSame( 'Tied title', $item['title'] );
+		self::assertSame( \Wstm121\get_permalink( $item['post_id'] ), $item['url'] );
+		self::assertSame( 0, $item['score'] );
+		self::assertSame( array( 'title', 'url', 'score' ), $item['untrusted_fields'] );
 	}
 
 	public function test_registered_raw_callbacks_validate_fields_before_queries_or_capabilities(): void {

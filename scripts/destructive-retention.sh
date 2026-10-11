@@ -48,11 +48,7 @@ wstm116_clear_retention() {
 }
 
 wstm116_retention_bytes() {
-	if [[ -n "${WSTM_QA_RUNTIME_PROFILE:-}${WSTM_PHP80_CONFIG+x}${WSTM_PHP80_CONFIG_SHA256+x}" ]]; then
-		"${WSTM108_HOST_PHP-php}" "$(dirname "${BASH_SOURCE[0]}")/qa-runtime.php" retention "$1" "$2"
-	else
-		printf 'owner=%s\nproject=%s\nsource=%s\n' "$1" "$COMPOSE_PROJECT_NAME" "$2"
-	fi
+	printf 'owner=%s\nproject=%s\nsource=%s\n' "$1" "$COMPOSE_PROJECT_NAME" "$2"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then

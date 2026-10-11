@@ -20,6 +20,17 @@ $artifact = getenv( 'WSTM116_ARTIFACT' );
 if ( ! is_string( $artifact ) || '' === $artifact || file_exists( $artifact ) || ! is_writable( dirname( $artifact ) ) ) {
 	throw new RuntimeException( 'WSTM116_ARTIFACT must name a new file in an existing writable artifact directory.' );
 }
+require_once __DIR__ . '/product-stage-artifacts.php';
+$stage_token = getenv( 'WSTM116_STAGE_TOKEN' );
+$expected_days = getenv( 'WSTM116_EXPECT_TRASH_DAYS' );
+if ( ! is_string( $stage_token ) || ! in_array( $expected_days, array( '0', '30' ), true ) ) {
+	throw new RuntimeException( 'Invalid destructive stage artifact identity.' );
+}
+Wstm_Product_Stage_Artifacts::directory( dirname( $artifact ), 'destructive', $stage_token );
+$artifact_name = ( '0' === $expected_days ? 'disabled' : 'enabled' ) . '-' . $boundary . '.json';
+if ( basename( $artifact ) !== $artifact_name || is_link( $artifact ) || file_exists( $artifact . '.jsonl' ) || is_link( $artifact . '.jsonl' ) ) {
+	throw new RuntimeException( 'Invalid or occupied destructive stage artifact file.' );
+}
 require_once __DIR__ . '/destructive-safety-evidence.php';
 $evidence = new Wstm116_Evidence( $artifact );
 $completed = false;

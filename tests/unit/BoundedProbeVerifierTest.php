@@ -6,6 +6,8 @@ use PHPUnit\Framework\TestCase;
 
 require_once dirname( __DIR__ ) . '/e2e/bounded-list-verifier.php';
 
+require_once __DIR__ . '/fixtures/bounded-product-record-model.php';
+
 final class BoundedProbeVerifierTest extends TestCase {
 	private static function state(): array {
 		return array( 'cpt' => 'w121_0123456789ab', 'catalog' => array( 'post' => array( 201, 200, 199 ), 'attachment' => range( 100, 1 ) ),
@@ -42,9 +44,15 @@ final class BoundedProbeVerifierTest extends TestCase {
 			'failed_response' => array( 'success' => false, 'error' => array( 'code' => 'upstream_failed', 'message' => 'The list query could not be completed.' ) ),
 			'retry' => array( 'query_start' => 11, 'query_end' => 12, 'response' => $response ),
 			'warm_stale' => array( 'query_start' => 12, 'query_end' => 12, 'response' => $response, 'last_error' => 'wstm121_stale_error_without_new_sql' ) );
+		$phase['injection'] = array( 'original' => $phase['sql'][0], 'replacement' => 'SELECT wstm121_deliberate_missing_column FROM wp_posts LIMIT 1', 'query_before' => 10, 'sql_index' => 0 );
+		$phase['failure_witness'] = array( 'sql_index' => 0, 'query_before' => 10, 'query_completed' => 11,
+			'query_sha256' => hash( 'sha256', $phase['injection']['replacement'] ), 'result_failed' => true, 'error_present' => true, 'boundary' => 'final' );
+		$priming = $phase;
+		$priming['sql'][0] = 'SELECT wp_posts.* FROM wp_posts WHERE ID IN (201,200)';
+		$priming['injection']['original'] = $priming['sql'][0];
 		return array( 'input' => array( 'page' => 1, 'per_page' => 2, 'orderby' => 'id', 'order' => 'DESC' ),
 			'expected_ids' => array( 201, 200 ), 'before' => array( 'same' ), 'after' => array( 'same' ),
-			'phases' => array( 'candidate' => $phase, 'priming' => $phase ) );
+			'phases' => array( 'candidate' => $phase, 'priming' => $priming ) );
 	}
 
 	public function test_original_reference_and_cache_observations_are_accepted(): void {
@@ -109,7 +117,7 @@ final class BoundedProbeVerifierTest extends TestCase {
 
 	public function test_seven_entries_cannot_reuse_one_directory_or_omit_external_custody(): void {
 		$this->expectException( RuntimeException::class );
-		Wstm121Verifier::aggregate( array_fill_keys( array_keys( Wstm121Plan::WORKERS ), __DIR__ ) );
+		Wstm121ProductRecordModel::directories( array_fill_keys( Wstm121ProductRecordModel::SURFACES, __DIR__ ) );
 	}
 
 	private static function projection(): array {

@@ -1,428 +1,270 @@
-# Security Strategy
+# Security strategy
 
-This repository is a public WordPress.org plugin that exposes MCP abilities. Security strategy focuses on preventing unsafe access to WordPress data and site-changing actions, while QA strategy defines the checks that prove the policy.
-
-See the [Software Development Lifecycle](sdlc-overview.md) for how security applies across the complete development process.
-
-## Security goals
-
-1. Use the narrowest relevant WordPress capability for every ability.
-2. Avoid exposing private content, trashed content, backend environment details, user identity fields, plugin details, or other sensitive data to lower-privilege users.
-3. Prevent status escalation such as publishing, scheduling, or making content private without the required capability.
-4. Keep ability `permission_callback` behavior aligned with execute-time checks.
-5. Treat dependency, workflow, and release automation as part of the security boundary.
+This public WordPress.org plugin exposes MCP abilities. Security policy governs
+access to WordPress data and site-changing actions; the
+[QA strategy](qa-strategy.md) defines the corresponding evidence. See the
+[software development lifecycle](sdlc-overview.md) for review and release stages.
 
 ## Threat model
 
-Primary risks for this plugin:
-
-- authenticated low-privilege users invoking MCP abilities that reveal data they could not access in wp-admin
-- broad list abilities leaking private/trash content or unauthorized totals
-- write abilities bypassing object, publish, delete, plugin-management, or administrator capabilities
-- sensitive response fields exposing logins, emails, version fingerprints, plugin state, or environment details
-- unsafe URLs, uploads, protected metadata, or unvalidated identifiers crossing trust boundaries
-- compromised workflow tokens, leaked secrets, or vulnerable dependencies affecting release integrity
+Use the narrowest relevant capability, keep permission callbacks consistent
+with guarded execution, and check object/status permissions before returning
+data or changing state. Primary risks include lower-role access to private or
+trashed content, unauthorized totals, status escalation, identity/environment
+fingerprinting, unsafe URLs/uploads/metadata/identifiers, vulnerable dependencies
+and compromised workflow or release credentials.
 
 ## Agent threat model
 
-### Approved signed-package PHP repair and configuration hardening
-
-Signed OS-package repair is authorized only on the owned disposable
-GitHub-hosted `release-package-qa` (PHP8.2), `ability-contract-qa` and
-`full-mcp-e2e-qa` (PHP8.4) machines. It must verify repository signatures and
-the approved fingerprint, source/archive bindings, locked package versions
-and installed owner/version/digests before accepting the selected interpreter.
-Only the approved fixed installation/selection operations and their original
-ROOT, time, command and acquisition limits apply. A missing owner is not
-permission to invent provenance or whitelist a foreign binary.
-
-The retained Perl tool may use only the complete two-name hard-link domain
-declared by the installed `perl-base` package: `/usr/bin/perl` and its exact
-installed upstream-version name. Protected installed metadata, the package
-listing and both manifest entries must agree with both owner queries and package
-source/version/architecture. Both canonical root-owned files must share the
-same physical identity and exactly two links, safe modes, protected parents and
-verified ELF bytes. Held-descriptor reads and subsequent domain checks reject
-extra links, substitutions, digest or metadata drift and exhausted original
-budgets. Generic files still require a single link. This installed-package
-binding does not prove a signed source archive or loader closure; existing
-dependency checks remain required before execution eligibility.
-Only the authenticated successful post-install refresh may update directory
-timestamp snapshots for both Perl names and their package metadata. Directory
-identity, ownership and modes, exact file identities, bytes, association and
-capabilities remain unchanged; ordinary reads cannot refresh these snapshots.
-
-Normal signed-package maintainer and housekeeping behavior is authorized on
-those three machines, including background cleanup of expired PHP sessions
-for other PHP versions. This authorizes the standard behavior; it does not
-prove that a timer, cron job or service did or did not run. It does not certify
-root-child termination or extend the capture's deadline. Controllers, capture
-and candidate application/site PHP remain nonroot; trusted package scripts and
-their normal housekeeping are distinct from candidate application elevation.
-There is no grant for arbitrary ROOT commands, service killing/masking,
-broker/signal/privilege bypasses, new runtime/discovery APIs, or local, shared,
-self-hosted or production resources. The 3.0 release is outside this repair.
-
-The configuration guard selects only CLI `php.ini` and
-`mods-available/sockets.ini` for the approved version. It verifies the genuine
-socket template's installed package/source version and manifest digest, exact
-configuration digest and root-owned `cli/conf.d/20-sockets.ini` alias. The alias
-must resolve to that same file without retargeting. `99-pecl.ini` is not an
-approved target. Missing files, substituted targets, skipped guards and
-fabricated native captures refuse.
-
-Cleanup command admission recognizes only the genuine source-bound
-`sessionclean` version loop. Its finite domain comes from the authenticated
-query producer and read-only immediate `/usr/lib/php` observations. The complete
-query domain distinguishes active workers (an executable binary and existing
-SAPI INI) from inactive entries; absent guards are retained and rechecked.
-Incoming producers use authenticated archive bindings, while unchanged
-producers require exact installed owner, source, manifest and custody bindings.
-
-The closed signed APT transaction authorizes its incoming code and verified
-retained maintainers/triggers, including bootstrap or replacement of PHP.
-Retained dpkg control basenames come from protected installed package metadata:
-`Multi-Arch: same` uses the verified native architecture qualifier, while
-ordinary packages remain unqualified. Available binary-package identifiers
-must agree with installed version/architecture and Multi-Arch metadata.
-Exact script/trigger bytes, canonical paths and missing control guards are
-rechecked before APT; incoming metadata cannot choose an old control path.
-This transaction scope derives from the authenticated lock, archive/control
-custody, job and original operation sequence, not a caller flag. Prospective
-bytes never establish installed authority or license direct helper execution.
-After APT succeeds, refresh installed status, owners, versions, digests, ELF
-loaders, generated UCF INIs, modules and aliases before selection or candidate
-eligibility. Direct helper admission retains installed checks and future-ELF
-refusal. Arbitrary dollar expansions, foreign sources, alias/parent drift and
-exhausted original budgets refuse. Recheck observed files and missing guards
-before transaction admission; retain pre-install evidence without refunds.
-
-On the explicitly approved owned disposable GitHub-hosted QA runners, the
-ordinary-user `host-prerequisite-setup.py` driver with required8.2/8.4 selection
-guard follows signed package provisioning and precedes every candidate
-configured-PHP script. Package selection8.2 is restricted to the release-package
-job; selection8.4 to Ability Contract and Full MCP. The same guard and
-read-only inventory implementation serve all three, with no version/env fallback.
-No candidate/config writer may run in this configuration-hardening interval;
-package maintainer work belongs to the separate approved installation step.
-Workflow context is a scope assertion, not an authorization token
-for a different machine or evidence that a hostile root administrator is absent.
-
-The configuration-hardening guard's only elevated argv is the fixed system
-sudo/chmod0644 command for the selected literal cli/php.ini and
-mods-available/sockets.ini pair:
-8.2 in Package,8.4 in Contract/Full MCP.
-No cross-version pair or other path can be constructed from input. The canonical
-interpreter and actual bare identity must agree with that SAME selection.
-Original root-owned/writable input remains ineligible for the read-only
-inventory until the guarded0644 postcondition; shared acquisition precedes
-candidate PHP on all three surfaces. Failed provisioning/acquisition also
-withholds always-running PHP diagnostics, summaries and export verification.
-The signed provider's refused preflight projection includes only a finite step
-label, the fixed requested-tool identifier when applicable, and the failed
-ordinary-file identity predicate when available. A null predicate remains
-unresolved; dependency phases name the requested root tool, not an inferred
-failing dependency. No paths, argv, exception text, file bytes, owners or inode
-values enter this witness. It neither authorizes execution nor changes any
-identity check, provenance requirement, operation or acquisition budget.
-Origin refusals add a closed `origin_check` label for owner response, installed
-package/manifest association, cached binding, Perl domain, configuration, sudo,
-support-module, APT-hook or CA-generation/selection checks. The identity field
-is null for these refusals; `unknown` explicitly means an unannotated predicate.
-Fixed APT-method and later preflight phases retain their requested root-tool
-labels where applicable. A diagnostic label is not proof of owner repair,
-signed installation, loader closure or native acceptance.
-An owner-response-shape refusal may also include finite row-count, potential
-owner-row/domain, target-relation, diversion-row and other-row categories from
-the already acquired response. These categories disclose no row text or names
-and do not admit, discard or normalize any response row. Null means unavailable
-structural evidence. Multiple, diverted, malformed or ambiguous responses
-remain subject to the same owner and provenance refusals.
-
-Only the three signed HOST QA jobs collect the user-approved read-only GPG
-diversion diagnostic after the exact multiple-diversion/no-owner refusal.
-The original refusal and exit 78 remain in force. The current invocation's
-owner command originals, protected complete diversion table, exact table-bound
-original/saved file identities and aliases, involved installed package records,
-file lists and manifests, and static ELF dependency observations are retained
-privately. Local declarations are observations, not executable authorization.
-The collector does not select or execute a replacement, follow unrelated
-diversion paths, scan for alternative binaries, or reconstruct an earlier
-job's state. Live loader/configuration closure remains unresolved.
-
-The requested root-tool label also covers failures inside that tool's dependency
-closure. For the observed GPG/readline usrmerge boundary, collection binds the
-exact failed alias-owner command and its unique adjacent canonical-owner command
-through their original intent, reservation, observed receipt and stream bytes.
-It follows only the source-fixed dependency and matching protected declaration,
-not the earlier successful GPG query or an arbitrary final path. Installed
-qualification, selected original status bytes, list/MD5 association, physical
-and alias-parent custody, and saved-file presence or protected absence are
-rechecked before the diagnostic observation is complete. Unreadability is not
-absence. Byte-parsed ELF headers and static loader facts do not establish live
-loader resolution or executable authority. The origin parser, complete-table
-refusal, fixed GPG consumers and ROOT argv remain unchanged.
-
-The associated installed-status stanza is selected by a bounded, offset-preserving
-pass associated with canonical records from the whole protected document.
-Individual paragraphs are not reparsed or stripped, so internal continuation
-whitespace retains the shared parser's exact semantics. Only whole-document
-outer whitespace is excluded from record association; malformed interior
-paragraphs, duplicate or mismatched package records and invalid qualification
-still refuse.
-The private stanza export binds its exact offset, length and digest to the
-whole-file digest and protected pin. This closes a modeled terminal-paragraph
-defect; the earlier native status suffix was not retained or reconstructed.
-
-Diagnostic queries reuse the existing owner/package/ELF capture operations and
-deadline, command, pin, acquisition, metadata, stream and record accounting.
-Capture-body slots and validated byte sizes are reserved before any body read;
-failed acquisitions keep their debit, and completed reuse is not charged again.
-Required record fields, scalar types, nested stream identities and source
-ledgers are validated before access. Malformed records explicitly refuse
-retention and preserve the original preflight exception and partial summary.
-Only the two protected table-derived names may add a literal owner query for
-an already pinned alias during collection; ordinary alias-query policy is
-unchanged. Prefix originals survive collection failure or budget exhaustion.
-The public projection exposes only closed collection state/reason labels,
-current-invocation attribution and false runtime/historical-state claims.
-
-Failure-only, repository-scoped artifact steps retain only
-`gpg-diagnostic-*.private*` files from reserved capture directories for one day.
-They do not upload complete capture directories, source frames, executable
-bytes, ambient environment, home files, credentials or user payloads. Raw
-metadata and command details are artifact evidence, never public log output;
-reviewers should handle these short-lived artifacts as private evidence.
-Within this configuration-hardening grant, no root repository/PHP/Python/shell
-script, dynamic path/argv, directory/glob,
-unapproved version/SAPI, ownership change, extra extension, namespace operation or
-runtime sudo policy is permitted. Before launch, full bounded content/identity
-and root-owned canonical parent checks protect both literal nonsymlink targets;
-trusted sudo/chmod package ELF and loader/policy-module pins protect system
-execution. Held original read descriptors and full postchecks reject content,
-inode, ownership or parent replacement while accepting only the expected0644
-mode/ctime change. Source archive/build-chain and actual loaded-module behavior
-remain explicit evidence limits, not inferred guarantees.
-
-All originals stay in exclusive owned private custody. The configuration guard's
-one setup deadline and conserved file/byte/command/output ledgers cover its operation, including
-rechecks and its single root launch. Package installation is a separate scoped
-grant, not an expansion of this chmod argv or ledger. Failure retains prefixes
-and unknown tails;
-the nonroot guard never signals a privileged child, invents a drain allowance
-or claims root cleanup. The original read-only inventory and three runtime
-observer operations are unchanged. No local/WSL root execution is part of the
-review/validation process.
-
-### Scoped repository QA host observation
-
-The setup driver's durable G1/G2 log projection is an availability-only public
-boundary, not an additional observer or permission grant. Its source-bound
-private original inventory, wait/EOF captures and input hash are retained before
-public parsing. A closed <=16384-byte schema permits only enumerated IDs,
-booleans/nulls, approved version/job selectors and canonical SHA256 digests.
-Raw operands, paths, configuration, versions, package text, process information
-and native output remain private. Unknown Python API observations remain unknown;
-no socket/FD/protocol operation is introduced to manufacture them.
-The existing original deadline and ledgers cover source rechecks and projection
-retention. Refusal preserves private partial evidence and withholds candidate
-PHP; failed writes, changed source, missing EOF or unknown exit cannot become
-successful acquisition. The genuine Actions job/attempt log and comparison
-against the reviewed source tuple are required when retrieving facts, including
-after a later admission failure. A copied JSON object, unit/mock marker, generic
-step success or configured workflow input is not genuine HOST evidence.
-
-Only separately approved disposable hosted CI selects
-`WSTM108_HOST_INSPECTION=system-readonly-v1`. The controller, capture and PHP
-remain nonroot; verified fixed system read/supervision primitives alone run
-through sudo against the validated Docker PID's descriptors, namespace and
-mount table. Candidate code is not elevated, no capabilities/permissions/mounts
-are changed, and namespace entry or container commands are not part of this
-boundary. See the [QA inspection policy](qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts)
-for clean environments, executable/target identity, complete observations,
-private originals, refusal/release rules and cooperative I/O limitations.
-Inspection cannot grant runtime or cleanup authority. Shared/live/self-hosted
-systems must not opt in. Keep every earlier proof seal unchanged through a
-reviewed outer source transition; native sudo and real runtime acceptance need
-separate evidence from parser/transport adapters.
-
-### Administrator diagnostic minimization (3.0 development)
-
-Administrator access does not imply that database identifiers should be sent to a model provider. Database health reports omit the configured prefix and custom/plugin table names by default, exposing only core logical labels and response-local opaque custom labels. Core classification uses WordPress's physical mapping rather than suffix guessing, without expanding the current-prefix query scope. Raw identifiers require explicit boolean `include_table_names: true` and effective `manage_options` even for direct callbacks. This opt-in deliberately discloses environment fingerprints; clients should confirm that disclosure is needed rather than enabling it automatically. It never enables passwords, raw SQL errors, or filesystem paths. Opaque labels are not stable cross-response identities, and unchanged counts/sizes remain diagnostic information, not complete anonymization.
-
 ### Untrusted site content
 
-Stored site content can contain prompt injection: text that asks an agent to disregard its task, change site data, or send information elsewhere. Treat post, page, custom post type, and revision bodies, titles, excerpts, and author display names as untrusted data. The same applies to block markup and attributes, comment bodies and author fields (including email and URL), media titles/captions/alt text, authorized SEO metadata and keywords, user profile fields, and user-chosen application-password `app_name` values. These fields can originate with another user or an attacker. A `message` field is not necessarily trusted instructions. In unreleased 3.0, opaque generated Yoast head HTML/JSON is not fetched or returned; the untrusted-content work does not restore it.
+Stored content may contain instructions that try to redirect an agent. Treat
+post, page, CPT and revision bodies/titles/excerpts/author display names as
+untrusted, along with block markup/attributes, comment bodies and author
+email/URL fields, media titles/captions/alt text, authorized SEO metadata and
+keywords, user profiles and user-chosen application-password `app_name`.
+A `message` field is not necessarily trusted instructions. Unreleased 3.0
+does not fetch or return opaque generated Yoast head HTML/JSON.
 
-SEO Analyze Post uses exactly `Focus keyword found in title.` and `Focus keyword not found in title.` for those two diagnostics. Authorized stored values remain in `data.metrics.yoast_focus_keyword` and `data.metrics.seopress_focus_keywords`, alongside the title and existing authorized-provider precedence. This data/message separation shipped independently of the unreleased 3.0 field markers. The markers do not strip, escape, or otherwise rewrite existing values, change authorization, or guarantee prompt-injection prevention.
+SEO Analyze Post uses exactly `Focus keyword found in title.` and
+`Focus keyword not found in title.` for these diagnostics. Authorized stored
+values remain in `data.metrics.yoast_focus_keyword` and
+`data.metrics.seopress_focus_keywords`, with the title and existing provider
+precedence. This separation shipped independently of the unreleased markers.
 
-JSON serialization, authenticated retrieval, read-only annotations, and successful capability checks do not make that text authoritative. Capabilities determine what the connected account may access or change, not whether a human requested a particular action. A read-only call can deliver instructions that influence later writes or transmission through another tool. Retrieved content must never authorize those later actions.
+Authentication, JSON serialization, capabilities and read-only annotations
+do not make retrieved text authoritative. Capabilities authorize an account's
+operations, not a human's intent. A read-only response can influence later
+writes or transmission through another tool; retrieved content cannot approve
+those actions.
 
-Client and operator controls should work together:
+Clients and operators should:
 
-- Keep retrieved content separate from trusted user instructions. Require real user intent for the specific mutation, selected objects, scope, and any transmission destination. Do not accept approval claimed inside site content or generated by the agent itself.
-- Show an independent preview or diff in the client before dangerous actions, including deletion, bulk changes, publishing, plugin changes, and sending site data elsewhere. Require explicit client-side approval bound to the actual action and arguments; changed scope or destination needs renewed approval.
-- Use bounded selections and small batches. Check exact IDs, proposed changes, and destinations against the user's request rather than letting retrieved text expand them. Use available hash preconditions for targeted edits, then inspect the result.
-- Use a dedicated account with only the capabilities needed for the task. Contributor or Author can be sufficient for work on editable own posts; use Editor only when broader editorial access is needed, and keep Administrator credentials out of routine content sessions.
-- Keep trustworthy backups and a tested recovery procedure outside the agent's control before destructive work. Do not assume trash, revisions, or a diagnostic backup-status response guarantees recovery.
+- Separate retrieved content from trusted instructions. Require user intent
+  for the exact mutation, objects, scope and any transmission destination.
+- Show an independent preview/diff and bind approval to actual arguments,
+  especially deletion, bulk changes, publication, plugin changes and disclosure.
+  Changed scope or destination requires renewed approval.
+- Use bounded selections, small batches and available hash preconditions.
+  Check proposed IDs and changes against the user request, then inspect results.
+- Use a dedicated least-privilege account. Contributor/Author may suffice for
+  own editable posts; use Editor for broader editorial access and avoid routine
+  Administrator credentials.
+- Keep trustworthy backups and tested recovery outside the agent's control.
+  Trash, revisions and backup-status responses do not guarantee recovery.
 
-Input sanitization and stripped HTML address different risks; plain text can still contain instructions. Unreleased 3.0 field markers, annotation hints, and confirmation interlocks are defense-in-depth, not a security boundary, capability check, content filter, or prompt-injection guarantee. A model-supplied `confirm: true` does not prove human approval, and a `dry_run` does not authorize a later write. The interlocks apply only to the five documented destructive/bulk abilities below, not universally to writes. Optional text-only `content_format` output is not implemented.
+Plain text can still contain instructions. Markers, hints and confirmation
+interlocks are defense-in-depth, not a content filter, capability grant,
+prompt-injection guarantee or universal write approval. Model-supplied
+`confirm:true` does not prove human approval; `dry_run` cannot approve a later
+write. Optional text-only `content_format` output is not implemented.
 
 ### Untrusted-field contract (3.0 Unreleased)
 
-Affected successful records carry an additive `untrusted_fields` array of unique field names **relative to that containing record**. Names identify only fields actually present, including null or empty values; they are not dotted paths or a global list. See the [field coverage table and example](../README.md#untrusted-result-fields-30-unreleased).
+Affected successful records have an additive `untrusted_fields` array of unique
+names relative to that record. Mark only fields actually present, including
+null/empty values; names are neither dotted paths nor a global list. See the
+[coverage and example](../README.md#untrusted-result-fields-30-unreleased).
 
-Marker addition preserves every existing value, type, HTML fragment, and block delimiter exactly as returned by the existing normalizer. Existing write sanitization and normalization still apply; this is not a promise to echo raw write input. A container marker such as `metadata`, `raw_meta`, `attrs`, or `entries` designates that whole value without injecting keys into its map. Missing or redacted fields are never restored to satisfy a marker.
+Preserve existing values, types, HTML and block delimiters returned by the
+normalizer. Existing write sanitization remains; markers do not promise raw
+input echoing. Container markers such as `metadata`, `raw_meta`, `attrs` or
+`entries` designate the whole value without injecting keys into stored maps.
+Do not restore missing/redacted fields to satisfy a marker.
 
-Standalone `get-post-meta` marks `meta` on its containing data record.
-Standalone `update-post-meta` marks `meta_key`, `previous_value`, and
-`current_value` on its data record; `delete-post-meta` marks `meta_key`.
-Nested stored maps remain untouched; object/key permissions and protected-key
-eligibility are unchanged. `patch-content-block` marks data `content`, while
-`patch-post-content` marks present `heading_text` on `data.target` (an empty
-marker array for exact-match targets), without altering its nested post's
-markers. SEO/site overview marks present `url`/`entries` on `sitemap` and
-`url` on `robots_txt`.
+Standalone `get-post-meta` marks data `meta`; `update-post-meta` marks
+`meta_key`, `previous_value`, `current_value`; `delete-post-meta` marks
+`meta_key`. Nested maps and object/key permissions remain unchanged.
+`patch-content-block` marks data `content`; `patch-post-content` marks present
+`heading_text` on `data.target`, with an empty marker list for exact-match
+targets. SEO/site overview marks present `url`/`entries` on `sitemap` and `url`
+on `robots_txt`.
 
-Authorization remains upstream of marking. User lookup login/email fields still depend on effective user-edit permission; privileged account/application-password audit data remains privileged. Comment fields retain the existing listing/reply/moderation capability policy: marking author email or URL does not add privacy redaction. SEO key denials retain `unavailable_fields` and `unevaluable_checks`; generated head inspection stays unavailable and URL-only inspection unsupported, with no provider head calls. Canonical errors and diagnostic error subrecords receive no markers. Conversely, absence of a marker is not a guarantee that a value elsewhere is trusted.
+Authorize before marking. User login/email lookup still needs effective
+user-edit permission; account/application-password audit remains privileged.
+Comment policies remain unchanged, so marking email/URL does not add redaction.
+SEO key denials retain `unavailable_fields` and `unevaluable_checks`; generated
+head inspection remains unavailable, URL-only inspection unsupported and
+provider head calls absent. Canonical errors and diagnostic error subrecords
+receive no markers. Missing markers do not guarantee trusted content.
 
 ### Annotation scope
 
-Plugin registrations declare `meta.annotations` such as `readonly`, `destructive`, and `idempotent`. For MCP Adapter **0.6.1**, verify these against the actual emitted `readOnlyHint`, `destructiveHint`, and `idempotentHint` on individually exposed tools. Registration/source inspection alone is not captured per-tool `tools/list` proof; that runtime annotation verification remains pending for this work.
+Registrations declare `meta.annotations` such as `readonly`, `destructive` and
+`idempotent`. QA checks actual MCP Adapter 0.6.1 individual-tool `tools/list`
+output for `readOnlyHint`, `destructiveHint` and `idempotentHint`; source
+inspection alone does not establish those runtime hints.
 
-The default server's `tools/list` exposes three gateway tools: discovery, get-info, and execute. Their tool-level annotations describe those gateways; per-ability hints are not available there. Retrieve the target's metadata using `mcp-adapter-get-ability-info` before interpreting its declared hints, and never treat them as user approval. In unreleased 3.0, field markers accompany the result data through both gateway and individual-tool calls regardless of this discovery distinction. Inspect the connected server's output before depending on a transport-specific hint or shape; see [Response format](../README.md#response-format).
+The default server exposes discovery, get-info and execute gateway tools.
+Their hints describe the gateways, not individual abilities. Retrieve metadata
+with `mcp-adapter-get-ability-info` before interpreting a target's hints, and
+never treat hints as approval. Markers accompany both transport forms.
+Inspect actual server output before depending on hints or shape; see
+[response format](../README.md#response-format).
 
 ## Ability permission policy
 
-Every ability must have an explicit `permission_callback`. Public `__return_true` callbacks are blocked by `composer validate:security-qa` unless intentionally allow-listed after explicit review.
+Every ability has an explicit `permission_callback`. Static policy blocks
+unreviewed `__return_true` callbacks. Use these expectations:
 
-Use these defaults:
-
-| Ability type | Permission expectation |
+| Operation | Permission |
 | --- | --- |
-| Public-safe read-only data | `read`, with documentation explaining why the response is safe. |
-| Delegated third-party permission | A local WordPress capability floor **plus** the exact upstream route permission, in permission and direct execution paths. Site Kit module, permission, and PageSpeed abilities require `read` before provider/route discovery or upstream work; a missing provider, route, or callable permission check fails closed. Normal REST dispatch must still authorize the request. Reverify effective permissions whenever supported upstream versions or their minimum version change; fixtures alone do not establish real-provider behavior. |
-| Object reads | Object-aware checks such as `read_post`, `edit_post`, or mapped CPT capabilities before returning full object payloads. |
-| List/query abilities | Query-level capability plus per-object/status filtering before normalizing results and totals. |
-| Writes and deletes | Object-specific `edit_*` / `delete_*` checks and status-specific publish/private/schedule checks. |
-| Plugin, environment, database, backup, performance, security, or runtime details | Administrator-level capabilities such as `manage_options` or plugin-management capabilities. |
-| User identity data | Restrict login/email fields to callers with user-management capabilities; use `assert_missing_paths` for lower-privilege cases. |
+| Public-safe read | `read`, with documented response safety. |
+| Object read | Object-aware `read_post`, `edit_post` or mapped CPT capability before full payloads. |
+| List/query | Query capability plus per-object/status filtering before normalization and totals. |
+| Write/delete | Object `edit_*`/`delete_*` and publish/private/schedule capability. |
+| Plugin/environment/database/security/runtime detail | `manage_options` or the relevant plugin-management capability. |
+| Identity | User-management permission for login/email, with absence assertions for lower roles. |
+| Delegated provider | Local capability floor plus the exact upstream route permission in permission and execution paths; fail closed on missing provider/route/callable check. |
 
-Comment updates, approval, trash, and spam require **both** `moderate_comments` and `edit_comment` on the resolved comment, in the permission callback and again before execution. WordPress maps `edit_comment` to the parent post's `edit_post` capabilities, or to `edit_posts` for an orphaned comment; the plugin delegates that mapping to core, including capability filters. Comment listing and replies retain their separate existing policies.
+Comment update/approval/trash/spam require both `moderate_comments` and
+`edit_comment` on the resolved object, in permission and execution. Core maps
+the latter to the parent post or orphan-comment `edit_posts`, including filters.
+Listing/reply policies are separate. This intentionally differs from WordPress
+7.1 REST's `moderate_comments` OR `edit_comment`.
 
-This is the plugin's moderation policy, not a claim of REST permission parity: WordPress 7.1's REST comment controller accepts `moderate_comments` **or** `edit_comment`. Existing-object denials use `forbidden` in permission callbacks; `WP_Ability::execute()` wraps them as `ability_invalid_permissions`. Missing objects are deferred to guarded execution for globally authorized callers. In unreleased 3.0, missing-comment failures uniformly use canonical `not_found` code/reason rather than the older mixed string/object errors. Direct callbacks retain missing-object handling even for denied callers, but always check both capabilities before exposing content or writing an existing object.
+Existing-object permission failures use `forbidden`, wrapped as
+`ability_invalid_permissions` by WordPress abilities. Authorized missing
+objects defer to guarded execution; unreleased 3.0 missing-comment failures use
+canonical `not_found`. Direct denied callbacks retain missing-object handling
+but cannot expose/write existing content before both capabilities pass.
+Invalid/nonpositive IDs never reach `get_comment(0)` or its global fallback;
+negative IDs cannot select a different positive object.
 
-The MCP Adapter 0.6.1 HTTP gateway checks permission before ability input validation. In unreleased 3.0, owned failures, including permission denials and authorized missing-object failures, use `isError:true` and one text block containing canonical JSON. `structuredContent` is omitted on the HTTP wire (internally null); clients must decode the text. The WordPress ability wrapper instead validates schema before permission checks. These remain distinct validation orders. Invalid/nonpositive IDs never reach `get_comment(0)` or its global-comment fallback; negative IDs cannot silently resolve a different positive ID. Those unsafe mutations are intentionally not compatibility guarantees.
+MCP Adapter's HTTP gateway checks permission before schema validation.
+WordPress abilities validate schema first. Unreleased owned HTTP failures have
+`isError:true` and one canonical-JSON text block without `structuredContent`
+on the wire (internally null). Preserve these distinct validation orders.
 
-The current [Site Kit implementation](../includes/class-site-kit.php) requires `manage_options` for status; module, permission, and PageSpeed access depends on Site Kit route permissions and sharing. It checks optional/internal route availability and calls the route permission callback during ability permission checks; data requests use WordPress REST dispatch. A WordPress role alone does not grant provider access, and inactive providers or unavailable/unsupported routes can prevent data retrieval even for an Administrator. See [Site Kit compatibility](../README.md#google-site-kit-compatibility-abilities) for the supported operations.
+[Site Kit](../includes/class-site-kit.php) status requires `manage_options`;
+module/permission/PageSpeed use a local `read` floor plus available upstream
+route permissions/sharing, rechecked before provider work. Data uses normal
+REST dispatch. Roles alone cannot grant provider access; inactive or unavailable
+routes can deny Administrators. Fixtures do not establish real-provider
+compatibility; see [supported operations](../README.md#google-site-kit-compatibility-abilities).
 
-### Webmaster verification privacy and caching
+## Diagnostic privacy
 
-Public webmaster verification remains a `read` ability. Both the permission callback and direct execution deny callers without `read` before HTTP, DNS, transient access, or private plugin inspection. Only callers with `activate_plugins` receive WordPress-only Site Kit installation, activation, and basename fields at `data.google.site_kit` and `data.checks.google_site_kit`. Other callers skip plugin inspection entirely; their summary is computed from public checks, not from a private result later redacted. Privileged response fields keep their existing shape. Clients without plugin activation permission must treat both private paths as absent.
+Administrator access does not justify sending database identifiers to a model.
+Database health omits the configured prefix and custom/plugin table names by
+default, using physical WordPress core mappings and response-local opaque
+custom labels without widening current-prefix queries. Explicit boolean
+`include_table_names:true` additionally requires effective `manage_options`,
+including direct calls. It discloses fingerprints but never passwords, raw SQL
+errors or filesystem paths. Opaque labels are not stable identities, and
+counts/sizes are not complete anonymization.
 
-Only public checks and homepage reachability are stored in a shared 60-second WordPress transient, keyed by schema version, blog ID, and home URL. Failures and unknown results are cached without changing their statuses or details. Caller-specific summaries and private plugin state are never stored; authorized plugin inspection runs separately on each request. This bounds warm repeats, not concurrent cold misses: there is no cross-request lock/coalescing guarantee, and WordPress can evict transients early. The repository has no existing shared locking primitive; this fix does not add a locking framework or change outbound URL policy.
+Public webmaster verification requires `read` before HTTP, DNS, transient or
+private-plugin work in both permission and direct callbacks. Only
+`activate_plugins` callers receive Site Kit installation/activation/basename
+at `data.google.site_kit` and `data.checks.google_site_kit`. Others skip plugin
+inspection entirely and derive summaries from public results; private paths
+remain absent rather than redacted afterward.
 
-Regression evidence separates deterministic namespaced HTTP/DNS/plugin-boundary fixtures from real WordPress capability/transient contract checks and real MCP HTTP transport QA. The security validator requires successful Subscriber and Author cases with both omission paths, denial coverage, and explicit contract HTTP counts.
+Only public checks/homepage reachability enter a shared 60-second transient
+keyed by schema version, blog ID and home URL. Preserve failure/unknown details.
+Never cache caller summaries or private plugin state; authorized inspection
+runs separately. This bounds warm repeats, not concurrent cold misses: no
+cross-request lock/coalescing guarantee exists and core may evict early.
+HTTP/DNS/plugin fixtures, real capability/transient tests and actual MCP
+transport provide distinct evidence.
 
-## Trash safety
+## Destructive-operation interlocks
 
-### Destructive-operation interlocks
+Unreleased schemas require strict `confirm:true` for permanent media/category/
+tag deletion and both bulk post operations. Callbacks enforce it independently,
+including previews. Missing/false/nonboolean confirmation cannot write.
+Bulk `dry_run` and media `force` require booleans. Prove permission denial with
+valid input rather than confusing it with schema rejection.
 
-The 3.0 development schemas require `confirm:true` on permanent media, category,
-and tag deletion and both bulk post operations. Callbacks independently require
-strict true, including previews; false/missing/non-boolean confirmation cannot
-write. Bulk `dry_run` and media `force` accept only booleans. Core schema
-validation may precede callback errors; permission denial must be proven with
-otherwise valid input rather than conflated with schema rejection.
+Bound raw bulk arrays to 100 before normalization/deduplication. Preview the
+same per-ID type/capability/status/disabled-trash eligibility without mutation.
+Report would-act successes, canonical item failures and `data.dry_run:true`;
+an all-failed processed batch retains `success:true`. Preview does not reserve
+state or predict third-party hooks.
 
-Bound raw bulk arrays to 100 before normalization/deduplication. Preview the same
-per-ID type, capability, status, and disabled-trash eligibility without calling
-mutation APIs. Report would-act successes, canonical item failures, and
-`data.dry_run:true`; an all-failed processed batch remains `success:true`. A
-preview cannot reserve state or predict subsequent third-party write hooks.
+Media deletion checks attachment `delete_post` before the shared orphan helper's
+featured-image metadata and literal content URL/GUID references. Only a known
+positive reference may be overridden with `force:true`; query failure fails
+closed even when forced, with safe canonical diagnostics. `in_use:false` cannot
+prove absence from serialized/custom storage, derivative URLs, external uses
+or concurrent references. Preserve orphan-list semantics.
 
-Media deletion requires actual `delete_post` on the attachment before scanning
-the shared orphan-media helper's featured-image metadata and literal content
-URL/GUID references. Only a known positive hit may be overridden with
-`force:true`; query failures fail closed, even when forced, with safe canonical
-diagnostics. Preserve the orphan-list reference semantics. `in_use:false` is
-not a guarantee: custom/serialized storage, derivative URLs, external users,
-and concurrent references are outside this limited scan. These inputs are
-interlocks, not capability grants or guaranteed human authorization.
+Post/page/CPT/bulk trash refuses before `wp_trash_post()` when
+`EMPTY_TRASH_DAYS` is falsy, because core otherwise permanently deletes.
+Check existence/type and deletion permission first; use `trash_disabled` only
+for authorized existing objects. Keep bulk item failures and totals without
+adding a permanent-delete route.
 
-### Disabled trash
+Comments use row-preserving `wp_set_comment_status(..., 'trash')`, not
+`wp_trash_comment()`. Characterize that distinct disabled-trash behavior without
+changing retention or other plugins' hooks.
 
-Post, page, generated CPT, and bulk post trash abilities must refuse before calling `wp_trash_post()` when `EMPTY_TRASH_DAYS` is falsy: core otherwise falls back to permanent deletion. Validate existence/type and object-delete permission first; retain existing errors and use `trash_disabled` only for authorized, existing items. Bulk operations keep per-ID failures and existing totals, not a new global-error contract. This safety fix adds no force/permanent-delete route.
+## Security-sensitive QA and environment assumptions
 
-Comment moderation uses `wp_set_comment_status( ..., 'trash' )`, not `wp_trash_comment()`. Its row-preserving behavior with trash disabled is characterized separately; do not assume the post-trash fallback applies to this different API. This does not change retention policies or other plugins' hooks.
+Retain allowed/denied manifest coverage, sensitive-field absence, invalid-input
+no-write snapshots and canonical errors. Static checks include security policy,
+manifest validation, locked audit, WPCS and configured PHPStan. Actual contract/
+MCP checks prove registrations, roles, mapped capabilities, mutations, transport
+and cleanup. Fresh trash boots verify constants and zero permanent-delete
+filters/hooks; they are not HTTP proof. Debug warnings/notices/deprecations/
+errors fail Docker QA.
 
-## Security-sensitive test policy
+Trust the disposable runner, Docker engine and reviewed images as prerequisites.
+This product QA does not claim whole-host provenance, kernel attestation or
+security of a hostile engine. Use ownership-labelled unique stacks, loopback
+HTTP, no database host port, read-only source/package binds and UID/GID 33:33
+candidate execution. Never mount the engine socket or run against shared/live
+WordPress. A fixed trusted directory initialization alone runs as root.
 
-Security-sensitive abilities must have E2E manifest coverage showing both allowed and denied behavior. Add `assert_missing_paths` when a response should omit sensitive fields for lower-privilege users.
+Credentials/context/raw HTTP/SQL/wire/resource/error records remain private and
+bounded. Public output uses only validated closed summaries. A successful
+export or boolean cleanup flag does not prove live absence. Retain failed
+records and original exits; restoration/absence failure blocks restart and
+teardown until the exact owned state is recovered.
 
-Current static enforcement:
+## Dependencies, secrets and release integrity
 
-- `composer validate:security-qa`
-- `composer validate:e2e-manifest`
-- `composer audit --locked`
-- `composer phpcs`
-- PHPStan at the configured project level
+Audit locked Composer dependencies and review updates without suppressing
+advisories or raising the declared PHP floor. Dependabot checks Composer/
+Actions weekly; alerts and automatic security updates still require review.
+Pin test dependencies, verify executable downloads and record floating tested
+versions before proposing promotion.
 
-Current runtime enforcement:
+Do not commit credentials, application passwords, tokens or service keys.
+Rotate leaked persistent secrets; dispose of exposed isolated test credentials.
+Keep Actions permissions explicit and PR code away from production secrets.
+Secret scanning/push protection supplement review, not proof of no leaks.
 
-- Ability Contract QA executes all manifest cases in WordPress.
-- Comment moderation cases verify persisted content and status on denied calls, including status-bearing updates. Direct callback checks also cover the moderation capability floor, custom post type maps, own-post access, orphan comments, malformed input, missing comments, and capability-filter denials.
-- Contract QA also boots fresh PHP processes with `EMPTY_TRASH_DAYS=30` and `0`, asserting the actual constant, registered-ability results, persisted rows, and zero permanent-deletion API filters/hooks. Enabled trash/restore and disabled comment-status behavior are checked independently. These configuration-specific checks are direct PHP ability calls, not HTTP MCP coverage.
-- Full MCP E2E verifies real MCP Adapter authentication, discovery, execution, and subscriber denial.
-- Docker QA fails when the WordPress debug log contains warnings, notices, deprecations, or errors.
+`SVN_USERNAME`/`SVN_PASSWORD` exist only in the protected `wordpress-org`
+environment after approval. Tags remain protected, source must be in main
+history and the approved artifact must be deployed. Tag-rule administration
+does not bypass environment approval.
 
-## Dependency and supply-chain policy
+## WordPress.org guideline review
 
-- Composer dependencies are audited with `composer audit --locked`.
-- Dependency changes should be reviewed carefully in PRs.
-- Dependabot checks Composer and GitHub Actions dependencies weekly. Alerts and automatic security-update PRs are enabled; updates still require normal QA and review.
-- Do not suppress a Composer advisory to restore a green merge gate. Update compatible tooling while preserving the plugin's declared PHP floor.
-- Pin routine test dependencies and verify executable downloads before use. Floating compatibility lanes must record exact tested versions before proposing pin changes.
-- Release workflows should build from the reviewed repository state and validate package contents before publishing.
-
-## Secrets and workflow security
-
-- Do not commit credentials, Application Passwords, tokens, SVN passwords, or service keys.
-- Prefer GitHub Actions `GITHUB_TOKEN` with explicit job-level `permissions`.
-- Do not expose secrets to workflows running untrusted PR code.
-- Rotate any secret that appears in logs or repository history.
-- Keep release credentials outside repository files. `SVN_USERNAME` and `SVN_PASSWORD` are stored only in the protected `wordpress-org` environment and become available after required review. Do not duplicate them as repository-level secrets.
-- Secret scanning and push protection are enabled. They are additional detection controls, not proof that a change contains no credentials.
-- Production tags are restricted, release commits must be in `main` history, and the approved artifact must be the artifact deployed. Administrator tag-rule bypass does not bypass the environment approval.
-
-## WordPress.org guideline security and privacy expectations
-
-The Detailed Plugin Guidelines make plugin developers responsible for all plugin contents and actions. For this MCP plugin, guideline review should be part of security review when a PR changes:
-
-- **External communication** — document required third-party services in `readme.txt`; do not contact external servers for tracking or non-essential functionality without explicit consent.
-- **Executable remote code** — do not load executable plugin, theme, update, JavaScript, or CSS code from third-party systems unless it is a documented service use that the guidelines allow.
-- **Public credits and links** — do not add public-facing "powered by" links, credits, or promotional output unless it is opt-in and disabled by default.
-- **Admin notices** — keep dashboard notices scoped, actionable, dismissible, and self-removing when resolved.
-- **Bundled assets and libraries** — ensure included code/assets are GPL-compatible and use WordPress-provided libraries instead of duplicating default libraries.
-- **Readme claims** — avoid unsupported security, compliance, legal, traffic, SEO, or automation guarantees in public-facing copy.
+Review external communication/consent, executable remote code, opt-in public
+credits, scoped dismissible notices, GPL-compatible assets, default WordPress
+libraries and accurate readme claims. Plugin contents remain the developer's
+responsibility; do not promise security, legal, compliance, traffic, SEO or
+automation guarantees unsupported by evidence.
 
 ## Vulnerability response
 
-1. Use [private vulnerability reporting](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/advisories/new) for suspected exploitable vulnerabilities. The feature is enabled; the public policy is [SECURITY.md](../SECURITY.md).
-2. Triage severity, affected versions, exploitability, and whether WordPress.org users are exposed.
-3. Fix on a private branch or security advisory fork when appropriate.
-4. Add regression tests or manifest cases that would have caught the issue.
-5. Release a patched version and publish advisory notes when needed.
-6. If the vulnerability affects a released package, coordinate WordPress.org plugin update timing and user communication.
-
-Security fixes target the latest stable release, without separate backports for older releases. Response and resolution are best-effort, without a fixed deadline. Reports should use disposable reproductions and omit credentials or private site data.
+Use [private reporting](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/advisories/new)
+and [SECURITY.md](../SECURITY.md), not public credentials or private site data.
+Triage affected versions/exploitability, use a private branch/advisory fork
+where appropriate, add regression coverage and coordinate a patched release/
+advisory with WordPress.org user communication. Fixes target the latest stable
+release without separate older backports. Response/resolution is best-effort
+without a fixed deadline; reproductions should be disposable.
 
 ## Official references
 
-- GitHub Docs: [Repository security advisories](https://docs.github.com/en/code-security/concepts/vulnerability-reporting-and-management/repository-security-advisories)
-- GitHub Docs: [Secret scanning](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning)
-- GitHub Docs: [Dependency review](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review)
-- GitHub Docs: [Code scanning](https://docs.github.com/en/code-security/concepts/code-scanning/code-scanning)
-- GitHub Docs: [Secure use reference](https://docs.github.com/en/actions/reference/security/secure-use)
-- WordPress Developer Resources: [Security](https://developer.wordpress.org/apis/security/)
-- WordPress Plugin Handbook: [Detailed Plugin Guidelines](https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/)
+- [Repository security advisories](https://docs.github.com/en/code-security/concepts/vulnerability-reporting-and-management/repository-security-advisories)
+- [Secret scanning](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning)
+- [Dependency review](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review)
+- [Code scanning](https://docs.github.com/en/code-security/concepts/code-scanning/code-scanning)
+- [Secure Actions use](https://docs.github.com/en/actions/reference/security/secure-use)
+- [WordPress security](https://developer.wordpress.org/apis/security/)
+- [Detailed Plugin Guidelines](https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/)

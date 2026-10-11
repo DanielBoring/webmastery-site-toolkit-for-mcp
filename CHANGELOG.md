@@ -8,6 +8,9 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Changed
 
+- Retain candidate and cache-priming database failures when later native reads
+  clear the last error. Return the safe upstream error and invalidate failed
+  query generations without adding queries or rejecting stale warm-cache errors.
 - Correct SEO and readability score records to mark the present score field as untrusted, including integer, zero and null values. Preserve score values, pagination, object/key permissions and denied-record omissions.
 - Breaking development change for 3.0: bound content, media, orphan-media, and score lists to candidate windows of at most 100 plus one lookahead ID. Replace exact filtered totals with explicit next-page continuation; empty authorized windows can still continue.
 - Default post/page/custom-post-type and revision lists to summary projection, omitting content without changing excerpts or other stored values. Explicit full projection and existing get/write responses retain content.

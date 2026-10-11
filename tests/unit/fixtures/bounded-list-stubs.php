@@ -24,6 +24,8 @@ final class Probe {
 	public static bool $validate_input = false;
 	public static bool $query_failure = false;
 	public static bool $prime_failure = false;
+	public static array $prime_reads = array();
+	public static array $filters = array();
 	public static bool $use_query_cache = false;
 	public static array $query_cache = array();
 	public static ?array $override_ids = null;
@@ -37,6 +39,7 @@ final class Probe {
 		self::$validate_input = false;
 		self::$query_failure = self::$use_query_cache = false;
 		self::$prime_failure = false;
+		self::$prime_reads = self::$filters = array();
 		self::$query_cache = array();
 		self::$override_ids = null;
 		self::$cache_invalidations = 0;
@@ -53,6 +56,7 @@ class WP_Query {
 			$this->posts = Probe::$query_cache[ $key ];
 			return;
 		}
+		apply_filters( 'query', 'SELECT candidate IDs' );
 		++$GLOBALS['wpdb']->num_queries;
 		$GLOBALS['wpdb']->last_error = Probe::$query_failure ? 'PRIVATE DATABASE ERROR' : '';
 		$ids = range( 1, Probe::$size );
@@ -82,10 +86,35 @@ function wp_cache_set_posts_last_changed() {
 
 function _prime_post_caches( $ids, $terms = true, $meta = true ) {
 	Probe::$primed[] = $ids;
+	foreach ( Probe::$prime_reads as $failed ) {
+		apply_filters( 'query', 'SELECT native priming read' );
+		++$GLOBALS['wpdb']->num_queries;
+		$GLOBALS['wpdb']->last_error = $failed ? 'PRIVATE PRIMING ERROR' : '';
+	}
 	if ( Probe::$prime_failure ) {
 		++$GLOBALS['wpdb']->num_queries;
 		$GLOBALS['wpdb']->last_error = 'PRIVATE PRIMING ERROR';
 	}
+}
+function add_filter( $name, $callback, $priority ) {
+	Probe::$filters[ $name ][ $priority ][] = $callback;
+}
+function remove_filter( $name, $callback, $priority ) {
+	foreach ( Probe::$filters[ $name ][ $priority ] as $key => $value ) {
+		if ( $value === $callback ) {
+			unset( Probe::$filters[ $name ][ $priority ][ $key ] );
+		}
+	}
+}
+function apply_filters( $name, $value ) {
+	$filters = Probe::$filters[ $name ] ?? array();
+	ksort( $filters );
+	foreach ( $filters as $callbacks ) {
+		foreach ( $callbacks as $callback ) {
+			$value = $callback( $value );
+		}
+	}
+	return $value;
 }
 function get_post( $id ) {
 	if ( is_object( $id ) ) {

@@ -29,6 +29,11 @@ try {
 			release_validate_runtime_tree($argv[2], $argv[3]);
 			echo "PASS runtime production tree still matches original ZIP; only empty bind placeholders permitted.\n";
 			break;
+		case 'prepare-runtime-mounts':
+			release_validate_package($root, $argv[3]);
+			release_prepare_runtime_mounts($argv[2], $argv[3]);
+			echo "PASS prepared exact empty runtime support mountpoints; production bytes unchanged.\n";
+			break;
 		case 'compare-tree':
 			release_require(release_tree($argv[2]) === release_zip_files($argv[3]), 'SVN tag does not match validated ZIP; refuse retagging.');
 			break;

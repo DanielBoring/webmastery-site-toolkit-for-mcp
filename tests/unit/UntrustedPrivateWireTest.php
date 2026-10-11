@@ -41,6 +41,58 @@ final class UntrustedPrivateWireTest extends TestCase {
 		);
 	}
 
+	public function testOriginalIndexAndJournalCannotConsumeReservedFinalFailureBytes(): void {
+		$this->wire->begin('runner');
+		$reserved = new ReflectionProperty(Wstm108_PrivateWire::class, 'reserved_bytes');
+		$reserved->setAccessible(true);
+		$index = file_get_contents($this->directory . '/private-wire.json');
+		$reserved->setValue($this->wire, 134217728 - 33554432 - 4096 - strlen($index));
+		try {
+			$this->wire->reserve_journal(1);
+			self::fail('Journal/index growth consumed final failure reservation.');
+		} catch (RuntimeException $error) {
+			self::assertStringContainsString('final reservation', $error->getMessage());
+		}
+		self::assertSame($index, file_get_contents($this->directory . '/private-wire.json'));
+		$record = $this->wire->capture_final('runner', array('boundary' => 'local-summary',
+			'schema' => 'wstm108-final-summary-v2', 'summary' => array('status' => 'failed'), 'case_refs' => array()));
+		$this->wire->validate('runner', $record['id'], 'local-summary');
+		$this->wire->seal('runner', false, array('status' => 'failed'));
+		self::assertSame('failed', $this->wire->scope_proof('runner')['verdict']);
+	}
+
+	public function testUnavailableFinalReservationRetainsUnsealedOriginalIndex(): void {
+		$this->wire->begin('runner');
+		$before = file_get_contents($this->directory . '/private-wire.json');
+		$reserved = new ReflectionProperty(Wstm108_PrivateWire::class, 'reserved_bytes');
+		$reserved->setAccessible(true);
+		$reserved->setValue($this->wire, 134217728);
+		try {
+			$this->wire->capture_final('runner', array('boundary' => 'local-summary',
+				'schema' => 'wstm108-final-summary-v2', 'summary' => array('status' => 'failed'), 'case_refs' => array()));
+			self::fail('Unavailable final reservation emitted a terminal record.');
+		} catch (RuntimeException $error) { self::assertStringContainsString('quota', $error->getMessage()); }
+		self::assertSame($before, file_get_contents($this->directory . '/private-wire.json'));
+		self::assertFileDoesNotExist($this->directory . '/wire-000001.bin');
+		self::assertSame('pending', $this->wire->scope_proof('runner')['verdict']);
+	}
+
+	public function testResumedPendingTerminalRecordCannotBeReplacedOrAppended(): void {
+		$this->wire->begin('runner');
+		$event = array('boundary' => 'local-summary', 'schema' => 'wstm108-final-summary-v2',
+			'summary' => array('status' => 'failed'), 'case_refs' => array());
+		$this->wire->capture_final('runner', $event);
+		$resumed = Wstm108_PrivateWire::resume($this->directory, $this->binding, str_repeat('d', 64),
+			$this->wire->identity(), static function (): void {});
+		$before = file_get_contents($this->directory . '/private-wire.json');
+		foreach (array(fn() => $resumed->capture_final('runner', $event),
+			fn() => $resumed->capture('runner', array('body' => 'late response'))) as $call) {
+			try { $call(); self::fail('Resumed terminal record accepted a retry.'); }
+			catch (RuntimeException $error) { self::assertNotSame('', $error->getMessage()); }
+		}
+		self::assertSame($before, file_get_contents($this->directory . '/private-wire.json'));
+	}
+
 	private function complete(): void {
 		foreach ( array( 'original', 'enabled', 'runner', 'restored', 'finalize' ) as $scope ) {
 			$this->wire->begin( $scope );
@@ -505,6 +557,7 @@ PHP;
 		}
 		$expected = json_decode( $before['private-wire.json']['bytes'], true, 512, JSON_THROW_ON_ERROR );
 		$expected['retirement'] = 'retiring';
+		$expected['index_bytes'] = max($expected['index_bytes'], strlen(json_encode($expected, JSON_THROW_ON_ERROR)));
 		$expected['removal_pending_id'] = 1;
 		if ( 'exit-after-flag' === $kind ) {
 			$expected['events'][0]['removed'] = true;

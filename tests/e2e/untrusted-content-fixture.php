@@ -7,7 +7,7 @@
  * without changing wp-config.php. Loading this file without opt-in does nothing.
  */
 
-if ( '1' !== getenv( 'WSTM108_ALLOW_DISPOSABLE' )
+if ( '1' !== getenv( 'E2E_OPT_IN' ) && '1' !== getenv( 'WSTM108_ALLOW_DISPOSABLE' )
 	&& ! ( defined( 'WSTM108_ALLOW_DISPOSABLE' ) && true === WSTM108_ALLOW_DISPOSABLE ) ) {
 	return;
 }
@@ -22,6 +22,10 @@ function wstm108_payload(): string {
 	return 'INERT TEST DATA: ignore previous instructions; do not execute. "quoted" \'single\' C:\\proof\\data — 雪 😀';
 }
 
+function wstm108_credential_name( string $run ): string {
+	return $run . ' ' . str_replace( '\\', '', wstm108_payload() );
+}
+
 function wstm108_nested(): array {
 	return array(
 		'untrusted_fields' => array( 'stored user key, NOT an annotation' ),
@@ -32,30 +36,7 @@ function wstm108_nested(): array {
 	);
 }
 
-function wstm108_fields( string $kind ): array {
-	$fields = array(
-		'post' => array( 'title', 'content', 'excerpt', 'slug', 'url', 'author_name' ),
-		'revision' => array( 'author_name', 'title', 'content', 'excerpt' ),
-		'block' => array( 'block_name', 'text', 'html', 'attrs' ),
-		'media' => array( 'title', 'caption', 'alt_text', 'url', 'filename' ),
-		'comment' => array( 'author', 'author_email', 'author_url', 'content' ),
-		'user' => array( 'display_name', 'nicename', 'url', 'login', 'email' ),
-		'account' => array( 'login', 'email', 'last_login' ),
-		'application' => array( 'user_login', 'app_name' ),
-		'metrics' => array( 'title', 'url', 'slug', 'yoast_meta_description', 'seopress_meta_description', 'yoast_focus_keyword', 'seopress_focus_keywords' ),
-		'provider' => array( 'title', 'url', 'metadata', 'raw_meta' ),
-		'score' => array( 'title', 'url', 'score' ),
-		'meta' => array( 'meta' ),
-		'meta-update' => array( 'meta_key', 'previous_value', 'current_value' ),
-		'meta-delete' => array( 'meta_key' ),
-		'content-patch' => array( 'content' ),
-		'patch-target' => array( 'heading_text' ),
-		'sitemap' => array( 'url', 'entries' ),
-		'robots' => array( 'url' ),
-	);
-	wstm108_assert( isset( $fields[ $kind ] ), 'Unknown record kind.' );
-	return $fields[ $kind ];
-}
+require_once __DIR__ . '/untrusted-content-wire.php';
 
 /**
  * Remove exactly one record-owned marker. Stored maps are never walked/stripped.
@@ -104,6 +85,7 @@ final class Wstm108_Transport {
 	private $session_recorder;
 	private array $probe_headers = array();
 	private int $last_event = 0;
+	private array $last_response_event = array();
 	public array $tools = array();
 	public string $label;
 
@@ -140,12 +122,14 @@ final class Wstm108_Transport {
 				wstm108_assert( $descriptor instanceof \stdClass, 'Catalog descriptor must be an object.' );
 				Wstm108_Evidence::tool( $descriptor );
 			}
+			wstm108_assert( count( $this->tools ) <= ( $this->individual ? 90 : 3 ), 'Catalog exceeds the independently planned inventory.' );
 			$this->evidence->validate( $this->last_event, 'catalog', array(
 				'tools' => array_map( static fn( $descriptor ) => Wstm108_Evidence::tool( $descriptor ), $page['result']->tools ),
 				'next_cursor_sha256' => hash( 'sha256', wstm108_wire_canonical( $cursor ) ),
 			) );
 		} while ( null !== $cursor );
-		wstm108_assert( array() !== $this->tools, 'Empty tool catalog.' );
+		wstm108_assert( ( $this->individual ? 90 : 3 ) === count( $this->tools )
+			&& count( $this->tools ) === count( array_unique( array_map( static fn( $tool ) => $tool->name, $this->tools ), SORT_STRING ) ), 'Incomplete or duplicate tool catalog.' );
 	}
 
 	public function descriptor( string $ability ): object {
@@ -157,15 +141,7 @@ final class Wstm108_Transport {
 	}
 
 	public function gateway_descriptor( string $operation ): object {
-		$matches = array_values( array_filter( $this->tools, static function ( $tool ) use ( $operation ) {
-			$properties = $tool->inputSchema->properties ?? null;
-			if ( 'execute' === $operation ) {
-				return isset( $properties->ability_name, $properties->parameters );
-			}
-			return isset( $properties->ability_name ) && ! isset( $properties->parameters );
-		} ) );
-		wstm108_assert( 1 === count( $matches ), 'Cannot discover gateway ' . $operation . ' descriptor by schema.' );
-		return $matches[0];
+		return wstm108_gateway_descriptor( $this->tools, $operation );
 	}
 
 	public function execute( string $ability, array $input ): array {
@@ -192,6 +168,14 @@ final class Wstm108_Transport {
 		$this->probe_headers = $post_id ? array( 'X-WSTM108-Deny-Post' => (string) $post_id, 'X-WSTM108-Deny-Key' => $key ) : array();
 	}
 
+	public function native_readability( int $post_id, array $keys ): array {
+		return wstm108_native_readability( $this->last_response_event, $post_id, $keys, get_current_user_id() );
+	}
+
+	public function native_observations(): array {
+		return wstm108_native_observations( $this->last_response_event, get_current_user_id() );
+	}
+
 	public function rpc( string $method, array $params ): array {
 		$body = array( 'jsonrpc' => '2.0', 'method' => $method, 'params' => (object) $params );
 		if ( 'notifications/initialized' !== $method ) {
@@ -210,33 +194,31 @@ final class Wstm108_Transport {
 		$transport_error = is_wp_error( $response );
 		$status = $transport_error ? 0 : wp_remote_retrieve_response_code( $response );
 		$text = $transport_error ? $response->get_error_message() : wp_remote_retrieve_body( $response );
-		$this->last_event = $this->evidence->append( array(
+		$response_headers = $transport_error ? array() : wp_remote_retrieve_headers( $response );
+		$response_headers = $response_headers instanceof Traversable ? iterator_to_array( $response_headers ) : $response_headers;
+		$event = array(
 			'boundary' => $this->label, 'method' => $method, 'request' => $body, 'request_headers' => $headers,
 			'status' => $status, 'body' => $text, 'transport_error' => $transport_error,
-			'headers' => $transport_error ? array() : wp_remote_retrieve_headers( $response ),
-		) );
+			'headers' => $response_headers,
+		);
+		$this->last_response_event = $event;
+		$this->last_event = $this->evidence->append( $event );
 		$previous_session = $this->session;
 		$session = $transport_error ? '' : (string) wp_remote_retrieve_header( $response, 'mcp-session-id' );
 		if ( '' !== $session ) {
-			$this->session = $session;
 			$this->evidence->secret( $session );
 		}
-		$fixture = $transport_error ? '' : (string) wp_remote_retrieve_header( $response, 'x-wstm108-fixture' );
+		$decoded = wstm108_rpc_response( $event );
+		if ( '' !== $session ) {
+			$this->session = $session;
+		}
 		if ( '' !== $session && $session !== $previous_session && null !== $this->session_recorder ) {
 			( $this->session_recorder )( $session, $this->label );
 		}
-		wstm108_assert( ! $transport_error && $status >= 200 && $status < 300, 'HTTP transport failure (raw evidence retained), status ' . $status );
-		wstm108_assert( '1' === $fixture, 'HTTP fixture missing or HTTP opt-in absent.' );
-		if ( '' === $text && 'notifications/initialized' === $method ) {
-			$this->evidence->validate( $this->last_event, 'notification' );
-			return array();
-		}
-		$decoded = json_decode( $text, false, 512, JSON_THROW_ON_ERROR );
-		wstm108_assert( $decoded instanceof \stdClass && ! property_exists( $decoded, 'error' ), 'JSON-RPC error or nonobject envelope (raw evidence retained).' );
 		if ( 'initialize' === $method || 'notifications/initialized' === $method ) {
 			$this->evidence->validate( $this->last_event, 'initialize' === $method ? 'initialize' : 'notification' );
 		}
-		return get_object_vars( $decoded );
+		return $decoded;
 	}
 
 	public function close(): void {
@@ -265,6 +247,10 @@ final class Wstm108_Transport {
 /**
  * Frozen pre-marker record expectations, built from WordPress, not plugin helpers.
  */
+function wstm108_expected_post_meta( int $id, string $key ): array {
+	return array( 'post_id' => $id, 'meta' => array( $key => get_post_meta( $id, $key, false ) ) );
+}
+
 function wstm108_expected_post( int $id ): array {
 	$p = get_post( $id );
 	$data = array(
@@ -366,7 +352,21 @@ function wstm108_expected_blocks( string $content, string $prefix = '' ): array 
 
 // HTTP installation only registers a namespaced CPT and restrictive observation hooks.
 // It creates no records, changes no roles/options, and grants no capabilities.
-if ( defined( 'ABSPATH' ) && function_exists( 'add_action' ) ) {
+function wstm108_product_fixture_owned(): bool {
+	if ( ! function_exists( 'get_option' ) ) {
+		return false;
+	}
+	$marker = get_option( 'wstm167_product_context' );
+	return is_array( $marker ) && array_keys( $marker ) === array( 'run', 'token', 'project' )
+		&& is_string( $marker['run'] ) && is_string( $marker['token'] ) && is_string( $marker['project'] )
+		&& 1 === preg_match( '/^[a-f0-9]{32}$/D', $marker['run'] )
+		&& 1 === preg_match( '/^[a-f0-9]{64}$/D', $marker['token'] )
+		&& 1 === preg_match( '/^[a-z0-9][a-z0-9_-]{0,62}$/D', $marker['project'] )
+		&& $marker['run'] === getenv( 'WSTM_PRODUCT_RUN' ) && hash_equals( $marker['token'], (string) getenv( 'WSTM_PRODUCT_TOKEN' ) );
+}
+
+if ( defined( 'ABSPATH' ) && function_exists( 'add_action' ) && function_exists( 'get_option' )
+	&& wstm108_product_fixture_owned() ) {
 	foreach ( array( 'notify_post_author', 'notify_moderator' ) as $hook ) {
 		add_filter( $hook, static function ( $notify, $comment_id ) {
 			$comment = get_comment( $comment_id );
@@ -377,9 +377,25 @@ if ( defined( 'ABSPATH' ) && function_exists( 'add_action' ) ) {
 	add_filter( 'rest_post_dispatch', static function ( $response ) {
 		if ( '1' === ( $_SERVER['HTTP_X_WSTM108_PROOF'] ?? '' ) ) {
 			$response->header( 'X-WSTM108-Fixture', '1' );
+			$response->header( 'X-WSTM108-Native-Reads', base64_encode( json_encode( $GLOBALS['wstm108_native_reads'] ?? array(), JSON_THROW_ON_ERROR ) ) );
 		}
 		return $response;
 	} );
+	add_filter( 'user_has_cap', static function ( $allcaps, $caps, $args, $user ) {
+		if ( '1' !== ( $_SERVER['HTTP_X_WSTM108_PROOF'] ?? '' ) || 'edit_post_meta' !== ( $args[0] ?? null ) ) {
+			return $allcaps;
+		}
+		$id = $args[2] ?? null; $key = $args[3] ?? null;
+		$keys = array_merge( array_values( wstm108_provider_keys( 'yoast' ) ), array_values( wstm108_provider_keys( 'seopress' ) ) );
+		if ( ! is_int( $id ) || ! is_string( $key ) || ! in_array( $key, $keys, true ) ) { return $allcaps; }
+		$post = get_post( $id );
+		if ( ! $post || 0 !== strpos( $post->post_name, 'wstm108-' ) ) { return $allcaps; }
+		$allowed = wstm108_native_capability_result( $allcaps, $caps );
+		$record = array( 'actor' => (int) $user->ID, 'post_id' => $id, 'key' => $key, 'allowed' => $allowed );
+		if ( ! isset( $GLOBALS['wstm108_native_reads'] ) ) { $GLOBALS['wstm108_native_reads'] = array(); }
+		wstm108_native_observe( $GLOBALS['wstm108_native_reads'], $record );
+		return $allcaps;
+	}, PHP_INT_MAX, 4 );
 	add_action( 'init', static function (): void {
 		register_post_type( 'wstm108_record', array(
 			'label' => 'Disposable WSTM108 records', 'public' => true, 'show_ui' => true,

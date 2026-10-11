@@ -50,11 +50,12 @@ final class Wstm121Verifier {
 		wstm121_require( array( 'page' => 1, 'per_page' => 2, 'orderby' => 'id', 'order' => 'DESC' ) === ( $record['input'] ?? null )
 			&& $expected === ( $record['expected_ids'] ?? null ), 'Cache probe window changed.' );
 		wstm121_require( array( 'candidate', 'priming' ) === array_keys( $record['phases'] ?? array() ), 'Missing candidate/priming failure proof.' );
-		foreach ( $record['phases'] as $phase ) {
+		foreach ( $record['phases'] as $name => $phase ) {
 			wstm121_require( 1 === ( $phase['injected'] ?? null ) && is_string( $phase['request'] ?? null )
 				&& is_array( $phase['sql'] ?? null ) && count( $phase['sql'] ) > 0, 'Original injected-query evidence is missing.' );
 			wstm121_require( Wstm121Plan::unsigned( $phase['query_end'] ?? null, 'failed query end' ) > Wstm121Plan::unsigned( $phase['query_start'] ?? null, 'failed query start' )
-				&& is_string( $phase['private_database_error'] ?? null ) && '' !== $phase['private_database_error'], 'Failure did not execute actual failing SQL.' );
+				&& is_string( $phase['private_database_error'] ?? null ), 'Final query error observation is malformed.' );
+			self::failure_witness( $name, $phase );
 			wstm121_require( is_string( $phase['generation_before'] ?? null ) && is_string( $phase['generation_after'] ?? null )
 				&& $phase['generation_before'] !== $phase['generation_after'], 'Failed cache generation was not invalidated.' );
 			$failed = $phase['failed_response'] ?? array();
@@ -73,8 +74,37 @@ final class Wstm121Verifier {
 				if ( 'warm_stale' === $name ) {
 					wstm121_require( 'wstm121_stale_error_without_new_sql' === ( $observation['last_error'] ?? null ), 'Warm-cache probe did not retain the intentionally stale error.' );
 				}
+
 			}
 		}
+	}
+
+	private static function failure_witness( string $name, array $phase ): void {
+		$injection = $phase['injection'] ?? null;
+		$witness = $phase['failure_witness'] ?? null;
+		wstm121_require( is_array( $injection ) && array( 'original', 'replacement', 'query_before', 'sql_index' ) === array_keys( $injection )
+			&& is_array( $witness ) && array( 'sql_index', 'query_before', 'query_completed', 'query_sha256', 'result_failed', 'error_present', 'boundary' ) === array_keys( $witness ),
+			'Missing or malformed execution-time failure witness.' );
+		$index = Wstm121Plan::unsigned( $injection['sql_index'], 'injected SQL index' );
+		$before = Wstm121Plan::unsigned( $injection['query_before'], 'injected query before' );
+		$completed = Wstm121Plan::unsigned( $witness['query_completed'], 'injected query completed' );
+		wstm121_require( $index < count( $phase['sql'] ) && is_string( $injection['original'] )
+			&& $phase['sql'][ $index ] === $injection['original'] && is_string( $injection['replacement'] )
+			&& 1 === preg_match( '/^SELECT wstm121_deliberate_missing_column FROM ([a-zA-Z0-9_]+) LIMIT 1$/D', $injection['replacement'], $table ),
+			'Injected-query bytes or SQL association changed.' );
+		$prime = '~^\\s*SELECT\\s+(?:' . preg_quote( $table[1], '~' ) . '\\.)?\\*\\s+FROM\\s+' . preg_quote( $table[1], '~' )
+			. '\\s+WHERE\\s+(?:' . preg_quote( $table[1], '~' ) . '\\.)?ID\\s+IN\\s*\\(~i';
+		wstm121_require( 1 === preg_match( '~\\bFROM\\s+' . preg_quote( $table[1], '~' ) . '\\b~i', $injection['original'] )
+			&& ( 'candidate' === $name ? $injection['original'] === $phase['request']
+				: 1 === preg_match( $prime, $injection['original'] ) ), 'Injected query does not belong to the intended phase.' );
+		wstm121_require( $before < PHP_INT_MAX && $before >= $phase['query_start'] && $before - $phase['query_start'] === $index
+			&& $completed === $before + 1
+			&& $completed <= $phase['query_end'] && $witness['query_before'] === $before && $witness['sql_index'] === $index
+			&& is_string( $witness['query_sha256'] ) && hash( 'sha256', $injection['replacement'] ) === $witness['query_sha256']
+			&& true === $witness['result_failed'] && true === $witness['error_present']
+			&& ( 'final' === $witness['boundary'] ? $completed === $phase['query_end']
+				: 'before-next-query' === $witness['boundary'] && $completed < $phase['query_end'] ),
+			'Failure did not execute the exact injected SQL at the retained boundary.' );
 	}
 
 	public static function projection_probe( array $state, array $record ): void {
@@ -105,136 +135,6 @@ final class Wstm121Verifier {
 		}
 	}
 
-	private static function original_operation( string $path ): array {
-		$record = Wstm121Plan::original( $path );
-		$typed = json_decode( (string) file_get_contents( $path ), false, 512, JSON_THROW_ON_ERROR );
-		$items = $typed->response->data->items ?? null;
-		wstm121_require( is_array( $items ), 'Original items must be a JSON array, not an object.' );
-		foreach ( $items as $item ) {
-			wstm121_require( is_object( $item ) && is_array( $item->untrusted_fields ?? null ), 'Original record marker must be a JSON array, including when empty.' );
-		}
-		return $record;
-	}
-
-	private static function original_projection( string $path ): array {
-		$record = Wstm121Plan::original( $path );
-		$typed = json_decode( (string) file_get_contents( $path ), false, 512, JSON_THROW_ON_ERROR );
-		wstm121_require( is_object( $typed->responses ?? null ), 'Projection responses must be a JSON object.' );
-		foreach ( $typed->responses as $name => $response ) {
-			$data = $response->data ?? null;
-			wstm121_require( is_object( $data ), 'Projection data must be a JSON object.' );
-			if ( str_starts_with( $name, 'revisions-' ) ) {
-				wstm121_require( is_array( $data->revisions ?? null ), 'Original revisions must be a JSON array.' );
-				$records = $data->revisions;
-			} else {
-				$records = array( $data );
-			}
-			foreach ( $records as $item ) {
-				wstm121_require( is_object( $item ) && is_array( $item->untrusted_fields ?? null ), 'Original projection markers must be JSON arrays.' );
-			}
-		}
-		return $record;
-	}
-
-	public static function storage( string $directory, array $execution ): array {
-		$control = $directory . '.controller';
-		$reported = $execution['namespace_storage'] ?? array();
-		$retained = 0;
-		$controller = 0;
-		$php_retained = 0;
-		$control_names = array( 'job.json', 'terminal.json', 'receipt.json', 'stdout.log', 'stderr.log', 'stdout.overflow.bin', 'stderr.overflow.bin' );
-		foreach ( array( 'data' => $directory, 'control' => $control ) as $area => $root ) {
-			wstm121_require( is_dir( $root ) && ! is_link( $root ), 'Evidence root is missing or linked.' );
-			$iterator = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $root, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::SELF_FIRST );
-			foreach ( $iterator as $file ) {
-				wstm121_require( ! $file->isLink(), 'Linked evidence entry is not owned.' );
-				if ( $file->isDir() ) {
-					continue;
-				}
-				wstm121_require( $file->isFile(), 'Non-file evidence entry cannot be accounted for.' );
-				$relative = str_replace( '\\', '/', substr( $file->getPathname(), strlen( $root ) + 1 ) );
-				$bytes = Wstm121Plan::unsigned( $file->getSize(), 'retained file bytes' );
-				$retained += $bytes;
-				if ( 'control' === $area ) {
-					if ( 'php-write-bytes.log' !== $relative ) {
-						$controller += $bytes;
-					}
-				} elseif ( 'execution.json' === $relative || ( preg_match( '~\\Aoperation-[1-9][0-9]*/~', $relative ) && in_array( basename( $relative ), $control_names, true ) ) ) {
-					$controller += $bytes;
-				} else {
-					wstm121_require( str_ends_with( $relative, '.json' ) || in_array( $relative, array( 'run.lock', 'workers.lock' ), true ), 'Unexpected/unpublished evidence file.' );
-					$php_retained += $bytes;
-				}
-			}
-		}
-		$journal_path = $control . '/php-write-bytes.log';
-		wstm121_require( is_file( $journal_path ) && ! is_link( $journal_path ) && filesize( $journal_path ) <= 16 * 1024 * 1024, 'Missing/oversized original PHP reservation journal.' );
-		$journal = (string) file_get_contents( $journal_path );
-		wstm121_require( '' !== $journal && str_ends_with( $journal, "\n" ), 'Incomplete PHP reservation journal.' );
-		$reserved = 0;
-		foreach ( explode( "\n", substr( $journal, 0, -1 ) ) as $line ) {
-			wstm121_require( 1 === preg_match( '/\\A[1-9][0-9]{0,7}\\z/D', $line ) && (int) $line <= Wstm121Plan::JSON_BYTES, 'Malformed PHP byte reservation.' );
-			$reserved += (int) $line;
-			wstm121_require( $reserved <= Wstm121Plan::NAMESPACE_BYTES, 'Cumulative PHP reservations exceed the namespace bound.' );
-		}
-		$final_bytes = filesize( $control . '/outcome.json' ) + filesize( $directory . '/execution.json' );
-		$custody_bytes = filesize( $control . '/custody.json' );
-		$all_final_bytes = $final_bytes + $custody_bytes;
-		wstm121_require( 34 * 1024 * 1024 === ( $reported['final_record_reserve_bytes'] ?? null )
-			&& $all_final_bytes <= $reported['final_record_reserve_bytes'], 'Final records were not reserved.' );
-		wstm121_require( $reserved >= $php_retained && $reserved === ( $reported['php_reserved_bytes'] ?? null )
-			&& strlen( $journal ) === ( $reported['php_journal_bytes'] ?? null ), 'PHP retained/reserved bytes disagree.' );
-		wstm121_require( $controller - $all_final_bytes === ( $reported['controller_written_bytes'] ?? null )
-			&& $retained - $all_final_bytes === ( $reported['retained_bytes'] ?? null ), 'Original retained/controller bytes disagree with the prepublication counters.' );
-		$cumulative = $reserved + strlen( $journal ) + $controller;
-		wstm121_require( $cumulative - $all_final_bytes === ( $reported['cumulative_write_bytes'] ?? null )
-			&& $cumulative <= Wstm121Plan::NAMESPACE_BYTES && $retained <= Wstm121Plan::NAMESPACE_BYTES, 'Original namespace write/retention bound failed.' );
-		$whole_job = Wstm121Plan::unsigned( $reported['whole_job_observed_bytes'] ?? null, 'whole-job bytes' );
-		$whole_limit = Wstm121Plan::unsigned( $reported['whole_job_limit_bytes'] ?? null, 'whole-job limit' );
-		wstm121_require( $whole_job + $reported['final_record_reserve_bytes'] <= $whole_limit, 'Whole-job reserve was exhausted.' );
-		return array( 'retained_bytes' => $retained, 'cumulative_reserved_and_written_bytes' => $cumulative, 'final_record_bytes' => $all_final_bytes );
-	}
-
-	public static function custody( string $directory, string $expected ): array {
-		Wstm121Plan::digest( $expected );
-		$path = $directory . '.controller/custody.json';
-		$record = Wstm121Plan::original( $path );
-		wstm121_require( hash_file( 'sha256', $path ) === $expected, 'Custody original does not match its externally pinned identity.' );
-		$files = $record['files'] ?? null;
-		wstm121_require( is_array( $files ) && count( $files ) > 0, 'Custody contains no original files.' );
-		$observed = array();
-		foreach ( array( 'data' => $directory, 'control' => $directory . '.controller' ) as $area => $root ) {
-			wstm121_require( is_dir( $root ) && ! is_link( $root ), 'Missing/linked custody root.' );
-			$iterator = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $root, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::SELF_FIRST );
-			foreach ( $iterator as $file ) {
-				wstm121_require( ! $file->isLink(), 'Linked custody artifact.' );
-				if ( $file->isDir() ) {
-					continue;
-				}
-				wstm121_require( $file->isFile(), 'Unsupported custody artifact kind.' );
-				$relative = str_replace( '\\', '/', substr( $file->getPathname(), strlen( $root ) + 1 ) );
-				if ( 'control' === $area && 'custody.json' === $relative ) {
-					continue;
-				}
-				$observed[ $area . '/' . $relative ] = array( 'bytes' => $file->getSize(), 'sha256' => hash_file( 'sha256', $file->getPathname() ) );
-			}
-		}
-		wstm121_require( count( $files ) === count( $observed ), 'Original artifact inventory changed.' );
-		$seen = array();
-		foreach ( $files as $file ) {
-			wstm121_require( in_array( $file['area'] ?? null, array( 'data', 'control' ), true )
-				&& is_string( $file['path'] ?? null ) && ! str_contains( $file['path'], '\\' )
-				&& 1 === preg_match( '~\\A[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\\z~D', $file['path'] )
-				&& ! in_array( '..', explode( '/', $file['path'] ), true ), 'Invalid custody relative path.' );
-			$key = $file['area'] . '/' . $file['path'];
-			wstm121_require( ! isset( $seen[ $key ] ) && isset( $observed[ $key ] ), 'Duplicate/missing custody artifact.' );
-			$seen[ $key ] = true;
-			wstm121_require( array( 'bytes' => Wstm121Plan::unsigned( $file['bytes'] ?? null, 'custody bytes' ),
-				'sha256' => Wstm121Plan::digest( $file['sha256'] ?? null ) ) === $observed[ $key ], 'Original artifact bytes changed.' );
-		}
-		return $record;
-	}
-
 	public static function markers( array $record, array $allowlist ): void {
 		wstm121_require( isset( $record['untrusted_fields'] ) && is_array( $record['untrusted_fields'] )
 			&& array_values( $record['untrusted_fields'] ) === $record['untrusted_fields'], 'Missing record-relative marker JSON array.' );
@@ -259,7 +159,13 @@ final class Wstm121Verifier {
 		$p = $job['per_page'];
 		$candidates = array_slice( $catalog, ( $job['page'] - 1 ) * $p, $p + 1 );
 		$window = array_slice( $candidates, 0, $p );
-		$expected = array_values( array_filter( $window, static fn( $id ) => wstm121_allowed( $job['mode'], $ranks[ $id ] )
+		$allowed = static function ( int $rank ) use ( $state, $job ): bool {
+			if ( true === ( $state['small_catalog'] ?? false ) ) {
+				return 'dense' === $job['mode'] || ( 'sparse' === $job['mode'] && 0 === intdiv( $rank, 20 ) % 2 && 0 === $rank % 3 );
+			}
+			return wstm121_allowed( $job['mode'], $rank );
+		};
+		$expected = array_values( array_filter( $window, static fn( $id ) => $allowed( $ranks[ $id ] )
 			&& ( ! $job['orphan'] || ! in_array( $id, $state['referenced'], true ) ) ) );
 		$response = $record['response'] ?? null;
 		wstm121_require( is_array( $response ) && true === ( $response['success'] ?? null ) && is_array( $response['data'] ?? null ), 'Original response is not a successful list result.' );
@@ -270,7 +176,7 @@ final class Wstm121Verifier {
 			wstm121_require( is_array( $item ), 'Invalid original list item.' );
 			$ids[] = Wstm121Plan::unsigned( $item['id'] ?? $item['post_id'] ?? null, 'response item ID' );
 			if ( 'get-seo-scores' === $job['ability'] ) {
-				self::markers( $item, array( 'title', 'url', 'slug', 'yoast_meta_description', 'seopress_meta_description', 'yoast_focus_keyword', 'seopress_focus_keywords' ) );
+				self::markers( $item, array( 'title', 'url', 'score' ) );
 			} elseif ( 'get-readability-scores' === $job['ability'] ) {
 				self::markers( $item, array( 'title', 'url', 'score' ) );
 			} elseif ( 'list-orphaned-media' === $job['ability'] ) {
@@ -283,7 +189,7 @@ final class Wstm121Verifier {
 				wstm121_require( ( 'full' === ( $job['input']['fields'] ?? 'summary' ) ) === array_key_exists( 'content', $item ), 'Original content projection is wrong.' );
 				wstm121_require( 'Controlled unchanged excerpt.' === ( $item['excerpt'] ?? null ), 'Original excerpt changed.' );
 				if ( array_key_exists( 'content', $item ) ) {
-					$content = 'post' === $job['type'] && $ranks[ end( $ids ) ] < 100 ? wstm121_large_content() : 'Controlled short body.';
+					$content = true !== ( $state['small_catalog'] ?? false ) && 'post' === $job['type'] && $ranks[ end( $ids ) ] < 100 ? wstm121_large_content() : 'Controlled short body.';
 					wstm121_require( $content === $item['content'], 'Full projection changed the controlled stored content bytes.' );
 				} elseif ( isset( $item['untrusted_fields'] ) ) {
 					wstm121_require( is_array( $item['untrusted_fields'] ) && ! in_array( 'content', $item['untrusted_fields'], true ), 'Summary marked omitted content.' );
@@ -355,217 +261,4 @@ final class Wstm121Verifier {
 		return $derived;
 	}
 
-	public static function receipt( array $receipt, int $seconds ): void {
-		$start = Wstm121Plan::unsigned( $receipt['start_ns'] ?? null, 'process start' );
-		$end = Wstm121Plan::unsigned( $receipt['end_ns'] ?? null, 'process end' );
-		wstm121_require( $end >= $start && $end - $start <= $seconds * 1000000000, 'Process deadline exceeded or clock invalid.' );
-		wstm121_require( 0 === ( $receipt['exit_code'] ?? null ) && true === ( $receipt['root_exit_observed'] ?? null )
-			&& true === ( $receipt['stdout_eof'] ?? null ) && true === ( $receipt['stderr_eof'] ?? null )
-			&& false === ( $receipt['truncated'] ?? null ) && array_key_exists( 'failure', $receipt ) && null === $receipt['failure'], 'Incomplete or failed original process receipt.' );
-		wstm121_require( array() === ( $receipt['secondary_errors'] ?? null ), 'Process cleanup/flush errors invalidate the capture.' );
-		foreach ( array( 'stdout', 'stderr' ) as $stream ) {
-			$bytes = Wstm121Plan::unsigned( $receipt[ $stream . '_bytes' ] ?? null, $stream . ' bytes' );
-			wstm121_require( $bytes <= Wstm121Plan::STREAM_BYTES, 'Process capture exceeds its declared byte limit.' );
-			wstm121_require( $bytes === ( $receipt[ $stream . '_received' ] ?? null )
-				&& 0 === ( $receipt[ $stream . '_diagnostic_bytes' ] ?? null )
-				&& 0 === ( $receipt[ $stream . '_observed_not_retained' ] ?? null ), 'Process capture discarded or hid original bytes.' );
-			Wstm121Plan::digest( $receipt[ $stream . '_sha256' ] ?? null );
-		}
-	}
-
-	public static function shard( string $directory, string $shard, string $custody_digest ): array {
-		$custody = self::custody( $directory, $custody_digest );
-		$environment = Wstm121Plan::original( $directory . '.controller/environment.json' );
-		foreach ( array( 'storage_receipt', 'private_durability_receipt' ) as $name ) {
-			$path = $directory . '.controller/' . $name . '.original.json';
-			Wstm121Plan::digest( $environment[ $name ]['sha256'] ?? null );
-			wstm121_require( is_file( $path ) && filesize( $path ) <= 1024 * 1024
-				&& hash_file( 'sha256', $path ) === $environment[ $name ]['sha256'], 'Original externally approved receipt is missing or changed.' );
-		}
-		$state = Wstm121Plan::original( $directory . '/state.json' );
-		wstm121_require( $custody['namespace'] === $state['namespace'] && $custody['shard'] === $shard, 'Custody belongs to another shard.' );
-		wstm121_require( $environment['namespace'] === $state['namespace'] && $environment['shard'] === $shard
-			&& $environment['source_sha'] === $custody['source_sha'], 'Retained environment identity disagrees with custody.' );
-		$jobs = Wstm121Plan::jobs( $state, $shard );
-		$provenance = Wstm121Plan::original( $directory . '/provenance.json' );
-		wstm121_require( $custody['source_sha'] === $provenance['source_sha'] && $state['sources'] === $provenance['sources'], 'State/custody/provenance source identities disagree.' );
-		$seed = Wstm121Plan::original( $directory . '/seed-measurements.json' );
-		wstm121_require( array_map( 'count', $state['catalog'] ) === ( $seed['catalog_counts'] ?? null )
-			&& 100 === ( $seed['large_posts'] ?? null ) && 55 * 1024 === ( $seed['large_body_bytes'] ?? null )
-			&& is_string( $seed['large_count_sql'] ?? null ) && str_contains( $seed['large_count_sql'], 'OCTET_LENGTH(post_content)' ), 'Missing actual full-size seed measurements.' );
-		$referenced = array();
-		foreach ( $state['catalog']['attachment'] as $rank => $id ) {
-			if ( 0 === $rank % 5 ) {
-				$referenced[] = $id;
-			}
-		}
-		array_push( $referenced, ...array_slice( $state['catalog']['attachment'], 1, 4 ) );
-		wstm121_require( array_values( array_unique( $referenced ) ) === $state['referenced'], 'Seed reference truth does not match the controlled featured/literal fixtures.' );
-		self::reference_probe( $state, Wstm121Plan::original( $directory . '/reference-parity.json' ) );
-		self::cache_probe( $state, Wstm121Plan::original( $directory . '/window-cache-faults.json' ) );
-		self::projection_probe( $state, self::original_projection( $directory . '/projection-probes.json' ) );
-		$plan = Wstm121Plan::original( $directory . '/plan.json' );
-		wstm121_require( $plan['shard'] === $shard && $plan['jobs'] === $jobs, 'Frozen plan differs from independent generation.' );
-		$before = Wstm121Plan::original( $directory . '/before.json' );
-		$after = Wstm121Plan::original( $directory . '/after.json' );
-		wstm121_require( $before === $after, 'Original database snapshots differ.' );
-		$setup = Wstm121Plan::original( $directory . '/setup-before.json' );
-		$restored = Wstm121Plan::original( $directory . '/cleanup-readback.json' );
-		wstm121_require( $restored['snapshot'] === $setup, 'Cleanup did not restore the original persisted state.' );
-		wstm121_require( array_keys( $restored['remaining'] ) === array( 'posts', 'actor', 'actor_meta', 'control' ), 'Incomplete owned-resource readback.' );
-		foreach ( $restored['remaining'] as $kind => $count ) {
-			wstm121_require( 0 === Wstm121Plan::unsigned( $count, 'remaining ' . $kind ), 'Owned fixture resources remain.' );
-		}
-		$execution = Wstm121Plan::original( $directory . '/execution.json' );
-		wstm121_require( $execution === Wstm121Plan::original( $directory . '.controller/outcome.json' )
-			&& array_key_exists( 'failure', $execution ) && null === $execution['failure'], 'Final execution/outcome originals differ or report failure.' );
-		foreach ( array( 'cleanup_failure', 'storage_failure', 'deadline_failure' ) as $failure ) {
-			wstm121_require( ! array_key_exists( $failure, $execution ), 'Execution contains a terminal ' . $failure );
-		}
-		$controller_start = Wstm121Plan::unsigned( $execution['controller_start_ns'] ?? null, 'controller start' );
-		$controller_end = Wstm121Plan::unsigned( $execution['controller_end_ns'] ?? null, 'controller end' );
-		wstm121_require( $controller_end >= $controller_start && $controller_end - $controller_start <= Wstm121Plan::NATIVE_SECONDS * 1000000000, 'Whole controller lifetime exceeded its native bound.' );
-		$storage = self::storage( $directory, $execution );
-		$custody_end = Wstm121Plan::unsigned( $custody['custody_ready_ns'] ?? null, 'custody ready' );
-		wstm121_require( $custody['controller_start_ns'] === $controller_start && $custody_end >= $controller_end
-			&& $custody_end - $controller_start <= Wstm121Plan::NATIVE_SECONDS * 1000000000, 'Custody finalization exceeded the native budget.' );
-		wstm121_require( array_keys( $execution['phases'] ) === array_keys( Wstm121Plan::PHASE_SECONDS ), 'Phase accounting is incomplete or reordered.' );
-		$previous = 0;
-		foreach ( Wstm121Plan::PHASE_SECONDS as $phase => $seconds ) {
-			$receipt = $execution['phases'][ $phase ];
-			if ( 'traversal' === $phase ) {
-				$start = Wstm121Plan::unsigned( $receipt['start_ns'] ?? null, 'traversal start' );
-				$end = Wstm121Plan::unsigned( $receipt['end_ns'] ?? null, 'traversal end' );
-				wstm121_require( 'worker-sequence' === ( $receipt['kind'] ?? null ) && count( $jobs ) === ( $receipt['workers'] ?? null )
-					&& $end >= $start && $end - $start <= $seconds * 1000000000, 'Traversal accounting is invalid.' );
-			} else {
-				self::receipt( $receipt, $seconds );
-				$phase_directory = $directory . '.controller/' . $phase;
-				$original = Wstm121Plan::original( $phase_directory . '/receipt.json' );
-				wstm121_require( $original === $receipt, 'Phase summary differs from its original receipt.' );
-				self::captures( $phase_directory, $receipt );
-			}
-			wstm121_require( $receipt['start_ns'] >= $previous, 'Phase lifetimes overlap or move backwards.' );
-			$previous = $receipt['end_ns'];
-		}
-		$first = reset( $execution['phases'] );
-		wstm121_require( $first['start_ns'] >= $controller_start && $previous <= $controller_end, 'Phase receipts escaped the controller lifetime.' );
-		wstm121_require( $previous - $first['start_ns'] <= Wstm121Plan::NATIVE_SECONDS * 1000000000, 'Whole native budget exhausted.' );
-		foreach ( array( 'retained_bytes', 'cumulative_write_bytes' ) as $counter ) {
-			wstm121_require( Wstm121Plan::unsigned( $execution['namespace_storage'][ $counter ] ?? null, $counter ) <= Wstm121Plan::NAMESPACE_BYTES, 'Namespace storage budget exceeded.' );
-		}
-		$seen = array();
-		$completed = array();
-		$case_hashes = array();
-		foreach ( $jobs as $index => $job ) {
-			$operation = $directory . '/operation-' . ( $index + 1 );
-			$receipt = Wstm121Plan::original( $operation . '/receipt.json' );
-			self::receipt( $receipt, Wstm121Plan::WORKER_SECONDS );
-			self::captures( $operation, $receipt );
-			$record = self::original_operation( $operation . '/result.json' );
-			$result = self::operation( $state, $job, $record );
-			wstm121_require( $receipt['start_ns'] >= $execution['phases']['traversal']['start_ns']
-				&& $receipt['end_ns'] <= $execution['phases']['traversal']['end_ns'], 'Worker escaped its complete traversal sequence.' );
-			wstm121_require( $record['operation_start']['time_ns'] >= $receipt['start_ns'] && $record['operation_end']['time_ns'] <= $receipt['end_ns'], 'Operation escaped its owned process lifetime.' );
-			$case_hashes[ $job['coverage_key'] ] = hash_file( 'sha256', $operation . '/result.json' );
-			if ( 'traversal' === $job['kind'] ) {
-				$key = $job['sequence_key'];
-				$seen[ $key ] = array_merge( $seen[ $key ] ?? array(), $result['item_ids'] );
-				if ( $job['page'] === $job['eof_page'] ) {
-					$expected = array();
-					foreach ( $state['catalog'][ $job['type'] ] as $rank => $id ) {
-						if ( wstm121_allowed( $job['mode'], $rank ) && ( ! $job['orphan'] || ! in_array( $id, $state['referenced'], true ) ) ) {
-							$expected[] = $id;
-						}
-					}
-					wstm121_require( $seen[ $key ] === $expected, 'Original traversal duplicates, skips, or reorders eligible IDs.' );
-					$completed[ $key ] = hash( 'sha256', json_encode( $seen[ $key ], JSON_THROW_ON_ERROR ) );
-				}
-			}
-		}
-		wstm121_require( 6 === count( $completed ), 'Missing complete stateful traversal.' );
-		return array( 'shard' => $shard, 'namespace' => $state['namespace'], 'case_hashes' => $case_hashes, 'traversals' => $completed, 'storage' => $storage );
-	}
-
-	private static function captures( string $directory, array $receipt ): void {
-		$terminal = Wstm121Plan::original( $directory . '/terminal.json' );
-		$without_hashes = $receipt;
-		unset( $without_hashes['stdout_sha256'], $without_hashes['stderr_sha256'] );
-		wstm121_require( $terminal === $without_hashes, 'Terminal facts changed during postprocessing.' );
-		foreach ( array( 'stdout', 'stderr' ) as $stream ) {
-			$path = $directory . '/' . $stream . '.log';
-			$overflow = $directory . '/' . $stream . '.overflow.bin';
-			wstm121_require( is_file( $path ) && ! is_link( $path ) && filesize( $path ) === $receipt[ $stream . '_bytes' ]
-				&& hash_file( 'sha256', $path ) === $receipt[ $stream . '_sha256' ], 'Original process capture is absent or altered.' );
-			wstm121_require( is_file( $overflow ) && ! is_link( $overflow ) && 0 === filesize( $overflow ), 'Overflow diagnostics indicate incomplete original output.' );
-		}
-	}
-
-	public static function aggregate( array $directories, array $custody_hashes = array() ): array {
-		wstm121_require( array_keys( self::keyed_directories( $directories ) ) === array_keys( Wstm121Plan::WORKERS ), 'Missing, duplicate, or reordered shards.' );
-		wstm121_require( array_keys( $custody_hashes ) === array_keys( $directories ), 'Every shard requires an independently pinned custody hash.' );
-		$results = array();
-		$namespaces = array();
-		$platform = null;
-		$identities = null;
-		foreach ( $directories as $shard => $directory ) {
-			$provenance = Wstm121Plan::original( $directory . '/provenance.json' );
-			$actual_platform = array_intersect_key( $provenance, array_flip( array( 'php', 'wordpress', 'yoast' ) ) );
-			wstm121_require( 3 === count( $actual_platform ), 'Missing runtime identity.' );
-			$actual_identities = array( $provenance['source_sha'], $provenance['sources']['sha256'] );
-			wstm121_require( is_string( $actual_identities[0] ) && 1 === preg_match( '/\\A[a-f0-9]{40}\\z/D', $actual_identities[0] ), 'Invalid source commit identity.' );
-			wstm121_require( is_array( $actual_identities[1] ) && count( $actual_identities[1] ) > 0, 'Missing source-file identities.' );
-			foreach ( $actual_identities[1] as $digest ) {
-				Wstm121Plan::digest( $digest );
-			}
-			wstm121_require( null === $platform || $actual_platform === $platform, 'Runtime platforms cannot be combined into one acceptance result.' );
-			wstm121_require( null === $identities || $actual_identities === $identities, 'Source identities differ between shards.' );
-			$platform = $actual_platform;
-			$identities = $actual_identities;
-			$result = self::shard( $directory, $shard, $custody_hashes[ $shard ] );
-			wstm121_require( ! isset( $namespaces[ $result['namespace'] ] ), 'Shard namespace reused.' );
-			$namespaces[ $result['namespace'] ] = true;
-			$results[] = $result;
-		}
-
-		return $results;
-	}
-
-	private static function keyed_directories( array $directories ): array {
-		$seen = array();
-		foreach ( $directories as $name => $directory ) {
-			wstm121_require( is_string( $name ) && is_string( $directory ) && is_dir( $directory ) && ! is_link( $directory ), 'Invalid shard directory mapping.' );
-			$canonical = realpath( $directory );
-			wstm121_require( false !== $canonical && ! isset( $seen[ $canonical ] ), 'Shard directories must be distinct.' );
-			$seen[ $canonical ] = true;
-		}
-		return $directories;
-	}
-}
-
-if ( isset( $_SERVER['SCRIPT_FILENAME'] ) && realpath( $_SERVER['SCRIPT_FILENAME'] ) === __FILE__ ) {
-	try {
-		wstm121_require( 'cli' === PHP_SAPI && 3 === count( $argv ), 'Usage: php bounded-list-verifier.php <shard-map.json> <exclusive-result.json>' );
-		$map = Wstm121Plan::original( $argv[1] );
-		$directories = array();
-		$hashes = array();
-		foreach ( $map as $shard => $entry ) {
-			wstm121_require( is_array( $entry ) && is_string( $entry['directory'] ?? null ), 'Invalid shard-map entry.' );
-			$directories[ $shard ] = $entry['directory'];
-			$hashes[ $shard ] = Wstm121Plan::digest( $entry['custody_sha256'] ?? null );
-		}
-		$result = Wstm121Verifier::aggregate( $directories, $hashes );
-		$json = json_encode( array( 'shards' => $result, 'scope' => 'Numeric/raw-record verification; host, original-package, private durability, HTTP/MCP and platform attestation are separate.' ), JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR );
-		wstm121_require( strlen( $json ) <= Wstm121Plan::JSON_BYTES, 'Verifier result exceeds its byte limit.' );
-		$output = fopen( $argv[2], 'xb' );
-		wstm121_require( is_resource( $output ), 'Verifier result already exists or cannot be created.' );
-		try {
-			wstm121_require( strlen( $json ) === fwrite( $output, $json ) && fflush( $output ), 'Incomplete verifier result write.' );
-		} finally {
-			fclose( $output );
-		}
-	} catch ( Throwable $error ) {
-		fwrite( STDERR, get_class( $error ) . ': ' . $error->getMessage() . PHP_EOL );
-		exit( 1 );
-	}
 }

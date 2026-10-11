@@ -8,13 +8,14 @@ if grep -Eq '"label":"supported-floor"|wordpress:6\.9-php8\.0-apache' <<< "$matr
 	echo 'PHP 8.1 compatibility must not masquerade as PHP 8.0 floor proof or invent an image tag.' >&2
 	exit 1
 fi
-grep -F 'compatibility-artifacts/runtime.json compatibility-artifacts/candidate-pins.json php81-compatibility' \
-	"$root/.github/workflows/compatibility-qa.yml" >/dev/null
 # shellcheck source=scripts/e2e-test.sh
 source "$root/scripts/e2e-test.sh"
 
 compose() {
 	case "$*" in
+		"port wordpress 80")
+			printf '%s\n' '127.0.0.1:18080'
+			;;
 		*curl*"/tests/e2e/database-table-privacy-runner.php")
 			printf '%s' "${WSTM111_MOCK_HTTP_STATUS:-403}"
 			;;
@@ -77,16 +78,14 @@ assert_cron_isolated() {
 
 # Exercise main's ordering without Docker, network, or filesystem mutations.
 export COMPOSE_PROJECT_NAME=compatibility-bootstrap-fixture
+E2E_ARTIFACTS_DIR="e2e-artifacts-${COMPOSE_PROJECT_NAME}"
 rm() { :; }
 mkdir() { :; }
-start_compose() {
-	if [[ "$QA_MODE" != contract && "$admission_stage_calls" != 1 ]]; then
-		echo 'Full QA must admit before starting or resetting its owned stack.' >&2
-		exit 1
-	fi
-}
+docker() { echo 'Bootstrap model must not invoke the engine.' >&2; exit 1; }
+start_compose() { :; }
 cleanup_compose() { :; }
 wait_for_wordpress_files() { :; }
+qa_initialize_artifacts() { :; }
 load_dependencies() { :; }
 install_wp_cli() { :; }
 wp() {
@@ -96,13 +95,7 @@ wp() {
 	fi
 	cron_configured=$(( cron_configured + 1 ))
 }
-install_wordpress() {
-	assert_cron_isolated
-	if [[ "$QA_MODE" != contract && "$admission_stage_calls" != 2 ]]; then
-		echo 'Full QA must re-admit the actual started inventory before fixtures.' >&2
-		exit 1
-	fi
-}
+install_wordpress() { assert_cron_isolated; }
 configure_http_auth_forwarding() { assert_cron_isolated; }
 configure_application_passwords() { assert_cron_isolated; }
 install_plugins() { assert_cron_isolated; }
@@ -124,17 +117,9 @@ run_input_schema_qa() {
 	schema_stage_calls=$(( schema_stage_calls + 1 ))
 	[[ "$destructive_stage_calls" == 1 && "$metadata_stage_calls" == 1 ]] || { echo 'Schema stage must follow safety and metadata authorization.' >&2; exit 1; }
 }
-run_untrusted_content_qa() {
+run_product_qa() {
 	assert_cron_isolated
-	untrusted_stage_calls=$(( untrusted_stage_calls + 1 ))
-}
-# Ordering model only; real native admission/capture is covered separately.
-run_untrusted_admission() {
-	if [[ "$cron_configured" != 0 ]]; then
-		echo 'Read-only admission must precede cron configuration and fixtures.' >&2
-		exit 1
-	fi
-	admission_stage_calls=$(( admission_stage_calls + 1 ))
+	product_stage_calls=$(( product_stage_calls + 1 ))
 }
 run_debug_log_check() { assert_cron_isolated; }
 for QA_MODE in contract e2e all; do
@@ -142,16 +127,9 @@ for QA_MODE in contract e2e all; do
 	metadata_stage_calls=0
 	destructive_stage_calls=0
 	schema_stage_calls=0
-	untrusted_stage_calls=0
-	admission_stage_calls=0
+	product_stage_calls=0
 	main >/dev/null
 	assert_cron_isolated
-	expected_admission_calls=2
-	if [[ "$QA_MODE" == contract ]]; then expected_admission_calls=0; fi
-	if [[ "$admission_stage_calls" != "$expected_admission_calls" ]]; then
-		echo "Unexpected admission count in ${QA_MODE} mode." >&2
-		exit 1
-	fi
 	if [ "$metadata_stage_calls" != 1 ]; then
 		echo "Metadata authorization QA must run exactly once in ${QA_MODE} mode." >&2
 		exit 1
@@ -164,8 +142,8 @@ for QA_MODE in contract e2e all; do
 		echo "Schema QA must run exactly once in ${QA_MODE} mode." >&2
 		exit 1
 	fi
-	if [ "$untrusted_stage_calls" != 1 ]; then
-		echo "Untrusted-content QA must run exactly once in ${QA_MODE} mode." >&2
+	if [ "$product_stage_calls" != 1 ]; then
+		echo "Untrusted-content and bounded product QA must run exactly once in ${QA_MODE} mode." >&2
 		exit 1
 	fi
 done

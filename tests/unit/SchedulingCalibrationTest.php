@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 use Wstm113Calibration\Probe;
 
 require_once __DIR__ . '/fixtures/scheduling-calibration.php';
+require_once __DIR__ . '/fixtures/legacy-artifact-calibration.php';
 require_once dirname( __DIR__ ) . '/e2e/error-contract-assertions.php';
 
 /**
@@ -121,7 +122,8 @@ final class SchedulingCalibrationTest extends TestCase {
 			$count
 		);
 		self::assertSame( 1, $count );
-		self::assertSame( $ledger->original_source, $source, 'All unrelated predicates, hooks, snapshots, fixture setup and cleanup must remain byte-identical.' );
+		self::assertSame( wstm_test_legacy_artifact_output_source( 'scheduling', $ledger->original_source ), $source,
+			'Only the approved artifact output delta may accompany the semantic calibration; every unrelated byte remains unchanged.' );
 	}
 
 	public function test_original_then_minimal_execute_real_registered_guards_on_same_fixture(): void {

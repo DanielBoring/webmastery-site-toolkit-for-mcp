@@ -10,6 +10,7 @@ if ( 'cli' !== PHP_SAPI ) {
 	exit( 'CLI only.' );
 }
 require_once __DIR__ . '/error-contract-assertions.php';
+require_once __DIR__ . '/legacy-artifacts.php';
 
 
 function wstm110_assert( bool $condition, string $message ): void {
@@ -360,7 +361,7 @@ try {
 			wstm110_assert( wp_delete_post( $id, true ) instanceof WP_Post, 'Fixture deletion failed.' );
 		} );
 	}
-	$path = __DIR__ . '/../../e2e-artifacts/post-meta-authorization-' . $boundary . '.json';
+	$path = Wstm_E2E_Artifacts::path( __DIR__ . '/../../e2e-artifacts/post-meta-authorization-' . $boundary . '.json' );
 	wstm110_write_summary( $path, $summary );
 }
 echo "Standalone metadata {$boundary}: {$summary['passed']} passed, {$summary['failed']} failed.\n";

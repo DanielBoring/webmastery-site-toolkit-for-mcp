@@ -7,6 +7,7 @@ if ( PHP_SAPI !== 'cli' ) {
 	exit;
 }
 require_once __DIR__ . '/error-contract-assertions.php';
+require_once __DIR__ . '/legacy-artifacts.php';
 
 if ( count( $argv ) > 2 || ( isset( $argv[1] ) && ! in_array( $argv[1], [ 'baseline', 'fixed' ], true ) ) ) {
 	fwrite( STDERR, "Usage: php media-download-runner.php [baseline|fixed]\n" );
@@ -14,7 +15,7 @@ if ( count( $argv ) > 2 || ( isset( $argv[1] ) && ! in_array( $argv[1], [ 'basel
 }
 $mode = $argv[1] ?? 'fixed';
 $root = dirname( __DIR__, 2 );
-$dir  = $root . '/e2e-artifacts';
+$dir  = Wstm_E2E_Artifacts::directory( $root . '/e2e-artifacts' );
 if ( ! is_dir( $dir ) && ! mkdir( $dir, 0777, true ) ) {
 	throw new RuntimeException( 'Cannot create evidence directory.' );
 }

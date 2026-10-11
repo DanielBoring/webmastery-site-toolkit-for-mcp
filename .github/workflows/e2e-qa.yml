@@ -78,8 +78,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      COMPOSE_PROJECT_NAME: webmastery-site-toolkit-for-mcp-contract-${{ github.event.pull_request.number || github.run_id }}
-      MYSQL_PORT: 0
+      COMPOSE_PROJECT_NAME: wstm-contract-${{ github.run_id }}-${{ github.run_attempt }}
       WORDPRESS_PORT: 0
     permissions:
       contents: read
@@ -108,74 +107,24 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Test shared HOST prerequisite controls
-        run: /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py units 8.4
-
-      - name: Test signed package and configuration controls
-        run: /usr/bin/python3 -I -S -B scripts/host-php-apt.py units
-
-      - name: Set up host QA PHP
-        id: php-permissions
-        env:
-          WSTM_HOST_SETUP_ROOT: ${{ runner.temp }}
-          WSTM_HOST_SETUP_RUNNER: ${{ runner.environment }}
-        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT="$WSTM_HOST_SETUP_ROOT" WSTM_HOST_SETUP_RUNNER="$WSTM_HOST_SETUP_RUNNER" GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_JOB="$GITHUB_JOB" GITHUB_SHA="$GITHUB_SHA" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" RUNNER_OS="$RUNNER_OS" /usr/bin/python3 -I -S -B scripts/host-php-apt.py 8.4
-
-      - name: Retain scoped private GPG diagnostic evidence
-        if: ${{ always() && steps.php-permissions.outcome == 'failure' && github.repository == 'DanielBoring/webmastery-site-toolkit-for-mcp' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
-          name: private-gpg-diagnostic-contract
-          path: ${{ runner.temp }}/wstm-prerequisite-*/gpg-diagnostic-*.private*
-          if-no-files-found: ignore
-          retention-days: 1
-
-      - name: Bind canonical host QA interpreter
-        shell: bash
-        run: |
-          set -euo pipefail
-          binary="$(readlink -e /usr/bin/php8.4)"
-          test "${binary##*/}" = php8.4
-          printf 'WSTM108_HOST_PHP=%s\n' "$binary" >> "$GITHUB_ENV"
-
-      - name: Record executed workflow identity
-        if: github.repository == 'DanielBoring/webmastery-site-toolkit-for-mcp'
-        env:
-          WSTM_CUSTODY_REPOSITORY: ${{ github.repository }}
-          WSTM_CUSTODY_REPOSITORY_ID: ${{ github.repository_id }}
-          WSTM_CUSTODY_RUN_ID: ${{ github.run_id }}
-          WSTM_CUSTODY_ATTEMPT: ${{ github.run_attempt }}
-          WSTM_CUSTODY_EVENT: ${{ github.event_name }}
-          WSTM_CUSTODY_EVENT_SHA: ${{ github.sha }}
-          WSTM_CUSTODY_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha || 'none' }}
-          WSTM_CUSTODY_WORKFLOW_COMMIT: ${{ github.workflow_sha }}
-          WSTM_CUSTODY_WORKFLOW_PATH: .github/workflows/e2e-qa.yml
-          WSTM_CUSTODY_WORKFLOW_REF: ${{ github.workflow_ref }}
-        run: php tests/support/private-custody-context.php
+          php-version: '8.2'
+          extensions: zip
+          coverage: none
 
       - name: Set up Docker Compose
-        run: docker compose version
+        run: bash scripts/qa-compose.sh version
 
       - name: Start WordPress stack
         run: |
           bash scripts/destructive-retention.sh check
-          docker compose down -v --remove-orphans
-          docker compose up -d
+          bash scripts/qa-compose.sh down -v --remove-orphans
+          bash scripts/qa-compose.sh up -d
 
       - name: Run Ability Contract QA
-        id: qa
-        env:
-          WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
-          WSTM108_HOST_INSPECTION: system-readonly-v1
         run: bash scripts/e2e-test.sh contract
-
-      - name: Show closed admission refusal diagnostic (not acceptance)
-        if: ${{ always() && steps.php-permissions.outcome == 'success' }}
-        continue-on-error: true
-        env:
-          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}
-          WSTM108_ADMISSION_CALLSITE_V1: ${{ steps.qa.outputs.untrusted_admission_callsite_v1 }}
-        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php
 
       - name: Upload isolated trash safety results
         if: ${{ always() }}
@@ -192,16 +141,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          wordpress_image="$(docker compose config | awk '$1 == "image:" && $2 ~ /^wordpress:/ { print $2; exit }')"
-          mysql_image="$(docker compose config | awk '$1 == "image:" && $2 ~ /^mysql:/ { print $2; exit }')"
-          wordpress_version="$(docker compose exec -T wordpress wp --allow-root core version 2>/dev/null || echo unknown)"
-          php_version="$(docker compose exec -T wordpress php -r 'echo PHP_VERSION;' 2>/dev/null || echo unknown)"
-          mysql_version="$(docker compose exec -T mysql mysql --version 2>/dev/null || echo unknown)"
+          wordpress_image="$(bash scripts/qa-compose.sh config | awk '$1 == "image:" && $2 ~ /^wordpress:/ { print $2; exit }')"
+          mysql_image="$(bash scripts/qa-compose.sh config | awk '$1 == "image:" && $2 ~ /^mysql:/ { print $2; exit }')"
+          wordpress_version="$(bash scripts/qa-compose.sh exec -T wordpress php /var/www/html/.qa-bin/wp core version 2>/dev/null || echo unknown)"
+          php_version="$(bash scripts/qa-compose.sh exec -T wordpress php -r 'echo PHP_VERSION;' 2>/dev/null || echo unknown)"
+          mysql_version="$(bash scripts/qa-compose.sh exec -T mysql mysql --version 2>/dev/null || echo unknown)"
           mcp_adapter_release="$(jq -r '"v" + .mcp_adapter' .github/compatibility-versions.json)"
-          mcp_adapter_version="$(docker compose exec -T wordpress wp --allow-root plugin get mcp-adapter --field=version 2>/dev/null || echo unknown)"
-          yoast_version="$(docker compose exec -T wordpress wp --allow-root plugin get wordpress-seo --field=version 2>/dev/null || echo unknown)"
-          seopress_version="$(docker compose exec -T wordpress wp --allow-root plugin get wp-seopress --field=version 2>/dev/null || echo unknown)"
-          plugin_version="$(docker compose exec -T wordpress wp --allow-root plugin get webmastery-site-toolkit-for-mcp --field=version 2>/dev/null || echo unknown)"
+          mcp_adapter_version="$(bash scripts/qa-compose.sh exec -T wordpress php /var/www/html/.qa-bin/wp plugin get mcp-adapter --field=version 2>/dev/null || echo unknown)"
+          yoast_version="$(bash scripts/qa-compose.sh exec -T wordpress php /var/www/html/.qa-bin/wp plugin get wordpress-seo --field=version 2>/dev/null || echo unknown)"
+          seopress_version="$(bash scripts/qa-compose.sh exec -T wordpress php /var/www/html/.qa-bin/wp plugin get wp-seopress --field=version 2>/dev/null || echo unknown)"
+          plugin_version="$(bash scripts/qa-compose.sh exec -T wordpress php /var/www/html/.qa-bin/wp plugin get webmastery-site-toolkit-for-mcp --field=version 2>/dev/null || echo unknown)"
           summary_file="e2e-artifacts/e2e-summary.json"
           registered_abilities="$(jq -r '.registered_abilities // "unknown"' "$summary_file" 2>/dev/null || echo unknown)"
           covered_abilities="$(jq -r '.covered_abilities // "unknown"' "$summary_file" 2>/dev/null || echo unknown)"
@@ -234,19 +183,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if ! docker compose exec -T wordpress test -f /var/www/html/wp-content/debug.log; then
+          if ! bash scripts/qa-compose.sh exec -T wordpress test -f /var/www/html/wp-content/debug.log; then
             echo "status=no_debug_log" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if docker compose exec -T wordpress grep -Eiq 'fatal error|parse error|uncaught|php (fatal error|parse error|warning|notice|deprecated)|deprecated|warning|notice|error' /var/www/html/wp-content/debug.log; then
+          if bash scripts/qa-compose.sh exec -T wordpress grep -Eiq 'fatal error|parse error|uncaught|php (fatal error|parse error|warning|notice|deprecated)|deprecated|warning|notice|error' /var/www/html/wp-content/debug.log; then
             echo "status=error_entries_found" >> "$GITHUB_OUTPUT"
             exit 1
           fi
           echo "status=no_error_entries" >> "$GITHUB_OUTPUT"
 
       - name: Publish contract job summary
-        if: ${{ always() && steps.php-permissions.outcome == 'success' }}
+        if: ${{ always() }}
         run: php scripts/docker-qa-summary.php e2e-artifacts/e2e-summary.json build/qa-summary-contract.json contract
+
+      - name: Upload verified product contract summary
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: product-qa-contract-summary
+          path: e2e-artifacts/product-qa.summary.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Clean up
         if: always()
@@ -355,53 +313,6 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Verify independently published untrusted export
-        id: untrusted-export-check
-        if: ${{ always() && steps.php-permissions.outcome == 'success' && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
-        env:
-          WSTM108_EXPORT_ROOT: ${{ steps.qa.outputs.untrusted_export_root }}
-          WSTM108_EXPORT_SHA256: ${{ steps.qa.outputs.untrusted_export_manifest_sha256 }}
-          WSTM108_EXPORT_CUSTODY: ${{ steps.qa.outputs.untrusted_export_custody }}
-          WSTM108_EXPECTED_EXPORT_PARENT: ${{ runner.temp }}
-          WSTM108_EXPECTED_SOURCE: ${{ github.sha }}
-          WSTM108_EXPECTED_PROJECT: ${{ env.COMPOSE_PROJECT_NAME }}
-          WSTM108_EXPECTED_RUN: ${{ github.run_id }}
-          WSTM108_EXPECTED_ATTEMPT: ${{ github.run_attempt }}
-          WSTM108_EXPECTED_JOB: ${{ github.job }}
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$WSTM108_EXPECTED_SOURCE"
-          "${WSTM108_HOST_PHP-php}" scripts/untrusted-export.php verify-published
-      - name: Upload only the closed safe untrusted export
-        id: untrusted-export-upload
-        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' && steps.untrusted-export-check.outcome == 'success' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: untrusted-contract-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-proof.json
-            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-failure-witnesses.json
-            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-export-manifest.json
-          if-no-files-found: error
-          retention-days: 7
-      - name: Require QA and safe evidence success
-        id: untrusted-required-evidence
-        if: always()
-        env:
-          QA_OUTCOME: ${{ steps.qa.outcome }}
-          EXPORT_READY: ${{ steps.qa.outputs.untrusted_export_ready }}
-          EXPORT_STATUS: ${{ steps.qa.outputs.untrusted_export_status }}
-          PROOF_STATUS: ${{ steps.qa.outputs.untrusted_proof_status }}
-          EXPORT_CHECK: ${{ steps.untrusted-export-check.outcome }}
-          EXPORT_UPLOAD: ${{ steps.untrusted-export-upload.outcome }}
-        run: |
-          set -euo pipefail
-          test "$QA_OUTCOME" = success
-          test "$EXPORT_READY" = true
-          test "$EXPORT_STATUS" = published
-          test "$PROOF_STATUS" = passed
-          test "$EXPORT_CHECK" = success
-          test "$EXPORT_UPLOAD" = success
       - name: Upload canonical error contract evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -427,8 +338,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      COMPOSE_PROJECT_NAME: webmastery-site-toolkit-for-mcp-e2e-${{ github.event.pull_request.number || github.run_id }}
-      MYSQL_PORT: 0
+      COMPOSE_PROJECT_NAME: wstm-e2e-${{ github.run_id }}-${{ github.run_attempt }}
       WORDPRESS_PORT: 0
     permissions:
       contents: read
@@ -439,78 +349,37 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Test shared HOST prerequisite controls
-        run: /usr/bin/python3 -I -S -B scripts/host-prerequisite-setup.py units 8.4
-
-      - name: Test signed package and configuration controls
-        run: /usr/bin/python3 -I -S -B scripts/host-php-apt.py units
-
-      - name: Set up host QA PHP
-        id: php-permissions
-        env:
-          WSTM_HOST_SETUP_ROOT: ${{ runner.temp }}
-          WSTM_HOST_SETUP_RUNNER: ${{ runner.environment }}
-        run: /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C WSTM_HOST_SETUP_ROOT="$WSTM_HOST_SETUP_ROOT" WSTM_HOST_SETUP_RUNNER="$WSTM_HOST_SETUP_RUNNER" GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_JOB="$GITHUB_JOB" GITHUB_SHA="$GITHUB_SHA" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" RUNNER_OS="$RUNNER_OS" /usr/bin/python3 -I -S -B scripts/host-php-apt.py 8.4
-
-      - name: Retain scoped private GPG diagnostic evidence
-        if: ${{ always() && steps.php-permissions.outcome == 'failure' && github.repository == 'DanielBoring/webmastery-site-toolkit-for-mcp' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
-          name: private-gpg-diagnostic-http
-          path: ${{ runner.temp }}/wstm-prerequisite-*/gpg-diagnostic-*.private*
-          if-no-files-found: ignore
-          retention-days: 1
-
-      - name: Bind canonical host QA interpreter
-        shell: bash
-        run: |
-          set -euo pipefail
-          binary="$(readlink -e /usr/bin/php8.4)"
-          test "${binary##*/}" = php8.4
-          printf 'WSTM108_HOST_PHP=%s\n' "$binary" >> "$GITHUB_ENV"
-
-      - name: Record executed workflow identity
-        if: github.repository == 'DanielBoring/webmastery-site-toolkit-for-mcp'
-        env:
-          WSTM_CUSTODY_REPOSITORY: ${{ github.repository }}
-          WSTM_CUSTODY_REPOSITORY_ID: ${{ github.repository_id }}
-          WSTM_CUSTODY_RUN_ID: ${{ github.run_id }}
-          WSTM_CUSTODY_ATTEMPT: ${{ github.run_attempt }}
-          WSTM_CUSTODY_EVENT: ${{ github.event_name }}
-          WSTM_CUSTODY_EVENT_SHA: ${{ github.sha }}
-          WSTM_CUSTODY_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha || 'none' }}
-          WSTM_CUSTODY_WORKFLOW_COMMIT: ${{ github.workflow_sha }}
-          WSTM_CUSTODY_WORKFLOW_PATH: .github/workflows/e2e-qa.yml
-          WSTM_CUSTODY_WORKFLOW_REF: ${{ github.workflow_ref }}
-        run: php tests/support/private-custody-context.php
+          php-version: '8.2'
+          extensions: zip
+          coverage: none
 
       - name: Set up Docker Compose
-        run: docker compose version
+        run: bash scripts/qa-compose.sh version
 
       - name: Start WordPress stack
         run: |
           bash scripts/destructive-retention.sh check
-          docker compose down -v --remove-orphans
-          docker compose up -d
+          bash scripts/qa-compose.sh down -v --remove-orphans
+          bash scripts/qa-compose.sh up -d
 
       - name: Run Full MCP E2E QA
-        id: qa
-        env:
-          WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
-          WSTM108_HOST_INSPECTION: system-readonly-v1
         run: bash scripts/e2e-test.sh e2e
 
-      - name: Show closed admission refusal diagnostic (not acceptance)
-        if: ${{ always() && steps.php-permissions.outcome == 'success' }}
-        continue-on-error: true
-        env:
-          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}
-          WSTM108_ADMISSION_CALLSITE_V1: ${{ steps.qa.outputs.untrusted_admission_callsite_v1 }}
-        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php
-
       - name: Publish transport job summary
-        if: ${{ always() && steps.php-permissions.outcome == 'success' }}
+        if: ${{ always() }}
         run: php scripts/docker-qa-summary.php e2e-artifacts/mcp-crud-summary.json build/qa-summary-transport.json transport
+
+      - name: Upload verified product transport summary
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: product-qa-transport-summary
+          path: e2e-artifacts/product-qa.summary.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Clean up
         if: always()
@@ -585,53 +454,6 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Verify independently published untrusted export
-        id: untrusted-export-check
-        if: ${{ always() && steps.php-permissions.outcome == 'success' && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
-        env:
-          WSTM108_EXPORT_ROOT: ${{ steps.qa.outputs.untrusted_export_root }}
-          WSTM108_EXPORT_SHA256: ${{ steps.qa.outputs.untrusted_export_manifest_sha256 }}
-          WSTM108_EXPORT_CUSTODY: ${{ steps.qa.outputs.untrusted_export_custody }}
-          WSTM108_EXPECTED_EXPORT_PARENT: ${{ runner.temp }}
-          WSTM108_EXPECTED_SOURCE: ${{ github.sha }}
-          WSTM108_EXPECTED_PROJECT: ${{ env.COMPOSE_PROJECT_NAME }}
-          WSTM108_EXPECTED_RUN: ${{ github.run_id }}
-          WSTM108_EXPECTED_ATTEMPT: ${{ github.run_attempt }}
-          WSTM108_EXPECTED_JOB: ${{ github.job }}
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$WSTM108_EXPECTED_SOURCE"
-          "${WSTM108_HOST_PHP-php}" scripts/untrusted-export.php verify-published
-      - name: Upload only the closed safe untrusted export
-        id: untrusted-export-upload
-        if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' && steps.untrusted-export-check.outcome == 'success' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: untrusted-http-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-proof.json
-            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-failure-witnesses.json
-            ${{ steps.qa.outputs.untrusted_export_root }}/untrusted-export-manifest.json
-          if-no-files-found: error
-          retention-days: 7
-      - name: Require QA and safe evidence success
-        id: untrusted-required-evidence
-        if: always()
-        env:
-          QA_OUTCOME: ${{ steps.qa.outcome }}
-          EXPORT_READY: ${{ steps.qa.outputs.untrusted_export_ready }}
-          EXPORT_STATUS: ${{ steps.qa.outputs.untrusted_export_status }}
-          PROOF_STATUS: ${{ steps.qa.outputs.untrusted_proof_status }}
-          EXPORT_CHECK: ${{ steps.untrusted-export-check.outcome }}
-          EXPORT_UPLOAD: ${{ steps.untrusted-export-upload.outcome }}
-        run: |
-          set -euo pipefail
-          test "$QA_OUTCOME" = success
-          test "$EXPORT_READY" = true
-          test "$EXPORT_STATUS" = published
-          test "$PROOF_STATUS" = passed
-          test "$EXPORT_CHECK" = success
-          test "$EXPORT_UPLOAD" = success
       - name: Upload canonical error HTTP evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

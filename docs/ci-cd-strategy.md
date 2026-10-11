@@ -1,303 +1,190 @@
-# CI/CD Strategy
+# CI/CD strategy
 
-This repository uses GitHub Actions as the automation layer for pull request checks, Docker WordPress validation, scheduled compatibility checks, and release publishing. The CI/CD strategy explains how automation is organized; the QA strategy explains what confidence each check provides.
-
-See the [Software Development Lifecycle](sdlc-overview.md) for where CI/CD connects the stages of the development process.
-
-## Goals
-
-1. Keep the default pull request path fast enough for routine contribution.
-2. Require stronger evidence for runtime, ability, security-sensitive, and release-impacting changes.
-3. Keep workflow permissions narrow and explicit.
-4. Make every required status check name unique and stable for branch protection.
-5. Preserve enough artifacts and PR comments to debug failures without rerunning everything locally.
+GitHub Actions runs pull request checks, real Docker WordPress/MCP validation,
+scheduled compatibility checks and protected release publishing. The
+[QA strategy](qa-strategy.md) defines each check's evidence; the
+[software development lifecycle](sdlc-overview.md) explains the review stages.
 
 ## Workflow inventory
 
-| Workflow | Primary trigger | Purpose |
+| Workflow | Triggers | Purpose |
 | --- | --- | --- |
-| `1 - Static QA` | `pull_request`, `push`, `workflow_dispatch` | PHP/Python AST lint, mock-only prerequisite controls, WPCS, PHPStan, Composer audit, E2E manifest validation, security QA validation, and diff whitespace checks. |
-| `2 - Unit Tests` | `pull_request`, `push`, `workflow_dispatch` | Fast PHPUnit helper tests. |
-| `3-4 - Docker QA` | `pull_request`, `push`, `workflow_dispatch` | Runtime-impact detection, Ability Contract QA, Full MCP E2E QA, failure artifacts, and PR comment summaries. |
-| `5 - Release Package QA` | release-impacting `pull_request`, `workflow_dispatch` | Contract + transport Docker QA, package validation, and WordPress Plugin Check without publishing. |
-| `5 - Release` | release-tag push; guarded recovery `workflow_dispatch` | Normal tags require main ancestry and Static/Unit/package QA. Recovery requires an annotated `v-release-recovery-*` control tag and reuses original successful QA evidence. Both use one protected, serialized publish job; control-tag pushes do not release. |
-| `6 - Compatibility QA` | weekly `schedule`, `workflow_dispatch` | Discovers official upstream releases, tests baseline and candidate WordPress/MCP Adapter combinations, and opens a reviewed baseline-update PR after successful scheduled tests. |
-| `7 - Issue Backlog Import` | `workflow_dispatch` | Previews or imports issue backlog files; uses a serialized, dry-run-first workflow. |
-| Workflow lint | `pull_request`, `push` to `main`, `workflow_dispatch` | Checks Actions syntax, shell scripts, and workflow security with pinned lint tools. |
+| `1 - Static QA` | PR, main push, manual | PHP syntax, WPCS, PHPStan/baseline guard, locked audit, manifest/security policy and whitespace. |
+| `2 - Unit Tests` | PR, main push, manual | Genuine PHP 8.0/8.4 PHPUnit and separate applicable safeguard matrices with one stable aggregate. |
+| `3-4 - Docker QA` | PR, main push, manual | Runtime change detection, Ability Contract QA, Full MCP E2E QA, safe evidence and summaries. |
+| `5 - Release Package QA` | Release-impacting PR, manual | Original-ZIP validation, installed contract/transport/product checks and pristine Plugin Check, without publishing. |
+| `5 - Release` | Release tag, guarded recovery dispatch | Main ancestry, Static/Unit/package QA and protected serialized publication. Recovery reuses original validated evidence through a reviewed control tag. |
+| `6 - Compatibility QA` | Weekly schedule, manual | Official upstream discovery, pinned/candidate combinations and reviewed baseline-update PRs. |
+| `7 - Issue Backlog Import` | Manual | Serialized dry-run-first backlog preview/import. |
+| Workflow lint | PR, main push, manual | Actions syntax, shell lint and workflow security using pinned tools. |
 
 ## Pull request policy
 
-### Signed-package HOST interpreter repair
+Every PR needs `1 - Static QA` and `2 - Unit Tests`. Runtime, ability and
+security-sensitive changes also need actual `3 - Ability Contract QA` and
+`4 - Full MCP E2E QA`. Release-impacting changes need `5 - Release Package QA`
+and workflow lint before merge. Broad compatibility is scheduled/manual unless
+a supported combination or dependency change makes it relevant to the PR.
 
-The approved repair scope is `release-package-qa` with PHP8.2 and
-`ability-contract-qa`/`full-mcp-e2e-qa` with PHP8.4 on owned disposable
-GitHub-hosted machines. Use the approved signed OS-package source and
-fingerprint; verify signatures, source/archive bindings and installed
-owner/version/digests. Preserve the fixed installation operations, original
-budgets, nonroot repository controllers and fail-closed permission/inventory
-chain. Package provisioning precedes the fixed CLI `php.ini` and
-`mods-available/sockets.ini` chmod hardening step, socket-template/alias
-verification, inventory and retained public projection. These jobs do not use
-setup-php to replace package-native configuration or the selected executable.
+Unit tests and safeguards run as separate PHP 8.0/8.4 matrices, each with a
+60-minute limit and `fail-fast: false`. They retain applicable main/product
+regressions, baseline controls, narrow permissions and interpreter selection.
+The `2 - Unit Tests` aggregate requires every applicable matrix result to be
+successful; failure, cancellation or unexpected skip cannot pass it. Separate
+jobs prevent completed units from consuming the safeguard budget.
 
-Normal package housekeeping, including background expiration of other PHP
-versions' sessions, is authorized only there. Authorization is not a scheduler
-nonexecution observation, permission for arbitrary ROOT/service/broker work,
-candidate application elevation or a certified root-child cleanup. Local,
-shared/production hosts, other jobs and the 3.0 release receive no new grant.
-The [security strategy](security-strategy.md#approved-signed-package-php-repair-and-configuration-hardening)
-defines these separate boundaries.
+`Docker QA gate` is a stable required result for runtime and non-runtime PRs.
+It rejects failed/cancelled detection, malformed outputs and missing/failed
+runtime results. Skipped runtime jobs are accepted only when successful
+detection explicitly identifies non-runtime changes.
 
-Required runtime jobs remain mandatory. The original three mock-only
-prerequisite suites and focused source-local provider/configuration controls run
-before provisioning without local native commands. The genuine cleanup loop
-uses the full observed query domain with active/inactive worker guards, not
-selected-version substitution. A closed authenticated APT transaction may
-bootstrap or replace PHP through approved signed maintainers and verified
-retained scripts/triggers; prospective code is transaction authorization, not
-installed authority. Refresh installed provenance, loaders, UCF configuration,
-modules and aliases after APT and before candidate eligibility. Incoming and
-unchanged query producers retain distinct archive/installed bindings. Keep
-additive current source bindings and
-unchanged frozen predecessor maps. Retain failure originals and unknown native
-facts; local source/data controls do not establish a passing new-head HOST run.
-
-### Scoped system observation on disposable hosts
-
-Approved disposable GitHub-hosted authority entries explicitly select
-`WSTM108_HOST_INSPECTION=system-readonly-v1`; shared/live/self-hosted runners
-must not select it. The [QA strategy](qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts)
-defines the fixed sudo/system-read boundary, native executable/target checks,
-private originals and supervision limitations. Controller/capture/PHP remain
-nonroot, candidate code is never elevated, and inspection changes no grants,
-fixtures, permissions, namespaces or mounts. All actual required runtime gates
-remain mandatory; synthetic adapters and older CI cannot substitute. Preserve
-the reviewed exact-byte outer projection ahead of every frozen seal.
-
-### Selected Unix listener classification
-
-Exact-b5 PR-event run `36817024600` reported closed refusals:
-E2E job `110224240488` (`topology/daemon-descriptors-inaccessible`) and Contract
-job `110224240544` (`topology/ambiguous-selected-listener`). These witnesses do
-not expose private hosted rows or establish their contents.
-
-A separate owned, nonroot Linux socket probe (read-only, network-none; no daemon
-or site access) reproduced a parser assumption: one canonical pathname may have
-both a listening stream row (`Flags=00010000`, `Type=0001`, `St=01`) and a normal
-accepted connected stream row (`00000000`, `0001`, `03`). The controller now
-classifies only these two exact shapes, counting only listening inodes. It still
-requires exactly one listener, rejects malformed/unknown selected-path records,
-and preserves canonical alias/realpath, bounded reads, PID-hint socket-fd ownership,
-descriptor readlink/access, process identity/start time and namespace continuity.
-Synthetic differential tests show the old predicate rejects the normal pair;
-they do not prove this pair occurred in hosted Contract evidence.
-
-The independent descriptor-access refusal remains blocked. No privileges,
-runtime configuration, grants, custody, deadlines or workflow changes are part
-of this correction. Parser validation is not WordPress/daemon admission.
-
-### Bounded unit and safeguard budget
-
-Both PHP 8.0/8.4 unit jobs are configured with a bounded 60-minute limit, retaining
-the original matrix, `fail-fast: false`, every command, permissions and aggregate
-gates. This new budget is not CI-verified until the next genuine PR run.
-
-The evidence differs by environment and scope:
-
-- Both original 1d1f hosted unit jobs completed their unit suites, then were
-  cancelled during safeguards with explicit 15-minute maximum-execution-time
-  annotations. They do not establish a completed safeguard duration.
-- The parent measured all 14 original safeguard commands, including Python, on
-  frozen 1d1f under native PHP 8.4: all passed in 16m38s, including release-runtime
-  700s and untrusted-stage 284s. That local measurement used a 2-CPU/3-GiB,
-  network-none, read-only image without a Docker socket.
-- Original 1d1f hosted Release Package job `110204613200` completed its
-  seven-command "Test release safeguard regressions" subset successfully from
-  03:27:55 to 04:04:33: 36m38s. Only that subset was measured; subsequent actual
-  package QA immediately refused with exit 78 and no known closed reason.
-
-The hosted subset already exceeds 30 minutes, so the native measurement cannot
-justify that budget. The bounded 60-minute choice allows the observed 36m38s
-subset, about 2m24s units/setup and headroom for remaining controls without
-skipping any checks. It is a budget decision, not proof that a complete hosted
-unit/safeguard job will finish within it. Release job limits, runtime deadlines
-and admission policies remain unchanged. None of these timings establishes
-WordPress/runtime/custody acceptance or explains the unknown refusal.
-
-All pull requests should pass:
-
-1. `1 - Static QA`
-2. `2 - Unit Tests`
-
-Runtime, ability, and security-sensitive pull requests should also pass:
-
-1. `3 - Ability Contract QA`
-2. `4 - Full MCP E2E QA`
-
-`Docker QA gate` is the stable required result for both runtime and non-runtime PRs. It rejects failed/cancelled change detection, malformed detection output, and failed/missing runtime results. It accepts skipped runtime jobs only after successful detection explicitly identifies non-runtime changes.
-
-Release-impacting pull requests should pass:
-
-1. `5 - Release Package QA`
-
-Compatibility QA starts as scheduled/manual. Promote matrix jobs to branch protection only after they are stable and low-noise.
+Run development QA locally against a settled source using disposable Docker.
+Then publish the reviewed candidate and require genuine checks on that final
+PR head. Local, previous-head and manual-dispatch successes do not substitute
+protected PR-event checks. Keep original failures and reproduce defects locally
+before changing code or test expectations.
 
 ## Branch protection
 
-The active `main-ci-gates` ruleset requires unique status check names before merge. GitHub warns that duplicate job names across workflows can create ambiguous status checks, so workflow and job display names should remain stable and unique.
+`main-ci-gates` requires exactly `1 - Static QA`, `2 - Unit Tests` and
+`Docker QA gate`, bound to GitHub Actions. Stable aggregate names avoid
+ambiguous matrix-expanded checks. Do not weaken protection or bypass a failed
+check to merge. The path-filtered package workflow is not a universal required
+check, but release-bound changes still require it under repository policy.
 
-Recommended `main` protection:
+The September 17, 2026 rollout activated ruleset 23522901 only for
+`refs/heads/main`, with no exclusions or bypass actors and GitHub Actions
+integration 15368. Its `strict_required_status_checks_policy=false` and
+`do_not_enforce_on_create=false` settings were unchanged. This is dated setup
+evidence, not a current PR result or permission to change repository rules.
+See [setup and rollout evidence](../.github/SETUP-COMPLETE.md#rollout-evidence).
 
-1. Require pull request before merge.
-2. Require `1 - Static QA` and `2 - Unit Tests`.
-3. Require `Docker QA gate`, which enforces both runtime checks when needed.
-4. Require conversation resolution.
-5. Require linear history if repository settings continue to disallow merge commits.
-6. Do not allow force pushes or branch deletion.
+Require normal PR review/conversation resolution and the repository's supported
+linear-history merge method. Never force-push main, delete unrelated branches
+or use environment approval as a branch-protection bypass. Bot-created PRs may
+still need maintainer approval before their real workflows run.
 
-The required-check names refer to stable aggregate jobs, not matrix-expanded names. Bind them to the GitHub Actions app. Do not require the path-filtered Release Package QA workflow unless it is redesigned to always report a final result.
+## Runtime environment
 
-On September 17, 2026, `main-ci-gates` (23522901) was activated with explicit maintainer authorization after successful genuine PR-event checks on Actions-created baseline PR #140. Read-back of the ruleset, effective `main` rules, and required PR checks confirmed enforcement. It applies only to `refs/heads/main`, with no exclusions or bypass actors, and requires exactly `1 - Static QA`, `2 - Unit Tests`, and `Docker QA gate`, each bound to GitHub Actions integration 15368. Only enforcement changed; `strict_required_status_checks_policy=false` and `do_not_enforce_on_create=false` remain unchanged.
+Hosted Linux runners and the local Docker engine/images are trusted execution
+prerequisites. The product checks do not claim whole-host/kernel/loader
+attestation. Runtime bootstrap uses the maintained main-supported setup and
+verified executable downloads without changing plugin support floors.
 
-The initial CI rollout is complete. See the [dated setup and rollout evidence](../.github/SETUP-COMPLETE.md#rollout-evidence) for the passing compatibility pipeline and all five approved PR-event workflows. At that verification, PR #140 was still open: MCP Adapter 0.6.1 was a tested candidate, while `main` at `3dae8aa` retained 0.5.0. The checked-in adapter baseline is now 0.6.1. Future bot PR workflow approvals, current-source baseline validation and merge, and production release approval remain separate maintainer decisions.
+Every Compose call uses `scripts/qa-compose.sh`: fixed files, explicit unique
+project, ownership-labelled resources and checked teardown. Candidate PHP and
+WP-CLI run as UID/GID 33:33. Only a fixed trusted directory initialization runs
+as root. HTTP is loopback-only, the database has no host port, source/package
+mounts are read-only and no engine socket enters the application containers.
 
-The production environment, main-history/PR rules, and tag protections were last read back on September 16, 2026; the September 17 CI activation check did not reverify those settings or establish completion of unrelated safeguards work.
+The product context binds actual CLI/HTTP interpreter lanes and expected
+source/package identity. PHP 8.1 compatibility, PHP 8.2 primary runtime and
+PHP 8.0/8.4 unit evidence are separate claims. A bootstrap smoke, modeled mock
+or successful dependency install does not establish product/package acceptance.
 
 ## Workflow permissions
 
-### Closed admission refusal diagnostics
+Request the smallest scope per job:
 
-Every runtime `qa` step in Docker E2E, release/package QA and compatibility
-jobs is followed by an `always()` diagnostic step. It passes only the existing
-`untrusted_admission_failure` output via `WSTM108_ADMISSION_FAILURE` and the
-finite `untrusted_admission_callsite_v1` scalar via
-`WSTM108_ADMISSION_CALLSITE_V1`, never
-interpolates that value into a shell command, and uses the topology allowlist
-already approved by the controller. The formatter accepts only a two-string
-`phase`/`reason` JSON object (at most 256 bytes, unescaped members), with phase
-`topology` and an approved refusal reason. Duplicate or extra keys, foreign
-phases/reasons, malformed or oversized payloads produce a fixed invalid message;
-absent output produces a fixed unavailable message. No raw payload, private
-stream, authority path or exception is logged or uploaded.
+- Validation defaults to `contents: read`; fork/bot checks need no release secrets.
+- PR reporting uses `pull-requests: write` only where necessary and does not run
+  PR-controlled code with privileged reporting credentials. Read-only contexts
+  use job summaries instead of requiring a writable comment token.
+- The compatibility failure reporter has issue-write access without source
+  checkout or release credentials.
+- Recovery resolution is read-only with `contents: read` and `actions: read`.
+- Protected publication alone uses `contents: write`, necessary cross-run
+  artifact read permission and WordPress.org environment secrets.
 
-The callsite scalar accepts only the fixed controller-owned IDs (32 bytes
-maximum). Missing, foreign or malformed values become `unknown`; a known site
-is displayed only alongside its unchanged `noncanonical-path` or
-`native-coordinate-prerequisite` witness, never
-inferred from its phase or exception class. See
-[terminal kernel diagnostics](qa-strategy.md#kernel-mount-verification) for the
-argument-free creation and exact trusted-callsite requirements. The scalar
-shares the existing bounded terminal write with the old witness; it is not
-another evidence file or authority channel. Original bootstrap stdout/stderr
-remain private. Each ordinary controller exits after one terminal report;
-repeated reports clear unattributable scalars, and jobs/steps do not share
-their output channels.
-Prerequisite IDs map exact existing guards, not individual members of compound
-conditions. A package refusal's reason does not itself identify credentials,
-fsync, a deadline or another prerequisite; unknown attribution is not guessed.
+`SVN_USERNAME` and `SVN_PASSWORD` exist only in the protected `wordpress-org`
+environment. Do not duplicate them as repository secrets or expose them to PR
+code. Actions remain pinned; dependency/tool updates need ordinary review.
 
-Formatter exit zero means only formatting completed, not that admission passed.
-The best-effort diagnostic cannot override the original QA failure (including
-exit 78), export/artifact eligibility, cleanup, custody or release gates. An
-unavailable witness is not evidence of a missing grant, missing bare stack or
-unsupported host. Runtime acceptance and native/Composer QA remain separate.
-Existing sealed workflow and proof expectations are retained through an exact,
-reversible outer CI-only transition; historical ledgers are not regenerated.
+## Environment and publication gates
 
-The exact-candidate compatibility job keeps QA and all source observations in
-`candidate`. Only its diagnostic step overrides that default working directory
-to `${{ github.workspace }}/candidate-floor-tools`, the separate approved tools
-checkout at `github.workflow_sha`. This permits arbitrary older candidate SHAs
-that lack the formatter, without trusting candidate diagnostic code or overlaying
-tools onto the candidate. The other seven diagnostic placements are unchanged.
+The `wordpress-org` environment protects **Publish release (GitHub approval
+required)**. Normal QA or the recovery resolver identifies the exact
+source/tag/run/attempt/artifact before approval. The environment ID, reviewer,
+secrets and deployment tag policy remain unchanged. Approval is repository
+production approval, not WordPress.org staff review.
 
-Use least privilege per job:
+The September 21, 2026 read-back recorded DanielBoring as reviewer, self-review
+allowed for solo maintenance and administrator environment bypass disabled.
+Only `v*` tags may deploy. Administrator control over tag creation does not
+bypass production approval.
 
-- Read-only jobs use `contents: read`.
-- PR comment jobs use `pull-requests: write` and avoid checking out PR-controlled code.
-- Release publishing uses `contents: write` only in the protected publish job of the tag release workflow.
-- Recovery resolution is read-only (`contents: read`, `actions: read`). The protected publisher also has `actions: read` for an explicit-token cross-run artifact download; only the original validated run/artifact IDs may be used.
-- Secrets should not be needed for PR validation from forks. Read-only fork/bot contexts use job summaries instead of requiring a writable PR comment token.
-- Actions tokens default to read-only; jobs request only their necessary scopes. The isolated compatibility failure reporter has issue-write access, not access to checkout or release credentials.
-- WordPress.org SVN credentials are named `SVN_USERNAME` and `SVN_PASSWORD` and stored only in the protected `wordpress-org` environment. They become available after approval.
+Recovery requires a separately authorized annotated `v-release-recovery-*`
+control tag on reviewed main history. Branch dispatch and ordinary release-tag
+dispatch are rejected; control-tag pushes do not publish a new release.
+Publication rechecks the approved identity, uses the original successful
+source/run/artifact and installs/verifies Subversion before preflight. See the
+[release recovery runbook](release-strategy.md#recovery-when-the-frozen-workflow-itself-needs-a-fix).
 
-## Environment gates
+One shared publish concurrency group serializes normal and recovery publication
+without cancelling an active deployment. There is no separate WordPress.org
+test SVN; use PR checks, package QA and staging installations first.
 
-The `wordpress-org` GitHub Environment protects **Publish release (GitHub approval required)**. A ready-for-approval summary from normal Release QA or the recovery resolver identifies the exact release/source/run/attempt/artifact before the protected job starts. This is GitHub production approval by DanielBoring, not WordPress.org staff review. The environment ID remains `wordpress-org` and can still appear in **Review deployments**; its established secrets, reviewer and tag policy are unchanged.
+## Scheduling and baseline promotion
 
-Recommended `wordpress-org` environment settings:
+Compatibility QA discovers official stable WordPress and MCP Adapter releases
+and separates supported-floor, pinned, latest and combined-update combinations.
+Other lanes cover PHP 8.4, MySQL 8.4, floating SEO plugins and current Plugin
+Check. Fresh images and exact resolved versions make upstream drift visible.
 
-1. Require manual approval before deployment.
-2. Restrict secrets to the environment when possible.
-3. Store the WordPress.org SVN-specific password, not the normal account password.
-4. Treat approval as confirmation that the validated tag should publish to WordPress.org production SVN.
+Only passing candidates may update `.github/compatibility-versions.json`,
+concrete image pins or `Tested up to`. Missing images, failed discovery, stale
+history and unavailable dependencies fail explicitly. Newer passing versions
+produce maintainer-reviewed PRs, never automatic merges. Genuine PR-event
+workflows and merge approval remain required after scheduled success.
 
-As read back again on September 21, 2026, the configured reviewer is DanielBoring, with self-review allowed for solo maintenance and administrator environment bypass disabled. Only tags matching `v*` may deploy. The tag ruleset separately restricts creation/update/deletion to repository administrators; it does not grant permission to bypass environment approval.
+Metadata generation uses the maintained updater CLI with all eight
+version/digest options, including `--mcp-adapter-sha256`, `--wp-cli-sha512`
+and `--confirmed-wordpress`. A metadata parser failure is not a Plugin Check
+result or successful promotion.
 
-Recovery cannot dispatch from `main`: checkout of an original tag does not change the workflow's deployment ref. It requires a separately authorized annotated `v-release-recovery-*` control tag on reviewed main history, excludes that namespace from normal tag-push releases, and rejects branch or ordinary-release-tag dispatch. The control tag selects only reviewed CI logic; publication uses the original successful QA source/run/artifact. The publish host explicitly installs and verifies Subversion before any SVN preflight. See the [normal/recovery runbook](release-strategy.md#recovery-when-the-frozen-workflow-itself-needs-a-fix).
+`composer qa:unit -- --filter CompatibilityBaselinesTest` exercises
+workflow-shaped arguments, promotion/no-op behavior and unchanged files after
+invalid/duplicate/unknown options and invalid references. These regressions do
+not update live pins or replace real runtime evidence.
 
-There is no separate WordPress.org test SVN. Use pull request checks, `5 - Release Package QA`, manual compatibility checks, and staging WordPress installs for pre-production confidence.
+## Artifacts and reporting
 
-## Scheduling policy
+Retain inherited main contract/MCP and dedicated parent-assignment evidence for
+the configured bounded retention period. Missing required evidence is an upload
+failure, not a successful summary. Report the tested commit/run, actual versions,
+coverage and failure counts, debug-log state and cleanup outcome.
 
-Scheduled jobs should detect drift that a PR did not cause:
+Product raw requests/responses, headers, SQL, credentials, context, wire frames,
+resource ledgers and exception logs remain private. Upload only the closed
+validated product summary, never a broad raw product-directory glob. Formatting
+or exporting data cannot override a stage's original nonzero exit. Missing or
+partial evidence cannot generate success-shaped fallback summaries.
 
-- `6 - Compatibility QA` runs weekly to query the official WordPress version API and latest stable MCP Adapter GitHub release, then catches upstream WordPress, PHP, MCP Adapter, Yoast SEO, SEOPress, Plugin Check, and Docker image changes.
-- Compatibility lanes pull fresh Docker images and record resolved runtime versions in the job summary so failures can be attributed to the support floor, pinned baseline, latest WordPress, latest MCP Adapter, or a combined update.
-- Passing newer versions produce a version-specific pull request that updates concrete pins but never auto-merges. `GITHUB_TOKEN` PRs need maintainer approval of their real PR-event workflows. Dispatched checks do not satisfy branch-ruleset requirements.
-- Candidate image availability and all required lane results must be confirmed before promotion. An unavailable image blocks the affected update rather than silently skipping it.
-- Scheduled failures should create maintainer follow-up work only after triage confirms the failure is not transient infrastructure noise.
-- Compatibility failures are release blockers only when they affect the supported floor, current WordPress line, or another supported version combination.
+Preserve failed local captures and ownership/retention records. Clear retention
+only after independently verified restoration and live owned-resource absence;
+otherwise refuse restart and teardown. Docker cleanup success does not turn
+a failed product run into acceptance.
 
-For an independently reviewed frozen source, the same registered compatibility workflow has an explicit `candidate_sha` dispatch path. It runs only pinned WordPress 6.9/PHP 8.1 full E2E compatibility on that exact commit, not PHP 8.0 minimum-runtime proof, with read-only repository permissions and separately pinned workflow/evidence tools; it never substitutes current main or discovered dependency pins. Candidate mode rejects `open_update_pr=true` and excludes discovery, the ordinary matrix/checker/promotion chain, and the issue-writing reporter. Empty `candidate_sha` retains the existing scheduled/manual pipeline and its default-branch freshness guards. See [exact-candidate compatibility and the pending PHP 8.0 floor](../tests/e2e/README.md#exact-candidate-compatibility-ci-and-pending-php-80-floor) for inputs and retained source/runtime/cleanup evidence. The independent pinned PHP 8.4/POSIX proof host and canonical interpreter binding match sibling jobs; the full harness supplies `runner.temp` to the existing private authority bootstrap. Canonical ownership, exclusive reservation and actual topology/custody admission still apply. This job does not run the large-library private receiver, replace genuine PHP 8.0 integration, PR checks or original-package QA, or satisfy the benchmark's numerical and private-custody requirements.
-
-## Artifact and reporting policy
-
-Docker jobs retain available contract/MCP summary JSON on success and failure, with bounded retention, and write readable job summaries.
-
-Parent-assignment regressions also retain dedicated detailed JSON for seven
-days on success or failure: direct-callback and ability-wrapper reports from
-Contract QA, and an actual HTTP report from Full MCP E2E QA. These include
-fixture-only before/after database state and write-hook observations, not live
-site data. Missing expected parent evidence is an artifact-upload error, not a
-successful substitute summary.
-
-Collect detailed diagnostics on failure:
-
-- Docker Compose logs
-- WordPress debug log
-- E2E summary JSON when available
-- MCP CRUD summary JSON when available
-
-PR comments should summarize runtime facts rather than static success claims:
-
-- tested commit
-- workflow run
-- ability coverage counts
-- pass/fail counts
-- debug-log status
-- tested WordPress/PHP/MySQL/plugin versions
-
-Cancel superseded PR runs using workflow/ref-scoped concurrency. Production publication uses one shared group across tags and never cancels an active publish. Required checks explicitly evaluate prerequisite results instead of relying on implicit skipped-job success.
-
-Pipeline linting is a separate opt-in local toolchain and GitHub workflow; `composer qa` includes Python AST and mock-only prerequisite controls but does not acquire a Docker dependency or execute native hardening. Lint success does not prove live environment protections, bot PR permissions, or release provenance policy.
+PR workflow concurrency may cancel superseded runs. Required aggregates
+explicitly evaluate prerequisite results instead of treating implicit skips as
+success. Pipeline lint is separate from Composer's local PHP QA and does not
+prove live runtime or production approval.
 
 ## Failure handling
 
-1. Fix `1 - Static QA` failures first; they are usually syntax, standards, static-analysis, security-policy, dependency, manifest, or whitespace issues.
-2. Fix `2 - Unit Tests` before Docker failures; unit failures often indicate helper contract drift.
-3. For Docker failures, inspect the PR comment and uploaded artifacts.
-4. For release failures, distinguish package metadata/content failures, Plugin Check failures, protected environment approval issues, SVN deployment failures, and GitHub Release creation failures.
-5. For scheduled compatibility failures, reproduce manually before changing required branch protection.
+Fix static/baseline/manifest/security-policy failures first, then helper/unit
+regressions. Distinguish actual Docker behavior from bootstrap failures and
+mock safeguards. Package failures may concern metadata, production hashes,
+runtime checks or Plugin Check; production failures additionally involve
+approval, SVN or GitHub Release publication.
 
-Compatibility metadata generation uses the same updater CLI in the current Plugin Check and proposed-commit jobs. Both pass all eight version/digest options, including `--mcp-adapter-sha256` and `--wp-cli-sha512`, followed by `--confirmed-wordpress`. A parser failure here occurs before Plugin Check executes; passing runtime lanes alone is not a passing checker or promotion.
-
-Run `composer qa:unit -- --filter CompatibilityBaselinesTest` for the local regression. It launches the actual CLI with workflow-shaped argv in disposable fixture roots, checks both workflow call sites, verifies promotion and no-op output, and confirms invalid/duplicate/unknown options and invalid references leave all baseline files unchanged. These tests also run in `composer qa`; they do not promote repository pins or replace the required runtime/package and real PR-event evidence.
+Reproduce scheduled failures before changing pins or merge policy. Supported
+version failures can block release; transient infrastructure or unsupported
+upstream combinations need separate triage, not silent skips.
 
 ## Official references
 
-- GitHub Docs: [Continuous integration](https://docs.github.com/en/actions/get-started/continuous-integration)
-- GitHub Docs: [Workflow syntax for GitHub Actions](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax)
-- GitHub Docs: [About protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
-- GitHub Docs: [Secure use reference](https://docs.github.com/en/actions/reference/security/secure-use)
-- GitHub Docs: [About releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
+- [GitHub continuous integration](https://docs.github.com/en/actions/get-started/continuous-integration)
+- [GitHub workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax)
+- [GitHub protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
+- [GitHub deployment environments](https://docs.github.com/en/actions/reference/deployments-and-environments)

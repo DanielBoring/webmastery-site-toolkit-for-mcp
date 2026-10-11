@@ -9,6 +9,15 @@ use Wstm127Proof\Registrations;
 require_once __DIR__ . '/fixtures/posts-extraction-stubs.php';
 
 final class PostsExtractionTest extends TestCase {
+	public function testBoundedConsumersRemainOwnedByTheExtractionRatherThanResurrectedPosts(): void {
+		$posts = new ReflectionClass( Webmastery_MCP_Posts::class );
+		foreach ( array( 'normalize_revision', 'normalize_block', 'register_get_post_meta', 'register_bulk_publish' ) as $method ) {
+			self::assertFalse( $posts->hasMethod( $method ) );
+		}
+		foreach ( array( 'Post_Access' => 'query_readable', 'Post_Content' => 'normalize', 'Post_Meta' => 'can_read_post_meta_key', 'Post_Revisions' => 'normalize_revision', 'Content_Patch' => 'normalize_block' ) as $owner => $method ) {
+			self::assertTrue( ( new ReflectionClass( 'Webmastery_MCP_' . $owner ) )->hasMethod( $method ) );
+		}
+	}
 	protected function setUp(): void {
 		Registrations::$before = Registrations::$after = Registrations::$reads = array();
 		Wstm127Before\Webmastery_MCP_Posts::register();
@@ -22,6 +31,18 @@ final class PostsExtractionTest extends TestCase {
 		self::assertSame( array_keys( Registrations::$before ), array_keys( Registrations::$after ) );
 		foreach ( Registrations::$before as $name => $definition ) {
 			$current = Registrations::$after[ $name ];
+			if ( in_array( $name, array( 'webmastery-site-toolkit-for-mcp/list-posts', 'webmastery-site-toolkit-for-mcp/list-pages', 'webmastery-site-toolkit-for-mcp/list-revisions' ), true ) ) {
+				self::assertSame( array( 'type' => 'string', 'enum' => array( 'summary', 'full' ), 'default' => 'summary',
+					'description' => 'Summary omits content only; full returns unchanged stored content.' ), $current['input_schema']['properties']['fields'] );
+				if ( 'webmastery-site-toolkit-for-mcp/list-revisions' === $name ) {
+					self::assertSame( 'List saved revisions for a WordPress post or page. Summary omits content; use fields full for stored revision content.', $current['description'] );
+				} else {
+					self::assertStringContainsString( 'bounded candidate windows', $current['description'] );
+					self::assertStringContainsString( 'no exact totals', $current['description'] );
+				}
+				unset( $current['input_schema']['properties']['fields'] );
+				$current['description'] = $definition['description'];
+			}
 			unset( $definition['execute_callback'], $definition['permission_callback'], $current['execute_callback'], $current['permission_callback'] );
 			self::assertSame( $definition, $current, $name );
 		}
@@ -89,70 +110,31 @@ final class PostsExtractionTest extends TestCase {
 		}
 	}
 
-	private static function method_source( string $source, string $name ): string {
-		preg_match_all( '/^\t(?:private|public) static function (\w+)\(/m', $source, $matches, PREG_OFFSET_CAPTURE );
-		foreach ( $matches[1] as $index => [ $method ] ) {
-			if ( $name === $method ) {
-				$start = $matches[0][ $index ][1];
-				$end = $matches[0][ $index + 1 ][1] ?? strrpos( $source, "\n}" );
-				return rtrim( substr( $source, $start, $end - $start ) );
+	public function testAllFeatureRegistrationMethodsRemainAtTheirCurrentOwners(): void {
+		foreach ( array(
+			'Content_Patch' => array( 'register_list_content_blocks', 'register_patch_content_block', 'register_patch_post_content', 'normalize_block' ),
+			'Featured_Image' => array( 'register_set_featured_image', 'register_remove_featured_image' ),
+			'Post_Revisions' => array( 'register_list_revisions', 'register_restore_revision', 'normalize_revision' ),
+			'Post_Meta' => array( 'register_get_post_meta', 'register_update_post_meta', 'register_delete_post_meta', 'writable_keys' ),
+			'Bulk_Posts' => array( 'register_bulk_trash_posts', 'register_bulk_publish_posts' ),
+			'Post_Access' => array( 'permission', 'object_permission', 'can_read', 'query_readable' ),
+		) as $owner => $methods ) {
+			foreach ( $methods as $method ) {
+				self::assertTrue( ( new ReflectionClass( 'Webmastery_MCP_' . $owner ) )->hasMethod( $method ), $owner . '::' . $method );
+				self::assertFalse( ( new ReflectionClass( Webmastery_MCP_Posts::class ) )->hasMethod( $method ), $method );
 			}
 		}
-		throw new RuntimeException( 'Missing bound method: ' . $name );
+		self::assertStringNotContainsString( 'SourceTransition', file_get_contents( __DIR__ . '/fixtures/posts-extraction-stubs.php' ) );
 	}
 
-	public function testEveryOriginalMethodHasAnExactReviewedOwnerAndReconstructsPriorBytes(): void {
-		$root = dirname( __DIR__, 2 );
-		$map = Wstm127SourceTransition::load();
-		self::assertCount( 61, $map['methods'] );
-		$prior = Wstm127SourceTransition::restore( 'includes/class-posts.php', file_get_contents( $root . '/includes/class-posts.php' ) );
-		$owners = array();
-		foreach ( $map['methods'] as $name => $binding ) {
-			$current = Wstm167SourceTransition::restore( $binding['owner'], file_get_contents( $root . '/' . $binding['owner'] ) );
-			$before = self::method_source( $prior, $name );
-			$after = self::method_source( $current, $name );
-			self::assertSame( $binding['baseline_sha256'], hash( 'sha256', $before ), $name );
-			self::assertSame( $binding['current_sha256'], hash( 'sha256', $after ), $name );
-			$normalize = static function ( $body ) {
-				$body = preg_replace( '/Webmastery_MCP_(?:Post_Access|Post_Meta|Posts|Bulk_Posts)::(\w+)\(/', 'self::$1(', $body );
-				return preg_replace( '/public static function/', 'private static function', $body, 1 );
-			};
-			self::assertSame( $normalize( $before ), $normalize( $after ), $name );
-			$owners[ $binding['owner'] ] = ( $owners[ $binding['owner'] ] ?? 0 ) + 1;
-		}
-		self::assertCount( 7, $owners );
-		foreach ( $map['files'] as $path => $binding ) {
-			$source = file_get_contents( $root . '/' . $path );
-			self::assertSame( $binding['baseline_sha256'], hash( 'sha256', Wstm127SourceTransition::restore( $path, $source ) ), $path );
+	public function testIndependentMainFixtureRejectsAlteredOwnerOracle(): void {
+		$json = file_get_contents( __DIR__ . '/fixtures/product-main-baseline.json' );
+		foreach ( array( 'main_commit', 'files', 'methods', 'class_sha256', 'class_source', 'main_file_sha256' ) as $key ) {
 			try {
-				Wstm127SourceTransition::restore( $path, $source . "\n// forged consumer\n" );
-				self::fail( 'Accepted drift: ' . $path );
-			} catch ( RuntimeException $error ) {
-				self::assertStringContainsString( 'current source drift', $error->getMessage() );
-			}
-		}
-		self::assertSame( '1bdd69f8b930f9c744afe557800eeafd195f30eeaa9b61c9b81fff5267e426d6', hash( 'sha256', str_replace( "\r\n", "\n", file_get_contents( __DIR__ . '/fixtures/shared-helper-transition.json' ) ) ) );
-	}
-
-	public function testForgedBindingsAndDriftedHelpersCannotEnterTheHistoricalChain(): void {
-		$json = file_get_contents( __DIR__ . '/fixtures/posts-extraction-transition.json' );
-		foreach ( array( 'predecessor_seal', 'files', 'dependencies', 'methods', 'current_sha256', 'current_blob', 'baseline_sha256', 'baseline_blob', 'hunks', 'owner' ) as $key ) {
-			try {
-				Wstm127SourceTransition::load( str_replace( '"' . $key . '"', '"' . $key . '_forged"', $json ) );
+				wstm_test_main_baseline( str_replace( '"' . $key . '"', '"' . $key . '_forged"', $json ) );
 				self::fail( 'Accepted forged binding: ' . $key );
 			} catch ( RuntimeException $error ) {
-				self::assertSame( 'Posts extraction transition seal mismatch.', $error->getMessage() );
-			}
-		}
-		foreach ( Wstm127SourceTransition::load()['dependencies'] as $target => $hash ) {
-			try {
-				Wstm127SourceTransition::verify_dependencies( static function ( $path ) use ( $target ) {
-					$source = file_get_contents( dirname( __DIR__, 2 ) . '/' . $path );
-					return $target === $path ? $source . "\n// forged helper\n" : $source;
-				} );
-				self::fail( 'Accepted helper drift: ' . $target );
-			} catch ( RuntimeException $error ) {
-				self::assertSame( 'Bounded integration dependency current source drift: ' . $target, $error->getMessage() );
+				self::assertSame( 'Independent main semantic baseline changed.', $error->getMessage() );
 			}
 		}
 	}

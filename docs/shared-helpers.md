@@ -2,10 +2,11 @@
 
 This is the behavior-preserving #119 consolidation map for the 17 ability groups.
 The issue's old line numbers and proposed signatures are not the current API.
-Its historical ability names, strict schemas, annotations, permission diagnostics,
-successful fields, metadata eligibility and authorized totals remain exactly
-reconstructible. The additive #167 integration below intentionally changes list
-pagination/projection, not the authorization policies or historical oracles.
+The helper extraction preserves ability names, strict schemas, annotations,
+permission diagnostics, successful fields and metadata eligibility. The
+bounded-list integration intentionally changes pagination/projection, with
+those client-facing changes documented separately. Existing authorization
+policies and applicable regression expectations remain.
 
 ## Requirement rows
 
@@ -38,27 +39,12 @@ rule rejects long literals. This is a documented repository preference, not a
 claim that WordPress Coding Standards itself prefers short arrays. Tests,
 scripts and vendor code are outside the production PHPCS file scope.
 
-`array-syntax-transition.json` adds 102 exact reversible hunks for five production
-files before the unchanged #167, #127 and #119 sealed historical transitions.
-Its independent seal binds raw and LF-normalized hashes, Git blobs, paths and
-predecessor seals. The #167 source and dependency entry points reverse this layer
-before comparing their existing hashes; historical ledgers are not regenerated.
-Live fixture callbacks still execute converted production code, never restored
-historical code. Targeted tests compare complete PHP token streams modulo
-literal syntax and whitespace, reject unrelated source/forged proof drift,
-retain prior chain safeguards and exercise the configured lint rule.
-
-The opt-in floor selector adds a separate exact outer
-`floor-selector-transition.json` layer for seven QA/test consumers and eleven
-dependencies before the unchanged syntax and #167/#127/#119 layers. Source
-selection does not change production abilities or grant runtime authority.
-Further bound admission/controller changes require another reviewed outer
-reversal, never regenerated historical seals.
-The composed `bounded-admission-transition.json` supplies that next exact
-reversal for eight QA consumers/bridge seams and their query/supervisor
-dependencies. Its projection precedes the unchanged floor and earlier layers.
-The separate observer/import-test reversal retains their accepted test history;
-neither layer changes packaged production or grants runtime authority.
+PHPCS enforces the chosen syntax on packaged production PHP. Current-source
+regressions check helper behavior and owner wiring. Independent selected-method
+expectations retain the applicable main behavior, with named bounded-window,
+projection and marker exceptions. Historical comments, taxonomy and scheduling
+calibration expectations remain unchanged; they do not reconstruct an entire
+historical checkout or establish host provenance.
 
 ## Public helpers and consumer policy
 
@@ -130,15 +116,13 @@ Unit/reflection consumers use their actual owners. Bootstrap loads dependencies
 and all feature owners before Posts inside the ability hook; package-map guards
 verify their exact bytes. Response, Scheduling and Parent remain shared.
 
-`PostsExtractionTest` compares all 24 registrations and permission factories
-against the reconstructed #119 source, and binds all 61 original
-non-dispatcher method bodies to seven final owners (57 moved, four retained).
-Only owner qualification and required public visibility change inside these
-bodies. Pre-move patch characterization and owner-specific tests retain dotted
+`PostsExtractionTest` checks current-source owner, dispatcher, bootstrap,
+registration, schema, callback and permission wiring. Patch characterization
+and owner-specific tests retain dotted
 path grammar, by-reference nested replacement, heading boundaries, raw exact
 matching and metadata depth/encoded-size limits.
 
-## #166 / #167 and provenance integration
+## Product integration and evidence
 
 #167 is retargeted onto the completed #119/#127 owners. `Post_Access` bounds
 post/page/CPT/media/score candidates; `Post_Content` owns common projection;
@@ -148,56 +132,20 @@ fail-closed deletion semantics. P+1 candidates, P authorizations, 5P+10
 capability calls, 3P+12 SQL queries (plus ceil(2P/50) for orphans), 64 KiB
 controlled payload and 64 MiB peak allocator budgets remain unchanged.
 
-The composed #166 delta retains the exact b3 `Untrusted` helper, entry-point,
-all 28 bounded production dependencies and the frozen #167/#127/#119 JSON seals.
-It adds absent stage/pipeline and safe admission diagnostics, not a second
-production marker implementation. Actual-owner fixtures prove full raw values,
-default summary omission and retained-field markers together; the HTTP plan
-also has distinct explicit-summary cases. No production-source reversal is
-needed because none of the bound production bytes changes.
+Actual-owner fixtures check full stored values, default summary omission and
+present-field markers together; the real HTTP plan includes explicit-summary
+cases. Shared-helper spies retain lookup/type order, effective permissions,
+normalization, canonical errors, scheduling/slashing and provider distinctions.
+Do not regenerate expected values from candidate output to make a regression pass.
 
-`untrusted-bounded-manifest-transition.json` adds an exact typed test-only layer
-before the existing bounded/schema/marker projections. It reverses only 188
-new marker-assertion case changes to recover the exact 601-case bounded view,
-and separately reconstructs the historical 589-case marker view. All previous
-inputs, roles, values, absence/no-write assertions, 12 added bounded cases and
-frozen source ledgers remain intact. The workflow transition similarly recovers
-the original pinned custody oracle without replacing its historical hash.
-These source proofs do not establish real runtime, lease or GitHub acceptance.
-
-`shared-helper-transition.json` seals the exact reverse hunks from the reviewed
-pre-extraction source at `8ea870b` to these helper consumers, including normalized
-SHA256 and Git blob hashes, plus helper dependency hashes. Its PHP loader seals
-the entire fixture, checks current source/dependencies, reverses only the exact
-hunks, then verifies the reconstructed baseline. Historical comments, taxonomy
-and scheduling ledgers still compare against their original hashes and execute
-current production bodies. Shared-helper units additionally execute the
-reconstructed original bodies only in an isolated comparison namespace.
-
-The additive `posts-extraction-transition.json` reverses eight changed/new
-runtime files through 24 exact hunks, binds all 61 original non-dispatcher
-methods and 26 dependency sources, and restores the exact #119 handoff bytes
-before the frozen bridge runs. Its seal is
-`2be14f26642f28014a9df9e99df36cb6697520b158938f1b3bad23e9da44c4f5`.
-The #119 JSON and seal
-`1bdd69f8b930f9c744afe557800eeafd195f30eeaa9b61c9b81fff5267e426d6`
-remain unchanged. Consumer, helper, reverse-hunk, owner and historical-hash
-forgeries remain fail-closed; no later HEAD substitutes for a historical oracle.
-
-Future changes to a bound consumer/helper must add an explicitly reviewed
-provenance transition before this frozen bridge, or maintain an equally exact
-reviewed chain to the same historical bytes. Do not replace historical ledgers,
-silently accept new hashes, disable the bridge, or regenerate its baseline from
-a later HEAD. Preserve source-drift and forged-binding mutation controls.
-
-`bounded-integration-transition.json` is the new outer #167 layer: 13 exact
-consumer reverse bindings and 28 current dependencies, including List Query
-and Untrusted, restore the immutable final prerequisite snapshot before #127
-and #119 run. Historical comparison namespaces explicitly load those restored
-prerequisite bodies; current bounded/marker/native tests execute the actual
-new owners. Both older JSON fixtures and seals stay byte-identical. Forged
-current/baseline SHA256, Git blobs, predecessors, hunks and dependency sources
-are rejected, including changes to either newly added primitive.
+Direct product runners execute only in an explicitly owned disposable
+WordPress installation. The untrusted-content stage retains 298 gateway,
+individual-tool and annotation labels. Bounded-list QA retains 336 large and
+1,125 small observations, independently selected IDs, raw measured bounds,
+reference/cache/projection probes and unchanged-state/cleanup readbacks.
+Private original records are replayed independently, and current live
+resource absence is checked before fixture/marker retirement. See
+[the runtime instructions](../tests/e2e/README.md#local-product-stages-and-environment).
 
 Local static/unit evidence does not replace authorized real WordPress/MCP,
 PHP-floor or original-ZIP runtime checks. No Docker or live-site mutation is

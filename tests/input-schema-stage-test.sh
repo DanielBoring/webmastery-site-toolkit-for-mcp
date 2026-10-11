@@ -8,6 +8,26 @@ trap 'status=$?; if [[ "$status" != 0 ]]; then echo "Failed schema stage evidenc
 export ROOT WORK COMPOSE_PROJECT_NAME=owned-input-schema-fixture E2E_ARTIFACTS_DIR=e2e-artifacts
 export TRACE="$WORK/trace"
 
+fixture_artifact_path() {
+	[[ "$1" =~ ^/qa-artifacts/[a-zA-Z0-9_./-]+$ && "$1" != *..* ]] || {
+		echo "Invalid mocked private artifact path: $1" >&2; return 91;
+	}
+	printf '%s\n' "$WORK/e2e-artifacts/private-volume/${1#/qa-artifacts/}"
+}
+
+# Model transport only; reports are still checked by the real host validators.
+qa_export_artifact() {
+	local source destination="$2"
+	source="$(fixture_artifact_path "$1")" || return $?
+	printf 'export-artifact %s %s\n' "$1" "$destination" >> "$TRACE"
+	[[ "$destination" == e2e-artifacts/* && "$destination" != *..* &&
+		! -e "$destination" && ! -L "$destination" && -f "$source" && ! -L "$source" ]] || {
+		echo "Missing or unsafe mocked artifact export." >&2; return 1;
+	}
+	[[ "${FAIL_EXPORT:-0}" != 1 ]] || return 1
+	(umask 077; set -o noclobber; cat "$source" > "$destination")
+}
+
 # Every compose/HTTP/WP action below is a fake; no runtime is started.
 # shellcheck disable=SC2329
 compose() {
@@ -28,12 +48,13 @@ compose() {
 			local arg artifact owner source boundary
 			for arg in "$@"; do
 				case "$arg" in
-					WSTM126_ARTIFACT=*) artifact="${arg#*=}"; artifact="${artifact#*/webmastery-site-toolkit-for-mcp/}" ;;
+					WSTM126_ARTIFACT=*) artifact="$(fixture_artifact_path "${arg#*=}")" || return $? ;;
 					WSTM126_STAGE_TOKEN=*) owner="${arg#*=}" ;;
 					WSTM126_SOURCE_SHA=*) source="${arg#*=}" ;;
 					WSTM126_BOUNDARY=*) boundary="${arg#*=}" ;;
 				esac
 			done
+			mkdir -p -- "$(dirname "$artifact")"
 			(
 				unset MSYS_NO_PATHCONV
 				php "$ROOT/tests/input-schema-report.php" "$artifact" "$owner" "$source" "$boundary" "${MUTATION:-none}" "${PACKAGE_TEST:-source}"
@@ -42,14 +63,14 @@ compose() {
 			;;
 	esac
 }
-export -f compose
+export -f compose qa_export_artifact fixture_artifact_path
 run_stage() {
 	local mode="$1" expected="$2" status=0
 	: > "$TRACE"
 	rm -f "$WORK/build/wstm116-retention-owned-input-schema-fixture"
 	(
 		cd "$WORK"
-		bash -c 'mock=$(declare -f compose); source "$ROOT/scripts/e2e-test.sh" "$1"; eval "$mock"; run_input_schema_qa' -- "$mode"
+		bash -c 'mock=$(declare -f compose qa_export_artifact); source "$ROOT/scripts/e2e-test.sh" "$1"; eval "$mock"; run_input_schema_qa' -- "$mode"
 	) > "$WORK/latest.log" 2>&1 || status=$?
 	[[ "$status" == "$expected" ]] || { cat "$WORK/latest.log" >&2; echo "Expected $expected, got $status" >&2; exit 1; }
 }
@@ -60,6 +81,7 @@ for mode in contract e2e all; do
 	[[ "$mode" != e2e ]] || count=2
 	[[ "$(grep -c 'WSTM126_DISPOSABLE=1 .*input-schema-runner.php$' "$TRACE")" == "$count" ]]
 	[[ "$(grep -c 'WSTM126_JOURNAL_DIR=/tmp/wstm126-stage/invocations' "$TRACE")" == "$count" ]]
+	[[ "$(grep -c '^export-artifact /qa-artifacts/' "$TRACE")" == "$count" ]]
 	[[ "$(grep -c 'input-schema-stage.php restore ' "$TRACE")" == 1 ]]
 	[[ "$(grep -c 'input-schema-stage.php finalize ' "$TRACE")" == 1 ]]
 	test ! -e "$WORK/build/wstm116-retention-owned-input-schema-fixture"
@@ -106,6 +128,10 @@ FAIL_RESTORE=1 run_stage all 47
 test -f "$WORK/build/wstm116-retention-owned-input-schema-fixture"
 FAIL_FINALIZE=1 run_stage all 48
 test -f "$WORK/build/wstm116-retention-owned-input-schema-fixture"
+FAIL_EXPORT=1 run_stage all 1
+test -f "$WORK/build/wstm116-retention-owned-input-schema-fixture"
+FAIL_RUNNER=1 FAIL_EXPORT=1 run_stage all 44
+test -f "$WORK/build/wstm116-retention-owned-input-schema-fixture"
 
 # The unchanged retention guard must also veto outer cleanup.
 (
@@ -116,7 +142,7 @@ if grep -q forbidden-teardown "$TRACE"; then exit 1; fi
 : > "$TRACE"
 (
 	cd "$WORK"
-	bash -c 'mock=$(declare -f compose); source "$ROOT/scripts/e2e-test.sh" all; eval "$mock"; run_input_schema_qa'
+	bash -c 'mock=$(declare -f compose qa_export_artifact); source "$ROOT/scripts/e2e-test.sh" all; eval "$mock"; run_input_schema_qa'
 ) > "$WORK/nested.log" 2>&1 && exit 1
 test ! -s "$TRACE"
 test -f "$WORK/build/wstm116-retention-owned-input-schema-fixture"
@@ -129,7 +155,7 @@ test ! -s "$TRACE"
 run_stage all 0
 (
 	cd "$WORK"
-	bash -c 'mock=$(declare -f compose); source "$ROOT/scripts/e2e-test.sh" all; eval "$mock"; trap '\''echo outer-trap >> "$TRACE"'\'' EXIT; run_input_schema_qa'
+	bash -c 'mock=$(declare -f compose qa_export_artifact); source "$ROOT/scripts/e2e-test.sh" all; eval "$mock"; trap '\''echo outer-trap >> "$TRACE"'\'' EXIT; run_input_schema_qa'
 ) > "$WORK/parent.log" 2>&1
 grep -Fx outer-trap "$TRACE"
 echo "PASS schema mode/order, precredential refusals, exact 152-case proofs, failures and outer retention without Docker"

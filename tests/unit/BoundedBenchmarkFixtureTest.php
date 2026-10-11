@@ -403,14 +403,19 @@ final class BoundedBenchmarkFixtureTest extends TestCase {
 		$this->addToAssertionCount( 1 );
 	}
 
-	public function test_runner_has_both_optins_and_does_not_execute_when_included(): void {
+	public function test_runner_uses_owned_product_context_and_does_not_execute_when_included(): void {
 		// Loading functions is safe: no WordPress runtime or subprocess is started.
 		require_once dirname( __DIR__ ) . '/e2e/bounded-list-benchmark.php';
-		self::assertTrue( function_exists( 'wstm121_main' ) );
+		self::assertTrue( function_exists( 'wstm121_worker' ) );
+		self::assertFalse( function_exists( 'wstm121_main' ) );
 		$source = file_get_contents( dirname( __DIR__ ) . '/e2e/bounded-list-benchmark.php' );
-		self::assertStringContainsString( "'1' === getenv( 'WSTM_BOUNDED_BENCHMARK' )", $source );
-		self::assertStringContainsString( "true === WSTM_BOUNDED_BENCHMARK", $source );
-		self::assertStringContainsString( "'posts' => 20000, 'attachments' => 10000, 'large_posts' => 100", $source );
+		$runtime = file_get_contents( dirname( __DIR__ ) . '/e2e/bounded-product-runtime.php' );
+		$context = file_get_contents( dirname( __DIR__ ) . '/e2e/product-runtime-context.php' );
+		self::assertStringContainsString( 'Wstm167_Product_Context::open()', $runtime );
+		self::assertStringContainsString( "'1' === getenv( 'E2E_OPT_IN' )", $context );
+		self::assertStringContainsString( '33 === posix_geteuid()', $context );
+		self::assertStringNotContainsString( 'exec( $git', $source );
+		self::assertStringNotContainsString( 'WSTM_BOUNDED_SOURCE_SHA', $source );
 		self::assertStringNotContainsString( 'memory_reset_peak_usage', $source );
 	}
 }

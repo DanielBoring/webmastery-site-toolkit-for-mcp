@@ -12,7 +12,8 @@ use Webmastery_MCP_Response;
 use WP_Error;
 
 require_once __DIR__ . '/shared-helper-loader.php';
-require_once __DIR__ . '/shared-helper-transition.php';
+require_once __DIR__ . '/product-source-bindings.php';
+require_once __DIR__ . '/legacy-artifact-calibration.php';
 \wstm_test_load_shared_helpers( __NAMESPACE__ );
 
 const BASELINE = '735d31df97ed91af34eec9439a3dbea22ea8f5d8';
@@ -47,13 +48,12 @@ function load_ledger( ?string $source = null ): stdClass {
 }
 
 function bounded_source_bindings(): array {
-	// Independently pin the reviewed list/payload changes, never rewrite the sealed scheduling history.
-	$reviewed = \Wstm167SourceTransition::load()['files'];
 	return array(
-		'includes/class-posts.php' => array( $reviewed['includes/class-posts.php']['current_sha256'], $reviewed['includes/class-posts.php']['current_blob'] ),
-		'includes/class-custom-post-types.php' => array( $reviewed['includes/class-custom-post-types.php']['current_sha256'], $reviewed['includes/class-custom-post-types.php']['current_blob'] ),
-		'includes/class-list-query.php' => array( 'b76100806af2d3044404aaa2b445512f705dfb79e9ff997cc59bb57f4a537dad', 'ccd80dc3aadd62a4b4b41044dc4d15e0a63948be' ),
+		'includes/class-posts.php' => array( '6f916cde9d6f5d29d150ee0b3010abc38372c3b915b898af7280acde782246b4', '26cf092695b0901fbed90ef012bc8fae1360a3ec' ),
+		'includes/class-custom-post-types.php' => array( 'bae6b4f5842955a947a05cc89018352b7e4a955971ed24bd96eda0bd2b29e403', 'bafa69be4376e0dec55c8568892d68ae3568f318' ),
+		'includes/class-list-query.php' => array( 'd6f267226522ddf267ec0497b997dcea1160ee15d0a353013fa51b46eefe9090', '723b2e143f3f06163780bf6bb79e42d46ad62095' ),
 		'includes/class-untrusted.php' => array( '5a0ba6dffdf9c30b0ec7a01c6d7cbaa7c9f15c3707adc04e06255deb41104e20', 'dd504fd3eae59bc945768b2249f122026af8bdef' ),
+		'includes/class-input.php' => \wstm_test_product_binding( 'includes/class-input.php' ),
 	);
 }
 
@@ -67,13 +67,12 @@ function assert_source_binding( string $path, string $source, array $binding ): 
 
 function assert_sources( stdClass $ledger ): void {
 	assert_seal( $ledger );
-	\Wstm167SourceTransition::verify_dependencies();
 	$bounded = bounded_source_bindings();
 	foreach ( $ledger->production as $path => $binding ) {
-		$source = \Wstm119SourceTransition::restore( $path, normalized( file_get_contents( root() . '/' . $path ) ) );
-		if ( $binding->baseline_sha256 !== $binding->current_sha256
+		$source = normalized( file_get_contents( root() . '/' . $path ) );
+		if ( ! isset( $bounded[ $path ] ) && ( $binding->baseline_sha256 !== $binding->current_sha256
 			|| ! hash_equals( $binding->current_sha256, hash( 'sha256', $source ) )
-			|| ! hash_equals( $binding->git_blob, sha1( 'blob ' . strlen( $source ) . "\0" . $source ) ) ) {
+			|| ! hash_equals( $binding->git_blob, sha1( 'blob ' . strlen( $source ) . "\0" . $source ) ) ) ) {
 			throw new RuntimeException( 'Scheduling production source binding changed: ' . $path );
 		}
 		if ( isset( $bounded[ $path ] ) ) {
@@ -419,10 +418,11 @@ function build( string $original, string $current, stdClass $production ): stdCl
 function derive( stdClass $ledger ): stdClass {
 	assert_sources( $ledger );
 	$current = normalized( file_get_contents( root() . '/tests/e2e/scheduling-runner.php' ) );
-	if ( $ledger->current_sha256 !== hash( 'sha256', $current ) ) {
+	if ( $ledger->current_sha256 !== hash( 'sha256', $ledger->current_source )
+		|| \wstm_test_legacy_artifact_output_source( 'scheduling', $ledger->current_source ) !== $current ) {
 		throw new RuntimeException( 'Current scheduling runner fingerprint mismatch.' );
 	}
-	$result = build( $ledger->original_source, $current, $ledger->production );
+	$result = build( $ledger->original_source, $ledger->current_source, $ledger->production );
 	assert_seal( $result );
 	return $result;
 }

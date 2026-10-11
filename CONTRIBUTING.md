@@ -44,31 +44,23 @@ Suspected security vulnerabilities must use [private vulnerability reporting](ht
 Use short `[]` array literals in `includes` and the plugin bootstrap. PHPCS
 enforces this repository preference with `Generic.Arrays.DisallowLongArraySyntax`;
 PHP 8.0+ supports it. Do not rewrite array type declarations, offsets or
-destructuring. Source-bound edits require an additive reviewed provenance layer;
-never regenerate historical ledger hashes or weaken their seals.
-
-The explicit `-text` entries in `.gitattributes` preserve reviewed source-bound
-bytes, including existing CRLF terminators. Do not remove these entries or
-normalize the listed files as incidental formatting. Other files retain the
-repository's normal text rules; whitespace checks remain enabled.
+destructuring, or normalize unrelated files as incidental formatting.
 
 Schema runtime changes must retain the isolated three-contract/two-HTTP stage,
 152 exact cases per invocation, unchanged configuration and original HTTP
 state. Validate resource identities before cleanup; a retained post also retains
 its actor and credential evidence. Missing or foreign cleanup proof keeps the
-outer retention guard armed. Fake stages do not replace leased disposable
-source/floor/original-ZIP execution.
+outer retention guard armed. Mocked stages do not replace disposable
+source/original-ZIP execution.
 
 This plugin follows [WordPress Coding Standards](https://developer.wordpress.org/coding-standards/wordpress-coding-standards/) and is evaluated against the [WordPress.org Detailed Plugin Guidelines](https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/). Key rules enforced throughout the codebase:
 
 - **Sanitize inputs** — use `sanitize_text_field()` for strings, `absint()` for IDs, `wp_kses_post()` for HTML content, and enum validation for fixed-value fields
 - **Capability checks** — every ability must have a `permission_callback` that returns a `WP_Error` on failure, not just `false`; prefer object-specific checks such as `edit_post` / `delete_post` when an object ID is available, and authorize every returned list object. Bounded lists expose continuation, never unauthorized or fabricated exact totals.
-- **Bounded list contracts** — retain candidate/query/capability budgets, empty-window continuation, stable ID ties, summary omission versus exact full values, and effective object/key authorization. Document breaking pagination/projection changes and preserve every earlier membership/value/permission oracle in a migration ledger. Run the owned benchmark only with a disposable-runtime lease; distinguish unit/static evidence from measured runtime/package results.
-- **Interrupted benchmark recovery** — use the same original identity, ownership state, namespace and byte journal in exclusive bounded attempts. Preserve original failures/outputs and cleanup eligibility; never certify shard success or overlay recovery onto an earlier-generation source.
-- **Owner/proof composition and PHP floor** — add an exact reviewed provenance transition ahead of frozen seals when retargeting extracted owners. Require composed full/summary marker proof; PHP 8.1 compatibility and proof-tool host requirements are not genuine PHP 8.0 plugin-floor acceptance.
-- **Opt-in PHP 8.0 fixture** — retain immutable core/base/ELF pins and candidate/full-E2E controls. Bind fixture selection consistently through the shared/admitted harness, inventories and retention/recovery; preserve frozen consumers through an additive bridge. Offline probes are not runtime/admission/custody acceptance. See `tests/fixtures/php80-floor/README.md`.
-- **Pre-fixture admission and cleanup** — full source/package QA must perform bounded read-only native admission before reset and again before fixtures. Require a separately approved bare stack and existing grants; refusal must not trigger fixtures or parent destructive cleanup. Preserve original streams/exits and independent fd verification; transfer package cleanup only after child success. Contract-only lifecycle remains separate.
-- **Scoped native host observation** — enable the exact versioned mode only on approved disposable hosted CI. Keep controller/capture/PHP nonroot and elevate only verified fixed system reads/supervision against the validated Docker PID. Retain complete observations, race checks, private originals, grants/custody and an exact outer source projection. The [QA policy](docs/qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts) distinguishes adapters, native sudo and actual runtime/CI acceptance, and cooperative I/O deadlines from a root-child cleanup certificate.
+- **Bounded list contracts** — retain measured candidate/query/capability, memory and response-size budgets, empty-window continuation, stable ID ties, summary omission versus exact full values, and effective object/key authorization. Document breaking pagination/projection changes and preserve existing membership/value/permission assertions. Run the direct benchmark only in an owned disposable installation; distinguish unit/static evidence from measured source/package results and independently determine expected IDs before calls.
+- **Extracted owners and PHP floor** — retain current-source dispatcher/bootstrap/callback ownership and composed full/summary marker tests. Genuine PHP 8.0/8.4 interpreter checks are separate from PHPStan's PHP 8.0 analysis target and the WordPress 6.9/PHP 8.1 runtime compatibility lane; never report one as another.
+- **Disposable QA lifecycle** — use the owned Compose wrapper, a fresh unique project and output directory, loopback HTTP, no database host port, generated private credentials, read-only source/package binds, separate private artifacts, and actual nonroot candidate CLI/HTTP workers. Verify ownership before lifecycle changes, preserve original failures and partial evidence, and clean up only owned resources. The trusted Docker engine and image initialization are environment assumptions, not whole-host provenance or attestation claims. Do not run candidate code as root, install host packages, mount the engine socket, use privileged containers, or reset shared/live sites.
+- **Product runner evidence** — require explicit disposable opt-in and the exact versioned context before mutation. Capture original wire/stdout/stderr privately before parsing; retain each original response/case once and a complete final summary, typed case inventories, record-local markers, actual transport annotations, owned fixtures and cleanup proof. Keep journal/index overhead and terminal failure reservations inside the unchanged limits. Independently distinguish native metadata row cardinality and provider read capability; standalone writable-key access is not a provider-read oracle. Preserve partial evidence and original failures. Public CI output must be a validated safe summary, not raw payloads, credentials or host inventories. Source runtime and original-ZIP runtime results remain distinct.
 - **Strict callback inputs** — declare exact types/enums and fixed property sets. The owned registration filter closes fixed objects and checks structural/type/enum/range/item constraints before raw permission and execute callbacks; it does not replace core format/combinator validation. Registered native validation must call the parent once first, preserve its error identity and empty-schema behavior, then validate strict types before permissions. Preserve normalization, lifecycle filters, actual authorization denials and direct destructive diagnostics; zero-work means original callbacks/capability/query/mutation boundaries, not all core hooks. Mark genuine extension maps explicitly open, preserve polymorphic metadata, test omitted versus null values and unknown keys with zero-work counters, and keep permission failures native `WP_Error`. Test schema/guard mutations, parent detach/omission, and direct/native/gateway/individual boundaries without weakening layer-specific errors.
 - **Permission defaults** — standalone registered permission checks materialize a declared default only for null input with an exact object-root type, before the existing parent permission call once. Do not replay normalization filters, expand nullable/scalar-root handling, coerce explicit input, or relax raw callbacks. Cover Adapter empty-object normalization, allowed/denied users, nested nulls, invalid defaults, core lifecycle/reentrancy and unchanged diagnostic privacy.
 - **Security-sensitive abilities** — include allowed and denied manifest cases for abilities that expose private data, user identity, environment/plugin details, destructive actions, uploads, or status transitions; use `assert_missing_paths` when lower-privilege responses must hide fields
@@ -92,15 +84,14 @@ composer qa
 
 PHPStan runs at level 5 with a reviewed, file/message/identifier/count-scoped baseline and a PHP 8.0 analysis target. New diagnostics must be fixed rather than added to the baseline. When fixing existing debt, lower the matching count or remove the resolved entry in the same PR; unmatched entries fail full-project analysis. Run `composer phpstan` without individual-file arguments and `composer test:phpstan-baseline` to verify the ratchet. See the [baseline review and regeneration policy](docs/qa-strategy.md#phpstan-level-5-and-baseline-ratchet).
 
-Workflow and shell changes also need the dedicated workflow lint checks. These tools are separate from the normal `composer qa` path, which now includes Python AST and mock-only prerequisite controls. Docker validation must use a disposable, uniquely named Compose project; do not run cleanup commands against a shared development stack.
-
-Controller CI changes must retain the required Ubuntu synthetic-component job:
-operational Linux pidfd/P_PIDFD, exactly ten started/finished/passing component
-IDs with no skipped/expected-failure outcomes, separate in-process harness
-regressions, and always-retained fresh private synthetic outputs with symlink
-metadata rather than target bytes. The unit gate must reject any failed or
-skipped dependency. Synthetic captures never substitute for leased WordPress,
-performance-budget, private-producer/custody, floor or package evidence.
+Workflow and shell changes also need the dedicated workflow lint checks. These
+tools are separate from the normal `composer qa` path. Genuine PHP 8.0/8.4
+unit tests and lengthy applicable safeguards run in separate required jobs;
+the stable unit aggregate rejects failures, cancellations and unexpected skips.
+Preserve all seven main release safeguards, baseline guards, compatibility
+dependency/download controls and applicable product regressions. Local
+results do not replace required exact-head PR-event checks or original-ZIP
+package QA for release-bound changes.
 
 Destructive safety orchestration must retain eight serial boundary/trash-mode invocations, an actual native registration audit before test-only MU capabilities, matching real CLI/HTTP configuration, exclusive evidence reservation before credentials, and token-owned exact restoration on every exit. Keep failed journals and original failure status; do not replace real source/floor/original-package proof with mocked orchestration. See `tests/e2e/README.md`.
 
@@ -239,14 +230,14 @@ Related file map:
 | `tests/unit/PermissionsLoadingTest.php` | Actual plugin bootstrap and release package-map guards |
 | `tests/unit/SharedHelpersTest.php` | Actual-source before/after permissions, normalizers and key-table comparisons; access, pagination, persistence and provenance controls |
 | `tests/unit/fixtures/shared-helper-loader.php` | Loads actual helper bodies in isolated namespaces so WordPress spies remain effective |
-| `tests/unit/fixtures/shared-helper-transition.php`, `shared-helper-transition.json` | Sealed reversible extraction proof; historical ledgers remain unchanged |
+| `tests/unit/fixtures/shared-helpers-stubs.php` | Isolated WordPress behavior spies for current shared-helper contracts |
 | `tests/unit/PostsCharacterizationTest.php`, `PostsExtractionTest.php` | Patch/metadata boundaries and exact 24-registration/permission/owner/source comparisons |
-| `tests/unit/fixtures/posts-extraction-transition.php`, `posts-extraction-transition.json`, `posts-extraction-stubs.php` | Additive exact reverse layer to the reviewed #119 source; sealed method ownership and dependency-drift controls |
+| `tests/unit/fixtures/posts-extraction-stubs.php` | Isolated current-owner registration, permission and response contracts |
 | `tests/unit/fixtures/permissions-stubs.php`, `tests/unit/fixtures/wstm114-verification.php` | Load actual helper/ability source together within isolated WordPress namespaces |
 
 The existing recursive `includes/` release map includes the helper without a packaging allowlist change. This is behavior-preserving repository maintenance, not a new ability or a user-facing permission policy change.
 
-See [the requirement matrix and completed extraction map](docs/shared-helpers.md) before changing an owner or list policy. Preserve current authorized totals, full candidate scans, provider readiness, key-level capability filters, and raw legacy clamp behavior. Do not add #166 markers, #167 bounded-list semantics, summary output, or an array-style rewrite to a behavior-preserving refactor. A bound-source change requires another reviewed additive transition, not replacement historical hashes or weakened mutation controls.
+See [the requirement matrix and completed extraction map](docs/shared-helpers.md) before changing an owner or list policy. Preserve object/key authorization, bounded candidate windows, continuation and ordering, provider readiness, and caller-specific clamps. Keep full/summary values and record-local markers consistent across owners. Update current-source bindings and their regression controls when bound source changes; retain historical evidence without treating deferred reversible-transition fixtures as active QA.
 
 ---
 

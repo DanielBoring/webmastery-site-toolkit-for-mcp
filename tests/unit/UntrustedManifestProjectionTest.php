@@ -132,12 +132,9 @@ final class UntrustedManifestProjectionTest extends TestCase {
 	}
 
 	private static function validate_import_indices( array $indices ): object {
-		$imports = json_decode( file_get_contents( __DIR__ . '/fixtures/untrusted-import-inventory.json' ), false, 512, JSON_THROW_ON_ERROR );
-		self::assertSame( '29d13070311dc94c334e12ea8102852f29248036e09d027bf762e6a85dde6d8e', Wstm108_Manifest_Projection::fingerprint( $imports ) );
-		$markers = Wstm108_Manifest_Projection::inventory();
-		foreach ( array( 'marker_source_sha', 'baseline_source_sha', 'marker_source_manifest_sha256', 'baseline_manifest_sha256' ) as $field ) {
-			self::assertSame( $markers->$field, $imports->$field );
-		}
+		$imports = json_decode( file_get_contents( __DIR__ . '/fixtures/product-import-cases.json' ), false, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( 'wstm-product-import-cases-v1', $imports->schema );
+		self::assertSame( '47ccbd58e7034a5897b1f365ac3db2d6f90ee7e6d4cf14d753a557fd39affe31', Wstm108_Manifest_Projection::fingerprint( $imports ) );
 		self::assertCount( 52, $imports->cases );
 		self::assertSame( array_column( $imports->cases, 'index' ), $indices );
 		return $imports;
@@ -159,7 +156,7 @@ final class UntrustedManifestProjectionTest extends TestCase {
 	}
 
 	/** @dataProvider import_index_mutations */
-	public function test_import_provenance_rejects_omissions_duplicates_and_other_index_changes( string $mutation ): void {
+	public function test_semantic_inventory_rejects_omissions_duplicates_and_other_index_changes( string $mutation ): void {
 		$indices = array_column( self::imported_rows(), 0 );
 		if ( 'missing' === $mutation ) { array_pop( $indices ); }
 		if ( 'extra' === $mutation ) { $indices[] = 44; }

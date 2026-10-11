@@ -4,9 +4,7 @@ set -Eeuo pipefail
 
 export MSYS_NO_PATHCONV="${MSYS_NO_PATHCONV:-1}"
 
-if [[ -z "${WSTM_QA_RUNTIME_PROFILE:-}${WSTM_PHP80_CONFIG+x}${WSTM_PHP80_CONFIG_SHA256+x}" ]]; then
-	WORDPRESS_URL="${WORDPRESS_URL:-http://localhost}"
-fi
+WORDPRESS_URL="${WORDPRESS_URL:-http://localhost}"
 PLUGIN_SLUG="webmastery-site-toolkit-for-mcp"
 DEPENDENCY_POLICY="${DEPENDENCY_POLICY:-pinned}"
 CONTAINER_PLUGIN_ROOT="/var/www/html/wp-content/plugins/${PLUGIN_SLUG}"
@@ -22,11 +20,11 @@ E2E_SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$(dirname "${BASH_SOURCE[0]}")/qa-compose.sh"
 # shellcheck source=scripts/destructive-retention.sh
 source "$(dirname "${BASH_SOURCE[0]}")/destructive-retention.sh"
-# shellcheck source=scripts/untrusted-stage.sh
-source "$(dirname "${BASH_SOURCE[0]}")/untrusted-stage.sh"
+# shellcheck source=scripts/qa-http-quiet.sh
+source "$(dirname "${BASH_SOURCE[0]}")/qa-http-quiet.sh"
 
 wp() {
-	compose exec -T wordpress wp --allow-root "$@"
+	qa_wp "$@"
 }
 
 start_compose() {
@@ -42,13 +40,70 @@ start_compose() {
 	compose up -d
 }
 
+capture_legacy_artifacts() {
+	local container name status private_directory
+	local summaries=(
+		e2e-summary.json issue125-permission-summary.json issue125-mcp-summary.json
+		mcp-crud-summary.json error-contract.json taxonomy-write-summary.json
+		scheduling-regression.json
+		comments-all.json comments-direct.json comments-ability.json comments-http.json
+		parent-assignment-all.json parent-assignment-direct.json parent-assignment-ability.json parent-assignment-http.json
+		post-meta-authorization-direct.json post-meta-authorization-ability.json post-meta-authorization-http.json
+		media-download-baseline.json media-download-fixed.json patch-html-summary.json
+		metadata-batch-direct.json metadata-batch-ability.json metadata-batch-http.json metadata-batch-individual.json
+		seo-metadata-direct.json seo-metadata-ability.json seo-metadata-http.json seo-metadata-individual.json
+		trash-safety-enabled.json trash-safety-disabled.json
+	)
+	container="$(compose ps -q wordpress)" || return $?
+	[[ -n "$container" ]] || return 0
+	for name in "${summaries[@]}"; do
+		status=0
+		compose exec -T wordpress test -e "/qa-artifacts/$name" || status=$?
+		if [[ "$status" == 1 ]]; then continue; fi
+		[[ "$status" == 0 ]] || return "$status"
+		qa_export_artifact "/qa-artifacts/$name" "$E2E_ARTIFACTS_DIR/$name" || return $?
+	done
+	private_directory="${WSTM_QA_PRIVATE_OUTPUT:-}/legacy"
+	for name in media-server-baseline.jsonl media-server-fixed.jsonl media-server-stderr.log; do
+		status=0
+		compose exec -T wordpress test -s "/qa-artifacts/$name" || status=$?
+		if [[ "$status" == 1 ]]; then continue; fi
+		[[ "$status" == 0 && -n "${WSTM_QA_PRIVATE_OUTPUT:-}" ]] || return 1
+		[[ ! -L "$private_directory" && ( ! -e "$private_directory" || -d "$private_directory" ) ]] || return 1
+		if [[ ! -d "$private_directory" ]]; then
+			(umask 077; mkdir "$private_directory") || return $?
+		fi
+		qa_export_artifact "/qa-artifacts/$name" "$private_directory/$name" || return $?
+	done
+	for name in fresh-install.private.json fresh-install.before.private.json fresh-install.inserts.private.json fresh-install.after.private.json; do
+		status=0
+		compose exec -T wordpress test -e "/qa-artifacts/$name" || status=$?
+		if [[ "$status" == 1 ]]; then continue; fi
+		[[ "$status" == 0 && -n "${WSTM_QA_PRIVATE_OUTPUT:-}" ]] || return 1
+		[[ ! -L "$private_directory" && ( ! -e "$private_directory" || -d "$private_directory" ) ]] || return 1
+		if [[ ! -d "$private_directory" ]]; then
+			(umask 077; mkdir "$private_directory") || return $?
+		fi
+		qa_export_artifact "/qa-artifacts/$name" "$private_directory/$name" || return $?
+	done
+}
+
 cleanup_compose() {
 	local original=$? cleanup=0
 	if ! wstm116_require_no_retention; then
 		if [[ "$original" != 0 ]]; then return "$original"; fi
 		return 1
 	fi
-	if [ "$E2E_MANAGE_COMPOSE" != "1" ] || { [ "$E2E_KEEP_COMPOSE" = "1" ] && { [ "$original" = 0 ] || [ "$QA_MODE" = contract ]; }; }; then
+	if ! capture_legacy_artifacts; then
+		echo "Legacy summary capture failed; owned stack retained instead of destroying evidence." >&2
+		if ! wstm116_arm_retention "$WSTM_PRODUCT_RUN" "${E2E_SOURCE_IDENTITY:0:40}"; then
+			if [[ "$original" != 0 ]]; then return "$original"; fi
+			return 1
+		fi
+		if [[ "$original" != 0 ]]; then return "$original"; fi
+		return 1
+	fi
+	if [ "$E2E_MANAGE_COMPOSE" != "1" ] || [ "$E2E_KEEP_COMPOSE" = "1" ]; then
 		return 0
 	fi
 
@@ -79,12 +134,26 @@ wait_for_wordpress_files() {
 	return 1
 }
 
+configure_owned_url() {
+	local binding port
+	binding="$(compose port wordpress 80)" || return $?
+	[[ "$binding" =~ ^127\.0\.0\.1:([0-9]{1,5})$ ]] || {
+		echo "Owned QA HTTP must have exactly one IPv4 loopback binding." >&2
+		return 1
+	}
+	port="${BASH_REMATCH[1]}"
+	((10#$port >= 1 && 10#$port <= 65535)) || return 1
+	WORDPRESS_URL="http://127.0.0.1:${port}"
+	export WORDPRESS_URL
+}
+
 install_wp_cli() {
 	echo "Installing verified WP-CLI ${WP_CLI_VERSION}..."
+	compose exec -T wordpress mkdir -p /var/www/html/.qa-bin
+	compose exec -T wordpress mkdir -p -m 0700 /qa-artifacts/parent-cache/wp-cli
 	compose exec -T wordpress bash "${CONTAINER_PLUGIN_ROOT}/scripts/compatibility-download.sh" \
 		"https://github.com/wp-cli/wp-cli/releases/download/v${WP_CLI_VERSION}/wp-cli-${WP_CLI_VERSION}.phar" \
-		"$WP_CLI_SHA512" sha512 /var/www/html/wp-cli-verified.phar
-	compose exec -T wordpress install -m 755 /var/www/html/wp-cli-verified.phar /usr/local/bin/wp
+		"$WP_CLI_SHA512" sha512 /var/www/html/.qa-bin/wp
 	wp --info
 }
 
@@ -121,19 +190,17 @@ load_dependencies() {
 }
 
 install_wordpress() {
+	local password
 	echo "Ensuring WordPress is installed..."
 	if wp core is-installed; then
-		echo "WordPress is already installed"
-		return 0
+		qa_quiet_install '' --verify
+		return $?
 	fi
 
-	wp core install \
-		--url="$WORDPRESS_URL" \
-		--title="MCP E2E" \
-		--admin_user=admin \
-		--admin_password=password123 \
-		--admin_email=admin@test.local \
-		--skip-email
+	password="$(host_php -r 'echo bin2hex(random_bytes(32));')" || return $?
+	[[ "$password" =~ ^[a-f0-9]{64}$ ]] || return 1
+	qa_quiet_install "$password" || return $?
+	wp rewrite structure '/%postname%/'
 }
 
 configure_http_auth_forwarding() {
@@ -347,7 +414,7 @@ run_database_privacy_qa() {
 	fi
 	compose exec -T wordpress grep -Fxq 'CLI only.' /tmp/wstm111-cli-response
 	compose exec -T -e WSTM111_DISPOSABLE_SITE=1 -e WSTM111_PRIVACY_HTTP="$http" \
-		-e WSTM111_PRIVACY_ARTIFACT="${CONTAINER_PLUGIN_ROOT}/e2e-artifacts/database-table-privacy-${boundary}.json" \
+		-e WSTM111_PRIVACY_ARTIFACT="/qa-artifacts/database-table-privacy-${boundary}.json" \
 		wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/database-table-privacy-runner.php"
 }
 
@@ -383,6 +450,7 @@ run_metadata_boundary_qa() (
 
 run_destructive_safety_qa() (
 	: "${COMPOSE_PROJECT_NAME:?Destructive QA requires an explicitly owned disposable Compose project}"
+	wstm116_require_no_retention || exit $?
 	[[ "$E2E_ARTIFACTS_DIR" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "Unsafe destructive artifact directory." >&2; exit 1; }
 	local token source_sha directory container_directory acquired=0 first_failure=0 cleanup_verified=1
 	local mode days boundary status
@@ -391,8 +459,9 @@ run_destructive_safety_qa() (
 	source_sha="$(git rev-parse HEAD)"
 	[[ "$token" =~ ^[a-f0-9]{32}$ && "$source_sha" =~ ^[a-f0-9]{40}$ ]] || exit 1
 	directory="${E2E_ARTIFACTS_DIR}/destructive-${token}"
-	container_directory="${CONTAINER_PLUGIN_ROOT}/${directory}"
+	container_directory="/qa-artifacts/destructive-${token}"
 	mkdir "$directory" || exit $?
+	compose exec -T wordpress mkdir -m 0700 "$container_directory" || exit $?
 	( set -o noclobber; : > "$directory/stage.log" ) || exit $?
 	stage_command() {
 		compose exec -T -e WSTM116_STAGE_DISPOSABLE=1 wordpress php \
@@ -419,8 +488,9 @@ run_destructive_safety_qa() (
 	acquired=1
 	# Audit native registration and denial persistence before any test-only MU ability.
 	compose exec -T -e WSTM116_STAGE_DISPOSABLE=1 -e WSTM116_SOURCE_SHA="$source_sha" wordpress php \
-		"${CONTAINER_PLUGIN_ROOT}/tests/e2e/destructive-safety-preflight.php" "$container_directory/preflight.json" \
+		"${CONTAINER_PLUGIN_ROOT}/tests/e2e/destructive-safety-preflight.php" "$container_directory/preflight.json" "$token" \
 		2>&1 | tee -a "$directory/stage.log" || exit $?
+	qa_export_artifact "$container_directory/preflight.json" "$directory/preflight.json" || exit $?
 	stage_command prepare 2>&1 | tee -a "$directory/stage.log" || exit $?
 	if [[ "$QA_MODE" == contract || "$QA_MODE" == all ]]; then boundaries+=( direct ability ); fi
 	if [[ "$QA_MODE" == e2e || "$QA_MODE" == all ]]; then boundaries+=( http individual ); fi
@@ -443,6 +513,10 @@ run_destructive_safety_qa() (
 				wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/destructive-safety-runner.php" \
 				2>&1 | tee -a "$directory/stage.log" || status=$?
 			if [[ "$first_failure" == 0 && "$status" != 0 ]]; then first_failure="$status"; fi
+				if ! qa_export_artifact "$container_directory/$mode-$boundary.json" "$directory/$mode-$boundary.json"; then
+					if [[ "$first_failure" != 0 ]]; then exit "$first_failure"; fi
+					exit 1
+				fi
 			if host_php "$E2E_SCRIPT_ROOT/destructive-cleanup-proof.php" "$directory/$mode-$boundary.json" "$source_sha" "$boundary" "$days" 2>&1 | tee -a "$directory/stage.log"; then
 				cleanup_verified=1
 			else
@@ -456,6 +530,7 @@ run_destructive_safety_qa() (
 
 run_input_schema_qa() (
 	: "${COMPOSE_PROJECT_NAME:?Schema QA requires an explicitly owned disposable Compose project}"
+	wstm116_require_no_retention || exit $?
 	[[ "$COMPOSE_PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ && "$E2E_ARTIFACTS_DIR" =~ ^[a-zA-Z0-9_-]+$ ]] || {
 		echo "Invalid schema project or artifact directory identity." >&2; exit 1
 	}
@@ -480,8 +555,9 @@ run_input_schema_qa() (
 		echo "Invalid schema owner or source identity." >&2; exit 1
 	}
 	directory="${E2E_ARTIFACTS_DIR}/input-schema-${token}"
-	container_directory="${CONTAINER_PLUGIN_ROOT}/${directory}"
+	container_directory="/qa-artifacts/input-schema-${token}"
 	mkdir "$directory" || exit $?
+	compose exec -T wordpress mkdir -m 0700 "$container_directory" || exit $?
 	( set -o noclobber; : > "$directory/stage.log" ) || exit $?
 	schema_stage() {
 		compose exec -T -e WSTM126_STAGE_DISPOSABLE=1 wordpress php \
@@ -539,6 +615,10 @@ run_input_schema_qa() (
 			wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/input-schema-runner.php" \
 			2>&1 | tee -a "$directory/stage.log" || status=$?
 		if [[ "$first_failure" == 0 && "$status" != 0 ]]; then first_failure="$status"; fi
+		if ! qa_export_artifact "$container_directory/$boundary.json" "$directory/$boundary.json"; then
+			if [[ "$first_failure" != 0 ]]; then exit "$first_failure"; fi
+			exit 1
+		fi
 		if host_php "$E2E_SCRIPT_ROOT/input-schema-proof.php" cleanup "$directory/$boundary.json" "$token" "$source_sha" \
 			"$COMPOSE_PROJECT_NAME" "$boundary" "$production_root" "$root" 2>&1 | tee -a "$directory/stage.log"; then
 			cleanup_verified=1
@@ -552,6 +632,160 @@ run_input_schema_qa() (
 		fi
 	done
 	exit "$first_failure"
+)
+
+verify_product_identity() {
+	case "$1" in
+		source)
+			[[ "$(host_php "$E2E_SCRIPT_ROOT/source-identity.php")" == "$2" ]] ||
+				{ echo "Source changed during product QA; refusing acceptance." >&2; return 1; }
+			;;
+		package)
+			host_php "$E2E_SCRIPT_ROOT/release-tools.php" runtime-package-after "$E2E_PACKAGE_ROOT" "$E2E_PACKAGE_ZIP"
+			;;
+		*)
+			echo "Unknown product identity kind." >&2
+			return 1
+			;;
+	esac
+}
+
+# PHP expressions must reach the interpreter without Bash expansion.
+# shellcheck disable=SC2016
+run_product_qa() (
+	umask 077
+	wstm116_require_no_retention || exit $?
+	local directory="${WSTM_QA_PRIVATE_OUTPUT:?Owned private host output required}/product-${WSTM_PRODUCT_RUN}"
+	local kind=source identity lane source_sha stage runner status cleanup_ready=0 summary_ready=0 production_root
+	mkdir "$directory" || exit $?
+	source_sha="$(git rev-parse HEAD)" || exit $?
+	if [[ -n "${E2E_PACKAGE_ZIP:-}" ]]; then
+		kind=package
+		production_root="$E2E_PACKAGE_ROOT"
+		identity="$(host_php -r '$hash = hash_file("sha256", $argv[1]); if (!is_string($hash)) { throw new RuntimeException("Original ZIP identity unavailable."); } echo $hash;' "$E2E_PACKAGE_ZIP")" || exit $?
+	else
+		production_root="$(pwd -P)"
+		identity="$(host_php "$E2E_SCRIPT_ROOT/source-identity.php")" || exit $?
+	fi
+	compose exec -T -e WSTM_INITIAL_SITE_URL=http://localhost wordpress php \
+		"$CONTAINER_PLUGIN_ROOT/tests/e2e/install-owned-wordpress.php" --verify \
+		> "$directory/fresh-install-check.private.log" 2>&1 || exit $?
+	lane="$(compose exec -T wordpress php -r 'echo PHP_MAJOR_VERSION, ".", PHP_MINOR_VERSION;')" || exit $?
+	host_php "$E2E_SCRIPT_ROOT/product-context.php" "$kind" "$identity" "$lane" > "$directory/context.private.json" || exit $?
+	compose exec -T wordpress php -r '
+		require "/var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/product-runtime-context.php";
+		$bytes = stream_get_contents(STDIN, 4097);
+		if (!is_string($bytes)) { throw new RuntimeException("Context input failed."); }
+		$data = Wstm167_Product_Context::decode($bytes);
+		Wstm167_Product_Context::validate($data, getenv("WSTM_PRODUCT_RUN"), getenv("WSTM_PRODUCT_TOKEN"), posix_geteuid(), PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION);
+		umask(0077);
+		$handle = fopen("/qa-artifacts/context.json", "xb");
+		if ($handle === false || fwrite($handle, $bytes) !== strlen($bytes) || !fflush($handle) || !fclose($handle) ||
+			file_get_contents("/qa-artifacts/context.json") !== $bytes) {
+			throw new RuntimeException("Exclusive context write/readback failed.");
+		}
+		' < "$directory/context.private.json" > "$directory/context-install.private.log" 2>&1 || exit $?
+	compose exec -T wordpress php "$CONTAINER_PLUGIN_ROOT/tests/e2e/product-context-marker.php" acquire \
+		> "$directory/marker-acquire.private.log" 2>&1 || exit $?
+	compose exec -T wordpress php "$CONTAINER_PLUGIN_ROOT/tests/e2e/product-fixture-lifecycle.php" install \
+		> "$directory/fixture-install.private.log" 2>&1 || exit $?
+	wstm116_arm_retention "$WSTM_PRODUCT_RUN" "$source_sha" > "$directory/retention.private.log" 2>&1 || exit $?
+	# shellcheck disable=SC2329
+	product_finish() {
+		local original=$? cleanup=0
+		trap - EXIT
+		if [[ "$cleanup_ready" == 1 ]]; then
+			compose exec -T wordpress php "$CONTAINER_PLUGIN_ROOT/tests/e2e/product-fixture-lifecycle.php" remove \
+				> "$directory/fixture-remove.private.log" 2>&1 || cleanup=$?
+			if [[ "$cleanup" == 0 ]]; then
+				compose exec -T wordpress php "$CONTAINER_PLUGIN_ROOT/tests/e2e/product-context-marker.php" retire \
+					> "$directory/marker-retire.private.log" 2>&1 || cleanup=$?
+			fi
+			if [[ "$cleanup" == 0 ]]; then
+				compose exec -T wordpress php -r '
+					$_SERVER["HTTP_HOST"] = "localhost";
+					require "/var/www/html/wp-load.php";
+					$count = 0;
+					foreach (wp_get_abilities() as $ability) {
+						if (strpos($ability->get_name(), "webmastery-site-toolkit-for-mcp/") === 0) { ++$count; }
+					}
+					if ($count !== 85) { throw new RuntimeException("Native toolkit inventory was not restored."); }
+					' > "$directory/native-inventory.private.log" 2>&1 || cleanup=$?
+			fi
+			if [[ "$cleanup" == 0 ]]; then
+				wstm116_clear_retention "$WSTM_PRODUCT_RUN" "$source_sha" >> "$directory/retention.private.log" 2>&1 || cleanup=$?
+			fi
+		else
+			echo "Product resource cleanup is unresolved; retaining the owned stack and private evidence." >&2
+			cleanup=1
+		fi
+		if [[ "$original" == 0 && "$cleanup" == 0 && "$summary_ready" == 1 ]]; then
+			if [[ -e "$E2E_ARTIFACTS_DIR/product-qa.summary.json" || -L "$E2E_ARTIFACTS_DIR/product-qa.summary.json" ]]; then
+				echo "Product summary destination is occupied; prior evidence preserved." >&2
+				cleanup=1
+			else
+				mv "$directory/summary.verified.private.json" "$E2E_ARTIFACTS_DIR/product-qa.summary.json" || cleanup=$?
+			fi
+		fi
+		printf 'Product QA: original_status=%s cleanup_status=%s\n' "$original" "$cleanup"
+		if [[ "$original" != 0 ]]; then exit "$original"; fi
+		exit "$cleanup"
+	}
+	trap product_finish EXIT
+	status="$(compose exec -T wordpress curl --max-time 20 --silent --show-error \
+		-D /qa-artifacts/product-runtime-headers.private -o /qa-artifacts/product-runtime-body.private \
+		-w '%{http_code}' -H "X-WSTM-QA-Token: $WSTM_PRODUCT_TOKEN" http://localhost/wp-json/wstm167-qa/v1/runtime \
+		2> "$directory/runtime-request.private.log")" || exit $?
+	qa_export_artifact /qa-artifacts/product-runtime-headers.private "$directory/runtime-headers.private" || exit $?
+	qa_export_artifact /qa-artifacts/product-runtime-body.private "$directory/runtime.verified.private.json" || exit $?
+	[[ "$status" == 200 ]] || { echo "Protected product runtime observation failed; private originals retained." >&2; exit 1; }
+	host_php -r '
+		require $argv[1];
+		$bytes = Wstm_Product_Summary::read($argv[2]);
+		$record = json_decode(Wstm_Product_Summary::read($argv[3]), true, 16, JSON_THROW_ON_ERROR);
+		Wstm_Product_Summary::runtime($bytes, $record);
+		$digest = hash_file("sha256", $argv[4] . "/includes/class-posts.php");
+		if (!is_string($digest) || $record["loaded_posts_sha256"] !== $digest) {
+			throw new RuntimeException("HTTP loaded Posts bytes do not match selected production.");
+		}
+		' "$E2E_SCRIPT_ROOT/product-summary.php" "$directory/context.private.json" "$directory/runtime.verified.private.json" \
+		"$production_root" > "$directory/runtime-check.private.log" 2>&1 || exit $?
+	for stage in untrusted bounded; do
+		cleanup_ready=0
+		if [[ "$stage" == bounded ]]; then
+			compose exec -T -e WSTM_INITIAL_SITE_URL=http://localhost wordpress php \
+				"$CONTAINER_PLUGIN_ROOT/tests/e2e/install-owned-wordpress.php" --verify \
+				> "$directory/fresh-bounded-check.private.log" 2>&1 || exit $?
+		fi
+		runner=untrusted-content-runner.php
+		if [[ "$stage" == bounded ]]; then runner=bounded-list-benchmark.php; fi
+		status=0
+		compose exec -T wordpress php "$CONTAINER_PLUGIN_ROOT/tests/e2e/$runner" \
+			> "$directory/$stage.stdout.private.log" 2> "$directory/$stage.stderr.private.log" || status=$?
+		printf '%s\n' "$status" > "$directory/$stage.exit.private"
+		compose exec -T wordpress php /qa-parent-support/scripts/product-artifacts.php export "$stage" \
+			> "$directory/$stage.capture.private.bin" 2> "$directory/$stage.export.private.log" ||
+			{ if [[ "$status" != 0 ]]; then exit "$status"; fi; exit 1; }
+		host_php "$E2E_SCRIPT_ROOT/product-artifacts.php" import "$stage" "$directory/$stage.capture.private.bin" \
+			"$directory/$stage" > "$directory/$stage.import.private.log" 2>&1 ||
+			{ if [[ "$status" != 0 ]]; then exit "$status"; fi; exit 1; }
+		if [[ "$stage" == bounded ]]; then
+			host_php tests/e2e/product-evidence-verifier.php --cleanup bounded "$directory/bounded" "$directory/context.private.json" \
+				> "$directory/bounded-cleanup.verified.private.json" 2> "$directory/bounded-cleanup.private.log" ||
+				{ if [[ "$status" != 0 ]]; then exit "$status"; fi; exit 1; }
+		fi
+		compose exec -T wordpress php "$CONTAINER_PLUGIN_ROOT/tests/e2e/product-live-cleanup.php" "$stage" \
+			> "$directory/$stage-live.verified.private.json" 2> "$directory/$stage-live.private.log" ||
+			{ if [[ "$status" != 0 ]]; then exit "$status"; fi; exit 1; }
+		cleanup_ready=1
+		if [[ "$status" != 0 ]]; then exit "$status"; fi
+		host_php tests/e2e/product-evidence-verifier.php "$stage" "$directory/$stage" "$directory/context.private.json" \
+			> "$directory/$stage.verified.private.json" 2> "$directory/$stage.verify.private.log" || exit $?
+	done
+	verify_product_identity "$kind" "$identity" > "$directory/identity-final.private.log" 2>&1 || exit $?
+	host_php "$E2E_SCRIPT_ROOT/product-summary.php" "$directory" > "$directory/summary.verified.private.json" \
+		2> "$directory/summary.private.log" || exit $?
+	summary_ready=1
 )
 
 run_debug_log_check() {
@@ -585,41 +819,37 @@ main() {
 
 	: "${COMPOSE_PROJECT_NAME:?Runtime QA requires an explicitly owned disposable Compose project}"
 	[[ "$COMPOSE_PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || { echo "Invalid disposable Compose project name." >&2; exit 1; }
-	if [[ -n "${WSTM_QA_RUNTIME_PROFILE:-}${WSTM_PHP80_CONFIG+x}${WSTM_PHP80_CONFIG_SHA256+x}" ]]; then
-		export COMPOSE_PROJECT_NAME E2E_ARTIFACTS_DIR DEPENDENCY_POLICY E2E_MANAGE_COMPOSE
-		local runtime_selection
-		runtime_selection="$(run_untrusted_runtime_selection shell)" || return $?
-		# Only complete source-reviewed shell quoting from verified private originals.
-		eval "$runtime_selection"
-	fi
 	wstm116_require_no_retention || return $?
 	if [ -n "${E2E_PACKAGE_ROOT:-}${E2E_PACKAGE_ZIP:-}" ]; then
 		: "${E2E_PACKAGE_ROOT:?Package runtime requires E2E_PACKAGE_ROOT}"
 		: "${E2E_PACKAGE_ZIP:?Package runtime requires E2E_PACKAGE_ZIP}"
-		if [ "$E2E_MANAGE_COMPOSE" != "1" ] || [ "$E2E_ARTIFACTS_DIR" != "e2e-artifacts" ]; then
-			echo "Package runtime requires managed Compose and the e2e-artifacts output mount." >&2
+		if [ "$E2E_MANAGE_COMPOSE" != "1" ]; then
+			echo "Package runtime requires managed Compose." >&2
 			exit 1
 		fi
 		host_php scripts/release-tools.php runtime-package "$E2E_PACKAGE_ROOT" "$E2E_PACKAGE_ZIP"
 		echo "Release runtime plugin root: ${E2E_PACKAGE_ROOT} (verified against ${E2E_PACKAGE_ZIP})"
 	fi
 
-	if [[ "$QA_MODE" == contract ]]; then
-		trap cleanup_compose EXIT
-	else
-		# A bare owned stack is a prerequisite, not something preflight creates.
-		run_untrusted_admission || return $?
+	if [[ "$E2E_ARTIFACTS_DIR" != e2e-artifacts && "$E2E_ARTIFACTS_DIR" != "e2e-artifacts-${COMPOSE_PROJECT_NAME}" ]]; then
+		echo "Artifact output must be e2e-artifacts or the exact project-specific output directory." >&2
+		return 1
 	fi
-
-	rm -rf "$E2E_ARTIFACTS_DIR"
-	mkdir -p "$E2E_ARTIFACTS_DIR"
+	if [[ -e "$E2E_ARTIFACTS_DIR" || -L "$E2E_ARTIFACTS_DIR" ]]; then
+		echo "Artifact output already exists; preserve it and choose a fresh disposable project." >&2
+		return 1
+	fi
+	(umask 077; mkdir "$E2E_ARTIFACTS_DIR") || return $?
+	E2E_SOURCE_IDENTITY="$(host_php scripts/source-identity.php)" || return $?
+	[[ "$E2E_SOURCE_IDENTITY" =~ ^[a-f0-9]{64}$ ]] || return 1
+	trap cleanup_compose EXIT
+	if [ -n "${E2E_PACKAGE_ROOT:-}" ]; then
+		host_php scripts/release-tools.php prepare-runtime-mounts "$E2E_PACKAGE_ROOT" "$E2E_PACKAGE_ZIP" || return $?
+	fi
 	start_compose || return $?
-	if [[ "$QA_MODE" != contract ]]; then
-		# Managed lifecycle changes invalidate the preceding live inventory.
-		run_untrusted_admission || return $?
-		trap cleanup_compose EXIT
-	fi
 	wait_for_wordpress_files
+	configure_owned_url || return $?
+	qa_initialize_artifacts || return $?
 	load_dependencies
 	install_wp_cli
 	configure_test_cron
@@ -628,6 +858,7 @@ main() {
 	configure_application_passwords
 	install_plugins
 	compose exec -T wordpress rm -f /var/www/html/wp-content/debug.log
+	run_product_qa
 
 	if [ "$QA_MODE" = "contract" ] || [ "$QA_MODE" = "all" ]; then
 		echo "Running Ability Contract QA..."
@@ -649,7 +880,6 @@ main() {
 	fi
 
 	run_destructive_safety_qa
-	run_untrusted_content_qa
 	run_parent_assignment_qa
 	run_post_meta_authorization_qa
 	run_error_contract_qa

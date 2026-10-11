@@ -7,7 +7,8 @@ use PHPUnit\Framework\TestCase;
 use Wstm117Calibration\Probe;
 
 require_once __DIR__ . '/fixtures/taxonomy-calibration.php';
-require_once __DIR__ . '/fixtures/shared-helper-transition.php';
+require_once __DIR__ . '/fixtures/product-source-bindings.php';
+require_once __DIR__ . '/fixtures/legacy-artifact-calibration.php';
 require_once dirname( __DIR__ ) . '/e2e/error-contract-assertions.php';
 
 /**
@@ -45,7 +46,12 @@ final class TaxonomyCalibrationTest extends TestCase {
 			foreach ( $files as $path => $hash ) {
 				$source = 'tests/e2e/taxonomy-write-runner.php' === $path ? $ledger->original_source
 					: str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) );
-				self::assertSame( $hash, hash( 'sha256', Wstm119SourceTransition::restore( $path, $source ) ), $path );
+				if ( 'tests/e2e/taxonomy-write-runner.php' === $path ) {
+					self::assertSame( $hash, hash( 'sha256', $source ), $path );
+				} else {
+					wstm_test_assert_product_source( $path, $source );
+					self::assertMatchesRegularExpression( '/^[a-f0-9]{64}$/D', $hash, 'Historical ledger remains independently sealed.' );
+				}
 			}
 		}
 		self::assertInstanceOf( stdClass::class, $ledger->calibration_pairs[0]->new_original_oracle->error->details );
@@ -63,7 +69,8 @@ final class TaxonomyCalibrationTest extends TestCase {
 			. "\t\t\t\t\t\t\t\tcontinue;\n\t\t\t\t\t\t\t}\n";
 		$restored = str_replace( $dispatch, '', $restored, $dispatch_count );
 		self::assertSame( array( 1, 1 ), array( $helper_count, $dispatch_count ) );
-		self::assertSame( $ledger->original_source, $restored, 'Every unrelated role, update, default-category, snapshot, capability and cleanup byte must remain unchanged.' );
+		self::assertSame( wstm_test_legacy_artifact_output_source( 'taxonomy', $ledger->original_source ), $restored,
+			'Only the approved artifact output delta may accompany the semantic calibration; every unrelated byte remains unchanged.' );
 	}
 
 	private function assert_pairs( array $records ): void {

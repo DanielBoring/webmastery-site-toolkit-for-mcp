@@ -3,7 +3,6 @@
 namespace Wstm119Shared;
 
 require_once __DIR__ . '/shared-helper-loader.php';
-require_once __DIR__ . '/shared-helper-transition.php';
 
 final class State {
 	public static array $posts = array();
@@ -60,16 +59,21 @@ class WP_Query {
 	public array $posts;
 	public function __construct( array $args ) {
 		State::$queries[] = $args;
-		$this->posts = State::$ids;
+		++$GLOBALS['wpdb']->num_queries;
+		$GLOBALS['wpdb']->last_error = '';
+		$this->posts = array_slice( State::$ids, $args['offset'] ?? 0, ( $args['posts_per_page'] ?? -1 ) < 0 ? null : $args['posts_per_page'] );
 	}
 }
 
-\wstm_test_load_shared_helpers( __NAMESPACE__, true );
+function _prime_post_caches( $ids, $terms, $meta ): void {}
+function wp_cache_set_posts_last_changed(): void {}
+
+\wstm_test_load_shared_helpers( __NAMESPACE__ );
 foreach ( array( 'posts', 'custom-post-types', 'media', 'seo', 'content-hygiene', 'users', 'comments', 'backup-status', 'performance-status', 'database-health' ) as $file ) {
 	$path = 'includes/class-' . $file . '.php';
 	$source = file_get_contents( dirname( __DIR__, 3 ) . '/' . $path );
-	eval( 'namespace ' . __NAMESPACE__ . '; use \\WP_Error; use \\Webmastery_MCP_Response; ' . substr( \Wstm167SourceTransition::restore( $path, $source ), 5 ) );
-	eval( 'namespace Wstm119Before; use \\WP_Error; use \\Webmastery_MCP_Response; ' . substr( \Wstm119SourceTransition::restore( $path, $source ), 5 ) );
+	eval( 'namespace ' . __NAMESPACE__ . '; use \\WP_Error; use \\Webmastery_MCP_Response; ' . substr( $source, 5 ) );
+	\wstm_test_load_main_baseline( 'Wstm119Before', $path );
 }
 
 namespace Wstm119Before;

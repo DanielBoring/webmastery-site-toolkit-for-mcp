@@ -5,7 +5,6 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once dirname( __DIR__ ) . '/e2e/untrusted-content-convergence.php';
-require_once __DIR__ . '/fixtures/untrusted-stage-envelope.php';
 
 final class UntrustedConvergenceTest extends TestCase {
 	private string $path;
@@ -26,7 +25,13 @@ final class UntrustedConvergenceTest extends TestCase {
 	}
 
 	private function evidence( string $scope = 'enabled' ): Wstm108_Evidence {
-		list( $evidence, $this->private_directory ) = Wstm108_ProofFixture::evidence( $this->path, $scope );
+		$this->private_directory = str_replace( '\\', '/', $this->path ) . '.private';
+		self::assertTrue( mkdir( $this->private_directory, 0700 ) );
+		$evidence = new Wstm108_Evidence( $this->path );
+		$binding = array( 'owner' => str_repeat( 'a', 32 ), 'project' => 'wstm167-unit',
+			'identity_kind' => 'source', 'identity_sha256' => str_repeat( 'b', 64 ) );
+		$evidence->attach( Wstm108_PrivateWire::create( $this->private_directory, $binding, str_repeat( 'c', 64 ),
+			static function (): void {} ), $scope );
 		return $evidence;
 	}
 

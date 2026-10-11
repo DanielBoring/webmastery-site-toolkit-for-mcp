@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/error-contract-assertions.php';
+require_once __DIR__ . '/legacy-artifacts.php';
 
 
 // This fixture mutates disposable WordPress data; never expose it over HTTP.
@@ -304,8 +305,9 @@ function wstm117_run_taxonomy_tests() {
 		wp_set_current_user( $original_user );
 	}
 
-	$path = WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/e2e-artifacts/taxonomy-write-summary.json';
-	if ( false === file_put_contents( $path, wp_json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n" ) ) {
+	$path = Wstm_E2E_Artifacts::path( WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/e2e-artifacts/taxonomy-write-summary.json' );
+	$json = wp_json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+	if ( false === $json || strlen( $json ) + 1 !== file_put_contents( $path, $json . "\n" ) ) {
 		throw new RuntimeException( 'Could not persist taxonomy write regression evidence.' );
 	}
 	echo "TAXONOMY SUMMARY {$summary['passed']} passed, {$summary['failed']} failed\n";

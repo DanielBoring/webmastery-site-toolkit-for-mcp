@@ -11,6 +11,7 @@ if ( PHP_SAPI !== 'cli' ) {
 	exit( 'CLI only.' );
 }
 require_once __DIR__ . '/error-contract-assertions.php';
+require_once __DIR__ . '/legacy-artifacts.php';
 
 
 $_SERVER['HTTP_HOST'] = 'localhost';
@@ -154,7 +155,7 @@ $mode = getenv( 'WSTM106_MODE' ) ?: 'fixed';
 wstm106_assert( in_array( $mode, array( 'baseline', 'fixed' ), true ), 'Unknown proof mode.' );
 $boundary_filter = getenv( 'WSTM106_BOUNDARY' ) ?: 'all';
 wstm106_assert( in_array( $boundary_filter, array( 'all', 'direct', 'ability', 'http' ), true ), 'Unknown boundary.' );
-$artifact = getenv( 'WSTM106_ARTIFACT' ) ?: __DIR__ . '/../../e2e-artifacts/parent-assignment-' . $boundary_filter . '.json';
+$artifact = getenv( 'WSTM106_ARTIFACT' ) ?: Wstm_E2E_Artifacts::path( __DIR__ . '/../../e2e-artifacts/parent-assignment-' . $boundary_filter . '.json' );
 $summary = array(
 	'mode' => $mode, 'wordpress' => get_bloginfo( 'version' ), 'php' => PHP_VERSION,
 	'runner_sha256' => hash_file( 'sha256', __FILE__ ),

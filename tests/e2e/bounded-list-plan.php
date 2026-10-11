@@ -5,18 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/bounded-list-assertions.php';
 
 final class Wstm121Plan {
-	public const WORKERS = array( 'posts' => 1228, 'pages' => 46, 'cpt' => 46, 'media' => 610, 'seo' => 1210, 'readability' => 1210, 'orphans' => 610 );
-	public const PHASE_SECONDS = array(
-		'seed' => 1020, 'reference' => 300, 'projection' => 300, 'cache-faults' => 300,
-		'snapshot-before' => 120, 'traversal' => 14400, 'snapshot-after' => 120,
-		'cleanup' => 600, 'cleanup-readback' => 120,
-	);
-	public const NATIVE_SECONDS = 18000;
-	public const JOB_SECONDS = 20700;
-	public const WORKER_SECONDS = 60;
 	public const JSON_BYTES = 33554432;
-	public const STREAM_BYTES = 4194304;
-	public const NAMESPACE_BYTES = 8589934592;
 
 	public static function collections( string $cpt ): array {
 		return array(
@@ -30,6 +19,36 @@ final class Wstm121Plan {
 		);
 	}
 
+	public static function selected( array $state ): array {
+		self::catalog( $state );
+		$jobs = array();
+		foreach ( self::collections( $state['cpt'] ) as $shard => list( $ability, $type, $content ) ) {
+			$count = count( $state['catalog'][ $type ] );
+			foreach ( array( 'cold', 'warm' ) as $cache ) {
+				foreach ( array( 'dense', 'sparse', 'all-denied' ) as $mode ) {
+					foreach ( array( 20, 100 ) as $p ) {
+						$pages = array( 'first' => 1, 'intermediate' => (int) ceil( 100 / $p ) + 1,
+							'final' => (int) ceil( $count / $p ), 'eof' => (int) ceil( $count / $p ) + 1 );
+						foreach ( $pages as $label => $page ) {
+							$input = array( 'page' => $page, 'per_page' => $p );
+							if ( in_array( $shard, array( 'seo', 'readability' ), true ) ) {
+								$input['post_type'] = 'post';
+							}
+							$jobs[] = array(
+								'coverage_key' => implode( ':', array( $shard, $cache, $mode, $p, $label ) ),
+								'ability' => $ability, 'type' => $type, 'cache' => $cache, 'mode' => $mode,
+								'input' => $input, 'page' => $page, 'per_page' => $p, 'orphan' => 'orphans' === $shard,
+								'controlled_default_summary' => $content && 20 === $p,
+							);
+						}
+					}
+				}
+			}
+		}
+		wstm121_require( 336 === count( $jobs ) && 336 === count( array_unique( array_column( $jobs, 'coverage_key' ) ) ), 'Selected coverage is incomplete.' );
+		return $jobs;
+	}
+
 	public static function catalog( array $state ): void {
 		wstm121_require( is_string( $state['cpt'] ?? null ) && 1 === preg_match( '/\\Aw121_[a-f0-9]{12}\\z/D', $state['cpt'] ), 'Invalid owned fixture namespace.' );
 		foreach ( array( 'post' => 20000, 'attachment' => 10000, 'page' => 203, $state['cpt'] => 205 ) as $type => $count ) {
@@ -41,52 +60,6 @@ final class Wstm121Plan {
 				$previous = $id;
 			}
 		}
-	}
-
-	public static function jobs( array $state, string $shard ): array {
-		self::catalog( $state );
-		$collections = self::collections( $state['cpt'] );
-		wstm121_require( isset( $collections[ $shard ] ), 'Unknown collection shard.' );
-		list( $ability, $type, $content ) = $collections[ $shard ];
-		$score = in_array( $shard, array( 'seo', 'readability' ), true );
-		$last = (int) ceil( count( $state['catalog'][ $type ] ) / 100 ) + 1;
-		$jobs = array();
-		$append = static function ( string $cache, string $mode, array $input, string $case, ?int $eof ) use ( &$jobs, $ability, $type, $content, $score, $shard ): void {
-			if ( $score ) {
-				$input['post_type'] = 'post';
-			}
-			$jobs[] = array(
-				'coverage_key' => implode( ':', array( $shard, $cache, $mode, $case ) ),
-				'sequence_key' => implode( ':', array( $shard, $cache, $mode, null === $eof ? $case : 'traversal' ) ),
-				'kind' => null === $eof ? 'edge' : 'traversal', 'eof_page' => $eof,
-				'ability' => $ability, 'type' => $type, 'cache' => $cache, 'mode' => $mode, 'input' => $input,
-				'page' => $input['page'] ?? 1, 'per_page' => $input['per_page'] ?? ( $score ? 10 : 20 ),
-				'orphan' => 'orphans' === $shard, 'controlled_default_summary' => array() === $input && $content,
-			);
-		};
-		foreach ( array( 'cold', 'warm' ) as $cache ) {
-			foreach ( array( 'dense', 'sparse', 'all-denied' ) as $mode ) {
-				for ( $page = 1; $page <= $last; ++$page ) {
-					$append( $cache, $mode, array( 'page' => $page, 'per_page' => 100 ), 'traversal:' . $page, $last );
-				}
-			}
-		}
-		$edges = array( 'one' => array( 'per_page' => 1 ), 'default' => array() );
-		if ( $content ) {
-			$edges['full'] = array( 'fields' => 'full', 'per_page' => 100 );
-			foreach ( array( 'date', 'title', 'modified', 'id' ) as $sort ) {
-				foreach ( array( 'ASC', 'DESC' ) as $order ) {
-					$edges[ 'tie:' . $sort . ':' . $order ] = array( 'orderby' => $sort, 'order' => $order, 'page' => 2, 'per_page' => 100 );
-				}
-			}
-		}
-		foreach ( $edges as $name => $input ) {
-			foreach ( array( 'cold', 'warm' ) as $cache ) {
-				$append( $cache, 'dense', $input, 'edge:' . $name, null );
-			}
-		}
-		wstm121_require( self::WORKERS[ $shard ] === count( $jobs ) && count( $jobs ) === count( array_unique( array_column( $jobs, 'coverage_key' ) ) ), 'Incomplete or duplicate shard plan.' );
-		return $jobs;
 	}
 
 	public static function unsigned( $value, string $name ): int {

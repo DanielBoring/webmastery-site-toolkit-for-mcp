@@ -66,6 +66,7 @@ Post/page/custom-post-type and revision lists default to fields:"summary", which
 Authorized records include untrusted_fields, an array of field names relative to that record. Summary output never marks omitted content. Markers preserve stored values and nested maps; they do not sanitize data, grant capabilities, prove human approval, or guarantee prompt-injection prevention. Compact trash results and errors remain unmarked.
 
 Pagination whose offset or successor cannot fit a PHP integer is rejected before querying. Candidate/priming SQL failures return an error, not an empty end-of-list. Fresh SQL failures invalidate the current site's post-query cache generation to prevent cached false empty results; normal successful-query caching is unchanged.
+Failures are retained even when later native priming reads clear the last database error. The check adds no queries and preserves zero-query cache hits with stale errors.
 
 = Which AI clients and MCP hosts work with this? =
 
@@ -250,6 +251,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 
+* Retain candidate/cache-priming database failures across later successful native reads, without adding queries, exposing SQL diagnostics or rejecting stale warm-cache errors.
 * Replace unbounded list materialization with candidate windows and next_page continuation, including empty windows; remove exact filtered totals for content, media, orphan-media, and score lists.
 * Default content and revision lists to summary projection; explicit fields:"full" preserves stored content. Batch known media references without relaxing permission or database-failure safeguards.
 * Mark present untrusted fields on authorized records without changing stored values, types, markup or privacy omissions; summary projections never mark omitted content. These record-local hints are not prompt-injection prevention.

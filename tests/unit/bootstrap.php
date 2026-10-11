@@ -5,6 +5,18 @@ declare(strict_types=1);
 define( 'ABSPATH', dirname(__DIR__, 2) . '/' );
 define( 'MINUTE_IN_SECONDS', 60 );
 
+function add_filter( $name, $callback, $priority = 10, $arguments = 1 ): void {
+	$GLOBALS['wstm_test_filters'][ $name ][ $priority ][] = $callback;
+}
+
+function remove_filter( $name, $callback, $priority = 10 ): void {
+	foreach ( $GLOBALS['wstm_test_filters'][ $name ][ $priority ] ?? array() as $key => $value ) {
+		if ( $callback === $value ) {
+			unset( $GLOBALS['wstm_test_filters'][ $name ][ $priority ][ $key ] );
+		}
+	}
+}
+
 function wp_timezone(): DateTimeZone {
 	return new DateTimeZone( $GLOBALS['wstm_test_timezone'] ?? 'UTC' );
 }
