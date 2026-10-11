@@ -1,5 +1,36 @@
 #!/usr/bin/env bash
 
+qa_quiet_images() {
+	local capture="$1" mode="$2" references=() wp_image db_image
+	(
+		umask 077
+		set -o noclobber
+		qa_compose_command config --format json > "$capture.config" || return $?
+		[[ ! -L "$capture.config" && "$(wc -c < "$capture.config")" -le 1048576 ]] || return 1
+		host_php scripts/qa-http-quiet.php configured-images < "$capture.config" > "$capture.references"
+	) || return $?
+	[[ ! -L "$capture.references" && "$(wc -c < "$capture.references")" -le 1026 ]] || return 1
+	mapfile -d '' -t references < "$capture.references"
+	[[ "${#references[@]}" == 2 ]] || return 1
+	wp_image="$(docker image inspect --format '{{.Id}}' "${references[0]}")" || return $?
+	db_image="$(docker image inspect --format '{{.Id}}' "${references[1]}")" || return $?
+	[[ "$wp_image" =~ ^sha256:[a-f0-9]{64}$ && "$db_image" =~ ^sha256:[a-f0-9]{64}$ ]] || {
+		echo 'HTTP-quiet resolved image identity is malformed or ambiguous.' >&2; return 1;
+	}
+	if [[ "$mode" == bind ]]; then
+		WSTM_QUIET_WP_REFERENCE="${references[0]}" WSTM_QUIET_DB_REFERENCE="${references[1]}"
+		WSTM_QUIET_WP_IMAGE="$wp_image" WSTM_QUIET_DB_IMAGE="$db_image"
+		export WSTM_QUIET_WP_REFERENCE WSTM_QUIET_DB_REFERENCE WSTM_QUIET_WP_IMAGE WSTM_QUIET_DB_IMAGE
+	elif [[ "$mode" == verify ]]; then
+		[[ "${references[0]}" == "$WSTM_QUIET_WP_REFERENCE" && "${references[1]}" == "$WSTM_QUIET_DB_REFERENCE" &&
+			"$wp_image" == "$WSTM_QUIET_WP_IMAGE" && "$db_image" == "$WSTM_QUIET_DB_IMAGE" ]] || {
+			echo 'HTTP-quiet configured or resolved image changed.' >&2; return 1;
+		}
+	else
+		echo 'HTTP-quiet image observation mode is invalid.' >&2; return 1
+	fi
+}
+
 qa_quiet_volume_consumers() {
 	local capture="$1" suffix identifier observed=() expected_consumers=()
 	for suffix in wp_data qa_artifacts mysql_data; do
@@ -39,6 +70,7 @@ qa_quiet_snapshot() {
 		echo 'HTTP-quiet observation limits exhausted.' >&2; return 1;
 	}
 	qa_verify_resources || return $?
+	qa_quiet_images "$capture.images" verify || return $?
 	local identifiers observed=() expected_containers=("$WSTM_QUIET_WP" "$WSTM_QUIET_DB")
 	identifiers="$(docker container ls -aq --no-trunc --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}")" || return $?
 	mapfile -t observed < <(printf '%s\n' "$identifiers" | sort)
@@ -70,6 +102,10 @@ qa_quiet_snapshot() {
 		echo json_encode($records, JSON_THROW_ON_ERROR);' "${parts[@]}" > "$capture" || return $?
 		[[ "$(wc -c < "$capture")" -le 1048576 ]] || return 1
 		host_php scripts/qa-http-quiet.php "$mode" < "$capture" || return $?
+		[[ "$(docker image inspect --format '{{.Id}}' "$WSTM_QUIET_WP_REFERENCE")" == "$WSTM_QUIET_WP_IMAGE" &&
+			"$(docker image inspect --format '{{.Id}}' "$WSTM_QUIET_DB_REFERENCE")" == "$WSTM_QUIET_DB_IMAGE" ]] || {
+			echo 'HTTP-quiet image changed during snapshot.' >&2; return 1;
+		}
 		qa_quiet_volume_consumers "$capture.after"
 	)
 }
@@ -133,6 +169,8 @@ qa_quiet_install() (
 	WSTM_QUIET_DB="$(compose ps -a -q mysql)" || return $?
 	[[ "$WSTM_QUIET_WP" =~ ^[a-f0-9]{64}$ && "$WSTM_QUIET_DB" =~ ^[a-f0-9]{64}$ ]] || return 1
 	export WSTM_QUIET_WP WSTM_QUIET_DB
+	qa_verify_resources || return $?
+	qa_quiet_images "$WSTM_QUIET_DIRECTORY/initial-images" bind || return $?
 	args_file="$WSTM_QUIET_DIRECTORY/original-mounts.private.argv"
 	(umask 077; set -o noclobber; qa_quiet_snapshot original > "$args_file") || return $?
 	mapfile -d '' -t mounts < "$args_file"
@@ -152,7 +190,7 @@ qa_quiet_install() (
 		-e E2E_OPT_IN -e WSTM_INITIAL_SITE_URL -e WSTM_PRODUCT_RUN -e WSTM_PRODUCT_TOKEN \
 		-e WORDPRESS_DEBUG=true -e WORDPRESS_DEBUG_LOG=/var/www/html/wp-content/debug.log \
 		-e WSTM_E2E_ARTIFACTS_DIR=/qa-artifacts -e WSTM_PRODUCT_CONTEXT=/qa-artifacts/context.json \
-		"${mounts[@]}" --entrypoint sleep sha256:5cbb0456741c335249cb26406ca8bef1e8919dbc8af1481c81fd7041a4c3b405 600)" || return $?
+		"${mounts[@]}" --entrypoint sleep "$WSTM_QUIET_WP_IMAGE" 600)" || return $?
 	[[ "$WSTM_QUIET_CLI" =~ ^[a-f0-9]{64}$ ]] || return 1
 	export WSTM_QUIET_CLI
 	qa_quiet_volume_consumers "$WSTM_QUIET_DIRECTORY/created-cli-consumers" || return $?

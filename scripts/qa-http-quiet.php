@@ -12,6 +12,18 @@ function wstm_quiet_path(string $path): string {
 	return preg_match('/^[a-zA-Z]:\//', $path) ? strtolower(rtrim($path, '/')) : rtrim($path, '/');
 }
 
+function wstm_quiet_configured_images(array $config, string $project): array {
+	wstm_quiet_check(($config['name'] ?? null) === $project && '' !== $project, 'configured image project');
+	$references = array();
+	foreach (array('wordpress', 'mysql') as $service) {
+		$reference = $config['services'][$service]['image'] ?? null;
+		wstm_quiet_check(is_string($reference) && strlen($reference) <= 512
+			&& 1 === preg_match('~^[a-zA-Z0-9][a-zA-Z0-9._/:@-]*$~D', $reference), 'configured image reference');
+		$references[] = $reference;
+	}
+	return $references;
+}
+
 function wstm_quiet_validate(array $records, string $mode, array $env): array {
 	wstm_quiet_check(in_array($mode, array('original', 'quiet', 'cli', 'stopped-cli', 'restored'), true), 'closed lifecycle mode');
 	$project = $env['COMPOSE_PROJECT_NAME'] ?? '';
@@ -34,10 +46,17 @@ function wstm_quiet_validate(array $records, string $mode, array $env): array {
 			&& array_keys($record['NetworkSettings']['Networks'] ?? array()) === array($project . '_default'),
 			'original container custody/topology');
 	}
-	wstm_quiet_check(($wp['Image'] ?? '') === 'sha256:5cbb0456741c335249cb26406ca8bef1e8919dbc8af1481c81fd7041a4c3b405'
-		&& ($db['Image'] ?? '') === 'sha256:a532724022429812ec797c285c1b540a644c15e248579c6bfdf12a8fbaab4964'
-		&& ($db['State']['Running'] ?? false) === true
-		&& ($db['State']['Health']['Status'] ?? '') === 'healthy', 'native image/database readiness');
+	foreach (array('WP' => $wp, 'DB' => $db) as $service => $record) {
+		$image = $env['WSTM_QUIET_' . $service . '_IMAGE'] ?? null;
+		$reference = $env['WSTM_QUIET_' . $service . '_REFERENCE'] ?? null;
+		wstm_quiet_check(is_string($image) && 1 === preg_match('/^sha256:[a-f0-9]{64}$/D', $image)
+			&& is_string($reference) && strlen($reference) <= 512
+			&& 1 === preg_match('~^[a-zA-Z0-9][a-zA-Z0-9._/:@-]*$~D', $reference), 'resolved image contract');
+		wstm_quiet_check(($record['Image'] ?? null) === $image
+			&& ($record['Config']['Image'] ?? null) === $reference, 'native configured image identity');
+	}
+	wstm_quiet_check(($db['State']['Running'] ?? false) === true
+		&& ($db['State']['Health']['Status'] ?? '') === 'healthy', 'native database readiness');
 	$db_mounts = $db['Mounts'] ?? null;
 	wstm_quiet_check(is_array($db_mounts) && array_keys($db_mounts) === array(0)
 		&& ($db_mounts[0]['Type'] ?? '') === 'volume'
@@ -105,6 +124,7 @@ function wstm_quiet_validate(array $records, string $mode, array $env): array {
 		wstm_quiet_check(is_string($cli['Id'] ?? null) && 1 === preg_match('/^[a-f0-9]{64}$/D', $cli['Id'])
 			&& $cli['Id'] === ($env['WSTM_QUIET_CLI'] ?? null) && !in_array($cli['Id'], array($wp['Id'], $db['Id']), true)
 			&& ($cli['Config']['User'] ?? '') === '33:33' && ($cli['Image'] ?? '') === $wp['Image']
+			&& ($cli['Config']['Image'] ?? '') === $env['WSTM_QUIET_WP_IMAGE']
 			&& ($cli['Config']['WorkingDir'] ?? '') === '/var/www/html'
 			&& ($cli['Config']['Labels']['io.webmastery.qa.owner'] ?? null) === $owner
 			&& ($cli['Config']['Labels']['com.docker.compose.project'] ?? null) === $project
@@ -155,6 +175,12 @@ if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) 
 	wstm_quiet_check(is_string($bytes) && strlen($bytes) <= 1048576, 'native inspection byte bound');
 	$records = json_decode($bytes, true, 64, JSON_THROW_ON_ERROR);
 	wstm_quiet_check(is_array($records), 'native inspection list');
+	if ('configured-images' === $argv[1]) {
+		$project = getenv('COMPOSE_PROJECT_NAME');
+		wstm_quiet_check(is_string($project), 'configured image project');
+		echo implode("\0", wstm_quiet_configured_images($records, $project)) . "\0";
+		exit(0);
+	}
 	$args = wstm_quiet_validate($records, $argv[1], getenv());
 	if ('original' === $argv[1]) { echo implode("\0", $args) . "\0"; }
 }

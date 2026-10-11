@@ -75,8 +75,14 @@ Fresh installation preparation verifies an absent or empty native database
 while the owned HTTP service and its health probes are stopped. An isolated
 UID33 CLI uses the authenticated image, database network and installed/artifact
 volumes without starting Apache. This prevents frontend rendering from creating
-navigation fallback content outside the installer observer. Native permalink
-auto-detection remains a failed request while HTTP is unavailable; no successful
+navigation fallback content outside the installer observer.
+The image contract resolves the owned Compose configuration's WordPress and
+database references to existing image config IDs and compares them with the
+original containers before and after installation. The installer clones the
+admitted WordPress image ID rather than a local cache-specific ID. Missing or
+changed references, identities or readiness refuse installation; this does not
+authorize new registry images or replace the trusted-engine assumption.
+Native permalink auto-detection remains a failed request while HTTP is unavailable; no successful
 HTTP result is fabricated. Preparation exports its private originals and retires
 the CLI before restoring HTTP. Installation or unresolved CLI cleanup failures
 retain the original failure and do not restore HTTP. Normal rewrite verification

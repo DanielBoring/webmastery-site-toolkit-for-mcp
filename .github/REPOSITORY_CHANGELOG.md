@@ -6,6 +6,11 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Bind HTTP-quiet installation to the owned Compose image references and their
+  resolved image IDs instead of cache-specific local IDs. Clone the admitted
+  WordPress image and retain image-change, readiness and isolation refusals so
+  tag-selected CI images follow the same admission contract as local QA.
+
 - Normalize publication source to the existing LF policy so Git export preserves
   the exact validated bytes. Remove stale README and contribution references
   to deferred host-framework and reversible-transition prerequisites.

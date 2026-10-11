@@ -45,12 +45,19 @@ final class HttpQuietInstallationTest extends TestCase {
 			'Destination' => '/var/lib/mysql', 'RW' => true));
 		$wp['Config']['Labels']['com.docker.compose.service'] = 'wordpress';
 		$db['Config']['Labels']['com.docker.compose.service'] = 'mysql';
+		$env['WSTM_QUIET_WP_IMAGE'] = $wp['Image'];
+		$env['WSTM_QUIET_DB_IMAGE'] = $db['Image'];
+		$env['WSTM_QUIET_WP_REFERENCE'] = 'wordpress:7.1.2-php8.2-apache';
+		$env['WSTM_QUIET_DB_REFERENCE'] = 'mysql:8.0.36';
+		$wp['Config']['Image'] = $env['WSTM_QUIET_WP_REFERENCE'];
+		$db['Config']['Image'] = $env['WSTM_QUIET_DB_REFERENCE'];
 		$db['HostConfig']['PortBindings'] = array(); $db['State'] = array('Running' => true, 'Health' => array('Status' => 'healthy'));
 		$network = array('Name' => $project . '_default', 'Labels' => $labels, 'Containers' => array($db['Id'] => array()));
 		if ($wp['State']['Running']) { $network['Containers'][$wp['Id']] = array(); }
 		$records = array($wp, $db, $network);
 		if (in_array($mode, array('cli', 'stopped-cli'), true)) {
 			$cli = $wp; $cli['Id'] = str_repeat('3', 64); $cli['Name'] = '/' . $project . '-install-cli';
+			$cli['Config']['Image'] = $env['WSTM_QUIET_WP_IMAGE'];
 			$cli['State']['Running'] = 'cli' === $mode;
 			$cli['Config']['User'] = '33:33'; $cli['Config']['WorkingDir'] = '/var/www/html';
 			$cli['Config']['Healthcheck'] = array('Test' => array('NONE'));
@@ -66,7 +73,6 @@ final class HttpQuietInstallationTest extends TestCase {
 		}
 		return array($records, $env);
 	}
-
 	public function testSourceAndPackageCustodyAcrossAllQuietLifecycleStates(): void {
 		foreach (array(false, true) as $package) {
 			foreach (array('original', 'quiet', 'cli', 'stopped-cli', 'restored') as $mode) {
@@ -126,7 +132,63 @@ final class HttpQuietInstallationTest extends TestCase {
 					catch (RuntimeException $error) {
 						self::assertStringContainsString('exact owned writable database volume', $error->getMessage());
 					}
+
 				}
+			}
+		}
+	}
+
+	public function testConfiguredReferencesAreClosedAndProjectBound(): void {
+		$config = array('name' => 'owned', 'services' => array(
+			'wordpress' => array('image' => 'wordpress:7.1.2-php8.2-apache'),
+			'mysql' => array('image' => 'mysql@sha256:' . str_repeat('a', 64))));
+		self::assertSame(array($config['services']['wordpress']['image'], $config['services']['mysql']['image']),
+			wstm_quiet_configured_images($config, 'owned'));
+		foreach (array('project', 'missing', 'empty', 'array', 'newline', 'space', 'option', 'oversize') as $kind) {
+			$bad = $config;
+			switch ($kind) {
+				case 'project': $bad['name'] = 'foreign'; break;
+				case 'missing': unset($bad['services']['mysql']); break;
+				case 'empty': $bad['services']['wordpress']['image'] = ''; break;
+				case 'array': $bad['services']['wordpress']['image'] = array(); break;
+				case 'newline': $bad['services']['wordpress']['image'] = "wordpress:tag\n"; break;
+				case 'space': $bad['services']['wordpress']['image'] = 'wordpress:tag extra'; break;
+				case 'option': $bad['services']['wordpress']['image'] = '--foreign'; break;
+				case 'oversize': $bad['services']['wordpress']['image'] = str_repeat('a', 513); break;
+			}
+			try { wstm_quiet_configured_images($bad, 'owned'); self::fail('Invalid configured image accepted.'); }
+			catch (RuntimeException $error) { self::assertStringContainsString('HTTP-quiet installation refused', $error->getMessage()); }
+		}
+	}
+
+	public function testHealthyTagSelectedNonlocalImagesRetainExactPerRunIdentity(): void {
+		foreach (array(false, true) as $package) {
+			foreach (array('original', 'quiet', 'cli', 'stopped-cli', 'restored') as $mode) {
+				list($records, $env) = $this->fixture($package, $mode);
+				$records[0]['Image'] = $env['WSTM_QUIET_WP_IMAGE'] = 'sha256:' . str_repeat('c', 64);
+				$records[1]['Image'] = $env['WSTM_QUIET_DB_IMAGE'] = 'sha256:' . str_repeat('d', 64);
+				if (isset($records[3])) {
+					$records[3]['Image'] = $records[3]['Config']['Image'] = $env['WSTM_QUIET_WP_IMAGE'];
+				}
+				self::assertCount($package ? 20 : 10, wstm_quiet_validate($records, $mode, $env));
+				foreach (array('wp-image', 'db-image', 'wp-reference', 'db-reference', 'missing', 'tag-not-id', 'ambiguous', 'db-stopped', 'db-unhealthy', 'cli-reference') as $kind) {
+					if ('cli-reference' === $kind && !isset($records[3])) { continue; }
+					$bad = $records; $bad_env = $env;
+					switch ($kind) {
+						case 'wp-image': $bad[0]['Image'] = 'sha256:' . str_repeat('e', 64); break;
+						case 'db-image': $bad[1]['Image'] = 'sha256:' . str_repeat('e', 64); break;
+						case 'wp-reference': $bad[0]['Config']['Image'] = 'wordpress:foreign'; break;
+						case 'db-reference': $bad[1]['Config']['Image'] = 'mysql:foreign'; break;
+						case 'missing': unset($bad_env['WSTM_QUIET_WP_IMAGE']); break;
+						case 'tag-not-id': $bad_env['WSTM_QUIET_DB_IMAGE'] = 'mysql:8.0.36'; break;
+						case 'ambiguous': $bad_env['WSTM_QUIET_DB_IMAGE'] .= "\nsha256:" . str_repeat('a', 64); break;
+						case 'db-stopped': $bad[1]['State']['Running'] = false; break;
+						case 'db-unhealthy': $bad[1]['State']['Health']['Status'] = 'starting'; break;
+						case 'cli-reference': $bad[3]['Config']['Image'] = $env['WSTM_QUIET_WP_REFERENCE']; break;
+					}
+					try { wstm_quiet_validate($bad, $mode, $bad_env); self::fail('Changed image/readiness accepted.'); }
+					catch (RuntimeException $error) { self::assertStringContainsString('HTTP-quiet installation refused', $error->getMessage()); }
+}
 			}
 		}
 	}

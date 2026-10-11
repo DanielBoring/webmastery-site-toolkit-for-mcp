@@ -4,11 +4,20 @@ ROOT="$(pwd -P)"
 mkdir -p build
 WORK="$(mktemp -d "$ROOT/build/http-quiet-unit-XXXXXXXX")"
 trap 'status=$?; if [[ "$status" == 0 ]]; then rm -r -- "$WORK"; else echo "HTTP-quiet controls retained at $WORK" >&2; fi; exit "$status"' EXIT
+# shellcheck source=/dev/null
 source scripts/e2e-test.sh all
 export COMPOSE_PROJECT_NAME=wstm-quiet-unit WSTM_PRODUCT_RUN=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 export WSTM_QA_OWNER=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 export WSTM_QA_DB_PASSWORD=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 export E2E_SOURCE_IDENTITY=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+export WSTM_QUIET_WP_REFERENCE=wordpress:7.1.2-php8.2-apache WSTM_QUIET_DB_REFERENCE=mysql:8.0.36
+export WSTM_QUIET_WP_IMAGE=sha256:5cbb0456741c335249cb26406ca8bef1e8919dbc8af1481c81fd7041a4c3b405
+export WSTM_QUIET_DB_IMAGE=sha256:a532724022429812ec797c285c1b540a644c15e248579c6bfdf12a8fbaab4964
+qa_compose_command() {
+	[[ "$*" == 'config --format json' ]] || return 89
+	printf '{"name":"%s","services":{"wordpress":{"image":"%s"},"mysql":{"image":"%s"}}}\n' \
+		"$COMPOSE_PROJECT_NAME" "$WSTM_QUIET_WP_REFERENCE" "$WSTM_QUIET_DB_REFERENCE"
+}
 qa_verify_resources() { :; }
 
 assert_trace_absent() {
@@ -33,6 +42,50 @@ assert_trace_absent() {
 )
 echo 'PASS negative trace assertions: absence accepted, forbidden/unreadable traces refuse.'
 
+quiet_image_controls() (
+	local scenario count=0 directory
+	local WSTM_QUIET_WP_IMAGE WSTM_QUIET_DB_IMAGE WSTM_QUIET_WP_REFERENCE WSTM_QUIET_DB_REFERENCE
+	# shellcheck disable=SC2329 # Invoked by the actual sourced image observation helper.
+	qa_compose_command() {
+		[[ "$*" == 'config --format json' ]] || return 89
+		[[ "$scenario" != config-failure ]] || return 72
+		if [[ "$scenario" == reference-change ]]; then
+			printf '{"name":"wstm-quiet-unit","services":{"wordpress":{"image":"wordpress:changed"},"mysql":{"image":"mysql:8.0.36"}}}\n'
+		else
+			printf '{"name":"wstm-quiet-unit","services":{"wordpress":{"image":"wordpress:7.1.2-php8.2-apache"},"mysql":{"image":"mysql:8.0.36"}}}\n'
+		fi
+	}
+	# shellcheck disable=SC2329 # Invoked by the actual sourced image observation helper.
+	docker() {
+		[[ "$1 $2 $3 $4" == 'image inspect --format {{.Id}}' ]] || return 89
+		[[ "$scenario" != inspect-failure ]] || return 73
+		if [[ "$scenario" == ambiguous ]]; then printf 'sha256:%064d\nsha256:%064d\n' 4 5
+		elif [[ "$scenario" == malformed ]]; then printf 'wordpress:tag\n'
+		elif [[ "$scenario" == image-change ]]; then printf 'sha256:%064d\n' 7
+		elif [[ "$5" == wordpress:* ]]; then printf 'sha256:%064d\n' 4
+		elif [[ "$5" == mysql:* ]]; then printf 'sha256:%064d\n' 5
+		else return 89; fi
+	}
+	scenario=valid
+	directory="$WORK/image-contract"
+	mkdir "$directory"
+	# Caller-supplied values are overwritten by the owned configured/resolved contract.
+	# shellcheck disable=SC2030 # Deliberately isolated caller values; other fixtures bind their own image contract.
+	export WSTM_QUIET_WP_IMAGE=foreign WSTM_QUIET_DB_IMAGE=foreign
+	qa_quiet_images "$directory/bind" bind
+	[[ "$WSTM_QUIET_WP_IMAGE" == "sha256:$(printf '%064d' 4)" &&
+		"$WSTM_QUIET_DB_IMAGE" == "sha256:$(printf '%064d' 5)" ]] || return 1
+	for scenario in valid reference-change image-change ambiguous malformed config-failure inspect-failure; do
+		local image_status=0
+		qa_quiet_images "$directory/$scenario" verify > "$directory/$scenario.log" 2>&1 || image_status=$?
+		if [[ "$scenario" == valid ]]; then [[ "$image_status" == 0 ]] || return 1
+		else [[ "$image_status" != 0 ]] || return 1; fi
+		count=$((count + 1))
+	done
+	echo "PASS $count actual configured/resolved image contracts: bind, stable verify, mutations and acquisition failures."
+)
+quiet_image_controls
+
 # Exercise the actual snapshot, native validator and volume census together.
 quiet_snapshot_controls() (
 	# shellcheck disable=SC2030,SC2031 # Explicitly reset this subshell's fixture ID; later orchestration obtains a new ID.
@@ -41,7 +94,7 @@ quiet_snapshot_controls() (
 	export WSTM_QUIET_DB=2222222222222222222222222222222222222222222222222222222222222222
 	# shellcheck disable=SC2031 # This fixture supplies a fixed cwd independently of qa_quiet_install.
 	export WSTM_QUIET_SOURCE_ROOT=/work/source
-	local package mode target_suffix kind phase status foreign_id count=0
+	local package mode target_suffix kind phase status foreign_id count=0 result=0
 	# shellcheck disable=SC2031 # This EXIT trap reads the current case in its own enclosing subshell.
 	trap 'result=$?; if [[ "$result" != 0 ]]; then
 		echo "Census control failure: package=${package:-unset} mode=${mode:-unset} suffix=${target_suffix:-unset} kind=${kind:-unset} phase=${phase:-unset} count=$count status=${status:-unset}" >&2
@@ -50,6 +103,14 @@ quiet_snapshot_controls() (
 	# shellcheck disable=SC2329 # Called indirectly by the sourced real snapshot and volume census.
 	docker() {
 		local selected="${5:-}" ids=() observed_count
+		if [[ "$1 $2" == 'image inspect' ]]; then
+			[[ "$3 $4" == "--format {{.Id}}" ]] || return 89
+			# shellcheck disable=SC2031 # This snapshot fixture supplies its own expected image IDs.
+			if [[ "$5" == "$WSTM_QUIET_WP_REFERENCE" ]]; then printf '%s\n' "$WSTM_QUIET_WP_IMAGE"
+			elif [[ "$5" == "$WSTM_QUIET_DB_REFERENCE" ]]; then printf '%s\n' "$WSTM_QUIET_DB_IMAGE"
+			else return 89; fi
+			return
+		fi
 		[[ "$1 $2" == 'container ls' || "$1 $2" == 'container inspect' || "$1 $2" == 'network inspect' ]] || return 89
 		if [[ "$1 $2" == 'container ls' ]]; then
 			[[ "$3 $4 $5" == '-aq --no-trunc --filter' ]] || return 89
@@ -208,6 +269,12 @@ compose() {
 docker() {
 	printf 'docker:%s\n' "$*" >> "$WORK/trace"
 	case "$1" in
+		image)
+			[[ "$2 $3 $4" == 'inspect --format {{.Id}}' ]] || return 89
+			# shellcheck disable=SC2031 # The real installer binds these IDs in this enclosing orchestration fixture.
+			if [[ "$5" == "$WSTM_QUIET_WP_REFERENCE" ]]; then printf '%s\n' "$WSTM_QUIET_WP_IMAGE"
+			elif [[ "$5" == "$WSTM_QUIET_DB_REFERENCE" ]]; then printf '%s\n' "$WSTM_QUIET_DB_IMAGE"
+			else return 89; fi ;;
 		container)
 			[[ "$2 $3 $4 $5" == 'ls -aq --no-trunc --filter' ]] || return 89
 			case "$6" in
@@ -230,6 +297,8 @@ docker() {
 		create)
 			[[ "$(cat "$WORK/http")" == quiet && "$*" == *"--user 33:33 --read-only --cap-drop ALL --security-opt no-new-privileges"* ]] || return 88
 			[[ "$*" != *--publish* && "$*" != *docker.sock* ]] || return 88
+			# shellcheck disable=SC2031 # Assert the real installer's newly bound image argument, not prior isolated control values.
+			[[ "$*" == *"--entrypoint sleep $WSTM_QUIET_WP_IMAGE 600" ]] || return 88
 			printf owned > "$WORK/cli"; printf '%064d' 3 ;;
 		start) [[ "$SCENARIO" != start-cli ]] || return 47; test -f "$WORK/cli" ;;
 		exec)
