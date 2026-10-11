@@ -78,8 +78,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      COMPOSE_PROJECT_NAME: webmastery-site-toolkit-for-mcp-contract-${{ github.event.pull_request.number || github.run_id }}
-      MYSQL_PORT: 0
+      COMPOSE_PROJECT_NAME: wstm-contract-${{ github.run_id }}-${{ github.run_attempt }}
       WORDPRESS_PORT: 0
     permissions:
       contents: read
@@ -108,14 +107,21 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          extensions: zip
+          coverage: none
+
       - name: Set up Docker Compose
-        run: docker compose version
+        run: bash scripts/qa-compose.sh version
 
       - name: Start WordPress stack
         run: |
           bash scripts/destructive-retention.sh check
-          docker compose down -v --remove-orphans
-          docker compose up -d
+          bash scripts/qa-compose.sh down -v --remove-orphans
+          bash scripts/qa-compose.sh up -d
 
       - name: Run Ability Contract QA
         run: bash scripts/e2e-test.sh contract
@@ -135,16 +141,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          wordpress_image="$(docker compose config | awk '$1 == "image:" && $2 ~ /^wordpress:/ { print $2; exit }')"
-          mysql_image="$(docker compose config | awk '$1 == "image:" && $2 ~ /^mysql:/ { print $2; exit }')"
-          wordpress_version="$(docker compose exec -T wordpress wp --allow-root core version 2>/dev/null || echo unknown)"
-          php_version="$(docker compose exec -T wordpress php -r 'echo PHP_VERSION;' 2>/dev/null || echo unknown)"
-          mysql_version="$(docker compose exec -T mysql mysql --version 2>/dev/null || echo unknown)"
+          wordpress_image="$(bash scripts/qa-compose.sh config | awk '$1 == "image:" && $2 ~ /^wordpress:/ { print $2; exit }')"
+          mysql_image="$(bash scripts/qa-compose.sh config | awk '$1 == "image:" && $2 ~ /^mysql:/ { print $2; exit }')"
+          wordpress_version="$(bash scripts/qa-compose.sh exec -T wordpress php /var/www/html/.qa-bin/wp core version 2>/dev/null || echo unknown)"
+          php_version="$(bash scripts/qa-compose.sh exec -T wordpress php -r 'echo PHP_VERSION;' 2>/dev/null || echo unknown)"
+          mysql_version="$(bash scripts/qa-compose.sh exec -T mysql mysql --version 2>/dev/null || echo unknown)"
           mcp_adapter_release="$(jq -r '"v" + .mcp_adapter' .github/compatibility-versions.json)"
-          mcp_adapter_version="$(docker compose exec -T wordpress wp --allow-root plugin get mcp-adapter --field=version 2>/dev/null || echo unknown)"
-          yoast_version="$(docker compose exec -T wordpress wp --allow-root plugin get wordpress-seo --field=version 2>/dev/null || echo unknown)"
-          seopress_version="$(docker compose exec -T wordpress wp --allow-root plugin get wp-seopress --field=version 2>/dev/null || echo unknown)"
-          plugin_version="$(docker compose exec -T wordpress wp --allow-root plugin get webmastery-site-toolkit-for-mcp --field=version 2>/dev/null || echo unknown)"
+          mcp_adapter_version="$(bash scripts/qa-compose.sh exec -T wordpress php /var/www/html/.qa-bin/wp plugin get mcp-adapter --field=version 2>/dev/null || echo unknown)"
+          yoast_version="$(bash scripts/qa-compose.sh exec -T wordpress php /var/www/html/.qa-bin/wp plugin get wordpress-seo --field=version 2>/dev/null || echo unknown)"
+          seopress_version="$(bash scripts/qa-compose.sh exec -T wordpress php /var/www/html/.qa-bin/wp plugin get wp-seopress --field=version 2>/dev/null || echo unknown)"
+          plugin_version="$(bash scripts/qa-compose.sh exec -T wordpress php /var/www/html/.qa-bin/wp plugin get webmastery-site-toolkit-for-mcp --field=version 2>/dev/null || echo unknown)"
           summary_file="e2e-artifacts/e2e-summary.json"
           registered_abilities="$(jq -r '.registered_abilities // "unknown"' "$summary_file" 2>/dev/null || echo unknown)"
           covered_abilities="$(jq -r '.covered_abilities // "unknown"' "$summary_file" 2>/dev/null || echo unknown)"
@@ -177,11 +183,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if ! docker compose exec -T wordpress test -f /var/www/html/wp-content/debug.log; then
+          if ! bash scripts/qa-compose.sh exec -T wordpress test -f /var/www/html/wp-content/debug.log; then
             echo "status=no_debug_log" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if docker compose exec -T wordpress grep -Eiq 'fatal error|parse error|uncaught|php (fatal error|parse error|warning|notice|deprecated)|deprecated|warning|notice|error' /var/www/html/wp-content/debug.log; then
+          if bash scripts/qa-compose.sh exec -T wordpress grep -Eiq 'fatal error|parse error|uncaught|php (fatal error|parse error|warning|notice|deprecated)|deprecated|warning|notice|error' /var/www/html/wp-content/debug.log; then
             echo "status=error_entries_found" >> "$GITHUB_OUTPUT"
             exit 1
           fi
@@ -190,6 +196,15 @@ jobs:
       - name: Publish contract job summary
         if: ${{ always() }}
         run: php scripts/docker-qa-summary.php e2e-artifacts/e2e-summary.json build/qa-summary-contract.json contract
+
+      - name: Upload verified product contract summary
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: product-qa-contract-summary
+          path: e2e-artifacts/product-qa.summary.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Clean up
         if: always()
@@ -323,8 +338,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      COMPOSE_PROJECT_NAME: webmastery-site-toolkit-for-mcp-e2e-${{ github.event.pull_request.number || github.run_id }}
-      MYSQL_PORT: 0
+      COMPOSE_PROJECT_NAME: wstm-e2e-${{ github.run_id }}-${{ github.run_attempt }}
       WORDPRESS_PORT: 0
     permissions:
       contents: read
@@ -335,14 +349,21 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          extensions: zip
+          coverage: none
+
       - name: Set up Docker Compose
-        run: docker compose version
+        run: bash scripts/qa-compose.sh version
 
       - name: Start WordPress stack
         run: |
           bash scripts/destructive-retention.sh check
-          docker compose down -v --remove-orphans
-          docker compose up -d
+          bash scripts/qa-compose.sh down -v --remove-orphans
+          bash scripts/qa-compose.sh up -d
 
       - name: Run Full MCP E2E QA
         run: bash scripts/e2e-test.sh e2e
@@ -350,6 +371,15 @@ jobs:
       - name: Publish transport job summary
         if: ${{ always() }}
         run: php scripts/docker-qa-summary.php e2e-artifacts/mcp-crud-summary.json build/qa-summary-transport.json transport
+
+      - name: Upload verified product transport summary
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: product-qa-transport-summary
+          path: e2e-artifacts/product-qa.summary.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Clean up
         if: always()

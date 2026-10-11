@@ -7,17 +7,17 @@ class Webmastery_MCP_Webmaster_Verification {
 	public static function register() {
 		wp_register_ability(
 			'webmastery-site-toolkit-for-mcp/webmaster-verification-status',
-			array(
+			[
 				'label'               => 'Webmaster Verification Status',
 				'description'         => 'Check public Google and Bing webmaster verification signals without Google or Bing API credentials.',
 				'category'            => 'webmastery-site-toolkit-for-mcp',
-				'execute_callback'    => array( self::class, 'execute' ),
-				'permission_callback' => array( self::class, 'permission' ),
-				'meta'                => array(
-					'annotations' => array( 'readonly' => true, 'destructive' => false, 'idempotent' => false ),
-					'mcp'         => array( 'public' => true, 'type' => 'tool' ),
-				),
-			)
+				'execute_callback'    => [ self::class, 'execute' ],
+				'permission_callback' => [ self::class, 'permission' ],
+				'meta'                => [
+					'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => false ],
+					'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+				],
+			]
 		);
 	}
 
@@ -25,7 +25,7 @@ class Webmastery_MCP_Webmaster_Verification {
 		return Webmastery_MCP_Permissions::check( 'read' );
 	}
 
-	public static function execute( $input = array() ) {
+	public static function execute( $input = [] ) {
 		$permission = self::permission();
 		if ( is_wp_error( $permission ) ) {
 			return $permission;
@@ -34,40 +34,40 @@ class Webmastery_MCP_Webmaster_Verification {
 		$home_url = home_url( '/' );
 		$public   = self::public_checks( $home_url );
 		$checks   = $public['checks'];
-		$google   = array();
+		$google   = [];
 		if ( current_user_can( 'activate_plugins' ) ) {
 			$site_kit           = self::check_google_site_kit();
-			$checks             = array_merge( array( 'google_site_kit' => $site_kit ), $checks );
+			$checks             = array_merge( [ 'google_site_kit' => $site_kit ], $checks );
 			$google['site_kit'] = $site_kit;
 		}
 		$summary = self::summarize( $checks );
 
-		return array(
+		return [
 			'success' => true,
-			'data'    => array(
+			'data'    => [
 				'home_url'    => $home_url,
 				'home_reached' => $public['home_reached'],
 				'summary'     => $summary,
 				'checks'      => $checks,
-				'google'      => array_merge( $google, array(
+				'google'      => array_merge( $google, [
 					'homepage_meta'        => $checks['google_homepage_meta'],
 					'account_verification' => $checks['account_verification'],
-				) ),
-				'bing'        => array(
+				] ),
+				'bing'        => [
 					'homepage_meta'        => $checks['bing_homepage_meta'],
 					'site_auth_xml'        => $checks['bing_site_auth_xml'],
 					'account_verification' => $checks['account_verification'],
-				),
+				],
 				'dns_txt'     => $checks['dns_txt_verification'],
 				'robots_txt'  => $checks['robots_txt'],
 				'sitemap_reachability' => $checks['sitemap_reachability'],
-				'sitemaps'    => $checks['sitemap_reachability']['items'] ?? array(),
-				'limitations' => array(
+				'sitemaps'    => $checks['sitemap_reachability']['items'] ?? [],
+				'limitations' => [
 					'This ability checks public and WordPress-visible proof only.',
 					'It does not confirm ownership inside Google Search Console or Bing Webmaster Tools accounts.',
-				),
-			),
-		);
+				],
+			],
+		];
 	}
 
 	private static function public_checks( $home_url ) {
@@ -79,7 +79,7 @@ class Webmastery_MCP_Webmaster_Verification {
 		}
 
 		$home_response = self::request_url( $home_url );
-		$checks        = array(
+		$checks        = [
 			'google_homepage_meta' => self::check_meta_tag(
 				$home_response,
 				'google-site-verification',
@@ -98,11 +98,11 @@ class Webmastery_MCP_Webmaster_Verification {
 				'Google Search Console and Bing Webmaster Tools account verification cannot be confirmed from public signals.',
 				'API-backed account confirmation would require OAuth/API credentials and a separate security model.'
 			),
-		);
-		$public        = array(
+		];
+		$public        = [
 			'home_reached' => self::is_success_response( $home_response ),
 			'checks'       => array_merge( $checks, self::check_sitemaps( $checks['robots_txt']['sitemap_urls'] ) ),
-		);
+		];
 
 		// Cache failures too, but never cache private checks or a caller's summary.
 		set_transient( $cache_key, $public, 60 );
@@ -133,11 +133,11 @@ class Webmastery_MCP_Webmaster_Verification {
 			$status,
 			$message,
 			null,
-			array(
+			[
 				'installed' => $installed,
 				'active'    => $active,
 				'plugin'    => $plugin_file,
-			)
+			]
 		);
 	}
 
@@ -155,7 +155,7 @@ class Webmastery_MCP_Webmaster_Verification {
 				'unknown',
 				$label . ' could not be checked because the homepage did not return a successful response.',
 				'HTTP status: ' . $home_response['status_code'],
-				array( 'status_code' => $home_response['status_code'] )
+				[ 'status_code' => $home_response['status_code'] ]
 			);
 		}
 
@@ -165,7 +165,7 @@ class Webmastery_MCP_Webmaster_Verification {
 				'warn',
 				$label . ' was not found on the rendered homepage.',
 				null,
-				array( 'found' => false )
+				[ 'found' => false ]
 			);
 		}
 
@@ -173,10 +173,10 @@ class Webmastery_MCP_Webmaster_Verification {
 			'pass',
 			$label . ' is present on the rendered homepage.',
 			null,
-			array(
+			[
 				'found'   => true,
 				'content' => $content,
-			)
+			]
 		);
 	}
 
@@ -189,7 +189,7 @@ class Webmastery_MCP_Webmaster_Verification {
 				'unknown',
 				'BingSiteAuth.xml reachability could not be checked.',
 				$response['error']->get_error_message(),
-				array( 'url' => $url )
+				[ 'url' => $url ]
 			);
 		}
 
@@ -198,7 +198,7 @@ class Webmastery_MCP_Webmaster_Verification {
 				'pass',
 				'BingSiteAuth.xml is publicly reachable.',
 				null,
-				array( 'url' => $url, 'status_code' => $response['status_code'] )
+				[ 'url' => $url, 'status_code' => $response['status_code'] ]
 			);
 		}
 
@@ -206,7 +206,7 @@ class Webmastery_MCP_Webmaster_Verification {
 			'warn',
 			'BingSiteAuth.xml is not publicly reachable.',
 			'HTTP status: ' . $response['status_code'],
-			array( 'url' => $url, 'status_code' => $response['status_code'] )
+			[ 'url' => $url, 'status_code' => $response['status_code'] ]
 		);
 	}
 
@@ -221,7 +221,7 @@ class Webmastery_MCP_Webmaster_Verification {
 				'unknown',
 				'DNS TXT records could not be checked because this PHP environment does not support TXT lookups.',
 				null,
-				array( 'host' => $host )
+				[ 'host' => $host ]
 			);
 		}
 
@@ -231,11 +231,11 @@ class Webmastery_MCP_Webmaster_Verification {
 				'unknown',
 				'DNS TXT records could not be read for the site host.',
 				null,
-				array( 'host' => $host )
+				[ 'host' => $host ]
 			);
 		}
 
-		$txt_records = array();
+		$txt_records = [];
 		foreach ( $records as $record ) {
 			if ( isset( $record['txt'] ) && is_string( $record['txt'] ) ) {
 				$txt_records[] = $record['txt'];
@@ -267,13 +267,13 @@ class Webmastery_MCP_Webmaster_Verification {
 				? 'Visible DNS TXT webmaster verification records were found.'
 				: 'No visible Google or Bing DNS TXT webmaster verification records were found.',
 			null,
-			array(
+			[
 				'host'                  => $host,
 				'record_count'          => count( $txt_records ),
 				'google_records'        => $google_records,
 				'bing_records'          => $bing_records,
 				'verification_detected' => $has_verification_record,
-			)
+			]
 		);
 	}
 
@@ -286,7 +286,7 @@ class Webmastery_MCP_Webmaster_Verification {
 				'unknown',
 				'robots.txt could not be checked.',
 				$response['error']->get_error_message(),
-				array( 'url' => $url, 'sitemap_urls' => array() )
+				[ 'url' => $url, 'sitemap_urls' => [] ]
 			);
 		}
 
@@ -295,7 +295,7 @@ class Webmastery_MCP_Webmaster_Verification {
 				'warn',
 				'robots.txt is not publicly reachable.',
 				'HTTP status: ' . $response['status_code'],
-				array( 'url' => $url, 'status_code' => $response['status_code'], 'sitemap_urls' => array() )
+				[ 'url' => $url, 'status_code' => $response['status_code'], 'sitemap_urls' => [] ]
 			);
 		}
 
@@ -307,27 +307,27 @@ class Webmastery_MCP_Webmaster_Verification {
 				? 'robots.txt is reachable but does not declare sitemap URLs.'
 				: 'robots.txt is reachable and declares sitemap URLs.',
 			null,
-			array(
+			[
 				'url'          => $url,
 				'status_code'  => $response['status_code'],
 				'sitemap_urls' => $sitemap_urls,
-			)
+			]
 		);
 	}
 
 	private static function check_sitemaps( $sitemap_urls ) {
 		if ( empty( $sitemap_urls ) ) {
-			return array(
+			return [
 				'sitemap_reachability' => self::result(
 					'unknown',
 					'Sitemap reachability could not be checked because robots.txt did not declare sitemap URLs.',
 					null,
-					array( 'items' => array() )
+					[ 'items' => [] ]
 				),
-			);
+			];
 		}
 
-		$items = array();
+		$items = [];
 		foreach ( $sitemap_urls as $url ) {
 			$items[] = self::check_sitemap_url( $url );
 		}
@@ -360,70 +360,70 @@ class Webmastery_MCP_Webmaster_Verification {
 			$message = 'No declared sitemaps are reachable.';
 		}
 
-		return array(
+		return [
 			'sitemap_reachability' => self::result(
 				$status,
 				$message,
 				null,
-				array(
+				[
 					'items'           => $items,
 					'reachable_count' => $reachable_count,
-				)
+				]
 			),
-		);
+		];
 	}
 
 	private static function check_sitemap_url( $url ) {
 		$home_host    = wp_parse_url( home_url(), PHP_URL_HOST );
 		$sitemap_host = wp_parse_url( $url, PHP_URL_HOST );
 		if ( $home_host && $sitemap_host && strtolower( $home_host ) !== strtolower( $sitemap_host ) ) {
-			return array(
+			return [
 				'url'     => $url,
 				'status'  => 'unknown',
 				'message' => 'Sitemap URL is declared on a different host, so reachability was not checked.',
-			);
+			];
 		}
 
 		$response = self::request_url( $url, 'HEAD' );
 		if ( is_wp_error( $response['error'] ) ) {
-			return array(
+			return [
 				'url'     => $url,
 				'status'  => 'unknown',
 				'message' => $response['error']->get_error_message(),
-			);
+			];
 		}
 
-		return array(
+		return [
 			'url'         => $url,
 			'status'      => self::is_success_response( $response ) ? 'pass' : 'warn',
 			'status_code' => $response['status_code'],
 			'message'     => self::is_success_response( $response )
 				? 'Sitemap is reachable.'
 				: 'Sitemap is not reachable.',
-		);
+		];
 	}
 
 	private static function request_url( $url, $method = 'GET' ) {
-		$args = array(
+		$args = [
 			'method'      => $method,
 			'timeout'     => 5,
 			'redirection' => 3,
-		);
+		];
 
 		$response = wp_remote_request( $url, $args );
 		if ( is_wp_error( $response ) ) {
-			return array(
+			return [
 				'error'       => $response,
 				'status_code' => null,
 				'body'        => '',
-			);
+			];
 		}
 
-		return array(
+		return [
 			'error'       => null,
 			'status_code' => (int) wp_remote_retrieve_response_code( $response ),
 			'body'        => (string) wp_remote_retrieve_body( $response ),
-		);
+		];
 	}
 
 	private static function is_success_response( $response ) {
@@ -446,7 +446,7 @@ class Webmastery_MCP_Webmaster_Verification {
 	}
 
 	private static function parse_sitemap_urls( $robots_body ) {
-		$urls = array();
+		$urls = [];
 		foreach ( preg_split( '/\r\n|\r|\n/', $robots_body ) as $line ) {
 			if ( preg_match( '/^\s*Sitemap\s*:\s*(\S+)\s*$/i', $line, $matches ) ) {
 				$urls[] = esc_url_raw( $matches[1] );
@@ -456,12 +456,12 @@ class Webmastery_MCP_Webmaster_Verification {
 		return array_values( array_unique( array_filter( $urls ) ) );
 	}
 
-	private static function result( $status, $message, $detail = null, $extra = array() ) {
+	private static function result( $status, $message, $detail = null, $extra = [] ) {
 		$result = array_merge(
-			array(
+			[
 				'status'  => $status,
 				'message' => $message,
-			),
+			],
 			$extra
 		);
 
@@ -473,11 +473,11 @@ class Webmastery_MCP_Webmaster_Verification {
 	}
 
 	private static function summarize( $checks ) {
-		$summary = array(
+		$summary = [
 			'pass'    => 0,
 			'warn'    => 0,
 			'unknown' => 0,
-		);
+		];
 
 		foreach ( $checks as $check ) {
 			$status = $check['status'] ?? 'unknown';

@@ -1,0 +1,3051 @@
+{
+    "base": "ad26b21c3e0cfdda5ac5eb946ad3e7b9da50a1c9",
+    "changed": [
+        {
+            "label": "list-cpt-mcp-book",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-cpt-mcp-book",
+                "label": "list-cpt-mcp-book",
+                "role": "book_manager",
+                "input": {
+                    "search": "MCP E2E Book",
+                    "author": "__book_manager_id__",
+                    "per_page": 5,
+                    "orderby": "id",
+                    "order": "ASC"
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items.0.id": "__book_id__",
+                    "data.items.0.type": "mcp_book",
+                    "data.items.0.taxonomy_terms.mcp_genre.0": "__genre_id__"
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-cpt-mcp-book",
+                "label": "list-cpt-mcp-book",
+                "role": "book_manager",
+                "input": {
+                    "search": "MCP E2E Book",
+                    "author": "__book_manager_id__",
+                    "per_page": 5,
+                    "orderby": "id",
+                    "order": "ASC"
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items.0.id": "__book_id__",
+                    "data.items.0.type": "mcp_book",
+                    "data.items.0.taxonomy_terms.mcp_genre.0": "__genre_id__",
+                    "data.page": 1,
+                    "data.per_page": 5
+                },
+                "assert_missing_paths": [
+                    "data.total",
+                    "data.total_pages",
+                    "data.items.0.content"
+                ]
+            }
+        },
+        {
+            "label": "list-cpt-mcp-book filters private without read-private",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-cpt-mcp-book",
+                "label": "list-cpt-mcp-book filters private without read-private",
+                "role": "limited_book_manager",
+                "input": {
+                    "status": "private",
+                    "search": "MCP E2E Private Book",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.total": 0
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-cpt-mcp-book",
+                "label": "list-cpt-mcp-book filters private without read-private",
+                "role": "limited_book_manager",
+                "input": {
+                    "status": "private",
+                    "search": "MCP E2E Private Book",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items": [],
+                    "data.next_page": null,
+                    "data.page": 1,
+                    "data.per_page": 5
+                },
+                "assert_missing_paths": [
+                    "data.total",
+                    "data.total_pages"
+                ]
+            }
+        },
+        {
+            "label": "list-cpt-mcp-book filters trash without delete",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-cpt-mcp-book",
+                "label": "list-cpt-mcp-book filters trash without delete",
+                "role": "limited_book_manager",
+                "input": {
+                    "status": "trash",
+                    "search": "MCP E2E Trash Filter Book",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.total": 0
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-cpt-mcp-book",
+                "label": "list-cpt-mcp-book filters trash without delete",
+                "role": "limited_book_manager",
+                "input": {
+                    "status": "trash",
+                    "search": "MCP E2E Trash Filter Book",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items": [],
+                    "data.next_page": null,
+                    "data.page": 1,
+                    "data.per_page": 5
+                },
+                "assert_missing_paths": [
+                    "data.total",
+                    "data.total_pages"
+                ]
+            }
+        },
+        {
+            "label": "list-cpt-mcp-case-study",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-cpt-mcp-case-study",
+                "label": "list-cpt-mcp-case-study",
+                "role": "case_manager",
+                "input": {
+                    "search": "MCP E2E Case Study",
+                    "author": "__case_manager_id__",
+                    "per_page": 5,
+                    "orderby": "id",
+                    "order": "ASC"
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items.0.id": "__case_id__",
+                    "data.items.0.type": "mcp_case_study"
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-cpt-mcp-case-study",
+                "label": "list-cpt-mcp-case-study",
+                "role": "case_manager",
+                "input": {
+                    "search": "MCP E2E Case Study",
+                    "author": "__case_manager_id__",
+                    "per_page": 5,
+                    "orderby": "id",
+                    "order": "ASC"
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items.0.id": "__case_id__",
+                    "data.items.0.type": "mcp_case_study",
+                    "data.page": 1,
+                    "data.per_page": 5
+                },
+                "assert_missing_paths": [
+                    "data.total",
+                    "data.total_pages",
+                    "data.items.0.content"
+                ]
+            }
+        },
+        {
+            "label": "list-posts includes safe author fields",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-posts",
+                "label": "list-posts includes safe author fields",
+                "role": "editor",
+                "input": {
+                    "search": "MCP E2E Post",
+                    "author": "__author_id__",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items.0.author": "__author_id__",
+                    "data.items.0.author_name": "author_test"
+                },
+                "assert_missing_paths": [
+                    "data.items.0.author_login"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-posts",
+                "label": "list-posts includes safe author fields",
+                "role": "editor",
+                "input": {
+                    "search": "MCP E2E Post",
+                    "author": "__author_id__",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items.0.author": "__author_id__",
+                    "data.items.0.author_name": "author_test",
+                    "data.page": 1,
+                    "data.per_page": 5
+                },
+                "assert_missing_paths": [
+                    "data.items.0.author_login",
+                    "data.total",
+                    "data.total_pages",
+                    "data.items.0.content"
+                ]
+            }
+        },
+        {
+            "label": "list-posts filters private without read-private",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-posts",
+                "label": "list-posts filters private without read-private",
+                "role": "limited_editor",
+                "input": {
+                    "status": "private",
+                    "search": "MCP E2E Private Post",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.total": 0
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-posts",
+                "label": "list-posts filters private without read-private",
+                "role": "limited_editor",
+                "input": {
+                    "status": "private",
+                    "search": "MCP E2E Private Post",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items": [],
+                    "data.next_page": null,
+                    "data.page": 1,
+                    "data.per_page": 5
+                },
+                "assert_missing_paths": [
+                    "data.total",
+                    "data.total_pages"
+                ]
+            }
+        },
+        {
+            "label": "list-posts filters trash without delete",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-posts",
+                "label": "list-posts filters trash without delete",
+                "role": "limited_editor",
+                "input": {
+                    "status": "trash",
+                    "search": "MCP E2E Trash Filter Post",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.total": 0
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-posts",
+                "label": "list-posts filters trash without delete",
+                "role": "limited_editor",
+                "input": {
+                    "status": "trash",
+                    "search": "MCP E2E Trash Filter Post",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items": [],
+                    "data.next_page": null,
+                    "data.page": 1,
+                    "data.per_page": 5
+                },
+                "assert_missing_paths": [
+                    "data.total",
+                    "data.total_pages"
+                ]
+            }
+        },
+        {
+            "label": "list-revisions post",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-revisions",
+                "label": "list-revisions post",
+                "role": "editor",
+                "input": {
+                    "post_id": "__revision_post_id__",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_paths": [
+                    "data.revisions.0.id",
+                    "data.revisions.0.content"
+                ],
+                "assert_values": {
+                    "data.post_id": "__revision_post_id__",
+                    "data.type": "post"
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-revisions",
+                "label": "list-revisions post",
+                "role": "editor",
+                "input": {
+                    "post_id": "__revision_post_id__",
+                    "per_page": 5,
+                    "fields": "full"
+                },
+                "expect": "success",
+                "assert_paths": [
+                    "data.revisions.0.id",
+                    "data.revisions.0.content"
+                ],
+                "assert_values": {
+                    "data.post_id": "__revision_post_id__",
+                    "data.type": "post"
+                }
+            }
+        },
+        {
+            "label": "list-revisions page",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-revisions",
+                "label": "list-revisions page",
+                "role": "editor",
+                "input": {
+                    "post_id": "__revision_page_id__",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_paths": [
+                    "data.revisions.0.id",
+                    "data.revisions.0.content"
+                ],
+                "assert_values": {
+                    "data.post_id": "__revision_page_id__",
+                    "data.type": "page"
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-revisions",
+                "label": "list-revisions page",
+                "role": "editor",
+                "input": {
+                    "post_id": "__revision_page_id__",
+                    "per_page": 5,
+                    "fields": "full"
+                },
+                "expect": "success",
+                "assert_paths": [
+                    "data.revisions.0.id",
+                    "data.revisions.0.content"
+                ],
+                "assert_values": {
+                    "data.post_id": "__revision_page_id__",
+                    "data.type": "page"
+                }
+            }
+        },
+        {
+            "label": "list-pages includes safe author fields",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-pages",
+                "label": "list-pages includes safe author fields",
+                "role": "editor",
+                "input": {
+                    "search": "MCP E2E Page",
+                    "author": "__editor_id__",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items.0.author": "__editor_id__",
+                    "data.items.0.author_name": "editor_test"
+                },
+                "assert_missing_paths": [
+                    "data.items.0.author_login"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-pages",
+                "label": "list-pages includes safe author fields",
+                "role": "editor",
+                "input": {
+                    "search": "MCP E2E Page",
+                    "author": "__editor_id__",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items.0.author": "__editor_id__",
+                    "data.items.0.author_name": "editor_test",
+                    "data.page": 1,
+                    "data.per_page": 5
+                },
+                "assert_missing_paths": [
+                    "data.items.0.author_login",
+                    "data.total",
+                    "data.total_pages",
+                    "data.items.0.content"
+                ]
+            }
+        },
+        {
+            "label": "list-pages filters private without read-private",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-pages",
+                "label": "list-pages filters private without read-private",
+                "role": "limited_editor",
+                "input": {
+                    "status": "private",
+                    "search": "MCP E2E Private Page",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.total": 0
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-pages",
+                "label": "list-pages filters private without read-private",
+                "role": "limited_editor",
+                "input": {
+                    "status": "private",
+                    "search": "MCP E2E Private Page",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items": [],
+                    "data.next_page": null,
+                    "data.page": 1,
+                    "data.per_page": 5
+                },
+                "assert_missing_paths": [
+                    "data.total",
+                    "data.total_pages"
+                ]
+            }
+        },
+        {
+            "label": "list-pages filters trash without delete",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-pages",
+                "label": "list-pages filters trash without delete",
+                "role": "limited_editor",
+                "input": {
+                    "status": "trash",
+                    "search": "MCP E2E Trash Filter Page",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.total": 0
+                }
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-pages",
+                "label": "list-pages filters trash without delete",
+                "role": "limited_editor",
+                "input": {
+                    "status": "trash",
+                    "search": "MCP E2E Trash Filter Page",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items": [],
+                    "data.next_page": null,
+                    "data.page": 1,
+                    "data.per_page": 5
+                },
+                "assert_missing_paths": [
+                    "data.total",
+                    "data.total_pages"
+                ]
+            }
+        },
+        {
+            "label": "list-media as author",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-media",
+                "label": "list-media as author",
+                "role": "author",
+                "input": {
+                    "search": "MCP E2E",
+                    "per_page": 10
+                },
+                "expect": "success"
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-media",
+                "label": "list-media as author",
+                "role": "author",
+                "input": {
+                    "search": "MCP E2E",
+                    "per_page": 10
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.page": 1,
+                    "data.per_page": 10
+                },
+                "assert_missing_paths": [
+                    "data.total",
+                    "data.total_pages"
+                ]
+            }
+        },
+        {
+            "label": "list-orphaned-media",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-orphaned-media",
+                "label": "list-orphaned-media",
+                "role": "author",
+                "input": {
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items.0.id": "__orphaned_media_id__",
+                    "data.items.0.title": "MCP E2E Media orphaned",
+                    "data.items.0.mime_type": "text/plain"
+                },
+                "assert_paths": [
+                    "data.items.0.url",
+                    "data.items.0.file_size"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-orphaned-media",
+                "label": "list-orphaned-media",
+                "role": "author",
+                "input": {
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items.0.id": "__orphaned_media_id__",
+                    "data.items.0.title": "MCP E2E Media orphaned",
+                    "data.items.0.mime_type": "text/plain",
+                    "data.page": 1,
+                    "data.per_page": 5
+                },
+                "assert_paths": [
+                    "data.items.0.url",
+                    "data.items.0.file_size"
+                ],
+                "assert_missing_paths": [
+                    "data.total",
+                    "data.total_pages"
+                ]
+            }
+        },
+        {
+            "label": "get-seo-scores",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/get-seo-scores",
+                "label": "get-seo-scores",
+                "role": "editor",
+                "input": {
+                    "post_type": "post",
+                    "status": "pending",
+                    "per_page": 1
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items.0.post_id": "__yoast_score_post_id__",
+                    "data.items.0.post_type": "post",
+                    "data.items.0.score": 82,
+                    "data.yoast_active": true
+                },
+                "assert_paths": [
+                    "data.items.0.title",
+                    "data.items.0.url",
+                    "data.items.0.modified_gmt"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/get-seo-scores",
+                "label": "get-seo-scores",
+                "role": "editor",
+                "input": {
+                    "post_type": "post",
+                    "status": "pending",
+                    "per_page": 1
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items.0.post_id": "__yoast_score_post_id__",
+                    "data.items.0.post_type": "post",
+                    "data.items.0.score": 82,
+                    "data.yoast_active": true,
+                    "data.page": 1,
+                    "data.per_page": 1
+                },
+                "assert_paths": [
+                    "data.items.0.title",
+                    "data.items.0.url",
+                    "data.items.0.modified_gmt"
+                ],
+                "assert_missing_paths": [
+                    "data.total",
+                    "data.total_pages"
+                ]
+            }
+        },
+        {
+            "label": "get-readability-scores",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/get-readability-scores",
+                "label": "get-readability-scores",
+                "role": "editor",
+                "input": {
+                    "post_type": "post",
+                    "status": "pending",
+                    "per_page": 1
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items.0.post_id": "__yoast_score_post_id__",
+                    "data.items.0.post_type": "post",
+                    "data.items.0.score": 74,
+                    "data.yoast_active": true
+                },
+                "assert_paths": [
+                    "data.items.0.title",
+                    "data.items.0.url",
+                    "data.items.0.modified_gmt"
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/get-readability-scores",
+                "label": "get-readability-scores",
+                "role": "editor",
+                "input": {
+                    "post_type": "post",
+                    "status": "pending",
+                    "per_page": 1
+                },
+                "expect": "success",
+                "assert_values": {
+                    "data.items.0.post_id": "__yoast_score_post_id__",
+                    "data.items.0.post_type": "post",
+                    "data.items.0.score": 74,
+                    "data.yoast_active": true,
+                    "data.page": 1,
+                    "data.per_page": 1
+                },
+                "assert_paths": [
+                    "data.items.0.title",
+                    "data.items.0.url",
+                    "data.items.0.modified_gmt"
+                ],
+                "assert_missing_paths": [
+                    "data.total",
+                    "data.total_pages"
+                ]
+            }
+        },
+        {
+            "label": "wstm120 list-posts contributor own drafts allowed",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-posts",
+                "label": "wstm120 list-posts contributor own drafts allowed",
+                "role": "contributor",
+                "input": {
+                    "status": "draft",
+                    "search": "WSTM120 Updated Draft",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_permission": true,
+                "assert_values": {
+                    "data.items.0.id": "__wstm120_contributor_draft_id__",
+                    "data.total": 1,
+                    "data.total_pages": 1
+                },
+                "assert_missing_paths": [
+                    "data.items.0.author_login"
+                ],
+                "assert_capabilities": [
+                    {
+                        "capability": "edit_posts",
+                        "args": [],
+                        "allowed": true
+                    }
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-posts",
+                "label": "wstm120 list-posts contributor own drafts allowed",
+                "role": "contributor",
+                "input": {
+                    "status": "draft",
+                    "search": "WSTM120 Updated Draft",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_permission": true,
+                "assert_values": {
+                    "data.items.0.id": "__wstm120_contributor_draft_id__",
+                    "data.next_page": null,
+                    "data.page": 1,
+                    "data.per_page": 5
+                },
+                "assert_missing_paths": [
+                    "data.items.0.author_login",
+                    "data.items.1",
+                    "data.total",
+                    "data.total_pages",
+                    "data.items.0.content"
+                ],
+                "assert_capabilities": [
+                    {
+                        "capability": "edit_posts",
+                        "args": [],
+                        "allowed": true
+                    }
+                ]
+            }
+        },
+        {
+            "label": "wstm120 list-pages editor allowed",
+            "before": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-pages",
+                "label": "wstm120 list-pages editor allowed",
+                "role": "editor",
+                "input": {
+                    "status": "private",
+                    "search": "MCP E2E Private Page",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_permission": true,
+                "assert_values": {
+                    "data.items.0.id": "__private_page_id__",
+                    "data.total": 1,
+                    "data.total_pages": 1
+                },
+                "assert_missing_paths": [
+                    "data.items.0.author_login"
+                ],
+                "assert_capabilities": [
+                    {
+                        "capability": "edit_pages",
+                        "args": [],
+                        "allowed": true
+                    }
+                ]
+            },
+            "after": {
+                "ability": "webmastery-site-toolkit-for-mcp/list-pages",
+                "label": "wstm120 list-pages editor allowed",
+                "role": "editor",
+                "input": {
+                    "status": "private",
+                    "search": "MCP E2E Private Page",
+                    "per_page": 5
+                },
+                "expect": "success",
+                "assert_permission": true,
+                "assert_values": {
+                    "data.items.0.id": "__private_page_id__",
+                    "data.next_page": null,
+                    "data.page": 1,
+                    "data.per_page": 5
+                },
+                "assert_missing_paths": [
+                    "data.items.0.author_login",
+                    "data.items.1",
+                    "data.total",
+                    "data.total_pages",
+                    "data.items.0.content"
+                ],
+                "assert_capabilities": [
+                    {
+                        "capability": "edit_pages",
+                        "args": [],
+                        "allowed": true
+                    }
+                ]
+            }
+        }
+    ],
+    "baseline": [
+        {
+            "label": "wstm116 bulk-trash-posts confirm missing",
+            "sha256": "fe06b5fed6336d0d6ad9919912cbef4b19ff033eca8cd18abc312260049472f8"
+        },
+        {
+            "label": "wstm116 bulk-trash-posts confirm false",
+            "sha256": "93344521b5bfd043e9bbcf81c4be5129eebea72654d2bda6f6c5c9e089cfd51a"
+        },
+        {
+            "label": "wstm116 bulk-trash-posts confirm string",
+            "sha256": "47d00e7c0caf31e3d07e43c20103270bdaf6ef40238207f26fcf3b72a5493a01"
+        },
+        {
+            "label": "wstm116 bulk-trash-posts confirm number",
+            "sha256": "efa2be4a2e80f394b61bd335ce67f5ea910bfb60a877814ed35142a907256f55"
+        },
+        {
+            "label": "wstm116 bulk-trash-posts confirm null",
+            "sha256": "af306d8de356284db057b3b522a018f6b9ad98a3d93ae5be57d0c9acdea384a5"
+        },
+        {
+            "label": "wstm116 bulk-trash-posts dry_run string",
+            "sha256": "5d6525d9add8d8232c04354d5d12abf0601f9ce3aad903a7695c3c8d3df0305b"
+        },
+        {
+            "label": "wstm116 bulk-trash-posts dry_run number",
+            "sha256": "049ddd70521e665e62fa85d20a09f5c74ed16e4fb1066f89a35ff17070c43136"
+        },
+        {
+            "label": "wstm116 bulk-trash-posts dry_run null",
+            "sha256": "3e9baa39945267038cfaa17b41e192d7432a15da6f141ba0416f9687557f4b8f"
+        },
+        {
+            "label": "wstm116 bulk-trash-posts 101 unique",
+            "sha256": "d80a43e9778e070f87250311ec33877b220e5890c3909c52db7b03b036a5789e"
+        },
+        {
+            "label": "wstm116 bulk-trash-posts 101 duplicate",
+            "sha256": "f429f3878bfcb49090579deb7316d48b801781185987663e3d02230ce6fc048f"
+        },
+        {
+            "label": "wstm116 bulk-trash-posts dry run mixed",
+            "sha256": "a8a9875368df988d82d5f790dad2d05fecfb6b8aafed33f3e1d057dd5c8afa2c"
+        },
+        {
+            "label": "wstm116 bulk-trash-posts dry run all failed",
+            "sha256": "6131687ba4860069fbcdc0d8f7eb38c6c760e0cac9165c864978c872c918b983"
+        },
+        {
+            "label": "wstm116 bulk-trash-posts 100 duplicates",
+            "sha256": "4ff3aff076e806c92a77f9351ef139a8a83db9d6c9e7f7d21a3b13d4a3ea9fe8"
+        },
+        {
+            "label": "wstm116 bulk-publish-posts confirm missing",
+            "sha256": "98c35a9a066eca131a6fcb41a9e21a9bd9501487c7b74b00f95cc1cddc1809c4"
+        },
+        {
+            "label": "wstm116 bulk-publish-posts confirm false",
+            "sha256": "bd41444847229fbcc3a21fd0660a8874cf8799892864cce25a3f2bf5abe371a4"
+        },
+        {
+            "label": "wstm116 bulk-publish-posts confirm string",
+            "sha256": "7a69a1e2df6dd04e0ad8f219833bc49b75b978b61d9917e8224765e96754c60b"
+        },
+        {
+            "label": "wstm116 bulk-publish-posts confirm number",
+            "sha256": "525c8dd933f04ee53a75bdbf519f5c5026cf760cab38eed8adec489c580cc7e2"
+        },
+        {
+            "label": "wstm116 bulk-publish-posts confirm null",
+            "sha256": "1261ef50ce91084c573c367e7f262da48b20696a750e2e640bd49ad141ff882e"
+        },
+        {
+            "label": "wstm116 bulk-publish-posts dry_run string",
+            "sha256": "a7beb4f8e8a4cedc1ab8fe49a2a0ebd0c765077b65e879594027d2807d526960"
+        },
+        {
+            "label": "wstm116 bulk-publish-posts dry_run number",
+            "sha256": "09cb69db801ab2c10bde2e54b5a47e62768a6f2cf0cc035a3bd949b21d8ab32d"
+        },
+        {
+            "label": "wstm116 bulk-publish-posts dry_run null",
+            "sha256": "22e419713352b4c1f602485253beb9c88f5252aef43a4691994799c5ff6126fa"
+        },
+        {
+            "label": "wstm116 bulk-publish-posts 101 unique",
+            "sha256": "541554fa85ec4845cca6001471c2f3d7584d411628845baab7a5be0b7759b487"
+        },
+        {
+            "label": "wstm116 bulk-publish-posts 101 duplicate",
+            "sha256": "24aa9d56bff07178028045d41257f1eeae38cb0db2e007e86e4b75d3946b03e8"
+        },
+        {
+            "label": "wstm116 bulk-publish-posts dry run mixed",
+            "sha256": "e946bb0071d0d468a963d2000ea12fa38031464792b9f6ac547a6b54f9a5a6b0"
+        },
+        {
+            "label": "wstm116 bulk-publish-posts dry run all failed",
+            "sha256": "e958de076be38c84f5751fdb6d070b405a75346b98c5a2aa1a8bb8ed36abc492"
+        },
+        {
+            "label": "wstm116 bulk-publish-posts 100 duplicates",
+            "sha256": "9b2349333361e81618f3275700c43def2938acf880c29022b0e511cfa6c4dd6f"
+        },
+        {
+            "label": "wstm116 delete-media confirm missing",
+            "sha256": "91706ffe45b3d32790af2b3406ecba6872058abf0948344bc7c440da9bba9e1c"
+        },
+        {
+            "label": "wstm116 delete-media confirm false",
+            "sha256": "b14d3345e2370a16f3521c1f963289204b81de1ba9f649acf953cc30fe03d31b"
+        },
+        {
+            "label": "wstm116 delete-media confirm string",
+            "sha256": "a6d5ea0c3601d8881d942b573fa96d26d1ffbb4686b5d99cbb67977bf554bed4"
+        },
+        {
+            "label": "wstm116 delete-media confirm number",
+            "sha256": "c3041d6c5a5e0380f4fa18cb3df46509f919037ddd4079ab266c3b71495f57f8"
+        },
+        {
+            "label": "wstm116 delete-media confirm null",
+            "sha256": "c41b73b15621dea2bf9c607fd3bd462306e8b041f1d4527cd95d8def556671cc"
+        },
+        {
+            "label": "wstm116 delete-media force string",
+            "sha256": "66871545043e0d0bc08b017603268643ba3d5a37b4be49b3621e7eedd2bc15f6"
+        },
+        {
+            "label": "wstm116 delete-media force number",
+            "sha256": "9466ddfd016215aed3d22c4bfa012516af651698563f2e6e171e6029791e0e6c"
+        },
+        {
+            "label": "wstm116 delete-media force null",
+            "sha256": "d7f0767943cd8c1332266580643db7d465b7c0b7c9223cbd10d1caf79b567ba8"
+        },
+        {
+            "label": "wstm116 delete-category confirm missing",
+            "sha256": "c80a99db13c0be6280641b24c02c436b56fe2e1b7408b78e8e740ce201a99b10"
+        },
+        {
+            "label": "wstm116 delete-category confirm false",
+            "sha256": "af23a69e278a9c877e74a96a9b5a0a3b4b83724498edf785bcbd3747ae7ee151"
+        },
+        {
+            "label": "wstm116 delete-category confirm string",
+            "sha256": "bb8521b6742a0966bdcfefb40523bc40976b205ab2c6f090205337c4466b0fb8"
+        },
+        {
+            "label": "wstm116 delete-category confirm number",
+            "sha256": "461c693b9472bdf80e2755258c4504b8bada5feaa63c22926bf5d748666e10e3"
+        },
+        {
+            "label": "wstm116 delete-category confirm null",
+            "sha256": "b17c4c3cb4e72e1204b951e48d1d43a8885c1bcc912a31f4a4794d9afca88f86"
+        },
+        {
+            "label": "wstm116 delete-tag confirm missing",
+            "sha256": "7eb40fc681ccbd8a5ef710162449c482ab2715b8c268e3004e2ab6d1e6a463cf"
+        },
+        {
+            "label": "wstm116 delete-tag confirm false",
+            "sha256": "c74265449f4dd751b403f6e128f71d5415dc877545ef405494972867fad7ada2"
+        },
+        {
+            "label": "wstm116 delete-tag confirm string",
+            "sha256": "66e1d1a1b3113cd38a405d27a5c8579bb184c22f51f9438e2a2b8c956378c2c9"
+        },
+        {
+            "label": "wstm116 delete-tag confirm number",
+            "sha256": "e895ec1558a03324f7d660b86d88f22a8bc79f2bb336f96eff17508c68605c6b"
+        },
+        {
+            "label": "wstm116 delete-tag confirm null",
+            "sha256": "1ffc8079eb59ff46fc1e14c96cac8d5ae593d3172afc7a9cd455924276609880"
+        },
+        {
+            "label": "list-post-types includes CPT metadata",
+            "sha256": "45e6884afe4c21ac28617ea023df7b05355af2ba38c949957fde686c516cf47c"
+        },
+        {
+            "label": "list-post-types without read invalid input rejected first",
+            "sha256": "e6adde72fa4e340c5f8ddd6b3b95ea9eda41b662fbc02f278d827aaa999f8335"
+        },
+        {
+            "label": "list-post-types without read valid input permission denial",
+            "sha256": "2ef2845bbfd038cc7b4825bd8eff60f0fff4ff3724ac5c13487965947177df95"
+        },
+        {
+            "label": "list-cpt-mcp-book",
+            "sha256": "34f03a508f4ed37feb995c35d1d30851462dd62714a35864884faa48970cf9a3"
+        },
+        {
+            "label": "list-cpt-mcp-book filters private without read-private",
+            "sha256": "a41721056c3f85960c6a29ae1cdb218f87679f8529380ec9a97ab4e68609817e"
+        },
+        {
+            "label": "list-cpt-mcp-book filters trash without delete",
+            "sha256": "0e3203b22b84c084df9462f56e625adac928b5b3cb06091dcd9228f948e82e28"
+        },
+        {
+            "label": "list-cpt-mcp-book as subscriber",
+            "sha256": "1e496f1994825c1b7d82fbb81445379605d0929261e1a1244ff2f5948193b6cf"
+        },
+        {
+            "label": "get-cpt-mcp-book",
+            "sha256": "9e45a703dd997578d5f74f6bf013a00d7601c737b8c41f2026ca39ab439e4e29"
+        },
+        {
+            "label": "get-cpt-mcp-book without read",
+            "sha256": "2f0b74d34ae70f3678fb4be3f442e68af5f2ed0d9070e2fb9306e72de6d1e9ed"
+        },
+        {
+            "label": "create-cpt-mcp-book with taxonomy terms",
+            "sha256": "9e9e3beca2a4bdfb2d07f9dfe33c5a3325d513c41bd10775d8c92d7f0dd086cb"
+        },
+        {
+            "label": "create-cpt-mcp-book as subscriber",
+            "sha256": "41105f8ea0b8d5d2489decabd222143fa922bd590d3289261fef273e74294d17"
+        },
+        {
+            "label": "create-cpt-mcp-book private without publish",
+            "sha256": "c017355e0d9350115c8fa846604670cc97caa3a215abbac9eec76de190fa463f"
+        },
+        {
+            "label": "update-cpt-mcp-book",
+            "sha256": "ac507a01718d413984b7f313cfa25e9d09baabef7d451758b730a30f04b5667e"
+        },
+        {
+            "label": "update-cpt-mcp-book as subscriber",
+            "sha256": "44fb729a166f41496cafa5297eb01ce0930cece122587009595580da370f6291"
+        },
+        {
+            "label": "update-cpt-mcp-book private without publish",
+            "sha256": "f5ae433043aead04df179ccbb4e5f36f587f6c6bdf109a3cfa653c20909d382b"
+        },
+        {
+            "label": "wstm107 update-cpt-mcp-book rejects invalid taxonomy before write",
+            "sha256": "dc6598cca91d49a2639f88a648b35faae97d1364338b830917164895627c3f6b"
+        },
+        {
+            "label": "wstm107 get-cpt-mcp-book confirms invalid taxonomy rejection did not persist",
+            "sha256": "dae302f4a759b53fb5967393cdf129955c0f7e5dab0624f2318d50883652d3de"
+        },
+        {
+            "label": "wstm107 update-cpt-mcp-book rejects unauthorized taxonomy assignment before publish write",
+            "sha256": "6eb108ed7c356e4b0872b6e1b290721440250668d9fdb162c35c05a4eb647137"
+        },
+        {
+            "label": "wstm107 get-cpt-mcp-book confirms unauthorized taxonomy rejection did not persist",
+            "sha256": "eb69e2571cddf111082f43c9e4bc29cbc855cc8ac63c67878102a2bc988461f0"
+        },
+        {
+            "label": "wstm107 update-cpt-mcp-book rejects mixed allowed and forbidden registered taxonomies before write",
+            "sha256": "7ed669577975d6defb773f22463f363b11dd03ce85453d0672db3c5123d5a603"
+        },
+        {
+            "label": "wstm107 get-cpt-mcp-book confirms mixed allowed and forbidden registered taxonomy payload did not partially persist",
+            "sha256": "30e68b83496d77689c274977b62ff5ac993c63140fd44058442da9ba0d5c95f6"
+        },
+        {
+            "label": "wstm107 update-cpt-mcp-book rejects mixed valid and invalid taxonomy payload atomically",
+            "sha256": "6e8df86342f660fd009364ec7fcc034eb5575a695f34889ea1e852b69d4c7c6b"
+        },
+        {
+            "label": "wstm107 get-cpt-mcp-book confirms mixed taxonomy payload rejection did not partially persist",
+            "sha256": "6aadf8bd66f13002f38e0ea4ef74720d736ffacf7d9258dad8c144718daab806"
+        },
+        {
+            "label": "wstm107 update-cpt-mcp-book persists content and requested terms once validated",
+            "sha256": "dda44fd823f9ad44ff9e84a3232589c3b396228f7413ee4fb04c6356c53a1838"
+        },
+        {
+            "label": "wstm107 get-cpt-mcp-book confirms validated update persisted content and terms",
+            "sha256": "8317013b1083a35e8e8c688cd66448b3cb88b0543ee0fb285660740e53d4e3c2"
+        },
+        {
+            "label": "delete-cpt-mcp-book",
+            "sha256": "1c401bf819dc4ebd330223102a689d3eb48f09dcf6c157cdf5a2acec795bf248"
+        },
+        {
+            "label": "delete-cpt-mcp-book as subscriber",
+            "sha256": "d1f4dc7e50f31739c39a340e101846794af6a48a65a4176d558984839cacd96b"
+        },
+        {
+            "label": "list-cpt-mcp-case-study",
+            "sha256": "4140c3b10c4614cc7c78272503b2ba6c6661d0e5b1528f59280580778ff23a8f"
+        },
+        {
+            "label": "list-cpt-mcp-case-study as subscriber",
+            "sha256": "0e241f132a4592b22363e71a6f3cc2469884e389296557381e6c05ea95f3053b"
+        },
+        {
+            "label": "get-cpt-mcp-case-study",
+            "sha256": "e3ccdfaf99d32851f8648cf03fbb6080ba4183281b1520d658712babb3386d05"
+        },
+        {
+            "label": "get-cpt-mcp-case-study without read",
+            "sha256": "292966a6929c14bf462b833d7f4896cb8650eec10546ff2694c560fc1e694cc4"
+        },
+        {
+            "label": "create-cpt-mcp-case-study",
+            "sha256": "245dd254cde1c8ee323bfeb718e022d8f85f47fbbd0d15c35ac5c137158f4598"
+        },
+        {
+            "label": "create-cpt-mcp-case-study as book manager",
+            "sha256": "f7398f550147f427dcf60aee888feaccd56f74d26d573be099f396706586a4b1"
+        },
+        {
+            "label": "update-cpt-mcp-case-study",
+            "sha256": "a20bc3a173cf37814cf0c5c278fc68341c6454c96d0b07d02cb86137c33b6219"
+        },
+        {
+            "label": "update-cpt-mcp-case-study as subscriber",
+            "sha256": "07544d91503678c85e0d2cf93f47df6a2e416127e10f5e3c9eeeae62d5f1482e"
+        },
+        {
+            "label": "delete-cpt-mcp-case-study",
+            "sha256": "5cf3b0b991dd7dd17a4945ef0bb8a97ac8a95749f7c000fd61bd8e338b9bc939"
+        },
+        {
+            "label": "delete-cpt-mcp-case-study as subscriber",
+            "sha256": "bf914241f8947c0eaa59e8c5673121412b8f2acdf96912c771afed6f672ef0c4"
+        },
+        {
+            "label": "list-posts includes safe author fields",
+            "sha256": "5148b224afc913d68855f66ee9539e3aa2a4e7909b4920063c4c7cf7bcc7e046"
+        },
+        {
+            "label": "list-posts filters private without read-private",
+            "sha256": "4bebf4b90686ffcb019dc16a4ede80163d46d3ccddfca0da8bf89f2ae99f6a68"
+        },
+        {
+            "label": "list-posts filters trash without delete",
+            "sha256": "beaa93e35070d539bec7485a9604a2abe07b3e7209726cfdebb0785f7ba3c6dd"
+        },
+        {
+            "label": "get-post",
+            "sha256": "a3dd43de0bb68c7a7e827de6a2dd896c834aad87e99a60bebcc03b76c8eb8704"
+        },
+        {
+            "label": "create-post",
+            "sha256": "2810445f6c48277dbad674c0778dd02347c4ba16802208c349409b5870514513"
+        },
+        {
+            "label": "create-post private without publish_posts",
+            "sha256": "77c263e917fc930b5e349b8943eb702180670f61f149ad0d7868ad7fa38e9e36"
+        },
+        {
+            "label": "create-post writes Yoast meta rejects original combined payload",
+            "sha256": "91dcd3c101f6a1eb8ac55add3c19b839f620b9d3d4666c119f63f081785db4f6"
+        },
+        {
+            "label": "create-post writes Yoast meta via plain request then separate metadata calls",
+            "sha256": "5eb1593a9e49c07cdafc5d6ed7792dee1b9c273a40724f33e249e8c0dee3179f"
+        },
+        {
+            "label": "create-post writes Yoast meta standalone _yoast_wpseo_focuskw",
+            "sha256": "9e3ad19e77606bcfb2369ee7cda804ed1427b4d10becb83f36a69a88fd8fbc8b"
+        },
+        {
+            "label": "create-post writes Yoast meta standalone _yoast_wpseo_metadesc",
+            "sha256": "7489a1fe8ed01be0362d3d99d8f797d753d7a233e37935852985b37d90ac6a9a"
+        },
+        {
+            "label": "create-post writes Yoast meta standalone _yoast_wpseo_title",
+            "sha256": "2f05a1171496e86278bf3e9a0b03eab653a78e9ac91ea988fd2b5a962912952f"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields rejects original combined payload",
+            "sha256": "72010a8c1d4825db5af0552c4f62661ed86b1158489c30fc94f53b1ad2eea6bf"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields via plain request then separate metadata calls",
+            "sha256": "fac1fcf62fe031dd915d8413e4ba65fbdfc8035f4a8cd88b56b4ef09f6591560"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_canonical",
+            "sha256": "2c28a19327f0f572d564dd4a34eb6cdfd9dc8995298397c62bb7ad76ceb5b34c"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_bctitle",
+            "sha256": "3187f7da2e904e133ae52e341af6eb7c8c11bcb693d3d6599e6e39dce7062f01"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_schema_page_type",
+            "sha256": "4227f27abb80076ab790c8ba8d3eb0d45942cbd814b08e8c00e79e4fac25c53a"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_schema_article_type",
+            "sha256": "7ac4c05e93466833e05a7f18bac6e60fc0bd984718c6f429369df6122bd0cfca"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_opengraph-title",
+            "sha256": "4cb8c6fe690afe4ccd61d053cdb30d031d794a74c1f64dc7df2dc1608aaec778"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_opengraph-description",
+            "sha256": "610364399da7f31ec83eaacd7067a08dbd4a452c1e80f2c10cb41913297442e7"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_opengraph-image",
+            "sha256": "805bbbec264cfdb4a51b65613b7e2a0a4863bd519edf0444c9e0f112df7fb91a"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_twitter-title",
+            "sha256": "27c05fcbbfaa73184fc044ba48ea6c8182fba82b26554aec6d5d78bc6ec41064"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_twitter-description",
+            "sha256": "728ba29da3c4e5fd5fde99871f24e838cfcbaa6483c36cfcddde71c98bd3137d"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_twitter-image",
+            "sha256": "d10ba8b067865d916a4e5fa6ee27a8c9b6bb4697fcb9d386b6948430ec208ed2"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_primary_category",
+            "sha256": "cfd6ee2bd825d82124d799c74d25a075eb13e94ca697c49efbc366fc24c6d25e"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_meta-robots-noindex",
+            "sha256": "b66170addfd0effefa9189aa7707bb6f36c0b59bc08f4353e2223c02a9837f4b"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_meta-robots-nofollow",
+            "sha256": "84e82fea291bce1082ebad37c6e66549bddc437afc9cd1ec83944dc30a6f9996"
+        },
+        {
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_meta-robots-adv",
+            "sha256": "0b96399928c3ae0596e47b0608664b0dd8f479e8dc53ac9c131c8cb8e9525c51"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields rejects original combined payload",
+            "sha256": "fd66bc689aff1b2c14ace0cd11fe71403acfa5e6c77e13f7487a7eb6dbcacfdc"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields via plain request then separate metadata calls",
+            "sha256": "e8b7452ac6bf129d9c9e3eaa4ab9d0dd4e805e411e97a8e08b1c6698b0c6be66"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_titles_desc",
+            "sha256": "50cba7171e2ede6ed8bc393edfc4fa513291ca9ea4a034dee2fd7c61575b1b91"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_analysis_target_kw",
+            "sha256": "98767507c8b301102127e8eb9cf622411f50b95b635372efd13a5f1c879f72af"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_titles_title",
+            "sha256": "a728507c4e0e382f3ec257ea71fc48eadce2a1611217ac84b75df809e70e10d2"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_robots_canonical",
+            "sha256": "f10fab29476950b3a0afa9a98f9cdd294e8163520008db67598d50ff5c10728a"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_social_fb_title",
+            "sha256": "6ecc77ee49481d4152c41c89a210dcd3217d330256737c09830242fc6465dac1"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_social_fb_desc",
+            "sha256": "e58704a02fc0b157a16f153240d5a3419e139ee57f792a9dee3ac1547ac86238"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_social_fb_img",
+            "sha256": "8fd68cd7e7fef2209091f9ea9c1b7dd6e0c4013ee3ed192a617674c0659a52ea"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_social_twitter_title",
+            "sha256": "03003c89aa3c3b81f8e1808c4112a41a28c34476f16fe83b569e9b359a5c4a14"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_social_twitter_desc",
+            "sha256": "21bb3058fc7dc79318a6fb9d279c9a42877144fe3693545be5a62966195ed975"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_social_twitter_img",
+            "sha256": "6ff80b242f0b2f6222cdd7e111bced1bb36a6f62e9b6aed90efcef45e12944c7"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_robots_primary_cat",
+            "sha256": "d22501ba4db064c7535fbf882970fb4ec570dd30128b18143d905ee4910eabe7"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_robots_index",
+            "sha256": "4384e458a02e18bd08176d300d153e3c3f8776efd818afa430a1b52a8d761ac6"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_robots_follow",
+            "sha256": "b4632b20dbd621de5ee0fbcc374c66cd25894e4accb82ef99a7b00674132c29b"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_robots_archive",
+            "sha256": "8be83b189e728045b98f12aed6b1cedb82ade79319fd0d7acd02301935c1bc44"
+        },
+        {
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_robots_breadcrumbs",
+            "sha256": "c7ddd3e7dc6bb6ec9f6f4ee2bba011b8673006ca3a700aeb75ecba9ccfdf404e"
+        },
+        {
+            "label": "create-post preserves backslashes",
+            "sha256": "f12443c9ebcb4193809fa7ceeebc48a9fbe34e9ac99f6bcd07e36261470997ff"
+        },
+        {
+            "label": "update-post rejects original combined payload",
+            "sha256": "b500439ac6544167c0626bfd60a45f19973b0b6afbec38d342537a98827f045c"
+        },
+        {
+            "label": "update-post via plain request then separate metadata calls",
+            "sha256": "0c737a5365be8836e87482774840f73b96079410fd6ba1b3fe9853f6be2e3bfa"
+        },
+        {
+            "label": "update-post standalone _yoast_wpseo_metadesc",
+            "sha256": "2ecf003f2354d269c87a902e40a2026eb060732c01a0ac27da76d1f9b4dc9579"
+        },
+        {
+            "label": "update-post standalone _yoast_wpseo_focuskw",
+            "sha256": "37493fc803b8004048ec60675943ef6f22469a08bcdbb49b63f23cb455a6c8e5"
+        },
+        {
+            "label": "update-post standalone _yoast_wpseo_title",
+            "sha256": "8ec27e6979dd3ec276aef9efc0a9b4f9eb4f682e66e1d75f2e6c361f9aa965ff"
+        },
+        {
+            "label": "update-post standalone _yoast_wpseo_canonical",
+            "sha256": "53ce7afc4b6924be235fe697f7d88c2e44000ee326a692a5bda045cfc5e5093c"
+        },
+        {
+            "label": "update-post standalone _yoast_wpseo_opengraph-title",
+            "sha256": "9c3fcb719890cb6a698a87afa0bbb8bb8e8bf0dc691e1f344db8e628c84ff234"
+        },
+        {
+            "label": "update-post standalone _yoast_wpseo_twitter-title",
+            "sha256": "b3c77d5eb9dce91c2f33c9fef8b1c8cc850e1d4f8b23523a03b044edd0aa34f2"
+        },
+        {
+            "label": "update-post standalone _yoast_wpseo_meta-robots-noindex",
+            "sha256": "3ced6a397a259168e933f7665d7f037479048acfb95d02ad346c0f50dd8d4053"
+        },
+        {
+            "label": "update-post private without publish_posts",
+            "sha256": "aa1a79d63f49f0aa5f2948d7f3802b7f29d2971046fcccb6094fd7294a8fce99"
+        },
+        {
+            "label": "update-post writes SEOPress metadata fields rejects original combined payload",
+            "sha256": "b7613909fedbe0b2761c8551de5f0f8691f1f87aa0da21d83d979233a60fe53f"
+        },
+        {
+            "label": "update-post writes SEOPress metadata fields via plain request then separate metadata calls",
+            "sha256": "f9dd34cfc0aa7bfe8d5e6f8957ef1c75c15cf3cac2e4bda7f18879a024eb217f"
+        },
+        {
+            "label": "update-post writes SEOPress metadata fields standalone _seopress_titles_desc",
+            "sha256": "4e7b42b473a9870a902e368cb882429ac8b21a405564cf2707a668ab0e2e8498"
+        },
+        {
+            "label": "update-post writes SEOPress metadata fields standalone _seopress_analysis_target_kw",
+            "sha256": "d99769460f041e23d7fa757d77874cef7ae74c0938bbea005bf960e7d97d773e"
+        },
+        {
+            "label": "update-post writes SEOPress metadata fields standalone _seopress_titles_title",
+            "sha256": "adc78689448b0bcc510d37592171f9b6f8ad9d66513cc3a3a4f4eefed392be94"
+        },
+        {
+            "label": "update-post writes SEOPress metadata fields standalone _seopress_robots_canonical",
+            "sha256": "8b66c9bee0ba04e9905460d963773d30d6f0d737e69521934072fab4486c69b5"
+        },
+        {
+            "label": "update-post writes SEOPress metadata fields standalone _seopress_robots_snippet",
+            "sha256": "2e682b8e2af2313419c348398ce6f65ef523ac5af6fb364890ad34a367e89538"
+        },
+        {
+            "label": "update-post reports unsupported protected meta rejects original combined payload",
+            "sha256": "a07f4ddbb6602d20ba58b403c047091cbc8772d03d17d00407da7d8d96c67df1"
+        },
+        {
+            "label": "update-post reports unsupported protected meta through standalone authorization",
+            "sha256": "e1f488e668531dd340a42d19afd34ccb62daeaa0137c4efb9cacfd0525556d98"
+        },
+        {
+            "label": "update-post preserves backslashes",
+            "sha256": "1596c7f87b411db7a3a6b8929edef9b650230655d5ec1a2e4e6ce9e7fc907ff3"
+        },
+        {
+            "label": "wstm110 standalone restricted read denied",
+            "sha256": "71890266b89b1caddfaf23093eb5530b4135402eb7cd7a710b8be75d6fed3798"
+        },
+        {
+            "label": "wstm110 standalone listing omits denied keys",
+            "sha256": "11eb54f2e10add09ffbe9c79c7a064550bd6bfdf63521b4c2fa9209e290a0508"
+        },
+        {
+            "label": "wstm110 standalone restricted upsert denied",
+            "sha256": "495909d6582ae259e483e1857754499969a0136693db68f062f326e402a855f2"
+        },
+        {
+            "label": "wstm110 standalone restricted no-op denied",
+            "sha256": "d403010495159a88859e2766f438fd01b43f01fea8e38119f8a5128b631ae9aa"
+        },
+        {
+            "label": "wstm110 standalone restricted deletion denied",
+            "sha256": "5b75565c3bb7f721671a01a1c57f5d149a9ebfcdceafbcd9a9f4d8700d59f7e3"
+        },
+        {
+            "label": "wstm110 standalone restricted read authorized",
+            "sha256": "70ca871e00f91d51c19bfd18e67b984714a66b751c772b1cc25bda6cc47f6afa"
+        },
+        {
+            "label": "wstm110 standalone restricted upsert authorized",
+            "sha256": "032dec2faccd17c4f52e591b2da09fb98cd98458630ac3b63bc8583ca0642a43"
+        },
+        {
+            "label": "wstm110 standalone restricted deletion authorized",
+            "sha256": "ad343b0055a03c7212fd091340f5dad88bd305517fdf0b8209dd0ff3e4600df4"
+        },
+        {
+            "label": "get-post-meta filters protected keys",
+            "sha256": "46cfc0ee7c7653fdf97e0eb6708b0011e3f06cbb55a21fd72dcd558e0c7a0024"
+        },
+        {
+            "label": "get-post-meta rejects protected key",
+            "sha256": "251ae79ca89f6f9729f4f3441043431ebff4923c46b463ea4e551f73eb433f00"
+        },
+        {
+            "label": "get-post-meta as subscriber",
+            "sha256": "a45b908a172d8bd9c415a270c5c704aaddfb9489b408808697943bdcc1a781fa"
+        },
+        {
+            "label": "update-post-meta structured value",
+            "sha256": "78ed5484ef36dcfb071f6776d18382d0e4ced52e5e009f09d26c3b661bd35afe"
+        },
+        {
+            "label": "update-post-meta preserves backslashes",
+            "sha256": "21ccc2895ccce7234dd004498a06d9b4caaa5edad09ad296250d9672bbe9d5e4"
+        },
+        {
+            "label": "update-post-meta rejects protected key",
+            "sha256": "65f754fb5de0d672e4d3aa200495fc3e1aaa9b120c86b258cddb342525db9ac1"
+        },
+        {
+            "label": "update-post-meta rejects invalid protected value",
+            "sha256": "c91073f2481d801e9f7d19001c5de95058d94620855713cb327659dcf19f1bf6"
+        },
+        {
+            "label": "delete-post-meta",
+            "sha256": "4ff9281671baf38b4ed777c3ce781d1922d41774f09fe84760de8b0027dffaab"
+        },
+        {
+            "label": "delete-post-meta as subscriber",
+            "sha256": "22a9b28a49f76f99c0a356612145c65a93a17731e605fb15b17e10e22a55b8d2"
+        },
+        {
+            "label": "list-content-blocks post",
+            "sha256": "4b766842e583a0173651c0fda22b9db1555f8ec9190e4994daf38c44dd496a31"
+        },
+        {
+            "label": "list-content-blocks as subscriber",
+            "sha256": "8b7f73949d0516fc9eee94a61085e6f3fde6eb754c6b3b33e9063fe5ab675051"
+        },
+        {
+            "label": "wstm115 block patch with untouched HTML",
+            "sha256": "7e878803ed6f11772487072cd3a53bd0fa9ef6ab2322ec6c15a5922b4a76db8f"
+        },
+        {
+            "label": "wstm115 block patch preserves untouched block hash",
+            "sha256": "ec54e3143c7603634475a8d113520f6ca911f192a53aecb47e120713fa9063d6"
+        },
+        {
+            "label": "wstm115 exact patch with untouched HTML",
+            "sha256": "a1dea0f29c6e3e91c77662690a3623cd5b736c201150b990e04d2f8f162f83c7"
+        },
+        {
+            "label": "wstm115 exact patch preserves untouched block hash",
+            "sha256": "65f2b5e0c7ca59838c2e7aa7f0d02be43e5189dba75c3c557857e2a2694b7875"
+        },
+        {
+            "label": "patch-content-block top-level path",
+            "sha256": "1bb67c2709f22376efc81b9d28bb60639c87e47f7944771ee5f090e71f7d48e7"
+        },
+        {
+            "label": "patch-content-block nested path",
+            "sha256": "c5ef0245b915bef66b6d6d338387335688bf119a20b22863ea95df502c98caaf"
+        },
+        {
+            "label": "patch-content-block page path",
+            "sha256": "8bd0ff95b69a4797bcf50900f4bcb80b0ca17d463c168091ea319421cf139605"
+        },
+        {
+            "label": "patch-content-block block hash",
+            "sha256": "0ef15ca8a23f71ec58e646c28b026e331b09b1f69f8639510d6d6b952f05e815"
+        },
+        {
+            "label": "patch-content-block missing path",
+            "sha256": "63d46d8626e6691154f6bffecc7a7a1fb16deba27ff352b9cb5177dbb064b9e7"
+        },
+        {
+            "label": "patch-content-block stale block hash",
+            "sha256": "7a5f9892e09807ad941018d90f47be33088c442bf66d9fcc90d4fb9c0895b718"
+        },
+        {
+            "label": "patch-content-block as subscriber",
+            "sha256": "3a1db6f72bb47d34592187d91198b837482f1a18075c7d8246ee62844c8a7901"
+        },
+        {
+            "label": "patch-post-content heading",
+            "sha256": "0569782b0b966a5184c7dc7c718972f67ad18f6d5c92a956b89e209148d9d909"
+        },
+        {
+            "label": "patch-post-content exact",
+            "sha256": "4da12b38469ebc816e8e66392ad887441c499f8db7a4660e9cce73acce3a1917"
+        },
+        {
+            "label": "patch-post-content page exact",
+            "sha256": "fbdc7951c5ae8304abe24da1c774feb615efd947aa0faa19183a3886beaf41f8"
+        },
+        {
+            "label": "patch-post-content custom post type exact",
+            "sha256": "41aac12355141861489e7653f61fb2778881a9d9ad8ea7c527ebc516448550fa"
+        },
+        {
+            "label": "patch-post-content custom post type as subscriber",
+            "sha256": "44473c2cd39f018c10a5195a2bfddebc67b4dbf6728ddbe2ab10699e65ddc10c"
+        },
+        {
+            "label": "patch-post-content unsupported attachment",
+            "sha256": "16cd920445eaca5dab15277f91519bd4d804c107bd571ac7f57370d630dddf94"
+        },
+        {
+            "label": "patch-post-content as subscriber",
+            "sha256": "c38d1ac153fe3489e6db419abd0f8a32556f59dc68d6dd6445dfbe8da187a798"
+        },
+        {
+            "label": "patch-post-content missing heading",
+            "sha256": "baf2fdb66b5fd8022bd1e0d620623e9d297f99bc02eb64b9cc73be7ee715a756"
+        },
+        {
+            "label": "patch-post-content ambiguous heading",
+            "sha256": "0f3baac13ae506817a5e98ae8b9d779030db80ecb5ced3c381a1be7835c17200"
+        },
+        {
+            "label": "patch-post-content content hash mismatch",
+            "sha256": "07ab5788b8d832fd52b25d774b56693358b1320639cd8d5d8b9b8aab1e3842da"
+        },
+        {
+            "label": "set-featured-image",
+            "sha256": "4f2379d8f9c3cb71dba314326e53918cfefcb9956d3f63de9dde3bcc86f06c3c"
+        },
+        {
+            "label": "wstm116 featured media requires explicit force",
+            "sha256": "c96db215c7b2a8bb488bdaa4af931a831d1815cf78a6427d15428e9cbc53067b"
+        },
+        {
+            "label": "set-featured-image as subscriber",
+            "sha256": "4731a469a28bef8d45a624fdde53b9247e8575d0f9144cb298118ede02c556e8"
+        },
+        {
+            "label": "remove-featured-image",
+            "sha256": "885ed08aec919a78269fe02c0a37d099aa5d37e10592a352fcc321dc8b02c23a"
+        },
+        {
+            "label": "remove-featured-image as subscriber",
+            "sha256": "cabc59b8f18facad5c04572fa5d4e2783c60ff9416be6bc587c5263b9b3281bc"
+        },
+        {
+            "label": "list-revisions post",
+            "sha256": "df77b38c55ff1bb5bcfea86b6d05fac54c830794a68614d7a11bd22e9eefe827"
+        },
+        {
+            "label": "list-revisions page",
+            "sha256": "b0b08143ad2c4227a25bae812dc198d29f118e6624793c95f07547ff2ef6d8c7"
+        },
+        {
+            "label": "list-revisions as subscriber",
+            "sha256": "57e2630f30918278ea4719269550de06fb8a2ceec2d12607ce398654c22d57fe"
+        },
+        {
+            "label": "restore-revision",
+            "sha256": "6b45128046a677b7e906bba041a06eb95bb982676c6a7ffe1dca10c9d009d6ab"
+        },
+        {
+            "label": "restore-revision as subscriber",
+            "sha256": "f52e5674b9a668d4383fdc6161ad14ba9324b8aaa62b5500c05bde222b563407"
+        },
+        {
+            "label": "bulk-trash-posts summary",
+            "sha256": "b07aa8810bc82a368dab802d625574d866037ff96235a88b494a1bb85909cec7"
+        },
+        {
+            "label": "bulk-trash-posts as subscriber",
+            "sha256": "4b67a91a47b3bc5ce91076769e10e886b5ec4f09db41d5d45f24ccb97bab9561"
+        },
+        {
+            "label": "bulk-publish-posts summary",
+            "sha256": "93b0d4d823e1451a462257fc44035617b44e41f969c9bfac91a377d0ee635c40"
+        },
+        {
+            "label": "bulk-publish-posts without publish_posts",
+            "sha256": "4ae34e408d08af37bd99696b1b1d93657ceb1ccdf64fafbd54a4ed0b00795d33"
+        },
+        {
+            "label": "bulk-publish-posts as subscriber",
+            "sha256": "e2939428ea60df9c97e09313cc0b78b6aa94d62969fd073f747294ffeb056186"
+        },
+        {
+            "label": "wstm109 delete-post as subscriber",
+            "sha256": "4b7fc68b68e0fa55f3529c1beb4ea12bc6752f50ea802aab28d032eab291420c"
+        },
+        {
+            "label": "delete-post",
+            "sha256": "66ce1f39d3c9dea0ff5f276a389238863541a531bf77bef9711d578d41f81190"
+        },
+        {
+            "label": "restore-post",
+            "sha256": "a66040913bf3c947d7897dc5d118a305738c5fabc221d2a6146ebb6f86c56780"
+        },
+        {
+            "label": "restore-post as subscriber",
+            "sha256": "e5e8496d690cef3cf72c896464fe40619fb6603f2367a0cb6955e5a81cbd5ca6"
+        },
+        {
+            "label": "list-pages includes safe author fields",
+            "sha256": "3934c4da59b5a197143872a4abf7de379197e187dfcb8538066ebd0e58915561"
+        },
+        {
+            "label": "list-pages filters private without read-private",
+            "sha256": "90dcc3c501b5c57c13831190a2652ccc3f7c48127c522bc59728994c182f1ecc"
+        },
+        {
+            "label": "list-pages filters trash without delete",
+            "sha256": "66a3cb0e9f4fec6d8d599a2585e6d83b60c18756bf9dbda5e4baf6b8c6e3f202"
+        },
+        {
+            "label": "get-page",
+            "sha256": "d51a38be9db8389e07866496b8cb02b473a3d83ffd868c263c891e813901babb"
+        },
+        {
+            "label": "create-page",
+            "sha256": "bb3930658a78350c5c949d540e1b85c75564deba618de2f5eebe8f8817a797f8"
+        },
+        {
+            "label": "create-page private without publish_pages",
+            "sha256": "145ce651fad0a5faf04ea9f747608127a80247f0dc7fea9630f7e039c95b5524"
+        },
+        {
+            "label": "update-page rejects original combined payload",
+            "sha256": "0d227d10cb36eff17cc9faa92a65b1595727643222411bc70f1adc5729f085fc"
+        },
+        {
+            "label": "update-page via plain request then separate metadata calls",
+            "sha256": "869cc1bcc56df6643ce1ac94e99356ffeaef97f58d680eb744ef27105005acf9"
+        },
+        {
+            "label": "update-page standalone _yoast_wpseo_metadesc",
+            "sha256": "b654db7286bb64b79f905cd19b0f26bd1c2d153c108eb17b7c41e8861bbb2200"
+        },
+        {
+            "label": "update-page standalone _yoast_wpseo_focuskw",
+            "sha256": "4343acb48f587151623b558ae37bf04e2dbccdd0909571c0f7b2d5256e53ca82"
+        },
+        {
+            "label": "update-page private without publish_pages",
+            "sha256": "7c44d0ab1ff91e2a1b9e31c8399b36bb656dc97f3177a1302562569bcf54eb1f"
+        },
+        {
+            "label": "set-featured-image page",
+            "sha256": "717b4a545eaba9582831945c2365d7df976b401b33c18f3da775747a800cfb7d"
+        },
+        {
+            "label": "remove-featured-image page",
+            "sha256": "d01ed656413ffca6427c8df17c5c0b62f7783017cfd65b4d92fe0c6c26c8bcc6"
+        },
+        {
+            "label": "wstm109 delete-page as subscriber",
+            "sha256": "da16100c31b3e2e7a225fb3bfc79432043dcde42b92bdde83d0315ef66a42be2"
+        },
+        {
+            "label": "delete-page",
+            "sha256": "58f052ba832a245ce4caa6a4b518a74ee3d349e31abb7fae28b97c1e229d04bd"
+        },
+        {
+            "label": "restore-page",
+            "sha256": "d67e4539f246a5aa6d31160cb2fceb3b6abca5324f26c6606b2d59d8ab6d6ae9"
+        },
+        {
+            "label": "restore-page as subscriber",
+            "sha256": "aafdbb0363700804cbd33f620e763f23984e6c496278d3500e4df1ce9aaf5cb5"
+        },
+        {
+            "label": "list-categories",
+            "sha256": "8bbb1e3798f1959ac907c75862475a4570eef44e84c435c34ea5808b17a59ef9"
+        },
+        {
+            "label": "get-category",
+            "sha256": "e227085798cac592ddc987dac414738929964c9f392368b89fade8af26840dd5"
+        },
+        {
+            "label": "get-category without read",
+            "sha256": "906be4159fbbc98f13132778e8e3c7c7920087145e935896958c5e5cba934a51"
+        },
+        {
+            "label": "create-category",
+            "sha256": "3b52921692c21a2eabb385092c1746d2d0b74e546aad5c67a38d563188e6774f"
+        },
+        {
+            "label": "create-category as subscriber",
+            "sha256": "eb8f7c23d1e464a68be2f8c31ac8226ec72bf54617e3a3cea0c71217f6ae7a5c"
+        },
+        {
+            "label": "update-category",
+            "sha256": "0c23586f5ef857afc475942e9a645b8cbd657d775e3bd36d773c154cfab7decb"
+        },
+        {
+            "label": "update-category as subscriber",
+            "sha256": "7f60e9d6973d88c7bead5d4d7750b95f2bee0985ae20b391626ea5ba612ff69e"
+        },
+        {
+            "label": "delete-category",
+            "sha256": "cc483435180198ce426734cddb68cf11f6f5c0250f1dc1aa26a0eebffc0abd44"
+        },
+        {
+            "label": "delete-category as subscriber",
+            "sha256": "b04309ce92abcb4ed8e29a02f42b9110814e43868897af246546592e2f180f21"
+        },
+        {
+            "label": "delete-category refuses default category",
+            "sha256": "7ff4b68a175968df247af89c138b82f9c07d9a3e555364c263428f860f136e3d"
+        },
+        {
+            "label": "default category still exists after deletion denial",
+            "sha256": "bcf9706fd1401ba34fe6f551611f67bf3226ae20db764e6f0aafb99e8c3c50a7"
+        },
+        {
+            "label": "list-tags",
+            "sha256": "73f7c038d3588bbb6b572e5f4e804fed4ab13457641cc7487e93e9c769f5d209"
+        },
+        {
+            "label": "get-tag",
+            "sha256": "ef4139200f83a2c9c8a705d3730624dd076b559aef379a4f3be9992427c9b84f"
+        },
+        {
+            "label": "get-tag without read",
+            "sha256": "aa41b6cf6ac6ae5f6a2fa2bfc612afa9df1e049f06f9f284c892b2544d18c017"
+        },
+        {
+            "label": "create-tag",
+            "sha256": "b502d4484e578a5229c53531769a57e0836f36897eb20962feb1d94d68ca04ca"
+        },
+        {
+            "label": "create-tag as subscriber",
+            "sha256": "afd9c9461ab18e9006516b6c8dee73de91730d18f010563701cc4d5e39127984"
+        },
+        {
+            "label": "update-tag",
+            "sha256": "a3a618c5679c2bd6b034d893ece5be618353965507af47df2e4fdacccbc80737"
+        },
+        {
+            "label": "update-tag as subscriber",
+            "sha256": "804fad8bebdf0156bf4d17dd9398db43c27a155f993c38f0f8a6a467850ed24b"
+        },
+        {
+            "label": "delete-tag",
+            "sha256": "96e71021b920a8bf05d22ea120e264693aa5cf47262b4f12905a082bb716eb01"
+        },
+        {
+            "label": "delete-tag as subscriber",
+            "sha256": "2a5441bbabaff298232a6cd1597a849a1a9a70c2d07b03c6085cd0063ac03cf3"
+        },
+        {
+            "label": "list-users as admin",
+            "sha256": "e9bc65994fb806877efbc28d366ffa51839d26e4c3954219fc71a719261c0b99"
+        },
+        {
+            "label": "list-users hides login and email without edit_users",
+            "sha256": "0dcd9b26bdc3cc5bfc7c593df15f0348b9b631a3e75c428fa21e794dd7180f54"
+        },
+        {
+            "label": "list-users as subscriber",
+            "sha256": "1d4490d750e90a92b134d60356c3d707141cfb2ba126cf16b53b57f11fd572ba"
+        },
+        {
+            "label": "get-user as admin",
+            "sha256": "f989dac7f5e61460b7347e141cc5f6e27b07309cca798ec2fec81a7a97ae6c8b"
+        },
+        {
+            "label": "get-user hides login and email without edit_users",
+            "sha256": "cf24b50ec5957dd2c0e7d462b85bbefe3095cd3123c04b44be2e851c947ecb38"
+        },
+        {
+            "label": "get-user as subscriber",
+            "sha256": "846dfd7f5a44cb5d1d6e426ca4f67aaaf8c18c99c4bebd770f1e57a2756e5d46"
+        },
+        {
+            "label": "user-access-audit as admin",
+            "sha256": "46fb9e6db15619da84b951ca9bb7446aad1c7edb27df4d66658ed88d3705358c"
+        },
+        {
+            "label": "user-access-audit as editor",
+            "sha256": "6f2fcae70c68b244910a97dc5d15b2f9a0761c64ed98d63469d1f520d5c8375c"
+        },
+        {
+            "label": "list-plugins as admin",
+            "sha256": "983d19d6323e1a18902b9d24aa595297b06493c9b35128cd545849fdda65dd64"
+        },
+        {
+            "label": "list-plugins as subscriber",
+            "sha256": "87d4db8c57406f222485a8630c813b3c979c1ad8f068508f928e3bc6e14c849a"
+        },
+        {
+            "label": "plugin-audit as admin",
+            "sha256": "7aa57ae0af2201bc1e285caa4d13a65bdc45cf22bd9fe098cf8535d1a3b2472e"
+        },
+        {
+            "label": "plugin-audit as subscriber",
+            "sha256": "ce2cd74f4eda30f1abd59efaae9809fe8ca616404e7da1989776e776886c393a"
+        },
+        {
+            "label": "activate-plugin network_wide on single site",
+            "sha256": "c42b66a29bc6ae01e761e69b2af07b10a7c750fc82c79ce569a0d1ae4b81b764"
+        },
+        {
+            "label": "activate-plugin missing plugin",
+            "sha256": "f75d8c7efc40a6d27e4d800daa397d0a458c3c3d89aa5b0e764ca3ce081eb32e"
+        },
+        {
+            "label": "activate-plugin ambiguous slug",
+            "sha256": "bd03de7e5c1d99eaedb3e09468a9cc1395aab0b869cb24d16a14728f31ea93d0"
+        },
+        {
+            "label": "activate-plugin",
+            "sha256": "7203dc7dfbf058bcbcd6b8b0740a8e1327d021958e7a98940b64434382c469c5"
+        },
+        {
+            "label": "activate-plugin as subscriber",
+            "sha256": "684f742885d6430222306399963e8eb424bb65e71c62ac448348b56233060864"
+        },
+        {
+            "label": "deactivate-plugin protected",
+            "sha256": "e35b2f5149bc3ccc43e85ea5d78720e55c69daa85c43316781f9fce0d0d546cd"
+        },
+        {
+            "label": "deactivate-plugin",
+            "sha256": "5573d7e1fe4ab7a059184e3b75c66ecbebd273a974a7c7f22da34ec17572f85e"
+        },
+        {
+            "label": "deactivate-plugin as subscriber",
+            "sha256": "4a7706d1a64b8862853b867ce4afe5e012730ebae82b28151b970da8594a94b1"
+        },
+        {
+            "label": "list-comments",
+            "sha256": "21b2483a3bd4668b193ec2fd2390d4e3f749345d02e7df4e7c7b887772a9460f"
+        },
+        {
+            "label": "list-comments as subscriber",
+            "sha256": "54e65516c26bc4bac363e91bb3385cfaac0da3624f1af6a4b92ecee4141a0468"
+        },
+        {
+            "label": "reply-comment",
+            "sha256": "da2f0c844b7c63dcceb78d525f965c393fbf5a7caab9fb16886102e93fc34bb8"
+        },
+        {
+            "label": "reply-comment as subscriber",
+            "sha256": "bbb29f68c44cc8e03d1476eba63f496f693a351d3cd433fc325128764d7b1dad"
+        },
+        {
+            "label": "reply-comment missing parent",
+            "sha256": "675cc7e03cd0859894d4bc5662dd34fd10969df62935ce63ef7db8c57708aba8"
+        },
+        {
+            "label": "update-comment",
+            "sha256": "2e62d5e13331564cd8f27f27bd632bebec72de379a0ccdd045b413d8e27622ef"
+        },
+        {
+            "label": "update-comment with status",
+            "sha256": "bccdbfcf1eab20a63b2d99d04372e7dd97b85eacd59689ee99cb5d04fb978e4d"
+        },
+        {
+            "label": "update-comment invalid status",
+            "sha256": "7e8b7679b8824ab38c11e32300d68a137498afd336dd97558dbdbf107d5a3d68"
+        },
+        {
+            "label": "update-comment missing",
+            "sha256": "39a8556aa820958efdc5d2100eacf8a7e91ef83cf6336059fac79651cdb91425"
+        },
+        {
+            "label": "update-comment as subscriber",
+            "sha256": "829e50544ae8ab634147e26e4bddac54772e51e918f864957f203d2aa41b5967"
+        },
+        {
+            "label": "approve-comment",
+            "sha256": "64819dd3086002af84ce2213afa9ef39991023ce88b1ad49b52277880d8e11f9"
+        },
+        {
+            "label": "wstm109 trash-comment as subscriber",
+            "sha256": "1e45e4da5c471c1bfd2d5ae89521a0096532e41d4bf082e17d2f21e3fdb5ae9e"
+        },
+        {
+            "label": "trash-comment",
+            "sha256": "653fe18d9af9f1c823bd5171885141f1fa740f4038d59f043ca5e2f6d814682e"
+        },
+        {
+            "label": "spam-comment",
+            "sha256": "c31017902e6cac7255975efb4f77fce25d8167588abd4501f430cd8d1987be17"
+        },
+        {
+            "label": "wstm105 update moderator denied with spam status",
+            "sha256": "16522b85c359ac288a584fdc9250728e45f5b0116db5bdf243478bd6d26a50eb"
+        },
+        {
+            "label": "wstm105 update moderator denied with approve status",
+            "sha256": "5b50cb4f36d51a8cdb8c47191e0606b7a631105970c3187404cce511980bc03d"
+        },
+        {
+            "label": "wstm105 update moderator denied with trash status",
+            "sha256": "f86fb828cdfd0efe6f11da2f918c9ca0b76208f29fb38b40090c3806663c3cd8"
+        },
+        {
+            "label": "wstm105 update moderator denied with hold status",
+            "sha256": "172afd1e8e9c0d12810c71e8cb2185af53570a663e7349cfe16f66bca0f7e870"
+        },
+        {
+            "label": "wstm105 update moderator denied content only",
+            "sha256": "6d54ffe34b92b4135cee0109639d72e46f11fd16ec0899a22813d7de26ad2354"
+        },
+        {
+            "label": "wstm105 approve moderator denied",
+            "sha256": "2bcea5ad1c82b7374d4af252270be1c667b60b5a03bae295f7ad0bd84bc75113"
+        },
+        {
+            "label": "wstm105 trash moderator denied",
+            "sha256": "cdb554e4186c752393b7040d20130b75e971da9537ffe1bc86bbc85fd9cf4705"
+        },
+        {
+            "label": "wstm105 spam moderator denied",
+            "sha256": "a0cfb252a9917d12174259b74bf523a18e94ee70f8cbc44fae7afbd1f7cfaf09"
+        },
+        {
+            "label": "wstm105 update own author lacks moderation floor",
+            "sha256": "16916dd693e90e16c0492b20fda9fb64d4a78bd8688a77323a27132fd2e2fd26"
+        },
+        {
+            "label": "wstm105 approve own author lacks moderation floor",
+            "sha256": "c7c88c00f5cc253820d14fb4d1f77cedaf581b13eb578c62f55b3003305aab0d"
+        },
+        {
+            "label": "wstm105 trash own author lacks moderation floor",
+            "sha256": "8e33c9016063ed277f748d63107dbf2b3df02b4b6a3d9c572adbcbeef4147b55"
+        },
+        {
+            "label": "wstm105 spam own author lacks moderation floor",
+            "sha256": "52c93228c63d92956d45830fc545e3d7713726c703a3372a3029daa28f89d901"
+        },
+        {
+            "label": "wstm105 update editor lacks CPT edit capability",
+            "sha256": "cd7f9f12fd6a9b7baa5e3e8d8490417fa18034c96df8829284b5279122ef436e"
+        },
+        {
+            "label": "wstm105 approve editor lacks CPT edit capability",
+            "sha256": "6a90f6c230f2521ba281c62f4ce95129083e1ae9fb3001e93b93c72916380912"
+        },
+        {
+            "label": "wstm105 trash editor lacks CPT edit capability",
+            "sha256": "aefde14262360fb6a9953a3639427a8f296a1a7122f7139e9b145d2648f29d42"
+        },
+        {
+            "label": "wstm105 spam editor lacks CPT edit capability",
+            "sha256": "0cfe25e6286ee33d893a286518c0c9a2da37ccbda4ed91bcc7bdee28e257cd01"
+        },
+        {
+            "label": "wstm105 update own draft moderator",
+            "sha256": "a40cbb7a33610bf8b0300ba2361d0fa37f4bb7a705bf23063b9ece852a609ba1"
+        },
+        {
+            "label": "wstm105 approve own draft moderator",
+            "sha256": "2671476541d27e2e92bf508698295ac67c8ed49bb9971da6241d43ef63959781"
+        },
+        {
+            "label": "wstm105 trash own draft moderator",
+            "sha256": "9f2cba010a928f30dd98edba7e64b268fd5ad26ed385bddc37aa8eb3fdf17041"
+        },
+        {
+            "label": "wstm105 spam own draft moderator",
+            "sha256": "d80b762c1deab1029e7d680b1f0d5dee8d0b7d8ebaffd3b8871c5d6f9b713830"
+        },
+        {
+            "label": "wstm105 update as admin",
+            "sha256": "edadda6bdbfc6bbb7f055d60b18af532b7188f7089fabc5aebd4178b2ba9e53c"
+        },
+        {
+            "label": "wstm105 approve as admin",
+            "sha256": "606df956a71548b926a392fc41cf3c2da0b0eae646e304b88490eaab8e4f8fc5"
+        },
+        {
+            "label": "wstm105 trash as admin",
+            "sha256": "98f74f4ba9de3abbe52b3c3c472316132ad06c8a7582bf1eabfb99bf26f8610a"
+        },
+        {
+            "label": "wstm105 spam as admin",
+            "sha256": "59638f94341b241bbd2c534440dea4dcc11736e571608e938b96c502824b4875"
+        },
+        {
+            "label": "wstm105 update orphan uses core edit_posts fallback",
+            "sha256": "34e1f9eaa839b80303cd0e4693533dbcf4af111c6aa02d4627da94d4a90349e1"
+        },
+        {
+            "label": "wstm105 approve orphan uses core edit_posts fallback",
+            "sha256": "5b782126264608f372a0e11f0dbd6ed37323298fe4892ce063117dd0700054a2"
+        },
+        {
+            "label": "wstm105 trash orphan uses core edit_posts fallback",
+            "sha256": "a78839a1aec47afeb451bb23e1bd5c3e986efef141ba8cfe35f6cb036469229c"
+        },
+        {
+            "label": "wstm105 spam orphan uses core edit_posts fallback",
+            "sha256": "bb8d7cec03cf9754bba508127b6062268782bb71f1a418dd046926d87869bb2a"
+        },
+        {
+            "label": "wstm105 approve missing comment",
+            "sha256": "1a11d3f9676d3edd6462734582e179b443410dbeb4be6028c24bbef8cf0eed82"
+        },
+        {
+            "label": "wstm105 trash missing comment",
+            "sha256": "c1c91303afe5a4f851f10d845221135370ed3063c75fd3a2dfdd8a0c1d89e247"
+        },
+        {
+            "label": "wstm105 spam missing comment",
+            "sha256": "1572d3ab4c358baa23f1aac438a329df16ce99f1c1df393d9590fcad23ddbc8a"
+        },
+        {
+            "label": "wstm105 update mapped CPT allowed",
+            "sha256": "4a32f164155d0ef98bd9ff0fd4d11f5d990e3b51343da25a9d3445dfdb25f396"
+        },
+        {
+            "label": "wstm105 approve mapped CPT allowed",
+            "sha256": "12ea14d5375ab75d21bda25f5f138b1529902d9e6b9fd16ec87731afea70df78"
+        },
+        {
+            "label": "wstm105 trash mapped CPT allowed",
+            "sha256": "008e043ada96007eb6fa73b7841e0af87ecd05b9bfc4cc62b98979ac7f4360df"
+        },
+        {
+            "label": "wstm105 spam mapped CPT allowed",
+            "sha256": "1bc38d5f4a262a7a490978cca0327dca408a973856b82d0be0e13d7b06ee1d92"
+        },
+        {
+            "label": "wstm105 update zero ID",
+            "sha256": "e73f94d75ee58513a5fb809ca7e78c8df34ee9ebe1511d87b08f58dee1f9c62a"
+        },
+        {
+            "label": "wstm105 approve zero ID",
+            "sha256": "08ef59a03adc89206323d49f846d5ebb935a8c4d2928035a8dbee5a9c98e95e3"
+        },
+        {
+            "label": "wstm105 trash zero ID",
+            "sha256": "79af82538e6fcca1d449cacb4f710700fcdd8115d9af748fe372cdd5e7163b3c"
+        },
+        {
+            "label": "wstm105 spam zero ID",
+            "sha256": "727867a35c3d4bdca9ac547efed95d44abe0d3a9e2fabb33980e0e06785ef5a1"
+        },
+        {
+            "label": "wstm105 update missing denied caller",
+            "sha256": "7b4e9f497d9888b8d2f07d9c80168a38d6af880b61f5fcc3570395111c5aedc8"
+        },
+        {
+            "label": "wstm105 approve missing denied caller",
+            "sha256": "44be02f66d70c46106e786e07ad7d5308269504f9ef6f652af66f2940e9b7a35"
+        },
+        {
+            "label": "wstm105 trash missing denied caller",
+            "sha256": "b69977b9b1fccfb7373090e4f41f75eca097ba5e95c41a0880d804c13a00ce72"
+        },
+        {
+            "label": "wstm105 spam missing denied caller",
+            "sha256": "603ce200cb3a77ea94fe1d01cc4156369b1ddc40d6b2d0577d3c24825d5b0f48"
+        },
+        {
+            "label": "list-media as author",
+            "sha256": "5f48e1ac9e859e6c7bbc3e3a18620098264e67bf5dd233f36c67b616041dc24f"
+        },
+        {
+            "label": "list-media as subscriber",
+            "sha256": "c851957670f7136b4a51c56c36d65311262ee864a50cbec3f631a1cc9bc27479"
+        },
+        {
+            "label": "get-media",
+            "sha256": "c753388c90fccd4948e371d7c98883ec30fbe87e19d4017608c75620baf8696d"
+        },
+        {
+            "label": "upload-image with featured image metadata",
+            "sha256": "328f88e881faae29d350ab506f6dc83d38893d1eef5ebc215dc1d6e19bf079ec"
+        },
+        {
+            "label": "upload-image as subscriber",
+            "sha256": "8d429c5e2f8a501adac115d3744e2b54232efc1d86cbeadc71f343920bbaa898"
+        },
+        {
+            "label": "upload-image rejects private URL",
+            "sha256": "b2e44f5a192323dff9094d118cf168045feb22bcb0625633500d3cd103479e50"
+        },
+        {
+            "label": "upload-image rejects non-image MIME",
+            "sha256": "ac1e1950bea77eaaec94157ef01421ac63282ae3007de9ed535f20eb80d0dc0c"
+        },
+        {
+            "label": "upload-image rejects empty file",
+            "sha256": "e37bb22cdaab5f1e170e1b2efa81fe290a74489ab12d5eadb7ad8158f3238805"
+        },
+        {
+            "label": "upload-image rejects incomplete PNG header",
+            "sha256": "8a2ec1fb49563bef52afb97bd2876f5deb710b13cc69935f766a6a0100ffc0eb"
+        },
+        {
+            "label": "upload-image rejects IPv6 literal",
+            "sha256": "03c85875892929e25f5e5708ec98dd66a037f75e5b536f4a7c0ade630c58029e"
+        },
+        {
+            "label": "upload-image requires featured image target",
+            "sha256": "5035a469d395fec853a60c25169fe7acaeffa1364f6319f1df8eab221971ba12"
+        },
+        {
+            "label": "update-media",
+            "sha256": "3fb88ad2e1d2608e65080a02e4d216a959368f0323cff85393ab1c6cf0df75f8"
+        },
+        {
+            "label": "delete-media",
+            "sha256": "089b6bc84daf6b4089c817608e36510d6013e33a8af155e0331738c47b869f9e"
+        },
+        {
+            "label": "list-orphaned-media",
+            "sha256": "04a60281ec086e81a0177b331d6fea7edd92935b7cc06ce67c1d704f0dac0e87"
+        },
+        {
+            "label": "list-orphaned-media as subscriber",
+            "sha256": "c594a9540e6112f5ef591414ac76666b790cc5d72b97a86fa03364031bdc348c"
+        },
+        {
+            "label": "list-posts-no-featured-image posts",
+            "sha256": "71bcb21c091d80c74ccbd52ef5efe9254b16a6c93b42e6540205c9d9b9810677"
+        },
+        {
+            "label": "list-posts-no-featured-image pages",
+            "sha256": "1c6e1a967ec9a15b13b2220fc8ab9e976f45a66492396d90fc606bfb9365d955"
+        },
+        {
+            "label": "list-posts-no-featured-image as subscriber",
+            "sha256": "98e0df952c113a188d1aa9e7cd2b33345d387844a24ff1085af024f60d82952a"
+        },
+        {
+            "label": "list-stuck-scheduled",
+            "sha256": "85c307965dddb9bc966779b5786d5c9e14b174ea074d724203c744027435de9d"
+        },
+        {
+            "label": "list-stuck-scheduled as subscriber",
+            "sha256": "1d1c1570ae53cf3fc3c9996a57b3210a71ea7d39f3d16e9571a90d835d46fcf9"
+        },
+        {
+            "label": "seo-analyze-post",
+            "sha256": "7e6f3e44f34af07c3c457aadbfb3a6c21108912158139b6179aa618b26827e31"
+        },
+        {
+            "label": "wstm108 Yoast found takes precedence",
+            "sha256": "779459681a45d7c996960dfed9a8f94e53b00e4063f1a9b10f22ce76a78c0ff8"
+        },
+        {
+            "label": "wstm108 Yoast missing does not fall back to matching SEOPress",
+            "sha256": "51bf920976394489451ceab5cb8d5350e6fb57729814d83fac94f629977dc710"
+        },
+        {
+            "label": "wstm108 SEOPress found fallback",
+            "sha256": "d4c4d1723193ab4ecc413ceaaea1db7cf48f791dfc5fdb17611949e4fd65d9a5"
+        },
+        {
+            "label": "wstm108 SEOPress missing fallback",
+            "sha256": "a242df1804e37f63da3a4de9c37a7f81ef5e2c5b5be51424bf5a5088bbadf5d8"
+        },
+        {
+            "label": "wstm108 no keyword unchanged",
+            "sha256": "e26bf591b20fb07698c233d8a1407ddf8500221656843afac0629e959aeb0b83"
+        },
+        {
+            "label": "get-seo-scores",
+            "sha256": "2736d07271693aaed47c8863b0ed986b1d1ffb94f843df6b318d6064c654ea44"
+        },
+        {
+            "label": "get-seo-scores as subscriber",
+            "sha256": "aed95a572bc84842ebb861fa23d81cb4969869801807b8b797e09b9c0a33d9a7"
+        },
+        {
+            "label": "get-readability-scores",
+            "sha256": "0531ef453ae66a18dd293ab7a4373a67459c4d06178aade75c87057cbb14d7b8"
+        },
+        {
+            "label": "get-readability-scores as subscriber",
+            "sha256": "0e472db8fdab949f3331b36af92df6ebdac8b791559497bea216c10052893d17"
+        },
+        {
+            "label": "get-yoast-metadata",
+            "sha256": "eaafc83bc777d7b0ca7d4ad1aaee4e6a287ff5ae13f2cdcfe5c04e0a3f3120f8"
+        },
+        {
+            "label": "get-yoast-metadata as subscriber",
+            "sha256": "4023c4ba54eea04639097b6b252c2b5b4ffae31c57635038117e989d4ca5acb3"
+        },
+        {
+            "label": "get-seopress-metadata",
+            "sha256": "284d9e60b4b1082d2b6a888f7f95555f19ec7aba2e3f4ef20bd05050fbedee0b"
+        },
+        {
+            "label": "get-seopress-metadata as subscriber",
+            "sha256": "c2e8560f3fc89a3d4a1831cfc4b50338cd650b870438af43e13f0e5f51a61da0"
+        },
+        {
+            "label": "wstm114 subscriber public verification cold cache",
+            "sha256": "7d7b742d0fc0c482b37c347f26b8d692051af042703f9f8e4d5aa95d49899659"
+        },
+        {
+            "label": "wstm114 author public verification warm cache",
+            "sha256": "869e7a8a1990dcb381bf2106a883183da638043b663b7d2911d80c71deb45928"
+        },
+        {
+            "label": "wstm114 admin after subscriber warm cache",
+            "sha256": "7f3ad2752f0b531033f23f3a8dcc39da6b0f44f1963e5dfa93c0c6ea917975a0"
+        },
+        {
+            "label": "wstm114 subscriber after admin warm cache",
+            "sha256": "fb3337e6373158d6233c8f0976e35005a6bbdf4652cad61ddac120ece3b87b7e"
+        },
+        {
+            "label": "wstm114 public HTTP failures cold admin cache",
+            "sha256": "f577f7e5ab57e9afedb7a107661e9257a4e3cba7249947b818ea0a655c2939a3"
+        },
+        {
+            "label": "wstm114 public HTTP failures warm subscriber cache",
+            "sha256": "fbb52f3a65cd60c02507be1b8c9653fffde79896fb05af02ed3b9e33d21b935f"
+        },
+        {
+            "label": "webmaster-verification-status without read",
+            "sha256": "32d816e648e2a7d6de8e8442b765a303eb07ef609f9e86b2ec42f84a8d2adadb"
+        },
+        {
+            "label": "get-site-info",
+            "sha256": "23bd0d66c8e5f9354edcdcfd26595c771e7d9da3ab743b99bcd9d2d2b95cf717"
+        },
+        {
+            "label": "get-site-info without read",
+            "sha256": "90a160efadf78a7546d78abbbbde9548caffdff8a765b6529460cb629b057591"
+        },
+        {
+            "label": "get-user-info",
+            "sha256": "6696927904f55a5c7fc56c055ac23e04cb676eeea8927eedcdc82a219dac6107"
+        },
+        {
+            "label": "get-user-info without read",
+            "sha256": "d8b5cf734804d4a5c8cdd47d5ceb1c523e74a3d15a91d7231379d33dcaa00372"
+        },
+        {
+            "label": "get-environment-info",
+            "sha256": "52057b8927622eb3499b7c1f255ae11c5f3c1b3c86353fc82f4fd54d98b1f6f6"
+        },
+        {
+            "label": "get-environment-info as subscriber",
+            "sha256": "2b5298b678ff3f381bfb1b443503c17dc4a3188d4d45a57bb4cb8958e3780b77"
+        },
+        {
+            "label": "get-environment-info without read",
+            "sha256": "e8397c52a26b91bf0e5d93fd76004a19a1f390b947e53b7479760cb6f47ba2ad"
+        },
+        {
+            "label": "seo-site-overview",
+            "sha256": "540dd5fc12148d61b9e1478495e03acb35bd923810ca90df629674fb7023563a"
+        },
+        {
+            "label": "seo-site-overview as subscriber",
+            "sha256": "4067929a97ef823473e770da8e9e6cde159878ea28deb70f927dcc8eadedb012"
+        },
+        {
+            "label": "site-health-check",
+            "sha256": "5fbbcd62592957556c967177e10ea45fd022fceaf5939337062ba3a8630b8cb2"
+        },
+        {
+            "label": "site-health-check as subscriber",
+            "sha256": "2ec9bb7d1af8392bc497498eb3025416d83585130f94c25d3558e45d7ad5fea3"
+        },
+        {
+            "label": "database-health as admin",
+            "sha256": "1674ba12c1d6ca0396881d75e6a752bbccaad7366df6497e88e41c25090a778d"
+        },
+        {
+            "label": "database-health as editor",
+            "sha256": "23d757ac4831df3ee200f51d6f60e137d8029a06f55c20a71c677307870d2020"
+        },
+        {
+            "label": "database-health as subscriber without data",
+            "sha256": "65c9af9c7af3db1045b0a3480e791857d5741ce8f5e38cee5ca6e9e84207b499"
+        },
+        {
+            "label": "database-health revision query error",
+            "sha256": "fbea943f3014fceac5678d0a152336f1844c49055fdc249321235302be58b53f"
+        },
+        {
+            "label": "database-health revision size query error",
+            "sha256": "3fbbd75eb9137149e544f44706fefa6937c9ee3c92612cd74b66259a0b528615"
+        },
+        {
+            "label": "database-health orphaned meta query error",
+            "sha256": "c5e9c9598b575479d8b35578af7739af21821faad3f3d3f4e347cd0166300b69"
+        },
+        {
+            "label": "database-health expired transients query error",
+            "sha256": "11bd57a395ab13d2e109c05ccc3b5038b9372c1f69258260ab6971d54907b5a9"
+        },
+        {
+            "label": "database-health autoload query error",
+            "sha256": "417a2919a84bf0f374c5d323d06c6675341f90e9c2102490c4d7eb5006dbcc8e"
+        },
+        {
+            "label": "database-health table size query error",
+            "sha256": "b3526f9c95dd84bf8121f558927f95928682879a6c001921002b3b6137070d75"
+        },
+        {
+            "label": "performance-status as admin",
+            "sha256": "425112b8480f366afa11158739df4a2b7a63d23124226560460c053ab94c5318"
+        },
+        {
+            "label": "performance-status as editor",
+            "sha256": "f96e6b8b735ae82784a180e389bd914ede1a26f381a2127754a44773163b8129"
+        },
+        {
+            "label": "backup-status as admin",
+            "sha256": "44b790d4cb7c9be919f6cf7a190a5685c72e40aea3484eb8c9ecbba1f7be8d38"
+        },
+        {
+            "label": "backup-status BackWPup",
+            "sha256": "6b32972985104d93936effe718a7db8851ead18f879ada2331293bae8ff71493"
+        },
+        {
+            "label": "backup-status Duplicator",
+            "sha256": "cb36296f79333b63de216c4edf44f90bc0bfbc35064cc776d1541caa96c7913c"
+        },
+        {
+            "label": "backup-status All-in-One WP Migration",
+            "sha256": "5d712113796371a5c902d36928afabbf064539a42f8051202b4478bee9a3defb"
+        },
+        {
+            "label": "backup-status no known plugin",
+            "sha256": "9de780f71d7cdbf8e96a76a944000c423849e85a671f8aebd8fee9a6b3fe05c5"
+        },
+        {
+            "label": "backup-status as editor",
+            "sha256": "5c8d045fea8e08b7674a1327180a943c6f06f75c3eb1f08c7a259b457da1ef5a"
+        },
+        {
+            "label": "security-audit",
+            "sha256": "fe61aed0c6f35e69d312b321edd2a1245b814dd30719eaf31c9b917a14c25142"
+        },
+        {
+            "label": "security-audit as subscriber",
+            "sha256": "222b6de798e3f960db689bd9d63e50150a252110cca5da01f322b944978a477f"
+        },
+        {
+            "label": "security-audit as editor without findings",
+            "sha256": "97cab5d1197507cfcb63fe39d2004cf04a7a18128fae9b582c2025d098a62435"
+        },
+        {
+            "label": "security-audit configured HTTP over simulated HTTPS request",
+            "sha256": "7a6ce7b7c20be7794c010f688d27f2cb339b68fefd32dc64ef474cdb1c9dc385"
+        },
+        {
+            "label": "security-audit admin TLS does not prove public HTTPS",
+            "sha256": "b2faec4a48afa80f5aff40a575aa47b798049288b6e814bba726592510b3881a"
+        },
+        {
+            "label": "security-audit configured HTTPS over HTTP request",
+            "sha256": "cc4078ae1239dc3c97e0bb202a54d771c6bc31f8aced6f2e2af65af56e13edc5"
+        },
+        {
+            "label": "security-audit malformed percent host is unknown",
+            "sha256": "d7c87b9fa19924dfac94528fa88ca84f67997cf3ef1acc2d50534829aff2bb94"
+        },
+        {
+            "label": "security-audit malformed authority is unknown",
+            "sha256": "7f129260b2663fb505552620f52529338750469ca5e0dfe934328799b60259b2"
+        },
+        {
+            "label": "security-audit invalid IP literal is unknown",
+            "sha256": "3ed627de15846f57afcac067599be0342c8fd55e8aedd577c29214597032a6ed"
+        },
+        {
+            "label": "security-audit local HTTP remains HTTP",
+            "sha256": "a7cc36c2c9aaeccbe87210ecacf48c93b96d181089c358955f61b60095fd59d0"
+        },
+        {
+            "label": "security-audit Unicode HTTPS is supported",
+            "sha256": "7e0ec4dcd599ba54eba64d1018a870368c269c00813eb3b8cce01d473a9fc0a1"
+        },
+        {
+            "label": "security-audit IPv6 HTTPS is supported",
+            "sha256": "6490289918f0c540ff45d0a69bd54ab9cbe5efb70a1cfe68db427481ac1941b1"
+        },
+        {
+            "label": "get-site-kit-status as admin",
+            "sha256": "a6d01a034e53444f6cd776c9dcbb17b6d9019d12194c9f360d0d1e7a7ce34be1"
+        },
+        {
+            "label": "get-site-kit-status as subscriber",
+            "sha256": "f3f5cd5a181eb3f9487d7235f9eb74675ba673acd72eed5222aa509922556206"
+        },
+        {
+            "label": "list-site-kit-modules as shared dashboard editor",
+            "sha256": "fa037e9954ae1f4f51967169f301cc69ad5e0c204db58819b0c1e67ee6e3b0e3"
+        },
+        {
+            "label": "list-site-kit-modules as subscriber",
+            "sha256": "9cfe3b69fd6da2cca3cf49b0d70405106e5bdfa4781e8417cb1486dd8df11ef7"
+        },
+        {
+            "label": "get-site-kit-permissions as shared dashboard editor",
+            "sha256": "cc214333ff9f4d04643d9535eb26e61135669d8ff8e9d0caec6b77d4d17da1bd"
+        },
+        {
+            "label": "get-site-kit-permissions as subscriber",
+            "sha256": "441c7017d6390ed3d5d5842d82eb686b2f3fcb62a7a782f1648b81e3ef634cfe"
+        },
+        {
+            "label": "get-site-kit-pagespeed as shared dashboard editor",
+            "sha256": "9329d130c001e3862af553aab68af9e69445004175e6a95aa256165b0694b4e8"
+        },
+        {
+            "label": "get-site-kit-pagespeed as subscriber",
+            "sha256": "d6c6de4692fbd3d519d39a5b60f3bd6f81cd94deb573c2d6f47d2738cfa50636"
+        },
+        {
+            "label": "get-site-kit-pagespeed rejects external URL",
+            "sha256": "5edb01aa9e405348d3b8aa7f31e01b072e83ce8d339515646a5a36851ca61ddf"
+        },
+        {
+            "label": "wstm106 create draft page with allowed parent",
+            "sha256": "f0452cab6a3090cba706e7daa459ca4bf9559648b90272d9328f6bcf22478b08"
+        },
+        {
+            "label": "wstm106 create page with inaccessible parent",
+            "sha256": "9b668f53a14a99fc7788f994b61417e12040f53a40ff0879db720ac67dd4b39c"
+        },
+        {
+            "label": "wstm106 page mixed update with inaccessible parent rejects original combined payload",
+            "sha256": "d9d9a31ab93630260f4f3b0eae2b82bdf99ead65bb143a7ac1ec28271071ac82"
+        },
+        {
+            "label": "wstm106 page mixed update with inaccessible parent",
+            "sha256": "265bcee79ff49f7a642270f3efcea66a3cbcbf3ca6920bf18c26218592a6fa90"
+        },
+        {
+            "label": "wstm106 page unchanged after parent denial",
+            "sha256": "3b70f1a569269f7efbde0c22532c2926ab1f9c66ef1b638e8cc7858231223331"
+        },
+        {
+            "label": "wstm106 page self parent rejected",
+            "sha256": "ef1e52a4153aa2d9dd7ac99878287523a707ae200812939970d7f085068e2037"
+        },
+        {
+            "label": "wstm106 page wrong type parent rejected",
+            "sha256": "d23f1fa6d5ae9a5dc83041e6642554f0951556f181d1513f176532c1a6e7cbb2"
+        },
+        {
+            "label": "wstm106 page missing parent rejected",
+            "sha256": "7fc2ca55ae9504727ed4b6ccb8619bf80c5d48ec594ce54f1b1aca2ec3602a6f"
+        },
+        {
+            "label": "wstm106 ordinary draft page parent update",
+            "sha256": "84984b03e732c5de4806a01f8cb7ecb70a68395042aafd95eb86931a25dc6220"
+        },
+        {
+            "label": "wstm106 ordinary draft page same parent",
+            "sha256": "06e15bbe3e1e28a59c1829d20ae24c1a5e48b24fd356ff14c5407547d56b151b"
+        },
+        {
+            "label": "wstm106 ordinary draft page parent omitted",
+            "sha256": "ba40821970249b54e688df39d7d07daa814e3e91af553f99b4132d5b8a96e315"
+        },
+        {
+            "label": "wstm106 ordinary draft page detach zero",
+            "sha256": "771f77794cc8e40202f619090175fe2940c7184ab36dead76bae0e7e0a6826b0"
+        },
+        {
+            "label": "wstm106 nonhierarchical book positive parent rejected",
+            "sha256": "fb2aee2c3276df9ca6665f3c0c2aa7de1f83d24e4c1ee033bfe75411640c9a26"
+        },
+        {
+            "label": "wstm106 nonhierarchical book mixed update rejected",
+            "sha256": "4381707f4c1d462d3607b4dc8f1c607e1d69d0704c8ebdbbff085de3a2c8dc89"
+        },
+        {
+            "label": "wstm106 book unchanged after parent denial",
+            "sha256": "ffba3a69b07e4756e72b7415fc504a13ebb73a6e2e3836ec6eaa01cb87407d6e"
+        },
+        {
+            "label": "wstm106 nonhierarchical book zero parent allowed",
+            "sha256": "3cfab5bf9fad786a83777c7cccb98ed61cea8ceed2c656ec90df785463646f0d"
+        },
+        {
+            "label": "wstm106 nonhierarchical draft book zero parent allowed",
+            "sha256": "c95b102ba8affa5be53e863969fb89237c787909180282310a2a2f822ebbd643"
+        },
+        {
+            "label": "wstm106 nonhierarchical explicit map positive parent rejected",
+            "sha256": "be33734133a7d944826d32b83264a6165d3d6cdb12d8c30616f31964e7d9a2c4"
+        },
+        {
+            "label": "wstm106 explicit map parent update rejected",
+            "sha256": "85865e1afaa123d418535d3ffe11aea8a567662f52649f3fc4f5a3b6ce85d7c1"
+        },
+        {
+            "label": "wstm106 case unchanged after parent denial",
+            "sha256": "1594f1787f3edb4c4127079f02ea5932941eddca4c2750860f42c8a0af306400"
+        },
+        {
+            "label": "wstm106 explicit map zero parent allowed",
+            "sha256": "0495ecd261192637c28ed9266308e485e8b2e511d1d849feeb747d0dab483aca"
+        },
+        {
+            "label": "wstm106 explicit map draft zero parent allowed",
+            "sha256": "6c18f08f1fd568f64029e70a77fa331484f4ac0fc9fc4c89f42ba6272f90c552"
+        },
+        {
+            "label": "wstm113 create post schedule",
+            "sha256": "72fd543fab7a0c522742fb2d6d288aad28a61405bd9ce9b83dd4a08267be5317"
+        },
+        {
+            "label": "wstm113 create post invalid date",
+            "sha256": "bc1560383e9323f4af142a2ad19c41c08253a9d3bdeb6286ae86fc64b2d8c654"
+        },
+        {
+            "label": "wstm113 create post missing date",
+            "sha256": "cea30616c6975cfc34694a08ac58de7575c094c8fa5dda8047f92d5256ac626e"
+        },
+        {
+            "label": "wstm113 create post denied publish",
+            "sha256": "2ddee6a8613e87776ce95919caacd1f443f548c38ea15aecd37f5edcd5b22c45"
+        },
+        {
+            "label": "wstm113 update post invalid date",
+            "sha256": "48dce57fc6fbcd8e2d9904fbafcc3373e669e3f6729b303ffce730c390568d49"
+        },
+        {
+            "label": "wstm113 update post unsafe date",
+            "sha256": "36149a4627adddf59ea9cbce0d11b41f56c7d1e09e2bb97d356a4de900bfe195"
+        },
+        {
+            "label": "wstm113 update post denied publish",
+            "sha256": "a43edfc4082ebc82705a396fcb05ffc93b9ec0656affc7f2bc7b8a4c628f42fe"
+        },
+        {
+            "label": "wstm113 update post schedule",
+            "sha256": "a7a03cea0e51103ef417a60cf12230c3305c3b7c06947720ddc1fb83e81834a9"
+        },
+        {
+            "label": "wstm113 create page schedule",
+            "sha256": "e10057b231288c9574c4b2c53086f034e1a993051412c91f2dc0bcbeb82e8f79"
+        },
+        {
+            "label": "wstm113 create page invalid date",
+            "sha256": "011092f80eb80dbb9f699882d1ab68b729bd115ae16795ad0c298b984c9bf521"
+        },
+        {
+            "label": "wstm113 create page missing date",
+            "sha256": "f6ccfe1508de795fd8d411c950189f3a44aba2797313e16918b9826e98ddfb06"
+        },
+        {
+            "label": "wstm113 create page denied publish",
+            "sha256": "7fd68925eab39044b9c4428e65686d54d77d0ea0d4a3a67055ffb2b2990aa7b3"
+        },
+        {
+            "label": "wstm113 update page invalid date",
+            "sha256": "abcc0e1feb763e597106df1f1a0553d23c13a1195d37dca42122218d2a0f5429"
+        },
+        {
+            "label": "wstm113 update page unsafe date",
+            "sha256": "7b97760cac0c60f869679a4975b7ee1ed5693d866079fef774576b03f3c8f755"
+        },
+        {
+            "label": "wstm113 update page denied publish",
+            "sha256": "b6e89a591af891859627e08bc525fa7b4fbc9cc16f695f54eeb669c4371a0691"
+        },
+        {
+            "label": "wstm113 update page schedule",
+            "sha256": "b39e0f70d5ae63e98608af5ad39f956df4ccbbf02cefb1fe9190fac5ea4d942a"
+        },
+        {
+            "label": "wstm113 create book schedule",
+            "sha256": "f168146b27c1722c26ceafce30cd025e30ce16dbe32f87269be0c58ac68668f2"
+        },
+        {
+            "label": "wstm113 create book invalid date",
+            "sha256": "3badb466b0568f4cec76f4c9a05a8b25ad72d978ac7c23d498da593305b1eb3a"
+        },
+        {
+            "label": "wstm113 create book missing date",
+            "sha256": "8244e46a9c5878ff6e3cad01f6d8b85badf5929e7473f477ec7ecb8fe376f59c"
+        },
+        {
+            "label": "wstm113 create book denied publish",
+            "sha256": "ad7f1a8e06196855b4946f8c9543b61c821e9d6b2ce18305a8875cbff3d6946a"
+        },
+        {
+            "label": "wstm113 update book invalid date",
+            "sha256": "52d2498c283dd0afeefd342b5738a8b3d58621f0a692ae97b1853790f19fcea8"
+        },
+        {
+            "label": "wstm113 update book unsafe date",
+            "sha256": "2fc7ee05e3c567ad96c7ccc6353bbec95a47badc4ac9e62bca54af013cf1a40e"
+        },
+        {
+            "label": "wstm113 update book denied publish",
+            "sha256": "12bc9d45320435f91a367f9501971a62b7af3f6d15780b31f26c60e00aa4ff11"
+        },
+        {
+            "label": "wstm113 update book schedule",
+            "sha256": "7db566565806bb3486c8599f1c801df983e966c3160881e680cad6eac9d2c8d8"
+        },
+        {
+            "label": "wstm113 create case schedule",
+            "sha256": "a699dfbd6d6ef6f80390881bc4d4c97b91d6d2f10a1336fad789d2e57c04b849"
+        },
+        {
+            "label": "wstm113 create case invalid date",
+            "sha256": "8caac3ddb9fda8f739df8a0208766f4800bf63eb4de59a81f6fd23a5fadf2915"
+        },
+        {
+            "label": "wstm113 create case missing date",
+            "sha256": "f95755f0e2fbbab615f0f386884bac925a65e3d617a1521f08870703452cea67"
+        },
+        {
+            "label": "wstm113 create case denied publish",
+            "sha256": "87a9d1a36d44d05327ad336045c2f8cb92a76943f93b052a8d8903987159952f"
+        },
+        {
+            "label": "wstm113 update case invalid date",
+            "sha256": "ee53eaf3103d4bcef564fb9c0075099f3b82dc80819816373053e986f7e3d3c0"
+        },
+        {
+            "label": "wstm113 update case unsafe date",
+            "sha256": "232c6cbc91fff811e2d533abe7498c7dc4f0018b85339d3c99efd2b897ce766e"
+        },
+        {
+            "label": "wstm113 update case denied publish",
+            "sha256": "7b8370cdcc2e661cb78f66119cb1ccbbe84288a7bc8460a1f22587562baa3dad"
+        },
+        {
+            "label": "wstm113 update case schedule",
+            "sha256": "e2e1dffa8c10c0f96edd2132303a8508e87a006771a019842f62fe635e8a0f02"
+        },
+        {
+            "label": "wstm125 modules no-read upstream allowed",
+            "sha256": "6870b0214051d3db91d9fb684a1039c7950d9ead3a2e8271a151bd15175db29a"
+        },
+        {
+            "label": "wstm125 permissions no-read upstream allowed",
+            "sha256": "ee9d936f7ff9b1d2845e422034977ee34b6a72475590aea198957a0ee7e31b98"
+        },
+        {
+            "label": "wstm125 pagespeed no-read upstream allowed",
+            "sha256": "6aec4a9d8f262543520c17102ab71733417d2bdd841fa8bf0fc1ef149cffe234"
+        },
+        {
+            "label": "wstm125 modules read upstream allowed",
+            "sha256": "2f6df207d4262c959a16864168c9981c0cc5c4a73841bfb2a7927b13bedc9c21"
+        },
+        {
+            "label": "wstm125 permissions read upstream allowed",
+            "sha256": "82726b6077aceb7f06a5d093562acc45aba47ee61968fa5ac261c7a71ebbc348"
+        },
+        {
+            "label": "wstm125 pagespeed read upstream allowed",
+            "sha256": "65ad9fc53b46e3ab41f5e31a39b1cd21fffdfdce8fbba4753892a1d5223473a5"
+        },
+        {
+            "label": "wstm125 modules shared subscriber upstream allowed",
+            "sha256": "88096575894dc738a50bcacfd35dbec2cda4ea07fe9f08151958d13bdb307bf6"
+        },
+        {
+            "label": "wstm125 permissions shared subscriber upstream allowed",
+            "sha256": "e8091a0c1fcf09fed7dbf55fa4b5400dfd1c1119c7b9094d1f4adfe9fbc13484"
+        },
+        {
+            "label": "wstm125 pagespeed shared subscriber upstream allowed",
+            "sha256": "6ff13fa21d04c935f3f001dff0922078a0b8b8e38a3fda69add74d6ede873998"
+        },
+        {
+            "label": "wstm122 create-post preserves sanitized SEO backslashes rejects original combined payload",
+            "sha256": "d984f5707cb2192ece1fe92771e54a70bf9a76c74ce461e542a40ce3653286e7"
+        },
+        {
+            "label": "wstm122 create-post preserves sanitized SEO backslashes via plain request then separate metadata calls",
+            "sha256": "a67e98d50f71d48ff2038f1c565b99cfd3cf0e35a63b2f4f0a286e41f0cfd249"
+        },
+        {
+            "label": "wstm122 create-post preserves sanitized SEO backslashes standalone _yoast_wpseo_metadesc",
+            "sha256": "670f436bf08881d104bda489e4a254a84becc73e74dcb976cfa3325b744216ae"
+        },
+        {
+            "label": "wstm122 create-post preserves sanitized SEO backslashes standalone _seopress_titles_desc",
+            "sha256": "2890ad7c3d234d22e68fd87d9d80ebb81539c5be9579241df540edecc7e484f0"
+        },
+        {
+            "label": "wstm122 create-page preserves quoted metadata rejects original combined payload",
+            "sha256": "1c77ca73421467bdbb2c538d62373923be80e3977c623667c2455aabf30c7981"
+        },
+        {
+            "label": "wstm122 create-page preserves quoted metadata via plain request then separate metadata calls",
+            "sha256": "a23a42c03632a243ce41bbbad5fe444a32a530eb3dfc2f439b268e86214c676e"
+        },
+        {
+            "label": "wstm122 create-page preserves quoted metadata standalone _yoast_wpseo_metadesc",
+            "sha256": "4d09e4c527730622581098681d29593edce181c90fb2a059c5bd65f6c8de048d"
+        },
+        {
+            "label": "wstm122 create-page preserves quoted metadata standalone _seopress_titles_desc",
+            "sha256": "3f3c1c1576ec72ce827d5805cfaf034302822e2c5c6b44c8f1fa7e24d0880783"
+        },
+        {
+            "label": "wstm122 update-post preserves repeated and trailing metadata backslashes rejects original combined payload",
+            "sha256": "bf2249187eff89f82dc289458f829460be1885a7ada459ebd61166aae064117a"
+        },
+        {
+            "label": "wstm122 update-post preserves repeated and trailing metadata backslashes via plain request then separate metadata calls",
+            "sha256": "60816afe21e22124e551de72d1c5586b5142e047dcaf190ebd2107215e76894f"
+        },
+        {
+            "label": "wstm122 update-post preserves repeated and trailing metadata backslashes standalone _yoast_wpseo_metadesc",
+            "sha256": "e14a68bdb8c5ba589a89ddbf01a02d911ea5da2d146bebe9df885bfd86d8b586"
+        },
+        {
+            "label": "wstm122 update-post preserves repeated and trailing metadata backslashes standalone _seopress_titles_desc",
+            "sha256": "77cc1fa28a38239d39be42c875d7017bd85d5b6afb834a174e78fdafa8b986ba"
+        },
+        {
+            "label": "wstm122 update-page preserves JSON metadata backslashes rejects original combined payload",
+            "sha256": "649188af5408c764423961977020f5e0355a8169e15fcf2d76272f52c9cfc719"
+        },
+        {
+            "label": "wstm122 update-page preserves JSON metadata backslashes via plain request then separate metadata calls",
+            "sha256": "a5132c47e86bc8a699fb0dcefdf897960021fa20fbaccb91a9d05d86e126ae8e"
+        },
+        {
+            "label": "wstm122 update-page preserves JSON metadata backslashes standalone _yoast_wpseo_metadesc",
+            "sha256": "daaf244a8179e3320d1bb98b598a94cdf40c0b47ada81ff4e0c51d7a6ace6845"
+        },
+        {
+            "label": "wstm122 update-page preserves JSON metadata backslashes standalone _seopress_titles_desc",
+            "sha256": "757fc326b57b193de609992e2e37b34a134884b43d2e4e988e87ade75c9e7d70"
+        },
+        {
+            "label": "wstm122 upload-image preserves sanitized title caption and alt backslashes",
+            "sha256": "90f61d59649f81ddaf9796c802eb8aa1fe869aebdd32a99df608d29246563276"
+        },
+        {
+            "label": "wstm122 update-media preserves sanitized title caption and alt backslashes",
+            "sha256": "7a1e28600b43b8d4eb66e202ab3b23a51c095b90a6e7cd0ea8465e7786996952"
+        },
+        {
+            "label": "wstm122 direct structured metadata remains slashed exactly once",
+            "sha256": "79592a23c5153eb97d3f0bf9d8026137aaee5fd21003ca43e99de5ff651fb4d3"
+        },
+        {
+            "label": "wstm122 denied media write preserves alt metadata",
+            "sha256": "cb4ffb0f20b61147d4fa61ba16cd6b1c6302ec5a3d27753a4d4694dcc2cad6f6"
+        },
+        {
+            "label": "wstm122 denied media write preserves title and caption",
+            "sha256": "e22f3cb6d8273d5adae600e4b64d8b3185aaea0124725905ba20958810143e6f"
+        },
+        {
+            "label": "wstm122 denied post write preserves metadata",
+            "sha256": "7a5932b332e5e42cd1748e4088711f7bc545894558495dccc4c1d0c1c34e7694"
+        },
+        {
+            "label": "wstm122 denied page write preserves metadata",
+            "sha256": "7197ffee261b9b22b2b694c2154b43a65c00a3407007334836cd0d446cd185ea"
+        },
+        {
+            "label": "wstm120 delete-media subscriber denial preserves rows metadata and files",
+            "sha256": "a3adc25463acea85250325e8d26cf4107a5fab3f13b46ac12130addd5e24980e"
+        },
+        {
+            "label": "wstm120 delete-media uploading author cannot delete another authors attachment",
+            "sha256": "56fd32e1544c4d90c7cd2aadc2afde15a8973b079b2ba0858229148adddc183f"
+        },
+        {
+            "label": "wstm120 get-media subscriber denial",
+            "sha256": "37ce7bcc39ecaa0688f804b0ba3a4044d52b7b37bfef5858f8fb08a925e3236d"
+        },
+        {
+            "label": "wstm120 get-media uploading author object denial",
+            "sha256": "97aeb8386e9e339f0fe6d4667f9d5c6b84269133d6ba34c91fc1b1b050b6c729"
+        },
+        {
+            "label": "wstm120 get-media owner retains attachment after denied permanent deletes",
+            "sha256": "0d0a2ce9bba88c00df9183d4004661d86084b223705c0f518afa2bafaad8bc89"
+        },
+        {
+            "label": "wstm120 contributor creates own draft",
+            "sha256": "2ec247c990489f334521341e2d66d26fb373bb181210e50158ad81ebfe3c7f5b"
+        },
+        {
+            "label": "wstm120 contributor updates own draft",
+            "sha256": "e8978d7bf8a0f2c514c2db398656e06a374059a644a5fc8e99b9515c2c3bd16d"
+        },
+        {
+            "label": "wstm120 contributor trashes own draft",
+            "sha256": "d66b49257ca0eb3c85e4b9b26a268e0c38738fc3b3f853655520dd95a1e39d35"
+        },
+        {
+            "label": "wstm120 contributor cannot create publish",
+            "sha256": "fd2b9805a977ae9e7792b2789c230fa16a3072ea7e50ee11de34342dedd21e2e"
+        },
+        {
+            "label": "wstm120 contributor cannot create private",
+            "sha256": "a679b71f5fe2776316559f168ec02fd5960242e6a366226e5a02083203e6299c"
+        },
+        {
+            "label": "wstm120 contributor cannot create future",
+            "sha256": "3e323ead5901a7823dd109654c312df9a1fd07c9e1fdc6b76dfa95243cff1392"
+        },
+        {
+            "label": "wstm120 contributor cannot transition draft to publish rejects original combined payload",
+            "sha256": "38d3d85f2c2546b2f13664826d3ad9e8a6ded18c032cfccedc3cedc3a3fd29fb"
+        },
+        {
+            "label": "wstm120 contributor cannot transition draft to publish",
+            "sha256": "a9cb014154832481cae2ebb806c239298011c8236d2c003c73d22f9cb0be614c"
+        },
+        {
+            "label": "wstm120 contributor cannot transition draft to private rejects original combined payload",
+            "sha256": "31ec93a2b7c2348483ef490112435875113a76441926d7b26e9383065f25e30a"
+        },
+        {
+            "label": "wstm120 contributor cannot transition draft to private",
+            "sha256": "6e824e38a5ef65a8036a19fb73e6c4d5889a1258a536387577bae7c8967229da"
+        },
+        {
+            "label": "wstm120 contributor cannot transition draft to future rejects original combined payload",
+            "sha256": "c2d8a40efb065f673f4ae3fb4917934e70004c0b924ca03f7a07ed6d7a5f4b12"
+        },
+        {
+            "label": "wstm120 contributor cannot transition draft to future",
+            "sha256": "ce6b6c3c3161794d330a4db6154388ca04a381f4de17edb017e9261cbc7970f2"
+        },
+        {
+            "label": "wstm120 contributor draft unchanged after denied transitions",
+            "sha256": "a5c1c272ce3bbd7a4c92640a27027326544d928d4a9257aab24bbc3d48fb2a9e"
+        },
+        {
+            "label": "wstm120 contributor cannot delete own published post",
+            "sha256": "46f14eaf3ed25088872f350defd9908abfb6dc4c066e63aea2d3c1f27f2dda6b"
+        },
+        {
+            "label": "wstm120 contributor cannot update unrelated draft",
+            "sha256": "455032bb06e0435bc8193664405921ac7f1a5d9077f96e42803eb3a319dc3ddf"
+        },
+        {
+            "label": "wstm120 contributor cannot delete unrelated draft",
+            "sha256": "0ff1cae96884f297caebc25f07fa094074c87dc73fc6b12ba20d239c92513e85"
+        },
+        {
+            "label": "wstm120 contributor cannot read unrelated draft",
+            "sha256": "ff58efdfd173bd0c3e85fc551d2cccd32da5d0d0d92a39ae3989d30e64a80871"
+        },
+        {
+            "label": "wstm120 get-post author owns private post",
+            "sha256": "21d83c3ae3822e5255d9d0441e462b6805e0847e45abe732d599fb914591e82c"
+        },
+        {
+            "label": "wstm120 get-post contributor owns private post",
+            "sha256": "7f67321666d4f4ab06b9a315bd5d71bd4c000d46bc8ef25e9fc7989f03bd03c8"
+        },
+        {
+            "label": "wstm120 get-post contributor cannot read others private post",
+            "sha256": "6bd83d650641fd0f1d4b0926bcdad528ccfd2f35c22a4bc33a08e359c037390d"
+        },
+        {
+            "label": "wstm120 get-post subscriber cannot read private post",
+            "sha256": "0642f73051220a2456623e13ed8762d6f2c67c88cc903bdc6c68b6e6b82e80db"
+        },
+        {
+            "label": "wstm120 get-post editor reads others private post",
+            "sha256": "b477bca9433cd99033337a3bb024cbb2969024f4f322d0cf5c5d7675227a6c25"
+        },
+        {
+            "label": "wstm120 get-post author owns trashed draft",
+            "sha256": "e00d8ecc9853fecf648212347089cffe6b3ae259ab7c33384f2d92e41f9708c6"
+        },
+        {
+            "label": "wstm120 get-post contributor owns trashed draft",
+            "sha256": "8af407c7e8966669f0e6e7ddfebfd9d4cbacb372abdb3c6f26ff12c71329f78e"
+        },
+        {
+            "label": "wstm120 get-post contributor cannot read others trashed draft",
+            "sha256": "547468ed0cd986cb42ce0c21c5dbe16fb66fca6371e66d03cf582a4048e1f2b8"
+        },
+        {
+            "label": "wstm120 get-post subscriber cannot read trashed draft",
+            "sha256": "771ef1ff0223e0e66e8a2270800708b7da2be7e8ae2056fba16307de1c2ef1cb"
+        },
+        {
+            "label": "wstm120 get-post limited editor reads trash despite lacking delete",
+            "sha256": "4bb8c98f5417fa78aef927930e8493c7e5d982dd2d58f4ddded6e77f63e2da1b"
+        },
+        {
+            "label": "wstm120 get-page editor owns private page",
+            "sha256": "6c33abcc4ae509642ab5b925343d1bafc73ecd760f0a7803a0b9816d6d8cf1ed"
+        },
+        {
+            "label": "wstm120 get-page contributor owning private page still lacks edit_pages",
+            "sha256": "2c26ed2706e45b685f046937bbb718321e129ce5a889480a62a7e09a86d8f831"
+        },
+        {
+            "label": "wstm120 get-page limited editor cannot read others private page",
+            "sha256": "2c2cf6c5517c0f6739c416af2cdb8b627fcce8bbce1cf165237a93ea966fc0bd"
+        },
+        {
+            "label": "wstm120 get-page subscriber cannot read private page",
+            "sha256": "a2aa997af4e96467c2244df16d046bfdaf22d3a9b11ffe603b9666c6406eca9d"
+        },
+        {
+            "label": "wstm120 get-page editor owns trashed draft",
+            "sha256": "4f2b6456e75ea8021f0ac3ebe00d5aa17804c0bfe78817d7fa3e406a998c342e"
+        },
+        {
+            "label": "wstm120 get-page contributor owning trashed page still lacks edit_pages",
+            "sha256": "fbbaf80d8e794b433a79ab0e5f1a1eebbcf5246833915cab7fc7fc5bf66bb152"
+        },
+        {
+            "label": "wstm120 get-page contributor cannot read others trashed page",
+            "sha256": "74a162842eb1abc5e034ef1456251c16adc2ba29918f52045c9281ae54701ec5"
+        },
+        {
+            "label": "wstm120 get-page subscriber cannot read trashed page",
+            "sha256": "b2c470adfd173fe2e5b56e4e2c0326409da533ca67ad123158eb132adcf9de1e"
+        },
+        {
+            "label": "wstm120 get-page limited editor reads trash despite lacking delete",
+            "sha256": "9186a2dac1cc3e71fa74111634ec27b9235ead15ea8a82f598cd79739844e77c"
+        },
+        {
+            "label": "wstm120 seo-analyze-post subscriber denial",
+            "sha256": "b65ed59279e185b9ef2a839bfd41f8fe45a9064e42f2d77df1efca126dcc1627"
+        },
+        {
+            "label": "wstm120 seo-analyze-post contributor object denial",
+            "sha256": "4a4a09b8dac67415c299f2f1b78bc1bea04dbc7feae751a6a080398ce2e0326e"
+        },
+        {
+            "label": "wstm120 seo-analyze-post contributor own draft allowed",
+            "sha256": "f6afb11ea4960ba99df4bf8812a1e47e175199c3891498aaab76093ce1cbc6df"
+        },
+        {
+            "label": "wstm120 list-posts without read",
+            "sha256": "53de20ace3ecbebc700f68fba25b18affe21940e5ead055019ad20162f9a5ea3"
+        },
+        {
+            "label": "wstm120 list-pages without read",
+            "sha256": "f56dcc84f5e5220ece65fe92a72dc7fb4d8e31a579200e8a5e412fccb0bc7ee0"
+        },
+        {
+            "label": "wstm120 list-categories without read",
+            "sha256": "f1b077712b163710245be34b76b03bec7dbe773cb8ad6c295b33622eed215349"
+        },
+        {
+            "label": "wstm120 list-tags without read",
+            "sha256": "6c34d0933c5cb36becdb906e50f219c6bb8a9ad126fd25fb2eb60ef7f924702b"
+        },
+        {
+            "label": "wstm120 list-posts contributor own drafts allowed",
+            "sha256": "a140d100be5ec2acbd233d389840458881870700f0a386387aed6a7de564f9cb"
+        },
+        {
+            "label": "wstm120 list-pages editor allowed",
+            "sha256": "70552c55252100ced5091a0d8d4defe238e456430ff4dead072aef9409e363f8"
+        },
+        {
+            "label": "wstm120 list-posts subscriber lacks edit_posts",
+            "sha256": "bb231cc0851e725adc54e7e105ef0575817aa57b4b350cdddd253b6dd3959b91"
+        },
+        {
+            "label": "wstm120 list-pages subscriber lacks edit_pages",
+            "sha256": "8de54b85eb9c18a40643292b9de7dd3b94d9df483a6725c5c13bb6ae63a32b45"
+        },
+        {
+            "label": "wstm120 list-categories subscriber read allowed",
+            "sha256": "598e2e6f1d7330c2b799b9aebb7a36d53ecd8e63990a4ab15ca10e4dc0f543f5"
+        },
+        {
+            "label": "wstm120 list-tags subscriber read allowed",
+            "sha256": "f464730d069db58e718f4a13ea3116f67772207a199787153648d0ee13bb25da"
+        },
+        {
+            "label": "wstm120 get-page limited page editor owns private page",
+            "sha256": "44be4160bcc2d4967c3634ca7907a9cc8570eb2361570f6427a21dac0560eb57"
+        },
+        {
+            "label": "wstm120 get-page limited page editor owns trashed draft",
+            "sha256": "a4252218d53c6ee9894446332114e9eb21d3f027b41fabd031035299a1464b44"
+        },
+        {
+            "label": "wstm120 get-post contributor cannot read own formerly published trash",
+            "sha256": "9d13ac1106ca640af32f2f5ce039025a517aa8b0e958cfb735fa892a0e18d3c3"
+        },
+        {
+            "label": "wstm120 get-post editor reads formerly published trash",
+            "sha256": "501d4a13f6eeeccb925c0e6069983096cb8ddfbb4a2791600c967a1890eac40b"
+        },
+        {
+            "label": "wstm120 contributor successful write calibrates state observer",
+            "sha256": "575a0c3dfc5ec7bf21c3af9601fd50cd5c02139309225ffbdc4fad034e64963b"
+        },
+        {
+            "label": "wstm110 create-post rejects null metadata presence",
+            "sha256": "f6b9826b35312d1f2c9c37dd394ceab7f0e770fbec9fb8daad372afb7dd283d2"
+        },
+        {
+            "label": "wstm110 update-post rejects empty metadata presence",
+            "sha256": "e716bc94fd251d5ed431a94604080bec3aa4799d15732887893d7a7575dd9f02"
+        },
+        {
+            "label": "wstm110 create-page rejects null SEO alias",
+            "sha256": "ef56feb95701f2b23f1cd4afaa1c73fcd9463c8d6d64dc7b4256e1a050c04630"
+        },
+        {
+            "label": "wstm110 update-page rejects empty SEO alias",
+            "sha256": "8af2e9b20dd5ba8f3b9bddb9a2ed01b3f6b07696ce99749f0ece5a499cd7af58"
+        },
+        {
+            "label": "wstm110 create-cpt-mcp-book rejects metadata",
+            "sha256": "be40fd3d3e060ff18db296f88d3bc1a01e8ee5b3ec1d5baf460a0459dae8b613"
+        },
+        {
+            "label": "wstm110 update-cpt-mcp-book rejects raw SEO key",
+            "sha256": "0e03f6fa63b33a4d2cc371dcb6aa46eb0ea220ad5a15ae3ab1b8975f64658c80"
+        },
+        {
+            "label": "wstm110 create-cpt-mcp-case-study rejects metadata input",
+            "sha256": "0565bfb8cd4a457cf87af8e699511060e20b7b80f7f0fd534d58831f4da6aa45"
+        },
+        {
+            "label": "wstm110 update-cpt-mcp-case-study rejects unknown SEO alias",
+            "sha256": "77d19b77969621740fead589d9692d818b4d399a3347cd505c2173e95586a1af"
+        },
+        {
+            "label": "wstm110 URL-only generated head explicitly unsupported",
+            "sha256": "e04a6740f68724031ae094d9838f4526c44bc7f14f5223ed42abca0047519f90"
+        }
+    ]
+}

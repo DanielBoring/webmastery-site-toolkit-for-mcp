@@ -17,14 +17,13 @@ jobs:
   unit-tests:
     name: Unit Tests / PHP ${{ matrix.php }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         php: ['8.0', '8.4']
     permissions:
       contents: read
-
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -39,6 +38,11 @@ jobs:
           extensions: zip
           tools: composer:v2
           coverage: none
+
+      - name: Verify selected PHP
+        env:
+          MATRIX_PHP: ${{ matrix.php }}
+        run: test "$(php -r 'echo PHP_MAJOR_VERSION, ".", PHP_MINOR_VERSION;')" = "$MATRIX_PHP"
 
       - name: Get Composer cache directory
         id: composer-cache
@@ -57,19 +61,70 @@ jobs:
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Run Unit Tests
+        env:
+          COMPOSER_PROCESS_TIMEOUT: '0'
         run: composer qa:unit
 
+  ci-safeguards:
+    name: CI safeguards / PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.0', '8.4']
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: zip
+          tools: composer:v2
+          coverage: none
+
+      - name: Verify selected PHP
+        env:
+          MATRIX_PHP: ${{ matrix.php }}
+        run: test "$(php -r 'echo PHP_MAJOR_VERSION, ".", PHP_MINOR_VERSION;')" = "$MATRIX_PHP"
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        shell: bash
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php-${{ matrix.php }}-composer-${{ hashFiles('composer.json', 'composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-${{ matrix.php }}-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
       - name: Run CI safeguards regression tests
+        env:
+          COMPOSER_PROCESS_TIMEOUT: '0'
         run: composer test:ci-safeguards
 
   unit-tests-gate:
     name: 2 - Unit Tests
-    needs: unit-tests
+    needs: [unit-tests, ci-safeguards]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Require every PHP unit check
+      - name: Require every PHP unit and safeguard check
         env:
-          RESULT: ${{ needs.unit-tests.result }}
-        run: test "$RESULT" = success
+          UNIT_RESULT: ${{ needs.unit-tests.result }}
+          SAFEGUARD_RESULT: ${{ needs.ci-safeguards.result }}
+        run: test "$UNIT_RESULT" = success && test "$SAFEGUARD_RESULT" = success

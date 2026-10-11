@@ -7,6 +7,8 @@ use PHPUnit\Framework\TestCase;
 use Wstm117Calibration\Probe;
 
 require_once __DIR__ . '/fixtures/taxonomy-calibration.php';
+require_once __DIR__ . '/fixtures/product-source-bindings.php';
+require_once __DIR__ . '/fixtures/legacy-artifact-calibration.php';
 require_once dirname( __DIR__ ) . '/e2e/error-contract-assertions.php';
 
 /**
@@ -44,7 +46,12 @@ final class TaxonomyCalibrationTest extends TestCase {
 			foreach ( $files as $path => $hash ) {
 				$source = 'tests/e2e/taxonomy-write-runner.php' === $path ? $ledger->original_source
 					: str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) );
-				self::assertSame( $hash, hash( 'sha256', $source ), $path );
+				if ( 'tests/e2e/taxonomy-write-runner.php' === $path ) {
+					self::assertSame( $hash, hash( 'sha256', $source ), $path );
+				} else {
+					wstm_test_assert_product_source( $path, $source );
+					self::assertMatchesRegularExpression( '/^[a-f0-9]{64}$/D', $hash, 'Historical ledger remains independently sealed.' );
+				}
 			}
 		}
 		self::assertInstanceOf( stdClass::class, $ledger->calibration_pairs[0]->new_original_oracle->error->details );
@@ -62,7 +69,8 @@ final class TaxonomyCalibrationTest extends TestCase {
 			. "\t\t\t\t\t\t\t\tcontinue;\n\t\t\t\t\t\t\t}\n";
 		$restored = str_replace( $dispatch, '', $restored, $dispatch_count );
 		self::assertSame( array( 1, 1 ), array( $helper_count, $dispatch_count ) );
-		self::assertSame( $ledger->original_source, $restored, 'Every unrelated role, update, default-category, snapshot, capability and cleanup byte must remain unchanged.' );
+		self::assertSame( wstm_test_legacy_artifact_output_source( 'taxonomy', $ledger->original_source ), $restored,
+			'Only the approved artifact output delta may accompany the semantic calibration; every unrelated byte remains unchanged.' );
 	}
 
 	private function assert_pairs( array $records ): void {
@@ -85,6 +93,8 @@ final class TaxonomyCalibrationTest extends TestCase {
 				self::assertSame( $pair->capability->name, $evidence['capability'] );
 				self::assertTrue( $evidence['can_delete'] );
 				self::assertTrue( $evidence['persisted_unchanged'] );
+				self::assertSame( array(), $evidence['write_hooks'] );
+				self::assertNull( $evidence['oracle_failure'] );
 				self::assertSame( $evidence['before_sha256'], $evidence['after_sha256'] );
 				self::assertSame( $call['before'], $call['after'] );
 				if ( 'original' === $kind ) {
@@ -268,6 +278,29 @@ final class TaxonomyCalibrationTest extends TestCase {
 		$records = Wstm117Calibration\run_pairs();
 		$this->expectException( AssertionFailedError::class );
 		$this->assert_pairs( $records );
+	}
+
+	public function test_hook_only_write_is_rejected_even_when_persisted_state_matches(): void {
+		Wstm117Calibration\load_runner_helper();
+		$key = 'webmastery-site-toolkit-for-mcp/delete-category';
+		$callback = Probe::$abilities[ $key ]['execute_callback'];
+		Probe::$abilities[ $key ]['execute_callback'] = static function ( $input ) use ( $callback ) {
+			$result = $callback( $input );
+			Wstm117Calibration\do_action( 'edit_terms' );
+			return $result;
+		};
+		$observed = 0;
+		foreach ( Wstm117Calibration\run_pairs() as $row ) {
+			if ( array() !== $row['evidence']['write_hooks'] ) {
+				++$observed;
+				self::assertSame( array( 'edit_terms' ), $row['evidence']['write_hooks'] );
+				self::assertTrue( $row['evidence']['persisted_unchanged'] );
+				self::assertFalse( $row['passed'] );
+			}
+		}
+		self::assertGreaterThan( 0, $observed );
+		self::assertSame( '', Probe::$hook );
+		self::assertEmpty( Probe::$filters['edit_terms'] );
 	}
 
 	public static function provenance_mutants(): array {

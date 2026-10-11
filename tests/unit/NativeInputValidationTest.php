@@ -376,7 +376,7 @@ final class NativeInputValidationTest extends TestCase {
 		self::assertSame( 1, $count, 'Mutation must disable exactly the production strict validation call.' );
 		$root = dirname( __DIR__, 2 );
 		$script = 'require ' . var_export( __DIR__ . '/bootstrap.php', true ) . ';'
-			. 'require ' . var_export( $root . '/includes/class-input.php', true ) . ';'
+			. 'require_once ' . var_export( $root . '/includes/class-input.php', true ) . ';'
 			. 'require ' . var_export( __DIR__ . '/fixtures/native-input-ability.php', true ) . ';'
 			. 'eval(' . var_export( substr( $mutated, 5 ), true ) . ');'
 			. '$name = "webmastery-site-toolkit-for-mcp/mutation-probe";'

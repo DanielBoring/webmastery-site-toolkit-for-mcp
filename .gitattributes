@@ -9,3 +9,20 @@
 *.txt text eol=lf
 *.xml text eol=lf
 *.yml text eol=lf
+
+# Preserve existing reviewed source and fixture bytes.
+phpcs.xml.dist -text whitespace=cr-at-eol
+phpstan-baseline.neon -text whitespace=cr-at-eol
+phpstan.neon.dist -text whitespace=cr-at-eol
+phpunit.xml.dist -text whitespace=cr-at-eol
+scripts/qa-local.ps1 -text whitespace=cr-at-eol
+tests/unit/ArraySyntaxTest.php -text whitespace=cr-at-eol
+tests/unit/fixtures/posts-extraction-stubs.php -text whitespace=cr-at-eol
+tests/unit/fixtures/shared-helper-loader.php -text whitespace=cr-at-eol
+tests/unit/fixtures/shared-helpers-stubs.php -text whitespace=cr-at-eol
+tests/unit/PostsExtractionTest.php -text whitespace=cr-at-eol
+tests/unit/SharedHelpersTest.php -text whitespace=cr-at-eol
+composer.lock -text whitespace=cr-at-eol
+tests/e2e/database-table-privacy-fixture.php -text whitespace=cr-at-eol
+tests/e2e/database-table-privacy-runner.php -text whitespace=cr-at-eol
+tests/unit/DatabasePrivacyExpirationTest.php -text whitespace=cr-at-eol

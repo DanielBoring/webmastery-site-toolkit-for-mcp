@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/error-contract-assertions.php';
+require_once __DIR__ . '/legacy-artifacts.php';
 
 
 // This fixture mutates disposable WordPress data; never expose it over HTTP.
@@ -37,26 +38,42 @@ function wstm117_delete_missing_pair( $ability, $execute, $input, $taxonomy, $sl
 	unset( $minimal['name'] );
 	foreach ( array( 'original' => $input, 'minimal' => $minimal ) as $kind => $payload ) {
 		$cap_calls = 0;
+		$hooks = array();
 		$observe_cap = static function ( $caps ) use ( &$cap_calls ) {
 			$cap_calls++;
 			return $caps;
 		};
+		$observe_write = static function () use ( &$hooks ): void { $hooks[] = current_filter(); };
+		$watched = array( 'create_term', 'edit_terms', 'pre_delete_term', 'delete_term', 'deleted_term', 'added_term_meta', 'updated_term_meta', 'deleted_term_meta', 'set_object_terms' );
 		add_filter( 'map_meta_cap', $observe_cap, -10000 );
+		foreach ( $watched as $hook ) {
+			add_action( $hook, $observe_write );
+		}
 		try {
 			$queries = $wpdb->num_queries;
 			$result = 'wrapped' === $path ? $ability->execute( $payload ) : $execute( $payload );
 			$query_calls = $wpdb->num_queries - $queries;
 		} finally {
 			remove_filter( 'map_meta_cap', $observe_cap, -10000 );
+			foreach ( $watched as $hook ) {
+				remove_action( $hook, $observe_write );
+			}
+			$after = wstm117_term_snapshot();
 		}
-		$after = wstm117_term_snapshot();
 		$schema_negative = 'original' === $kind;
 		$reason = $schema_negative ? 'ability_invalid_input' : 'not_found';
 		$message = $schema_negative ? 'Ability input does not match its schema.' : ( 'category' === $taxonomy ? 'Category' : 'Tag' ) . ' not found.';
-		$passed = $reason === wstm118_error_reason( $result )
+		$actual_reason = null;
+		$oracle_failure = null;
+		try {
+			$actual_reason = wstm118_error_reason( $result );
+		} catch ( \RuntimeException $error ) {
+			$oracle_failure = array( 'classification' => 'error_contract_assertion_failed', 'message' => $error->getMessage() );
+		}
+		$passed = null === $oracle_failure && $reason === $actual_reason
 			&& ( $schema_negative ? 'invalid_input' : 'not_found' ) === $result['error']['code']
 			&& $message === $result['error']['message'] && '{}' === wp_json_encode( $result['error']['details'] )
-			&& $before === $after && $actor === get_current_user_id()
+			&& $before === $after && array() === $hooks && $actor === get_current_user_id()
 			&& true === $can_delete && true === current_user_can( $capability )
 			&& ( ! $schema_negative || ( 0 === $cap_calls && 0 === $query_calls ) );
 		$label = "delete-{$slug}: {$scenario} {$path}";
@@ -65,9 +82,9 @@ function wstm117_delete_missing_pair( $ability, $execute, $input, $taxonomy, $sl
 			'result' => $result, 'persisted_unchanged' => $before === $after,
 			'before_sha256' => hash( 'sha256', wp_json_encode( $before ) ),
 			'after_sha256' => hash( 'sha256', wp_json_encode( $after ) ),
-			'capability_calls' => $cap_calls, 'query_calls' => $query_calls,
+			'write_hooks' => $hooks, 'capability_calls' => $cap_calls, 'query_calls' => $query_calls,
+			'oracle_failure' => $oracle_failure,
 		) );
-		$before = $after;
 	}
 }
 
@@ -288,8 +305,9 @@ function wstm117_run_taxonomy_tests() {
 		wp_set_current_user( $original_user );
 	}
 
-	$path = WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/e2e-artifacts/taxonomy-write-summary.json';
-	if ( false === file_put_contents( $path, wp_json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n" ) ) {
+	$path = Wstm_E2E_Artifacts::path( WP_PLUGIN_DIR . '/webmastery-site-toolkit-for-mcp/e2e-artifacts/taxonomy-write-summary.json' );
+	$json = wp_json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+	if ( false === $json || strlen( $json ) + 1 !== file_put_contents( $path, $json . "\n" ) ) {
 		throw new RuntimeException( 'Could not persist taxonomy write regression evidence.' );
 	}
 	echo "TAXONOMY SUMMARY {$summary['passed']} passed, {$summary['failed']} failed\n";

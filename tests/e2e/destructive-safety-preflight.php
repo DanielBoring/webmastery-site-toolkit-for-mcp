@@ -9,6 +9,15 @@ if ( 'cli' !== PHP_SAPI ) {
 if ( '1' !== getenv( 'WSTM116_STAGE_DISPOSABLE' ) ) {
 	throw new RuntimeException( 'Preflight requires disposable-project opt-in.' );
 }
+require_once __DIR__ . '/product-stage-artifacts.php';
+if (3 !== count($argv)) {
+	throw new RuntimeException('Preflight requires its exact output and stage token.');
+}
+Wstm_Product_Stage_Artifacts::directory(dirname($argv[1]), 'destructive', $argv[2]);
+if (basename($argv[1]) !== 'preflight.json') {
+	throw new RuntimeException('Preflight output filename is not the reserved stage filename.');
+}
+umask(0077);
 $artifact = fopen( $argv[1] ?? '', 'x' );
 if ( false === $artifact ) {
 	throw new RuntimeException( 'Preflight evidence collision.' );

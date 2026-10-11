@@ -30,23 +30,15 @@ class Webmastery_MCP_Users {
 			$data['email'] = $user->user_email;
 		}
 
-		return $data;
+		return Webmastery_MCP_Untrusted::mark( $data, [ 'display_name', 'nicename', 'url', 'login', 'email' ] );
 	}
 
 	public static function permission() {
-		if ( ! current_user_can( 'list_users' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires list_users capability.' );
-		}
-
-		return true;
+		return Webmastery_MCP_Permissions::check( 'list_users' );
 	}
 
 	public static function audit_permission() {
-		if ( ! current_user_can( 'edit_users' ) ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_users capability.' );
-		}
-
-		return true;
+		return Webmastery_MCP_Permissions::check( 'edit_users' );
 	}
 
 	private static function normalize_admin_account( $user ) {
@@ -55,13 +47,13 @@ class Webmastery_MCP_Users {
 			return null;
 		}
 
-		return [
+		return Webmastery_MCP_Untrusted::mark( [
 			'id'         => (int) $user->ID,
 			'login'      => $user->user_login,
 			'email'      => $user->user_email,
 			'registered' => $user->user_registered,
 			'last_login' => self::get_last_login( (int) $user->ID ),
-		];
+		], [ 'login', 'email', 'last_login' ] );
 	}
 
 	private static function get_last_login( $user_id ) {
@@ -89,12 +81,12 @@ class Webmastery_MCP_Users {
 			$last_used = gmdate( 'c', (int) $last_used );
 		}
 
-		return [
+		return Webmastery_MCP_Untrusted::mark( [
 			'user_id'    => (int) $user->ID,
 			'user_login' => $user->user_login,
 			'app_name'   => (string) ( $password['name'] ?? '' ),
 			'last_used'  => $last_used ? (string) $last_used : null,
-		];
+		], [ 'user_login', 'app_name' ] );
 	}
 
 	private static function register_list() {
@@ -114,8 +106,7 @@ class Webmastery_MCP_Users {
 				],
 			],
 			'execute_callback'    => function ( $input ) {
-				$per_page = min( (int) ( $input['per_page'] ?? 20 ), 100 );
-				$page     = max( 1, (int) ( $input['page'] ?? 1 ) );
+				[ 'per_page' => $per_page, 'page' => $page ] = Webmastery_MCP_Input::pagination( $input, 20, 100, null );
 
 				$args = [
 					'number'      => $per_page,

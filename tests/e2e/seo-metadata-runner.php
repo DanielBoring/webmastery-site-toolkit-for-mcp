@@ -15,6 +15,7 @@ $_SERVER['HTTP_HOST'] = 'localhost';
 require_once '/var/www/html/wp-load.php';
 require_once __DIR__ . '/metadata-batch-fixture.php';
 require_once __DIR__ . '/error-contract-assertions.php';
+require_once __DIR__ . '/legacy-artifacts.php';
 require_once __DIR__ . '/metadata-transport.php';
 
 function wstm110_seo_assert( bool $condition, string $message ): void {
@@ -184,7 +185,7 @@ try {
 		}
 	}
 	foreach ( array( 'get-seo-scores' => '_yoast_wpseo_linkdex', 'get-readability-scores' => '_yoast_wpseo_content_score' ) as $slug => $key ) {
-		$record_case( "{$slug}:denied key excluded before pagination", static function ( array &$record ) use ( $post_ids, $slug, $key, $execute ): void {
+		$record_case( "{$slug}:denied key excluded within bounded window", static function ( array &$record ) use ( $post_ids, $slug, $key, $execute ): void {
 			$id = $post_ids[0];
 			wstm110_seo_assert( $id === wp_update_post( array( 'ID' => $id, 'post_status' => 'pending' ), true ), 'Cannot prepare pending score fixture.' );
 			$input = array( 'post_type' => 'post', 'status' => 'pending', 'per_page' => 100, 'page' => 1 );
@@ -197,9 +198,11 @@ try {
 			$record['result'] = $result;
 			$record['reads'] = get_option( 'wstm110_seo_read_events', array() );
 			wstm110_seo_assert( true === ( $result['success'] ?? null ) && array() === $record['reads'], 'Score list read forbidden key.' );
-			wstm110_seo_assert( $baseline['data']['total'] - 1 === $result['data']['total'], 'Score total still counts denied object/key.' );
+			$expected_items = array_values( array_filter( $baseline['data']['items'], static fn( $item ) => $item['post_id'] !== $id ) );
+			wstm110_seo_assert( $expected_items === $result['data']['items'], 'Score window membership/values changed beyond denied object/key.' );
 			wstm110_seo_assert( ! in_array( $id, array_column( $result['data']['items'], 'post_id' ), true ), 'Score page contains denied object/key.' );
-			wstm110_seo_assert( (int) ceil( $result['data']['total'] / 100 ) === $result['data']['total_pages'], 'Score total_pages uses unfiltered total.' );
+			wstm110_seo_assert( ! array_key_exists( 'total', $result['data'] ) && ! array_key_exists( 'total_pages', $result['data'] ), 'Score response exposes obsolete totals.' );
+			wstm110_seo_assert( $baseline['data']['next_page'] === $result['data']['next_page'] && 1 === $result['data']['page'] && 100 === $result['data']['per_page'], 'Score continuation changed with authorization.' );
 		} );
 	}
 	$record_case( 'overview authorized bounded observations', static function ( array &$record ) use ( $post_ids, $execute ): void {
@@ -285,7 +288,7 @@ try {
 		$cleanup( 'actor', static function () use ( $user_id ): void { wstm110_seo_assert( wp_delete_user( $user_id ), 'Cannot remove SEO fixture actor.' ); } );
 	}
 	wp_set_current_user( $old_user );
-	$directory = dirname( __DIR__, 2 ) . '/e2e-artifacts';
+	$directory = Wstm_E2E_Artifacts::directory( dirname( __DIR__, 2 ) . '/e2e-artifacts' );
 	wstm110_seo_assert( is_dir( $directory ) || mkdir( $directory, 0777, true ), 'Cannot create SEO evidence directory.' );
 	$json = json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR ) . "\n";
 	wstm110_seo_assert( strlen( $json ) === file_put_contents( $directory . '/seo-metadata-' . $boundary . '.json', $json ), 'Cannot persist complete SEO evidence.' );

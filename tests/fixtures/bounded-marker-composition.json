@@ -1,0 +1,73 @@
+{
+  "purpose": "Compose the reviewed M1 record-relative markers with the bounded-list contract without importing unbounded peer query implementations.",
+  "source": {
+    "helper_sha256": "5a0ba6dffdf9c30b0ec7a01c6d7cbaa7c9f15c3707adc04e06255deb41104e20",
+    "test_sha256": "dfc7e0337ba4dcac1e36e1e737c3573b0b5b837d325bda98237ef50a9366e938",
+    "fixture_sha256": "174122b59ca9668eec5d9f29253d8837669898fd774c5f190c057b82a0d66e65"
+  },
+  "unchanged": [
+    "Stored values and types, including nested error-shaped data and stored marker-like keys.",
+    "Get, create, update, block, user, comment, metadata, access-audit and compact-delete response purposes.",
+    "Object/key authorization, failure reasons, compact trash shape and unmarked error responses.",
+    "All original M1 test methods and their membership/value/authorization purposes."
+  ],
+  "changed_oracles": [
+    {
+      "test": "SeoAnalysisTest::test_stored_keywords_are_data_not_diagnostics",
+      "before": "Exact metric keys omit the new record-relative marker property.",
+      "after": "Reuse the canonical M1 two-assertion change: append only untrusted_fields to the exact historical metric-key list and assert its exact seven-field array. Preserve every stored-value, provider-selection, diagnostic-message and score assertion without stripping or normalizing response data."
+    },
+    {
+      "test": "CommentsCalibrationTest sealed production provenance",
+      "before": "Comments source must byte-match the historical pre-marker source.",
+      "after": "Require exact reviewed M1 source SHA256 and Git blob, reverse exactly one marker opening and closing, and require the result to match both the fixed historical SHA256 and the unchanged sealed ledger binding. Add LF/CRLF positives and six source/binding mutants; do not regenerate the ledger.",
+      "current_sha256": "3db21ccc0fc980d2d0b6e13d7ee7d2da8b53c3eee31580c715e8c1e35604bc81",
+      "historical_sha256": "a5cc75ef65c0cb2b7b5e7c9173fc3f857f8181c9270c6f201483db73cde9bb4f"
+    },
+    {
+      "test": "BoundedListTest summary/full post, revision and CPT comparisons",
+      "before": "Removing content alone makes the full and summary records identical.",
+      "after": "Assert each exact full and summary marker list first, then remove content and normalize only the already-asserted marker difference for the unchanged strict value comparison."
+    },
+    {
+      "test": "test_registered_post_and_page_crud_callbacks_return_marked_persisted_records",
+      "before": "Exact totals and full content in the default list response.",
+      "after": "Exact candidate-window envelope and default summary omission; an additional full-list call preserves the original full-value oracle; get/write checks remain full."
+    },
+    {
+      "test": "test_registered_revision_callback_keeps_its_envelope_and_marks_each_revision",
+      "before": "Default revision record includes content and its marker.",
+      "after": "Default revision omits content and its marker; an additional full call preserves exact original values and post_id/type/revisions envelope."
+    },
+    {
+      "test": "test_orphan_callback_preserves_reference_checks_pagination_and_unmarked_failures",
+      "before": "Load-all query, four per-attachment reference queries, exact filtered totals.",
+      "after": "P+1 query with explicit offset, first-P batched thumbnail/content reads, truthful continuation, same returned ID47/value/permission/failure oracles.",
+      "fixture_calibration": "Give attachment46 a newer date than47 so actual date DESC/ID DESC sorting retains the original intended second-page ID47; unlike the old fixture, the query stub now applies bounded sorting and offsets."
+    },
+    {
+      "test": "test_registered_cpt_callbacks_return_the_same_marked_persisted_record",
+      "before": "Exact totals and full content in the default list response.",
+      "after": "Exact candidate-window envelope and summary omission; additional full-list call preserves all original full-value assertions."
+    },
+    {
+      "test": "test_registered_media_callbacks_retain_error_shaped_alt_text_as_data",
+      "before": "Exact filtered totals.",
+      "after": "Exact candidate-window envelope; all original media value/type/marker and get/write assertions retained."
+    }
+  ],
+  "new_checks": [
+    "Projection recomputes markers through the shared helper after omitted fields are removed, including stale absent marker names and duplicates.",
+    "Default summary and explicit full normalizer composition, rather than marking omitted content.",
+    "The reference stub records the actual batch candidate arguments and literal URL pattern; SQL failure remains fail-closed."
+  ],
+  "manifest_layer": {
+    "canonical_four_case_manifest_sha256": "fa63182bceeefd980455f798cd8c4df088ce10eb07a64ec95844a7fbdfad608a",
+    "changes": "Append only data.items.0.untrusted_fields on the four exact successful hygiene ability/label pairs. Do not import the peer 570-case manifest.",
+    "projection": "Strip exactly these four approved assertions before both historical594 and canonical589/570 reconstruction, preserving case order and every remaining typed property.",
+    "negative_controls": "48 marker/role/input/identity/value mutations and three denied-case controls; preserve the original projection guards."
+  },
+  "pending": [
+    "Native QA and actual WordPress/current/floor/package/HTTP/MCP acceptance are required."
+  ]
+}

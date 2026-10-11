@@ -49,8 +49,13 @@ final class InputBoundaryTest extends TestCase {
 		$manifest = json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
 		$names = array_column( $manifest, 'ability' );
 		self::assertGreaterThan( 60, count( Probe::$abilities ) );
+		self::assertCount( 17, Probe::$classes );
+		self::assertCount( 85, Probe::$abilities );
 		foreach ( Probe::$abilities as $name => $args ) {
 			self::assertContains( $name, $names );
+			$cases = array_filter( $manifest, static fn( $case ) => $name === $case['ability'] );
+			self::assertNotEmpty( array_filter( $cases, static fn( $case ) => 'success' === $case['expect'] ), $name . ' must retain an allowed control.' );
+			self::assertNotEmpty( array_filter( $cases, static fn( $case ) => 'forbidden' === ( $case['expect_error_code'] ?? null ) || 'forbidden' === ( $case['assert_permission'] ?? null ) ), $name . ' must retain a role/capability denial.' );
 			self::assertFalse( $args['input_schema']['additionalProperties'], $name );
 			$input = $this->input( $args['input_schema'] );
 			foreach ( array( 'execute_callback' => false, 'permission_callback' => true ) as $key => $permission ) {

@@ -3,13 +3,15 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-use Wstm120\Webmastery_MCP_Posts as Posts;
+use Wstm120\Webmastery_MCP_Content_Patch as ContentPatch;
+use Wstm120\Webmastery_MCP_Post_Meta as PostMeta;
 
 require_once __DIR__ . '/fixtures/posts-helper-stubs.php';
 
 final class PostsCharacterizationTest extends TestCase {
 	private static function invoke( string $method, array $args ) {
-		$reflection = new ReflectionMethod( Posts::class, $method );
+		$class = in_array( $method, array( 'normalize_post_meta_value', 'validate_post_meta_value' ), true ) ? PostMeta::class : ContentPatch::class;
+		$reflection = new ReflectionMethod( $class, $method );
 		$reflection->setAccessible( true );
 		return $reflection->invokeArgs( null, $args );
 	}
@@ -60,6 +62,31 @@ final class PostsCharacterizationTest extends TestCase {
 			$this->assertInstanceOf( WP_Error::class, $result );
 			$this->assertSame( 'target_not_found', $result->get_error_code() );
 			$this->assertSame( $expected, $blocks, 'Missing paths must not partially mutate ancestors.' );
+		}
+	}
+
+	public function test_block_lookup_retains_zero_indices_and_missing_path_diagnostics(): void {
+		$leaf = array( 'innerHTML' => 'raw \\ "leaf"', 'innerBlocks' => array() );
+		$blocks = array( array( 'innerBlocks' => array( $leaf ) ) );
+		$this->assertSame( $leaf, self::invoke( 'get_block_by_segments', array( $blocks, array( 0, 0 ) ) ) );
+		foreach ( array( array( 1 ), array( 0, 1 ), array( 0, 0, 0 ) ) as $path ) {
+			$error = self::invoke( 'get_block_by_segments', array( $blocks, $path ) );
+			$this->assertSame( 'target_not_found', $error->get_error_code() );
+			$this->assertSame( 'Block path not found.', $error->get_error_message() );
+		}
+	}
+
+	public function test_exact_patch_preserves_raw_bytes_and_reports_exact_missing_or_duplicate_targets(): void {
+		$prefix = "<script>const p = 'C:\\\\site';</script>\r\n";
+		$suffix = '<iframe src="keep"></iframe>';
+		$needle = '<p onclick="keep()">Target</p>';
+		$result = self::invoke( 'patch_content_by_exact_match', array( $prefix . $needle . $suffix, $needle, '<p>New</p>' ) );
+		$this->assertSame( $prefix . '<p>New</p>' . $suffix, $result['content'] );
+		$this->assertSame( array( 'content', 'replaced_blocks', 'target' ), array_keys( $result ) );
+		foreach ( array( 'target_not_found' => $prefix . $suffix, 'ambiguous_target' => $needle . $needle ) as $code => $content ) {
+			$error = self::invoke( 'patch_content_by_exact_match', array( $content, $needle, '<p>New</p>' ) );
+			$this->assertSame( $code, $error->get_error_code() );
+			$this->assertSame( 'target_not_found' === $code ? 'Exact content target not found.' : 'Exact content target matched more than once.', $error->get_error_message() );
 		}
 	}
 

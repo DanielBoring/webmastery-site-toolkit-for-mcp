@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/error-contract-assertions.php';
+require_once __DIR__ . '/legacy-artifacts.php';
 
 /**
  * Real-core patch preservation regressions, invoked by the contract runner.
@@ -215,14 +216,17 @@ final class WSTM115_Patch_HTML_Tests {
 		$summary = array(
 			'wordpress_version' => get_bloginfo( 'version' ),
 			'php_version' => PHP_VERSION,
-			'source_sha256' => hash_file( 'sha256', dirname( __DIR__, 2 ) . '/includes/class-posts.php' ),
+			'source_sha256' => hash_file( 'sha256', dirname( __DIR__, 2 ) . '/includes/class-content-patch.php' ),
+			'access_sha256' => hash_file( 'sha256', dirname( __DIR__, 2 ) . '/includes/class-post-access.php' ),
+			'writes_sha256' => hash_file( 'sha256', dirname( __DIR__, 2 ) . '/includes/class-post-writes.php' ),
 			'test_cases' => count( $this->cases ),
 			'passed' => count( $this->cases ) - $failed,
 			'failed' => $failed,
 			'cases' => $this->cases,
 		);
-		$dir = dirname( __DIR__, 2 ) . '/e2e-artifacts';
-		if ( ! wp_mkdir_p( $dir ) || false === file_put_contents( $dir . '/patch-html-summary.json', wp_json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n" ) ) {
+		$dir = Wstm_E2E_Artifacts::directory( dirname( __DIR__, 2 ) . '/e2e-artifacts' );
+		$json = wp_json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+		if ( false === $json || ! wp_mkdir_p( $dir ) || strlen( $json ) + 1 !== file_put_contents( $dir . '/patch-html-summary.json', $json . "\n" ) ) {
 			throw new RuntimeException( 'Unable to persist WSTM115 raw-content regression evidence.' );
 		}
 		echo "PATCH HTML SUMMARY {$summary['passed']} passed, {$failed} failed\n";

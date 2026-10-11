@@ -1,0 +1,3004 @@
+{
+    "marker_source_sha": "2ef8c40b7d0ac3cc8b15a9292a4ec987b55854e6",
+    "baseline_source_sha": "2feed8d18d0721a4c7ca2e0187005c8cfae76322",
+    "marker_source_manifest_sha256": "55df412a6bd22af2dc367f230264c259752451e3e2ef56264bdcd4bf72c93cdc",
+    "baseline_manifest_sha256": "da4395a6a9d6532c10423e25d02c710c2ed150d226dfa87a988b5594ede8fa4a",
+    "manifest_count": 570,
+    "marked_case_count": 190,
+    "marker_assertion_count": 200,
+    "cases": [
+        {
+            "index": 47,
+            "marker_source_index": 3,
+            "ability": "webmastery-site-toolkit-for-mcp/list-cpt-mcp-book",
+            "label": "list-cpt-mcp-book",
+            "had_assert_values": true,
+            "markers": {
+                "data.items.0.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 51,
+            "marker_source_index": 7,
+            "ability": "webmastery-site-toolkit-for-mcp/get-cpt-mcp-book",
+            "label": "get-cpt-mcp-book",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 53,
+            "marker_source_index": 9,
+            "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-book",
+            "label": "create-cpt-mcp-book with taxonomy terms",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 56,
+            "marker_source_index": 12,
+            "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-book",
+            "label": "update-cpt-mcp-book",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 60,
+            "marker_source_index": 16,
+            "ability": "webmastery-site-toolkit-for-mcp/get-cpt-mcp-book",
+            "label": "wstm107 get-cpt-mcp-book confirms invalid taxonomy rejection did not persist",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 62,
+            "marker_source_index": 18,
+            "ability": "webmastery-site-toolkit-for-mcp/get-cpt-mcp-book",
+            "label": "wstm107 get-cpt-mcp-book confirms unauthorized taxonomy rejection did not persist",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 64,
+            "marker_source_index": 20,
+            "ability": "webmastery-site-toolkit-for-mcp/get-cpt-mcp-book",
+            "label": "wstm107 get-cpt-mcp-book confirms mixed allowed and forbidden registered taxonomy payload did not partially persist",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 66,
+            "marker_source_index": 22,
+            "ability": "webmastery-site-toolkit-for-mcp/get-cpt-mcp-book",
+            "label": "wstm107 get-cpt-mcp-book confirms mixed taxonomy payload rejection did not partially persist",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 67,
+            "marker_source_index": 23,
+            "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-book",
+            "label": "wstm107 update-cpt-mcp-book persists content and requested terms once validated",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 68,
+            "marker_source_index": 24,
+            "ability": "webmastery-site-toolkit-for-mcp/get-cpt-mcp-book",
+            "label": "wstm107 get-cpt-mcp-book confirms validated update persisted content and terms",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 69,
+            "marker_source_index": 25,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-cpt-mcp-book",
+            "label": "delete-cpt-mcp-book",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 71,
+            "marker_source_index": 27,
+            "ability": "webmastery-site-toolkit-for-mcp/list-cpt-mcp-case-study",
+            "label": "list-cpt-mcp-case-study",
+            "had_assert_values": true,
+            "markers": {
+                "data.items.0.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 73,
+            "marker_source_index": 29,
+            "ability": "webmastery-site-toolkit-for-mcp/get-cpt-mcp-case-study",
+            "label": "get-cpt-mcp-case-study",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 75,
+            "marker_source_index": 31,
+            "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study",
+            "label": "create-cpt-mcp-case-study",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 77,
+            "marker_source_index": 33,
+            "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study",
+            "label": "update-cpt-mcp-case-study",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 79,
+            "marker_source_index": 35,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-cpt-mcp-case-study",
+            "label": "delete-cpt-mcp-case-study",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 81,
+            "marker_source_index": 37,
+            "ability": "webmastery-site-toolkit-for-mcp/list-posts",
+            "label": "list-posts includes safe author fields",
+            "had_assert_values": true,
+            "markers": {
+                "data.items.0.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 84,
+            "marker_source_index": 40,
+            "ability": "webmastery-site-toolkit-for-mcp/get-post",
+            "label": "get-post",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 85,
+            "marker_source_index": 41,
+            "ability": "webmastery-site-toolkit-for-mcp/create-post",
+            "label": "create-post",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 88,
+            "marker_source_index": 44,
+            "ability": "webmastery-site-toolkit-for-mcp/create-post",
+            "label": "create-post writes Yoast meta via plain request then separate metadata calls",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 89,
+            "marker_source_index": 45,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast meta standalone _yoast_wpseo_focuskw",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 90,
+            "marker_source_index": 46,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast meta standalone _yoast_wpseo_metadesc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 91,
+            "marker_source_index": 47,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast meta standalone _yoast_wpseo_title",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 93,
+            "marker_source_index": 49,
+            "ability": "webmastery-site-toolkit-for-mcp/create-post",
+            "label": "create-post writes Yoast free metadata fields via plain request then separate metadata calls",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 94,
+            "marker_source_index": 50,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_canonical",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 95,
+            "marker_source_index": 51,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_bctitle",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 96,
+            "marker_source_index": 52,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_schema_page_type",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 97,
+            "marker_source_index": 53,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_schema_article_type",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 98,
+            "marker_source_index": 54,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_opengraph-title",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 99,
+            "marker_source_index": 55,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_opengraph-description",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 100,
+            "marker_source_index": 56,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_opengraph-image",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 101,
+            "marker_source_index": 57,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_twitter-title",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 102,
+            "marker_source_index": 58,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_twitter-description",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 103,
+            "marker_source_index": 59,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_twitter-image",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 104,
+            "marker_source_index": 60,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_primary_category",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 105,
+            "marker_source_index": 61,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_meta-robots-noindex",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 106,
+            "marker_source_index": 62,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_meta-robots-nofollow",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 107,
+            "marker_source_index": 63,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes Yoast free metadata fields standalone _yoast_wpseo_meta-robots-adv",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 109,
+            "marker_source_index": 65,
+            "ability": "webmastery-site-toolkit-for-mcp/create-post",
+            "label": "create-post writes SEOPress free metadata fields via plain request then separate metadata calls",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 110,
+            "marker_source_index": 66,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_titles_desc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 111,
+            "marker_source_index": 67,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_analysis_target_kw",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 112,
+            "marker_source_index": 68,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_titles_title",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 113,
+            "marker_source_index": 69,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_robots_canonical",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 114,
+            "marker_source_index": 70,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_social_fb_title",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 115,
+            "marker_source_index": 71,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_social_fb_desc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 116,
+            "marker_source_index": 72,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_social_fb_img",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 117,
+            "marker_source_index": 73,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_social_twitter_title",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 118,
+            "marker_source_index": 74,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_social_twitter_desc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 119,
+            "marker_source_index": 75,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_social_twitter_img",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 120,
+            "marker_source_index": 76,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_robots_primary_cat",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 121,
+            "marker_source_index": 77,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_robots_index",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 122,
+            "marker_source_index": 78,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_robots_follow",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 123,
+            "marker_source_index": 79,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_robots_archive",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 124,
+            "marker_source_index": 80,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "create-post writes SEOPress free metadata fields standalone _seopress_robots_breadcrumbs",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 125,
+            "marker_source_index": 81,
+            "ability": "webmastery-site-toolkit-for-mcp/create-post",
+            "label": "create-post preserves backslashes",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 127,
+            "marker_source_index": 83,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post",
+            "label": "update-post via plain request then separate metadata calls",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 128,
+            "marker_source_index": 84,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-post standalone _yoast_wpseo_metadesc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 129,
+            "marker_source_index": 85,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-post standalone _yoast_wpseo_focuskw",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 130,
+            "marker_source_index": 86,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-post standalone _yoast_wpseo_title",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 131,
+            "marker_source_index": 87,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-post standalone _yoast_wpseo_canonical",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 132,
+            "marker_source_index": 88,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-post standalone _yoast_wpseo_opengraph-title",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 133,
+            "marker_source_index": 89,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-post standalone _yoast_wpseo_twitter-title",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 134,
+            "marker_source_index": 90,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-post standalone _yoast_wpseo_meta-robots-noindex",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 137,
+            "marker_source_index": 93,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post",
+            "label": "update-post writes SEOPress metadata fields via plain request then separate metadata calls",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 138,
+            "marker_source_index": 94,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-post writes SEOPress metadata fields standalone _seopress_titles_desc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 139,
+            "marker_source_index": 95,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-post writes SEOPress metadata fields standalone _seopress_analysis_target_kw",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 140,
+            "marker_source_index": 96,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-post writes SEOPress metadata fields standalone _seopress_titles_title",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 141,
+            "marker_source_index": 97,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-post writes SEOPress metadata fields standalone _seopress_robots_canonical",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 142,
+            "marker_source_index": 98,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-post writes SEOPress metadata fields standalone _seopress_robots_snippet",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 145,
+            "marker_source_index": 101,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post",
+            "label": "update-post preserves backslashes",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 147,
+            "marker_source_index": 103,
+            "ability": "webmastery-site-toolkit-for-mcp/get-post-meta",
+            "label": "wstm110 standalone listing omits denied keys",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta"
+                ]
+            }
+        },
+        {
+            "index": 151,
+            "marker_source_index": 107,
+            "ability": "webmastery-site-toolkit-for-mcp/get-post-meta",
+            "label": "wstm110 standalone restricted read authorized",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta"
+                ]
+            }
+        },
+        {
+            "index": 152,
+            "marker_source_index": 108,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "wstm110 standalone restricted upsert authorized",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 153,
+            "marker_source_index": 109,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-post-meta",
+            "label": "wstm110 standalone restricted deletion authorized",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key"
+                ]
+            }
+        },
+        {
+            "index": 154,
+            "marker_source_index": 110,
+            "ability": "webmastery-site-toolkit-for-mcp/get-post-meta",
+            "label": "get-post-meta filters protected keys",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta"
+                ]
+            }
+        },
+        {
+            "index": 157,
+            "marker_source_index": 113,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-post-meta structured value",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 158,
+            "marker_source_index": 114,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-post-meta preserves backslashes",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 161,
+            "marker_source_index": 117,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-post-meta",
+            "label": "delete-post-meta",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key"
+                ]
+            }
+        },
+        {
+            "index": 163,
+            "marker_source_index": 119,
+            "ability": "webmastery-site-toolkit-for-mcp/list-content-blocks",
+            "label": "list-content-blocks post",
+            "had_assert_values": true,
+            "markers": {
+                "data.blocks.0.untrusted_fields": [
+                    "block_name",
+                    "text",
+                    "html",
+                    "attrs"
+                ],
+                "data.blocks.1.untrusted_fields": [
+                    "block_name",
+                    "text",
+                    "html",
+                    "attrs"
+                ],
+                "data.blocks.2.untrusted_fields": [
+                    "block_name",
+                    "text",
+                    "html",
+                    "attrs"
+                ],
+                "data.blocks.3.untrusted_fields": [
+                    "block_name",
+                    "text",
+                    "html",
+                    "attrs"
+                ]
+            }
+        },
+        {
+            "index": 165,
+            "marker_source_index": 121,
+            "ability": "webmastery-site-toolkit-for-mcp/patch-content-block",
+            "label": "wstm115 block patch with untouched HTML",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "content"
+                ]
+            }
+        },
+        {
+            "index": 166,
+            "marker_source_index": 122,
+            "ability": "webmastery-site-toolkit-for-mcp/list-content-blocks",
+            "label": "wstm115 block patch preserves untouched block hash",
+            "had_assert_values": true,
+            "markers": {
+                "data.blocks.0.untrusted_fields": [
+                    "block_name",
+                    "text",
+                    "html",
+                    "attrs"
+                ]
+            }
+        },
+        {
+            "index": 167,
+            "marker_source_index": 123,
+            "ability": "webmastery-site-toolkit-for-mcp/patch-post-content",
+            "label": "wstm115 exact patch with untouched HTML",
+            "had_assert_values": false,
+            "markers": {
+                "data.post.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ],
+                "data.target.untrusted_fields": []
+            }
+        },
+        {
+            "index": 168,
+            "marker_source_index": 124,
+            "ability": "webmastery-site-toolkit-for-mcp/list-content-blocks",
+            "label": "wstm115 exact patch preserves untouched block hash",
+            "had_assert_values": true,
+            "markers": {
+                "data.blocks.0.untrusted_fields": [
+                    "block_name",
+                    "text",
+                    "html",
+                    "attrs"
+                ]
+            }
+        },
+        {
+            "index": 169,
+            "marker_source_index": 125,
+            "ability": "webmastery-site-toolkit-for-mcp/patch-content-block",
+            "label": "patch-content-block top-level path",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "content"
+                ]
+            }
+        },
+        {
+            "index": 170,
+            "marker_source_index": 126,
+            "ability": "webmastery-site-toolkit-for-mcp/patch-content-block",
+            "label": "patch-content-block nested path",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "content"
+                ]
+            }
+        },
+        {
+            "index": 171,
+            "marker_source_index": 127,
+            "ability": "webmastery-site-toolkit-for-mcp/patch-content-block",
+            "label": "patch-content-block page path",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "content"
+                ]
+            }
+        },
+        {
+            "index": 172,
+            "marker_source_index": 128,
+            "ability": "webmastery-site-toolkit-for-mcp/patch-content-block",
+            "label": "patch-content-block block hash",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "content"
+                ]
+            }
+        },
+        {
+            "index": 176,
+            "marker_source_index": 132,
+            "ability": "webmastery-site-toolkit-for-mcp/patch-post-content",
+            "label": "patch-post-content heading",
+            "had_assert_values": true,
+            "markers": {
+                "data.post.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ],
+                "data.target.untrusted_fields": [
+                    "heading_text"
+                ]
+            }
+        },
+        {
+            "index": 177,
+            "marker_source_index": 133,
+            "ability": "webmastery-site-toolkit-for-mcp/patch-post-content",
+            "label": "patch-post-content exact",
+            "had_assert_values": true,
+            "markers": {
+                "data.post.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ],
+                "data.target.untrusted_fields": []
+            }
+        },
+        {
+            "index": 178,
+            "marker_source_index": 134,
+            "ability": "webmastery-site-toolkit-for-mcp/patch-post-content",
+            "label": "patch-post-content page exact",
+            "had_assert_values": true,
+            "markers": {
+                "data.post.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ],
+                "data.target.untrusted_fields": []
+            }
+        },
+        {
+            "index": 179,
+            "marker_source_index": 135,
+            "ability": "webmastery-site-toolkit-for-mcp/patch-post-content",
+            "label": "patch-post-content custom post type exact",
+            "had_assert_values": true,
+            "markers": {
+                "data.post.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ],
+                "data.target.untrusted_fields": []
+            }
+        },
+        {
+            "index": 186,
+            "marker_source_index": 142,
+            "ability": "webmastery-site-toolkit-for-mcp/set-featured-image",
+            "label": "set-featured-image",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 189,
+            "marker_source_index": 144,
+            "ability": "webmastery-site-toolkit-for-mcp/remove-featured-image",
+            "label": "remove-featured-image",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 191,
+            "marker_source_index": 146,
+            "ability": "webmastery-site-toolkit-for-mcp/list-revisions",
+            "label": "list-revisions post",
+            "had_assert_values": true,
+            "markers": {
+                "data.revisions.0.untrusted_fields": [
+                    "author_name",
+                    "title",
+                    "content",
+                    "excerpt"
+                ]
+            }
+        },
+        {
+            "index": 192,
+            "marker_source_index": 147,
+            "ability": "webmastery-site-toolkit-for-mcp/list-revisions",
+            "label": "list-revisions page",
+            "had_assert_values": true,
+            "markers": {
+                "data.revisions.0.untrusted_fields": [
+                    "author_name",
+                    "title",
+                    "content",
+                    "excerpt"
+                ]
+            }
+        },
+        {
+            "index": 194,
+            "marker_source_index": 149,
+            "ability": "webmastery-site-toolkit-for-mcp/restore-revision",
+            "label": "restore-revision",
+            "had_assert_values": true,
+            "markers": {
+                "data.revision.untrusted_fields": [
+                    "author_name",
+                    "title",
+                    "content",
+                    "excerpt"
+                ],
+                "data.post.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 202,
+            "marker_source_index": 157,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-post",
+            "label": "delete-post",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 205,
+            "marker_source_index": 160,
+            "ability": "webmastery-site-toolkit-for-mcp/list-pages",
+            "label": "list-pages includes safe author fields",
+            "had_assert_values": true,
+            "markers": {
+                "data.items.0.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 208,
+            "marker_source_index": 163,
+            "ability": "webmastery-site-toolkit-for-mcp/get-page",
+            "label": "get-page",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 209,
+            "marker_source_index": 164,
+            "ability": "webmastery-site-toolkit-for-mcp/create-page",
+            "label": "create-page",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 212,
+            "marker_source_index": 167,
+            "ability": "webmastery-site-toolkit-for-mcp/update-page",
+            "label": "update-page via plain request then separate metadata calls",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 213,
+            "marker_source_index": 168,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-page standalone _yoast_wpseo_metadesc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 214,
+            "marker_source_index": 169,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "update-page standalone _yoast_wpseo_focuskw",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 216,
+            "marker_source_index": 171,
+            "ability": "webmastery-site-toolkit-for-mcp/set-featured-image",
+            "label": "set-featured-image page",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 217,
+            "marker_source_index": 172,
+            "ability": "webmastery-site-toolkit-for-mcp/remove-featured-image",
+            "label": "remove-featured-image page",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 219,
+            "marker_source_index": 174,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-page",
+            "label": "delete-page",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 242,
+            "marker_source_index": 197,
+            "ability": "webmastery-site-toolkit-for-mcp/list-users",
+            "label": "list-users as admin",
+            "had_assert_values": false,
+            "markers": {
+                "data.items.0.untrusted_fields": [
+                    "display_name",
+                    "nicename",
+                    "url",
+                    "login",
+                    "email"
+                ]
+            }
+        },
+        {
+            "index": 243,
+            "marker_source_index": 198,
+            "ability": "webmastery-site-toolkit-for-mcp/list-users",
+            "label": "list-users hides login and email without edit_users",
+            "had_assert_values": true,
+            "markers": {
+                "data.items.0.untrusted_fields": [
+                    "display_name",
+                    "nicename",
+                    "url"
+                ]
+            }
+        },
+        {
+            "index": 245,
+            "marker_source_index": 200,
+            "ability": "webmastery-site-toolkit-for-mcp/get-user",
+            "label": "get-user as admin",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "display_name",
+                    "nicename",
+                    "url",
+                    "login",
+                    "email"
+                ]
+            }
+        },
+        {
+            "index": 246,
+            "marker_source_index": 201,
+            "ability": "webmastery-site-toolkit-for-mcp/get-user",
+            "label": "get-user hides login and email without edit_users",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "display_name",
+                    "nicename",
+                    "url"
+                ]
+            }
+        },
+        {
+            "index": 248,
+            "marker_source_index": 203,
+            "ability": "webmastery-site-toolkit-for-mcp/user-access-audit",
+            "label": "user-access-audit as admin",
+            "had_assert_values": true,
+            "markers": {
+                "data.admin_accounts.0.untrusted_fields": [
+                    "login",
+                    "email",
+                    "last_login"
+                ],
+                "data.application_passwords.0.untrusted_fields": [
+                    "user_login",
+                    "app_name"
+                ]
+            }
+        },
+        {
+            "index": 262,
+            "marker_source_index": 217,
+            "ability": "webmastery-site-toolkit-for-mcp/list-comments",
+            "label": "list-comments",
+            "had_assert_values": false,
+            "markers": {
+                "data.items.0.untrusted_fields": [
+                    "author",
+                    "author_email",
+                    "author_url",
+                    "content"
+                ]
+            }
+        },
+        {
+            "index": 264,
+            "marker_source_index": 219,
+            "ability": "webmastery-site-toolkit-for-mcp/reply-comment",
+            "label": "reply-comment",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "author",
+                    "author_email",
+                    "author_url",
+                    "content"
+                ]
+            }
+        },
+        {
+            "index": 267,
+            "marker_source_index": 222,
+            "ability": "webmastery-site-toolkit-for-mcp/update-comment",
+            "label": "update-comment",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "author",
+                    "author_email",
+                    "author_url",
+                    "content"
+                ]
+            }
+        },
+        {
+            "index": 268,
+            "marker_source_index": 223,
+            "ability": "webmastery-site-toolkit-for-mcp/update-comment",
+            "label": "update-comment with status",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "author",
+                    "author_email",
+                    "author_url",
+                    "content"
+                ]
+            }
+        },
+        {
+            "index": 292,
+            "marker_source_index": 247,
+            "ability": "webmastery-site-toolkit-for-mcp/update-comment",
+            "label": "wstm105 update own draft moderator",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "author",
+                    "author_email",
+                    "author_url",
+                    "content"
+                ]
+            }
+        },
+        {
+            "index": 296,
+            "marker_source_index": 251,
+            "ability": "webmastery-site-toolkit-for-mcp/update-comment",
+            "label": "wstm105 update as admin",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "author",
+                    "author_email",
+                    "author_url",
+                    "content"
+                ]
+            }
+        },
+        {
+            "index": 300,
+            "marker_source_index": 255,
+            "ability": "webmastery-site-toolkit-for-mcp/update-comment",
+            "label": "wstm105 update orphan uses core edit_posts fallback",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "author",
+                    "author_email",
+                    "author_url",
+                    "content"
+                ]
+            }
+        },
+        {
+            "index": 307,
+            "marker_source_index": 262,
+            "ability": "webmastery-site-toolkit-for-mcp/update-comment",
+            "label": "wstm105 update mapped CPT allowed",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "author",
+                    "author_email",
+                    "author_url",
+                    "content"
+                ]
+            }
+        },
+        {
+            "index": 319,
+            "marker_source_index": 274,
+            "ability": "webmastery-site-toolkit-for-mcp/list-media",
+            "label": "list-media as author",
+            "had_assert_values": false,
+            "markers": {
+                "data.items.0.untrusted_fields": [
+                    "title",
+                    "caption",
+                    "alt_text",
+                    "url",
+                    "filename"
+                ]
+            }
+        },
+        {
+            "index": 321,
+            "marker_source_index": 276,
+            "ability": "webmastery-site-toolkit-for-mcp/get-media",
+            "label": "get-media",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "caption",
+                    "alt_text",
+                    "url",
+                    "filename"
+                ]
+            }
+        },
+        {
+            "index": 322,
+            "marker_source_index": 277,
+            "ability": "webmastery-site-toolkit-for-mcp/upload-image",
+            "label": "upload-image with featured image metadata",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "caption",
+                    "alt_text",
+                    "url",
+                    "filename"
+                ]
+            }
+        },
+        {
+            "index": 330,
+            "marker_source_index": 285,
+            "ability": "webmastery-site-toolkit-for-mcp/update-media",
+            "label": "update-media",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "caption",
+                    "alt_text",
+                    "url",
+                    "filename"
+                ]
+            }
+        },
+        {
+            "index": 339,
+            "marker_source_index": 294,
+            "ability": "webmastery-site-toolkit-for-mcp/seo-analyze-post",
+            "label": "seo-analyze-post",
+            "had_assert_values": false,
+            "markers": {
+                "data.metrics.untrusted_fields": [
+                    "title",
+                    "url",
+                    "slug",
+                    "yoast_meta_description",
+                    "seopress_meta_description",
+                    "yoast_focus_keyword",
+                    "seopress_focus_keywords"
+                ]
+            }
+        },
+        {
+            "index": 340,
+            "marker_source_index": 295,
+            "ability": "webmastery-site-toolkit-for-mcp/seo-analyze-post",
+            "label": "wstm108 Yoast found takes precedence",
+            "had_assert_values": true,
+            "markers": {
+                "data.metrics.untrusted_fields": [
+                    "title",
+                    "url",
+                    "slug",
+                    "yoast_meta_description",
+                    "seopress_meta_description",
+                    "yoast_focus_keyword",
+                    "seopress_focus_keywords"
+                ]
+            }
+        },
+        {
+            "index": 341,
+            "marker_source_index": 296,
+            "ability": "webmastery-site-toolkit-for-mcp/seo-analyze-post",
+            "label": "wstm108 Yoast missing does not fall back to matching SEOPress",
+            "had_assert_values": true,
+            "markers": {
+                "data.metrics.untrusted_fields": [
+                    "title",
+                    "url",
+                    "slug",
+                    "yoast_meta_description",
+                    "seopress_meta_description",
+                    "yoast_focus_keyword",
+                    "seopress_focus_keywords"
+                ]
+            }
+        },
+        {
+            "index": 342,
+            "marker_source_index": 297,
+            "ability": "webmastery-site-toolkit-for-mcp/seo-analyze-post",
+            "label": "wstm108 SEOPress found fallback",
+            "had_assert_values": true,
+            "markers": {
+                "data.metrics.untrusted_fields": [
+                    "title",
+                    "url",
+                    "slug",
+                    "yoast_meta_description",
+                    "seopress_meta_description",
+                    "yoast_focus_keyword",
+                    "seopress_focus_keywords"
+                ]
+            }
+        },
+        {
+            "index": 343,
+            "marker_source_index": 298,
+            "ability": "webmastery-site-toolkit-for-mcp/seo-analyze-post",
+            "label": "wstm108 SEOPress missing fallback",
+            "had_assert_values": true,
+            "markers": {
+                "data.metrics.untrusted_fields": [
+                    "title",
+                    "url",
+                    "slug",
+                    "yoast_meta_description",
+                    "seopress_meta_description",
+                    "yoast_focus_keyword",
+                    "seopress_focus_keywords"
+                ]
+            }
+        },
+        {
+            "index": 344,
+            "marker_source_index": 299,
+            "ability": "webmastery-site-toolkit-for-mcp/seo-analyze-post",
+            "label": "wstm108 no keyword unchanged",
+            "had_assert_values": true,
+            "markers": {
+                "data.metrics.untrusted_fields": [
+                    "title",
+                    "url",
+                    "slug",
+                    "yoast_meta_description",
+                    "seopress_meta_description",
+                    "yoast_focus_keyword",
+                    "seopress_focus_keywords"
+                ]
+            }
+        },
+        {
+            "index": 345,
+            "marker_source_index": 300,
+            "ability": "webmastery-site-toolkit-for-mcp/get-seo-scores",
+            "label": "get-seo-scores",
+            "had_assert_values": true,
+            "markers": {
+                "data.items.0.untrusted_fields": [
+                    "title",
+                    "url",
+                    "score"
+                ]
+            }
+        },
+        {
+            "index": 347,
+            "marker_source_index": 302,
+            "ability": "webmastery-site-toolkit-for-mcp/get-readability-scores",
+            "label": "get-readability-scores",
+            "had_assert_values": true,
+            "markers": {
+                "data.items.0.untrusted_fields": [
+                    "title",
+                    "url",
+                    "score"
+                ]
+            }
+        },
+        {
+            "index": 349,
+            "marker_source_index": 304,
+            "ability": "webmastery-site-toolkit-for-mcp/get-yoast-metadata",
+            "label": "get-yoast-metadata",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "url",
+                    "metadata",
+                    "raw_meta"
+                ]
+            }
+        },
+        {
+            "index": 351,
+            "marker_source_index": 306,
+            "ability": "webmastery-site-toolkit-for-mcp/get-seopress-metadata",
+            "label": "get-seopress-metadata",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "url",
+                    "metadata",
+                    "raw_meta"
+                ]
+            }
+        },
+        {
+            "index": 416,
+            "marker_source_index": 364,
+            "ability": "webmastery-site-toolkit-for-mcp/create-page",
+            "label": "wstm106 create draft page with allowed parent",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 420,
+            "marker_source_index": 368,
+            "ability": "webmastery-site-toolkit-for-mcp/get-page",
+            "label": "wstm106 page unchanged after parent denial",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 424,
+            "marker_source_index": 372,
+            "ability": "webmastery-site-toolkit-for-mcp/update-page",
+            "label": "wstm106 ordinary draft page parent update",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 425,
+            "marker_source_index": 373,
+            "ability": "webmastery-site-toolkit-for-mcp/update-page",
+            "label": "wstm106 ordinary draft page same parent",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 426,
+            "marker_source_index": 374,
+            "ability": "webmastery-site-toolkit-for-mcp/update-page",
+            "label": "wstm106 ordinary draft page parent omitted",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 427,
+            "marker_source_index": 375,
+            "ability": "webmastery-site-toolkit-for-mcp/update-page",
+            "label": "wstm106 ordinary draft page detach zero",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 430,
+            "marker_source_index": 378,
+            "ability": "webmastery-site-toolkit-for-mcp/get-cpt-mcp-book",
+            "label": "wstm106 book unchanged after parent denial",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 431,
+            "marker_source_index": 379,
+            "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-book",
+            "label": "wstm106 nonhierarchical book zero parent allowed",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 432,
+            "marker_source_index": 380,
+            "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-book",
+            "label": "wstm106 nonhierarchical draft book zero parent allowed",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 435,
+            "marker_source_index": 383,
+            "ability": "webmastery-site-toolkit-for-mcp/get-cpt-mcp-case-study",
+            "label": "wstm106 case unchanged after parent denial",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 436,
+            "marker_source_index": 384,
+            "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study",
+            "label": "wstm106 explicit map zero parent allowed",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 437,
+            "marker_source_index": 385,
+            "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study",
+            "label": "wstm106 explicit map draft zero parent allowed",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 438,
+            "marker_source_index": 386,
+            "ability": "webmastery-site-toolkit-for-mcp/create-post",
+            "label": "wstm113 create post schedule",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 445,
+            "marker_source_index": 393,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post",
+            "label": "wstm113 update post schedule",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 446,
+            "marker_source_index": 394,
+            "ability": "webmastery-site-toolkit-for-mcp/create-page",
+            "label": "wstm113 create page schedule",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 453,
+            "marker_source_index": 401,
+            "ability": "webmastery-site-toolkit-for-mcp/update-page",
+            "label": "wstm113 update page schedule",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 454,
+            "marker_source_index": 402,
+            "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-book",
+            "label": "wstm113 create book schedule",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 461,
+            "marker_source_index": 409,
+            "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-book",
+            "label": "wstm113 update book schedule",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 462,
+            "marker_source_index": 410,
+            "ability": "webmastery-site-toolkit-for-mcp/create-cpt-mcp-case-study",
+            "label": "wstm113 create case schedule",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 469,
+            "marker_source_index": 417,
+            "ability": "webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study",
+            "label": "wstm113 update case schedule",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 480,
+            "marker_source_index": 428,
+            "ability": "webmastery-site-toolkit-for-mcp/create-post",
+            "label": "wstm122 create-post preserves sanitized SEO backslashes via plain request then separate metadata calls",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 481,
+            "marker_source_index": 429,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "wstm122 create-post preserves sanitized SEO backslashes standalone _yoast_wpseo_metadesc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 482,
+            "marker_source_index": 430,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "wstm122 create-post preserves sanitized SEO backslashes standalone _seopress_titles_desc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 484,
+            "marker_source_index": 432,
+            "ability": "webmastery-site-toolkit-for-mcp/create-page",
+            "label": "wstm122 create-page preserves quoted metadata via plain request then separate metadata calls",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 485,
+            "marker_source_index": 433,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "wstm122 create-page preserves quoted metadata standalone _yoast_wpseo_metadesc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 486,
+            "marker_source_index": 434,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "wstm122 create-page preserves quoted metadata standalone _seopress_titles_desc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 488,
+            "marker_source_index": 436,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post",
+            "label": "wstm122 update-post preserves repeated and trailing metadata backslashes via plain request then separate metadata calls",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 489,
+            "marker_source_index": 437,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "wstm122 update-post preserves repeated and trailing metadata backslashes standalone _yoast_wpseo_metadesc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 490,
+            "marker_source_index": 438,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "wstm122 update-post preserves repeated and trailing metadata backslashes standalone _seopress_titles_desc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 492,
+            "marker_source_index": 440,
+            "ability": "webmastery-site-toolkit-for-mcp/update-page",
+            "label": "wstm122 update-page preserves JSON metadata backslashes via plain request then separate metadata calls",
+            "had_assert_values": false,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 493,
+            "marker_source_index": 441,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "wstm122 update-page preserves JSON metadata backslashes standalone _yoast_wpseo_metadesc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 494,
+            "marker_source_index": 442,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "wstm122 update-page preserves JSON metadata backslashes standalone _seopress_titles_desc",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 495,
+            "marker_source_index": 443,
+            "ability": "webmastery-site-toolkit-for-mcp/upload-image",
+            "label": "wstm122 upload-image preserves sanitized title caption and alt backslashes",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "caption",
+                    "alt_text",
+                    "url",
+                    "filename"
+                ]
+            }
+        },
+        {
+            "index": 496,
+            "marker_source_index": 444,
+            "ability": "webmastery-site-toolkit-for-mcp/update-media",
+            "label": "wstm122 update-media preserves sanitized title caption and alt backslashes",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "caption",
+                    "alt_text",
+                    "url",
+                    "filename"
+                ]
+            }
+        },
+        {
+            "index": 497,
+            "marker_source_index": 445,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post-meta",
+            "label": "wstm122 direct structured metadata remains slashed exactly once",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "meta_key",
+                    "previous_value",
+                    "current_value"
+                ]
+            }
+        },
+        {
+            "index": 499,
+            "marker_source_index": 447,
+            "ability": "webmastery-site-toolkit-for-mcp/get-media",
+            "label": "wstm122 denied media write preserves title and caption",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "caption",
+                    "alt_text",
+                    "url",
+                    "filename"
+                ]
+            }
+        },
+        {
+            "index": 506,
+            "marker_source_index": 454,
+            "ability": "webmastery-site-toolkit-for-mcp/get-media",
+            "label": "wstm120 get-media owner retains attachment after denied permanent deletes",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "caption",
+                    "alt_text",
+                    "url",
+                    "filename"
+                ]
+            }
+        },
+        {
+            "index": 507,
+            "marker_source_index": 455,
+            "ability": "webmastery-site-toolkit-for-mcp/create-post",
+            "label": "wstm120 contributor creates own draft",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 508,
+            "marker_source_index": 456,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post",
+            "label": "wstm120 contributor updates own draft",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 509,
+            "marker_source_index": 457,
+            "ability": "webmastery-site-toolkit-for-mcp/delete-post",
+            "label": "wstm120 contributor trashes own draft",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 519,
+            "marker_source_index": 467,
+            "ability": "webmastery-site-toolkit-for-mcp/get-post",
+            "label": "wstm120 contributor draft unchanged after denied transitions",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 524,
+            "marker_source_index": 472,
+            "ability": "webmastery-site-toolkit-for-mcp/get-post",
+            "label": "wstm120 get-post author owns private post",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 525,
+            "marker_source_index": 473,
+            "ability": "webmastery-site-toolkit-for-mcp/get-post",
+            "label": "wstm120 get-post contributor owns private post",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 528,
+            "marker_source_index": 476,
+            "ability": "webmastery-site-toolkit-for-mcp/get-post",
+            "label": "wstm120 get-post editor reads others private post",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 529,
+            "marker_source_index": 477,
+            "ability": "webmastery-site-toolkit-for-mcp/get-post",
+            "label": "wstm120 get-post author owns trashed draft",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 530,
+            "marker_source_index": 478,
+            "ability": "webmastery-site-toolkit-for-mcp/get-post",
+            "label": "wstm120 get-post contributor owns trashed draft",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 533,
+            "marker_source_index": 481,
+            "ability": "webmastery-site-toolkit-for-mcp/get-post",
+            "label": "wstm120 get-post limited editor reads trash despite lacking delete",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 534,
+            "marker_source_index": 482,
+            "ability": "webmastery-site-toolkit-for-mcp/get-page",
+            "label": "wstm120 get-page editor owns private page",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 538,
+            "marker_source_index": 486,
+            "ability": "webmastery-site-toolkit-for-mcp/get-page",
+            "label": "wstm120 get-page editor owns trashed draft",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 542,
+            "marker_source_index": 490,
+            "ability": "webmastery-site-toolkit-for-mcp/get-page",
+            "label": "wstm120 get-page limited editor reads trash despite lacking delete",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 545,
+            "marker_source_index": 493,
+            "ability": "webmastery-site-toolkit-for-mcp/seo-analyze-post",
+            "label": "wstm120 seo-analyze-post contributor own draft allowed",
+            "had_assert_values": true,
+            "markers": {
+                "data.metrics.untrusted_fields": [
+                    "title",
+                    "url",
+                    "slug",
+                    "yoast_meta_description",
+                    "seopress_meta_description",
+                    "yoast_focus_keyword",
+                    "seopress_focus_keywords"
+                ]
+            }
+        },
+        {
+            "index": 550,
+            "marker_source_index": 498,
+            "ability": "webmastery-site-toolkit-for-mcp/list-posts",
+            "label": "wstm120 list-posts contributor own drafts allowed",
+            "had_assert_values": true,
+            "markers": {
+                "data.items.0.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 551,
+            "marker_source_index": 499,
+            "ability": "webmastery-site-toolkit-for-mcp/list-pages",
+            "label": "wstm120 list-pages editor allowed",
+            "had_assert_values": true,
+            "markers": {
+                "data.items.0.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 556,
+            "marker_source_index": 504,
+            "ability": "webmastery-site-toolkit-for-mcp/get-page",
+            "label": "wstm120 get-page limited page editor owns private page",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 557,
+            "marker_source_index": 505,
+            "ability": "webmastery-site-toolkit-for-mcp/get-page",
+            "label": "wstm120 get-page limited page editor owns trashed draft",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 559,
+            "marker_source_index": 507,
+            "ability": "webmastery-site-toolkit-for-mcp/get-post",
+            "label": "wstm120 get-post editor reads formerly published trash",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        },
+        {
+            "index": 560,
+            "marker_source_index": 508,
+            "ability": "webmastery-site-toolkit-for-mcp/update-post",
+            "label": "wstm120 contributor successful write calibrates state observer",
+            "had_assert_values": true,
+            "markers": {
+                "data.untrusted_fields": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "slug",
+                    "url",
+                    "author_name"
+                ]
+            }
+        }
+    ]
+}

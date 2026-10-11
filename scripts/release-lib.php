@@ -183,11 +183,131 @@ function release_extract(string $zip, string $target): void {
 	release_require(release_zip_files($zip) === release_tree($target . '/' . RELEASE_SLUG), 'Extracted package differs from ZIP.');
 }
 
-/** Check host-side runtime bytes, allowing only Docker's empty nested-bind scaffolding. */
+function release_runtime_mount_files(): array {
+	return array('scripts/compatibility-baselines.php', 'scripts/compatibility-download.sh', '.github/compatibility-versions.json');
+}
+
+function release_runtime_path_identity(string $path, int $type): array {
+	clearstatcache(true, $path);
+	$stat = @lstat($path);
+	release_require(false !== $stat && $type === ($stat['mode'] & 0170000)
+		&& (0100000 !== $type || 1 === $stat['nlink']), "Runtime mount custody: missing, linked or unsafe path {$path}");
+	return array('dev' => $stat['dev'], 'ino' => $stat['ino'], 'mode' => $stat['mode']);
+}
+
+/** Checks observed boundaries, not atomic protection against swaps inside pathname syscalls. */
+function release_assert_runtime_custody(string $directory, string $root, array $identities, array $contents, array $children, string $pending = ''): void {
+	clearstatcache(true);
+	$resolved = realpath($directory);
+	release_require(!is_link($directory) && false !== $resolved && $root === str_replace('\\', '/', $resolved), 'Runtime mount custody: root resolution changed.');
+	foreach ($identities as $path => $identity) {
+		release_require($identity === release_runtime_path_identity($path, $identity['mode'] & 0170000),
+			"Runtime mount custody: path identity changed {$path}");
+	}
+	foreach ($contents as $path => $digest) {
+		release_require($digest === hash_file('sha256', $path), "Runtime mount custody: content changed {$path}");
+	}
+	foreach ($children as $path => $expected) {
+		if ('' !== $pending && dirname($pending) === $path) {
+			$expected[] = basename($pending);
+		}
+		sort($expected);
+		$observed = @scandir($path);
+		release_require(false !== $observed, "Runtime mount custody: unreadable directory {$path}");
+		$observed = array_values(array_diff($observed, array('.', '..')));
+		release_require($expected === $observed, "Runtime mount custody: directory inventory changed {$path}");
+	}
+	foreach ($identities as $path => $identity) {
+		release_require($identity === release_runtime_path_identity($path, $identity['mode'] & 0170000),
+			"Runtime mount custody: identity changed during observation {$path}");
+	}
+}
+
+/** Provision before the parent bind becomes read-only; failures retain partial evidence. */
+function release_prepare_runtime_mounts(string $directory, string $zip): void {
+	$archive_sha = hash('sha256', release_read($zip));
+	$expected = release_zip_files($zip);
+	$root = realpath($directory);
+	release_require(false !== $root, 'Cannot resolve runtime mount preparation root.');
+	$root = str_replace('\\', '/', $root);
+	for ($parent = $directory; '.' !== $parent && dirname($parent) !== $parent; $parent = dirname($parent)) {
+		release_require(!is_link($parent), 'Linked runtime mount preparation parent.');
+	}
+	$identities = array();
+	for ($parent = $root; ; $parent = dirname($parent)) {
+		$identities[$parent] = release_runtime_path_identity($parent, 0040000);
+		if (dirname($parent) === $parent) {
+			break;
+		}
+	}
+	$identities[$zip] = release_runtime_path_identity($zip, 0100000);
+	release_require(release_tree($directory) === $expected, 'Runtime mount preparation requires a pristine original ZIP extraction.');
+	$contents = array($zip => $archive_sha);
+	$children = array($root => array());
+	$directories = array();
+	foreach (array_keys($expected) as $name) {
+		$path = $root . '/' . $name;
+		$identities[$path] = release_runtime_path_identity($path, 0100000);
+		$contents[$path] = $expected[$name];
+		$children[dirname($path)][] = basename($path);
+		for ($parent = dirname($name); '.' !== $parent; $parent = dirname($parent)) {
+			$directories[$parent] = true;
+		}
+	}
+	$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::SELF_FIRST);
+	foreach ($iterator as $entry) {
+		if ($entry->isDir()) {
+			$name = str_replace('\\', '/', substr($entry->getPathname(), strlen($root) + 1));
+			release_require(isset($directories[$name]), "Nonpristine runtime directory; mount preparation refused: {$name}");
+			$path = str_replace('\\', '/', $entry->getPathname());
+			$identities[$path] = release_runtime_path_identity($path, 0040000);
+			$children[$path] = $children[$path] ?? array();
+			$children[dirname($path)][] = basename($path);
+		}
+	}
+	foreach (array('tests', 'scripts', '.github') as $name) {
+		release_require(!file_exists($root . '/' . $name) && !is_link($root . '/' . $name), "Runtime mountpoint collision: {$name}");
+	}
+	foreach (array('tests', 'scripts', '.github') as $name) {
+		$path = $root . '/' . $name;
+		release_assert_runtime_custody($directory, $root, $identities, $contents, $children);
+		release_require(@mkdir($path, 0755), "Runtime mount preparation incomplete: cannot create {$name}; preserve partial extraction.");
+		release_assert_runtime_custody($directory, $root, $identities, $contents, $children, $path);
+		$identities[$path] = release_runtime_path_identity($path, 0040000);
+		$children[$root][] = $name;
+		$children[$path] = array();
+		release_assert_runtime_custody($directory, $root, $identities, $contents, $children);
+	}
+	foreach (release_runtime_mount_files() as $name) {
+		$path = $root . '/' . $name;
+		release_assert_runtime_custody($directory, $root, $identities, $contents, $children);
+		$handle = @fopen($path, 'x+b');
+		release_require(false !== $handle, "Runtime mount preparation incomplete: cannot exclusively create {$name}; preserve partial extraction.");
+		try {
+			release_assert_runtime_custody($directory, $root, $identities, $contents, $children, $path);
+			$stat = fstat($handle);
+			release_require(false !== $stat && 0100000 === ($stat['mode'] & 0170000) && 1 === $stat['nlink'] && 0 === $stat['size'],
+				"Runtime mount preparation incomplete: unsafe placeholder {$name}");
+			$identity = array('dev' => $stat['dev'], 'ino' => $stat['ino'], 'mode' => $stat['mode']);
+			release_require($identity === release_runtime_path_identity($path, 0100000), "Runtime mount custody: placeholder identity changed {$name}");
+			$identities[$path] = $identity;
+			$contents[$path] = hash('sha256', '');
+			$children[dirname($path)][] = basename($path);
+		} finally {
+			fclose($handle);
+		}
+		release_assert_runtime_custody($directory, $root, $identities, $contents, $children);
+	}
+	release_assert_runtime_custody($directory, $root, $identities, $contents, $children);
+	release_validate_runtime_tree($directory, $zip);
+	release_assert_runtime_custody($directory, $root, $identities, $contents, $children);
+}
+
+/** Check host-side runtime bytes, allowing only empty nested-bind scaffolding. */
 function release_validate_runtime_tree(string $directory, string $zip): void {
 	$expected = release_zip_files($zip);
 	$actual = release_tree($directory);
-	foreach (array('scripts/compatibility-baselines.php', 'scripts/compatibility-download.sh', '.github/compatibility-versions.json') as $placeholder) {
+	foreach (release_runtime_mount_files() as $placeholder) {
 		if (isset($actual[$placeholder])) {
 			release_require(hash('sha256', '') === $actual[$placeholder], "Nonempty runtime mount placeholder: {$placeholder}");
 			unset($actual[$placeholder]);

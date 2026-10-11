@@ -5,6 +5,7 @@ if ( PHP_SAPI !== 'cli' ) {
 	exit( 'CLI only.' );
 }
 require_once __DIR__ . '/error-contract-assertions.php';
+require_once __DIR__ . '/legacy-artifacts.php';
 
 
 require_once dirname( __DIR__, 5 ) . '/wp-load.php';
@@ -34,7 +35,7 @@ function wstm113_write( $path, $summary ) {
 	}
 }
 
-$artifact = getenv( 'WSTM113_ARTIFACT' ) ?: dirname( __DIR__, 2 ) . '/e2e-artifacts/scheduling-regression.json';
+$artifact = getenv( 'WSTM113_ARTIFACT' ) ?: Wstm_E2E_Artifacts::path( dirname( __DIR__, 2 ) . '/e2e-artifacts/scheduling-regression.json' );
 $summary = [ 'wordpress' => get_bloginfo( 'version' ), 'php' => PHP_VERSION, 'runner_sha256' => hash_file( 'sha256', __FILE__ ), 'passed' => 0, 'failed' => 0, 'cases' => [] ];
 $original_timezone = get_option( 'timezone_string' );
 $hooks = [ 'pre_post_insert', 'pre_post_update', 'wp_insert_post', 'wp_after_insert_post', 'save_post', 'transition_post_status', 'publish_post', 'publish_page', 'publish_mcp_book', 'publish_mcp_case_study', 'added_post_meta', 'updated_post_meta', 'set_object_terms', 'schedule_event' ];

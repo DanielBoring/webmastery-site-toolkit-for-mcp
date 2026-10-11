@@ -2,11 +2,20 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+matrix="$(php "$root/scripts/compatibility-matrix.php" "$root/.github/compatibility-versions.json" "$root/.github/compatibility-versions.json")"
+grep -F '"label":"wp69-php81-compatibility","wordpress-image":"wordpress:6.9-php8.1-apache"' <<< "$matrix" >/dev/null
+if grep -Eq '"label":"supported-floor"|wordpress:6\.9-php8\.0-apache' <<< "$matrix"; then
+	echo 'PHP 8.1 compatibility must not masquerade as PHP 8.0 floor proof or invent an image tag.' >&2
+	exit 1
+fi
 # shellcheck source=scripts/e2e-test.sh
 source "$root/scripts/e2e-test.sh"
 
 compose() {
 	case "$*" in
+		"port wordpress 80")
+			printf '%s\n' '127.0.0.1:18080'
+			;;
 		*curl*"/tests/e2e/database-table-privacy-runner.php")
 			printf '%s' "${WSTM111_MOCK_HTTP_STATUS:-403}"
 			;;
@@ -69,11 +78,14 @@ assert_cron_isolated() {
 
 # Exercise main's ordering without Docker, network, or filesystem mutations.
 export COMPOSE_PROJECT_NAME=compatibility-bootstrap-fixture
+E2E_ARTIFACTS_DIR="e2e-artifacts-${COMPOSE_PROJECT_NAME}"
 rm() { :; }
 mkdir() { :; }
+docker() { echo 'Bootstrap model must not invoke the engine.' >&2; exit 1; }
 start_compose() { :; }
 cleanup_compose() { :; }
 wait_for_wordpress_files() { :; }
+qa_initialize_artifacts() { :; }
 load_dependencies() { :; }
 install_wp_cli() { :; }
 wp() {
@@ -105,12 +117,17 @@ run_input_schema_qa() {
 	schema_stage_calls=$(( schema_stage_calls + 1 ))
 	[[ "$destructive_stage_calls" == 1 && "$metadata_stage_calls" == 1 ]] || { echo 'Schema stage must follow safety and metadata authorization.' >&2; exit 1; }
 }
+run_product_qa() {
+	assert_cron_isolated
+	product_stage_calls=$(( product_stage_calls + 1 ))
+}
 run_debug_log_check() { assert_cron_isolated; }
 for QA_MODE in contract e2e all; do
 	cron_configured=0
 	metadata_stage_calls=0
 	destructive_stage_calls=0
 	schema_stage_calls=0
+	product_stage_calls=0
 	main >/dev/null
 	assert_cron_isolated
 	if [ "$metadata_stage_calls" != 1 ]; then
@@ -123,6 +140,10 @@ for QA_MODE in contract e2e all; do
 	fi
 	if [ "$schema_stage_calls" != 1 ]; then
 		echo "Schema QA must run exactly once in ${QA_MODE} mode." >&2
+		exit 1
+	fi
+	if [ "$product_stage_calls" != 1 ]; then
+		echo "Untrusted-content and bounded product QA must run exactly once in ${QA_MODE} mode." >&2
 		exit 1
 	fi
 done

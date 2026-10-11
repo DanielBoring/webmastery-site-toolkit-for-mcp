@@ -2,9 +2,12 @@
 
 namespace Wstm120;
 
+require_once __DIR__ . '/shared-helper-loader.php';
+\wstm_test_load_shared_helpers( __NAMESPACE__ );
+
 // Isolate controlled parser/encoder boundaries without changing the class body.
 $source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-posts.php' );
-eval( 'namespace Wstm120; use \WP_Error; use \Webmastery_MCP_Response; ' . substr( $source, 5 ) );
+eval( 'namespace Wstm120; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Untrusted; use \Webmastery_MCP_List_Query; ' . substr( $source, 5 ) );
 
 function parse_blocks( $content ) {
 	if ( ! array_key_exists( $content, $GLOBALS['wstm120_blocks'] ) ) {

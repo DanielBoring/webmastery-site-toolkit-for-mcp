@@ -87,6 +87,66 @@ $test('valid package and scoped changelog notes', static function () use ($sourc
 	release_require($metadata === release_validate_package($source, $zip), 'Valid metadata mismatch.');
 	release_require(!str_contains($metadata['notes'], 'Upgrade Notice'), 'Upgrade text leaked into notes.');
 });
+$test('actual product final package boundary accepts only empty mount scaffolding', static function () use ($repository, $work, $zip): void {
+	$extraction = $work . '/product-runtime';
+	release_extract($zip, $extraction);
+	$runtime = $extraction . '/' . RELEASE_SLUG;
+	foreach (array('scripts', '.github', 'tests', 'e2e-artifacts') as $directory) {
+		mkdir($runtime . '/' . $directory);
+	}
+	$placeholders = array('scripts/compatibility-baselines.php', 'scripts/compatibility-download.sh', '.github/compatibility-versions.json');
+	foreach ($placeholders as $path) {
+		file_put_contents($runtime . '/' . $path, '');
+	}
+	$invoke = static function () use ($repository, $runtime, $zip): array {
+		$bash = 'bash';
+		if ('Windows' === PHP_OS_FAMILY) {
+			// CreateProcess otherwise searches System32's WSL launcher before PATH.
+			$bash = '';
+			foreach (explode(PATH_SEPARATOR, (string) getenv('PATH')) as $directory) {
+				$candidate = rtrim($directory, '\\/') . '/bash.exe';
+				if (is_file($candidate)) {
+					$bash = $candidate;
+					break;
+				}
+			}
+			release_require('' !== $bash, 'Git Bash is required for actual product boundary checks.');
+		}
+		$process = proc_open(array(
+			$bash, '-s', '--',
+			str_replace('\\', '/', $repository . '/scripts/e2e-test.sh'),
+			str_replace('\\', '/', $runtime), str_replace('\\', '/', $zip),
+		), array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w')), $pipes, $repository);
+		release_require(is_resource($process), 'Could not start the actual product package boundary.');
+		$script = 'source "$1"; export E2E_PACKAGE_ROOT="$2" E2E_PACKAGE_ZIP="$3"; verify_product_identity package unused' . "\n";
+		release_require(strlen($script) === fwrite($pipes[0], $script), 'Actual product package boundary input failed.');
+		fclose($pipes[0]);
+		$output = stream_get_contents($pipes[1]);
+		$error = stream_get_contents($pipes[2]);
+		fclose($pipes[1]);
+		fclose($pipes[2]);
+		return array(proc_close($process), $output, $error);
+	};
+	$result = $invoke();
+	release_require(0 === $result[0], 'Empty approved scaffolding failed actual product boundary: ' . $result[2]);
+	release_require(str_contains($result[1], 'only empty bind placeholders permitted'), 'Actual runtime validator was not exercised.');
+	foreach ($placeholders as $path) {
+		file_put_contents($runtime . '/' . $path, 'changed');
+		$result = $invoke();
+		release_require(0 !== $result[0] && str_contains($result[2], 'Nonempty runtime mount placeholder'), 'Nonempty scaffolding passed actual product boundary.');
+		file_put_contents($runtime . '/' . $path, '');
+	}
+	file_put_contents($runtime . '/unexpected.php', '<?php');
+	$result = $invoke();
+	release_require(0 !== $result[0] && str_contains($result[2], 'unexpected files'), 'Unexpected files passed actual product boundary.');
+	unlink($runtime . '/unexpected.php');
+	$bootstrap = $runtime . '/' . RELEASE_SLUG . '.php';
+	$original = release_read($bootstrap);
+	file_put_contents($bootstrap, $original . "\n// unexpected drift\n");
+	$result = $invoke();
+	release_require(0 !== $result[0] && str_contains($result[2], 'production files changed'), 'Production-byte drift passed actual product boundary.');
+	file_put_contents($bootstrap, $original);
+});
 foreach (array('v2.5.0', '2.5.0-rc1', '2.5.0junk', '02.5.0', '2.5', '../2.5.0', "2.5.0\n") as $invalid) {
 	$test('invalid version ' . json_encode($invalid), static function () use ($invalid): void {
 		release_test_fails(static fn() => release_version($invalid), 'Invalid');

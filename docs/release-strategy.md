@@ -77,6 +77,14 @@ Release build and validation scripts require PHP with ZipArchive. The release wo
 
 Plugin Check reports are parsed independently of the command exit status. Any ERROR, malformed report, or unknown finding type blocks release; existing warnings stay visible without being treated as errors. `REQUIRE_CURRENT_PLUGIN_CHECK=1` checks the same ZIP with both the pinned and current checker versions. The release workflow requires both; local `PLUGIN_CHECK_VERSION=latest` selects only the current checker.
 
+Each package QA invocation reserves fresh `build/release-qa-<owner>` checker
+and runtime extractions. Plugin Check copies the pristine ZIP contents into a
+separate, exclusively created directory for each checker version; it never
+deletes an occupied destination or reuses existing reports. The owned outer
+package trap handles teardown, including failed runtime runs. Missing product
+cleanup proof keeps retention armed and blocks that teardown. Raw product
+evidence stays private; only the validated closed product summary is uploaded.
+
 Automated process:
 
 1. The release workflow validates a curated package ZIP and transfers it to the publish job without rebuilding.

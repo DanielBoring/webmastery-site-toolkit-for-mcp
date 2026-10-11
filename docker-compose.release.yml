@@ -1,10 +1,17 @@
 services:
   wordpress:
     volumes:
+      - type: bind
+        source: ${E2E_CHECKER_ROOT:?Package runtime requires the pristine checker extraction}
+        target: /qa-package-pristine
+        read_only: true
+        bind:
+          create_host_path: false
       # Compose replaces the checkout bind with this same-target package bind.
       - type: bind
         source: ${E2E_PACKAGE_ROOT:?Package runtime requires an extracted plugin root}
         target: /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp
+        read_only: true
         bind:
           create_host_path: false
       - type: bind
@@ -29,10 +36,5 @@ services:
         source: ./.github/compatibility-versions.json
         target: /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/.github/compatibility-versions.json
         read_only: true
-        bind:
-          create_host_path: false
-      - type: bind
-        source: ./e2e-artifacts
-        target: /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/e2e-artifacts
         bind:
           create_host_path: false

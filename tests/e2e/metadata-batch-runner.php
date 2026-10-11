@@ -17,6 +17,7 @@ $_SERVER['HTTP_HOST'] = 'localhost';
 require_once '/var/www/html/wp-load.php';
 require_once __DIR__ . '/metadata-batch-fixture.php';
 require_once __DIR__ . '/error-contract-assertions.php';
+require_once __DIR__ . '/legacy-artifacts.php';
 require_once __DIR__ . '/metadata-transport.php';
 
 function wstm110_batch_require( bool $condition, string $message ): void {
@@ -50,6 +51,9 @@ $summary = array(
 	'runner_sha256' => hash_file( 'sha256', __FILE__ ),
 	'fixture_sha256' => hash_file( 'sha256', __DIR__ . '/metadata-batch-fixture.php' ),
 	'posts_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-posts.php' ),
+	'meta_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-post-meta.php' ),
+	'access_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-post-access.php' ),
+	'writes_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-post-writes.php' ),
 	'cpt_sha256' => hash_file( 'sha256', __DIR__ . '/../../includes/class-custom-post-types.php' ),
 	'passed' => 0, 'failed' => 0, 'cases' => array(),
 );
@@ -277,7 +281,7 @@ try {
 		} );
 	}
 	wp_set_current_user( $old_user_id );
-	$directory = dirname( __DIR__, 2 ) . '/e2e-artifacts';
+	$directory = Wstm_E2E_Artifacts::directory( dirname( __DIR__, 2 ) . '/e2e-artifacts' );
 	wstm110_batch_require( is_dir( $directory ) || mkdir( $directory, 0777, true ), 'Cannot create metadata-batch artifact directory.' );
 	$json = json_encode( $summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR ) . "\n";
 	$path = $directory . '/metadata-batch-' . $boundary . '.json';

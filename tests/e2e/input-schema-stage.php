@@ -15,6 +15,8 @@ if ( '1' !== getenv( 'WSTM126_STAGE_DISPOSABLE' ) ) {
 try {
 require_once __DIR__ . '/input-schema-lifecycle.php';
 Wstm126_Boot::check( 7 === count( $argv ) && in_array( $argv[1], array( 'acquire', 'prepare', 'restore', 'finalize' ), true ), 'Invalid schema stage invocation.' );
+require_once __DIR__ . '/product-stage-artifacts.php';
+Wstm_Product_Stage_Artifacts::directory($argv[5], 'input-schema', $argv[2]);
 $root = '/var/www/html';
 $plugin = dirname( __DIR__, 2 );
 $lifecycle = new Wstm126_Lifecycle( $root, $plugin, '/tmp/wstm126-stage', $argv[2], $argv[3], $argv[4], $argv[5], explode( ',', $argv[6] ) );

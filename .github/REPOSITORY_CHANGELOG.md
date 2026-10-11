@@ -6,6 +6,176 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Export the existing native and HTTP database privacy JSON reports through
+  the guarded artifact inventory so required source and package uploads receive
+  actual reports. Require evidence for attempted boundaries and test missing
+  captures, read failures and destination collisions without masking failures.
+
+- Bind HTTP-quiet installation to the owned Compose image references and their
+  resolved image IDs instead of cache-specific local IDs. Clone the admitted
+  WordPress image and retain image-change, readiness and isolation refusals so
+  tag-selected CI images follow the same admission contract as local QA.
+
+- Normalize publication source to the existing LF policy so Git export preserves
+  the exact validated bytes. Remove stale README and contribution references
+  to deferred host-framework and reversible-transition prerequisites.
+
+- Prepare the closed set of empty package test-support mountpoints before
+  starting read-only runtime mounts. Validate pristine extraction and production
+  hashes, reject collisions and partial states, and require orchestration mocks
+  to observe preparation rather than create missing mountpoints.
+  Check root, ancestry and captured path custody before and after every creation,
+  refusing subsequent writes after observed changes without foreign cleanup.
+
+- Allocate private evidence reads using the locked, identity-checked file size
+  rather than the per-file ceiling. Preserve admission, custody, mutation and
+  hash checks; add executed boundary and unchanged-128-MiB memory controls.
+  Share the exact-size reader across file creation, observation and update
+  readbacks, preserving exclusive update locks and rejecting conflicting locks.
+
+- Bind cache-fault evidence to completed failing SQL at its execution boundary,
+  preserving truthful final-error observations and strict producer/replay checks.
+  Add native and executed regression coverage without changing production code.
+
+- Add multiquery candidate/priming failure regressions, native failure-clearing
+  reproduction, warm-cache and retry controls, and exact updated source bindings.
+  Plugin-facing failure-retention behavior is recorded in `CHANGELOG.md`.
+
+- Capture reference-parity SQL at the late pre-injection boundary, after native
+  placeholder handling. Require exact original-query association and retain
+  strict replacement, failure and reference checks without double-counting.
+
+- Correct bounded SEO-score verification to require the existing score-field
+  marker. Include each catalog's existing pre-acquisition record in the closed
+  evidence export/import contract, preserving strict file and failure checks.
+
+- Use the authenticated uploads base when writing attachment fixture metadata.
+  Add executed source/package regressions for acquisition through metadata
+  writing, including the stale-reference failure.
+
+- Establish missing native uploads directories before acquiring upload fixtures,
+  with exact owned-root, path and parent-custody checks. Preserve exclusive-child
+  cleanup boundaries and refusal of native errors, symlinks and path drift.
+
+- Account for the native calendar cache side effect of verified default-post
+  deletion using pinned callbacks and exact query/result evidence. Derive cache
+  fields and new allocator identity independently while retaining strict checks
+  on unrelated options and failed preparation.
+
+- Retain captured after snapshots before fresh-install preservation checks.
+  Failed private receipts bind bounded first-difference diagnostics to original
+  hashes without changing permitted data changes, rollback or failure status.
+
+- Keep owned HTTP and health probes stopped during authenticated CLI installation
+  and default preparation in source and package QA. Restore HTTP only after
+  preparation evidence export and installer retirement, preventing frontend
+  navigation fallback writes without admitting additional bootstrap defaults or
+  dropping subsequent rewrite and HTTP checks.
+
+- Preserve private native before/insert evidence before fresh-install default
+  comparison. Failed preparation receipts retain bounded count diagnostics and
+  associated query outcomes without treating insert attempts as successful
+  writes or weakening default-deletion guards.
+
+- Run product QA before legacy fixtures on an authenticated fresh installation.
+  Remove only native-initializer-proven bootstrap defaults, retaining private
+  preparation evidence and foreign-data refusals. Share config-owned cron checks
+  between bounded runtime and live cleanup. Distinguish verified non-acquisition
+  from acquired cleanup without changing failed producer outcomes or coverage.
+
+- Compare private PHP case inventories and original case values with the existing
+  bounded typed commitment, preserving native comment snapshots' protected
+  property keys. Keep HTTP JSON validation, original frame hashes, scope seals
+  and strict no-write comparisons unchanged.
+
+- Scope fixture-only native read observations by actor, post and metadata key
+  across collection, transport and replay. Cover multi-post score/readability
+  calls without weakening owned-post, primary-proof or conflicting-tuple checks.
+  Accept the owned cron configuration's unconditional definition after a
+  completed top-level brace, retaining conditional and ambiguous-policy refusals.
+
+- Resolve the PATH-selected Bash executable and send workflow-wrapper regression
+  scripts through UTF-8 byte stdin so Windows executable lookup, command-line
+  quoting and text-mode newline conversion do not alter the tested environment,
+  arguments or command-scoped Composer timeout.
+
+- Correct product-fixture metadata row and provider read-availability oracles
+  without changing plugin behavior, typed comparisons or denied-key checks.
+  Retain original response/case evidence once and a complete final summary,
+  with journal and terminal failure space inside the unchanged wire limits.
+  Reclaim modeled replay fixture cycles and allocator caches at test boundaries
+  while keeping the full PHP 8.0 suite's 128 MiB limit and original assertions.
+  Let the owned QA configuration define cron policy once, and validate its
+  literal value, effective no-work policy and custody instead of emitting a
+  duplicate-constant warning during live-absence checks.
+  Commit the reconstructed final summary through ordered typed values rather
+  than cross-frame PHP object aliases, retaining original per-case hashes and
+  the mandatory semantic seal.
+
+- Register the product individual MCP server through the normal Adapter hook,
+  with native permissions and the exact planned ability inventory. Preserve
+  adversarial display-name and last-login fixture values at native write
+  boundaries. Validate typed setup responses before session enrollment and
+  independently replay their request association; bind failed evidence to the
+  complete final journal without claiming cleanup or acceptance.
+
+- Refresh only the owned actor's metadata before native MCP session reads and
+  revalidate actor ownership before enrollment. Retain exact session-token and
+  client-name comparisons. Use instruction-looking test credential names with
+  quotes and Unicode but without backslashes, preserving both live audit cases
+  while keeping separate native backslash-boundary regressions.
+
+- Re-scope product QA around untrusted content, shared helpers, bounded lists and
+  Posts extraction while retaining applicable main regressions. Defer the
+  additional signed host-PHP, kernel/loader provenance and controller framework;
+  local bootstrap/mocks are not product or original-package acceptance.
+- Separate genuine PHP 8.0/8.4 units and safeguards into independent bounded jobs.
+  Preserve the stable aggregate, required checks, permissions and explicit
+  failure/cancellation/unexpected-skip refusal.
+- Use unique ownership-checked disposable Compose stacks, loopback HTTP, no
+  database host port, read-only source/package support and UID/GID 33:33 candidate
+  execution. Keep generated credentials outside the candidate bind; refuse
+  unknown resources, root/privileged overrides and reused output.
+- Keep WordPress initialization, WP-CLI and runtime fixtures on the fixed
+  internal `http://localhost` origin. Random loopback host ports remain transport
+  bindings, not site-option values; preserve sitemap and PageSpeed same-site
+  assertions without weakening URL validation.
+- Check that the combined untrusted-content and bounded product QA stage runs
+  exactly once in each contract, E2E and combined bootstrap mode. Keep these
+  ordering controls independent of Docker and actual product acceptance.
+- Initialize lazy toolkit registration through a normal ability lookup in each
+  product CLI process after WordPress and database ownership checks. Retain
+  missing-ability, activation, loaded-root and protected-source refusals without
+  executing the selected ability.
+- Slash test credential names at the native creation boundary so metadata
+  unslashing preserves their original values. Keep exact intent, actor, name
+  and UUID checks; record the post-bootstrap plugin root from validated context
+  rather than a variable that WordPress bootstrap can unset.
+- Supply a finite source/package-associated actual-runtime context and protected
+  HTTP observation, with exclusive product fixture setup/removal and private
+  bounded JSON/binary capture. Preserve original exits, failed captures and
+  restoration/cleanup retention rather than logging raw product data.
+- Write inherited runtime reports to the private artifact volume instead of the
+  read-only plugin mount. Export only named legacy summaries before teardown;
+  retain the owned stack if capture fails. Do not expose context or private
+  product records through a public plugin-directory mount; keep raw host product
+  captures outside the mounted candidate as well.
+- Reserve fresh original-package checker/runtime extractions without deleting
+  prior build roots. Keep pristine Plugin Check separate from test-overlay
+  placeholders, reserve a separate destination/report for each checker, preserve
+  original command failures and recheck original ZIP and production hashes.
+- Publish only a closed product summary after original-record replay, current
+  live absence checks, owned fixture/marker retirement and native registration
+  restoration. Keep partial records, context, wire data and errors private.
+- Retain all 589 inherited manifest labels plus 12 additions, the 298 untrusted
+  labels, 336 large measurements and small exact-order/failure controls. Retarget
+  helper/owner assertions to current source and selected main semantics without
+  rewriting historical oracles or adding plugin minimum/version changes.
+- Keep contributor/PR, QA/CI/security and E2E guidance consistent with actual
+  disposable runtime assumptions. Remove attributes for deleted framework files
+  while preserving every retained exact-byte fixture/configuration rule.
+
+
 - Admit database privacy parity probes only inside a bounded, read-only transient expiration horizon, with one shared 90-second admission budget and unchanged exact payload comparisons. Retain original responses and fail on read errors, exhausted admission, window overruns, or genuine metric drift; add boundary and failure regressions without changing production clocks, queries, privacy policy, or downstream artifact requirements.
 
 - Promote the current compatibility QA baseline and default Docker image to

@@ -1,207 +1,404 @@
-# QA Strategy
+# QA strategy
 
-This repository uses layered QA for a public WordPress.org plugin. The goal is to catch the cheapest problems first, then add WordPress runtime, MCP transport, security, compatibility, and release-package evidence when a change can affect users, site data, permissions, or publishing.
+QA starts with syntax, static analysis and small regression tests, then checks
+actual WordPress behavior, MCP transport and the original release package.
+Permissions, response privacy and cleanup require explicit assertions; a
+successful request alone is insufficient.
 
-The plugin is now reviewed as a WordPress.org plugin, so QA must prove more than "the code runs." It must also prove ability permissions, object-level access, response privacy, WordPress compatibility, and package contents stay aligned with WordPress.org expectations.
-
-See the [Software Development Lifecycle](sdlc-overview.md) for where QA fits in the complete development process.
-
-Related strategy guides:
-
-- [`ci-cd-strategy.md`](ci-cd-strategy.md) explains GitHub Actions automation, branch protection, workflow permissions, schedules, artifacts, and failure handling.
-- [`security-strategy.md`](security-strategy.md) explains the WordPress plugin threat model, ability permission policy, secrets, dependency security, and vulnerability response.
-- [`release-strategy.md`](release-strategy.md) explains versioning, release readiness, GitHub releases, WordPress.org SVN publishing, hotfixes, and rollback policy.
+See the [software development lifecycle](sdlc-overview.md),
+[CI/CD strategy](ci-cd-strategy.md), [security strategy](security-strategy.md)
+and [release strategy](release-strategy.md) for the related policies.
 
 ## QA checks
 
-| GitHub Actions check | Command | What it proves | When it should run |
-| --- | --- | --- | --- |
-| 1 - Static QA | `composer qa:static` | PHP files parse, WordPress Coding Standards pass, PHPStan level 5 passes against reviewed baseline debt with working regression/ratchet guards, Composer dependencies have no known locked advisories, the E2E manifest is structurally valid, security-sensitive QA policy checks pass, and the diff has no whitespace errors. | Every PR and every push to `main`. |
-| 2 - Unit Tests | `composer qa:unit` | Small pieces of PHP logic behave correctly without booting WordPress. These tests are the fast safety net for sanitization, response shape, permission helpers, SEO metadata normalization, taxonomy helpers, plugin safety logic, and failure paths. | Every PR and every push to `main`. |
-| 3 - Ability Contract QA | `composer qa:contract` or `bash scripts/e2e-test.sh contract` | WordPress boots in Docker, required plugins load, every registered ability is represented in `tests/e2e/abilities-manifest.json`, manifest cases execute through `wp_get_ability()->execute()`, permission-sensitive cases pass, and the debug log stays clean. | Runtime PRs, ability PRs, security-sensitive PRs, `main`, releases, and manual dispatch. |
-| 4 - Full MCP E2E QA | `composer qa:e2e` or `bash scripts/e2e-test.sh e2e` | A real MCP HTTP JSON-RPC session can discover and execute abilities through the MCP Adapter, including Application Password authentication, session setup, tool discovery, editor CRUD, and subscriber denial. | Runtime PRs, ability PRs, security-sensitive PRs, `main`, releases, and manual dispatch. |
-| 5 - Release Package QA | `composer qa:release` or `bash scripts/release-qa.sh` | Release metadata is aligned, Ability Contract QA and Full MCP E2E QA pass, the release zip contains only packaged plugin files, and WordPress Plugin Check evaluates the built package instead of the development checkout. This check must pass before the protected WordPress.org SVN deploy job can run. | Release PRs, tags, and manual dispatch. |
-| 6 - Compatibility QA | `.github/workflows/compatibility-qa.yml` | Scheduled/manual Docker QA discovers official upstream releases, isolates pinned and candidate WordPress/MCP Adapter combinations, and promotes passing versions through a maintainer-reviewed PR while exercising ability contracts, MCP transport, and debug-log cleanliness. | Weekly schedule, manual dispatch after an upstream release, release-candidate investigation, and upstream-breakage triage. |
+| Check | Command | Required evidence |
+| --- | --- | --- |
+| `1 - Static QA` | `composer qa:static` | PHP syntax, WPCS, PHPStan level 5 and baseline ratchet, locked dependency audit, manifest/security policy and whitespace checks. |
+| `2 - Unit Tests` | `composer qa:unit`, `composer test:ci-safeguards` | Genuine PHP 8.0/8.4 unit tests and separate safeguard matrices. The stable aggregate requires all applicable jobs to succeed. |
+| `3 - Ability Contract QA` | `composer qa:contract` | Actual WordPress registration and manifest execution, allowed/denied roles, response shape, persisted no-write checks and clean debug log. |
+| `4 - Full MCP E2E QA` | `composer qa:e2e` | Actual HTTP JSON-RPC authentication, sessions, discovery, CRUD, authorization and cleanup through MCP Adapter. |
+| `5 - Release Package QA` | `composer qa:release` | Original-ZIP layout/metadata/hash validation, contract and transport checks against installed production contents, and Plugin Check against a pristine extraction. |
+| `6 - Compatibility QA` | `.github/workflows/compatibility-qa.yml` | Scheduled/manual upstream discovery, supported combinations, exact resolved versions and reviewed baseline promotion. |
+| Workflow lint | `.github/workflows/workflow-lint.yml` | Actionlint, ShellCheck and zizmor using the maintained pinned lint tools. |
 
-Static QA runs the full toolchain on PHP 8.0 and syntax checks on PHP 8.4; Unit Tests run on both versions. Each workflow has a stable aggregate result. `Docker QA gate` reports successful change detection and the required Docker results; failure-induced skips cannot pass it. A separate workflow lint check runs actionlint, ShellCheck, and zizmor without making local PHP QA depend on Docker.
+Static QA runs its full toolchain on PHP 8.0 and syntax checks on PHP 8.4.
+Unit and safeguard jobs use actual interpreters on both versions and have
+separate 60-minute limits. A failed, cancelled or unexpectedly skipped matrix
+job cannot produce a successful `2 - Unit Tests` aggregate. Workflow lint is
+independent of the local PHP toolchain.
 
-Database privacy's three real responses retain exact full-payload metric/order parity. To avoid comparing opposite sides of an existing transient's natural expiration, the disposable runner first admits a read-only 15-second expiration horizon, bounded by one shared 90-second run deadline. It uses production timeout conversion and the strict expiration boundary, records no transient identities/values, and never retries failed payloads. Exhaustion, SQL failure, clock/window overrun, newly changed expirations, and other metric drift remain failures with original responses retained. Synthetic expiration tests supplement, rather than replace, the genuine native/HTTP original-package proofs described in `tests/e2e/README.md`.
+The primary runtime baseline is WordPress 7.1.2, PHP 8.2 and MCP Adapter 0.6.1.
+Dependency versions and executable-download digests come from
+`.github/compatibility-versions.json`. `readme.txt` retains `Tested up to: 7.1`.
+The advertised minimums remain WordPress 6.9 and PHP 8.0.
 
-The current compatibility baseline is WordPress 7.1.2 with MCP Adapter 0.6.1.
-The default Docker image is `wordpress:7.1.2-php8.2-apache`; other pinned
-dependencies and their digests are unchanged. `readme.txt` retains the
-major/minor `Tested up to: 7.1` header. This baseline update does not change
-the declared WordPress 6.9 / PHP 8.0 plugin minimums. The existing compatibility
-floor lane uses PHP 8.1 and is not genuine PHP 8.0 runtime evidence.
+Memory-heavy modeled replay tests reclaim unreachable cycles and allocator
+caches at their fixture boundaries, after owned cleanup on teardown. Keep the
+full suite at its existing 128 MiB limit; a focused pass or a higher-memory run
+does not establish minimum-runtime compatibility. This test-fixture lifetime
+control does not change production readers or product evidence limits.
+
+## Disposable local and CI runtime
+
+Use a trusted disposable Docker engine and the reviewed images. This is an
+environment assumption, not whole-host provenance or an OS security audit.
+Do not run the fixtures against production, a shared WordPress installation,
+or someone else's Compose project.
+
+The local wrappers create unique project names and output directories.
+`scripts/qa-compose.sh` selects the fixed Compose files and verifies opaque
+ownership labels before changing containers, networks or volumes. It refuses
+foreign resources, caller-selected Compose files, privileged execution and
+candidate root execution. The only root operation initializes the artifact
+volume with a fixed directory command; candidate PHP and WP-CLI use UID/GID
+33:33.
+
+HTTP binds to a random IPv4 loopback port. MySQL has no host port. Source and
+installed-package binds are read-only; the engine socket is not mounted.
+Before package Compose startup, validate the pristine runtime extraction and
+prepare only empty `tests`, `scripts` and `.github` directories plus the three
+declared compatibility-support file mountpoints. Reject collisions, links,
+unexpected entries and partial preparation; retain failed state without retry
+or rollback. Recheck production hashes. The original archive and separate
+checker extraction remain unchanged, and all nested support binds stay read-only.
+Check bound root, ancestry, captured identities and closed inventories before
+and after each creation. A detected change stops subsequent writes without
+rollback or foreign cleanup. These pathname observations assume a trusted
+disposable host; they cannot make a filesystem call atomic against a concurrent
+host mutation. An inside-call swap may leave that call's directory behind,
+but its postcheck must refuse further creation.
+Private generated credentials and ownership records live outside the candidate
+bind. Inside the stack, `/qa-artifacts` has mode 0700 and belongs to UID/GID
+33:33. Password initialization reads private stdin without printing a prompt or
+sending installation email.
+Fresh installation preparation verifies an absent or empty native database
+while the owned HTTP service and its health probes are stopped. An isolated
+UID33 CLI uses the authenticated image, database network and installed/artifact
+volumes without starting Apache. This prevents frontend rendering from creating
+navigation fallback content outside the installer observer.
+The image contract resolves the owned Compose configuration's WordPress and
+database references to existing image config IDs and compares them with the
+original containers before and after installation. The installer clones the
+admitted WordPress image ID rather than a local cache-specific ID. Missing or
+changed references, identities or readiness refuse installation; this does not
+authorize new registry images or replace the trusted-engine assumption.
+Native permalink auto-detection remains a failed request while HTTP is unavailable; no successful
+HTTP result is fabricated. Preparation exports its private originals and retires
+the CLI before restoring HTTP. Installation or unresolved CLI cleanup failures
+retain the original failure and do not restore HTTP. Normal rewrite verification
+and all product, legacy and package HTTP checks run after successful preparation.
+Preparation attributes default fixtures to the pinned native initializer.
+Remove only those verified defaults and their dependencies through
+native APIs; preserve the administrator, taxonomy and unrelated options.
+Foreign rows, changed native bytes or missing fresh-install evidence refuse.
+Retain preparation snapshots and receipts privately. Persist native before
+and insert evidence before comparing defaults, including when comparison
+refuses. Incomplete receipts report bounded table counts and hash-associated
+query outcomes without exposing row contents or raw SQL errors. An observed
+insert attempt alone does not establish a successful write.
+Persist captured after bytes before dependency and preservation comparisons.
+On refusal, the incomplete private receipt binds that original to a bounded
+first-difference diagnostic without exposing values. Missing or unreadable
+captures remain failures; diagnostics do not widen permitted changes or replace
+rollback, commit verification or complete preparation evidence.
+The native calendar deletion hook can create or update its published-post cache
+before the authenticated default post is removed. Preparation pins the native
+callback bytes and associates the exact calendar query with its result. The
+expected cache fields follow native pre-delete semantics; a new option identity
+comes from the successful insert result, not from the after snapshot. Existing
+cache updates require native write evidence unless the true value is unchanged.
+All other option rows remain subject to strict preservation checks.
+
+Database privacy runners write their native and HTTP JSON reports to the
+private container artifact volume. The guarded host-export inventory includes
+both reports for required workflow uploads. An attempted privacy boundary
+requires its report even if the runner fails; missing or unreadable captures
+and destination collisions fail without replacing the original runner status.
+Verify the exported JSON and its case totals for source and original-ZIP runs;
+successful console totals alone do not establish that upload evidence exists.
+
+Before upload fixtures acquire their exclusive child directory, validate the
+owned WordPress root and native uploads paths, then establish missing ordinary
+uploads/date directories through the WordPress API. Recheck exact paths,
+symlink-free ancestry, access and parent custody after creation. Native errors
+or changed configuration refuse before fixture acquisition. Ordinary uploads
+directories are not destructive fixtures; cleanup owns only the journaled
+exclusive child and its verified resources.
+Attachment metadata uses a path relative to that authenticated base. Executed
+regressions cover acquisition through metadata writing for source and package
+contexts; they do not replace installed WordPress acceptance.
+
+Output directories are exclusively reserved and never reused. Failed runs
+preserve private originals and the original exit status. Teardown rechecks
+resource ownership. An unresolved destructive/schema/product retention marker
+blocks teardown and restart; a passed flag or successful export alone cannot
+clear it. Recover the exact owned resources and verify restoration and absence
+before retiring the marker.
+
+## Focused product acceptance
+
+Both source and installed-package runs retain the existing main-branch
+security, destructive, schema, metadata, comment, database-privacy and Site Kit
+checks. The native manifest has 85 abilities and 601 cases, including all 589
+inherited cases and 12 additions; permission-sensitive cases include allowed
+and denied roles.
+Run product acceptance once after installation, dependencies, authentication
+and plugin setup, before legacy suites can populate the content tables.
+Untrusted checks run before bounded catalogs. Keep the bounded seed's empty
+posts/postmeta prerequisite and every later legacy check.
+
+A failed catalog that never acquired resources can prove cleanup only with an
+explicit pre-acquisition record, unchanged native snapshots, a closed artifact
+inventory and fresh zero-owned-resource readback. Missing state after acquisition
+starts still refuses. Cleanup readiness never changes a failed producer verdict.
+The closed export/import contract includes each catalog's existing
+`pre-acquisition.json`; unknown files and special paths still refuse.
+SEO-score items require record-local markers for present `title`, `url` and
+`score` fields without changing their authorized values or types.
+
+| Area | Acceptance |
+| --- | --- |
+| Untrusted content | All 298 ordered labels: 104 gateway calls, 104 individual-tool calls and 90 actual annotation observations. Check record-local present-only markers, unchanged authorized values/types/HTML, canonical errors, privacy and role denials, stored-content/message separation and actual MCP hints. |
+| Shared helpers | All 12 helper rows retain permission and lookup/type order, errors/response shape, normalization/defaults, scheduling/slashing, plugin inventory, SEO tables and pagination. |
+| Bounded lists | Recompute all 336 large and 1125 small observations, exact order, empty-window continuation, authorized summaries/full/revisions, reference parity and injected failure controls from the retained raw records. |
+| Post extraction | Six owners retain callbacks, schemas, permission checks and dispatcher/bootstrap wiring without changing ability names. |
+
+The large benchmark uses 20,000 posts, 10,000 fileless attachments and 100
+selected 55-KiB post bodies. Seven surfaces, two request-local cache regimes,
+three authorization regimes, page sizes 20/100 and four predetermined windows
+produce 336 observations. The small catalog checks full eligible sequences at
+page sizes 1/20/100, filters, ties, full/default responses and EOF independently
+of candidate output.
+
+For page size P, candidate objects are bounded by P+1, distinct authorized
+objects by P, capability calls by 5P+10, and SQL by 3P+12 plus the documented
+orphan-reference allowance. Each candidate query uses IDs, `no_found_rows`,
+P+1 and the correct offset. Reference batches contain at most 50 patterns;
+thumbnail lookup uses at most one IN batch. No mutation is allowed during
+measurement. Conservative incremental allocated memory must stay within
+64 MiB; controlled default-20 content summaries must stay within 64 KiB.
+Do not subtract a historical memory peak or describe request-local cache
+flushing as a fresh database or process.
+Reference-parity probes capture each original query once immediately before
+fault injection, after native placeholder handling. Injection requires exact
+equality with that observation; replay still checks original/replacement SQL,
+failure outcomes and reference associations without query normalization.
+List-query failure regressions cover native priming failures followed by
+successful reads that clear `last_error`. A scoped observer retains only the
+current-read failure flag and is removed in `finally`; it adds no SQL and
+preserves stale-error warm-cache hits. Native reproduction and unit doubles
+remain distinct from full source and installed-package acceptance.
+Cache-fault evidence binds a completed failed query to its injected replacement
+hash and query counter before a later read clears the error, or at the final
+query boundary. Replay requires that closed witness, not an injection attempt
+or a nonempty final error alone. The final observed error remains separate.
+
+Actual product runners use an exact 12-field `wstm-product-context-v1` record
+at `/qa-artifacts/context.json` and matching `WSTM_PRODUCT_RUN`,
+`WSTM_PRODUCT_TOKEN` and `WSTM_PRODUCT_CONTEXT`, with `E2E_OPT_IN=1`.
+The context binds a source inventory or original-ZIP SHA256, the owned project,
+fixed internal roots, UID 33 and expected actual PHP major/minor. Its
+`php_floor` field is an actual-lane value, not a support-floor claim: 8.0, 8.1,
+8.2 and 8.4 remain distinct observations. CLI and authenticated HTTP workers
+must match the selected lane exactly.
+
+After checking WordPress and database ownership, the shared product guard uses
+the normal `get-post` ability lookup to initialize lazy toolkit registration.
+It requires the ability to exist without executing it, then checks activation,
+loaded production roots and source stability. A fresh CLI process must satisfy
+these checks independently of any earlier HTTP request.
+
+Test credential creation supplies slashed names to the native WordPress API so
+metadata unslashing preserves the original intent. Enrollment and recovery
+still require exact actor, name and UUID agreement. An unresolved credential
+intent blocks cleanup and acceptance; it is not evidence of absence.
+
+Live credential names retain instruction-looking text, quotes and Unicode,
+but omit backslashes because native usage updates strip them. Dedicated
+boundary regressions cover backslashes separately. Before native MCP session
+reads, refresh only the owned actor's metadata cache and retain exact token,
+client-name and actor checks across enrollment, recovery and absence checks.
+
+The owned product fixture registers the individual server through the normal
+Adapter initialization hook, using native transport permissions and exactly
+85 native plus five owned CPT abilities. Capture setup responses before
+validation, but enroll sessions only after HTTP, fixture and typed JSON-RPC
+request/response checks pass. Host replay independently checks all six client
+setups and their catalogs. Failed evidence binds the complete final journal
+and remains failed; closing its wire scope does not authorize cleanup.
+
+Metadata expectations distinguish zero stored rows, one empty-string row and
+multiple rows through independent native row observations. Provider availability
+uses the same actor's effective native per-key read capability at the restricted
+HTTP boundary. A standalone writable-key allowlist denial is not proof that a
+provider field is unreadable. Keep inspect-only fields, exact typed comparisons,
+denied-key privacy and no-write controls.
+Address observations by actor, post and metadata key, so list calls can visit
+multiple owned posts without overwriting another post's evidence. Identical
+repeated decisions for one tuple are idempotent; conflicting decisions refuse.
+Replay score observations against the original owned-post ledger and require
+the primary post's allowed score-key observation.
+
+The protected runtime endpoint returns a closed observation without the raw
+token; missing or incorrect tokens receive 403. The product-only MU fixture
+is active only during its owned stage and removed before checks that expect
+exactly 85 native registrations. Do not precreate or reuse the two exclusive
+per-run stage directories.
+
+Raw responses, headers, SQL, credentials, resource ledgers, context and verdicts
+stay private. Untrusted output and wire domains are separately bounded at
+128 MiB, with at most 4096 wire frames and 32 MiB per file/frame. Bounded output
+has at most 4096 paths, 32 MiB per file and 512 MiB attempted writes. Final
+export limits do not prove attempted-write accounting or semantic completion.
+Private file reads allocate from the locked, identity-checked observed size,
+not the per-file ceiling. Reservation equality, before/after identity and size,
+exact read length and expected-content checks still apply. Executed reader
+controls cover empty and near/exact-limit inputs, mutation refusals and the
+unchanged 128 MiB memory cap; they are not full campaign acceptance.
+File observation and creation readback use the same guarded reader. Updates
+read through their existing exclusive-lock handle without reopening or
+downgrading the lock, and compare expected bytes and hashes before and after
+persistence. Conflicting locks refuse; the per-file and domain budgets do not
+change.
+Public summaries contain only validated stage states, actual lane/UID and
+known outcome counts. Retain incomplete records privately; missing observations
+never count as passing.
+
+Retain each original response and case record once, and one complete final
+summary, rather than capturing the growing cumulative summary after every
+case. Independent replay must still account for every ordered label and its
+original request, response and oracle. Charge journal/index overhead and
+reserve terminal failure evidence within the existing wire domain; do not
+increase, reset or refund its limits. Progress is not an acceptance verdict,
+and failed historical packets remain unchanged.
+
+The terminal summary references ordered original case frames by label, outcome
+and serialized digest; replay rehydrates and checks the complete summary.
+The summary commitment uses an ordered typed value stream rather than
+whole-graph PHP serialization. Shared descriptor objects therefore commit to
+their exact repeated values without depending on aliases lost between separate
+frames. Preserve scalar/key types, container shape and entry order; reject
+unsupported values and retain the mandatory scope seal comparison.
+Charge expanded work before hashing: at most 131072 visited values including
+keys, 32 MiB of encoded bytes and depth 512. Reject cycles and exhausted
+reservations with controlled content-free errors, without allocating an
+expanded tree. These parser-work bounds do not increase artifact quotas.
+Compare private PHP case inventories and original case values with the same
+bounded typed commitment. Native comment snapshots may contain NUL-prefixed
+protected-property keys; preserve those keys without a JSON object round trip.
+HTTP payload canonicalization, original serialized case hashes and strict
+before/after no-write equality remain separate requirements.
+The version-2 private index accounts for HTTP journal bytes and monotonic
+index growth. Reserve one existing frame slot and 32 MiB of the existing wire
+budget for terminal evidence, plus 4096 bytes for retirement transitions.
+These reservations reduce available working space rather than add quota.
+Native read-capability observations are fixture-only HTTP records; reject
+missing, foreign, duplicate or ambiguous actor/post/key associations.
+
+Bounded runtime and the live-absence helper share the owned QA configuration's single
+unconditional literal-true cron definition before bootstrap. It does not
+redefine the constant or suppress diagnostics. Check effective cron policy,
+absence of cron work and unchanged configuration custody after bootstrap and
+absence reads. Unsupported configuration shapes refuse before bootstrap.
+An unconditional top-level definition may follow a completed closing brace.
+Nested or unbraced conditional definitions, namespace declarations, duplicate
+definitions and nonliteral or false values still refuse.
 
 ## PHPStan level 5 and baseline ratchet
 
-`composer phpstan` analyses the plugin entry point and all of `includes/` at level 5, explicitly targeting PHP 8.0 regardless of the local interpreter. `phpstan-baseline.neon` records pre-existing diagnostics, not permission to introduce new ones. Each generated ignore has an anchored message, identifier, positive count, and individual file path. There are no excluded production paths or identifier-only/global ignores. The existing `treatPhpDocTypesAsCertain: false` policy and WordPress stubs bootstrap are retained; no extra bootstrap constants or relaxed rules hide debt.
+`composer phpstan` analyzes the plugin entry point and all of `includes/` at
+level 5 with a PHP 8.0 analysis target. Each reviewed baseline entry has an
+anchored message, identifier, positive count and individual path. There are no
+excluded production paths or global identifier-only ignores.
+`treatPhpDocTypesAsCertain: false` and the WordPress stubs bootstrap remain.
 
-The initial reviewed baseline contains 35 diagnostics in 21 entries across nine files:
+A clean analysis means no diagnostics beyond reviewed debt; it does not prove
+runtime safety or soundness of every mixed value. Matching is by message,
+identifier, file and count, so moving an equivalent error within a file still
+requires diff review. PHPStan's target is not genuine PHP 8.0 execution.
 
-| Existing diagnostic group | Count | Review context |
-| --- | ---: | --- |
-| Missing WordPress constants | 9 | `ARRAY_A`, `WP_CONTENT_DIR`, `WP_PLUGIN_DIR`, `DAY_IN_SECONDS`, and `MINUTE_IN_SECONDS` are runtime/bootstrap knowledge absent from the current analysis setup. Kept as explicit debt, not globally suppressed. |
-| Argument types | 4 | Media sideload array typing and post-update array shapes after `wp_slash`; investigate with WordPress stub and runtime evidence before changing calls. |
-| Media callback control flow | 16 | Always-true/false comparisons, boolean expressions, and unreachable code around by-reference state in deferred download hooks. Do not delete runtime safeguards merely to satisfy inference. |
-| Private late-static method calls | 2 | Media DNS validation calls need separate inheritance/typing review. |
-| Database error-state comparisons | 2 | Defensive checks of mutable `$wpdb->last_error` after database calls. |
-| Revision error check and sitemap offset | 2 | One impossible-type diagnostic and one redundant null-coalescing diagnostic; assess separately before simplifying defensive code. |
+The PHPStan 2.2.15 inference update removed an unmatched sitemap offset ignore.
+Its source fallback was preserved. Later extraction-related baseline reductions
+are retained; do not restore resolved entries to reproduce a historical total.
 
-A green run means no diagnostics beyond that reviewed debt, not that these findings are fixed or that all mixed input/output types are sound. The baseline matches counts per message/identifier/file, not line or expression identity: replacing a removed error with the same error elsewhere in the same file can evade the count ratchet and still needs human diff review. This tooling change does not validate ability schemas, enums, output contracts, or runtime permissions.
+To reduce debt:
 
-The PHPStan 2.2.15 update removes the now-unmatched sitemap offset entry. With `treatPhpDocTypesAsCertain: false`, the updated regex output inference no longer reports the null-coalescing fallback as redundant. The source fallback is unchanged; this is a baseline compatibility adjustment, not a runtime fix or proof that the sitemap debt was resolved.
+1. Fix the underlying behavior/type issue with focused evidence. Do not remove
+   defensive checks, broaden types or add casts/ignores solely for analysis.
+2. Run the complete `composer phpstan`. Unmatched-ignore reporting rejects stale
+   entries and counts; per-file analysis is not full ratchet evidence.
+3. Remove only resolved entries or lower their counts. Review any regeneration
+   for increased counts, widened messages, wildcard paths or unrelated debt.
+4. Run `composer phpstan`, `composer test:phpstan-baseline` and `composer qa`.
+   Keep the fix and baseline reduction together.
 
-### Reducing debt
-
-1. Fix the underlying issue with focused behavior/typing evidence. Do not add casts, assertions, inline ignores, broader types, or remove defensive checks solely to silence analysis.
-2. Run **the complete** `composer phpstan`. `reportUnmatchedIgnoredErrors: true` rejects removed diagnostics and reduced counts until the corresponding baseline entry is removed or its count lowered. Passing individual filenames to PHPStan skips unmatched-entry checking and is not ratchet evidence.
-3. Remove only resolved entries or reduce their counts. If regeneration is necessary, run `composer phpstan -- --generate-baseline=phpstan-baseline.neon`, then review the entire baseline diff. Reject unrelated additions, increased counts, wildcard paths, widened messages, and removed identifiers. Do not regenerate the baseline just to make a new error pass.
-4. Run `composer phpstan` and `composer test:phpstan-baseline` again, followed by `composer qa`. Commit the fix and baseline reduction together. New baseline debt needs explicit separate review and rationale; normal changes must not grow it.
-
-Zero debt is a valid endpoint: after fixing the final diagnostic, keep the baseline file with `ignoreErrors: []` nested under `parameters:`. The guard accepts an empty baseline while continuing to check every remaining entry and the full-project analysis policy.
-
-`composer test:phpstan-baseline` checks the effective repository configuration and ignore scopes, then generates isolated synthetic PHP under a random `build/phpstan-tests-*` directory. It inherits the real rules and unmatched-ignore setting, proves existing fixture debt passes, and requires nonzero analysis with the expected diagnostics for new level-5 argument/return errors, identical errors in another path, different messages under the same identifier, excess counts, partially stale counts, and fully stale entries. Lowering a fixed count and removing a resolved entry must restore a clean run. Fixtures are analysed, never executed, and cleaned up on exit; they are not shipped in the plugin.
-
-The guard runs in `composer qa:static` and in `composer test:ci-safeguards`, so CI exercises it on PHP 8.0 and 8.4 without changing the runtime test suites. PHPStan dependency upgrades remain a separate review because inference or diagnostic wording changes can alter baseline matching.
+An empty `parameters.ignoreErrors: []` is valid after the final debt is fixed.
+The baseline guard generates isolated, non-executed fixtures and verifies
+existing debt, new errors, other paths, different messages, excess/stale counts
+and corresponding successful reductions. It runs in static QA and safeguards.
+Tool upgrades need review when inference or message wording changes.
 
 ## Security QA policy
 
-Security QA is a cross-cutting gate, not just a separate scanner. The permission issue fixed in PR #90 showed that valid syntax, WPCS, and broad ability coverage are not enough unless the tests explicitly prove the permission model.
+An ability needs explicit security coverage when it accesses private content,
+users, environment/plugin/database/security data, full payloads or identifiers;
+changes site state; or accepts object IDs, URLs, HTML, metadata keys, taxonomy
+terms, plugin identifiers, statuses or capability-sensitive input.
 
-For every new or changed `webmastery-site-toolkit-for-mcp/*` ability, review whether it is security-sensitive. An ability is security-sensitive when it does any of the following:
+Require an allowed role and a denied role unless the response is intentionally
+public-safe with documented rationale. Lists need object/status-aware filtering;
+lower-privilege responses need sensitive-field absence assertions. Test invalid
+input, protected keys, unsafe URLs, stale preconditions and no-write failures.
 
-- reads private, draft, pending, scheduled, trashed, user, environment, plugin, security, database, backup, or performance data
-- returns full object payloads, totals, author identity, login names, emails, backend versions, filesystem/plugin details, or other fingerprinting data
-- creates, updates, deletes, publishes, schedules, privates, restores, activates, deactivates, uploads, or otherwise changes site state
-- accepts object IDs, URLs, HTML, metadata keys, taxonomy terms, plugin identifiers, statuses, or role/capability-sensitive inputs
+`composer validate:security-qa` rejects unreviewed public permission callbacks
+and preserves the permission-hardening, comment moderation and sensitive-field
+regressions. Comment cases retain mapped-CPT behavior, the Author moderation
+floor, zero-ID controls and exact missing-object results. Permission denial
+must use otherwise valid input rather than an unrelated schema rejection.
+Static policy checks supplement runtime evidence and human review.
 
-Security-sensitive abilities must include:
+## Contract and transport boundaries
 
-1. A positive manifest case for a role/capability that should be allowed.
-2. A negative manifest case for a role/capability that should be denied, unless the ability intentionally returns public-safe data and that rationale is documented.
-3. Object/status-aware assertions for list/query abilities that can return mixed authorization results.
-4. `assert_missing_paths` for sensitive fields that must not appear for lower-privilege callers.
-5. Failure-path assertions for status escalation, protected metadata, unsafe URLs, ambiguous identifiers, stale preconditions, and destructive actions where applicable.
+Contract QA executes the manifest through registered WordPress abilities.
+It also boots separate PHP processes with actual `EMPTY_TRASH_DAYS=30` and
+`0`, verifying enabled trash/restore and refusal before permanent mutation.
+These direct configuration checks do not substitute HTTP transport evidence.
 
-`composer validate:security-qa` enforces the current high-risk policy:
+Full MCP E2E uses Application Passwords, initialized HTTP sessions, `tools/list`,
+gateway/individual tool execution, actual mutations and lower-role denials.
+The boundaries have distinct validation/error ordering and must be reported
+separately.
 
-- `permission_callback => '__return_true'` is blocked in plugin ability registrations unless intentionally allow-listed in the validator after explicit security review.
-- The permission-hardening regression cases from PR #90 must keep negative manifest coverage.
-- Comment update, approval, trash, and spam abilities must keep moderator-only denial cases with persisted content/status assertions, including an update that supplies a moderation status.
-- Comment QA also requires mapped-CPT allowed/denied cases, the Author moderation floor, zero-ID no-write controls, and exact missing-object results for allowed/denied callers. A dedicated CLI-only runner compares direct, ability, and real HTTP behavior and retains comment table/metadata hashes and raw transport envelopes.
-- Sensitive identity and fingerprinting absence assertions must remain in the manifest.
+Database privacy retains exact metrics/order across its three actual responses.
+A read-only 15-second expiration horizon shares one 90-second deadline and uses
+production timeout conversion. It does not record transient identities/values,
+resample failed payloads or tolerate metric drift. SQL/window/deadline failures
+remain failures with original responses retained.
 
-This validator is intentionally conservative. It should catch known dangerous patterns without replacing human review, WordPress.org review, or future deeper static analysis such as CodeQL or Semgrep.
+## Trigger and merge policy
 
-## Ability Contract QA vs Full MCP E2E QA
+Static and Unit checks run for every PR and main push. Runtime-impacting changes
+require Contract and Full MCP E2E. Runtime paths include source, tests, scripts,
+Compose, Composer, workflows, package metadata, assets and `readme.txt`.
+Release-impacting PRs also require original-ZIP package QA. Scheduled/manual
+compatibility covers broader upstream combinations.
 
-These two checks both use Docker WordPress, but they prove different things.
+The active `main-ci-gates` ruleset requires `1 - Static QA`, `2 - Unit Tests`
+and `Docker QA gate`. The Docker aggregate requires successful change detection
+and both runtime jobs for runtime changes; failures, cancellations, malformed
+outputs and unexpected skips cannot pass. Explicit non-runtime detection may
+permit skipped runtime jobs.
 
-Ability Contract QA is the plugin contract layer. It asks: "Inside WordPress, did this plugin register the abilities we expect, and do the manifest cases pass with the right permissions and response shapes?" It is broad and ability-driven.
+Workflow lint and `5 - Release Package QA` remain release-bound merge policy.
+The path-filtered package workflow is not a universal branch-required check.
+Only genuine final-head PR-event checks satisfy protected PR gates; local or
+manual-dispatch results are supplementary. Do not change protection to complete
+a PR. See the [recorded setup evidence](../.github/SETUP-COMPLETE.md#rollout-evidence)
+for the distinction between rollout, bot-workflow approval and merge.
 
-Contract QA additionally runs `tests/e2e/trash-safety-runner.php` in two fresh PHP processes. Each defines and verifies `EMPTY_TRASH_DAYS` before loading actual WordPress core: `30` for normal trash/restore and `0` for refusal before mutation. These lanes exercise registered abilities, not stubs, and report separately from the ordinary manifest counts. See [`tests/e2e/README.md`](../tests/e2e/README.md#isolated-trash-safety-regressions) for assertions and coverage boundaries.
+## Local commands
 
-Full MCP E2E QA is the real transport layer. It asks: "Can an MCP client actually talk to WordPress through the MCP Adapter and perform real work?" It is narrower but deeper, because it uses Application Passwords, MCP session initialization, `tools/list`, ability discovery, and real CRUD calls over HTTP JSON-RPC.
-
-Both layers matter. Contract QA catches broad ability drift and permission regressions. Full MCP E2E catches transport and integration problems that direct PHP execution cannot see.
-
-## Trigger matrix
-
-| Event or change type | 1 - Static QA | 2 - Unit Tests | 3 - Ability Contract QA | 4 - Full MCP E2E QA | 5 - Release Package QA | 6 - Compatibility QA |
-| --- | --- | --- | --- | --- | --- | --- |
-| Docs-only PR | Required | Required | Skipped unless manually dispatched | Skipped unless manually dispatched | Skipped | Skipped |
-| Runtime PR | Required | Required | Required | Required | Skipped unless release-impacting | Manual when compatibility-risky |
-| New or changed ability | Required | Required | Required | Required | Skipped unless release-impacting | Manual when dependency/version-risky |
-| Security-sensitive PR | Required | Required | Required | Required | Required when release-bound | Manual before release when risk is broad |
-| Push to `main` | Required | Required | Required when runtime files changed | Required when runtime files changed | Skipped | Scheduled/manual |
-| Release PR | Required | Required | Required | Required | Required | Manual for release candidates |
-| Tag `v*` | Required by release workflow | Required by release workflow | Covered by Release Package QA | Covered by Release Package QA | Required | Review current compatibility evidence before approval |
-| `workflow_dispatch` | Runs selected workflow | Runs selected workflow | Runs | Runs | Runs | Runs |
-| Weekly schedule | Skipped | Skipped | Skipped | Skipped | Skipped | Runs |
-
-Runtime-impacting paths include plugin source, tests, scripts, Docker configuration, Composer files, workflow files, package metadata, assets, and `readme.txt`.
-
-## Required main CI checks
-
-The active `main-ci-gates` ruleset requires exactly these GitHub Actions checks before merging any PR into `main`:
-
-- `1 - Static QA`
-- `2 - Unit Tests`
-- `Docker QA gate`
-
-For runtime-impacting, ability, or security-sensitive PRs, `Docker QA gate` requires both runtime checks to pass; they are not separate required-check entries in the ruleset:
-
-- `3 - Ability Contract QA`
-- `4 - Full MCP E2E QA`
-
-Require release/package QA before publishing a release:
-
-- `5 - Release Package QA`
-
-Use `6 - Compatibility QA` as a scheduled/manual maintainer gate at first. Promote individual compatibility jobs to required only after they are stable and low-noise.
-
-The important GitHub concept is "required status checks." A workflow can run on many events, but branch protection decides which successful checks are required before a PR can merge.
-
-Enforcement was activated and read back on September 17, 2026, after all five genuine PR-event workflows passed on bot PR #140. See the [dated setup evidence](../.github/SETUP-COMPLETE.md#rollout-evidence), which distinguishes the dispatched compatibility pipeline from the approved PR-event checks. `workflow_dispatch` job results do not satisfy branch-ruleset requirements. Future `GITHUB_TOKEN`-created PRs still need maintainer workflow approval; the initial rollout did not create an auto-approval bypass. The path-filtered Release Package QA workflow must not become a required PR check in its current form.
-
-## Which command should I run?
-
-For a docs-only change:
-
-```bash
-composer qa
-```
-
-For a normal code bugfix:
-
-```bash
-composer qa
-E2E_MANAGE_COMPOSE=1 composer qa:contract
-E2E_MANAGE_COMPOSE=1 composer qa:e2e
-```
-
-For a new or changed ability:
-
-```bash
-composer qa
-E2E_MANAGE_COMPOSE=1 composer qa:contract
-E2E_MANAGE_COMPOSE=1 composer qa:e2e
-```
-
-For a security-sensitive change:
-
-```bash
-composer qa
-composer validate:security-qa
-E2E_MANAGE_COMPOSE=1 composer qa:contract
-E2E_MANAGE_COMPOSE=1 composer qa:e2e
-```
-
-For release preparation:
-
-```bash
-composer qa
-composer qa:release
-```
-
-`composer qa:release` runs the Docker contract and transport checks before Plugin Check. If Docker is unavailable locally, use GitHub Actions for the authoritative release validation and document the local blocker in the PR.
-
-Release QA builds once (or accepts `RELEASE_ZIP`) and validates exact source/ZIP allowlist hashes before extraction. Runtime QA mounts `build/release-runtime/webmastery-site-toolkit-for-mcp`, not the checkout, through `docker-compose.release.yml`. Only `tests/`, the two compatibility helpers, the baseline JSON, and `e2e-artifacts/` are additional binds; no checkout-wide or `vendor/` mount can supply an unpackaged dependency. Plugin Check copies a separate pristine `build/release-check` extraction, so nested runtime mount placeholders cannot affect its findings. After QA, the actual runtime production tree must still match the ZIP: only the exact empty host-side bind placeholders are permitted, not arbitrary extra files or directories. The original ZIP's SHA-256 must also remain unchanged.
-
-Use a uniquely named disposable project, for example `COMPOSE_PROJECT_NAME=wstm-release-mytest MYSQL_PORT=0 WORDPRESS_PORT=0 REQUIRE_CURRENT_PLUGIN_CHECK=1 COMPOSER_PROCESS_TIMEOUT=0 composer qa:release`. The timeout override lets the full local runtime/checker sequence exceed Composer's default 300 seconds; GitHub release jobs invoke Bash directly under workflow time limits. Ordinary `composer qa:contract`/`qa:e2e` retain the checkout bind. Package mode explicitly selects the base and release Compose files for runtime, checker, and cleanup, rather than inheriting a caller's `COMPOSE_FILE`. Do not reuse a shared Compose project. `composer test:release-safeguards` exercises the real release/E2E orchestration with safe Docker stubs, malformed/missing package guards, a checkout-mode negative control, checker failures, and archive-identity mutation without Docker or network access.
-
-PowerShell users can use the local wrapper:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1
-powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Contract
-powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -E2E
-powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Release
-```
-
-Bash users can use the local wrapper:
+Use the wrappers for fresh owned projects:
 
 ```bash
 scripts/qa-local.sh
@@ -210,69 +407,6 @@ scripts/qa-local.sh --e2e
 scripts/qa-local.sh --release
 ```
 
-## WordPress.org release-readiness policy
-
-Before publishing a WordPress.org-facing release:
-
-1. Confirm version metadata matches across the plugin header, `readme.txt` stable tag, changelog, release notes, zip name, and tag.
-2. Run `composer qa` and `composer qa:release`.
-3. Confirm Plugin Check evaluates the built package under the canonical `webmastery-site-toolkit-for-mcp` slug.
-4. Confirm no unexpected WordPress debug-log warnings, notices, deprecations, or errors appear during Docker QA.
-5. Confirm security-sensitive changes have manifest evidence for allowed and denied access.
-6. Review the official [WordPress.org Detailed Plugin Guidelines](https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/) for release-impacting changes, especially licensing, bundled assets, external services, tracking consent, executable remote code, readme content, default WordPress libraries, SVN discipline, version increments, and trademarks.
-7. Run or review the latest `6 - Compatibility QA` result before approving WordPress.org SVN deployment.
-8. Document any known Plugin Check warnings, guideline considerations, or unavailable local tooling in the PR.
-
-Plugin Check supports the guideline review, but it does not replace maintainer responsibility for the final WordPress.org package contents and behavior.
-
-## Compatibility policy
-
-The default PR path should stay stable and reasonably fast. Compatibility QA starts as scheduled/manual coverage because upstream images, plugin versions, and dependency repositories can change independently of a PR.
-
-The current compatibility workflow reads `.github/compatibility-versions.json`, discovers the latest stable releases, and runs:
-
-- WordPress 6.9 on PHP 8.1 with the pinned MCP Adapter baseline
-- the exact pinned WordPress and MCP Adapter baselines
-- the pinned WordPress baseline with the latest stable MCP Adapter
-- the latest stable WordPress release with the pinned MCP Adapter baseline
-- both latest releases together when both changed during the same interval
-
-All lanes pull fresh images, run both Ability Contract QA and Full MCP E2E QA, fail on WordPress debug-log warnings/notices/deprecations/errors, and record resolved dependency versions in the GitHub Actions job summary. After a successful scheduled run, newer versions are proposed in an automated PR that updates the baseline file and the concrete runtime pins. Maintainer approval and merge remain mandatory.
-
-Additional coverage separates PHP 8.4, MySQL 8.4, floating SEO dependencies, and current Plugin Check package validation. Package-check lanes run the applicable package command; they are not interchangeable with the contract/transport lanes. Ordinary QA uses the reviewed dependency pins and executable-download digests in `.github/compatibility-versions.json`.
-
-Only tested candidates may update baselines or `readme.txt` `Tested up to`. Missing images, failed discovery, stale source history, and unavailable dependencies are explicit failures that block promotion. Baseline updates preserve the full configuration and PHP image suffix. Approval of the bot PR's genuine PR-event workflows is required; a successful manual dispatch is not a substitute.
-
-The checked-in primary baseline is WordPress 7.1 with MCP Adapter 0.6.1 and its verified SHA-256. This adapter update leaves WordPress, `Tested up to`, other dependency pins, and PHP support unchanged.
-
-At the September 17, 2026 verification, `main` at `3dae8aa` pinned MCP Adapter 0.5.0. The passing compatibility pipeline proposed 0.6.1 in PR #140, which then remained open and unmerged. Those historical results do not replace current-source compatibility and genuine PR checks before promotion.
-
-### Runtime coverage limitation
-
-The advertised plugin minimum remains PHP 8.0. Syntax and unit tests exercise that version, but the supported-floor WordPress Docker lane uses PHP 8.1. This is a documented integration-coverage gap, not authorization to raise the plugin minimum or claim PHP 8.0 WordPress integration was tested. Add a maintained PHP 8.0 integration fixture or make a separate support-policy decision before changing that claim.
-
-PHPCompatibilityWP's available stable rules depend on the older PHPCompatibility engine. Installing those rules alone does not establish PHP 8.4 compatibility. Runtime evidence remains necessary; a future compatibility-sniff dependency must be reviewed for its actual supported language versions.
-
-When compatibility failures occur, triage them as:
-
-- **release blocker** when the failure affects the supported floor, current WordPress line, or another supported WordPress/PHP combination
-- **upstream drift** when a floating WordPress or latest MCP Adapter dependency changed and the plugin needs an adjustment or documented compatibility boundary
-- **workflow maintenance** when the failure is caused by runner/image/tooling changes unrelated to plugin behavior
-
-## Environment notes
-
-The QA layers are the same in every environment, but the safest entrypoint differs by shell.
-
-### GitHub Actions
-
-GitHub Actions is the authoritative validation gate before merge. The workflows install their own PHP and Composer runtime, use Ubuntu shell tools, and run Docker jobs on GitHub-hosted Linux runners.
-
-Use branch protection to require the relevant workflow checks instead of relying only on a contributor's local machine.
-
-### Windows PowerShell
-
-PowerShell users should prefer the local wrapper because it checks prerequisites and gives Windows-specific hints:
-
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1
 powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Contract
@@ -280,38 +414,69 @@ powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -E2E
 powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Release
 ```
 
-Docker Desktop must be running for Docker QA. Native `php`, `composer`, and archive tooling may depend on Windows PATH setup. When the native PHP/Composer path is not available, the project can still run many checks through Docker-based PHP/Composer commands.
-
-### Windows Git Bash
-
-Git Bash users should prefer login-shell style commands for Docker QA:
+`composer qa` runs local static/unit checks. Raw Docker commands require an
+explicit unique `COMPOSE_PROJECT_NAME`, managed Compose and fresh output.
+For example:
 
 ```bash
-bash -lc './scripts/e2e-test.sh contract'
-bash -lc './scripts/e2e-test.sh e2e'
-bash -lc 'bash scripts/release-qa.sh'
+COMPOSE_PROJECT_NAME=wstm-contract-mytest E2E_MANAGE_COMPOSE=1 \
+  E2E_ARTIFACTS_DIR=e2e-artifacts-wstm-contract-mytest \
+  COMPOSER_PROCESS_TIMEOUT=0 composer qa:contract
 ```
 
-The Docker runner sets `MSYS_NO_PATHCONV=1` so Git Bash does not rewrite Linux container paths such as `/var/www/html/wp-load.php` into Windows paths. This matters because Docker commands in the runner execute inside Linux containers, even though the shell is running on Windows.
+Choose a new name for each run. Do not overwrite retained evidence or delete
+unknown build directories. Composer's timeout override permits a full local
+runtime run; GitHub jobs retain their own finite limits.
 
-Depending on local PATH and Docker Desktop setup, `bash scripts/...` and `bash -lc './scripts/...'` can resolve Docker shims differently. If a plain Git Bash invocation fails locally but GitHub Actions passes, retry with the login-shell form above before assuming the repo script is broken.
+Git Bash container commands retain `MSYS_NO_PATHCONV=1`; native host PHP calls
+remove it for Windows path conversion. Docker Desktop must be running.
+Fresh image/plugin setup needs network access. Missing tools or failed setup
+must be reported, not converted to skipped acceptance.
 
-### Local caveats
+## Original-package QA
 
-Docker Desktop must be running before Docker QA can start. WordPress, MCP Adapter, Yoast SEO, SEOPress, Plugin Check, and release package checks all depend on network access during fresh local runs.
+Build once or use `RELEASE_ZIP`, validate the production allowlist and hashes,
+then reserve `build/release-qa-<opaque owner>/{checker,runtime}`. Neither path
+overwrites a prior extraction. Runtime uses the installed original package,
+read-only test/compatibility support and a private artifact volume, without a
+checkout-wide or vendor overlay on production contents.
 
-Local Plugin Check output may include known warnings that are acceptable for this project. The release process should treat unexpected errors as blockers, while the documented warnings in `CONTRIBUTING.md` remain known review items.
+Plugin Check reads a separate pristine extraction at `/qa-package-pristine`;
+nested test-bind placeholders cannot alter its findings. Recheck installed
+production hashes, the finite allowed empty placeholders and original ZIP
+SHA256 after runtime QA. Source-only success does not establish package behavior.
+Release safeguards mock external orchestration/failure boundaries; they do not
+replace real WordPress, HTTP, benchmark or package acceptance.
 
-## How to read failures
+## Compatibility and release readiness
 
-Static QA failures usually mean the code has a syntax, style, static-analysis, manifest-shape, security-policy, dependency-audit, or whitespace problem. Fix these first because they are the cheapest.
+The maintained compatibility campaign separates the WordPress 6.9/PHP 8.1 lane,
+pinned baseline, latest stable adapter/WordPress combinations, PHP 8.4,
+MySQL 8.4, floating SEO plugins and current Plugin Check. Resolve exact tested
+versions, refuse unavailable images/dependencies and propose only successful
+updates in maintainer-reviewed PRs. Do not auto-merge baseline promotions.
 
-Unit test failures usually mean a small helper contract changed. Either fix the behavior or intentionally update the test if the contract changed.
+The PHP 8.1 WordPress lane is an existing integration-coverage limitation:
+it does not prove the advertised PHP 8.0 minimum. Genuine 8.0/8.4 syntax/unit
+evidence, actual runtime observations and package results must remain distinct.
+Do not raise a support floor, fabricate an image tag or label PHP 8.1 as 8.0
+to close that gap.
 
-Ability Contract QA failures usually mean the plugin and manifest disagree, a permission case is wrong, an ability response shape changed, an expected sensitive field appeared, or WordPress logged a problem.
+Before release, align all version metadata, run `composer qa` and
+`composer qa:release`, review compatibility and Plugin Check findings, confirm
+no unexpected debug-log problems, and review the
+[WordPress.org guidelines](https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/).
+Licensing, bundled assets, external services/consent, executable code, readme
+claims, default libraries, SVN/version discipline and trademarks remain
+maintainer responsibilities. Known warnings must be documented; Plugin Check
+does not replace guideline review or production approval.
 
-Full MCP E2E failures usually mean the real MCP Adapter path broke: session setup, tool discovery, ability execution, WordPress side effects, denied-role behavior, or cleanup.
+## Reading failures
 
-Release Package QA failures usually mean the package is not ready to ship: Docker contract/transport checks failed, version metadata is out of sync, release notes are missing, dev files leaked into the zip, or Plugin Check found a WordPress.org readiness issue.
-
-Compatibility QA failures usually mean upstream WordPress, PHP, MySQL, MCP Adapter, Yoast SEO, SEOPress, Plugin Check, or GitHub runner behavior changed and needs maintainer triage.
+Fix syntax/static/manifest/security-policy failures before runtime work.
+Unit failures usually indicate helper or error-contract drift. Contract
+failures concern registration, roles, response shape, persistence or debug logs;
+MCP failures concern authentication, sessions, transport, mutations and cleanup.
+Package failures include metadata, production contents and Plugin Check.
+Compatibility failures need triage as supported-version regressions, upstream
+drift or workflow maintenance before changing pins or merge policy.

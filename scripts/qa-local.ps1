@@ -52,23 +52,51 @@ if ($PreflightOnly) {
 	exit 0
 }
 
-Invoke-QACommand 'Install Composer dependencies' 'composer' @('install', '--no-interaction', '--prefer-dist', '--no-progress')
-Invoke-QACommand 'Run Composer QA checks' 'composer' @('qa')
-
-if ($Contract) {
-	$keepComposeValue = if ($KeepCompose) { '1' } else { '0' }
-
-	Invoke-QACommand 'Run Docker Ability Contract QA' 'bash' @('-lc', "E2E_MANAGE_COMPOSE=1 E2E_KEEP_COMPOSE=$keepComposeValue bash scripts/e2e-test.sh contract")
+if (-not (Test-Path -LiteralPath 'vendor\autoload.php' -PathType Leaf)) {
+	Invoke-QACommand 'Install missing Composer dependencies' 'composer' @('install', '--no-interaction', '--prefer-dist', '--no-progress')
+}
+$previousComposerTimeout = [Environment]::GetEnvironmentVariable('COMPOSER_PROCESS_TIMEOUT', 'Process')
+try {
+	$env:COMPOSER_PROCESS_TIMEOUT = '0'
+	Invoke-QACommand 'Run Composer QA checks' 'composer' @('qa')
+} finally {
+	if ($null -eq $previousComposerTimeout) {
+		$env:COMPOSER_PROCESS_TIMEOUT = $null
+	} else {
+		[Environment]::SetEnvironmentVariable('COMPOSER_PROCESS_TIMEOUT', $previousComposerTimeout, 'Process')
+	}
 }
 
-if ($E2E) {
-	$keepComposeValue = if ($KeepCompose) { '1' } else { '0' }
-
-	Invoke-QACommand 'Run Docker E2E QA' 'bash' @('-lc', "E2E_MANAGE_COMPOSE=1 E2E_KEEP_COMPOSE=$keepComposeValue bash scripts/e2e-test.sh e2e")
-}
-
-if ($Release) {
-	Invoke-QACommand 'Run Release Package QA' 'bash' @('-lc', 'bash scripts/release-qa.sh')
+if ($Contract -or $E2E -or $Release) {
+	Invoke-QACommand 'Check local Docker engine' 'docker' @('info', '--format', '{{.ServerVersion}}')
+	$project = 'wstm-local-' + [guid]::NewGuid().ToString('N').Substring(0, 16)
+	$names = @('COMPOSE_PROJECT_NAME', 'E2E_ARTIFACTS_DIR', 'E2E_MANAGE_COMPOSE', 'E2E_KEEP_COMPOSE', 'WSTM_QA_OWNER', 'MSYS_NO_PATHCONV')
+	$previous = @{}
+	foreach ($name in $names) {
+		$previous[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
+	}
+	try {
+		$env:MSYS_NO_PATHCONV = '1'
+		$env:E2E_MANAGE_COMPOSE = '1'
+		$env:E2E_KEEP_COMPOSE = if ($KeepCompose) { '1' } else { '0' }
+		if ($Contract -or $E2E) {
+			$mode = if ($Contract -and $E2E) { 'all' } elseif ($E2E) { 'e2e' } else { 'contract' }
+			$env:WSTM_QA_OWNER = $null
+			$env:COMPOSE_PROJECT_NAME = "$project-source"
+			$env:E2E_ARTIFACTS_DIR = "e2e-artifacts-$($env:COMPOSE_PROJECT_NAME)"
+			Invoke-QACommand 'Run owned Docker source QA' 'bash' @('scripts/e2e-test.sh', $mode)
+		}
+		if ($Release) {
+			$env:WSTM_QA_OWNER = $null
+			$env:COMPOSE_PROJECT_NAME = "$project-package"
+			$env:E2E_ARTIFACTS_DIR = "e2e-artifacts-$($env:COMPOSE_PROJECT_NAME)"
+			Invoke-QACommand 'Run owned original-ZIP Package QA' 'bash' @('scripts/release-qa.sh')
+		}
+	} finally {
+		foreach ($name in $names) {
+			[Environment]::SetEnvironmentVariable($name, $previous[$name], 'Process')
+		}
+	}
 }
 
 Write-Host 'Local QA completed successfully.'

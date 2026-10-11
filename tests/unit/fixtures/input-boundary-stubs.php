@@ -8,6 +8,11 @@ use Webmastery_MCP_Input;
 require_once dirname( __DIR__, 3 ) . '/includes/class-input.php';
 require_once dirname( __DIR__, 3 ) . '/includes/class-media.php';
 
+foreach ( array( 'class-list-query.php', 'class-permissions.php' ) as $helper ) {
+	$source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/' . $helper );
+	eval( 'namespace Wstm126Boundary; use \Closure; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Untrusted; ' . substr( $source, 5 ) );
+}
+
 final class BoundaryReached extends RuntimeException {}
 
 final class Probe {
@@ -19,6 +24,7 @@ final class Probe {
 	public static array $classes = array();
 
 	public static function reset(): void {
+		$GLOBALS['wpdb'] = (object) array( 'num_queries' => 0, 'last_error' => '' );
 		self::$abilities = self::$originals = self::$events = array();
 		self::$allowed = true;
 		self::$post_type = 'page';
@@ -41,7 +47,8 @@ final class Probe {
 	}
 }
 
-eval( 'namespace Wstm126Boundary; use \Closure; use \WP_Error; use \Webmastery_MCP_Response; ' . substr( file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-permissions.php' ), 5 ) );
+require_once __DIR__ . '/shared-helper-loader.php';
+\wstm_test_load_shared_helpers( __NAMESPACE__ );
 
 foreach ( glob( dirname( __DIR__, 3 ) . '/includes/class-*.php' ) as $file ) {
 	$source = file_get_contents( $file );
@@ -49,6 +56,9 @@ foreach ( glob( dirname( __DIR__, 3 ) . '/includes/class-*.php' ) as $file ) {
 		continue;
 	}
 	preg_match( '/class (Webmastery_MCP_\w+)/', $source, $matches );
+	if ( class_exists( __NAMESPACE__ . '\\' . $matches[1], false ) ) {
+		continue;
+	}
 	eval( 'namespace Wstm126Boundary; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Post_Parent; use \Webmastery_MCP_Post_Scheduling; ' . substr( $source, 5 ) );
 	Probe::$classes[] = __NAMESPACE__ . '\\' . $matches[1];
 }

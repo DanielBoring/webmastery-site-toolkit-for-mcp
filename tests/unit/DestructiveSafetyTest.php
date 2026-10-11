@@ -36,6 +36,9 @@ final class Wstm116ReferenceDatabase {
 	public array $queries = array();
 
 	public function prepare( $query, ...$args ) {
+		if ( 1 === count( $args ) && is_array( $args[0] ) ) {
+			$args = $args[0];
+		}
 		return array( $query, $args );
 	}
 
@@ -43,11 +46,26 @@ final class Wstm116ReferenceDatabase {
 		return addcslashes( $value, '_%\\' );
 	}
 
-	public function get_var( $query ) {
+	public function get_col( $query ) {
 		$this->queries[] = $query;
 		$result = array_shift( $this->results );
 		$this->last_error = null === $result ? 'PRIVATE SQL DATABASE ERROR' : '';
-		return $result;
+		return null === $result ? null : ( $result ? array( '46' ) : array() );
+	}
+
+	public function get_row( $query, $format ) {
+		$this->queries[] = $query;
+		$row = array();
+		foreach ( $query[1] as $index => $pattern ) {
+			$result = array_shift( $this->results );
+			if ( null === $result ) {
+				$this->last_error = 'PRIVATE SQL DATABASE ERROR';
+				return null;
+			}
+			$row[ 'ref_' . $index ] = $result;
+		}
+		$this->last_error = '';
+		return $row;
 	}
 }
 
@@ -184,7 +202,7 @@ final class DestructiveSafetyTest extends TestCase {
 	public static function reference_results(): array {
 		return array(
 			'featured' => array( array( 1 ), true ),
-			'content URL' => array( array( 0, 1 ), true ),
+			'content URL' => array( array( 0, 1, 0 ), true ),
 			'content GUID' => array( array( 0, 0, 1 ), true ),
 			'not referenced' => array( array( 0, 0, 0 ), false ),
 		);
@@ -197,13 +215,10 @@ final class DestructiveSafetyTest extends TestCase {
 			$GLOBALS['wpdb']->queries = array();
 			$GLOBALS['wstm116_mutations'] = array();
 			$result = $this->execute( 'delete-media', array( 'media_id' => 46, 'confirm' => true, 'force' => $force ) );
-			self::assertCount( count( $counts ), $GLOBALS['wpdb']->queries, 'Force must still use the same reference scan.' );
+			self::assertCount( 1 === count( $counts ) ? 1 : 2, $GLOBALS['wpdb']->queries, 'Force must still use the same batched reference scan.' );
 			self::assertSame( array( '_thumbnail_id', '46' ), $GLOBALS['wpdb']->queries[0][1] );
 			if ( count( $counts ) > 1 ) {
-				self::assertSame( array( '%https://example.test/uploads/46.png%' ), $GLOBALS['wpdb']->queries[1][1] );
-			}
-			if ( count( $counts ) > 2 ) {
-				self::assertSame( array( '%https://old.example.test/46.png%' ), $GLOBALS['wpdb']->queries[2][1] );
+				self::assertSame( array( '%https://example.test/uploads/46.png%', '%https://old.example.test/46.png%' ), $GLOBALS['wpdb']->queries[1][1] );
 			}
 			if ( $in_use && ! $force ) {
 				self::assertSame( 'media_in_use', $result['error']['reason'] );

@@ -4,6 +4,7 @@ if ( 'cli' !== PHP_SAPI ) {
 	exit( 'This test runner is CLI-only.' );
 }
 require_once __DIR__ . '/error-contract-assertions.php';
+require_once __DIR__ . '/legacy-artifacts.php';
 
 
 /**
@@ -331,11 +332,12 @@ $summary = [
 	'passed' => count( $wstm109_results ) - $failed, 'failed' => $failed,
 	'deletion_events' => $wstm109_events, 'cases' => $wstm109_results,
 ];
-$directory = dirname( __DIR__, 2 ) . '/e2e-artifacts';
+$directory = Wstm_E2E_Artifacts::directory( dirname( __DIR__, 2 ) . '/e2e-artifacts' );
 if ( ! is_dir( $directory ) && ! wp_mkdir_p( $directory ) ) {
 	throw new RuntimeException( 'Could not create trash safety artifact directory.' );
 }
-if ( false === file_put_contents( "$directory/trash-safety-$mode.json", wp_json_encode( $summary, JSON_PRETTY_PRINT ) . "\n" ) ) {
+$json = wp_json_encode( $summary, JSON_PRETTY_PRINT );
+if ( false === $json || strlen( $json ) + 1 !== file_put_contents( "$directory/trash-safety-$mode.json", $json . "\n" ) ) {
 	throw new RuntimeException( 'Could not write trash safety summary.' );
 }
 echo "SUMMARY {$summary['passed']} passed, $failed failed ($mode; EMPTY_TRASH_DAYS=" . EMPTY_TRASH_DAYS . ")\n";

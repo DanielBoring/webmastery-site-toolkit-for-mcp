@@ -72,7 +72,7 @@ foreach ( array(
 		WP_Application_Passwords::delete_application_password( $user->ID, $created[1]['uuid'] );
 	}
 }
-webmastery_mcp_e2e_write_summary( __DIR__ . '/../../e2e-artifacts/issue125-mcp-summary.json', $wstm125_summary );
+webmastery_mcp_e2e_write_summary( Wstm_E2E_Artifacts::path( __DIR__ . '/../../e2e-artifacts/issue125-mcp-summary.json' ), $wstm125_summary );
 if ( $wstm125_summary['failed'] ) {
 	throw new RuntimeException( 'Site Kit MCP transport regressions failed.' );
 }

@@ -35,7 +35,7 @@ $mode = getenv( 'WSTM105_MODE' ) ?: 'fixed';
 $boundary_filter = getenv( 'WSTM105_BOUNDARY' ) ?: 'all';
 wstm105_assert( in_array( $mode, array( 'fixed', 'baseline' ), true ), 'Unknown proof mode.' );
 wstm105_assert( in_array( $boundary_filter, array( 'all', 'direct', 'ability', 'http' ), true ), 'Unknown proof boundary.' );
-$artifact = getenv( 'WSTM105_ARTIFACT' ) ?: __DIR__ . '/../../e2e-artifacts/comments-' . $boundary_filter . '.json';
+$artifact = getenv( 'WSTM105_ARTIFACT' ) ?: Wstm_E2E_Artifacts::path( __DIR__ . '/../../e2e-artifacts/comments-' . $boundary_filter . '.json' );
 $summary = array(
 	'mode' => $mode, 'wordpress' => get_bloginfo( 'version' ), 'php' => PHP_VERSION,
 	'runner_sha256' => hash_file( 'sha256', __FILE__ ),

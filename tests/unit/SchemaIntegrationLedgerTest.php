@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
-require_once __DIR__ . '/fixtures/schema-integration-ledger.php';
+require_once __DIR__ . '/fixtures/bounded-manifest-projection.php';
 
 final class SchemaIntegrationLedgerTest extends TestCase {
 	private function manifest(): array {
-		return json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		$manifest = json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		return BoundedManifestProjection::schema_source( $manifest );
 	}
 
 	public function test_exact_source_projection_and_all_approved_field_changes(): void {
 		$ledger = json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/input-schema-integration-ledger.json' ), false, 512, JSON_THROW_ON_ERROR );
 		self::assertSame( 'f93b7d11bec24620f5dd51202db3e6cb1df020d9', $ledger->parent_sha );
 		self::assertSame( '1bf2eb2c8b5df9f17f7baa3487babedb70edbccb', $ledger->approved_schema_sha );
-		$manifest = $this->manifest();
+		$manifest = Wstm108_Schema_Integration::main_input( $this->manifest() );
 		$parent = wstm126_parent_manifest( $manifest );
 		self::assertCount( 570, $parent );
 		$safety = $privacy = $native = $raw = 0;

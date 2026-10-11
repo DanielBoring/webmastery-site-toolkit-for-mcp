@@ -195,7 +195,8 @@ development-ZIP QA. Tests are harness-only mounts for package QA; production
 does not fall back to the checkout and ZIP bytes remain immutable. Contract,
 HTTP and package workflows upload the complete stage directory even on failure;
 compatibility lanes already retain the complete artifact tree. Archive reports
-before starting a new suite, whose existing top-level wrapper clears artifacts.
+before starting a new suite. The wrapper refuses existing output; choose a fresh
+project and artifact directory instead of deleting prior evidence.
 
 The runner distinguishes callback permission outcomes from execution denial;
 compares preview summaries to real writes; snapshots posts, postmeta, terms,
@@ -737,7 +738,25 @@ The harness disables request-triggered WordPress cron before installation and fi
 
 Compatibility lane artifacts retain both runtime metadata and the detailed `e2e-artifacts/` reports for 30 days, including failed scheduling cases. A failed or unavailable lane still blocks promotion.
 
-Release QA opts into extracted-package execution with `E2E_PACKAGE_ROOT` and `E2E_PACKAGE_ZIP`. Both must be supplied together, with managed Compose and the standard `e2e-artifacts` output directory. Before touching Docker, the harness requires the root to match the original ZIP exactly and the ZIP to match the source allowlist. `scripts/release-qa.sh` creates this fresh runtime extraction automatically, selects `docker-compose.release.yml` in addition to the base file, and keeps Plugin Check's extraction separate. The override exposes only the extracted production root, read-only `tests/`, compatibility helper files and baseline JSON, plus writable report output. No `vendor/` or whole-checkout bind is present. Default source E2E does not opt in and is unchanged. Use a unique disposable Compose project; do not point package mode at an existing development stack.
+Release QA opts into extracted-package execution with `E2E_PACKAGE_ROOT` and `E2E_PACKAGE_ZIP`. Both must be supplied together, with managed Compose and a fresh standard or exact project-specific artifact directory. Before touching Docker, the harness requires the root to match the original ZIP exactly and the ZIP to match the source allowlist. `scripts/release-qa.sh` creates this fresh runtime extraction automatically, selects `docker-compose.release.yml` in addition to the base file, and keeps Plugin Check's extraction separate. The override exposes only the extracted production root, read-only `tests/`, compatibility helper files and baseline JSON. No `vendor/` or whole-checkout production bind is present. Use a unique disposable Compose project; do not point package mode at an existing development stack.
+
+Both source and package Compose runs set `WSTM_E2E_ARTIFACTS_DIR=/qa-artifacts`
+for inherited reports. Explicit per-runner artifact overrides retain priority;
+standalone callers retain the existing output defaults. The private volume is
+not mounted inside the public plugin directory. Before teardown, the harness
+exports only named legacy summaries to the fresh host artifact directory, never
+the product context or private product records. Capture failure arms the
+existing retention guard and preserves the owned stack and original failing
+exit. Product restoration failures still block all teardown before capture.
+Raw product captures use `WSTM_QA_PRIVATE_OUTPUT` in the owned private state
+directory outside the candidate, not a path below the read-only public plugin
+bind. Only the verified six-key product summary moves into the host artifact
+directory after runtime cleanup and retirement.
+
+WordPress `home`/`siteurl`, WP-CLI and runtime fixtures all use the fixed internal
+`http://localhost` origin. The randomly assigned host loopback port identifies
+the disposable transport binding only. It does not replace the internal origin
+or broaden sitemap/PageSpeed same-site validation.
 
 Current coverage is 75 base registered abilities plus 5 generated abilities per eligible custom post type. The E2E runner registers two fixture custom post types, so the manifest covers 85 abilities (see the manifest validation script's runtime summary for the current test case count), including custom post type discovery and CRUD permission coverage for two capability maps, object/status-aware post, page, CPT, media, and SEO score list filtering, private-status and bulk-publish denial cases, sensitive identity-field absence checks, taxonomy get/update permission coverage, post and page listing response-shape assertions, expanded Yoast and SEOPress metadata write coverage, controlled Google Site Kit status/module/permission/PageSpeed route fixtures with shared-dashboard, denial, privacy, and same-site URL coverage, the bulk post abilities `webmastery-site-toolkit-for-mcp/bulk-trash-posts` and `webmastery-site-toolkit-for-mcp/bulk-publish-posts`, the revision abilities `webmastery-site-toolkit-for-mcp/list-revisions` and `webmastery-site-toolkit-for-mcp/restore-revision`, the post meta abilities `webmastery-site-toolkit-for-mcp/get-post-meta`, `webmastery-site-toolkit-for-mcp/update-post-meta`, and `webmastery-site-toolkit-for-mcp/delete-post-meta`, the block editing abilities `webmastery-site-toolkit-for-mcp/list-content-blocks`, `webmastery-site-toolkit-for-mcp/patch-content-block`, and `webmastery-site-toolkit-for-mcp/patch-post-content` with targeted post, page, CPT, permission-denial, and unsupported-type coverage, the comment interaction abilities `webmastery-site-toolkit-for-mcp/reply-comment` and `webmastery-site-toolkit-for-mcp/update-comment`, the media sideload ability `webmastery-site-toolkit-for-mcp/upload-image`, the content hygiene abilities `webmastery-site-toolkit-for-mcp/list-orphaned-media`, `webmastery-site-toolkit-for-mcp/list-posts-no-featured-image`, and `webmastery-site-toolkit-for-mcp/list-stuck-scheduled`, the site introspection abilities `webmastery-site-toolkit-for-mcp/get-site-info`, `webmastery-site-toolkit-for-mcp/get-user-info`, and `webmastery-site-toolkit-for-mcp/get-environment-info`, the user access audit ability `webmastery-site-toolkit-for-mcp/user-access-audit`, the Yoast score and metadata abilities `webmastery-site-toolkit-for-mcp/get-seo-scores`, `webmastery-site-toolkit-for-mcp/get-readability-scores`, and `webmastery-site-toolkit-for-mcp/get-yoast-metadata`, the SEOPress metadata ability `webmastery-site-toolkit-for-mcp/get-seopress-metadata`, the webmaster verification ability `webmastery-site-toolkit-for-mcp/webmaster-verification-status`, the database health ability `webmastery-site-toolkit-for-mcp/database-health`, the performance status ability `webmastery-site-toolkit-for-mcp/performance-status`, the backup status ability `webmastery-site-toolkit-for-mcp/backup-status`, plus the plugin abilities `webmastery-site-toolkit-for-mcp/list-plugins`, `webmastery-site-toolkit-for-mcp/plugin-audit`, `webmastery-site-toolkit-for-mcp/activate-plugin`, and `webmastery-site-toolkit-for-mcp/deactivate-plugin`.
 
@@ -1074,7 +1093,8 @@ Permission callbacks return `WP_Error( 'forbidden', ... )`; direct execute denia
 To reproduce before/after on an owned disposable stack, first bootstrap it with `scripts/e2e-test.sh all`, then run (Bash):
 
 ```bash
-docker compose -p "$COMPOSE_PROJECT_NAME" exec -T wordpress wp --allow-root eval \
+source scripts/qa-compose.sh
+qa_wp eval \
   'require WP_PLUGIN_DIR . "/webmastery-site-toolkit-for-mcp/tests/e2e/taxonomy-write-runner.php"; $summary = wstm117_run_taxonomy_tests(); exit($summary["failed"] ? 1 : 0);'
 ```
 
@@ -1181,8 +1201,9 @@ Fixtures/users/role names are scoped to `wstm109` and live only in the disposabl
 For an already-bootstrapped disposable Compose project, rerun just these processes:
 
 ```bash
-docker compose exec -T wordpress php /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/trash-safety-runner.php enabled
-docker compose exec -T wordpress php /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/trash-safety-runner.php disabled
+source scripts/qa-compose.sh
+compose exec -T wordpress php /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/trash-safety-runner.php enabled
+compose exec -T wordpress php /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/trash-safety-runner.php disabled
 ```
 
 ### Full suites
@@ -1200,7 +1221,8 @@ For both Docker layers, use a disposable Compose project with automatically assi
 
 ```bash
 export COMPOSE_PROJECT_NAME="webmastery-qa-$(date +%s)-$RANDOM"
-export MYSQL_PORT=0 WORDPRESS_PORT=0
+export WORDPRESS_PORT=0
+export E2E_ARTIFACTS_DIR="e2e-artifacts-${COMPOSE_PROJECT_NAME}"
 E2E_MANAGE_COMPOSE=1 bash scripts/e2e-test.sh all
 ```
 
@@ -1234,7 +1256,6 @@ PowerShell users can run:
 
 ```powershell
 $env:COMPOSE_PROJECT_NAME = "webmastery-qa-$([guid]::NewGuid().ToString('N').Substring(0, 12))"
-$env:MYSQL_PORT = '0'
 $env:WORDPRESS_PORT = '0'
 powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Contract
 powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -E2E
@@ -1261,3 +1282,242 @@ These counts make it visible when an enhancement adds new ability coverage.
 Full E2E artifacts also include `mcp-crud-summary.json` for the secondary protocol-level CRUD QA phase.
 
 GitHub Actions retains available JSON summaries on successful runs as well as failures, with bounded retention. Fork/read-only bot PRs use job summaries without requiring a write token for comments. `Docker QA gate` accepts skipped Docker jobs only when successful change detection explicitly identifies a non-runtime change.
+
+## Local product stages and environment
+
+Use a trusted disposable Docker engine and reviewed images. Every Compose
+operation goes through `scripts/qa-compose.sh`, with a unique explicit project
+and opaque resource ownership. HTTP is loopback-only; the database has no host
+port. Source/package mounts are read-only. Candidate PHP and WP-CLI run as
+UID/GID 33:33; a fixed trusted directory initialization alone runs as root.
+No engine socket, whole-host attestation or production/shared WordPress is
+part of this test environment.
+
+`scripts/qa-local.sh` and `scripts/qa-local.ps1` generate distinct source/package
+projects and output paths. Raw entrypoints require an explicit project, managed
+Compose and fresh artifacts. Existing output and unknown resources are refused,
+not removed. Passwords/ownership state remain outside the candidate bind;
+installation reads private stdin without printing credentials or sending mail.
+
+The parent supplies a regular single-link 0600 context at
+`/qa-artifacts/context.json` in a UID/GID33:33 0700 artifact volume. Its exact
+12-field `wstm-product-context-v1` binds run/token/project, fixed WordPress/plugin/
+artifact roots, source-inventory or original-ZIP SHA256, UID and actual expected
+PHP lane. Use `E2E_OPT_IN=1`, `WSTM_PRODUCT_CONTEXT`, `WSTM_PRODUCT_RUN` and
+`WSTM_PRODUCT_TOKEN`. `php_floor` means the expected actual major/minor:
+8.0, 8.1, 8.2 and 8.4 are distinct, with strict CLI/HTTP matching. PHP8.1
+compatibility does not prove the advertised PHP8.0 minimum.
+
+The protected `/wp-json/wstm167-qa/v1/runtime` observation requires the private
+token header, returns ten closed fields without the raw token, and refuses
+missing/incorrect tokens with 403. Parent lifecycle owns the exact context
+marker and exclusively installed MU fixture. Remove the product-only fixture
+before later checks that expect 85 native registrations. Never precreate or
+reuse `/qa-artifacts/<run>/untrusted` or `/qa-artifacts/<run>/bounded`.
+
+### Untrusted-content coverage (3.0 Unreleased, #108)
+
+`untrusted-content-runner.php` executes 298 independently planned ordered labels:
+104 gateway, 104 individual-tool and 90 annotation observations (85 native
+abilities plus five owned fixture abilities). Keep authorized values/types/
+HTML/block delimiters unchanged, add only record-local present-field markers,
+and retain canonical errors, role/privacy/no-write controls and stored-content/
+trusted-message separation. Check actual advertised tool names and Adapter
+hints, not source registration alone.
+
+Metadata oracles preserve actual native row cardinality: no rows, one
+empty-string row and multiple rows are different results. Provider read
+availability follows the same actor's native per-key capability, including
+the actual restricted HTTP header boundary. Do not derive it from standalone
+writable-key tool access or copy provider output into its own expectations.
+Inspect-only fields still require exact value, privacy and no-write assertions.
+Collect native observations by actor/post/key tuple. Score and readability
+lists may observe multiple owned posts; host replay checks their original
+ledger membership and requires the primary post's allowed score-key proof.
+Repeated identical tuples are idempotent, while conflicting, foreign or
+missing primary observations refuse.
+
+Private evidence includes `runner.json`, its HTTP journal, `resources.json`,
+the closed `product-verdict.private.json`, private-wire ledger and ordinal
+original frames. Retain object/list/scalar distinctions and actual raw request/
+response bindings. Label counts, supplied passed flags, HMACs or successful
+copying alone do not establish semantic acceptance or live resource absence.
+Current client/operator protections are documented in the
+[agent threat model](../../docs/security-strategy.md#agent-threat-model).
+
+Capture original responses and per-case records once, with one complete final
+summary. Repeated cumulative summary snapshots are not required proof.
+Independent replay still requires all 298 ordered cases and their exact
+request/response/oracle associations. Keep journal/index overhead and terminal
+failure reservations inside the existing wire budget. A partial run or a
+successful cleanup cannot substitute for complete semantic replay.
+Use the explicit typed-summary encoding for the final summary commitment:
+repeated descriptor values must not depend on PHP object aliases crossing
+separately captured frames. Original per-case serialized commitments, exact
+typed values/key order and the mandatory scope seal comparison remain required.
+Use the bounded typed commitment for private PHP case comparisons too, retaining
+native comment snapshots' NUL-prefixed protected-property keys. Keep HTTP JSON
+canonicalization, original serialized hashes and strict no-write equality.
+Live cleanup requires a single unconditional literal-true cron definition.
+A completed top-level brace before that definition is supported; nested,
+conditional, namespace, duplicate and false-policy forms still refuse.
+
+### Bounded-list coverage and oracle migration (3.0)
+
+Product QA runs once before legacy suites, on the fresh owned installation.
+During installation and default preparation, the owned HTTP service and its
+health probes are stopped. A temporary isolated UID33 CLI uses the same verified
+image, database network and installed/artifact volumes without serving HTTP.
+This prevents frontend navigation fallback writes outside the installer observer.
+Private originals are exported and the CLI is retired before HTTP is restored;
+installation or unresolved CLI cleanup failures do not restore HTTP. Native
+permalink auto-detection fails truthfully while HTTP is unavailable. The normal
+rewrite verification and all later source/package HTTP checks remain required.
+Preparation attributes sample content to the pinned native initializer and
+removes only verified bootstrap defaults through native APIs. Its private
+receipts preserve native before/inserts/after evidence; foreign content or
+unproved existing installations refuse. Bounded seeding still requires empty
+posts/postmeta tables. Before and insert originals persist before default
+comparison, so a refusal retains the evidence needed for diagnosis. Incomplete
+receipts contain bounded table counts and hash-associated query outcomes;
+insert attempts are not counted as successful writes without their outcomes.
+Raw row evidence remains private, and count diagnostics do not permit foreign
+or missing defaults.
+Captured after originals also persist before dependency and preservation checks.
+Incomplete private receipts bind a bounded, content-free first-difference
+diagnostic to the exact snapshot hashes. Unreadable captures refuse without
+inventing evidence; failed preparation still rolls back and cannot satisfy
+acceptance.
+Calendar cache changes caused by the pinned native pre-delete hook require exact
+query/result evidence. Expected fields are derived from native behavior, with
+new IDs supplied only by the authenticated insert result. This is not an option
+allowlist: foreign writes, missing provenance and unrelated option changes still
+refuse.
+
+Upload fixtures establish the ordinary native uploads base/date prerequisite
+only after verifying the owned root, exact paths and parent custody. WordPress
+creates missing native directories; path, symlink, access and configuration
+checks remain mandatory afterward. Those directories are not cleanup targets.
+Attachment metadata retains the run-owned file path relative to the
+authenticated uploads base. Executed source/package regressions cover that
+sequence, including refusal before metadata writing for an invalid reference.
+The fixture journals and retires only its exclusive child and verified files
+and attachments.
+
+Failed pre-acquisition cleanup requires an explicit phase record, unchanged
+native snapshots, a closed artifact inventory and zero owned resources in fresh
+readback. State remains mandatory once acquisition begins. Bounded runtime and
+live cleanup share config-owned cron checks without redefining the constant.
+Neither cleanup readiness nor a verified empty baseline makes a failed run pass.
+The bounded export/import contract admits only the existing `small` and `large`
+catalog `pre-acquisition.json` roles alongside its other closed evidence roles.
+Unknown files, symlinks and special paths remain errors. SEO-score verification
+requires record-local markers for present `title`, `url` and `score` fields and
+preserves the exact authorized values and types.
+
+Windowed content/media/score/orphan lists return `items`, `page`, `per_page`
+and `next_page` without exact filtered totals. Empty candidate windows may
+continue. Post/page/CPT/revision lists default to summary; use `fields:"full"`
+for content. See the [migration contract](../../docs/3.0-migration.md#bounded-list-windows-and-summary-projection).
+Existing typed migration/permission/no-write guards remain; do not regenerate
+their goldens or relax canonical errors to accept a new result.
+
+`bounded-list-benchmark.php` executes 336 large observations across seven
+surfaces, two request-local cache regimes, three authorization regimes,
+P20/P100 and four predetermined windows. Large setup has 20,000 posts,
+10,000 fileless attachments, 203 page candidates, 205 CPT candidates and 100
+selected 55-KiB bodies. Small setup has 43 posts/attachments/CPT candidates and 46
+page candidates; 1,059 full traversal observations plus 66 projection/filter/tie
+edges total 1,125. Derive exact eligible ordered IDs before calls, including
+sparse empty windows, all-denied and EOF.
+
+Recompute raw SQL/query/capability/response facts with `Wstm121Verifier`.
+For P, candidates<=P+1, distinct authorized objects<=P, capability calls<=5P+10
+and SQL<=3P+12 plus ceil(2P/50) for orphan-reference allowance. Require one
+IDs/no_found_rows candidate query, correct offset, at most 50 reference patterns
+per batch and one thumbnail IN batch. No measured mutation, incremental
+allocated memory above 64 MiB or controlled default 20 summary above 64 KiB is
+allowed. Do not subtract a historical peak or call request-local cache flush
+a fresh database/process.
+Reference-parity SQL observations occur once at the late pre-injection boundary.
+The injector requires the exact observed original before replacing it. Native
+placeholder handling does not permit query normalization or weaker SQL,
+reference-association and failure assertions.
+Candidate and priming fault controls require the canonical error even when
+later native reads clear the database's last error. Retaining a current failure
+must not add queries, reject stale zero-query cache hits or leave observers
+registered after completion or an exception.
+Cache-fault probes retain a closed execution-time witness: exact injected-query
+hash, completed counter, failed result and error presence at the next-query or
+final boundary. Replay rejects missing, stale, foreign or nonexecuted witnesses.
+The final database error is recorded truthfully even when later reads clear it.
+
+Check independent legacy-reference parity and forced-delete failure, getter/
+revision projection and no-write records, candidate/priming faults, retry/
+generation invalidation and stale warm database errors. Evidence lives in
+`small|large/operation-<index>/result.json`, state/plan/setup/before/after files,
+the three large probe files and cleanup readbacks. Every entered catalog,
+including a failed active catalog omitted from the final verdict, needs
+bound zero remaining counts and setup-snapshot equality.
+
+### Shared-helper consolidation coverage
+
+All 12 helper rows retain permission and lookup/type ordering, response/error
+contracts, normalization/defaults, scheduling/slashing, active-plugin inventory,
+SEO key tables and pagination. Current-source helper/namespace spies compare
+the selected main behavior with explicit bounded-window/projection/marker
+exceptions, without reconstructing historical whole source trees.
+
+`PostsExtractionTest` covers the six owners Post Access, Post Meta, Bulk Posts,
+Post Revisions, Featured Image and Content Patch, with dispatcher/bootstrap/
+registration/schema/callback/permission wiring. `PostsCharacterizationTest`
+retains block paths, nested replacement, heading boundaries, raw replacement
+bytes and metadata limits. The manifest remains 85 abilities/601 cases/313
+negatives, preserving all 589 inherited labels plus 12 additions. Units do not
+substitute actual WordPress/MCP/original-ZIP acceptance.
+
+### Private outputs, cleanup and package distinction
+
+Raw context, credentials, HTTP, SQL, wire frames, ledgers and errors stay
+private. Untrusted output and wire domains each have 128 MiB attempted-write
+limits, at most 4,096 frames and 32 MiB per file/frame. Bounded output has 4,096
+paths, 32 MiB per file and 512 MiB attempted writes. Final export sizes do not
+prove attempted-write accounting. Upload only a validated closed public
+summary, not the raw stage directories. Private file reads allocate the locked,
+identity-checked observed length instead of the 32 MiB ceiling. Existing
+reservation, custody, before/after size, exact-length and expected-content
+checks remain required. Reader regressions run under an unchanged 128 MiB cap,
+including empty and near/exact-limit files and mutation/refusal controls.
+File observations and creation readbacks share that reader; updates use their
+existing exclusive-lock handle for guarded pre/post-write checks. Conflicting
+locks refuse rather than permit an unprotected snapshot. Native file, creation
+and update allocation controls retain the same 128 MiB limit.
+`product-qa.summary.json` has exactly
+`schema`, `status`, `lane`, `uid`, `untrusted_cases` and `bounded_observations`.
+It is published only after full record replay, current live resource absence,
+owned MU/marker retirement and restoration of the 85 native registrations.
+
+Keep original nonzero exits and partial private evidence. Flags alone cannot
+clear outer retention: independently verify restoration and actual absence of
+owned posts/meta/actors/credentials/sessions/comments/files/control scopes.
+Missing or failed cleanup proof blocks restart/teardown until exact owned
+recovery. Successful cleanup does not convert a failed run to acceptance.
+
+Source and original-package evidence remain separate. Package QA reserves fresh
+`build/release-qa-<owner>/{checker,runtime}` roots, mounts original installed
+production read-only with test support, and runs Plugin Check against
+`/qa-package-pristine`. Verify unchanged production hashes, permitted empty
+mount placeholders and original ZIP SHA256 after runtime. No release is
+published by these checks.
+Prepare those placeholders before Compose starts, after strict pristine-tree
+validation: empty `tests`, `scripts` and `.github` directories, then empty
+`scripts/compatibility-baselines.php`, `scripts/compatibility-download.sh` and
+`.github/compatibility-versions.json` files. Preparation rejects links,
+collisions, unexpected entries and partial state, and rechecks production
+hashes. Failed preparation retains evidence and refuses retry. It does not
+alter the ZIP, checker extraction or read-only mount policy.
+Bound root, ancestry, captured identities and inventory checks surround every
+creation. Changes stop subsequent writes without foreign cleanup. This is
+observation-based custody on a trusted disposable host, not atomic protection
+against a swap inside a filesystem call; the corresponding regression permits
+that call's directory but requires refusal before any further creation.
