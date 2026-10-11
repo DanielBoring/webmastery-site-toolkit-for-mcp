@@ -37,7 +37,7 @@ docker() {
 	fi
 	for argument in "$@"; do
 		case "$argument" in
-			WSTM116_ARTIFACT=*|WSTM126_ARTIFACT=*) artifact="${argument#*=}" ;;
+			WSTM116_ARTIFACT=*|WSTM126_ARTIFACT=*|WSTM111_PRIVACY_ARTIFACT=*) artifact="${argument#*=}" ;;
 			WSTM126_STAGE_TOKEN=*) owner="${argument#*=}" ;;
 			WSTM116_SOURCE_SHA=*|WSTM126_SOURCE_SHA=*) source="${argument#*=}" ;;
 			WSTM116_BOUNDARY=*|WSTM126_BOUNDARY=*) boundary="${argument#*=}" ;;
@@ -45,6 +45,20 @@ docker() {
 		esac
 	done
 	case "$command" in
+		*" ps -q wordpress") printf 'owned-runtime-fixture\n' ;;
+		*" wordpress test -e /qa-artifacts/"*) test -e "$WORK/container${!#}" ;;
+		*" wordpress test -s /qa-artifacts/"*) test -s "$WORK/container${!#}" ;;
+		*"WSTM111_DISPOSABLE_SITE=1 "*"/tests/e2e/database-table-privacy-runner.php")
+			# Controlled external producer output, not live privacy-case evidence.
+			# shellcheck disable=SC2016
+			host_php -r '
+				define("WEBMASTERY_MCP_E2E_CLIENT_ONLY", true);
+				require "tests/e2e/mcp-crud-runner.php";
+				webmastery_mcp_e2e_write_summary($argv[1], array("cases" => array(
+					array("id" => "controlled-export", "passed" => true,
+						"predicates" => array("redacted" => true), "response" => array("success" => true))
+				)));
+			' "$WORK/container$artifact" ;;
 		*" down -v --remove-orphans")
 			rm -f "$WORK/private-backup" "$WORK/readonly-probe" "$WORK/retained-attachment" "$WORK/retained-file" "$WORK/retained-marker"
 			rm -f "$WORK/schema-journal" "$WORK/schema-probe" "$WORK/schema-post" "$WORK/schema-actor" "$WORK/schema-credential" "$WORK/product-journal"

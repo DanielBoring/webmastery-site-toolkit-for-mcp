@@ -14,13 +14,17 @@ run_case() {
 		cd "$WORK/$scenario"
 		mkdir e2e-artifacts
 		source "$ROOT/scripts/e2e-test.sh" all
+		# shellcheck disable=SC2030 # The next capture fixture supplies its own project and run.
 		COMPOSE_PROJECT_NAME=owned-legacy-fixture
+		# shellcheck disable=SC2030
 		WSTM_PRODUCT_RUN=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 		E2E_SOURCE_IDENTITY=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 		E2E_MANAGE_COMPOSE=1
 		E2E_KEEP_COMPOSE=0
+		# shellcheck disable=SC2030 # Private output is deliberately local to this case.
 		WSTM_QA_PRIVATE_OUTPUT="$PWD/private-output"
 		mkdir "$WSTM_QA_PRIVATE_OUTPUT"
+		# shellcheck disable=SC2030 # Each capture case selects a new scenario.
 		export SCENARIO="$scenario"
 		# All resource operations are modeled; no Docker command is executed.
 		# shellcheck disable=SC2329
@@ -123,4 +127,161 @@ for scenario in fresh-export-failure fresh-inventory-failure fresh-original-fail
 	test -f "$WORK/$scenario/build/wstm116-retention-owned-legacy-fixture"
 	[[ "$(cat "$WORK/$scenario/events")" == $'export\nexport' ]]
 done
+
+run_privacy_case() {
+	local scenario="$1" expected="$2" status=0
+	mkdir "$WORK/$scenario"
+	(
+		cd "$WORK/$scenario"
+		mkdir e2e-artifacts volume
+		source "$ROOT/scripts/e2e-test.sh" all
+		COMPOSE_PROJECT_NAME=owned-legacy-fixture
+		WSTM_PRODUCT_RUN=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+		E2E_SOURCE_IDENTITY=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+		E2E_MANAGE_COMPOSE=1
+		E2E_KEEP_COMPOSE=0
+		# shellcheck disable=SC2031 # This case replaces, rather than inherits, the previous scenario.
+		export SCENARIO="$scenario"
+		# shellcheck disable=SC2016 # PHP variables must not expand in Bash.
+		php -r '
+			define("WEBMASTERY_MCP_E2E_CLIENT_ONLY", true);
+			require getenv("ROOT") . "/tests/e2e/mcp-crud-runner.php";
+			$source = file_get_contents(getenv("ROOT") . "/tests/e2e/database-table-privacy-runner.php");
+			if (preg_match("/^function wstm111_privacy_check\b.*?^}/ms", $source, $match) !== 1) {
+				throw new RuntimeException("Actual privacy producer was not found.");
+			}
+			eval($match[0]);
+			foreach (array("native" => 2, "http" => 3) as $boundary => $count) {
+				$GLOBALS["wstm111_privacy_report"] = array("cases" => array());
+				for ($i = 0; $i < $count; $i++) {
+					wstm111_privacy_check("controlled-" . $boundary . "-" . $i,
+						array("names_redacted" => true), array("success" => true));
+				}
+				webmastery_mcp_e2e_write_summary("volume/database-table-privacy-" . $boundary . ".json",
+					$GLOBALS["wstm111_privacy_report"]);
+			}
+			webmastery_mcp_e2e_write_summary("volume/e2e-summary.json", array("passed" => true));
+		'
+		printf 'private diagnostic sentinel\n' > volume/not-in-inventory.private.json
+		# Only external container observations/reads are modeled. Capture and host export are real.
+		# shellcheck disable=SC2329
+		compose() {
+			case "$*" in
+				"ps -q wordpress")
+					[[ "$SCENARIO" == privacy-no-container || "$SCENARIO" == privacy-wrapper-no-container ]] || printf 'owned-container\n' ;;
+				"exec -T wordpress test -e /qa-artifacts/"*)
+					local name="${*: -1}"
+					name="${name##*/}"
+					if [[ "$name" == database-table-privacy-native.json && "$SCENARIO" == privacy-inventory-failure ]]; then return 79; fi
+					test -f "volume/$name" ;;
+				"exec -T wordpress test -s /qa-artifacts/"*) return 1 ;;
+				"exec -T wordpress curl "*) printf '403' ;;
+				"exec -T wordpress grep -Fxq CLI only. /tmp/wstm111-cli-response") return 0 ;;
+				"exec -T wordpress grep -Fxq CLI only. /tmp/wstm118-cli-response") return 0 ;;
+				"exec -T wordpress cp "*"error-contract-fixture.php "*)
+					printf 'installed\n' > error-fixture ;;
+				"exec -T wordpress rm -f /var/www/html/wp-content/mu-plugins/wstm-issue118-errors.php")
+					rm error-fixture
+					printf 'removed\n' > error-fixture-cleanup ;;
+				"exec -T -e WSTM118_DISPOSABLE=1 "*)
+					[[ "$SCENARIO" != privacy-wrapper-runner-failure ]] || return 74 ;;
+				"exec -T -e WSTM111_DISPOSABLE_SITE=1 "*) return 0 ;;
+				"down -v --remove-orphans") printf 'down\n' > down ;;
+				*) echo "Unexpected modeled operation: $*" >&2; return 88 ;;
+			esac
+		}
+		# shellcheck disable=SC2329
+		qa_artifact_read() {
+			local name="${*: -1}"
+			name="${name##*/}"
+			if [[ "$name" == database-table-privacy-native.json && "$SCENARIO" == privacy-read-failure ]]; then return 78; fi
+			cat "volume/$name"
+		}
+		trap cleanup_compose EXIT
+		if [[ "$SCENARIO" == privacy-wrapper-* ]]; then
+			QA_MODE=e2e
+			rm volume/database-table-privacy-native.json
+			if [[ "$SCENARIO" == privacy-wrapper-runner-failure ]]; then rm volume/database-table-privacy-http.json; fi
+			run_error_contract_qa || exit $?
+			[[ "${DATABASE_PRIVACY_ARTIFACTS[*]}" == database-table-privacy-http.json ]]
+			test ! -e error-fixture
+			test -f error-fixture-cleanup
+			case "$SCENARIO" in
+				privacy-wrapper-missing|privacy-wrapper-original-failure) rm volume/database-table-privacy-http.json ;;
+			esac
+		elif [[ "$SCENARIO" != privacy-optional ]]; then
+			if [[ "$SCENARIO" != privacy-http-only ]]; then run_database_privacy_qa native; fi
+			if [[ "$SCENARIO" != privacy-native-only ]]; then run_database_privacy_qa http; fi
+		fi
+		case "$SCENARIO" in
+			privacy-missing-native|privacy-http-only|privacy-original-failure) rm volume/database-table-privacy-native.json ;;
+			privacy-missing-http|privacy-native-only|privacy-optional) rm volume/database-table-privacy-http.json ;;
+			privacy-collision) printf 'original\n' > e2e-artifacts/database-table-privacy-native.json ;;
+		esac
+		trap cleanup_compose EXIT
+		if [[ "$SCENARIO" == privacy-original-failure || "$SCENARIO" == privacy-wrapper-original-failure ]]; then exit 73; fi
+	) > "$WORK/$scenario.log" 2>&1 || status=$?
+	[[ "$status" == "$expected" ]] || {
+		cat "$WORK/$scenario.log" >&2
+		echo "Expected $expected for $scenario, received $status" >&2
+		exit 1
+	}
+}
+
+run_privacy_case privacy-success 0
+for boundary in native http; do
+	cmp "$WORK/privacy-success/volume/database-table-privacy-$boundary.json" \
+		"$WORK/privacy-success/e2e-artifacts/database-table-privacy-$boundary.json"
+done
+# shellcheck disable=SC2016 # PHP variables must not expand in Bash.
+php -r '
+	foreach (array("native" => 2, "http" => 3) as $boundary => $count) {
+		$report = json_decode(file_get_contents($argv[1] . "/database-table-privacy-" . $boundary . ".json"), true, 512, JSON_THROW_ON_ERROR);
+		if (array_keys($report) !== array("cases") || count($report["cases"]) !== $count) {
+			throw new RuntimeException("Exported controlled report count/shape differs.");
+		}
+		foreach ($report["cases"] as $case) {
+			if (array_keys($case) !== array("id", "passed", "predicates", "response") || $case["passed"] !== true) {
+				throw new RuntimeException("Exported controlled case shape differs.");
+			}
+		}
+	}
+' "$WORK/privacy-success/e2e-artifacts"
+[[ "$(find "$WORK/privacy-success/e2e-artifacts" -type f | wc -l)" == 3 ]]
+test ! -e "$WORK/privacy-success/e2e-artifacts/not-in-inventory.private.json"
+for scenario in privacy-missing-native privacy-missing-http privacy-inventory-failure privacy-read-failure privacy-collision privacy-no-container; do
+	run_privacy_case "$scenario" 1
+	test ! -e "$WORK/$scenario/down"
+	test -f "$WORK/$scenario/build/wstm116-retention-owned-legacy-fixture"
+done
+grep -Fxq original "$WORK/privacy-collision/e2e-artifacts/database-table-privacy-native.json"
+test ! -e "$WORK/privacy-missing-native/e2e-artifacts/database-table-privacy-native.json"
+test ! -e "$WORK/privacy-missing-http/e2e-artifacts/database-table-privacy-http.json"
+test ! -s "$WORK/privacy-read-failure/e2e-artifacts/database-table-privacy-native.json"
+run_privacy_case privacy-native-only 0
+run_privacy_case privacy-http-only 0
+run_privacy_case privacy-optional 0
+run_privacy_case privacy-original-failure 73
+test ! -e "$WORK/privacy-original-failure/down"
+test -f "$WORK/privacy-original-failure/build/wstm116-retention-owned-legacy-fixture"
+test ! -e "$WORK/privacy-native-only/e2e-artifacts/database-table-privacy-http.json"
+test ! -e "$WORK/privacy-http-only/e2e-artifacts/database-table-privacy-native.json"
+test ! -e "$WORK/privacy-optional/e2e-artifacts/database-table-privacy-http.json"
+run_privacy_case privacy-wrapper-success 0
+test -f "$WORK/privacy-wrapper-success/e2e-artifacts/database-table-privacy-http.json"
+test ! -e "$WORK/privacy-wrapper-success/e2e-artifacts/database-table-privacy-native.json"
+test -f "$WORK/privacy-wrapper-success/down"
+for scenario in privacy-wrapper-missing privacy-wrapper-no-container privacy-wrapper-original-failure privacy-wrapper-runner-failure; do
+	expected=1
+	[[ "$scenario" != privacy-wrapper-original-failure ]] || expected=73
+	[[ "$scenario" != privacy-wrapper-runner-failure ]] || expected=74
+	run_privacy_case "$scenario" "$expected"
+	test ! -e "$WORK/$scenario/down"
+	test -f "$WORK/$scenario/error-fixture-cleanup"
+	test ! -e "$WORK/$scenario/error-fixture"
+	test -f "$WORK/$scenario/build/wstm116-retention-owned-legacy-fixture"
+done
+test ! -e "$WORK/privacy-wrapper-missing/e2e-artifacts/database-table-privacy-http.json"
+echo 'Actual error-contract HTTP wrapper: parent requirement retained; missing/no-container fail closed; fixture cleanup and original statuses 73/74 preserved.'
+echo 'Actual privacy producer/export: controlled native=2 HTTP=3 JSON cases; required-source/read/collision failures closed.'
 echo 'Legacy artifact capture, closed exports, failure retention and original-exit controls passed.'

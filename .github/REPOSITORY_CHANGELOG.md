@@ -6,6 +6,11 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Export the existing native and HTTP database privacy JSON reports through
+  the guarded artifact inventory so required source and package uploads receive
+  actual reports. Require evidence for attempted boundaries and test missing
+  captures, read failures and destination collisions without masking failures.
+
 - Bind HTTP-quiet installation to the owned Compose image references and their
   resolved image IDs instead of cache-specific local IDs. Clone the admitted
   WordPress image and retain image-change, readiness and isolation refusals so

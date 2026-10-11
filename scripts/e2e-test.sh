@@ -14,6 +14,7 @@ E2E_ARTIFACTS_DIR="${E2E_ARTIFACTS_DIR:-e2e-artifacts}"
 E2E_MANAGE_COMPOSE="${E2E_MANAGE_COMPOSE:-0}"
 E2E_KEEP_COMPOSE="${E2E_KEEP_COMPOSE:-0}"
 QA_MODE="${1:-all}"
+DATABASE_PRIVACY_ARTIFACTS=()
 E2E_SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck source=scripts/qa-compose.sh
@@ -53,13 +54,26 @@ capture_legacy_artifacts() {
 		metadata-batch-direct.json metadata-batch-ability.json metadata-batch-http.json metadata-batch-individual.json
 		seo-metadata-direct.json seo-metadata-ability.json seo-metadata-http.json seo-metadata-individual.json
 		trash-safety-enabled.json trash-safety-disabled.json
+		database-table-privacy-native.json database-table-privacy-http.json
 	)
 	container="$(compose ps -q wordpress)" || return $?
-	[[ -n "$container" ]] || return 0
+	if [[ -z "$container" ]]; then
+		[[ "${#DATABASE_PRIVACY_ARTIFACTS[@]}" == 0 ]] || {
+			echo "Required database privacy capture has no owned source container." >&2
+			return 1
+		}
+		return 0
+	fi
 	for name in "${summaries[@]}"; do
 		status=0
 		compose exec -T wordpress test -e "/qa-artifacts/$name" || status=$?
-		if [[ "$status" == 1 ]]; then continue; fi
+		if [[ "$status" == 1 ]]; then
+			if [[ " ${DATABASE_PRIVACY_ARTIFACTS[*]} " == *" $name "* ]]; then
+				echo "Required database privacy artifact is missing: $name" >&2
+				return 1
+			fi
+			continue
+		fi
 		[[ "$status" == 0 ]] || return "$status"
 		qa_export_artifact "/qa-artifacts/$name" "$E2E_ARTIFACTS_DIR/$name" || return $?
 	done
@@ -380,22 +394,28 @@ run_post_meta_authorization_qa() (
 	done
 )
 
-run_error_contract_qa() (
+run_error_contract_qa() {
+	# Register the selected HTTP stage in the shell that owns final capture.
+	if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then
+		DATABASE_PRIVACY_ARTIFACTS+=( database-table-privacy-http.json )
+	fi
+	(
 	local fixture="/var/www/html/wp-content/mu-plugins/wstm-issue118-errors.php"
 	local status
 	trap 'compose exec -T wordpress rm -f /var/www/html/wp-content/mu-plugins/wstm-issue118-errors.php' EXIT
-	compose exec -T wordpress cp "${CONTAINER_PLUGIN_ROOT}/tests/e2e/error-contract-fixture.php" "$fixture"
-	status="$(compose exec -T wordpress curl --silent --show-error --output /tmp/wstm118-cli-response --write-out '%{http_code}' "http://localhost/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/error-contract-runner.php")"
+	compose exec -T wordpress cp "${CONTAINER_PLUGIN_ROOT}/tests/e2e/error-contract-fixture.php" "$fixture" || exit $?
+	status="$(compose exec -T wordpress curl --silent --show-error --output /tmp/wstm118-cli-response --write-out '%{http_code}' "http://localhost/wp-content/plugins/${PLUGIN_SLUG}/tests/e2e/error-contract-runner.php")" || exit $?
 	if [ "$status" != "403" ]; then
 		echo "Error-contract runner must reject non-CLI requests (HTTP ${status})." >&2
 		exit 1
 	fi
-	compose exec -T wordpress grep -Fxq 'CLI only.' /tmp/wstm118-cli-response
-	compose exec -T -e WSTM118_DISPOSABLE=1 wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/error-contract-runner.php"
+	compose exec -T wordpress grep -Fxq 'CLI only.' /tmp/wstm118-cli-response || exit $?
+	compose exec -T -e WSTM118_DISPOSABLE=1 wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/error-contract-runner.php" || exit $?
 	if [ "$QA_MODE" = "e2e" ] || [ "$QA_MODE" = "all" ]; then
-		run_database_privacy_qa http
+		run_database_privacy_qa http || exit $?
 	fi
-)
+	)
+}
 
 run_database_privacy_qa() {
 	local boundary="$1"
@@ -413,6 +433,7 @@ run_database_privacy_qa() {
 		return 1
 	fi
 	compose exec -T wordpress grep -Fxq 'CLI only.' /tmp/wstm111-cli-response
+	DATABASE_PRIVACY_ARTIFACTS+=( "database-table-privacy-${boundary}.json" )
 	compose exec -T -e WSTM111_DISPOSABLE_SITE=1 -e WSTM111_PRIVACY_HTTP="$http" \
 		-e WSTM111_PRIVACY_ARTIFACT="/qa-artifacts/database-table-privacy-${boundary}.json" \
 		wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/database-table-privacy-runner.php"

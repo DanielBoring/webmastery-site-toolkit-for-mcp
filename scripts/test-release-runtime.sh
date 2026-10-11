@@ -146,6 +146,17 @@ for boundary in native http; do
 	http=0
 	[[ "$boundary" != http ]] || http=1
 	grep -F "WSTM111_DISPOSABLE_SITE=1 -e WSTM111_PRIVACY_HTTP=${http} -e WSTM111_PRIVACY_ARTIFACT=/qa-artifacts/database-table-privacy-${boundary}.json wordpress php /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/database-table-privacy-runner.php" "$TRACE" >/dev/null
+	cmp "$WORK/container/qa-artifacts/database-table-privacy-${boundary}.json" \
+		"e2e-artifacts/database-table-privacy-${boundary}.json"
+	# shellcheck disable=SC2016
+	host_php -r '
+		$report = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR);
+		if (array_keys($report) !== array("cases") || count($report["cases"]) !== 1 ||
+			array_keys($report["cases"][0]) !== array("id", "passed", "predicates", "response") ||
+			$report["cases"][0]["passed"] !== true) {
+			throw new RuntimeException("Controlled package privacy export count/shape differs.");
+		}
+	' "e2e-artifacts/database-table-privacy-${boundary}.json"
 done
 for boundary in direct ability http individual; do
 	for runner in metadata-batch seo-metadata; do

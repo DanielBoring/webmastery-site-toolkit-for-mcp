@@ -109,6 +109,14 @@ comes from the successful insert result, not from the after snapshot. Existing
 cache updates require native write evidence unless the true value is unchanged.
 All other option rows remain subject to strict preservation checks.
 
+Database privacy runners write their native and HTTP JSON reports to the
+private container artifact volume. The guarded host-export inventory includes
+both reports for required workflow uploads. An attempted privacy boundary
+requires its report even if the runner fails; missing or unreadable captures
+and destination collisions fail without replacing the original runner status.
+Verify the exported JSON and its case totals for source and original-ZIP runs;
+successful console totals alone do not establish that upload evidence exists.
+
 Before upload fixtures acquire their exclusive child directory, validate the
 owned WordPress root and native uploads paths, then establish missing ordinary
 uploads/date directories through the WordPress API. Recheck exact paths,
