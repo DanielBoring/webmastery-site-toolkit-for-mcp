@@ -1,6 +1,7 @@
 import importlib.util
 import os
 import pathlib
+import shutil
 import unittest
 
 
@@ -18,6 +19,33 @@ CANDIDATE_SPEC.loader.exec_module(CANDIDATE)
 
 
 class AdapterReleaseAssessmentTest(unittest.TestCase):
+    def test_each_adapter_restarts_and_waits_before_http_probe(self):
+        import re
+        import subprocess
+        import tempfile
+
+        source = (ROOT / "scripts" / "adapter-release-assessment.sh").read_text()
+        loop = re.search(r"for adapter in 0\.6\.1 0\.7\.0; do\n.*?\ndone\n", source, re.S)
+        self.assertIsNotNone(loop)
+        with tempfile.TemporaryDirectory() as directory:
+            script = (
+                'set -Eeuo pipefail\nprivate="$ASSESSMENT_TEST_PRIVATE"; candidate=""; assessment_status=0\n'
+                 'if command -v cygpath >/dev/null 2>&1; then private="$(cygpath -u "$private")"; fi\n'
+                 'download() { :; }\nqa_wp() { :; }\n'
+                 'compose() { if [[ "$1" == restart || "$1" == up ]]; then printf "%s\\n" "$*"; fi; }\n'
+                 'python() { printf "probe\\n"; }\n' + loop.group()
+            )
+            result = subprocess.run(
+                [shutil.which("bash"), "--noprofile", "--norc"], input=script.encode(), cwd=ROOT,
+                env={**os.environ, "BASH_ENV": os.devnull, "ASSESSMENT_TEST_PRIVATE": directory},
+                capture_output=True, timeout=30,
+            )
+            self.assertEqual(0, result.returncode, result.stderr.decode())
+            self.assertEqual(
+                ["restart wordpress", "up -d --wait --wait-timeout 180 wordpress", "probe"] * 2,
+                result.stdout.decode().splitlines(),
+            )
+
     @unittest.skipUnless(os.name == "posix", "Requires genuine POSIX permission semantics")
     def test_public_assets_are_readable_without_exposing_private_parent(self):
         import re

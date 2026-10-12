@@ -10,6 +10,9 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
   by nonroot Linux workers while retaining private parent-directory permissions.
   Add a genuine POSIX mode regression after the hosted historical assessment
   exposed unreadable copied WP-CLI bytes.
+- Restart and health-check the owned historical assessment's WordPress workers
+  after each Adapter replacement, avoiding mixed old/new Apache opcode caches;
+  retain a serial lifecycle regression and the failed hosted evidence.
 
 - Send PHP engine-preflight failures explicitly to stderr regardless of the
   local CLI error-display configuration. Retain fail-closed engine selection

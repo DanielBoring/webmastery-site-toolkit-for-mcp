@@ -420,6 +420,14 @@ Initial local failures are retained, not reclassified as passes:
   mode 0644 and fresh extracted production files use a process-local 0022
   umask; private parent directories retain mode 0700. A genuine POSIX regression
   checks both boundaries. This changes no package bytes or ownership guards.
+- The next hosted floor attempt
+  [38249811021](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/actions/runs/38249811021)
+  passed all 285 old-Adapter cases but returned mixed-version handler failures
+  after replacing Adapter 0.6.1 with 0.7.0. Its fatal referenced an old
+  `HttpRequestHandler::toArray()` call absent from the verified 0.7.0 ZIP.
+  The harness now restarts and health-checks only its fresh owned WordPress
+  service after each replacement; a mocked sequencing test does not substitute
+  for the required new hosted runtime result.
 
 The latest reviewed scheduled Compatibility QA run,
 [37356229529](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/actions/runs/37356229529),

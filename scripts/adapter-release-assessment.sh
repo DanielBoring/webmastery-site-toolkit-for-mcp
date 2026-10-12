@@ -117,6 +117,9 @@ for adapter in 0.6.1 0.7.0; do
 	compose cp "$private/adapter-$adapter.zip" wordpress:/var/www/html/.qa-bin/adapter.zip
 	qa_wp plugin install /var/www/html/.qa-bin/adapter.zip --force --activate
 	qa_wp plugin activate webmastery-site-toolkit-for-mcp
+	# Replacement files must not share the previous Adapter's Apache opcode cache.
+	compose restart wordpress
+	compose up -d --wait --wait-timeout 180 wordpress
 	qa_wp eval 'require "/qa-parent-support/tests/e2e/adapter-release-fixture.php";' > "$private/fixture-$adapter.json"
 	if [[ -n "$candidate" ]]; then
 		python -B scripts/adapter-candidate-assessment.py "$private/fixture-$adapter.json" \
