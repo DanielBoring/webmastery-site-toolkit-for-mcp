@@ -42,6 +42,8 @@ When asked to add, change, or release abilities, complete all applicable steps b
      - E2E workflow or manifest validation
      - `git diff --check`
    - Expect GitHub Actions to run the authoritative PR checks again after push or PR creation.
+   - Run development runtime QA where this session executes: local Docker for local app/CLI sessions, cloud containers or Actions for cloud-agent sessions. Use `scripts/qa-run.sh all` and `scripts/qa-run.sh package`; do not silently dispatch cloud QA from a local session.
+   - Keep product/package results separate from `scripts/qa-run.sh publishing`. `scripts/qa-run.sh release` preserves combined release requirements. Record blocked checks, actual engine/interpreter versions, and unverified Podman configurations; do not provision a Podman machine without user approval.
    - If PHP, Composer, Docker, or another required tool is unavailable locally, state that clearly in the final response.
 
 6. Final response

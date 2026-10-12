@@ -1,9 +1,16 @@
 # QA strategy
 
-QA starts with syntax, static analysis and small regression tests, then checks
-actual WordPress behavior, MCP transport and the original release package.
+QA checks the plugin itself: correctness, permissions, response privacy,
+WordPress compatibility, MCP interoperability, data integrity and the behavior
+of the installed release package. It starts with syntax, static analysis and
+small regression tests, then checks actual WordPress and HTTP behavior.
 Permissions, response privacy and cleanup require explicit assertions; a
 successful request alone is insufficient.
+
+WordPress.org approval and directory listing are outside the scope of product
+QA. Passing these tests does not establish either. Directory guideline review
+and publishing checks belong to the release process, with separate results
+from plugin behavior and package integrity.
 
 See the [software development lifecycle](sdlc-overview.md),
 [CI/CD strategy](ci-cd-strategy.md), [security strategy](security-strategy.md)
@@ -17,7 +24,10 @@ and [release strategy](release-strategy.md) for the related policies.
 | `2 - Unit Tests` | `composer qa:unit`, `composer test:ci-safeguards` | Genuine PHP 8.0/8.4 unit tests and separate safeguard matrices. The stable aggregate requires all applicable jobs to succeed. |
 | `3 - Ability Contract QA` | `composer qa:contract` | Actual WordPress registration and manifest execution, allowed/denied roles, response shape, persisted no-write checks and clean debug log. |
 | `4 - Full MCP E2E QA` | `composer qa:e2e` | Actual HTTP JSON-RPC authentication, sessions, discovery, CRUD, authorization and cleanup through MCP Adapter. |
-| `5 - Release Package QA` | `composer qa:release` | Original-ZIP layout/metadata/hash validation, contract and transport checks against installed production contents, and Plugin Check against a pristine extraction. |
+| `5 - Release Package QA` / `Package QA gate` | `composer qa:package` | Original-ZIP layout/metadata/hash validation and contract/transport/product checks against installed production contents; no directory checker requirement. |
+| Minimum runtime / `Minimum runtime QA gate` | `bash scripts/qa-floor.sh` | Digest-pinned WordPress 6.9 on genuine PHP 8.0.30, actual CLI/HTTP lane observations and the same source acceptance tests. |
+| WordPress.org publishing checks | `composer qa:publishing` | Plugin Check against a pristine original-ZIP extraction. Setup is not product acceptance or directory approval. |
+| Combined release verification | `composer qa:release` | Both original-ZIP product QA and publishing checks; existing publication controls remain unchanged. |
 | `6 - Compatibility QA` | `.github/workflows/compatibility-qa.yml` | Scheduled/manual upstream discovery, supported combinations, exact resolved versions and reviewed baseline promotion. |
 | Workflow lint | `.github/workflows/workflow-lint.yml` | Actionlint, ShellCheck and zizmor using the maintained pinned lint tools. |
 
@@ -37,6 +47,49 @@ caches at their fixture boundaries, after owned cleanup on teardown. Keep the
 full suite at its existing 128 MiB limit; a focused pass or a higher-memory run
 does not establish minimum-runtime compatibility. This test-fixture lifetime
 control does not change production readers or product evidence limits.
+
+Native Windows PHP cannot execute the POSIX ownership and mode assertions.
+Run those unit checks in a disposable Linux environment instead of weakening
+them or treating Windows filesystem behavior as equivalent. Some unit fixtures
+write beneath the test tree, so use an owned writable copy inside that
+environment, with the original checkout mounted read-only. Do not copy retained
+runtime evidence or use the unit copy to bypass the runtime retention guard.
+
+## Execution location
+
+Run development QA where the coding session runs. A local coding session,
+including the GitHub Copilot desktop app or CLI, should use the local disposable
+container engine. A GitHub cloud-agent session should use disposable containers
+in its cloud environment or GitHub Actions. Do not dispatch a cloud workflow
+merely to replace an available local development run.
+
+| Context | Development QA location | Independent verification |
+| --- | --- | --- |
+| Local Copilot app, CLI or editor | Local Docker through the shared launcher/wrappers. Podman API adapter is experimental and runtime-unverified. | GitHub PR checks still run on the submitted candidate. |
+| GitHub cloud agent | Containers available in the cloud execution environment; use Actions when that environment cannot run the required checks. | GitHub PR checks still run on the submitted candidate. |
+| Scheduled compatibility or release verification | GitHub Actions using the reviewed runtime and package commands. | Existing required checks and publication controls remain in force. |
+
+The location changes, not the assertions. Local and cloud runs must use the
+same manifests, runners, dependency pins and package checks. Report actual
+source identity, working-tree changes, engine/runtime versions, cases executed,
+skips and cleanup status. A local run may validate uncommitted edits; protected
+PR checks must validate the submitted commit.
+
+`scripts/qa-run.sh` preflights engine connectivity, Linux server identity and
+Compose availability, reserves fresh projects/output directories, and calls the
+same existing acceptance runners. Local wrappers explicitly select local
+execution; Actions selects cloud execution. Neither dispatches cloud workflows
+nor starts a Podman machine. Ownership and mount/port isolation are verified
+by the existing guarded lifecycle before candidate execution.
+Use Docker by default. The experimental Podman path uses Docker CLI/Compose
+against an explicit Podman Docker-compatible local API socket; native Podman
+inspection is not assumed to have Docker's JSON shape. Real Podman source,
+package, topology and cleanup verification is outstanding. Remote TCP/SSH
+endpoints and mismatched engine identities fail preflight. Selected endpoints
+are pinned during execution and bound to private project ownership state.
+If the selected environment cannot run a required check, report it as blocked
+and request an explicit execution choice rather than silently switching engines,
+hosts or weakening the tests.
 
 ## Disposable local and CI runtime
 
@@ -389,8 +442,13 @@ and both runtime jobs for runtime changes; failures, cancellations, malformed
 outputs and unexpected skips cannot pass. Explicit non-runtime detection may
 permit skipped runtime jobs.
 
-Workflow lint and `5 - Release Package QA` remain release-bound merge policy.
-The path-filtered package workflow is not a universal branch-required check.
+`Package QA gate` and `Minimum runtime QA gate` always report. They accept
+skipped producer jobs only after successful detection explicitly identifies a
+non-product change. Failed detection, malformed output, cancellation or an
+unexpected skip fails the aggregate. The package workflow no longer has
+workflow-level path filtering. These new checks are not yet activated in the
+live ruleset; activation follows merged workflow availability and successful
+PR-event verification, without weakening existing requirements.
 Only genuine final-head PR-event checks satisfy protected PR gates; local or
 manual-dispatch results are supplementary. Do not change protection to complete
 a PR. See the [recorded setup evidence](../.github/SETUP-COMPLETE.md#rollout-evidence)
@@ -404,6 +462,8 @@ Use the wrappers for fresh owned projects:
 scripts/qa-local.sh
 scripts/qa-local.sh --contract
 scripts/qa-local.sh --e2e
+scripts/qa-local.sh --contract --e2e --package
+scripts/qa-local.sh --publishing
 scripts/qa-local.sh --release
 ```
 
@@ -411,10 +471,16 @@ scripts/qa-local.sh --release
 powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1
 powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Contract
 powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -E2E
+powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Contract -E2E -Package
+powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Publishing
 powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Release
 ```
 
-`composer qa` runs local static/unit checks. Raw Docker commands require an
+`composer qa` runs local static/unit checks. `composer qa:local`,
+`composer qa:package` and `composer qa:publishing` run their respective runtime
+scopes through the shared launcher without repeating static/unit checks.
+Runtime Composer scripts disable only Composer's process timeout; CI jobs retain
+finite limits. Raw Docker commands require an
 explicit unique `COMPOSE_PROJECT_NAME`, managed Compose and fresh output.
 For example:
 
@@ -427,6 +493,10 @@ COMPOSE_PROJECT_NAME=wstm-contract-mytest E2E_MANAGE_COMPOSE=1 \
 Choose a new name for each run. Do not overwrite retained evidence or delete
 unknown build directories. Composer's timeout override permits a full local
 runtime run; GitHub jobs retain their own finite limits.
+Run actual runtime campaigns serially within one checkout. Different Compose
+projects still share candidate/package support and the checkout-wide retention
+interlock; an overlapping campaign can be refused and retained even when its
+own project is clean. Independent CI jobs have separate checkouts.
 
 Git Bash container commands retain `MSYS_NO_PATHCONV=1`; native host PHP calls
 remove it for Windows path conversion. Docker Desktop must be running.
@@ -448,6 +518,15 @@ SHA256 after runtime QA. Source-only success does not establish package behavior
 Release safeguards mock external orchestration/failure boundaries; they do not
 replace real WordPress, HTTP, benchmark or package acceptance.
 
+`composer qa:package` runs product checks alone. `composer qa:publishing`
+prepares an owned stack and runs Plugin Check alone, explicitly reporting that
+contract/HTTP product acceptance did not run. `composer qa:release` combines
+both for release verification. Report product and checker findings separately.
+Plugin Check can find defects relevant to users, but its directory-specific
+requirements are publishing checks, not evidence that plugin behavior works.
+The manual `publishing-qa.yml` workflow reports checker verdicts independently.
+The protected release workflow retains its combined command and prerequisites.
+
 ## Compatibility and release readiness
 
 The maintained compatibility campaign separates the WordPress 6.9/PHP 8.1 lane,
@@ -456,20 +535,75 @@ MySQL 8.4, floating SEO plugins and current Plugin Check. Resolve exact tested
 versions, refuse unavailable images/dependencies and propose only successful
 updates in maintainer-reviewed PRs. Do not auto-merge baseline promotions.
 
-The PHP 8.1 WordPress lane is an existing integration-coverage limitation:
-it does not prove the advertised PHP 8.0 minimum. Genuine 8.0/8.4 syntax/unit
-evidence, actual runtime observations and package results must remain distinct.
+The PHP 8.1 WordPress compatibility lane does not prove the advertised PHP 8.0
+minimum. `minimum-runtime-qa.yml` separately builds actual PHP 8.0.30 with
+WordPress 6.9 from digest-pinned bases and signed frozen Debian packages.
+This EOL stack is a disposable compatibility fixture, not a production
+recommendation. An image build alone is not runtime acceptance.
+Genuine 8.0/8.4 syntax/unit evidence, actual CLI/HTTP observations and package
+results remain distinct.
 Do not raise a support floor, fabricate an image tag or label PHP 8.1 as 8.0
 to close that gap.
 
-Before release, align all version metadata, run `composer qa` and
-`composer qa:release`, review compatibility and Plugin Check findings, confirm
-no unexpected debug-log problems, and review the
+Before a plugin release, align version metadata, run `composer qa` and the
+original-package checks, review supported-version compatibility, and confirm
+no unexpected debug-log problems. `composer qa:release` also requires Plugin
+Check; `composer qa:package` does not establish publication readiness.
+
+For a WordPress.org submission or publication, separately review Plugin Check
+findings and the
 [WordPress.org guidelines](https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/).
 Licensing, bundled assets, external services/consent, executable code, readme
 claims, default libraries, SVN/version discipline and trademarks remain
-maintainer responsibilities. Known warnings must be documented; Plugin Check
-does not replace guideline review or production approval.
+maintainer responsibilities. Known warnings must be documented. Plugin Check
+does not establish directory approval or listing, and a product-QA pass does
+not authorize publication.
+
+## Verification and rollout
+
+The shared launcher, separated scopes, genuine minimum-runtime fixture and
+stronger manifest assertions require actual source/package/HTTP runs, not only
+modeled harness controls. All eleven formerly smoke-only successes now have
+explicit response or native-state assertions; health/security counts must match
+nonempty observed buckets. Native term-state and diagnostic bucket assertions
+run once per applicable case, independently of response-value assertions.
+The contract workflow keeps its owned stack available for version and debug-log
+reporting, then performs guarded cleanup.
+
+The local WordPress 6.9/PHP 8.0.30 campaign completed its source and HTTP
+checks: all 601 manifest cases across 85 abilities and all 23 MCP CRUD cases
+passed, with successful owned cleanup. After the historical fixture corrections,
+the complete Linux PHP 8.0 unit suite passed 4,645 tests and 205,528 assertions
+at the unchanged 128 MiB limit. Static QA, focused safeguards and workflow lint
+also passed. The runtime campaign preceded those unit-fixture corrections;
+original-ZIP acceptance and a final-candidate runtime rerun remain blocked.
+These results do not establish Podman support or GitHub PR-event behavior.
+
+Adapter 0.6.1 remains the supported, pinned baseline. The attempted Adapter
+0.7.0 campaign stopped at the product proof's explicit 0.6.1 version check,
+before proof actors were created. This is a harness compatibility refusal,
+not a reproduced plugin regression or the historical HTTP 400 failure.
+Adapter 0.7.0 support is deferred; latest/combined compatibility acceptance and
+baseline promotion remain blocked. The failed run's stack and private evidence
+remain retained because its resource ledger did not establish cleanup.
+Do not clear the checkout-wide retention marker or rerun runtime/package QA
+in this checkout until a reviewed recovery proves cleanup.
+
+Historical unit-test projections use a sealed, exact eleven-case additive
+assertion transition. They reconstruct the unchanged historical manifests;
+live product runners use the stronger current manifest. Case order, typed
+inputs, roles, outcomes and all unrelated assertions remain hash-covered.
+
+Podman runtime verification remains blocked by the local disconnected engine;
+no machine is provisioned automatically. Keep that adapter experimental until
+source, original-ZIP, HTTP, private-artifact and ownership/cleanup checks pass.
+Cloud PR-event execution and new required-check activation follow workflow
+rollout. Local modeled controls and image builds do not replace that evidence.
+
+Reproduce historical upstream compatibility failures on current source before
+changing pins. Separate setup/infrastructure failures from product or transport
+regressions, and require successful reruns before baseline promotion. Keep
+scheduled discovery in GitHub Actions.
 
 ## Reading failures
 
@@ -477,6 +611,8 @@ Fix syntax/static/manifest/security-policy failures before runtime work.
 Unit failures usually indicate helper or error-contract drift. Contract
 failures concern registration, roles, response shape, persistence or debug logs;
 MCP failures concern authentication, sessions, transport, mutations and cleanup.
-Package failures include metadata, production contents and Plugin Check.
+Product package failures concern metadata, production contents and installed
+runtime behavior. Report Plugin Check findings under the separate publishing
+scope, including when combined release verification runs both checks.
 Compatibility failures need triage as supported-version regressions, upstream
 drift or workflow maintenance before changing pins or merge policy.

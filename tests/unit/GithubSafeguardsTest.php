@@ -71,7 +71,7 @@ final class GithubSafeguardsTest extends TestCase {
 		$root = dirname(__DIR__, 2);
 		$composer = json_decode(file_get_contents($root . '/composer.json'), true, 512, JSON_THROW_ON_ERROR);
 		self::assertSame(
-			array('python3 -B -m unittest discover -s tests/unit -p test_rescoped_workflow_gates.py -v', 'python3 -B -m unittest discover -s tests/unit -p test_catalog_ordering.py -v', 'bash tests/qa-compose-safety-test.sh', 'bash tests/legacy-artifact-stage-test.sh', 'bash tests/owned-bootstrap-origin-test.sh', '@test:phpstan-baseline', '@test:release-safeguards', 'bash tests/destructive-stage-test.sh', 'bash tests/input-schema-stage-test.sh', 'bash tests/compatibility-download-test.sh', 'bash tests/compatibility-dependency-policy-test.sh'),
+			array('python3 -B -m unittest discover -s tests/unit -p test_rescoped_workflow_gates.py -v', 'python3 -B -m unittest discover -s tests/unit -p test_qa_execution.py -v', 'python3 -B -m unittest discover -s tests/unit -p test_catalog_ordering.py -v', 'bash tests/qa-compose-safety-test.sh', 'bash tests/legacy-artifact-stage-test.sh', 'bash tests/owned-bootstrap-origin-test.sh', '@test:phpstan-baseline', '@test:release-safeguards', 'bash tests/destructive-stage-test.sh', 'bash tests/input-schema-stage-test.sh', 'bash tests/compatibility-download-test.sh', 'bash tests/compatibility-dependency-policy-test.sh'),
 			$composer['scripts']['test:ci-safeguards']
 		);
 		self::assertSame('php scripts/test-phpstan-baseline.php', $composer['scripts']['test:phpstan-baseline']);
@@ -221,7 +221,9 @@ final class GithubSafeguardsTest extends TestCase {
 		self::assertStringContainsString('- qa_artifacts:/qa-artifacts', $base);
 		self::assertStringNotContainsString('./e2e-artifacts', $base);
 		$workflow = file_get_contents($root . '/.github/workflows/release-package-qa.yml');
-		self::assertStringContainsString("'docker-compose.release.yml'", $workflow);
-		self::assertStringContainsString("'scripts/qa-compose.sh'", $workflow);
+		self::assertStringContainsString('bash scripts/qa-changes.sh', $workflow);
+		$detector = file_get_contents($root . '/scripts/qa-changes.sh');
+		self::assertStringContainsString('docker-compose[^/]*', $detector);
+		self::assertStringContainsString('scripts/', $detector);
 	}
 }

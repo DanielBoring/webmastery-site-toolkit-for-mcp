@@ -77,6 +77,7 @@ jobs:
       matrix: ${{ fromJSON(needs.discover-versions.outputs.matrix) }}
     env:
       COMPOSE_PROJECT_NAME: mcp-compat-${{ matrix.label }}-${{ github.run_id }}-${{ github.run_attempt }}
+      E2E_ARTIFACTS_DIR: e2e-artifacts
       MYSQL_IMAGE: ${{ matrix.mysql-image }}
       MCP_ADAPTER_ZIP: ${{ matrix.mcp-adapter-zip }}
       MCP_ADAPTER_SHA256: ${{ matrix.mcp-adapter-sha256 }}
@@ -123,7 +124,7 @@ jobs:
         env:
           E2E_MANAGE_COMPOSE: 1
           E2E_KEEP_COMPOSE: 1
-        run: bash scripts/e2e-test.sh all
+        run: bash scripts/qa-run.sh all
       - name: Record every lane outcome and runtime
         if: always()
         env:

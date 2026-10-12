@@ -1,0 +1,97 @@
+name: Minimum runtime QA
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: minimum-runtime-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      should-run: ${{ steps.filter.outputs.should-run }}
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect runtime changes
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: bash scripts/qa-changes.sh >> "$GITHUB_OUTPUT"
+
+  php80-runtime:
+    name: WordPress 6.9 / PHP 8.0 product runtime
+    needs: changes
+    if: needs.changes.outputs.should-run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      COMPOSE_PROJECT_NAME: wstm-php80-floor-${{ github.run_id }}-${{ github.run_attempt }}
+      E2E_ARTIFACTS_DIR: e2e-artifacts
+      WSTM_QA_LOCATION: cloud
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up host PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          extensions: zip
+          coverage: none
+      - name: Build and verify actual minimum runtime
+        run: bash scripts/qa-floor.sh
+      - name: Upload closed product summary
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: minimum-runtime-product-summary
+          path: e2e-artifacts/product-qa.summary.json
+          if-no-files-found: error
+          retention-days: 7
+
+  minimum-runtime-gate:
+    name: Minimum runtime QA gate
+    needs: [changes, php80-runtime]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout gate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up gate PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - name: Require applicable floor execution
+        env:
+          DETECTOR: ${{ needs.changes.result }}
+          SHOULD_RUN: ${{ needs.changes.outputs.should-run }}
+          RESULT: ${{ needs.php80-runtime.result }}
+        run: php scripts/qa-check-gate.php "$DETECTOR" "$SHOULD_RUN" "$RESULT"

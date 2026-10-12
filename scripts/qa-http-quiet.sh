@@ -12,8 +12,8 @@ qa_quiet_images() {
 	[[ ! -L "$capture.references" && "$(wc -c < "$capture.references")" -le 1026 ]] || return 1
 	mapfile -d '' -t references < "$capture.references"
 	[[ "${#references[@]}" == 2 ]] || return 1
-	wp_image="$(docker image inspect --format '{{.Id}}' "${references[0]}")" || return $?
-	db_image="$(docker image inspect --format '{{.Id}}' "${references[1]}")" || return $?
+	wp_image="$(qa_engine image inspect --format '{{.Id}}' "${references[0]}")" || return $?
+	db_image="$(qa_engine image inspect --format '{{.Id}}' "${references[1]}")" || return $?
 	[[ "$wp_image" =~ ^sha256:[a-f0-9]{64}$ && "$db_image" =~ ^sha256:[a-f0-9]{64}$ ]] || {
 		echo 'HTTP-quiet resolved image identity is malformed or ambiguous.' >&2; return 1;
 	}
@@ -37,7 +37,7 @@ qa_quiet_volume_consumers() {
 		(
 			umask 077
 			set -o noclobber
-			docker container ls -aq --no-trunc --filter "volume=${COMPOSE_PROJECT_NAME}_$suffix" > "$capture.$suffix"
+			qa_engine container ls -aq --no-trunc --filter "volume=${COMPOSE_PROJECT_NAME}_$suffix" > "$capture.$suffix"
 		) || return $?
 		[[ ! -L "$capture.$suffix" && "$(wc -c < "$capture.$suffix")" -le 130 ]] || {
 			echo 'HTTP-quiet volume consumer inventory exceeded its exact domain.' >&2; return 1;
@@ -72,7 +72,7 @@ qa_quiet_snapshot() {
 	qa_verify_resources || return $?
 	qa_quiet_images "$capture.images" verify || return $?
 	local identifiers observed=() expected_containers=("$WSTM_QUIET_WP" "$WSTM_QUIET_DB")
-	identifiers="$(docker container ls -aq --no-trunc --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}")" || return $?
+	identifiers="$(qa_engine container ls -aq --no-trunc --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}")" || return $?
 	mapfile -t observed < <(printf '%s\n' "$identifiers" | sort)
 	if [[ -n "${WSTM_QUIET_CLI:-}" ]]; then expected_containers+=("$WSTM_QUIET_CLI"); fi
 	[[ "${#observed[@]}" == "${#expected_containers[@]}" && \
@@ -83,10 +83,10 @@ qa_quiet_snapshot() {
 		umask 077
 		set -o noclobber
 		qa_quiet_volume_consumers "$capture.before" || return $?
-		docker container inspect "$WSTM_QUIET_WP" "$WSTM_QUIET_DB" > "$capture.containers" || return $?
-		docker network inspect "${COMPOSE_PROJECT_NAME}_default" > "$capture.network" || return $?
+		qa_engine container inspect "$WSTM_QUIET_WP" "$WSTM_QUIET_DB" > "$capture.containers" || return $?
+		qa_engine network inspect "${COMPOSE_PROJECT_NAME}_default" > "$capture.network" || return $?
 		if [[ "$mode" == cli || "$mode" == stopped-cli ]]; then
-			docker container inspect "$WSTM_QUIET_CLI" > "$capture.cli" || return $?
+			qa_engine container inspect "$WSTM_QUIET_CLI" > "$capture.cli" || return $?
 		fi
 		local parts=("$capture.containers" "$capture.network")
 		if [[ "$mode" == cli || "$mode" == stopped-cli ]]; then parts+=("$capture.cli"); fi
@@ -102,8 +102,8 @@ qa_quiet_snapshot() {
 		echo json_encode($records, JSON_THROW_ON_ERROR);' "${parts[@]}" > "$capture" || return $?
 		[[ "$(wc -c < "$capture")" -le 1048576 ]] || return 1
 		host_php scripts/qa-http-quiet.php "$mode" < "$capture" || return $?
-		[[ "$(docker image inspect --format '{{.Id}}' "$WSTM_QUIET_WP_REFERENCE")" == "$WSTM_QUIET_WP_IMAGE" &&
-			"$(docker image inspect --format '{{.Id}}' "$WSTM_QUIET_DB_REFERENCE")" == "$WSTM_QUIET_DB_IMAGE" ]] || {
+		[[ "$(qa_engine image inspect --format '{{.Id}}' "$WSTM_QUIET_WP_REFERENCE")" == "$WSTM_QUIET_WP_IMAGE" &&
+			"$(qa_engine image inspect --format '{{.Id}}' "$WSTM_QUIET_DB_REFERENCE")" == "$WSTM_QUIET_DB_IMAGE" ]] || {
 			echo 'HTTP-quiet image changed during snapshot.' >&2; return 1;
 		}
 		qa_quiet_volume_consumers "$capture.after"
@@ -124,7 +124,7 @@ qa_quiet_export_failure() {
 	for name in fresh-install.private.json fresh-install.before.private.json fresh-install.inserts.private.json fresh-install.after.private.json; do
 		qa_quiet_assert_cli "$WSTM_QUIET_CLI" || return $?
 		status=0
-		docker exec --user 33:33 "$WSTM_QUIET_CLI" test -e "/qa-artifacts/$name" || status=$?
+		qa_engine exec --user 33:33 "$WSTM_QUIET_CLI" test -e "/qa-artifacts/$name" || status=$?
 		if [[ "$status" == 1 ]]; then
 			[[ "$required" == 0 ]] || {
 				echo 'Complete preparation originals missing; refusing HTTP restoration.' >&2; return 1;
@@ -138,9 +138,9 @@ qa_quiet_export_failure() {
 
 qa_quiet_remove_cli() {
 	qa_quiet_assert_cli "$WSTM_QUIET_CLI" || return $?
-	docker stop --time 5 "$WSTM_QUIET_CLI" >/dev/null || return $?
+	qa_engine stop --time 5 "$WSTM_QUIET_CLI" >/dev/null || return $?
 	qa_quiet_snapshot stopped-cli || return $?
-	docker rm "$WSTM_QUIET_CLI" >/dev/null || return $?
+	qa_engine rm "$WSTM_QUIET_CLI" >/dev/null || return $?
 	unset WSTM_QUIET_CLI
 }
 
@@ -180,7 +180,7 @@ qa_quiet_install() (
 	export WORDPRESS_DB_HOST=mysql WORDPRESS_DB_USER=wp WORDPRESS_DB_NAME=wordpress
 	export WORDPRESS_DB_PASSWORD="$WSTM_QA_DB_PASSWORD"
 	export E2E_OPT_IN=1 WSTM_INITIAL_SITE_URL=http://localhost
-	WSTM_QUIET_CLI="$(docker create --pull=never --name "${COMPOSE_PROJECT_NAME}-install-cli" \
+	WSTM_QUIET_CLI="$(qa_engine create --pull=never --name "${COMPOSE_PROJECT_NAME}-install-cli" \
 		--label "io.webmastery.qa.owner=$WSTM_QA_OWNER" --label "com.docker.compose.project=$COMPOSE_PROJECT_NAME" \
 		--user 33:33 --read-only --cap-drop ALL --security-opt no-new-privileges \
 		--workdir /var/www/html --no-healthcheck \
@@ -194,17 +194,17 @@ qa_quiet_install() (
 	[[ "$WSTM_QUIET_CLI" =~ ^[a-f0-9]{64}$ ]] || return 1
 	export WSTM_QUIET_CLI
 	qa_quiet_volume_consumers "$WSTM_QUIET_DIRECTORY/created-cli-consumers" || return $?
-	docker start "$WSTM_QUIET_CLI" >/dev/null || return $?
+	qa_engine start "$WSTM_QUIET_CLI" >/dev/null || return $?
 	qa_quiet_assert_cli "$WSTM_QUIET_CLI" || return $?
 	if [[ "$verify" == --verify ]]; then
-		docker exec --user 33:33 "$WSTM_QUIET_CLI" php "$CONTAINER_PLUGIN_ROOT/tests/e2e/install-owned-wordpress.php" --verify || status=$?
+		qa_engine exec --user 33:33 "$WSTM_QUIET_CLI" php "$CONTAINER_PLUGIN_ROOT/tests/e2e/install-owned-wordpress.php" --verify || status=$?
 	else
-		printf '%s\n' "$password" | docker exec -i --user 33:33 "$WSTM_QUIET_CLI" php \
+		printf '%s\n' "$password" | qa_engine exec -i --user 33:33 "$WSTM_QUIET_CLI" php \
 			"$CONTAINER_PLUGIN_ROOT/tests/e2e/install-owned-wordpress.php" || status=$?
 		if [[ "$status" == 0 ]]; then
 			qa_quiet_assert_cli "$WSTM_QUIET_CLI" || status=$?
 			if [[ "$status" == 0 ]]; then
-				docker exec --user 33:33 "$WSTM_QUIET_CLI" php "$CONTAINER_PLUGIN_ROOT/tests/e2e/install-owned-wordpress.php" --verify || status=$?
+				qa_engine exec --user 33:33 "$WSTM_QUIET_CLI" php "$CONTAINER_PLUGIN_ROOT/tests/e2e/install-owned-wordpress.php" --verify || status=$?
 			fi
 		fi
 	fi

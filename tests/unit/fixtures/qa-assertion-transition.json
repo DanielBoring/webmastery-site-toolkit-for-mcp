@@ -1,0 +1,19 @@
+{
+    "schema": 1,
+    "case_count": 601,
+    "before_sha256": "0cbcfb7e822f85e58081630e58087390ba5af071a36d84b825a0a2b2f5eba7c9",
+    "after_sha256": "b9766cc3faf1144b7987913df8dfaaa68bcf3637c63dfbdcc36e09d1ac09b754",
+    "changes": [
+        {"index": 250, "label": "list-categories", "added_fields": ["assert_paths"], "before_sha256": "1862c3c18815c3f906b5d6798209fc6d96a8fd2ce15ab71e17a99c86c4d14ff6", "after_sha256": "f32ef98c78ec88b683c4047c957c6460a8908145ba1921e39098b096125a42db"},
+        {"index": 253, "label": "create-category", "added_fields": ["assert_values", "assert_term_state"], "before_sha256": "4fe5c107b9a4422206abc23ca7390dd7d0b15e679eb265549742b6e37286cdbf", "after_sha256": "155c0be2330c6932592d014d61aa67f3552ca6c761e93bb0b7e33739c04f9533"},
+        {"index": 257, "label": "delete-category", "added_fields": ["assert_values", "assert_term_state"], "before_sha256": "629fa9e1f8d2bf1d3ff22a53bc434ce9a20370bfc8809973aea401c411cb4bb0", "after_sha256": "540e70d08c2a23676479767affca633e11d41e7bd2c9897cf68a90d41148d825"},
+        {"index": 261, "label": "list-tags", "added_fields": ["assert_paths"], "before_sha256": "51da834a301a380fbc0471c7e8963eec559fb83342f26b0b5dc01995b06d5dcf", "after_sha256": "f2136b1dd3ccb91390708618144e8c3349503cea6884f0b73f5f269898d6d668"},
+        {"index": 264, "label": "create-tag", "added_fields": ["assert_values", "assert_term_state"], "before_sha256": "0ae351295054173f8f97f97619023eef841eaf7be4c56a4bef17e04b60b264da", "after_sha256": "e8503282369ce956e1b9307c1906c5d831f6fff5109449ae2189260f7e4fcff7"},
+        {"index": 268, "label": "delete-tag", "added_fields": ["assert_values", "assert_term_state"], "before_sha256": "7a0f73c75f621fa2f097512db55ec8ab49973fdf573baa94ad761896eef044ef", "after_sha256": "40eb77bd9eef7d59916a16787921f25da34ae9303efc5d63a94a6db187d03bc0"},
+        {"index": 300, "label": "approve-comment", "added_fields": ["assert_values"], "before_sha256": "3dc113659db903e3afafa2974764746e4273c1901bd89de864b1167b1a180c1d", "after_sha256": "146f04fb25dd6623fab40861e3515bc288e756c4f5d0227dbe7b4a8b8d6b60b3"},
+        {"index": 303, "label": "spam-comment", "added_fields": ["assert_values"], "before_sha256": "88c9770a21bfb481fc3f1284f497b2c838943672db2cdf05c877e80b5f095e53", "after_sha256": "e596a98417b873c72a6078fd9059a0cd865d9d0a0867799d41bac9b05d911a61"},
+        {"index": 395, "label": "seo-site-overview", "added_fields": ["assert_paths", "assert_values"], "before_sha256": "a8144921b62d399ba371f131a581ef3c64a175be6c024b05a45736a3f92547ab", "after_sha256": "b43f729667e591ca1e7e185e61d77d6ae0d3de7d560e09a05237074fd88f53f5"},
+        {"index": 397, "label": "site-health-check", "added_fields": ["assert_bucket_counts"], "before_sha256": "c7fb6540d5cb44bad3d9cf7d3323ae7c3d480cde94e1b7d25a04b188c7b38ca5", "after_sha256": "96d023030865e596e55aed5e77eb08d6e8614b6b1e3e81dc3b24f24e5ca30eb2"},
+        {"index": 423, "label": "security-audit", "added_fields": ["assert_bucket_counts"], "before_sha256": "6545b6320a89b303964d1f11896c7392382d80e1c46b337ff7f26e1cbfdf2d06", "after_sha256": "c1a2da3e9f21670407af0a3908b2a1678ba5d4096f0b24958e400f6384f92215"}
+    ]
+}

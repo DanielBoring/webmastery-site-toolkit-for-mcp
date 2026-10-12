@@ -21,8 +21,9 @@ final class DestructivePackageOwnershipTest extends TestCase {
 		self::assertStringContainsString( "        env:\n", $body );
 		$assignment = '          COMPOSE_PROJECT_NAME: ' . $prefix . '-${{ github.run_id }}-${{ github.run_attempt }}';
 		self::assertStringContainsString( $assignment, $body );
-		self::assertStringContainsString( 'run: bash scripts/release-qa.sh', $body );
-		self::assertLessThan( strpos( $body, 'run: bash scripts/release-qa.sh' ), strpos( $body, $assignment ) );
+		$command = 'release-package-qa.yml' === $file ? 'run: bash scripts/qa-run.sh package' : 'run: bash scripts/release-qa.sh';
+		self::assertStringContainsString( $command, $body );
+		self::assertLessThan( strpos( $body, $command ), strpos( $body, $assignment ) );
 	}
 
 	public function test_outer_workflow_teardown_cannot_bypass_retention(): void {

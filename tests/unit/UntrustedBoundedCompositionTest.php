@@ -10,6 +10,7 @@ require_once __DIR__ . '/fixtures/product-source-bindings.php';
 final class UntrustedBoundedCompositionTest extends TestCase {
 	public function test_every_new_marker_assertion_is_additive_and_the_complete_bounded_view_is_preserved(): void {
 		$manifest = json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		$manifest = QaAssertionTransition::before( $manifest );
 		$bounded = Wstm108_Bounded_Manifest_Transition::bounded( $manifest );
 		self::assertCount( 601, $manifest );
 		self::assertSame( array_column( $manifest, 'label' ), array_column( $bounded, 'label' ) );

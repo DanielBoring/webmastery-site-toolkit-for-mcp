@@ -82,6 +82,23 @@ composer qa
 
 `composer qa` runs the normal fast pre-PR checks: Static QA plus Unit Tests. See [`docs/qa-strategy.md`](docs/qa-strategy.md) for the full QA posture, including when to run Ability Contract QA, Full MCP E2E QA, Release Package QA, and Compatibility QA.
 
+Run development runtime QA where the coding session runs. Local Copilot app,
+CLI and editor sessions use local Docker; cloud-agent sessions use available
+cloud containers or Actions. `scripts/qa-run.sh` shares the assertions and
+preflights the selected engine without dispatching cloud work or provisioning
+Podman. `--engine podman --engine-host SOCKET` (PowerShell: `-Engine podman
+-EngineHost SOCKET`) selects the experimental Docker-compatible local API
+adapter. Podman source/package runtime verification is still outstanding.
+Remote TCP/SSH engines and mismatched observed servers are refused. An owned
+project cannot change its recorded engine endpoint.
+
+Product QA is separate from directory publishing checks. Use `--package` or
+`-Package` for original-ZIP plugin behavior, and `--publishing` or `-Publishing`
+for Plugin Check without product acceptance. `--release`/`-Release` retains
+both requirements. No result establishes WordPress.org approval or listing.
+`Package QA gate` and `Minimum runtime QA gate` report on every applicable PR,
+but their activation in the live branch ruleset is a separate rollout step.
+
 PHPStan runs at level 5 with a reviewed, file/message/identifier/count-scoped baseline and a PHP 8.0 analysis target. New diagnostics must be fixed rather than added to the baseline. When fixing existing debt, lower the matching count or remove the resolved entry in the same PR; unmatched entries fail full-project analysis. Run `composer phpstan` without individual-file arguments and `composer test:phpstan-baseline` to verify the ratchet. See the [baseline review and regeneration policy](docs/qa-strategy.md#phpstan-level-5-and-baseline-ratchet).
 
 Workflow and shell changes also need the dedicated workflow lint checks. These
@@ -265,6 +282,7 @@ requirements apply together:
 - [ ] Audit all registered abilities against the E2E manifest, adding allowed/denied cases and missing-path assertions where relevant.
 - [ ] Update user-facing docs, migration/QA guidance, and `CHANGELOG.md` under `## Unreleased`; put repository/CI/contributor changes in `.github/REPOSITORY_CHANGELOG.md`.
 - [ ] Run `composer phpcs`, E2E manifest validation, relevant E2E QA, and `git diff --check`; document missing tools or runtime blockers rather than claiming unrun checks passed.
+- [ ] Development runtime QA ran where the session executes; engine, genuine PHP lane, package results and any blocked checks are recorded separately from WordPress.org publishing findings.
 - [ ] Review WordPress.org guideline impacts, including privacy, external communication, licensing, packaging and unsupported security claims.
 
 For the #108 runtime probes, require `WSTM108_ALLOW_DISPOSABLE=1` and an owned
@@ -297,14 +315,20 @@ Environment-specific notes for GitHub Actions, Windows PowerShell, and Windows G
 | `composer qa:contract` | Docker Ability Contract QA against an already-running Compose stack |
 | `composer qa:e2e` | Docker Full MCP E2E QA against an already-running Compose stack |
 | `composer qa:release` | Release Package QA: original-ZIP extraction as the Docker plugin root, contract/transport QA, exact package validation, and WordPress Plugin Check on a separate pristine extraction |
+| `composer qa:local` | Shared launcher: fresh owned source contract and HTTP product runtime |
+| `composer qa:package` | Shared launcher: original-ZIP plugin QA without WordPress.org checker requirements |
+| `composer qa:publishing` | Shared launcher: pristine-package Plugin Check; no product acceptance claim |
+| `bash scripts/qa-floor.sh` | Build digest-pinned WordPress 6.9 / genuine PHP 8.0.30 and execute the same source contract/HTTP suite |
 | `E2E_MANAGE_COMPOSE=1 composer qa:contract` | Ability Contract QA with automatic Compose startup and cleanup |
 | `E2E_MANAGE_COMPOSE=1 composer qa:e2e` | Full MCP E2E QA with automatic Compose startup and cleanup |
 | `scripts/qa-local.sh --contract` | Unix/Git Bash wrapper for Composer QA plus managed Ability Contract QA |
 | `scripts/qa-local.sh --e2e` | Unix/Git Bash wrapper for Composer QA plus managed Full MCP E2E QA |
 | `scripts/qa-local.sh --release` | Unix/Git Bash wrapper for Composer QA plus Release Package QA |
+| `scripts/qa-local.sh --contract --e2e --package` | Local static/unit, source runtime and original-ZIP product QA |
 | `powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Contract` | PowerShell wrapper for Composer QA plus managed Ability Contract QA |
 | `powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -E2E` | PowerShell wrapper for Composer QA plus managed Full MCP E2E QA |
 | `powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Release` | PowerShell wrapper for Composer QA plus Release Package QA |
+| `powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -Contract -E2E -Package` | Local static/unit, source runtime and original-ZIP product QA |
 | `powershell -ExecutionPolicy Bypass -File scripts/qa-local.ps1 -PreflightOnly` | Windows prerequisite check without installing dependencies or running QA |
 | `scripts/qa-local.sh --preflight-only` | Unix/Git Bash prerequisite check without installing dependencies or running QA |
 

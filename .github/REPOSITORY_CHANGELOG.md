@@ -6,6 +6,31 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Execute native term-state and diagnostic bucket assertions independently of
+  value assertions, once per applicable manifest case. Keep the contract stack
+  alive until runtime-version and debug-log reporting, then use guarded cleanup.
+- Add a shared local/cloud runtime launcher and explicit Docker or experimental
+  Podman local-API selection, with connectivity/server checks and persistent
+  project endpoint binding. Local wrappers never dispatch cloud QA.
+- Separate original-ZIP product QA from WordPress.org publishing checks while
+  retaining combined release verification. Add always-reporting change-aware
+  package and minimum-runtime aggregates and manual publishing verification;
+  live branch-rule activation remains a separate rollout step.
+- Add a digest-pinned WordPress 6.9 / real PHP 8.0.30 fixture and contract/HTTP
+  workflow, scoped Composer runtime timeout handling, engine/gate controls and
+  stronger assertions for the eleven remaining smoke-only manifest successes.
+- Preserve frozen historical manifest guards through an exact sealed
+  assertion-only transition with mutation controls. Record successful genuine
+  PHP 8.0 source/HTTP acceptance and deferred Adapter 0.7.0 harness support;
+  retained cleanup evidence still blocks further runtime QA in this checkout.
+
+- Define QA around plugin behavior, compatibility, data integrity and installed
+  package correctness, separately from WordPress.org approval and publishing.
+  Document local-container development QA for local coding sessions, cloud
+  execution for cloud agents, and independent GitHub PR verification. Record
+  the verification policy for engine support, separate package/publishing
+  checks, genuine PHP 8.0 runtime coverage and stronger regression assertions.
+
 - Export the existing native and HTTP database privacy JSON reports through
   the guarded artifact inventory so required source and package uploads receive
   actual reports. Require evidence for attempted boundaries and test missing

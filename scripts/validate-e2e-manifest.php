@@ -137,6 +137,33 @@ foreach ( $manifest as $index => $case ) {
 	if ( array_key_exists( 'assert_values', $case ) && ! is_array( $case['assert_values'] ) ) {
 		$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_values' ) . ' must be an object.';
 	}
+	if ( array_key_exists( 'assert_bucket_counts', $case ) && ( true !== $case['assert_bucket_counts']
+		|| ! in_array( $ability, array( 'webmastery-site-toolkit-for-mcp/site-health-check', 'webmastery-site-toolkit-for-mcp/security-audit' ), true ) ) ) {
+		$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_bucket_counts' ) . ' requires a supported diagnostic ability and true.';
+	}
+	if ( array_key_exists( 'assert_term_state', $case ) ) {
+		$state = $case['assert_term_state'];
+		if ( ! is_array( $state ) || ! in_array( $state['taxonomy'] ?? null, array( 'category', 'post_tag' ), true )
+			|| array_diff( array_keys( $state ), array( 'id', 'taxonomy', 'name', 'slug', 'description', 'deleted' ) )
+			|| 'success' !== $expect
+			|| ! preg_match( '#^webmastery-site-toolkit-for-mcp/(create|update|delete)-(category|tag)$#', $ability ) ) {
+			$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_term_state' ) . ' requires a successful taxonomy case and known state fields.';
+		} else {
+			foreach ( array( 'name', 'slug', 'description' ) as $field ) {
+				if ( array_key_exists( $field, $state ) && ! is_string( $state[ $field ] ) ) {
+					$errors[] = webmastery_mcp_manifest_path( $case_number, "assert_term_state.{$field}" ) . ' must be a string.';
+				}
+			}
+			if ( array_key_exists( 'deleted', $state ) && ( true !== $state['deleted'] || ! isset( $state['id'] )
+				|| array_diff( array_keys( $state ), array( 'id', 'taxonomy', 'deleted' ) ) ) ) {
+				$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_term_state.deleted' ) . ' requires true and an explicit id.';
+			}
+			if ( array_key_exists( 'id', $state ) && ! ( is_int( $state['id'] ) && $state['id'] > 0 )
+				&& ! ( is_string( $state['id'] ) && preg_match( '/^__[a-z0-9_]+__$/', $state['id'] ) ) ) {
+				$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_term_state.id' ) . ' requires a positive id or fixture placeholder.';
+			}
+		}
+	}
 
 	foreach ( array( 'assert_unchanged', 'assert_changed' ) as $field ) {
 		if ( array_key_exists( $field, $case ) && true !== $case[ $field ] ) {
