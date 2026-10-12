@@ -373,13 +373,19 @@ bounded-read, untrusted-content, privacy and parent/taxonomy proofs.
 Each successful final project proved restoration and owned cleanup.
 
 A later authorization-wording correction changed packaged `readme.txt`.
-The resulting final ZIP was built from
+The replacement ZIP was built from
 `f662e223ce65e55a732e7b38ecd94411fe420259`, with SHA-256
 `e64f16a11594460d45f7ebdeadfc3d4c2bffb66806e24b664b21fdeb422889e2`.
 All 38 payload files match that commit's exact Git blobs; only `readme.txt`
 differs from the first versioned ZIP. The first ZIP results do not certify
-these replacement bytes. The release PR's Testing section records the repeated
-combined release results for this final archive and the exact final-head
+these replacement bytes. Both repeated combined release runs subsequently
+passed on this archive, retaining its original digest and production bytes.
+Plugin Check 2.1.0 (both pinned/current) reported zero errors and two warnings:
+the existing diagnostic SQL warning and an upgrade-notice length warning.
+Although the raw notice was 297 characters, the checker rejected its parsed
+length. The notice was shortened; this changes packaged bytes again.
+The release PR's Testing section records the new archive identity and repeated
+combined results, separately from these superseded packages and exact-head
 hosted checks. Subsequent assessment-document edits are not packaged.
 
 Release product suites use the normal 2025 protocol transport. Detailed
@@ -428,6 +434,12 @@ Initial local failures are retained, not reclassified as passes:
   The harness now restarts and health-checks only its fresh owned WordPress
   service after each replacement; a mocked sequencing test does not substitute
   for the required new hosted runtime result.
+- The restart attempt
+  [38250936431](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/actions/runs/38250936431)
+  reached healthy workers but retained a pre-restart ephemeral host port, so
+  the probe connection was refused. The binding is now resolved and checked
+  again inside each Adapter iteration after the restart; the lifecycle
+  regression exercises two distinct ports.
 
 The latest reviewed scheduled Compatibility QA run,
 [37356229529](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/actions/runs/37356229529),

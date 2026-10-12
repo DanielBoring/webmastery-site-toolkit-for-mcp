@@ -103,9 +103,6 @@ if [[ -n "$candidate" ]]; then
 	compose cp "$candidate/tests/e2e/custom-post-types-fixture.php" \
 		wordpress:/var/www/html/wp-content/mu-plugins/adapter-assessment-cpts.php
 fi
-binding="$(compose port wordpress 80)"
-[[ "$binding" =~ ^127\.0\.0\.1:([0-9]+)$ ]] || { echo "Non-loopback assessment binding refused." >&2; exit 1; }
-export WSTM_ASSESSMENT_URL="http://$binding"
 assessment_status=0
 for adapter in 0.6.1 0.7.0; do
 	case "$adapter" in
@@ -120,6 +117,9 @@ for adapter in 0.6.1 0.7.0; do
 	# Replacement files must not share the previous Adapter's Apache opcode cache.
 	compose restart wordpress
 	compose up -d --wait --wait-timeout 180 wordpress
+	binding="$(compose port wordpress 80)"
+	[[ "$binding" =~ ^127\.0\.0\.1:([0-9]+)$ ]] || { echo "Non-loopback assessment binding refused." >&2; exit 1; }
+	export WSTM_ASSESSMENT_URL="http://$binding"
 	qa_wp eval 'require "/qa-parent-support/tests/e2e/adapter-release-fixture.php";' > "$private/fixture-$adapter.json"
 	if [[ -n "$candidate" ]]; then
 		python -B scripts/adapter-candidate-assessment.py "$private/fixture-$adapter.json" \

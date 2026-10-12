@@ -32,8 +32,12 @@ class AdapterReleaseAssessmentTest(unittest.TestCase):
                 'set -Eeuo pipefail\nprivate="$ASSESSMENT_TEST_PRIVATE"; candidate=""; assessment_status=0\n'
                  'if command -v cygpath >/dev/null 2>&1; then private="$(cygpath -u "$private")"; fi\n'
                  'download() { :; }\nqa_wp() { :; }\n'
-                 'compose() { if [[ "$1" == restart || "$1" == up ]]; then printf "%s\\n" "$*"; fi; }\n'
-                 'python() { printf "probe\\n"; }\n' + loop.group()
+                 'compose() {\n'
+                 'if [[ "$1" == port ]]; then\n'
+                 'if [[ "$adapter" == 0.6.1 ]]; then printf "127.0.0.1:10061\\n"; '
+                 'else printf "127.0.0.1:10070\\n"; fi\n'
+                 'elif [[ "$1" == restart || "$1" == up ]]; then printf "%s\\n" "$*"; fi\n'
+                 '}\npython() { printf "probe %s\\n" "$WSTM_ASSESSMENT_URL"; }\n' + loop.group()
             )
             result = subprocess.run(
                 [shutil.which("bash"), "--noprofile", "--norc"], input=script.encode(), cwd=ROOT,
@@ -42,7 +46,9 @@ class AdapterReleaseAssessmentTest(unittest.TestCase):
             )
             self.assertEqual(0, result.returncode, result.stderr.decode())
             self.assertEqual(
-                ["restart wordpress", "up -d --wait --wait-timeout 180 wordpress", "probe"] * 2,
+                ["restart wordpress", "up -d --wait --wait-timeout 180 wordpress",
+                 "probe http://127.0.0.1:10061", "restart wordpress",
+                 "up -d --wait --wait-timeout 180 wordpress", "probe http://127.0.0.1:10070"],
                 result.stdout.decode().splitlines(),
             )
 

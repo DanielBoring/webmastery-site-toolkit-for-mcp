@@ -347,7 +347,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Upgrade Notice ==
 
 = 3.0.0 =
-Breaking: follow next_page through empty windows; use fields:"full" for content. Send strict types/known keys. Separate draft, metadata and publish calls. Add confirm:true; preview bulk actions with dry_run:true. Parse error code/reason. Review identifier privacy and untrusted markers in the FAQ.
+3.0 breaks client contracts. Review the FAQ before upgrading: bounded lists, summary/full output, strict inputs, separate metadata writes, destructive confirmation, canonical errors, identifier privacy and untrusted-field markers.
 
 = 2.6.0 =
 Standalone metadata, comment and taxonomy permissions are tighter. Create/update metadata, SEO aliases and separate SEO reads retain authorization gaps (see FAQ). Clients using custom role/key policies must review denials. Image upload limits and PHP 8.0 minimum are unchanged.

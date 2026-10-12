@@ -13,6 +13,9 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 - Restart and health-check the owned historical assessment's WordPress workers
   after each Adapter replacement, avoiding mixed old/new Apache opcode caches;
   retain a serial lifecycle regression and the failed hosted evidence.
+- Refresh the validated loopback binding after each assessment restart because
+  an ephemeral Docker host port can change; test distinct ports across both
+  Adapter iterations without relaxing the target guard.
 
 - Send PHP engine-preflight failures explicitly to stderr regardless of the
   local CLI error-display configuration. Retain fail-closed engine selection
