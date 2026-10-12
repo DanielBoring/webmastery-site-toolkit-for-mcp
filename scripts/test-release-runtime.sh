@@ -213,6 +213,26 @@ SOURCE_MODE=1 expect_failure 'Artifact output already exists' bash scripts/e2e-t
 [[ "$(wc -l < "$TRACE")" == "$lines" ]]
 grep -Fx 'retained-output' e2e-artifacts/retained-fixture
 
+# Scope separation must not turn publishing setup into product acceptance.
+fresh_case
+bash scripts/release-qa.sh --product > "$WORK/product-only.log" 2>&1
+grep -F 'PASS packaged-plugin QA' "$WORK/product-only.log"
+grep -F 'mcp-crud-runner.php' "$TRACE" >/dev/null
+grep -F 'mock-product:summary-published' "$TRACE" >/dev/null
+if grep -F 'plugin install plugin-check' "$TRACE"; then
+	echo "Product scope unexpectedly executed Plugin Check." >&2; exit 1
+fi
+fresh_case
+bash scripts/release-qa.sh --publishing > "$WORK/publishing-only.log" 2>&1
+grep -F 'PASS publishing checks; product contract and HTTP acceptance not run.' "$WORK/publishing-only.log"
+grep -F 'plugin install plugin-check' "$TRACE" >/dev/null
+if grep -E 'mock-product:|ability-runner.php|mcp-crud-runner.php' "$TRACE"; then
+	echo "Publishing scope unexpectedly executed product acceptance." >&2; exit 1
+fi
+test ! -e e2e-artifacts/product-qa.summary.json
+SKIP_PLUGIN_CHECK=1 expect_failure 'Offline validation is not product or publishing acceptance.' bash scripts/release-qa.sh --product
+SKIP_PLUGIN_CHECK=1 expect_failure 'Offline validation is not product or publishing acceptance.' bash scripts/release-qa.sh --publishing
+
 # The main destructive outer matrix remains unchanged semantically.
 for outer in package source; do
 	for failure in restoration attachment missing-proof ordinary combined success teardown ordinary-teardown; do

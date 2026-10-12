@@ -692,6 +692,17 @@ run_product_qa() (
 		"$CONTAINER_PLUGIN_ROOT/tests/e2e/install-owned-wordpress.php" --verify \
 		> "$directory/fresh-install-check.private.log" 2>&1 || exit $?
 	lane="$(compose exec -T wordpress php -r 'echo PHP_MAJOR_VERSION, ".", PHP_MINOR_VERSION;')" || exit $?
+	if [[ -n "${WSTM_QA_EXPECTED_PHP:-}" && "$lane" != "$WSTM_QA_EXPECTED_PHP" ]]; then
+		echo "Actual CLI PHP lane does not match the requested runtime." >&2
+		exit 1
+	fi
+	if [[ -n "${WSTM_QA_EXPECTED_WORDPRESS:-}" ]]; then
+		local wordpress_version
+		wordpress_version="$(qa_wp core version)" || exit $?
+		[[ "$wordpress_version" == "$WSTM_QA_EXPECTED_WORDPRESS" ]] || {
+			echo "Actual WordPress version does not match the requested runtime." >&2; exit 1;
+		}
+	fi
 	host_php "$E2E_SCRIPT_ROOT/product-context.php" "$kind" "$identity" "$lane" > "$directory/context.private.json" || exit $?
 	compose exec -T wordpress php -r '
 		require "/var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/product-runtime-context.php";
@@ -829,11 +840,11 @@ main() {
 	echo "================================"
 
 	case "$QA_MODE" in
-		contract|e2e|all)
+		contract|e2e|all|setup)
 			;;
 		*)
 			echo "Unknown QA mode: ${QA_MODE}" >&2
-			echo "Usage: scripts/e2e-test.sh [contract|e2e|all]" >&2
+			echo "Usage: scripts/e2e-test.sh [contract|e2e|all|setup]" >&2
 			exit 1
 			;;
 	esac
@@ -879,6 +890,10 @@ main() {
 	configure_application_passwords
 	install_plugins
 	compose exec -T wordpress rm -f /var/www/html/wp-content/debug.log
+	if [[ "$QA_MODE" == setup ]]; then
+		echo "Owned WordPress setup complete; product acceptance tests have not run."
+		return 0
+	fi
 	run_product_qa
 
 	if [ "$QA_MODE" = "contract" ] || [ "$QA_MODE" = "all" ]; then

@@ -33,12 +33,24 @@ Production PHP uses PHPCS-enforced short `[]` array literals. The
 [array syntax policy](docs/shared-helpers.md#array-syntax-and-historical-provenance)
 documents the repository preference and behavior-preserving checks.
 
-Local and hosted runtime QA use an owned disposable Docker project with
+Product QA checks plugin behavior, permissions, compatibility and the installed
+release package. WordPress.org approval or directory listing is not a QA result.
+Local coding sessions use local containers; cloud-agent sessions use their cloud
+containers or Actions. Both use `scripts/qa-run.sh`, with no automatic cloud fallback.
+Run `composer qa:local` for source runtime checks and `composer qa:package` for
+original-ZIP product checks. `composer qa:publishing` runs separate directory checks;
+`composer qa:release` retains the combined release requirements.
+
+Local and hosted runtime QA use an owned disposable container project with
 loopback HTTP, no database host port, read-only source/package mounts and
 nonroot candidate CLI/HTTP workers. The Docker engine and reviewed images are
 trusted environment prerequisites, not whole-host attestation. Raw product
 evidence stays private; only validated summaries are uploaded. See
 [QA Strategy](docs/qa-strategy.md).
+
+Docker is the default. The explicit Podman API adapter requires a connected
+Podman engine, Docker CLI/Compose and a local socket. Its runtime compatibility
+has not been verified; it is not a supported replacement yet.
 
 The current development QA baseline is **WordPress 7.1.2 with MCP Adapter
 0.6.1**. The default Docker image and compatibility metadata use that baseline;

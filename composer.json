@@ -14,9 +14,9 @@
 	},
 	"scripts": {
 		"audit:locked": "composer audit --locked",
-		"contract": "bash scripts/e2e-test.sh contract",
+		"contract": ["Composer\\Config::disableProcessTimeout", "bash scripts/e2e-test.sh contract"],
 		"diff-check": "git diff --check",
-		"e2e": "bash scripts/e2e-test.sh all",
+		"e2e": ["Composer\\Config::disableProcessTimeout", "bash scripts/e2e-test.sh all"],
 		"lint:php": "php scripts/php-lint.php",
 		"lint:workflows": "php scripts/workflow-lint.php",
 		"phpcs": "php vendor/squizlabs/php_codesniffer/bin/phpcs --standard=phpcs.xml.dist",
@@ -27,8 +27,11 @@
 			"@qa:unit"
 		],
 		"qa:contract": "@contract",
-		"qa:e2e": "bash scripts/e2e-test.sh e2e",
-		"qa:release": "bash scripts/release-qa.sh",
+		"qa:e2e": ["Composer\\Config::disableProcessTimeout", "bash scripts/e2e-test.sh e2e"],
+		"qa:local": ["Composer\\Config::disableProcessTimeout", "bash scripts/qa-run.sh all"],
+		"qa:package": ["Composer\\Config::disableProcessTimeout", "bash scripts/qa-run.sh package"],
+		"qa:publishing": ["Composer\\Config::disableProcessTimeout", "bash scripts/qa-run.sh publishing"],
+		"qa:release": ["Composer\\Config::disableProcessTimeout", "bash scripts/release-qa.sh"],
 		"qa:static": [
 			"@lint:php",
 			"@phpcs",
@@ -45,6 +48,7 @@
 		],
 		"test:ci-safeguards": [
 			"python3 -B -m unittest discover -s tests/unit -p test_rescoped_workflow_gates.py -v",
+			"python3 -B -m unittest discover -s tests/unit -p test_qa_execution.py -v",
 			"python3 -B -m unittest discover -s tests/unit -p test_catalog_ordering.py -v",
 			"bash tests/qa-compose-safety-test.sh",
 			"bash tests/legacy-artifact-stage-test.sh",

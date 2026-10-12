@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/qa-assertion-transition.php';
+
 final class Wstm108_Bounded_Manifest_Transition {
 	private const SEAL = 'f8c66be7aae8b3831b233b24c7f37dc8ed2bdaf9797712b7db826349bff66cd7';
 
@@ -39,6 +41,7 @@ final class Wstm108_Bounded_Manifest_Transition {
 		if ( self::fingerprint( $manifest ) === $ledger->bounded_sha256 ) {
 			return $manifest;
 		}
+		$manifest = QaAssertionTransition::before( $manifest );
 		\PHPUnit\Framework\Assert::assertCount( 601, $manifest, 'Bounded-marker exact case cardinality.' );
 		\PHPUnit\Framework\Assert::assertSame( $ledger->current_sha256, self::fingerprint( $manifest ), 'Bounded-marker complete typed manifest drift.' );
 		$cases = self::indexed( $manifest, $ledger );
@@ -53,6 +56,11 @@ final class Wstm108_Bounded_Manifest_Transition {
 	/** Reconstruct the exact earlier marker oracle, never a live request/response. */
 	public static function historical( array $manifest ): array {
 		$ledger = self::ledger();
+		$assertions = QaAssertionTransition::ledger();
+		if ( ! in_array( self::fingerprint( $manifest ), array( $assertions->before_sha256, $assertions->after_sha256 ), true ) ) {
+			throw new RuntimeException( 'Bounded-marker complete typed manifest drift.' );
+		}
+		$manifest = QaAssertionTransition::before( $manifest );
 		$cases = self::indexed( $manifest, $ledger );
 		self::reverse( $cases, $ledger->changes );
 		foreach ( $ledger->additions as $addition ) {

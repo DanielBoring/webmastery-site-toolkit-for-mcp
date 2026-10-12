@@ -68,7 +68,11 @@ composer() {
 php() { printf '0123456789abcdef'; }
 git() { return 0; }
 docker() { return 0; }
-bash() { printf 'mock-child:%s:%s\n' "$*" "${COMPOSER_PROCESS_TIMEOUT-unset}"; }
+bash() {
+    local kind=child
+    if [[ "${2:-}" == preflight ]]; then kind=preflight; fi
+    printf 'mock-%s:%s:%s\n' "$kind" "$*" "${COMPOSER_PROCESS_TIMEOUT-unset}"
+}
 source scripts/qa-local.sh
 printf 'mock-restored:%s\n' "${COMPOSER_PROCESS_TIMEOUT-unset}"
 """
@@ -98,6 +102,7 @@ printf 'mock-restored:%s\n' "${COMPOSER_PROCESS_TIMEOUT-unset}"
                 if mode == "preflight":
                     self.assertNotIn("mock-composer:", result.stdout)
                     self.assertNotIn("mock-child:", result.stdout)
+                    self.assertEqual(1, result.stdout.count("mock-preflight:"))
                     continue
                 self.assertIn("mock-composer:qa:0\n", result.stdout)
                 expected = prior if prior is not None else "unset"
@@ -130,7 +135,8 @@ function php { $global:LASTEXITCODE = 0 }
 function git { $global:LASTEXITCODE = 0 }
 function docker { $global:LASTEXITCODE = 0 }
 function bash {
-    $global:QAObserved.Add(@{command='child'; timeout=$env:COMPOSER_PROCESS_TIMEOUT})
+    $kind = if ($args[1] -eq 'preflight') { 'preflight' } else { 'child' }
+    $global:QAObserved.Add(@{command=$kind; timeout=$env:COMPOSER_PROCESS_TIMEOUT})
     $global:LASTEXITCODE = 0
 }
 $prior = [Environment]::GetEnvironmentVariable('COMPOSER_PROCESS_TIMEOUT', 'Process')
@@ -423,7 +429,7 @@ refuse compose exec -T wordpress wp --allow-root core version
         for name, mode in (("ability-contract-qa", "contract"),
                            ("full-mcp-e2e-qa", "e2e")):
             self.assertIn("if: needs.changes.outputs.should-run == 'true'", docker[name])
-            self.assertIn("run: bash scripts/e2e-test.sh " + mode, docker[name])
+            self.assertIn("run: bash scripts/qa-run.sh " + mode, docker[name])
             self.assertIn("run: php scripts/docker-qa-summary.php", docker[name])
             self.assertIn("run: bash scripts/destructive-retention.sh cleanup", docker[name])
             self.assertIn("shivammathur/setup-php@", docker[name])
@@ -439,7 +445,7 @@ refuse compose exec -T wordpress wp --allow-root core version
         composer = json.loads((ROOT / "composer.json").read_text(encoding="utf-8"))
         for command in composer["scripts"]["test:release-safeguards"]:
             self.assertIn(command, package)
-        self.assertIn("run: bash scripts/release-qa.sh", package)
+        self.assertIn("run: bash scripts/qa-run.sh package", package)
         self.assertIn("php-version: '8.2'", package)
         self.assertNotIn("continue-on-error:", package)
         for text in (source("e2e-qa.yml"), source("compatibility-qa.yml"),

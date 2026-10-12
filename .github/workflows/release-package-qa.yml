@@ -4,31 +4,6 @@ on:
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - '.github/compatibility-versions.json'
-      - '.github/workflows/release.yml'
-      - '.github/workflows/release-package-qa.yml'
-      - 'docker-compose.yml'
-      - 'docker-compose.release.yml'
-      - 'scripts/qa-compose.sh'
-      - 'scripts/e2e-test.sh'
-      - 'scripts/build-release.sh'
-      - 'scripts/release-qa.sh'
-      - 'scripts/validate-release-package.php'
-      - 'scripts/create-release-zip.php'
-      - 'scripts/release-*.php'
-      - 'scripts/release-*.sh'
-      - 'scripts/test-release-*'
-      - 'scripts/compatibility-baselines.php'
-      - 'composer.json'
-      - 'composer.lock'
-      - '.wordpress-org/**'
-      - 'tests/e2e/**'
-      - 'webmastery-site-toolkit-for-mcp.php'
-      - 'includes/**'
-      - 'readme.txt'
-      - 'CHANGELOG.md'
-      - 'LICENSE'
 
 permissions: {}
 
@@ -37,8 +12,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      should-run: ${{ steps.filter.outputs.should-run }}
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect product package changes
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: bash scripts/qa-changes.sh >> "$GITHUB_OUTPUT"
+
   release-package-qa:
     name: 5 - Release Package QA
+    needs: changes
+    if: needs.changes.outputs.should-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 55
     permissions:
@@ -71,7 +69,8 @@ jobs:
       - name: Run Release Package QA
         env:
           COMPOSE_PROJECT_NAME: wstm-package-qa-${{ github.run_id }}-${{ github.run_attempt }}
-        run: bash scripts/release-qa.sh
+          E2E_ARTIFACTS_DIR: e2e-artifacts
+        run: bash scripts/qa-run.sh package
 
       - name: Upload destructive safety package evidence
         if: ${{ always() }}
@@ -139,3 +138,28 @@ jobs:
             e2e-artifacts/database-table-privacy-http.json
           if-no-files-found: error
           retention-days: 7
+
+  package-gate:
+    name: Package QA gate
+    needs: [changes, release-package-qa]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout gate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up gate PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - name: Require successful detection and applicable package QA
+        env:
+          DETECTOR: ${{ needs.changes.result }}
+          SHOULD_RUN: ${{ needs.changes.outputs.should-run }}
+          RESULT: ${{ needs.release-package-qa.result }}
+        run: php scripts/qa-check-gate.php "$DETECTOR" "$SHOULD_RUN" "$RESULT"

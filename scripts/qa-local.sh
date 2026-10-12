@@ -5,12 +5,14 @@ set -Eeuo pipefail
 RUN_E2E=0
 RUN_CONTRACT=0
 RUN_RELEASE=0
+RUN_PACKAGE=0
+RUN_PUBLISHING=0
 KEEP_COMPOSE=0
 PREFLIGHT_ONLY=0
 
 usage() {
 	cat <<'USAGE'
-Usage: scripts/qa-local.sh [--contract] [--e2e] [--release] [--keep-compose] [--preflight-only]
+Usage: scripts/qa-local.sh [--contract] [--e2e] [--package] [--publishing] [--release] [--engine docker|podman] [--engine-host SOCKET] [--keep-compose] [--preflight-only]
 
 Runs local preflight QA:
   - composer install --no-interaction --prefer-dist --no-progress
@@ -23,6 +25,10 @@ Options:
   --contract        run managed Docker Ability Contract QA
   --e2e             run managed Docker Full MCP E2E QA
   --release         run Release Package QA
+  --package         run packaged-plugin QA without directory checks
+  --publishing      run directory checks without claiming product acceptance
+  --engine          docker (default) or podman through its local API socket
+  --engine-host     explicit local Unix socket or Windows named pipe
   --preflight-only  check required commands and exit without running QA
 USAGE
 }
@@ -37,6 +43,13 @@ while [ "$#" -gt 0 ]; do
 			;;
 		--release)
 			RUN_RELEASE=1
+			;;
+		--package) RUN_PACKAGE=1 ;;
+		--publishing) RUN_PUBLISHING=1 ;;
+		--engine|--engine-host)
+			[[ "$#" -ge 2 && -n "$2" ]] || { echo "$1 requires a value." >&2; exit 78; }
+			if [[ "$1" == --engine ]]; then export WSTM_QA_ENGINE="$2"; else export WSTM_QA_ENGINE_HOST="$2"; fi
+			shift
 			;;
 		--keep-compose)
 			KEEP_COMPOSE=1
@@ -98,10 +111,12 @@ run_step() {
 require_command php
 require_command composer
 require_command git
+export WSTM_QA_LOCATION=local
 
-if [ "$RUN_CONTRACT" = "1" ] || [ "$RUN_E2E" = "1" ] || [ "$RUN_RELEASE" = "1" ]; then
+if [[ "$RUN_CONTRACT$RUN_E2E$RUN_RELEASE$RUN_PACKAGE$RUN_PUBLISHING" != 00000 ]]; then
 	require_command docker
 	require_command bash
+	run_step bash scripts/qa-run.sh preflight
 fi
 
 if [ "$PREFLIGHT_ONLY" = "1" ]; then
@@ -114,9 +129,8 @@ if [[ ! -f vendor/autoload.php ]]; then
 fi
 COMPOSER_PROCESS_TIMEOUT=0 run_step composer qa
 
-if [[ "$RUN_CONTRACT" == 1 || "$RUN_E2E" == 1 || "$RUN_RELEASE" == 1 ]]; then
+if [[ "$RUN_CONTRACT$RUN_E2E$RUN_RELEASE$RUN_PACKAGE$RUN_PUBLISHING" != 00000 ]]; then
 	export MSYS_NO_PATHCONV="${MSYS_NO_PATHCONV:-1}"
-	docker info --format '{{.ServerVersion}}' >/dev/null
 	project_token="$(php -r 'echo bin2hex(random_bytes(8));')"
 	[[ "$project_token" =~ ^[a-f0-9]{16}$ ]] || exit 1
 	local_project="wstm-local-${project_token}"
@@ -129,14 +143,23 @@ if [[ "$RUN_CONTRACT" == 1 || "$RUN_E2E" == 1 ]]; then
 	export COMPOSE_PROJECT_NAME="${local_project}-source"
 	export E2E_ARTIFACTS_DIR="e2e-artifacts-${COMPOSE_PROJECT_NAME}"
 	export E2E_MANAGE_COMPOSE=1 E2E_KEEP_COMPOSE="$KEEP_COMPOSE"
-	run_step bash scripts/e2e-test.sh "$mode"
+	run_step bash scripts/qa-run.sh "$mode"
 fi
 
 if [ "$RUN_RELEASE" = "1" ]; then
 	unset WSTM_QA_OWNER
-	export COMPOSE_PROJECT_NAME="${local_project}-package"
+	export COMPOSE_PROJECT_NAME="${local_project}-release"
 	export E2E_ARTIFACTS_DIR="e2e-artifacts-${COMPOSE_PROJECT_NAME}"
-	run_step bash scripts/release-qa.sh
+	run_step bash scripts/qa-run.sh release
 fi
+for selection in package publishing; do
+	if [[ ( "$selection" == package && "$RUN_PACKAGE" == 1 ) ||
+		( "$selection" == publishing && "$RUN_PUBLISHING" == 1 ) ]]; then
+		unset WSTM_QA_OWNER
+		export COMPOSE_PROJECT_NAME="${local_project}-${selection}"
+		export E2E_ARTIFACTS_DIR="e2e-artifacts-${COMPOSE_PROJECT_NAME}"
+		run_step bash scripts/qa-run.sh "$selection"
+	fi
+done
 
 echo "Local QA completed successfully."

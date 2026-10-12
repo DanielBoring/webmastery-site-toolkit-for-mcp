@@ -5697,7 +5697,8 @@
             "search": "MCP E2E",
             "per_page": 10
         },
-        "expect": "success"
+        "expect": "success",
+        "assert_paths": ["data.0.id", "data.0.name", "data.0.slug", "data.0.count", "data.0.parent"]
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/get-category",
@@ -5733,7 +5734,14 @@
             "slug": "mcp-e2e-created-category",
             "description": "Created by E2E manifest."
         },
-        "expect": "success"
+        "expect": "success",
+        "assert_values": {"data.name": "MCP E2E Created Category", "data.slug": "mcp-e2e-created-category"},
+        "assert_term_state": {
+            "taxonomy": "category",
+            "name": "MCP E2E Created Category",
+            "slug": "mcp-e2e-created-category",
+            "description": "Created by E2E manifest."
+        }
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/create-category",
@@ -5788,7 +5796,9 @@
             "category_id": "__delete_category_id__",
             "confirm": true
         },
-        "expect": "success"
+        "expect": "success",
+        "assert_values": {"data.id": "__delete_category_id__", "data.deleted": true},
+        "assert_term_state": {"id": "__delete_category_id__", "taxonomy": "category", "deleted": true}
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/delete-category",
@@ -5837,7 +5847,8 @@
             "search": "mcp-e2e",
             "per_page": 10
         },
-        "expect": "success"
+        "expect": "success",
+        "assert_paths": ["data.0.id", "data.0.name", "data.0.slug", "data.0.count", "data.0.parent"]
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/get-tag",
@@ -5873,7 +5884,14 @@
             "slug": "mcp-e2e-created-tag",
             "description": "Created by E2E manifest."
         },
-        "expect": "success"
+        "expect": "success",
+        "assert_values": {"data.name": "mcp-e2e-created-tag", "data.slug": "mcp-e2e-created-tag"},
+        "assert_term_state": {
+            "taxonomy": "post_tag",
+            "name": "mcp-e2e-created-tag",
+            "slug": "mcp-e2e-created-tag",
+            "description": "Created by E2E manifest."
+        }
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/create-tag",
@@ -5926,7 +5944,9 @@
             "tag_id": "__delete_tag_id__",
             "confirm": true
         },
-        "expect": "success"
+        "expect": "success",
+        "assert_values": {"data.id": "__delete_tag_id__", "data.deleted": true},
+        "assert_term_state": {"id": "__delete_tag_id__", "taxonomy": "post_tag", "deleted": true}
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/delete-tag",
@@ -6453,7 +6473,8 @@
         "input": {
             "comment_id": "__comment_id__"
         },
-        "expect": "success"
+        "expect": "success",
+        "assert_values": {"data.id": "__comment_id__", "data.status": "approved"}
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/trash-comment",
@@ -6487,7 +6508,8 @@
         "input": {
             "comment_id": "__spam_comment_id__"
         },
-        "expect": "success"
+        "expect": "success",
+        "assert_values": {"data.id": "__spam_comment_id__", "data.status": "spam"}
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/update-comment",
@@ -8219,7 +8241,14 @@
         "label": "seo-site-overview",
         "role": "admin",
         "input": null,
-        "expect": "success"
+        "expect": "success",
+        "assert_paths": ["data.sitemap.url", "data.sitemap.accessible", "data.robots_txt.url", "data.providers", "data.total_published"],
+        "assert_values": {
+            "data.observation_scope.mode": "sample",
+            "data.observation_scope.post_limit": 100,
+            "data.observation_scope.ordering": "ID ASC",
+            "data.observation_scope.counts_are_sitewide": false
+        }
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/seo-site-overview",
@@ -8236,7 +8265,8 @@
         "label": "site-health-check",
         "role": "admin",
         "input": null,
-        "expect": "success"
+        "expect": "success",
+        "assert_bucket_counts": true
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/site-health-check",
@@ -8757,7 +8787,8 @@
         "label": "security-audit",
         "role": "admin",
         "input": null,
-        "expect": "success"
+        "expect": "success",
+        "assert_bucket_counts": true
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/security-audit",
