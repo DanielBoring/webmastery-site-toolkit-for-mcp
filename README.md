@@ -72,7 +72,8 @@ do not promote the development QA baseline or certify the whole 3.0 release.
 bounded pagination and summary defaults, strict inputs, separate metadata writes,
 destructive confirmation/previews, canonical errors, database identifier privacy,
 and record-relative untrusted-field markers change client contracts.
-WordPress 6.9 / PHP 8.0 minimums and capability requirements remain unchanged.
+WordPress 6.9 / PHP 8.0 minimums remain unchanged. Metadata/SEO reads now
+enforce effective object/key authorization; migration never grants capabilities.
 Error normalization alone preserves successful payloads; the separately
 documented list, metadata and marker changes do not.
 
