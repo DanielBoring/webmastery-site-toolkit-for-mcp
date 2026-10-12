@@ -1104,13 +1104,14 @@ foreach ( $manifest as $case ) {
 				$passed = false;
 				break;
 			}
-			if ( $passed && isset( $case['assert_term_state'] ) ) {
-				$passed = webmastery_mcp_qa_term_state( $case['assert_term_state'], $result );
-			}
-			if ( $passed && isset( $case['assert_bucket_counts'] ) ) {
-				$passed = webmastery_mcp_qa_bucket_counts( $result, $case['ability'] );
-			}
 		}
+	}
+
+	if ( $passed && isset( $case['assert_term_state'] ) ) {
+		$passed = webmastery_mcp_qa_term_state( $case['assert_term_state'], $result );
+	}
+	if ( $passed && isset( $case['assert_bucket_counts'] ) ) {
+		$passed = webmastery_mcp_qa_bucket_counts( $result, $case['ability'] );
 	}
 
 	if ( $passed && isset( $case['assert_diagnostic_findings'] ) ) {

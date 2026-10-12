@@ -6,6 +6,9 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Execute native term-state and diagnostic bucket assertions independently of
+  value assertions, once per applicable manifest case. Keep the contract stack
+  alive until runtime-version and debug-log reporting, then use guarded cleanup.
 - Add a shared local/cloud runtime launcher and explicit Docker or experimental
   Podman local-API selection, with connectivity/server checks and persistent
   project endpoint binding. Local wrappers never dispatch cloud QA.

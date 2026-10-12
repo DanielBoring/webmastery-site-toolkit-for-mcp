@@ -80,6 +80,7 @@ jobs:
     env:
       COMPOSE_PROJECT_NAME: wstm-contract-${{ github.run_id }}-${{ github.run_attempt }}
       E2E_ARTIFACTS_DIR: e2e-artifacts
+      E2E_KEEP_COMPOSE: 1
       WORDPRESS_PORT: 0
     permissions:
       contents: read

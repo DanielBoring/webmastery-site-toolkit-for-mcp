@@ -8,6 +8,8 @@ import subprocess
 import tempfile
 import unittest
 
+from test_rescoped_workflow_gates import jobs
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -207,6 +209,72 @@ echo "Term persistence and diagnostic mutation controls passed.\n";
                 )
                 self.assertNotEqual(0, result.returncode)
                 self.assertIn(f"assert_term_state.{field}".encode(), result.stderr)
+
+    def test_actual_runner_executes_diagnostic_and_term_oracles_independently_once(self):
+        source = (ROOT / "tests" / "e2e" / "ability-runner.php").read_text()
+        start = source.index("\tif ( $passed && ! empty( $case['assert_values'] ) ) {")
+        end = source.index("\tif ( $passed && isset( $case['assert_diagnostic_findings'] ) ) {", start)
+        body = source[start:end]
+        script = r"""<?php
+class WP_Term { public $taxonomy = 'category'; public $name = 'Stored category'; }
+$reads = 0;
+function get_term($id, $taxonomy) {
+    ++$GLOBALS['reads'];
+    return $id === 12 && $taxonomy === 'category' ? new WP_Term() : null;
+}
+function e2e_get_path_value($result, $path, &$exists) { $exists = true; return 12; }
+require 'tests/e2e/qa-assertions.php';
+function verdict($case, $result, $initial = true) {
+    $passed = $initial;
+""" + body + r"""
+    return $passed;
+}
+foreach (['site-health-check', 'security-audit'] as $slug) {
+    $case = ['ability' => 'webmastery-site-toolkit-for-mcp/' . $slug, 'assert_bucket_counts' => true];
+    $keys = $slug === 'site-health-check' ? ['critical', 'recommended', 'good'] : ['fail', 'warn', 'pass'];
+    $buckets = array_fill_keys($keys, []);
+    $buckets[$keys[2]] = [[$slug === 'site-health-check' ? 'test' : 'check' => 'observed', 'label' => 'Observed']];
+    $summary = array_combine($keys, [0, 0, 1]);
+    $data = $slug === 'site-health-check' ? ['summary' => $summary, 'results' => $buckets] : ['summary' => $summary] + $buckets;
+    if (!verdict($case, ['data' => $data])) { exit(1); }
+    if (verdict($case, ['data' => []])) { exit(2); }
+    $bad = $data; $bad['summary'][$keys[2]] = 2;
+    if (verdict($case, ['data' => $bad])) { exit(3); }
+    $bad['summary'][$keys[2]] = '1';
+    if (verdict($case, ['data' => $bad])) { exit(4); }
+    if (verdict($case, ['data' => $data], false)) { exit(5); }
+}
+$case = ['assert_term_state' => ['taxonomy' => 'category', 'name' => 'Stored category']];
+if (!verdict($case, ['data' => ['id' => 12]]) || $reads !== 1) { exit(6); }
+$case['assert_values'] = ['data.id' => 12, 'data.other' => 12];
+$reads = 0;
+if (!verdict($case, ['data' => ['id' => 12]]) || $reads !== 1) { exit(7); }
+$case['assert_term_state']['name'] = 'Wrong category';
+if (verdict($case, ['data' => ['id' => 12]])) { exit(8); }
+$reads = 0;
+$case['assert_values']['data.id'] = 13;
+if (verdict($case, ['data' => ['id' => 12]]) || $reads !== 0) { exit(9); }
+echo "Actual runner independent oracle controls passed.\n";
+"""
+        result = subprocess.run(
+            ["php"], input=script.encode(), cwd=ROOT, capture_output=True, timeout=30, check=False,
+        )
+        self.assertEqual(0, result.returncode, result.stdout.decode() + result.stderr.decode())
+        mutant = script.replace(body, "if ( ! empty( $case['assert_values'] ) ) {\n" + body + "}\n", 1)
+        rejected = subprocess.run(
+            ["php"], input=mutant.encode(), cwd=ROOT, capture_output=True, timeout=30, check=False,
+        )
+        self.assertEqual(2, rejected.returncode, "Value-gated diagnostic assertions must fail the executable regression.")
+
+    def test_contract_workflow_preserves_stack_until_version_and_debug_reporting(self):
+        contract = jobs((ROOT / ".github" / "workflows" / "e2e-qa.yml").read_text())["ability-contract-qa"]
+        environment = contract.split("    steps:", 1)[0]
+        self.assertIn("      E2E_KEEP_COMPOSE: 1", environment)
+        ordered = ["Run Ability Contract QA", "Collect tested versions and contract summary",
+                   "Check WordPress debug log for errors", "Clean up"]
+        positions = [contract.index(f"      - name: {name}") for name in ordered]
+        self.assertEqual(sorted(positions), positions)
+        self.assertIn("run: bash scripts/destructive-retention.sh cleanup", contract)
 
     def test_change_detection_refuses_unknown_events_and_git_failures(self):
         body = r"""

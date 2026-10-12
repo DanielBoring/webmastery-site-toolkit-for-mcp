@@ -565,7 +565,10 @@ The shared launcher, separated scopes, genuine minimum-runtime fixture and
 stronger manifest assertions require actual source/package/HTTP runs, not only
 modeled harness controls. All eleven formerly smoke-only successes now have
 explicit response or native-state assertions; health/security counts must match
-nonempty observed buckets.
+nonempty observed buckets. Native term-state and diagnostic bucket assertions
+run once per applicable case, independently of response-value assertions.
+The contract workflow keeps its owned stack available for version and debug-log
+reporting, then performs guarded cleanup.
 
 The local WordPress 6.9/PHP 8.0.30 campaign completed its source and HTTP
 checks: all 601 manifest cases across 85 abilities and all 23 MCP CRUD cases
