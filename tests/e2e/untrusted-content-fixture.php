@@ -181,7 +181,7 @@ final class Wstm108_Transport {
 		if ( 'notifications/initialized' !== $method ) {
 			$body['id'] = ++$this->sequence;
 		}
-		$headers = array_merge( array( 'Content-Type' => 'application/json', 'Authorization' => $this->authorization, 'X-WSTM108-Proof' => '1' ), $this->probe_headers );
+		$headers = array_merge( array( 'Content-Type' => 'application/json', 'MCP-Protocol-Version' => '2025-11-25', 'Authorization' => $this->authorization, 'X-WSTM108-Proof' => '1' ), $this->probe_headers );
 		if ( '' !== $this->session ) {
 			$headers['Mcp-Session-Id'] = $this->session;
 		}
@@ -226,7 +226,7 @@ final class Wstm108_Transport {
 			return;
 		}
 		try {
-			$response = wp_remote_request( $this->url, array( 'method' => 'DELETE', 'timeout' => 30, 'redirection' => 0, 'headers' => array( 'Authorization' => $this->authorization, 'Mcp-Session-Id' => $this->session ) ) );
+			$response = wp_remote_request( $this->url, array( 'method' => 'DELETE', 'timeout' => 30, 'redirection' => 0, 'headers' => array( 'Authorization' => $this->authorization, 'Mcp-Session-Id' => $this->session, 'MCP-Protocol-Version' => '2025-11-25' ) ) );
 		} catch ( Throwable $error ) {
 			$this->evidence->append( array( 'boundary' => $this->label, 'method' => 'DELETE', 'status' => 0, 'body' => '', 'transport_error' => $error->getMessage() ) );
 			throw $error;

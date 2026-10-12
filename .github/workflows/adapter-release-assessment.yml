@@ -1,0 +1,44 @@
+name: Released plugin Adapter assessment
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/adapter-release-assessment.yml'
+      - 'scripts/adapter-release-assessment.*'
+      - 'scripts/adapter-candidate-assessment.py'
+      - 'tests/e2e/adapter-release-*'
+      - 'tests/unit/test_adapter_release_assessment.py'
+
+permissions:
+  contents: read
+
+jobs:
+  released-adapter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: pinned
+            image: wordpress:7.1.2-php8.2-apache
+          - label: wordpress-floor
+            image: wordpress:6.9-php8.1-apache
+    env:
+      COMPOSE_PROJECT_NAME: mcp-release-${{ matrix.label }}-${{ github.run_id }}-${{ github.run_attempt }}
+      WORDPRESS_IMAGE: ${{ matrix.image }}
+      WORDPRESS_PORT: 0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          extensions: zip
+          coverage: none
+      - name: Verify assessment guards and parsers
+        run: python -B -m unittest discover -s tests/unit -p test_adapter_release_assessment.py -v
+      - name: Test unchanged 2.6.0 ZIP against Adapter 0.6.1 and 0.7.0
+        run: bash scripts/adapter-release-assessment.sh

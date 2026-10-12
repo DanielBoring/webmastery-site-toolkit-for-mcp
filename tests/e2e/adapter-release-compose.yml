@@ -1,0 +1,9 @@
+services:
+  wordpress:
+    volumes:
+      - type: bind
+        source: ${E2E_PACKAGE_ROOT:?Released package required}
+        target: /var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp
+        read_only: true
+        bind:
+          create_host_path: false

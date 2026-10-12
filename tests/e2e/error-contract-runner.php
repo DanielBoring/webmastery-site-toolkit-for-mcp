@@ -45,7 +45,7 @@ try {
 	$handler_source = file_get_contents( $adapter->getFileName() );
 	$plugin_data = get_file_data( WP_PLUGIN_DIR . '/mcp-adapter/mcp-adapter.php', array( 'version' => 'Version' ) );
 	$summary['adapter'] = array( 'version' => $plugin_data['version'], 'handler_sha256' => hash( 'sha256', $handler_source ), 'result_hook_offset' => strpos( $handler_source, "'mcp_adapter_tool_call_result'" ), 'permission_offset' => strpos( $handler_source, 'check_permission' ) );
-	webmastery_mcp_e2e_assert( '0.6.1' === $plugin_data['version'], 'Proof requires the pinned installed Adapter 0.6.1.' );
+	webmastery_mcp_e2e_assert( in_array( $plugin_data['version'], array( '0.6.1', '0.7.0' ), true ), 'Proof requires an assessed installed Adapter version (0.6.1 or 0.7.0).' );
 	webmastery_mcp_e2e_assert( false !== $summary['adapter']['result_hook_offset'] && false !== $summary['adapter']['permission_offset'] && $summary['adapter']['permission_offset'] < $summary['adapter']['result_hook_offset'], 'Installed Adapter permission/result-hook order differs.' );
 	$password = WP_Application_Passwords::create_new_application_password( $admin->ID, array( 'name' => 'wstm118 owned error proof' ) );
 	webmastery_mcp_e2e_assert( ! is_wp_error( $password ), 'Cannot create fixture application password.' );

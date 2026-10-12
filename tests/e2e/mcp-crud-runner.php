@@ -94,6 +94,7 @@ final class Webmastery_MCP_E2E_Client {
 	private function request( string $method, ?array $body = null, bool $use_session = false, bool $allow_empty_json = false ): array {
 		$headers = array(
 			'Authorization: Basic ' . base64_encode( $this->username . ':' . $this->password ),
+			'MCP-Protocol-Version: 2025-11-25',
 		);
 
 		if ( null !== $body ) {
@@ -253,7 +254,7 @@ function webmastery_mcp_e2e_call_tool( Webmastery_MCP_E2E_Client $client, string
 		'tools/call',
 		array(
 			'name'      => $name,
-			'arguments' => $arguments,
+			'arguments' => (object) $arguments,
 		)
 	);
 

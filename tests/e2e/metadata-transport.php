@@ -86,7 +86,7 @@ final class Wstm110_Metadata_Transport {
 
 	private function rpc( string $method, array $params, string $token = '' ): array {
 		$this->last_response_body = '';
-		$headers = array( 'Content-Type' => 'application/json', 'Authorization' => 'Basic ' . base64_encode( $this->credential['login'] . ':' . $this->credential['password'] ) );
+		$headers = array( 'Content-Type' => 'application/json', 'MCP-Protocol-Version' => '2025-11-25', 'Authorization' => 'Basic ' . base64_encode( $this->credential['login'] . ':' . $this->credential['password'] ) );
 		if ( '' !== $this->session ) {
 			$headers['Mcp-Session-Id'] = $this->session;
 		}
@@ -130,7 +130,7 @@ final class Wstm110_Metadata_Transport {
 		}
 		$response = wp_remote_request( $this->url, array(
 			'method' => 'DELETE', 'timeout' => 30,
-			'headers' => array( 'Authorization' => 'Basic ' . base64_encode( $this->credential['login'] . ':' . $this->credential['password'] ), 'Mcp-Session-Id' => $this->session ),
+			'headers' => array( 'Authorization' => 'Basic ' . base64_encode( $this->credential['login'] . ':' . $this->credential['password'] ), 'Mcp-Session-Id' => $this->session, 'MCP-Protocol-Version' => '2025-11-25' ),
 		) );
 		if ( is_wp_error( $response ) || ! in_array( wp_remote_retrieve_response_code( $response ), array( 200, 202, 204 ), true ) ) {
 			throw new RuntimeException( 'Metadata HTTP session cleanup failed.' );

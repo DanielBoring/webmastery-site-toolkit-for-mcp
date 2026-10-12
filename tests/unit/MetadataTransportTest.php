@@ -74,6 +74,19 @@ final class MetadataTransportTest extends TestCase {
 		return array( 'gateway' => array( false ), 'individual' => array( true ) );
 	}
 
+	public function test_negotiated_protocol_header_covers_notifications_and_session_cleanup(): void {
+		$transport = $this->initialize();
+		$GLOBALS['wstm110_transport_responses'][] = array( 'status' => 204, 'headers' => array(), 'body' => '' );
+		$transport->close();
+		self::assertCount( 4, $GLOBALS['wstm110_transport_requests'] );
+		foreach ( $GLOBALS['wstm110_transport_requests'] as [ , $request ] ) {
+			self::assertSame( '2025-11-25', $request['headers']['MCP-Protocol-Version'] );
+		}
+		$initialize = json_decode( $GLOBALS['wstm110_transport_requests'][0][1]['body'], true, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( $initialize['params']['protocolVersion'], $GLOBALS['wstm110_transport_requests'][0][1]['headers']['MCP-Protocol-Version'] );
+		self::assertSame( 'DELETE', $GLOBALS['wstm110_transport_requests'][3][1]['method'] );
+	}
+
 	/** @dataProvider boundaries */
 	public function test_advertised_tool_arguments_session_and_positive_observer_evidence( bool $individual ): void {
 		$transport = $this->initialize( $individual );

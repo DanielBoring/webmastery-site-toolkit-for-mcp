@@ -6,6 +6,39 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Route historical assessment freshness probes and Compose lifecycle through
+  the same admitted QA engine as ownership checks, and regression-test that the
+  default Docker context cannot receive those calls.
+- Require error wire evidence to omit structured content entirely, rejecting
+  explicit null in both historical and candidate probes.
+
+- Keep verified public assessment downloads and extracted plugin files readable
+  by nonroot Linux workers while retaining private parent-directory permissions.
+  Add a genuine POSIX mode regression after the hosted historical assessment
+  exposed unreadable copied WP-CLI bytes.
+- Restart and health-check the owned historical assessment's WordPress workers
+  after each Adapter replacement, avoiding mixed old/new Apache opcode caches;
+  retain a serial lifecycle regression and the failed hosted evidence.
+- Refresh the validated loopback binding after each assessment restart because
+  an ephemeral Docker host port can change; test distinct ports across both
+  Adapter iterations without relaxing the target guard.
+
+- Send PHP engine-preflight failures explicitly to stderr regardless of the
+  local CLI error-display configuration. Retain fail-closed engine selection
+  and add an executed stdout-default regression; Podman remains unverified.
+
+- Add a digest-pinned released-2.6.0 comparison against MCP Adapter 0.6.1 and
+  0.7.0, with isolated original-ZIP HTTP probes, all native-install tool
+  projections, protocol/permission/error regressions and focused PR/manual CI.
+  Document the measured compatibility and release recommendation without
+  changing production code, version numbers or development dependency pins.
+- Add an exact-commit pending-3.0 production-package comparison using the current
+  ability manifest, canonical errors, strict mutation/no-write probes, bounded
+  reads and bulk safeguards, including genuine PHP 8.0 protocol coverage.
+  Permit only assessed Adapter 0.6.1/0.7.0 versions in the two existing proof
+  guards and send the negotiated protocol header from existing QA session
+  clients. Encode empty discovery-tool argument maps as JSON objects and add
+  regression coverage; retain all behavioral and ownership assertions.
 - Execute native term-state and diagnostic bucket assertions independently of
   value assertions, once per applicable manifest case. Keep the contract stack
   alive until runtime-version and debug-log reporting, then use guarded cleanup.
