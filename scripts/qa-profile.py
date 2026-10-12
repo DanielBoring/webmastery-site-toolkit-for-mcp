@@ -17,6 +17,14 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "tests" / "qa-suites.json"
 MAX_BYTES = 32 * 1024 * 1024
+RUNTIME = {
+    "wordpress-contract": "composer qa:contract",
+    "mcp-integration": "composer qa:e2e",
+    "source-product": "composer qa:local",
+    "package-product": "composer qa:package",
+    "publishing": "composer qa:publishing",
+    "combined-release": "composer qa:release",
+}
 
 
 def read_bytes(path):
@@ -51,10 +59,13 @@ def inventory(root=ROOT, catalog=CATALOG):
     for name, command in data["safeguards"].items():
         if scripts[name] != command:
             raise ValueError("Safeguard command drift: " + name)
-    for command in data["runtime"].values():
-        prefix, name = command.split(" ", 1)
-        if prefix != "composer" or name not in scripts:
-            raise ValueError("Unknown runtime suite command")
+    if data["runtime"] != RUNTIME:
+        raise ValueError("Missing, extra or changed runtime classification")
+    expected_runtime = {command.split(" ", 1)[1] for command in RUNTIME.values()}
+    actual_runtime = {name for name in scripts if name.startswith("qa:")}
+    actual_runtime -= {"qa:static", "qa:unit"}
+    if actual_runtime != expected_runtime:
+        raise ValueError("Unaccounted Composer runtime entry points")
     return data
 
 
@@ -213,7 +224,7 @@ def main():
     stage.add_argument("--source", required=True)
     stage.add_argument("--lane", required=True)
     stage.add_argument("--suite", choices=("production-unit", "qa-tooling-unit",
-                       "wordpress-contract", "mcp-integration", "package-product",
+                       "wordpress-contract", "mcp-integration", "source-product", "package-product",
                        "publishing", "combined-release", "mixed-phpunit"), required=True)
     stage.add_argument("--phase", choices=("setup", "execution", "cleanup"), required=True)
     stage.add_argument("--output", required=True)

@@ -93,6 +93,43 @@ class QaProfileTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Safeguard command drift"):
                 PROFILE.inventory(root, catalog_path)
 
+    def test_runtime_inventory_is_closed_and_new_commands_cannot_disappear(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            unit = root / "tests" / "unit"
+            unit.mkdir(parents=True)
+            catalog = PROFILE.inventory()
+            for files in catalog["phpunit"].values():
+                for name in files:
+                    (unit / name).touch()
+            for name in catalog["python"]:
+                (unit / name).touch()
+            path = root / "catalog.json"
+            original = json.loads((ROOT / "composer.json").read_text())
+            composer = root / "composer.json"
+            composer.write_text(json.dumps(original))
+            for change in ("delete", "add", "replace"):
+                current = json.loads(json.dumps(catalog))
+                if change == "delete":
+                    del current["runtime"]["wordpress-contract"]
+                elif change == "add":
+                    current["runtime"]["extra"] = "composer qa:contract"
+                else:
+                    current["runtime"]["wordpress-contract"] = "composer qa:e2e"
+                path.write_text(json.dumps(current))
+                with self.assertRaisesRegex(ValueError, "runtime classification"):
+                    PROFILE.inventory(root, path)
+            path.write_text(json.dumps(catalog))
+            for change in ("delete", "add"):
+                current = json.loads(json.dumps(original))
+                if change == "delete":
+                    del current["scripts"]["qa:local"]
+                else:
+                    current["scripts"]["qa:new-runtime"] = "new runtime"
+                composer.write_text(json.dumps(current))
+                with self.assertRaisesRegex(ValueError, "runtime entry points"):
+                    PROFILE.inventory(root, path)
+
     def test_job_steps_keep_failed_skipped_and_mixed_phases(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "jobs.json"

@@ -125,6 +125,7 @@
   "runtime": {
     "wordpress-contract": "composer qa:contract",
     "mcp-integration": "composer qa:e2e",
+    "source-product": "composer qa:local",
     "package-product": "composer qa:package",
     "publishing": "composer qa:publishing",
     "combined-release": "composer qa:release"
