@@ -6,6 +6,13 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Inventory every PHPUnit/Python test file and existing safeguard/runtime
+  command, distinguishing production units from QA tooling and real-runtime
+  evidence. Add opt-in per-test and stage timing reports without changing
+  discovery, selecting tests, accepting skipped/failed checks, or caching passes.
+  Keep payloads and raw JUnit private; regression-test incomplete inventories,
+  original command failures, exclusive evidence and malformed profiles.
+
 - Route historical assessment freshness probes and Compose lifecycle through
   the same admitted QA engine as ownership checks, and regression-test that the
   default Docker context cannot receive those calls.

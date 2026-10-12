@@ -50,6 +50,7 @@
 			"python3 -B -m unittest discover -s tests/unit -p test_rescoped_workflow_gates.py -v",
 			"python3 -B -m unittest discover -s tests/unit -p test_qa_execution.py -v",
 			"python3 -B -m unittest discover -s tests/unit -p test_catalog_ordering.py -v",
+			"python3 -B -m unittest discover -s tests/unit -p test_qa_profile.py -v",
 			"bash tests/qa-compose-safety-test.sh",
 			"bash tests/legacy-artifact-stage-test.sh",
 			"bash tests/owned-bootstrap-origin-test.sh",
