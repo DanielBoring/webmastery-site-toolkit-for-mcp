@@ -69,6 +69,22 @@ The tag workflow owns release validation, WordPress.org SVN deployment, and GitH
 
 Do not manually upload an unvalidated zip to GitHub releases.
 
+The serial tag-validation job has a 120-minute outer budget for static/unit QA,
+release safeguards, original-ZIP product QA and both Plugin Check versions.
+This is an execution budget, not a passing result or a relaxation of any test,
+cleanup, integrity or production-approval requirement. Run `composer
+test:ci-safeguards` and `composer lint:workflows` when changing this workflow.
+
+The first `v3.0.0` attempt (run `38273601311`) exhausted its former 65-minute
+budget after static/unit QA and safeguards passed, while package QA was still
+running. It produced no sealed bundle and reached no production approval.
+That immutable tag retains its original workflow: merging a later budget fix
+does not change a rerun. Existing-artifact recovery requires a successful
+original validation and sealed artifact; neither local/PR packages nor partial
+tag-run results qualify. A new validation/publication path requires separate
+maintainer authorization. No release retry, new tag or publication is implied
+by this budget fix.
+
 ## WordPress.org release flow
 
 WordPress.org uses SVN as the release repository. GitHub remains the development repository.
