@@ -61,7 +61,7 @@ $_SERVER['HTTP_HOST'] = 'localhost';
 require_once '/var/www/html/wp-load.php';
 
 function wstm110_http( string $method, array $params, array $credential, string &$session ): array {
-	$headers = array( 'Content-Type' => 'application/json', 'Authorization' => 'Basic ' . base64_encode( $credential['login'] . ':' . $credential['password'] ) );
+	$headers = array( 'Content-Type' => 'application/json', 'MCP-Protocol-Version' => '2025-11-25', 'Authorization' => 'Basic ' . base64_encode( $credential['login'] . ':' . $credential['password'] ) );
 	if ( $session ) {
 		$headers['Mcp-Session-Id'] = $session;
 	}
@@ -344,6 +344,7 @@ try {
 					'headers' => array(
 						'Authorization' => 'Basic ' . base64_encode( $credential['login'] . ':' . $credential['password'] ),
 						'Mcp-Session-Id' => $sessions[ $role ],
+						'MCP-Protocol-Version' => '2025-11-25',
 					),
 				) );
 				wstm110_assert( ! is_wp_error( $response ), 'Session close transport failed.' );

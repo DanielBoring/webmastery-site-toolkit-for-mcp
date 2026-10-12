@@ -6,6 +6,19 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add a digest-pinned released-2.6.0 comparison against MCP Adapter 0.6.1 and
+  0.7.0, with isolated original-ZIP HTTP probes, all native-install tool
+  projections, protocol/permission/error regressions and focused PR/manual CI.
+  Document the measured compatibility and release recommendation without
+  changing production code, version numbers or development dependency pins.
+- Add an exact-commit pending-3.0 production-package comparison using the current
+  ability manifest, canonical errors, strict mutation/no-write probes, bounded
+  reads and bulk safeguards, including genuine PHP 8.0 protocol coverage.
+  Permit only assessed Adapter 0.6.1/0.7.0 versions in the two existing proof
+  guards and send the negotiated protocol header from existing QA session
+  clients. Encode empty discovery-tool argument maps as JSON objects and add
+  regression coverage; retain all behavioral and ownership assertions.
+
 - Export the existing native and HTTP database privacy JSON reports through
   the guarded artifact inventory so required source and package uploads receive
   actual reports. Require evidence for attempted boundaries and test missing

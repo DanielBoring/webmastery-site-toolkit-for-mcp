@@ -86,7 +86,7 @@ function wstm106_seed_loop( int $a, int $b ): void {
 }
 
 function wstm106_http( string $method, array $params, string $username, string $password, string &$session, string $trace = '' ): array {
-	$headers = array( 'Content-Type: application/json', 'Authorization: Basic ' . base64_encode( $username . ':' . $password ) );
+	$headers = array( 'Content-Type: application/json', 'MCP-Protocol-Version: 2025-11-25', 'Authorization: Basic ' . base64_encode( $username . ':' . $password ) );
 	if ( $session ) {
 		$headers[] = 'Mcp-Session-Id: ' . $session;
 	}

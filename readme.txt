@@ -51,6 +51,16 @@ https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
 
 == Frequently Asked Questions ==
 
+= Has released 2.6.0 been checked against MCP Adapter 0.7.0? =
+
+Yes. The unchanged 2.6.0 production ZIP passed isolated local HTTP checks against Adapter 0.6.1 and 0.7.0 on WordPress 7.1.2/PHP 8.2 and WordPress 6.9/PHP 8.1. All 75 native-install abilities were discovered and projected as individual tools. Representative reads, draft writes, permission denials and errors passed, including the 2026-07-28 sessionless protocol. These checks do not cover every callback or optional provider. No live or staging site was used. This is separate from unreleased 3.0 behavior.
+
+Assessment: https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/mcp-adapter-0.7-assessment.md
+
+= Has pending 3.0 code also been tested with the new Adapter? =
+
+An independent production ZIP from main commit 115b577bf59e4d3c33b0ccc78d9317e09efab3e1 passed focused isolated protocol tests against Adapter 0.6.1 and 0.7.0 on WordPress 7.1.2/PHP 8.2 and WordPress 6.9/genuine PHP 8.0.30. Those tests cover the current 85-ability inventory, canonical errors, strict inputs, bounded reads, permissions and bulk destructive safeguards. They do not certify every callback or the whole release. The package still carries the 2.6.0 version header; no 3.0 release or dependency-baseline promotion was made.
+
 = What changes for clients on the unreleased 3.0 development branch? =
 
 The stable tag remains 2.6.0. Development failures now use success:false and an error object with code, reason, message, and object-shaped details. Seven categories replace mixed codes; precise legacy reasons move to reason. MCP Adapter 0.6.1 tool errors carry this JSON in one text block with isError:true; structuredContent is omitted on HTTP (internally null). Error normalization preserves successful payloads and gateway success wrapping; separate metadata projections and additive untrusted_fields markers change success contracts as described below. Bulk summaries are non-atomic; inspect every item even when the batch succeeds. Provider diagnostics are redacted without bypassing capability checks.

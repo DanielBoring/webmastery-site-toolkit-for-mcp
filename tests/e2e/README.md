@@ -7,6 +7,57 @@ The Docker QA suite has two layers:
 1. Ability Contract QA is ability-driven. Every registered `webmastery-site-toolkit-for-mcp/*` ability must be represented in `tests/e2e/abilities-manifest.json`.
 2. Full MCP E2E QA uses real MCP Adapter HTTP JSON-RPC requests against `/wp-json/mcp/mcp-adapter-default-server` to prove a remote MCP client can create, read, update, and delete content through the adapter transport.
 
+## Released 2.6.0 / Adapter 0.7.0 comparison
+
+`bash scripts/adapter-release-assessment.sh` is a separate, focused historical
+package test, not the current 3.0 manifest suite. Set a fresh
+`COMPOSE_PROJECT_NAME`; it accepts no remote site URL. It downloads digest-pinned
+production ZIPs, compares GitHub and WordPress.org file bytes, mounts the unchanged
+GitHub package read-only, and tests Adapter 0.6.1 before 0.7.0 on the same owned
+installation. Test support and a disposable individual-tool server are separate
+from production files. No candidate code executes as root.
+
+The comparison covers all 75 native-install ability discoveries, info responses,
+individual projections and annotations; representative successful reads, draft
+writes, allowed/denied capabilities, malformed-input no-write checks, plain-text
+released errors, and protocol negotiation. New-protocol requests include exact
+per-request metadata and HTTP method/name headers. Raw responses, private actor
+credentials and logs stay in the existing private QA state directory; do not upload
+that directory. The wrapper removes only its verified owned Compose resources.
+
+Run the guard/parser tests with
+`python -B -m unittest discover -s tests/unit -p test_adapter_release_assessment.py -v`.
+The focused PR/manual workflow runs native WordPress 7.1.2/PHP 8.2 and
+WordPress 6.9/PHP 8.1 lanes. See the
+[assessment](../../docs/mcp-adapter-0.7-assessment.md) for provenance, measured
+results and what this does not establish.
+
+### Exact pending-3.0 candidate mode
+
+Pass a clean candidate checkout and its original production ZIP as two arguments
+to `scripts/adapter-release-assessment.sh`. This mode pins main commit
+`115b577bf59e4d3c33b0ccc78d9317e09efab3e1`, verifies the complete production
+inventory against Git bytes, and uses that checkout's current 85-ability
+manifest. It keeps the historical 2.6.0 parser/oracle separate from candidate
+canonical JSON errors, strict inputs, bounded projections and bulk destructive
+safeguards. Use a fresh owned project for every run; no remote endpoint is
+accepted. See the assessment for exact artifact identity and runtime results.
+
+For broader source/package acceptance, use the candidate's documented
+`scripts/qa-run.sh all` and `scripts/qa-run.sh package` in **separate checkouts**.
+Do not run them concurrently in one checkout: its retention guard deliberately
+blocks lifecycle changes while another proof is active or cleanup is unresolved.
+To assess Adapter 0.7.0, explicitly set `MCP_ADAPTER_ZIP` and the verified
+`MCP_ADAPTER_SHA256`; the default QA baseline remains 0.6.1.
+Existing proof guards admit only those two assessed versions. The 2025-11-25
+HTTP clients must send the matching `MCP-Protocol-Version` header on session
+requests, including notifications and cleanup; Adapter 0.7.0 rejects its absence.
+The shared tool-call helper encodes empty argument maps as `{}`, not `[]`;
+the Adapter no longer repairs a JSON array where the wire schema requires an
+object.
+Retain failed owned stacks and private evidence when cleanup cannot be proven;
+never bypass their guards or upload private captures.
+
 ## Unreleased canonical error coverage
 
 All manifest failures require `expect_error_shape:"canonical"`, a seven-category

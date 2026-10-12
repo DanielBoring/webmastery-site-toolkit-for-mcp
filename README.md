@@ -45,6 +45,16 @@ The current development QA baseline is **WordPress 7.1.2 with MCP Adapter
 the declared WordPress 6.9 / PHP 8.0 plugin minimums are unchanged. See
 [QA Strategy](docs/qa-strategy.md) for the separate compatibility and runtime gates.
 
+**Released 2.6.0 and Adapter 0.7.0:** the unchanged production ZIP has passed
+isolated HTTP checks against both Adapter 0.6.1 and 0.7.0. All 75 native-install
+abilities remain discoverable and individually schema-valid; representative
+execution, permission and error checks include the new sessionless protocol.
+No plugin migration was needed for these checks. See the
+[assessment and limits](docs/mcp-adapter-0.7-assessment.md). A separate,
+exact-commit pending-3.0 package comparison covers the current 85-ability
+inventory and changed contracts on PHP 8.2 and genuine PHP 8.0. These results
+do not promote the development QA baseline or certify the whole 3.0 release.
+
 **Unreleased 3.0 development:** this branch changes the error contract, not the
 2.6.0 stable tag. Clients must follow the [3.0 migration guide](docs/3.0-migration.md)
 before deploying it. Ability names, roles, inputs, defaults, and successful
