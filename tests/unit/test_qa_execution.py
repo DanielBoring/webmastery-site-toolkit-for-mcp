@@ -91,6 +91,16 @@ podman() { return "${MOCK_PODMAN_STATUS:-0}"; }
         result = self.run_control("qa_engine_preflight\n", {"MOCK_COMPOSE_STATUS": "42"})
         self.assertEqual(42, result.returncode)
 
+    def test_preflight_failure_uses_stderr_even_when_php_defaults_to_stdout(self):
+        result = self.run_control(
+            'php() { command php -d display_errors=stdout -d log_errors=0 "$@"; }\n'
+            'qa_engine_preflight\n',
+            {"MOCK_SERVER": json.dumps({"Os": "windows", "Version": "29"})},
+        )
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn(b"QA requires an observed Linux container server", result.stderr)
+        self.assertNotIn(b"RuntimeException", result.stdout)
+
     def test_launcher_modes_and_both_wrappers_use_shared_entry(self):
         launcher = (ROOT / "scripts" / "qa-run.sh").read_text()
         self.assertIn("qa_engine_preflight", launcher)

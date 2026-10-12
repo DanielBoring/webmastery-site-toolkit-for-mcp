@@ -6,6 +6,10 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Send PHP engine-preflight failures explicitly to stderr regardless of the
+  local CLI error-display configuration. Retain fail-closed engine selection
+  and add an executed stdout-default regression; Podman remains unverified.
+
 - Add a digest-pinned released-2.6.0 comparison against MCP Adapter 0.6.1 and
   0.7.0, with isolated original-ZIP HTTP probes, all native-install tool
   projections, protocol/permission/error regressions and focused PR/manual CI.

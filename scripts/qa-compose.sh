@@ -45,7 +45,7 @@ qa_engine_preflight() {
 		echo "BLOCKED: selected container engine is unavailable." >&2; return 78;
 	}
 	# shellcheck disable=SC2016
-	printf '%s' "$server" | host_php -r '
+	printf '%s' "$server" | host_php -d display_errors=stderr -r '
 		$server = json_decode(stream_get_contents(STDIN), true, 32, JSON_THROW_ON_ERROR);
 		if (!is_array($server) || ($server["Os"] ?? null) !== "linux" ||
 			!is_string($server["Version"] ?? null) || $server["Version"] === "") {
