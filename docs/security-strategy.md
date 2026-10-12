@@ -23,14 +23,14 @@ post, page, CPT and revision bodies/titles/excerpts/author display names as
 untrusted, along with block markup/attributes, comment bodies and author
 email/URL fields, media titles/captions/alt text, authorized SEO metadata and
 keywords, user profiles and user-chosen application-password `app_name`.
-A `message` field is not necessarily trusted instructions. Unreleased 3.0
+A `message` field is not necessarily trusted instructions. 3.0
 does not fetch or return opaque generated Yoast head HTML/JSON.
 
 SEO Analyze Post uses exactly `Focus keyword found in title.` and
 `Focus keyword not found in title.` for these diagnostics. Authorized stored
 values remain in `data.metrics.yoast_focus_keyword` and
 `data.metrics.seopress_focus_keywords`, with the title and existing provider
-precedence. This separation shipped independently of the unreleased markers.
+precedence. This separation shipped independently of the 3.0 markers.
 
 Authentication, JSON serialization, capabilities and read-only annotations
 do not make retrieved text authoritative. Capabilities authorize an account's
@@ -59,12 +59,12 @@ prompt-injection guarantee or universal write approval. Model-supplied
 `confirm:true` does not prove human approval; `dry_run` cannot approve a later
 write. Optional text-only `content_format` output is not implemented.
 
-### Untrusted-field contract (3.0 Unreleased)
+### Untrusted-field contract (3.0)
 
 Affected successful records have an additive `untrusted_fields` array of unique
 names relative to that record. Mark only fields actually present, including
 null/empty values; names are neither dotted paths nor a global list. See the
-[coverage and example](../README.md#untrusted-result-fields-30-unreleased).
+[coverage and example](../README.md#untrusted-result-fields-30).
 
 Preserve existing values, types, HTML and block delimiters returned by the
 normalizer. Existing write sanitization remains; markers do not promise raw
@@ -125,14 +125,14 @@ Listing/reply policies are separate. This intentionally differs from WordPress
 
 Existing-object permission failures use `forbidden`, wrapped as
 `ability_invalid_permissions` by WordPress abilities. Authorized missing
-objects defer to guarded execution; unreleased 3.0 missing-comment failures use
+objects defer to guarded execution; 3.0 missing-comment failures use
 canonical `not_found`. Direct denied callbacks retain missing-object handling
 but cannot expose/write existing content before both capabilities pass.
 Invalid/nonpositive IDs never reach `get_comment(0)` or its global fallback;
 negative IDs cannot select a different positive object.
 
 MCP Adapter's HTTP gateway checks permission before schema validation.
-WordPress abilities validate schema first. Unreleased owned HTTP failures have
+WordPress abilities validate schema first. 3.0 owned HTTP failures have
 `isError:true` and one canonical-JSON text block without `structuredContent`
 on the wire (internally null). Preserve these distinct validation orders.
 
@@ -171,7 +171,7 @@ transport provide distinct evidence.
 
 ## Destructive-operation interlocks
 
-Unreleased schemas require strict `confirm:true` for permanent media/category/
+3.0 schemas require strict `confirm:true` for permanent media/category/
 tag deletion and both bulk post operations. Callbacks enforce it independently,
 including previews. Missing/false/nonboolean confirmation cannot write.
 Bulk `dry_run` and media `force` require booleans. Prove permission denial with

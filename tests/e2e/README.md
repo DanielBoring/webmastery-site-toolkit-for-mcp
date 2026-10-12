@@ -80,7 +80,7 @@ check exact IDs/statuses; SEO overview checks its bounded sample contract.
 Health/security diagnostics require nonempty findings and integer summary
 counts that match actual buckets. Permission and no-write cases remain intact.
 
-## Unreleased canonical error coverage
+## 3.0 canonical error coverage
 
 All manifest failures require `expect_error_shape:"canonical"`, a seven-category
 `expect_error_code`, and an exact `expect_error_reason`. The independent
@@ -1022,7 +1022,7 @@ Use argument `debug` in separate PHP processes with `WP_DEBUG_LOG` disabled, `tr
 
 HTTPS request variables in these tests are simulations, not actual TLS, certificate, reachability, or redirect tests. Run authenticated MCP HTTP checks separately when changing these findings. WordPress 6.9/7.1 on PHP 8.2 covers the WordPress floor, not PHP 8.0; the PHP floor requires its own runtime.
 
-### Database table privacy (3.0 development)
+### Database table privacy (3.0)
 
 `DatabaseTablePrivacyTest` covers custom prefixes, current-blog versus global mappings, custom user-table mappings, core-looking custom names, plugin-extended mapping labels, unchanged SQL scope/order, response-local label resets, exact metric parity, and query-free direct denials/malformed-input failures. These controlled unit mappings do not replace real WordPress evidence.
 
@@ -1388,7 +1388,7 @@ marker and exclusively installed MU fixture. Remove the product-only fixture
 before later checks that expect 85 native registrations. Never precreate or
 reuse `/qa-artifacts/<run>/untrusted` or `/qa-artifacts/<run>/bounded`.
 
-### Untrusted-content coverage (3.0 Unreleased, #108)
+### Untrusted-content coverage (3.0, #108)
 
 `untrusted-content-runner.php` executes 298 independently planned ordered labels:
 104 gateway, 104 individual-tool and 90 annotation observations (85 native

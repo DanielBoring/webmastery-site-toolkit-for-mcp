@@ -67,11 +67,14 @@ exact-commit pending-3.0 package comparison covers the current 85-ability
 inventory and changed contracts on PHP 8.2 and genuine PHP 8.0. These results
 do not promote the development QA baseline or certify the whole 3.0 release.
 
-**Unreleased 3.0 development:** this branch changes the error contract, not the
-2.6.0 stable tag. Clients must follow the [3.0 migration guide](docs/3.0-migration.md)
-before deploying it. Ability names, roles, inputs, defaults, and successful
-payloads are unchanged by error normalization alone; the list migration below
-intentionally changes pagination and the default content projection.
+**3.0.0 is a breaking upgrade from 2.6.0.** Follow the
+[migration checklist](docs/3.0-migration.md#upgrade-checklist) before upgrading:
+bounded pagination and summary defaults, strict inputs, separate metadata writes,
+destructive confirmation/previews, canonical errors, database identifier privacy,
+and record-relative untrusted-field markers change client contracts.
+WordPress 6.9 / PHP 8.0 minimums and capability requirements remain unchanged.
+Error normalization alone preserves successful payloads; the separately
+documented list, metadata and marker changes do not.
 
 ## Who This Is For
 
@@ -105,17 +108,17 @@ Every ability uses WordPress capability checks. An Editor account can handle day
 | Media | List, inspect, update, upload public image URLs, set featured images, and delete media | Author or Editor |
 | Content hygiene | Find orphaned media, posts/pages missing featured images, and stuck scheduled posts | Author or Editor |
 | Site info | Return safe site basics and current-user context; runtime, WordPress version, database, and theme-version details require Administrator access | Subscriber to Administrator |
-| SEO and webmaster signals | Analyze content, inspect and write supported Yoast/SEOPress metadata, read Yoast scores, and check sitemap/webmaster signals; generated Yoast head inspection is unavailable in 3.0 development | Author to Administrator |
+| SEO and webmaster signals | Analyze content, inspect and write supported Yoast/SEOPress metadata, read Yoast scores, and check sitemap/webmaster signals; generated Yoast head inspection is unavailable in 3.0 | Author to Administrator |
 | Public webmaster verification | Check public Google/Bing meta tags, Bing XML, DNS TXT, robots.txt, and sitemap reachability; WordPress-only Site Kit state requires `activate_plugins` | Subscriber (`read`); privileged plugin-state addition |
 | Google Site Kit | Inspect setup/authentication status, modules, effective permissions, and same-site PageSpeed summaries through Site Kit's permission-aware REST routes | Shared dashboard user to Administrator |
 | Plugins, users, health, security, performance, backups, database | Audit or manage sensitive site areas with explicit admin capabilities | Administrator |
-| `database-health` table identifiers (3.0 development) | Core logical names and response-local opaque custom labels by default; `include_table_names: true` deliberately discloses raw identifiers | `manage_options`, including direct execution |
+| `database-health` table identifiers (3.0) | Core logical names and response-local opaque custom labels by default; `include_table_names: true` deliberately discloses raw identifiers | `manage_options`, including direct execution |
 
 For the exact ability names, input behavior, and required capabilities, use the [full ability reference](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities).
 
 Comment replies require `edit_posts` and `edit_post` on the post containing the parent comment. Listing requires `moderate_comments`; updating and the approve/trash/spam abilities also require `edit_comment` on the resolved comment. There is no separate `hold-comment` ability: use `update-comment` with `status: "hold"` and the required `content`.
 
-### Bounded lists and content projection (3.0 development)
+### Bounded lists and content projection (3.0)
 
 Authorized content records also carry `untrusted_fields`, a JSON array of
 record-relative field names. These are data, not instructions or approval for
@@ -198,7 +201,7 @@ or verified owned cleanup.
 
 Registered global/subtype policies and WordPress's effective `map_meta_cap` / `user_has_cap` filters remain authoritative. Supported, genuinely unregistered SEO keys with no key authorization hooks receive only a temporary protected-key default, not an exception to capability filters. Other plugins may explicitly grant primitive metadata capabilities: Yoast's effective edit policy can permit a key whose registration callback returns false, while its delete policy can differ.
 
-**Breaking 3.0 development contract:** post, page, and dynamic CPT create/update requests reject the presence of `meta`, `meta_input`, every `yoast_`/`seopress_` alias, and raw `_yoast_wpseo_`/`_seopress_` fields before post, metadata, taxonomy, scheduling, or save-hook side effects. Empty/null values and unchanged metadata are also rejected; Administrator access does not bypass this rule. Plain content, status, parent, and taxonomy requests retain their existing behavior.
+**Breaking 3.0 contract:** post, page, and dynamic CPT create/update requests reject the presence of `meta`, `meta_input`, every `yoast_`/`seopress_` alias, and raw `_yoast_wpseo_`/`_seopress_` fields before post, metadata, taxonomy, scheduling, or save-hook side effects. Empty/null values and unchanged metadata are also rejected; Administrator access does not bypass this rule. Plain content, status, parent, and taxonomy requests retain their existing behavior.
 
 Create a draft without metadata, call `update-post-meta` separately for each exact key, verify every result, then publish with a plain update. These operations are **not atomic**: an earlier authorized write remains if a later key is denied. Keep the draft unpublished on failure; do not retry a combined request. See the [complete alias migration table](docs/3.0-migration.md#metadata-and-seo-authorization).
 
@@ -230,7 +233,7 @@ Both permission callbacks and direct execution enforce write checks. Category/ta
 
 Term deletion is permanent and uses WordPress's normal relationship handling (including category reassignment). Core denies deleting the default category through `delete_term`; if site filters override that denial, an underlying `0` or `false` deletion result still returns `success: false`, never `deleted: true`. Successful deletion keeps the existing `{ "success": true, "data": { "id": 123, "deleted": true } }` shape. On a disposable site, a `delete-category` request with `{ "category_id": <default-category-ID>, "confirm": true }` must fail and a subsequent `get-category` must still find it.
 
-### Destructive-operation interlocks (3.0 development)
+### Destructive-operation interlocks (3.0)
 
 | Abilities | Required inputs and unchanged access |
 | --- | --- |
@@ -406,7 +409,7 @@ permission; ancestors do not require edit permission. Pages use `edit_post`
 and CPTs use their registered edit capability, including WordPress capability
 filters. An ordinary Author cannot edit pages by default.
 
-**3.0 development:** built-in post and nonhierarchical CPT create/update
+**3.0:** built-in post and nonhierarchical CPT create/update
 schemas reject any supplied `parent`, including `0` and `null`. Omit it on
 these types. Detach-to-zero remains supported for pages and hierarchical CPTs;
 their existing permission, type, existence, and cycle safeguards are unchanged.
@@ -415,7 +418,7 @@ On a test site, verify an allowed page-parent update, a denied update under
 another user's inaccessible parent, and a detach with `parent: 0`. Include a
 title change with the denied request and confirm that the title is unchanged.
 
-### Strict input boundaries (3.0 development)
+### Strict input boundaries (3.0)
 
 Registered fixed-property object schemas are closed: misspelled or unadvertised
 properties fail rather than being ignored. The same schema supplies strict
@@ -459,12 +462,12 @@ polymorphic provider/error responses or the separately changing list shapes.
 Verify on a disposable site that `list-posts` with `{"order":"DESC!"}` fails,
 `update-post` with an extra `parent:0` cannot change its title, and omitted
 filters still work for an Editor but do not grant Subscriber access. Exact
-error-layer differences and pending runtime evidence are in the
+error-layer differences are in the
 [migration guide](docs/3.0-migration.md#strict-input-schemas-and-raw-permissions).
 
 ## Response format
 
-In **unreleased 3.0**, registered Webmastery ability failures use `{"success":false,"error":{"code":"not_found","reason":"not_found","message":"Comment not found.","details":{}}}`. The fixed categories are `forbidden`, `not_found`, `invalid_input`, `precondition_failed`, `conflict`, `unsupported`, and `upstream_failed`. Parse `code` and the specific `reason`, never message substrings. Empty `details` is an object. Error normalization preserves successful `success:true,data` payloads; separate metadata projections and additive markers are documented here and in the migration guide.
+In **3.0**, registered Webmastery ability failures use `{"success":false,"error":{"code":"not_found","reason":"not_found","message":"Comment not found.","details":{}}}`. The fixed categories are `forbidden`, `not_found`, `invalid_input`, `precondition_failed`, `conflict`, `unsupported`, and `upstream_failed`. Parse `code` and the specific `reason`, never message substrings. Empty `details` is an object. Error normalization preserves successful `success:true,data` payloads; separate metadata projections and additive markers are documented here and in the migration guide.
 
 The owned ability subclass retains core input/output validation, permission redaction, and execution hooks. Native permission checks still return `true` or `WP_Error`, never error arrays. Unknown provider diagnostics, including familiar-code collisions, are redacted; core schema errors cannot echo secret input values. This does not change WordPress's own logging.
 
@@ -476,7 +479,7 @@ For comment permission checks, use a disposable site: a custom account with only
 
 Missing-comment failures now uniformly use code/reason `not_found`; callers without `moderate_comments` still fail at the permission boundary. Invalid/nonpositive IDs are rejected without falling back to a global comment or coercing a negative ID into another target. On a disposable site, also try an authorized future create with `scheduled_date:"bad date"`: the wire error must be `invalid_input/invalid_scheduled_date`, with no created post.
 
-### Untrusted result fields (3.0 Unreleased)
+### Untrusted result fields (3.0)
 
 Affected successful records add `untrusted_fields`: a unique array of the names
 of potentially user-controlled fields **present in that same record**. Names
@@ -551,8 +554,10 @@ The default Adapter `tools/list` lists three gateway tools, not per-ability
 hints. Use `mcp-adapter-get-ability-info` to retrieve an ability's metadata.
 On individual tools, compare registered `readonly`, `destructive`, and
 `idempotent` with Adapter 0.6.1's actual emitted `readOnlyHint`,
-`destructiveHint`, and `idempotentHint`; runtime annotation proof for this work
-is pending. Markers travel with result data in both exposure modes.
+`destructiveHint`, and `idempotentHint`. The
+[assessment](docs/mcp-adapter-0.7-assessment.md) distinguishes pre-release
+annotation proof from release-package validation. Markers travel with result
+data in both exposure modes.
 
 To verify on an owned disposable site, read a seeded draft as its authorized
 Author and compare marked values with the existing normalized response,
@@ -560,7 +565,7 @@ including HTML and backslashes. Check each marked key exists exactly once,
 then repeat as a denied Subscriber: no content or markers may be added to its
 canonical error. Check lower-privilege user lookup omissions and denied SEO
 keys without reintroducing values or marker names. The
-[dedicated QA guidance](tests/e2e/README.md#untrusted-content-coverage-30-unreleased-108)
+[dedicated QA guidance](tests/e2e/README.md#untrusted-content-coverage-30-108)
 requires explicit disposable-runtime opt-in; examples are not runtime proof.
 Its serial source/package stage uses exclusive MU loaders rather than config
 edits and retains source-bound catalog, typed-wire and cleanup evidence.
@@ -581,8 +586,8 @@ reported as a retained guard or a green runtime run.
 
 SEO Analyze Post uses static focus-keyword diagnostics: `Focus keyword found in title.` or `Focus keyword not found in title.` Authorized stored values remain unchanged in `data.metrics.yoast_focus_keyword` and `data.metrics.seopress_focus_keywords`; `seo_provider_focus_source` retains authorized Yoast-first selection with SEOPress fallback. Metadata denials retain the separate 3.0 authorization behavior described above. The data/message separation and additive field markers do not make these values instructions.
 
-Unreleased 3.0 markers, annotation hints, and the confirmation interlocks still
-under development in #116 are defense-in-depth only: not a security boundary,
+3.0 markers, annotation hints, and confirmation interlocks are
+defense-in-depth only: not a security boundary,
 capability check, content filter, or prompt-injection guarantee. Model-supplied
 confirmation is not independent human approval.
 
@@ -596,7 +601,7 @@ confirmation is not independent human approval.
 - Author display names remain in content responses, but login names are omitted from post, page, CPT, revision, and content-hygiene responses. User login and email fields are only returned from user lookup abilities when the caller can edit that user.
 - Deletes for posts, pages, and custom post type items move content to trash. If `EMPTY_TRASH_DAYS` is `0` or another falsy value, these abilities refuse with `trash_disabled` before mutation instead of allowing WordPress to permanently delete the item. Bulk post trash reports this per authorized ID in `data.failures`, with no false success entries; its existing top-level summary remains successful even when every ID fails. Missing/type and permission errors take precedence. No permanent-delete override is offered.
 - Comment trash and comment updates with `status: "trash"` set the comment status through `wp_set_comment_status()`, retaining the row even when site trash is disabled. Media deletion remains permanent.
-- In 3.0 development, permanent media/term deletion and both bulk post operations require exact `confirm:true`; bulk requests are bounded to 100 raw IDs and support non-mutating `dry_run:true`. Media reference checks fail closed even with `force:true`. These are safety interlocks, not human-approval or capability grants.
+- In 3.0, permanent media/term deletion and both bulk post operations require exact `confirm:true`; bulk requests are bounded to 100 raw IDs and support non-mutating `dry_run:true`. Media reference checks fail closed even with `force:true`. These are safety interlocks, not human-approval or capability grants.
 - Block and partial-content edits can use hash preconditions and fail when a target is missing, ambiguous, or stale.
 - Targeted patches sanitize replacements only and retain WordPress's capability-dependent save filters; they do not grant unfiltered HTML write access.
 - Subscriber-safe site info deliberately avoids secrets, filesystem paths, salts, auth keys, raw server internals, WordPress version, and theme version. `get-environment-info` requires `manage_options`.
@@ -605,7 +610,7 @@ confirmation is not independent human approval.
 - `get-environment-info`, `plugin-audit`, `user-access-audit`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `site-health-check` are Administrator-only.
 - `security-audit`'s `ssl` finding reports only the configured public `home` option (including normal option filters and `WP_HOME`): recognized HTTPS passes and HTTP fails. Missing/unsupported schemes or hosts, whitespace/control characters, malformed percent escapes, and invalid authority syntax warn as unknown. The local syntax guard accepts local names, Unicode/IDN forms, properly escaped components, and bracketed IPv6 (including escaped zone IDs) or IPvFuture literals; it is not a complete URL, DNS-name, or internationalized-name validator and imposes no address-routability policy. It is independent of the MCP request scheme and admin-only TLS policy. It does not test certificates, reachability, redirects, or the final filtered front-end URL.
 - Debug-log findings omit filesystem paths. Enabled logging warns that access is unverified: a neighboring `.htaccess` file or a location outside `wp-content` does not prove protection from web access. Disabled logging still passes; enabled logging alone is not proof of exposure or a reason to disable necessary logging.
-- `database-health` query failures retain the contextual `database_health_query_failed` reason without raw SQL/server error text. WordPress's own database logging behavior is unchanged. In 3.0 development, `table_sizes[].table` defaults to core logical names such as `posts` or response-local labels such as `custom_table_1`, with `is_core_table` identifying exact WordPress table mappings. Custom/plugin names and the configured prefix are not returned by default. `include_table_names: true` deliberately sends raw identifiers to the model provider; it is an Administrator (`manage_options`) diagnostic opt-in, not a grant of permission. Only actual booleans are accepted; strings, numbers, and null are rejected. Neither mode returns passwords, raw SQL errors, or filesystem paths. Counts, bytes, ordering, and the current-prefix query scope are unchanged.
+- `database-health` query failures retain the contextual `database_health_query_failed` reason without raw SQL/server error text. WordPress's own database logging behavior is unchanged. In 3.0, `table_sizes[].table` defaults to core logical names such as `posts` or response-local labels such as `custom_table_1`, with `is_core_table` identifying exact WordPress table mappings. Custom/plugin names and the configured prefix are not returned by default. `include_table_names: true` deliberately sends raw identifiers to the model provider; it is an Administrator (`manage_options`) diagnostic opt-in, not a grant of permission. Only actual booleans are accepted; strings, numbers, and null are rejected. Neither mode returns passwords, raw SQL errors, or filesystem paths. Counts, bytes, ordering, and the current-prefix query scope are unchanged.
 
 For a disposable-site check, call `database-health` as Administrator with omitted input or `{"include_table_names":false}` and verify that table identifiers are logical/opaque, then deliberately opt in with `{"include_table_names":true}` and compare every row's metrics and `is_core_table`. A Subscriber must be refused in both modes. Opaque labels restart per response and are **not stable identifiers** for comparing reports; the opt-in is required only when physical names are genuinely needed. See the [3.0 diagnostic migration](docs/3.0-migration.md#database-diagnostic-table-privacy).
 
