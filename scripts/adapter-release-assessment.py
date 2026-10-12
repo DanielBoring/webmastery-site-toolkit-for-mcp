@@ -102,7 +102,7 @@ def payload(wire):
 
 def error_text(wire):
     result = wire["result"]
-    if result.get("isError") is not True or result.get("structuredContent") is not None:
+    if result.get("isError") is not True or "structuredContent" in result:
         raise AssertionError("Released error must set isError and omit structured content.")
     if len(result["content"]) != 1 or result["content"][0]["type"] != "text":
         raise AssertionError("Released error must contain one text block.")

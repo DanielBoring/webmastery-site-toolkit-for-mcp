@@ -460,3 +460,9 @@ staging WordPress installation or remote WordPress MCP server was accessed.
 Docker Desktop Linux 29.6.2 / Compose 5.3.1 was exercised; real Podman remains
 unverified. Final-head PR checks, review, tag-time artifact validation and
 separate protected production approval remain required before publication.
+
+The PR review follow-up routes all assessment freshness and Compose operations
+through the admitted `qa_engine`, fails closed on inventory-query errors and
+tests that the default Docker context receives no calls. Both error probes
+reject an explicitly null `structuredContent` key: wire errors must omit it.
+These harness changes do not alter the validated production ZIP payloads.

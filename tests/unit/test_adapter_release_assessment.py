@@ -19,6 +19,47 @@ CANDIDATE_SPEC.loader.exec_module(CANDIDATE)
 
 
 class AdapterReleaseAssessmentTest(unittest.TestCase):
+    def test_assessment_freshness_and_lifecycle_use_selected_engine(self):
+        import re
+        import subprocess
+
+        source = (ROOT / "scripts" / "adapter-release-assessment.sh").read_text()
+        freshness = re.search(r"for resource in container network volume; do\n.*?\ndone\n", source, re.S)
+        override = re.search(r"qa_compose_command\(\) \{\n.*?\n\}", source, re.S)
+        self.assertIsNotNone(freshness)
+        self.assertIsNotNone(override)
+        script = (
+            'set -Eeuo pipefail\nCOMPOSE_PROJECT_NAME=owned-assessment\n'
+            'qa_engine() { printf "selected:%s\\n" "$*" >&2; }\n'
+            'docker() { printf "default-engine\\n" >&2; return 95; }\n'
+            + freshness.group() + override.group() + '\nqa_compose_command up -d wordpress\n'
+        )
+        result = subprocess.run(
+            [shutil.which("bash"), "--noprofile", "--norc"], input=script.encode(), cwd=ROOT,
+            env={**os.environ, "BASH_ENV": os.devnull}, capture_output=True, timeout=30,
+        )
+        self.assertEqual(0, result.returncode, result.stderr.decode())
+        self.assertEqual(
+            ["selected:" + resource + " ls -q --filter label=com.docker.compose.project=owned-assessment"
+             for resource in ("container", "network", "volume")] +
+            ["selected:compose --project-name owned-assessment -f docker-compose.yml "
+             "-f tests/e2e/adapter-release-compose.yml up -d wordpress"],
+            result.stderr.decode().splitlines(),
+        )
+        failed = subprocess.run(
+            [shutil.which("bash"), "--noprofile", "--norc"],
+            input=script.replace(
+                'qa_engine() { printf "selected:%s\\n" "$*" >&2; }',
+                'qa_engine() { printf "selected:%s\\n" "$*" >&2; return 42; }',
+            ).encode(), cwd=ROOT, env={**os.environ, "BASH_ENV": os.devnull},
+            capture_output=True, timeout=30,
+        )
+        self.assertEqual(42, failed.returncode, failed.stderr.decode())
+        self.assertEqual(
+            ["selected:container ls -q --filter label=com.docker.compose.project=owned-assessment"],
+            failed.stderr.decode().splitlines(),
+        )
+
     def test_each_adapter_restarts_and_waits_before_http_probe(self):
         import re
         import subprocess
@@ -117,6 +158,9 @@ class AdapterReleaseAssessmentTest(unittest.TestCase):
         self.assertEqual("Post not found.", ASSESSMENT.error_text(wire))
         with self.assertRaises(ValueError):
             ASSESSMENT.payload(wire)
+        wire["result"]["structuredContent"] = None
+        with self.assertRaises(AssertionError):
+            ASSESSMENT.error_text(wire)
         wire["result"]["structuredContent"] = {"leaked": True}
         with self.assertRaises(AssertionError):
             ASSESSMENT.error_text(wire)
@@ -136,6 +180,10 @@ class AdapterReleaseAssessmentTest(unittest.TestCase):
         }}
         wire = {"result": {"isError": True, "content": [{"type": "text", "text": json.dumps(value)}]}}
         self.assertEqual(value, CANDIDATE.canonical(wire, "invalid_input", "ability_invalid_input"))
+        wire["result"]["structuredContent"] = None
+        with self.assertRaises(AssertionError):
+            CANDIDATE.canonical(wire, "invalid_input")
+        del wire["result"]["structuredContent"]
         value["error"]["details"] = []
         wire["result"]["content"][0]["text"] = json.dumps(value)
         with self.assertRaises(AssertionError):

@@ -6,6 +6,12 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Route historical assessment freshness probes and Compose lifecycle through
+  the same admitted QA engine as ownership checks, and regression-test that the
+  default Docker context cannot receive those calls.
+- Require error wire evidence to omit structured content entirely, rejecting
+  explicit null in both historical and candidate probes.
+
 - Keep verified public assessment downloads and extracted plugin files readable
   by nonroot Linux workers while retaining private parent-directory permissions.
   Add a genuine POSIX mode regression after the hosted historical assessment

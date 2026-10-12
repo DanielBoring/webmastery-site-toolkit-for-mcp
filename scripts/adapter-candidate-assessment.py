@@ -20,7 +20,7 @@ PREFIX = "webmastery-site-toolkit-for-mcp/"
 
 def canonical(wire, code, reason=None):
     result = wire["result"]
-    if result.get("isError") is not True or result.get("structuredContent") is not None:
+    if result.get("isError") is not True or "structuredContent" in result:
         raise AssertionError("Canonical error requires isError and no structured payload.")
     if len(result["content"]) != 1 or result["content"][0]["type"] != "text":
         raise AssertionError("Canonical error requires exactly one text block.")

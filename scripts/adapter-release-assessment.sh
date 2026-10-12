@@ -18,7 +18,8 @@ fi
 qa_prepare_project
 qa_verify_resources
 for resource in container network volume; do
-	[[ -z "$(docker "$resource" ls -q --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME")" ]] || {
+	identifiers="$(qa_engine "$resource" ls -q --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME")"
+	[[ -z "$identifiers" ]] || {
 		echo "Assessment requires a fresh project with no existing resources." >&2; exit 1;
 	}
 done
@@ -65,7 +66,7 @@ export E2E_PACKAGE_ZIP="$private/release/plugin.zip"
 # Called by the sourced ownership wrapper.
 # shellcheck disable=SC2329
 qa_compose_command() {
-	docker compose --project-name "$COMPOSE_PROJECT_NAME" -f docker-compose.yml \
+	qa_engine compose --project-name "$COMPOSE_PROJECT_NAME" -f docker-compose.yml \
 		-f tests/e2e/adapter-release-compose.yml "$@"
 }
 # shellcheck disable=SC2329
