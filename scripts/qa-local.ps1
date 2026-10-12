@@ -2,6 +2,11 @@ param(
 	[switch] $Contract,
 	[switch] $E2E,
 	[switch] $Release,
+	[switch] $Package,
+	[switch] $Publishing,
+	[ValidateSet('docker', 'podman')]
+	[string] $Engine = $(if ($env:WSTM_QA_ENGINE) { $env:WSTM_QA_ENGINE } else { 'docker' }),
+	[string] $EngineHost,
 	[switch] $KeepCompose,
 	[switch] $PreflightOnly
 )
@@ -42,9 +47,22 @@ Test-QACommand 'php'
 Test-QACommand 'composer'
 Test-QACommand 'git'
 
-if ($Contract -or $E2E -or $Release) {
+if ($Contract -or $E2E -or $Release -or $Package -or $Publishing) {
 	Test-QACommand 'docker'
 	Test-QACommand 'bash'
+	$priorEngine = [Environment]::GetEnvironmentVariable('WSTM_QA_ENGINE', 'Process')
+	$priorHost = [Environment]::GetEnvironmentVariable('WSTM_QA_ENGINE_HOST', 'Process')
+	$priorLocation = [Environment]::GetEnvironmentVariable('WSTM_QA_LOCATION', 'Process')
+	try {
+		$env:WSTM_QA_ENGINE = $Engine
+		$env:WSTM_QA_LOCATION = 'local'
+		if ($EngineHost) { $env:WSTM_QA_ENGINE_HOST = $EngineHost }
+		Invoke-QACommand 'Check selected container engine' 'bash' @('scripts/qa-run.sh', 'preflight')
+	} finally {
+		[Environment]::SetEnvironmentVariable('WSTM_QA_ENGINE', $priorEngine, 'Process')
+		[Environment]::SetEnvironmentVariable('WSTM_QA_ENGINE_HOST', $priorHost, 'Process')
+		[Environment]::SetEnvironmentVariable('WSTM_QA_LOCATION', $priorLocation, 'Process')
+	}
 }
 
 if ($PreflightOnly) {
@@ -67,16 +85,18 @@ try {
 	}
 }
 
-if ($Contract -or $E2E -or $Release) {
-	Invoke-QACommand 'Check local Docker engine' 'docker' @('info', '--format', '{{.ServerVersion}}')
+if ($Contract -or $E2E -or $Release -or $Package -or $Publishing) {
 	$project = 'wstm-local-' + [guid]::NewGuid().ToString('N').Substring(0, 16)
-	$names = @('COMPOSE_PROJECT_NAME', 'E2E_ARTIFACTS_DIR', 'E2E_MANAGE_COMPOSE', 'E2E_KEEP_COMPOSE', 'WSTM_QA_OWNER', 'MSYS_NO_PATHCONV')
+	$names = @('COMPOSE_PROJECT_NAME', 'E2E_ARTIFACTS_DIR', 'E2E_MANAGE_COMPOSE', 'E2E_KEEP_COMPOSE', 'WSTM_QA_OWNER', 'MSYS_NO_PATHCONV', 'WSTM_QA_ENGINE', 'WSTM_QA_ENGINE_HOST', 'WSTM_QA_LOCATION')
 	$previous = @{}
 	foreach ($name in $names) {
 		$previous[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
 	}
 	try {
 		$env:MSYS_NO_PATHCONV = '1'
+		$env:WSTM_QA_ENGINE = $Engine
+		$env:WSTM_QA_LOCATION = 'local'
+		if ($EngineHost) { $env:WSTM_QA_ENGINE_HOST = $EngineHost }
 		$env:E2E_MANAGE_COMPOSE = '1'
 		$env:E2E_KEEP_COMPOSE = if ($KeepCompose) { '1' } else { '0' }
 		if ($Contract -or $E2E) {
@@ -84,13 +104,21 @@ if ($Contract -or $E2E -or $Release) {
 			$env:WSTM_QA_OWNER = $null
 			$env:COMPOSE_PROJECT_NAME = "$project-source"
 			$env:E2E_ARTIFACTS_DIR = "e2e-artifacts-$($env:COMPOSE_PROJECT_NAME)"
-			Invoke-QACommand 'Run owned Docker source QA' 'bash' @('scripts/e2e-test.sh', $mode)
+			Invoke-QACommand 'Run owned container source QA' 'bash' @('scripts/qa-run.sh', $mode)
 		}
 		if ($Release) {
 			$env:WSTM_QA_OWNER = $null
-			$env:COMPOSE_PROJECT_NAME = "$project-package"
+			$env:COMPOSE_PROJECT_NAME = "$project-release"
 			$env:E2E_ARTIFACTS_DIR = "e2e-artifacts-$($env:COMPOSE_PROJECT_NAME)"
-			Invoke-QACommand 'Run owned original-ZIP Package QA' 'bash' @('scripts/release-qa.sh')
+			Invoke-QACommand 'Run original-ZIP and publishing QA' 'bash' @('scripts/qa-run.sh', 'release')
+		}
+		foreach ($selection in @('package', 'publishing')) {
+			if (($selection -eq 'package' -and $Package) -or ($selection -eq 'publishing' -and $Publishing)) {
+				$env:WSTM_QA_OWNER = $null
+				$env:COMPOSE_PROJECT_NAME = "$project-$selection"
+				$env:E2E_ARTIFACTS_DIR = "e2e-artifacts-$($env:COMPOSE_PROJECT_NAME)"
+				Invoke-QACommand "Run $selection QA" 'bash' @('scripts/qa-run.sh', $selection)
+			}
 		}
 	} finally {
 		foreach ($name in $names) {

@@ -7,6 +7,27 @@ The Docker QA suite has two layers:
 1. Ability Contract QA is ability-driven. Every registered `webmastery-site-toolkit-for-mcp/*` ability must be represented in `tests/e2e/abilities-manifest.json`.
 2. Full MCP E2E QA uses real MCP Adapter HTTP JSON-RPC requests against `/wp-json/mcp/mcp-adapter-default-server` to prove a remote MCP client can create, read, update, and delete content through the adapter transport.
 
+Use `bash scripts/qa-run.sh all` for a fresh owned source run and
+`bash scripts/qa-run.sh package` for the installed original ZIP. Local sessions
+use local Docker; cloud sessions use cloud containers. The launcher never
+dispatches cloud work to replace local QA. `publishing` checks only the
+pristine package with Plugin Check, while `release` retains both scopes.
+`setup` is an internal publishing prerequisite and is never product acceptance.
+
+`bash scripts/qa-floor.sh` builds a genuine PHP 8.0.30 / WordPress 6.9 image
+from digest-pinned bases and a signed frozen Debian package snapshot. The old
+PHP/Debian stack is a disposable compatibility fixture, not a recommended
+production image. CLI version expectations and the existing protected HTTP
+runtime observations must agree. The PHP 8.1 compatibility lane remains
+separate. Docker is the default; the Podman local-API adapter has modeled
+controls but no verified source/package runtime result yet.
+
+Every success case has an explicit assertion. The formerly smoke-only taxonomy
+cases check response fields and native create/delete state; comment actions
+check exact IDs/statuses; SEO overview checks its bounded sample contract.
+Health/security diagnostics require nonempty findings and integer summary
+counts that match actual buckets. Permission and no-write cases remain intact.
+
 ## Unreleased canonical error coverage
 
 All manifest failures require `expect_error_shape:"canonical"`, a seven-category

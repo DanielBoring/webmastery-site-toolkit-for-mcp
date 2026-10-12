@@ -1,5 +1,71 @@
 #!/usr/bin/env bash
 
+qa_engine() {
+	local engine="${WSTM_QA_ENGINE:-docker}"
+	case "$engine" in
+		docker|podman) ;;
+		*) echo "QA engine must be docker or podman." >&2; return 78 ;;
+	esac
+	if [[ "$engine" == podman && -z "${WSTM_QA_ENGINE_HOST:-}" ]]; then
+		echo "BLOCKED: Podman QA requires WSTM_QA_ENGINE_HOST pointing to its Docker-compatible local socket." >&2
+		return 78
+	fi
+	if [[ -n "${WSTM_QA_ENGINE_HOST:-}" ]]; then
+		case "$WSTM_QA_ENGINE_HOST" in
+			unix:///*|npipe:////./pipe/*) ;;
+			*) echo "BLOCKED: QA requires a local Unix socket or Windows named pipe; remote engines are not selected implicitly." >&2; return 78 ;;
+		esac
+		docker --host "$WSTM_QA_ENGINE_HOST" "$@"
+	else
+		docker "$@"
+	fi
+}
+
+qa_engine_preflight() {
+	local location="${WSTM_QA_LOCATION:-local}" endpoint server
+	[[ "$location" == local || "$location" == cloud ]] || {
+		echo "QA location must be local or cloud." >&2; return 78;
+	}
+	command -v docker >/dev/null || {
+		echo "BLOCKED: Docker CLI with Compose is required, including for the Podman API adapter." >&2; return 78;
+	}
+	if [[ "${WSTM_QA_ENGINE:-docker}" == podman ]]; then
+		command -v podman >/dev/null || { echo "BLOCKED: Podman is not installed." >&2; return 78; }
+		podman info >/dev/null || { echo "BLOCKED: Podman is not connected; no machine or service will be provisioned automatically." >&2; return 78; }
+	fi
+	if [[ "${WSTM_QA_ENGINE:-docker}" == docker && -z "${WSTM_QA_ENGINE_HOST:-}" ]]; then
+		if [[ -n "${DOCKER_HOST:-}" ]]; then
+			endpoint="$DOCKER_HOST"
+		else
+			endpoint="$(docker context inspect --format '{{.Endpoints.docker.Host}}')" || return $?
+		fi
+		export WSTM_QA_ENGINE_HOST="$endpoint"
+	fi
+	server="$(qa_engine version --format '{{json .Server}}')" || {
+		echo "BLOCKED: selected container engine is unavailable." >&2; return 78;
+	}
+	# shellcheck disable=SC2016
+	printf '%s' "$server" | host_php -r '
+		$server = json_decode(stream_get_contents(STDIN), true, 32, JSON_THROW_ON_ERROR);
+		if (!is_array($server) || ($server["Os"] ?? null) !== "linux" ||
+			!is_string($server["Version"] ?? null) || $server["Version"] === "") {
+			throw new RuntimeException("QA requires an observed Linux container server and version.");
+		}
+		$podman = stripos($server["Platform"]["Name"] ?? "", "podman") !== false;
+		foreach ($server["Components"] ?? [] as $component) {
+			$podman = $podman || stripos($component["Name"] ?? "", "podman") !== false;
+		}
+		if ((getenv("WSTM_QA_ENGINE") === "podman") !== $podman) {
+			throw new RuntimeException("Selected QA engine does not match the observed API server.");
+		}
+		echo "QA engine observed: ", getenv("WSTM_QA_ENGINE") ?: "docker",
+			", Linux server ", $server["Version"], PHP_EOL;
+	' || return $?
+	qa_engine compose version || return $?
+	export WSTM_QA_LOCATION="$location" WSTM_QA_ENGINE="${WSTM_QA_ENGINE:-docker}"
+	echo "QA engine preflight passed."
+}
+
 host_php() (
 	# Native Windows PHP needs host-path conversion; container paths do not.
 	unset MSYS_NO_PATHCONV
@@ -12,7 +78,7 @@ qa_wp() {
 }
 
 qa_prepare_project() {
-	local root state_base state_root source_key owner_file database_file existing new_project=0 database_credentials=()
+	local root state_base state_root source_key owner_file database_file engine_file engine_identity endpoint existing new_project=0 database_credentials=()
 	: "${COMPOSE_PROJECT_NAME:?QA requires an explicitly owned disposable Compose project}"
 	[[ "$COMPOSE_PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]{0,62}$ ]] || {
 		echo "Invalid disposable Compose project name." >&2; return 1;
@@ -43,6 +109,24 @@ qa_prepare_project() {
 	(umask 077; mkdir -p "$state_root") || return $?
 	owner_file="$state_root/${COMPOSE_PROJECT_NAME}.owner"
 	database_file="$state_root/${COMPOSE_PROJECT_NAME}.database"
+	engine_file="$state_root/${COMPOSE_PROJECT_NAME}.engine"
+	if [[ -e "$engine_file" || -L "$engine_file" || -n "${WSTM_QA_ENGINE_HOST:-}" ]]; then
+		endpoint="${WSTM_QA_ENGINE_HOST:-${DOCKER_HOST:-}}"
+		if [[ -z "$endpoint" && "${WSTM_QA_ENGINE:-docker}" == docker ]]; then
+			endpoint="$(docker context inspect --format '{{.Endpoints.docker.Host}}')" || return $?
+		fi
+		[[ -n "$endpoint" ]] || { echo "Owned QA project requires its explicit engine endpoint." >&2; return 78; }
+		export WSTM_QA_ENGINE_HOST="$endpoint"
+		engine_identity="$(printf '%s\n' "${WSTM_QA_ENGINE:-docker}" "$endpoint" | host_php -r 'echo hash("sha256", stream_get_contents(STDIN));')" || return $?
+		if [[ -e "$engine_file" || -L "$engine_file" ]]; then
+			[[ -f "$engine_file" && ! -L "$engine_file" && "$(wc -c < "$engine_file")" == 65 &&
+				"$(cat "$engine_file")" == "$engine_identity" ]] || {
+				echo "Owned QA project's selected engine or endpoint changed; refusing resource access." >&2; return 78;
+			}
+		else
+			(umask 077; set -o noclobber; printf '%s\n' "$engine_identity" > "$engine_file") || return $?
+		fi
+	fi
 	if [[ -e "$owner_file" || -L "$owner_file" ]]; then
 		[[ -f "$owner_file" && ! -L "$owner_file" && "$(wc -c < "$owner_file")" == 65 ]] || {
 			echo "Invalid QA ownership record; refusing resource access." >&2; return 1;
@@ -88,20 +172,20 @@ qa_prepare_project() {
 
 qa_verify_resources() {
 	local kind identifiers identifier observed count=0 selected
-	docker info --format '{{.ServerVersion}}' >/dev/null || return $?
+	qa_engine info --format '{{.ServerVersion}}' >/dev/null || return $?
 	for kind in container network volume; do
 		case "$kind" in
 			container)
-				identifiers="$(docker container ls -aq --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}")" || return $?
-				selected="$(docker container ls -aq --filter "name=^/${COMPOSE_PROJECT_NAME}[-_](wordpress|mysql)[-_]1$")" || return $?
+				identifiers="$(qa_engine container ls -aq --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}")" || return $?
+				selected="$(qa_engine container ls -aq --filter "name=^/${COMPOSE_PROJECT_NAME}[-_](wordpress|mysql)[-_]1$")" || return $?
 				;;
 			network)
-				identifiers="$(docker network ls -q --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}")" || return $?
-				selected="$(docker network ls -q --filter "name=^${COMPOSE_PROJECT_NAME}_default$")" || return $?
+				identifiers="$(qa_engine network ls -q --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}")" || return $?
+				selected="$(qa_engine network ls -q --filter "name=^${COMPOSE_PROJECT_NAME}_default$")" || return $?
 				;;
 			volume)
-				identifiers="$(docker volume ls -q --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}")" || return $?
-				selected="$(docker volume ls -q --filter "name=^${COMPOSE_PROJECT_NAME}_(mysql_data|wp_data|qa_artifacts)$")" || return $?
+				identifiers="$(qa_engine volume ls -q --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}")" || return $?
+				selected="$(qa_engine volume ls -q --filter "name=^${COMPOSE_PROJECT_NAME}_(mysql_data|wp_data|qa_artifacts)$")" || return $?
 				;;
 		esac
 		identifiers="$(printf '%s\n%s\n' "$identifiers" "$selected" | sort -u)" || return $?
@@ -113,9 +197,9 @@ qa_verify_resources() {
 				return 1
 			fi
 			if [[ "$kind" == container ]]; then
-				observed="$(docker container inspect --format '{{ index .Config.Labels "io.webmastery.qa.owner" }}' "$identifier")" || return $?
+				observed="$(qa_engine container inspect --format '{{ index .Config.Labels "io.webmastery.qa.owner" }}' "$identifier")" || return $?
 			else
-				observed="$(docker "$kind" inspect --format '{{ index .Labels "io.webmastery.qa.owner" }}' "$identifier")" || return $?
+				observed="$(qa_engine "$kind" inspect --format '{{ index .Labels "io.webmastery.qa.owner" }}' "$identifier")" || return $?
 			fi
 			[[ "$observed" == "$WSTM_QA_OWNER" ]] || {
 				echo "Foreign or unowned Compose resource; refusing lifecycle changes." >&2
@@ -134,7 +218,7 @@ qa_compose_command() {
 		: "${E2E_PACKAGE_ZIP:?Package runtime requires E2E_PACKAGE_ZIP}"
 		files+=( -f docker-compose.release.yml )
 	fi
-	docker compose --project-name "$COMPOSE_PROJECT_NAME" "${files[@]}" "$@"
+	qa_engine compose --project-name "$COMPOSE_PROJECT_NAME" "${files[@]}" "$@"
 }
 
 qa_initialize_artifacts() {
@@ -203,7 +287,7 @@ qa_artifact_read() {
 		compose exec -T wordpress "$@"
 	else
 		qa_quiet_assert_cli "$cli" || return $?
-		docker exec --user 33:33 "$cli" "$@"
+		qa_engine exec --user 33:33 "$cli" "$@"
 	fi
 }
 

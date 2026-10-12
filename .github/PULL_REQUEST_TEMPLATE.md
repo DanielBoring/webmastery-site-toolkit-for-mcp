@@ -10,6 +10,7 @@
 ## Testing
 <!-- How did you verify this works? Include exact commands and their results, such as composer qa, scripts/qa-local.sh --contract --e2e, scripts/qa-local.sh --release, or scripts/qa-local.ps1 -Contract -E2E -Release. Distinguish unit/static, source runtime, original-ZIP runtime, and genuine PHP interpreter lanes. State missing tools, failures, skipped checks, or inapplicable items explicitly. See docs/qa-strategy.md; process changes also affect docs/ci-cd-strategy.md, docs/security-strategy.md, and docs/release-strategy.md. -->
 <!-- 1 - Static QA, 2 - Unit Tests, and Docker QA gate report on every PR; Actions-created PRs need workflow approval. 3 - Ability Contract QA and 4 - Full MCP E2E QA run for runtime-impacting changes. Local results do not replace required exact-head PR-event checks. -->
+<!-- Local coding sessions run development QA on local containers. Cloud sessions use cloud containers/Actions through the same launcher. Include --package/-Package or composer qa:package for original-ZIP product QA; --publishing/-Publishing is a separate directory check. Record actual engine and interpreter lanes, and do not claim unverified Podman compatibility. Package QA gate and Minimum runtime QA gate are rollout checks, not yet activated live ruleset requirements. -->
 
 ## Checklist
 - [ ] Capability checks use the narrowest relevant WordPress capability and return/surface `WP_Error` on failure
@@ -40,6 +41,7 @@
 - [ ] Plugin-facing changes update `CHANGELOG.md` under `## Unreleased`
 - [ ] Repository, CI, contributor, GitHub platform, template, or agent workflow changes update `.github/REPOSITORY_CHANGELOG.md` under `## Unreleased`
 - [ ] Local QA checked with `composer qa` and relevant Docker/release wrappers, including original-ZIP checks for release-bound changes, or missing tools/runtime blockers are documented above
+- [ ] Development runtime QA ran where the session executes; engine, genuine PHP lane, package results and any blocked checks are recorded separately from WordPress.org publishing findings
 - [ ] `composer phpcs`, E2E manifest validation, relevant E2E QA, and `git diff --check` ran, or missing tools/runtime blockers are documented
 - [ ] PHPStan level 5 passes without new baseline debt; resolved entries/counts are removed or lowered, and baseline changes follow the ratchet policy in `docs/qa-strategy.md`
 - [ ] Genuine PHP 8.0/8.4 interpreter evidence is distinguished from PHPStan's PHP 8.0 analysis target and the separate WordPress 6.9/PHP 8.1 runtime compatibility lane

@@ -1,7 +1,10 @@
 # CI/CD strategy
 
-GitHub Actions runs pull request checks, real Docker WordPress/MCP validation,
-scheduled compatibility checks and protected release publishing. The
+Local coding sessions use local disposable containers for development QA.
+GitHub cloud-agent sessions use containers in their execution environment or
+GitHub Actions. Actions also runs independent pull request checks, real Docker
+WordPress/MCP validation, scheduled compatibility checks and protected release
+publishing. The
 [QA strategy](qa-strategy.md) defines each check's evidence; the
 [software development lifecycle](sdlc-overview.md) explains the review stages.
 
@@ -12,7 +15,9 @@ scheduled compatibility checks and protected release publishing. The
 | `1 - Static QA` | PR, main push, manual | PHP syntax, WPCS, PHPStan/baseline guard, locked audit, manifest/security policy and whitespace. |
 | `2 - Unit Tests` | PR, main push, manual | Genuine PHP 8.0/8.4 PHPUnit and separate applicable safeguard matrices with one stable aggregate. |
 | `3-4 - Docker QA` | PR, main push, manual | Runtime change detection, Ability Contract QA, Full MCP E2E QA, safe evidence and summaries. |
-| `5 - Release Package QA` | Release-impacting PR, manual | Original-ZIP validation, installed contract/transport/product checks and pristine Plugin Check, without publishing. |
+| `5 - Release Package QA` | Every PR, manual; product jobs are change-aware | Original-ZIP installed product checks and always-reporting `Package QA gate`; no directory checker requirement. |
+| Minimum runtime QA | Every PR, main push, manual; product job is change-aware | Actual WordPress 6.9 / PHP 8.0.30 contract/HTTP execution and `Minimum runtime QA gate`. |
+| WordPress.org publishing checks | Manual | Pristine original-ZIP Plugin Check, separately reported without product acceptance or publication. |
 | `5 - Release` | Release tag, guarded recovery dispatch | Main ancestry, Static/Unit/package QA and protected serialized publication. Recovery reuses original validated evidence through a reviewed control tag. |
 | `6 - Compatibility QA` | Weekly schedule, manual | Official upstream discovery, pinned/candidate combinations and reviewed baseline-update PRs. |
 | `7 - Issue Backlog Import` | Manual | Serialized dry-run-first backlog preview/import. |
@@ -38,7 +43,15 @@ It rejects failed/cancelled detection, malformed outputs and missing/failed
 runtime results. Skipped runtime jobs are accepted only when successful
 detection explicitly identifies non-runtime changes.
 
-Run development QA locally against a settled source using disposable Docker.
+For local app, CLI and editor work, run development QA against the local source
+using disposable Docker through `scripts/qa-run.sh` and the maintained wrappers.
+The explicit Podman local-API adapter remains experimental until source/package
+runtime and ownership/cleanup verification pass.
+For cloud-agent work, run the same applicable tests in the cloud environment;
+use Actions when that environment cannot run them. Missing prerequisites must
+produce an explicit blocked result, not a silent local-to-cloud fallback.
+See the [execution policy and implementation plan](qa-strategy.md#execution-location).
+
 Then publish the reviewed candidate and require genuine checks on that final
 PR head. Local, previous-head and manual-dispatch successes do not substitute
 protected PR-event checks. Keep original failures and reproduce defects locally
@@ -49,8 +62,10 @@ before changing code or test expectations.
 `main-ci-gates` requires exactly `1 - Static QA`, `2 - Unit Tests` and
 `Docker QA gate`, bound to GitHub Actions. Stable aggregate names avoid
 ambiguous matrix-expanded checks. Do not weaken protection or bypass a failed
-check to merge. The path-filtered package workflow is not a universal required
-check, but release-bound changes still require it under repository policy.
+check to merge. The new package and minimum-runtime aggregates always report,
+but are not yet activated in this live ruleset. Activate them only after merged
+workflow availability and successful PR-event verification. Release-bound
+changes still require original-ZIP checks under repository policy.
 
 The September 17, 2026 rollout activated ruleset 23522901 only for
 `refs/heads/main`, with no exclusions or bypass actors and GitHub Actions

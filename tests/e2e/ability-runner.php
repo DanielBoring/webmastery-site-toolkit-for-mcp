@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/diagnostics-fixture.php';
+require_once __DIR__ . '/qa-assertions.php';
 require_once __DIR__ . '/legacy-artifacts.php';
 require_once __DIR__ . '/coverage-fixture.php';
 require_once dirname( __DIR__ ) . '/fixtures/seo-analysis.php';
@@ -1102,6 +1103,12 @@ foreach ( $manifest as $case ) {
 			if ( ! $exists || $expected_value !== $actual_value ) {
 				$passed = false;
 				break;
+			}
+			if ( $passed && isset( $case['assert_term_state'] ) ) {
+				$passed = webmastery_mcp_qa_term_state( $case['assert_term_state'], $result );
+			}
+			if ( $passed && isset( $case['assert_bucket_counts'] ) ) {
+				$passed = webmastery_mcp_qa_bucket_counts( $result, $case['ability'] );
 			}
 		}
 	}

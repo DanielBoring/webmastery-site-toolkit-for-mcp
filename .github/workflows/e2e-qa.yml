@@ -79,6 +79,7 @@ jobs:
     timeout-minutes: 30
     env:
       COMPOSE_PROJECT_NAME: wstm-contract-${{ github.run_id }}-${{ github.run_attempt }}
+      E2E_ARTIFACTS_DIR: e2e-artifacts
       WORDPRESS_PORT: 0
     permissions:
       contents: read
@@ -124,7 +125,7 @@ jobs:
           bash scripts/qa-compose.sh up -d
 
       - name: Run Ability Contract QA
-        run: bash scripts/e2e-test.sh contract
+        run: bash scripts/qa-run.sh contract
 
       - name: Upload isolated trash safety results
         if: ${{ always() }}
@@ -339,6 +340,7 @@ jobs:
     timeout-minutes: 30
     env:
       COMPOSE_PROJECT_NAME: wstm-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+      E2E_ARTIFACTS_DIR: e2e-artifacts
       WORDPRESS_PORT: 0
     permissions:
       contents: read
@@ -366,7 +368,7 @@ jobs:
           bash scripts/qa-compose.sh up -d
 
       - name: Run Full MCP E2E QA
-        run: bash scripts/e2e-test.sh e2e
+        run: bash scripts/qa-run.sh e2e
 
       - name: Publish transport job summary
         if: ${{ always() }}

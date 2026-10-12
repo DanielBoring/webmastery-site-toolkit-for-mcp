@@ -2,8 +2,17 @@
 set +x
 set -Eeuo pipefail
 
+SCOPE=all
+case "${1:-}" in
+	--product) SCOPE=product; shift ;;
+	--publishing) SCOPE=publishing; shift ;;
+esac
 VERSION="${1:-}"
+[[ "$#" -le 1 && "$VERSION" != --* ]] || { echo "Usage: release-qa.sh [--product|--publishing] [VERSION]" >&2; exit 78; }
 PLUGIN_SLUG="webmastery-site-toolkit-for-mcp"
+if [[ "$SCOPE" != all && "${SKIP_PLUGIN_CHECK:-0}" != 0 ]]; then
+	echo "Offline validation is not product or publishing acceptance." >&2; exit 78
+fi
 if [[ ( "${CI:-}" == "true" || "${GITHUB_ACTIONS:-}" == "true" ) && "${SKIP_PLUGIN_CHECK:-0}" != "0" ]]; then
 	echo "Plugin Check cannot be bypassed in CI." >&2
 	exit 1
@@ -44,7 +53,7 @@ if [[ "${SKIP_PLUGIN_CHECK:-0}" == "1" ]]; then
 fi
 
 PLUGIN_CHECK_VERSION="${PLUGIN_CHECK_VERSION:-$(php scripts/compatibility-baselines.php plugin_check)}"
-if [[ "$PLUGIN_CHECK_VERSION" != "latest" && ! "$PLUGIN_CHECK_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+if [[ "$SCOPE" != product && "$PLUGIN_CHECK_VERSION" != "latest" && ! "$PLUGIN_CHECK_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	echo "Invalid PLUGIN_CHECK_VERSION." >&2
 	exit 1
 fi
@@ -70,12 +79,18 @@ cleanup_release() {
 	exit "$cleanup"
 }
 trap cleanup_release EXIT
-bash scripts/e2e-test.sh all
+if [[ "$SCOPE" == publishing ]]; then
+	bash scripts/e2e-test.sh setup
+else
+	bash scripts/e2e-test.sh all
+fi
 
-source scripts/release-plugin-check.sh
-check_package "$PLUGIN_CHECK_VERSION"
-if [[ "${REQUIRE_CURRENT_PLUGIN_CHECK:-0}" == "1" && "$PLUGIN_CHECK_VERSION" != "latest" ]]; then
-	check_package latest
+if [[ "$SCOPE" != product ]]; then
+	source scripts/release-plugin-check.sh
+	check_package "$PLUGIN_CHECK_VERSION"
+	if [[ "${REQUIRE_CURRENT_PLUGIN_CHECK:-0}" == "1" && "$PLUGIN_CHECK_VERSION" != "latest" ]]; then
+		check_package latest
+	fi
 fi
 # Detect any unexpected runtime-side change to the archive before handoff.
 php scripts/validate-release-package.php "$ZIP_FILE" "$VERSION"
@@ -86,3 +101,5 @@ if [[ "$(sha256sum -- "$ZIP_FILE")" != "$ZIP_IDENTITY" ]]; then
 	exit 1
 fi
 echo "Unchanged release archive: $ZIP_IDENTITY"
+if [[ "$SCOPE" == product ]]; then echo "PASS packaged-plugin QA; WordPress.org publishing checks not requested."; fi
+if [[ "$SCOPE" == publishing ]]; then echo "PASS publishing checks; product contract and HTTP acceptance not run."; fi
