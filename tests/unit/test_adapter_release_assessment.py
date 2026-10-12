@@ -1,4 +1,5 @@
 import importlib.util
+import os
 import pathlib
 import unittest
 
@@ -17,6 +18,48 @@ CANDIDATE_SPEC.loader.exec_module(CANDIDATE)
 
 
 class AdapterReleaseAssessmentTest(unittest.TestCase):
+    @unittest.skipUnless(os.name == "posix", "Requires genuine POSIX permission semantics")
+    def test_public_assets_are_readable_without_exposing_private_parent(self):
+        import re
+        import subprocess
+        import tempfile
+        import zipfile
+
+        source = (ROOT / "scripts" / "adapter-release-assessment.sh").read_text()
+        download = re.search(r"download\(\) \{.*?\n\}", source, re.S)
+        extract = re.search(
+            r"host_php -r '(.*?)' \"\$private/release/plugin.zip\" \"\$private/release\"",
+            source, re.S,
+        )
+        self.assertIsNotNone(download)
+        self.assertIsNotNone(extract)
+        with tempfile.TemporaryDirectory() as directory:
+            private = pathlib.Path(directory)
+            private.chmod(0o700)
+            release = private / "release"
+            release.mkdir(mode=0o700)
+            archive = private / "plugin.zip"
+            with zipfile.ZipFile(archive, "w") as package:
+                package.writestr("webmastery-site-toolkit-for-mcp/includes/fixture.php", "<?php\n")
+            subprocess.run(
+                ["php", "-r", "umask(0077);\n" + extract.group(1), str(archive), str(release)],
+                check=True,
+            )
+            production = release / "webmastery-site-toolkit-for-mcp"
+            self.assertEqual(0o755, production.stat().st_mode & 0o777)
+            self.assertEqual(0o755, (production / "includes").stat().st_mode & 0o777)
+            self.assertEqual(0o644, (production / "includes" / "fixture.php").stat().st_mode & 0o777)
+            asset = private / "wp.phar"
+            subprocess.run(
+                ["bash", "-c", 'set -Eeuo pipefail; umask 077\n'
+                 'bash() { printf fixture > "$5"; }\n' + download.group() +
+                 '\ndownload url digest sha256 "$1"', "asset-mode-test", str(asset)],
+                check=True,
+            )
+            self.assertEqual(0o644, asset.stat().st_mode & 0o777)
+            self.assertEqual(0o700, private.stat().st_mode & 0o777)
+            self.assertEqual(0o700, release.stat().st_mode & 0o777)
+
     def test_target_is_owned_loopback_only(self):
         ASSESSMENT.validate_target("http://127.0.0.1:12345", "owner", "owner")
         for url in (

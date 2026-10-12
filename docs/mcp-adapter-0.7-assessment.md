@@ -413,6 +413,13 @@ Initial local failures are retained, not reclassified as passes:
   run. A login shell then hid the installed linter PATH. Retaining the owned
   clone metadata and using its normal non-login environment resolved both;
   the complete aggregate was rerun successfully.
+- The first hosted historical-assessment run
+  [38249016231](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/actions/runs/38249016231)
+  failed both lanes because restrictive host umask permissions made the copied
+  public WP-CLI PHAR unreadable to UID 33. Public verified downloads now use
+  mode 0644 and fresh extracted production files use a process-local 0022
+  umask; private parent directories retain mode 0700. A genuine POSIX regression
+  checks both boundaries. This changes no package bytes or ownership guards.
 
 The latest reviewed scheduled Compatibility QA run,
 [37356229529](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/actions/runs/37356229529),

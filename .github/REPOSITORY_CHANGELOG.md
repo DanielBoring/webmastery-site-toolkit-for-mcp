@@ -6,6 +6,11 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Keep verified public assessment downloads and extracted plugin files readable
+  by nonroot Linux workers while retaining private parent-directory permissions.
+  Add a genuine POSIX mode regression after the hosted historical assessment
+  exposed unreadable copied WP-CLI bytes.
+
 - Send PHP engine-preflight failures explicitly to stderr regardless of the
   local CLI error-display configuration. Retain fail-closed engine selection
   and add an executed stdout-default regression; Podman remains unverified.

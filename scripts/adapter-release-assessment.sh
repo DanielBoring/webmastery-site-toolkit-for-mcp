@@ -25,7 +25,10 @@ done
 private="$WSTM_QA_PRIVATE_OUTPUT"
 if command -v cygpath >/dev/null 2>&1; then private="$(cygpath -m "$private")"; fi
 mkdir "$private/release"
-download() { bash scripts/compatibility-download.sh "$1" "$2" "$3" "$4"; }
+download() {
+	bash scripts/compatibility-download.sh "$1" "$2" "$3" "$4" || return $?
+	chmod 0644 "$4"
+}
 if [[ -n "$candidate" ]]; then
 	cp "$candidate_archive" "$private/release/plugin.zip"
 	python -B scripts/adapter-candidate-assessment.py --verify-package "$candidate" "$private/release/plugin.zip" \
@@ -41,6 +44,7 @@ fi
 # PHP expressions must not expand in the shell.
 # shellcheck disable=SC2016
 host_php -r '
+umask(0022);
 $zip = new ZipArchive();
 if ($zip->open($argv[1]) !== true) { throw new RuntimeException("Cannot open release ZIP."); }
 for ($i = 0; $i < $zip->numFiles; $i++) {
