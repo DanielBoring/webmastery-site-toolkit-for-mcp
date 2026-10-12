@@ -335,3 +335,101 @@ The minimum runtime above tests the dedicated candidate protocol probes, not
 every manifest callback or the full source/package suite on PHP 8.0.
 No cloud workflows, publishing checks, live/staging sites, external WordPress
 MCP servers or shared-parent checkout changes are part of this assessment.
+
+## Authorized 3.0.0 release preparation
+
+The scope statement above describes the original assessment. The subsequent
+release-preparation approval authorized integrating the assessment, committing
+and pushing a release PR, and running local release gates. It did not authorize
+merging, creating a release tag, production approval or publication.
+
+Current main `115b577bf59e4d3c33b0ccc78d9317e09efab3e1` was merged into the
+isolated branch without editing the shared checkout. The release changes align
+the plugin header, stable tag, changelog, upgrade notice and migration guidance
+at 3.0.0. Support floors remain unchanged, but object/key authorization is
+tighter; client migrations must not assume unchanged metadata/SEO permissions.
+The Adapter baseline remains 0.6.1.
+
+### Versioned package and runtime evidence
+
+The first versioned source was
+`9ab6716d3af5aa46af7e4a85bb422ba7b10f6503`. Its ZIP SHA-256 was
+`0e70f005b1764c70ec3e20c8461c7c742b54652d9be8849a23397ac1fb07e255`.
+Separate owned checkouts/projects completed these local commands:
+
+| Command | Actual lane and result |
+| --- | --- |
+| `bash scripts/qa-run.sh all` | Passed WP 7.1.2/PHP 8.2 with Adapter 0.6.1 and, separately, 0.7.0. |
+| `RELEASE_ZIP=webmastery-site-toolkit-for-mcp-3.0.0.zip REQUIRE_CURRENT_PLUGIN_CHECK=1 bash scripts/qa-run.sh release` | Passed both Adapter lanes, including original-ZIP product QA and pinned/current Plugin Check. |
+| `bash scripts/qa-floor.sh` | Passed the complete source contract/HTTP suite on genuine WP 6.9/PHP 8.0.30 with Adapter 0.7.0. |
+| `php vendor/phpunit/phpunit/phpunit --configuration phpunit.xml.dist` | Passed 4,646 tests / 205,535 assertions on genuine Linux PHP 8.0.30: 23:07.899, 110.01 MB. |
+| `COMPOSER_PROCESS_TIMEOUT=1800 composer qa` | Passed static QA and the complete PHP 8.4.25 unit aggregate: 4,646 tests / 205,535 assertions, 10:44.045, 106.01 MB. |
+
+The existing 128 MiB unit memory limit was not raised. Versioned product runs
+retain all 601 manifest cases, 23 HTTP CRUD cases, 78 canonical error cases,
+1,180 metadata and 252 SEO cases at each of four boundaries, and 152 strict
+input cases at each of five boundaries, alongside the existing safety,
+bounded-read, untrusted-content, privacy and parent/taxonomy proofs.
+Each successful final project proved restoration and owned cleanup.
+
+A later authorization-wording correction changed packaged `readme.txt`.
+The resulting final ZIP was built from
+`f662e223ce65e55a732e7b38ecd94411fe420259`, with SHA-256
+`e64f16a11594460d45f7ebdeadfc3d4c2bffb66806e24b664b21fdeb422889e2`.
+All 38 payload files match that commit's exact Git blobs; only `readme.txt`
+differs from the first versioned ZIP. The first ZIP results do not certify
+these replacement bytes. The release PR's Testing section records the repeated
+combined release results for this final archive and the exact final-head
+hosted checks. Subsequent assessment-document edits are not packaged.
+
+Release product suites use the normal 2025 protocol transport. Detailed
+2026-07-28/sessionless protocol evidence remains the separate exact
+`115b577` assessment above, not a claim of repeated modern-protocol testing
+on every versioned release package.
+
+### Controls, environment failures and remaining release gates
+
+On `f662e22`, `composer qa:static`, `composer lint:workflows`,
+`composer test:ci-safeguards` and the eight assessment Python regressions
+passed in an owned UID 33:33 Linux project. Static QA checked 302 PHP files,
+PHPCS, PHPStan/ratchet, locked dependency audit and manifest/security policy.
+All 85 registered abilities have manifest success and forbidden cases.
+The complete safeguards include all seven release safeguard commands.
+The engine-preflight fix directs PHP failures to stderr even when the local
+CLI defaults to stdout; all 14 engine-control cases passed without relaxing
+engine admission or cleanup guards.
+
+Initial local failures are retained, not reclassified as passes:
+
+- The default Composer 300-second timeout was insufficient; the bounded
+  1,800-second local rerun passed. Existing hosted unit timeout controls remain
+  unchanged.
+- The initial PHP 8.4 image lacked ZipArchive; the successful release unit
+  aggregate used the restored local image.
+- Missing pinned workflow linters were restored locally after the actual
+  failed check. Copying into `/tmp` correctly failed the release workspace
+  guard; the admitted owned project root was used instead.
+- A later scratch copy omitted Git metadata, so `git diff --check` could not
+  run. A login shell then hid the installed linter PATH. Retaining the owned
+  clone metadata and using its normal non-login environment resolved both;
+  the complete aggregate was rerun successfully.
+
+The latest reviewed scheduled Compatibility QA run,
+[37356229529](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/actions/runs/37356229529),
+failed its latest-Adapter, combined-latest and latest-SEO HTTP CRUD lanes with
+HTTP 400. Those older failures are not a green current drift check. The
+controlled local release lanes passed with both Adapters and actual Yoast
+28.5/SEOPress 10.2; no cloud replacement was manually dispatched.
+
+Read-only GitHub configuration inspection confirmed the active main CI
+requirements, restricted release tags and protected `wordpress-org` production
+environment: DanielBoring approval, tag-only `v*` deployments, no administrator
+environment bypass, and the expected SVN secret names. Secret values and live
+SVN credentials were not tested. Package/minimum-runtime rollout gates are not
+live ruleset requirements. No protection was changed.
+
+The three retained failed projects listed above remain untouched. No live or
+staging WordPress installation or remote WordPress MCP server was accessed.
+Docker Desktop Linux 29.6.2 / Compose 5.3.1 was exercised; real Podman remains
+unverified. Final-head PR checks, review, tag-time artifact validation and
+separate protected production approval remain required before publication.
