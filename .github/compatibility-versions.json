@@ -1,10 +1,10 @@
 {
-    "wordpress": "7.1.2",
-    "mcp_adapter": "0.6.1",
-    "mcp_adapter_sha256": "1c3cd47c32e99b4e7d8690a44a7890256e92a8b96f61776cbe1894e5483cf676",
+    "wordpress": "7.1.3",
+    "mcp_adapter": "0.7.0",
+    "mcp_adapter_sha256": "9168c18dbd018428ff14ee28e7018aa0399d4b8819b7c98b406f6610731c3a79",
     "wp_cli": "2.12.0",
     "wp_cli_sha512": "be928f6b8ca1e8dfb9d2f4b75a13aa4aee0896f8a9a0a1c45cd5d2c98605e6172e6d014dda2e27f88c98befc16c040cbb2bd1bfa121510ea5cdf5f6a30fe8832",
-    "yoast": "28.5",
-    "seopress": "10.2",
+    "yoast": "28.6",
+    "seopress": "10.3",
     "plugin_check": "2.1.0"
 }
