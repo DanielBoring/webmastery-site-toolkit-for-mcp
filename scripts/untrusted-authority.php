@@ -276,7 +276,8 @@ final class Wstm108_HostAuthority {
 
 	public static function child_environment( array $environment ): array {
 		$environment = \Wstm108_HostController::child_environment( $environment );
-		foreach ( array( 'DOCKER_CONTEXT', 'DOCKER_HOST', 'DOCKER_TLS_VERIFY', 'DOCKER_CERT_PATH', 'DOCKER_TLS' ) as $key ) {
+		foreach ( array( 'DOCKER_CONTEXT', 'DOCKER_HOST', 'DOCKER_TLS_VERIFY', 'DOCKER_CERT_PATH', 'DOCKER_TLS',
+			'WSTM108_HOST_INSPECTION', 'WSTM108_HOST_OBSERVATION_CUSTODY' ) as $key ) {
 			unset( $environment[ $key ] );
 		}
 		return $environment;

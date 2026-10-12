@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/release-lib.php';
 require_once dirname( __DIR__ ) . '/tests/e2e/untrusted-content-provenance.php';
+require_once __DIR__ . '/qa-runtime.php';
 
 set_exception_handler( static function ( Throwable $error ): void {
 	fwrite( STDERR, 'ERROR Untrusted source provenance: ' . $error->getMessage() . PHP_EOL );
@@ -35,6 +36,8 @@ if ( 1 !== preg_match( '/\Atree ([a-f0-9]{40})(?:\n|$)/', $commit, $matches ) ) 
 	throw new RuntimeException( 'Missing exact commit tree identity.' );
 }
 $tree = $matches[1];
+$runtime_selection = WstmQaRuntime::selection( getenv(), $root );
+WstmQaRuntime::assert_binding( $runtime_selection, array( 'source_sha' => $source, 'tree_sha' => $tree, 'project' => $project, 'package_sha256' => null ) );
 if ( 1 !== preg_match( '/^[a-f0-9]{40}$/D', $source ) || 1 !== preg_match( '/^[a-f0-9]{40}$/D', $tree ) ) {
 	throw new RuntimeException( 'Invalid Git source/tree identity.' );
 }
@@ -58,10 +61,19 @@ $require_committed( $harness );
 $host_files = array();
 foreach ( array( 'scripts/e2e-test.sh', 'scripts/untrusted-stage.sh', 'scripts/untrusted-provenance.php',
 	'scripts/untrusted-cleanup-proof.php', 'scripts/untrusted-authority.php', 'scripts/untrusted-release.php', 'scripts/destructive-retention.sh', 'scripts/qa-compose.sh',
-	'scripts/untrusted-host-topology.php', 'scripts/untrusted-host-bootstrap.sh', 'scripts/untrusted-host-controller.php', 'scripts/untrusted-export.php',
+	'scripts/untrusted-host-topology.php', 'scripts/untrusted-host-observation.php', 'scripts/untrusted-host-bootstrap.sh', 'scripts/untrusted-host-controller.php', 'scripts/untrusted-export.php',
+	'scripts/untrusted-query.py', 'tests/e2e/bounded-list-controller.py',
 	'scripts/release-lib.php', 'scripts/release-qa.sh', '.github/workflows/e2e-qa.yml', '.github/workflows/unit-tests.yml',
-	'.github/workflows/release-package-qa.yml', '.github/workflows/compatibility-qa.yml', '.github/workflows/release.yml' ) as $name ) {
+	'.github/workflows/release-package-qa.yml', '.github/workflows/compatibility-qa.yml', '.github/workflows/release.yml',
+	'scripts/qa-runtime.php', 'scripts/verify-candidate-floor.php', 'scripts/compatibility-baselines.php',
+	'tests/fixtures/php80-floor/fixture.php' ) as $name ) {
 	$host_files[ $name ] = Wstm108_Files::file( $root . '/' . $name )['sha256'];
+}
+if ( 'php80-floor' === $runtime_selection['profile'] ) {
+	foreach ( array( 'Dockerfile', 'compose.yml', 'entrypoint.sh', 'router.php', 'README.md' ) as $name ) {
+		$path = 'tests/fixtures/php80-floor/' . $name;
+		$host_files[ $path ] = Wstm108_Files::file( $root . '/' . $path )['sha256'];
+	}
 }
 ksort( $host_files, SORT_STRING );
 $require_committed( $host_files );

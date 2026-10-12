@@ -1,0 +1,198 @@
+{
+  "schema": 1,
+  "base_commit": "32387be002a5aff0e256d9570d17817fb12e55bb",
+  "predecessor_seal": "a1e215abbc4e0f8ae3bf47a7becda2ab474740a8b8192ca0223afc668aeae201",
+  "scope": "Bounded measured CI timeout and approved candidate diagnostic control checkout only",
+  "files": {
+    ".github/REPOSITORY_CHANGELOG.md": {
+      "baseline_raw_sha256": "a77e3c1eee79c5f95ac3a74d402d7f606ffdf490f1c01b8931256e9d9d95c213",
+      "current_raw_sha256": "92e98751b8b05578aa3ce596d3975dc9d1d6a2112639a4299fd13bd6ad964b08",
+      "hunks": [
+        {
+          "start": 7,
+          "before": [],
+          "after": [
+            "",
+            "- Give both unit/safeguard lanes a bounded 60-minute budget without skipping any",
+            "  controls or changing matrix, permissions or aggregate gates. Original hosted",
+            "  unit jobs passed units but were cancelled at the 15-minute limit; local native",
+            "  PHP 8.4 completed all 14 guards in 16m38s, while the original hosted release",
+            "  job's seven-command safeguard subset alone passed in 36m38s. Thirty minutes is",
+            "  therefore unsupported by hosted evidence. The new 60-minute setting still",
+            "  requires a genuine PR run; release limits, runtime deadlines and admission",
+            "  policies are unchanged, and the subsequent package refusal reason is unknown.",
+            "- Run only the exact-candidate compatibility diagnostic from the separately",
+            "  approved workflow-tools checkout, not potentially older candidate code.",
+            "  Preserve the eight closed, environment-only diagnostics, candidate isolation",
+            "  and all accepted seals through a reviewed exact outer correction."
+          ]
+        }
+      ]
+    },
+    ".github/workflows/compatibility-qa.yml": {
+      "baseline_raw_sha256": "3004e811ca7a7d7c38b1c40d606f274acce384fff24fb14d61d8a0e7d9167bb7",
+      "current_raw_sha256": "ca8c18c12b14d76d27be262da5ef2c2dd80ec7dbcb4fcbb7df86f3d9a381936f",
+      "hunks": [
+        {
+          "start": 118,
+          "before": [],
+          "after": [
+            "        working-directory: ${{ github.workspace }}/candidate-floor-tools"
+          ]
+        }
+      ]
+    },
+    ".github/workflows/unit-tests.yml": {
+      "baseline_raw_sha256": "a1805baa36924551fe11a903f3a178c662e3639d1216864ca0b87915a11370c9",
+      "current_raw_sha256": "588fe8eb8d437bdaedf84a18dc930f73c317671f061f355f5bbe08380d620917",
+      "hunks": [
+        {
+          "start": 19,
+          "before": [
+            "    timeout-minutes: 15"
+          ],
+          "after": [
+            "    timeout-minutes: 60"
+          ]
+        }
+      ]
+    },
+    "docs/ci-cd-strategy.md": {
+      "baseline_raw_sha256": "61cc409d49082226b1fb0a7f4447f29d06979e0faf6968c0fce964a62c018339",
+      "current_raw_sha256": "c3cfd86861ab6e9c9eb9874b6d7f96ca757f3db18699d894889a61cb552ae7d0",
+      "hunks": [
+        {
+          "start": 28,
+          "before": [],
+          "after": [
+            "",
+            "### Bounded unit and safeguard budget",
+            "",
+            "Both PHP 8.0/8.4 unit jobs are configured with a bounded 60-minute limit, retaining",
+            "the original matrix, `fail-fast: false`, every command, permissions and aggregate",
+            "gates. This new budget is not CI-verified until the next genuine PR run.",
+            "",
+            "The evidence differs by environment and scope:",
+            "",
+            "- Both original 1d1f hosted unit jobs completed their unit suites, then were",
+            "  cancelled during safeguards with explicit 15-minute maximum-execution-time",
+            "  annotations. They do not establish a completed safeguard duration.",
+            "- The parent measured all 14 original safeguard commands, including Python, on",
+            "  frozen 1d1f under native PHP 8.4: all passed in 16m38s, including release-runtime",
+            "  700s and untrusted-stage 284s. That local measurement used a 2-CPU/3-GiB,",
+            "  network-none, read-only image without a Docker socket.",
+            "- Original 1d1f hosted Release Package job `110204613200` completed its",
+            "  seven-command \"Test release safeguard regressions\" subset successfully from",
+            "  03:27:55 to 04:04:33: 36m38s. Only that subset was measured; subsequent actual",
+            "  package QA immediately refused with exit 78 and no known closed reason.",
+            "",
+            "The hosted subset already exceeds 30 minutes, so the native measurement cannot",
+            "justify that budget. The bounded 60-minute choice allows the observed 36m38s",
+            "subset, about 2m24s units/setup and headroom for remaining controls without",
+            "skipping any checks. It is a budget decision, not proof that a complete hosted",
+            "unit/safeguard job will finish within it. Release job limits, runtime deadlines",
+            "and admission policies remain unchanged. None of these timings establishes",
+            "WordPress/runtime/custody acceptance or explains the unknown refusal."
+          ]
+        },
+        {
+          "start": 118,
+          "before": [],
+          "after": [
+            "",
+            "The exact-candidate compatibility job keeps QA and all source observations in",
+            "`candidate`. Only its diagnostic step overrides that default working directory",
+            "to `${{ github.workspace }}/candidate-floor-tools`, the separate approved tools",
+            "checkout at `github.workflow_sha`. This permits arbitrary older candidate SHAs",
+            "that lack the formatter, without trusting candidate diagnostic code or overlaying",
+            "tools onto the candidate. The other seven diagnostic placements are unchanged."
+          ]
+        }
+      ]
+    },
+    "tests/unit/CiAdmissionDiagnosticTest.php": {
+      "baseline_raw_sha256": "77992069e16ffc9c2d2629a1ef22969e76ddb5e0dcdeafe2f350d321ba05deb4",
+      "current_raw_sha256": "adb252540738114447833e99f07ba3cbc4484447064582b01bfcbdedfbe282c7",
+      "hunks": [
+        {
+          "start": 113,
+          "before": [
+            "\t\t\t$source = $this->read( $path );"
+          ],
+          "after": [
+            "\t\t\t$source = Wstm167CiBudgetControlTransition::restore( $path, $this->read( $path ) );"
+          ]
+        },
+        {
+          "start": 118,
+          "before": [
+            "\t\t\tself::assertSame( str_replace( $step, '', str_replace( $step . \"\\n\", '', $source ) ), Wstm167CiDiagnosticTransition::restore( $path, $source ), $name );"
+          ],
+          "after": [
+            "\t\t\tself::assertSame( str_replace( $step, '', str_replace( $step . \"\\n\", '', $source ) ), Wstm167CiDiagnosticTransition::restore( $path, $this->read( $path ) ), $name );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/fixtures/ci-diagnostic-transition.php": {
+      "baseline_raw_sha256": "4f05e8c9b8f80ac2455c00997fe1733b94a70848d0889b3df5ede37452bb74ae",
+      "current_raw_sha256": "68abd2be28837cdda9e252fa7334eaa0c5e84b674165c1efc009610dbcaec06f",
+      "hunks": [
+        {
+          "start": 3,
+          "before": [],
+          "after": [
+            "",
+            "require_once __DIR__ . '/ci-budget-control-transition.php';"
+          ]
+        },
+        {
+          "start": 19,
+          "before": [],
+          "after": [
+            "\t\tWstm167CiBudgetControlTransition::verify_dependencies( $read );"
+          ]
+        },
+        {
+          "start": 23,
+          "before": [],
+          "after": [
+            "\t\t\tif ( is_string( $source ) ) { $source = Wstm167CiBudgetControlTransition::restore( $path, $source ); }"
+          ]
+        },
+        {
+          "start": 38,
+          "before": [],
+          "after": [
+            "\t\t$source = Wstm167CiBudgetControlTransition::restore( $path, $source );"
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "composer.json": "3a231c527e8f04c6cec07edaac76b6c3611060dac97ec3ac90c1809dfa453506",
+    "includes/class-seo.php": "30f35eb3b65384e151dfaa4d8d3465e4a95b99e29a0d4df8f731e85eebe4df91",
+    "scripts/untrusted-admission-diagnostic.php": "0d0b3d993753e2a09016d75e7802797ddc40959511e22dcbe713193e1f4e3b4a",
+    "scripts/untrusted-host-topology.php": "acf569cce5b595e01d5f8208ec88159e511214f0697b97552ad0a79af9ed97aa",
+    "tests/e2e/abilities-manifest.json": "f09633e8e6e2fe88b18eefe5748e3eafd3a55ff62c17b54ec9cae76bd776029d",
+    "tests/unit/CiBudgetControlFollowupTest.php": "666052a9c0454918a3dcf4cc5bb67ba9d31028264632f360c3ca131325b8aa68",
+    "tests/unit/CompatibilityBaselinesTest.php": "7007e97ef0496d62322b2fc82660d9f4c8712170497a5e6b43af35fed54b6a99",
+    "tests/unit/UntrustedHostControllerTest.php": "78a6046e01400cc4ef2882f247459f229d3763c1a3660c0723d38f88141dc1e1",
+    "tests/unit/fixtures/admission-native-fixture-transition.json": "08cc480bd501c8a190699ef5a114fffd694332b4485bbc595ed13e0b87a8e99e",
+    "tests/unit/fixtures/array-syntax-transition.json": "b8d2ad18c87ee97c8eeb86f8601b6d1fce5af16842b7a4c4de9e886138ba53e0",
+    "tests/unit/fixtures/authority-observer-transition.json": "88ff7a6b1d42d7839c793aa481b9099dd4631a49eabf39aa87100600b96fef58",
+    "tests/unit/fixtures/bounded-admission-transition.json": "a45c96be6790c0380788529adc509955ffc9de64b472a5fae24bb46a9e13df5f",
+    "tests/unit/fixtures/bounded-integration-transition.json": "e847ac561c95854f66b5b04af627e992fa8886dd76eab018b730b07f42d290fa",
+    "tests/unit/fixtures/ci-diagnostic-transition.json": "a1e215abbc4e0f8ae3bf47a7becda2ab474740a8b8192ca0223afc668aeae201",
+    "tests/unit/fixtures/floor-selector-transition.json": "204877c9ff0325b4a6a90f040de918759d9ec45ed22b75a29a075de3451c2d78",
+    "tests/unit/fixtures/legacy-runtime-transition.json": "e713a22640ae27f2b3fc9de235fc32620cb6270b77a6bc3527d661dfa48b5b9d",
+    "tests/unit/fixtures/posts-extraction-transition.json": "2be14f26642f28014a9df9e99df36cb6697520b158938f1b3bad23e9da44c4f5",
+    "tests/unit/fixtures/score-marker-transition.json": "bbc14f6fdf5184f515a93dedd19b29d707245e52bd4d17207a61b5fbfd8e2076",
+    "tests/unit/fixtures/score-proof-entry-transition.json": "e79abfdb00bcb85deff22b30c836b2bfbc2ac1e343a8b20dc9ba1311aaeb8ca8",
+    "tests/unit/fixtures/selector-import-transition.json": "67e7fc5b92b672b8e56c6346c121f5837f9a1cb62257e31b4ae494c23c34f539",
+    "tests/unit/fixtures/shared-helper-transition.json": "1bdd69f8b930f9c744afe557800eeafd195f30eeaa9b61c9b81fff5267e426d6",
+    "tests/unit/fixtures/untrusted-bounded-manifest-transition.json": "a86d8850ca345db59302cde04f14f1f75b1b06baf41e9f72df41db9e3954ed88",
+    "tests/unit/fixtures/untrusted-workflow-transition.json": "f30822cfc6eb489c3993ffaacdc89862d87780335ff64e222e04cdf5c3a5e64e"
+  }
+}

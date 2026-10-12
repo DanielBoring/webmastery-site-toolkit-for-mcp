@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 require_once __DIR__ . '/fixtures/untrusted-runtime-diagnostic.php';
 require_once __DIR__ . '/fixtures/untrusted-host-boundaries.php';
 require_once __DIR__ . '/fixtures/untrusted-runtime-diagnostic-controls.php';
+require_once __DIR__ . '/fixtures/selected-listener-transition.php';
 
 final class UntrustedRuntimeDiagnosticTest extends TestCase {
 	public static function mapped_reasons(): array {
@@ -199,6 +200,7 @@ final class UntrustedRuntimeDiagnosticTest extends TestCase {
 
 	public function test_allowlist_characterizes_every_current_topology_guard_in_stable_code_order(): void {
 		$source = file_get_contents( dirname( __DIR__, 2 ) . '/scripts/untrusted-host-topology.php' );
+		$source = Wstm167SelectedListenerTransition::restore( 'scripts/untrusted-host-topology.php', $source );
 		self::assertSame( range( 1, 36 ), array_keys( Wstm108_SyntheticDiagnostic::REASONS ) );
 		self::assertSame( array_values( Wstm108_SyntheticDiagnostic::REASONS ), self::topology_reasons( $source ),
 			'New, removed or reordered reasons require explicit diagnostic-code review; this is not a claim of future coverage.' );

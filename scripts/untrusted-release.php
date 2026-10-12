@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once dirname( __DIR__ ) . '/tests/e2e/untrusted-content-files.php';
 require_once dirname( __DIR__ ) . '/tests/e2e/untrusted-content-provenance.php';
+require_once __DIR__ . '/qa-runtime.php';
 
 /** A companion recognized by unchanged f93 gates protects its clear/echo interval. */
 final class Wstm108_ReleaseGuard {
@@ -42,7 +43,7 @@ final class Wstm108_ReleaseGuard {
 		$primary = Wstm108_Files::file( $this->path( false ) );
 		self::require( posix_geteuid() === $build['uid'] && 0 === ( $build['mode'] & 0022 )
 			&& posix_geteuid() === $primary['identity']['uid'] && 0100600 === $primary['identity']['mode'], 'primary/build ownership is not the original private arm.' );
-		self::require( "owner={$b['owner']}\nproject={$b['project']}\nsource={$b['source_sha']}\n" === $primary['bytes'], 'unchanged primary arm must precede companion creation.' );
+		self::require( $this->retention_bytes() === $primary['bytes'], 'unchanged primary arm must precede companion creation.' );
 		$bytes = "version=1\npurpose=wstm108-release-companion\nowner={$b['owner']}\nproject={$b['project']}\nsource={$b['source_sha']}\n";
 		$intent = array( 'version' => 1, 'binding' => $b, 'context_sha256' => $this->host['context_sha256'],
 			'build_identity' => $build, 'primary' => $primary, 'companion_bytes' => $bytes );
@@ -61,6 +62,7 @@ final class Wstm108_ReleaseGuard {
 
 	public function verify( array $record, bool $primary_present ): void {
 		$this->authority->handle();
+		self::require( $this->retention_bytes() === ( $record['primary']['bytes'] ?? null ), 'original floor/default runtime selection changed; retaining companion.' );
 		self::require( array_keys( $record ) === array( 'version', 'binding', 'context_sha256', 'build_identity', 'primary', 'companion_bytes', 'intent', 'companion', 'enrollment' )
 			&& 1 === $record['version'] && $this->host['binding'] === $record['binding'] && $this->host['context_sha256'] === $record['context_sha256']
 			&& $record['build_identity'] === Wstm108_Files::directory( $this->host['checkout'] . '/build' ), 'missing or changed original companion/build binding.' );
@@ -74,6 +76,16 @@ final class Wstm108_ReleaseGuard {
 			clearstatcache( true, $this->path( false ) );
 			self::require( false === @lstat( $this->path( false ) ), 'primary is not absent after validated clear.' );
 		}
+	}
+
+	private function retention_bytes(): string {
+		$b = $this->host['binding'];
+		$environment = getenv();
+		$environment['COMPOSE_PROJECT_NAME'] = $b['project'];
+		$plan = WstmQaRuntime::selection( $environment, $this->host['checkout'] );
+		WstmQaRuntime::assert_binding( $plan, $b );
+		if ( 'php80-floor' === $plan['profile'] ) { wstm_php80_floor_private_inputs( $plan['config'] ); }
+		return WstmQaRuntime::retention_bytes( $plan, $environment, $b['owner'], $b['project'], $b['source_sha'] );
 	}
 
 	public function clear_primary( array $record ): array {

@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/ci-diagnostic-transition.php';
+
 final class Wstm108_Workflow_Transition {
 	private const SEAL = 'f30822cfc6eb489c3993ffaacdc89862d87780335ff64e222e04cdf5c3a5e64e';
 
 	public static function restore( string $path, string $source ): string {
+		$source = Wstm167CiDiagnosticTransition::restore( $path, $source );
 		$json = file_get_contents( __DIR__ . '/untrusted-workflow-transition.json' );
 		if ( self::SEAL !== hash( 'sha256', $json ) ) {
 			throw new RuntimeException( 'Unapproved workflow composition transition.' );

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/untrusted-runtime-diagnostic.php';
 set_exception_handler( static function ( Throwable $error ): void {
+	// Disable all observers before reporting; a previous observer may delegate here.
+	set_exception_handler( null );
 	try {
 		try {
 			Wstm108_SyntheticDiagnostic::record_authority( $error, getenv( 'WSTM108_MOCK_ROOT' ) . '/first-package-diagnostic' );
@@ -11,7 +13,6 @@ set_exception_handler( static function ( Throwable $error ): void {
 			fwrite( STDERR, "Native authority location writer failed; original Throwable retained.\n" );
 		}
 	} finally {
-		restore_exception_handler();
 		throw $error;
 	}
 } );

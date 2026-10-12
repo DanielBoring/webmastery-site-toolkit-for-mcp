@@ -1,0 +1,282 @@
+{
+  "schema": 1,
+  "base_commit": "1d1f9080c9e38627995c26eb11f9c4a54e8f8193",
+  "scope": "Closed CI diagnostic visibility only; exact outer reversal, no admission or authority changes",
+  "files": {
+    ".github/REPOSITORY_CHANGELOG.md": {
+      "baseline_raw_sha256": "bd54513c46d4c25413692ee716c9162851c5b1946c7eaacabf9d45e476a196ab",
+      "current_raw_sha256": "a77e3c1eee79c5f95ac3a74d402d7f606ffdf490f1c01b8931256e9d9d95c213",
+      "hunks": [
+        {
+          "start": 7,
+          "before": [],
+          "after": [
+            "",
+            "- Surface only the controller's approved closed topology refusal witness after",
+            "  runtime CI QA, including compatibility and release/package jobs. Treat absent",
+            "  or invalid witnesses explicitly without exposing private streams or changing",
+            "  QA, admission, artifact, cleanup or publishing conclusions. Preserve historical",
+            "  workflow/proof seals through a minimal reviewed outer reversal."
+          ]
+        }
+      ]
+    },
+    ".github/workflows/compatibility-qa.yml": {
+      "baseline_raw_sha256": "267274eafa4285489453a7916752d948b84a751631da2cb80130d68e5a01f873",
+      "current_raw_sha256": "3004e811ca7a7d7c38b1c40d606f274acce384fff24fb14d61d8a0e7d9167bb7",
+      "hunks": [
+        {
+          "start": 117,
+          "before": [],
+          "after": [
+            "      - name: Show closed admission refusal diagnostic (not acceptance)",
+            "        if: ${{ always() }}",
+            "        continue-on-error: true",
+            "        env:",
+            "          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}",
+            "        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php"
+          ]
+        },
+        {
+          "start": 383,
+          "before": [],
+          "after": [
+            "      - name: Show closed admission refusal diagnostic (not acceptance)",
+            "        if: ${{ always() }}",
+            "        continue-on-error: true",
+            "        env:",
+            "          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}",
+            "        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php"
+          ]
+        },
+        {
+          "start": 592,
+          "before": [],
+          "after": [
+            "      - name: Show closed admission refusal diagnostic (not acceptance)",
+            "        if: ${{ always() }}",
+            "        continue-on-error: true",
+            "        env:",
+            "          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}",
+            "        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php"
+          ]
+        },
+        {
+          "start": 764,
+          "before": [],
+          "after": [
+            "      - name: Show closed admission refusal diagnostic (not acceptance)",
+            "        if: ${{ always() }}",
+            "        continue-on-error: true",
+            "        env:",
+            "          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}",
+            "        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php"
+          ]
+        }
+      ]
+    },
+    ".github/workflows/e2e-qa.yml": {
+      "baseline_raw_sha256": "dc6b73044cefb9097fbb030609d3d0b3f0c0701d25ce77fd8c5ca7c31edca64a",
+      "current_raw_sha256": "f2f4febd0da80b37263b2c32d306e24094ae5dd51787a65fd97e73fb210f716c",
+      "hunks": [
+        {
+          "start": 154,
+          "before": [],
+          "after": [
+            "",
+            "      - name: Show closed admission refusal diagnostic (not acceptance)",
+            "        if: ${{ always() }}",
+            "        continue-on-error: true",
+            "        env:",
+            "          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}",
+            "        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php"
+          ]
+        },
+        {
+          "start": 469,
+          "before": [],
+          "after": [
+            "      - name: Show closed admission refusal diagnostic (not acceptance)",
+            "        if: ${{ always() }}",
+            "        continue-on-error: true",
+            "        env:",
+            "          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}",
+            "        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php",
+            ""
+          ]
+        }
+      ]
+    },
+    ".github/workflows/release-package-qa.yml": {
+      "baseline_raw_sha256": "534d2787ebb61c521d335b4f4b2e70d04544c69c6e1e926907cf0f03201df648",
+      "current_raw_sha256": "ea39ebd603fd9d5f924d11106874e80d9efab37bfc7f5157a1d0f35a1a91b548",
+      "hunks": [
+        {
+          "start": 91,
+          "before": [],
+          "after": [
+            "",
+            "      - name: Show closed admission refusal diagnostic (not acceptance)",
+            "        if: ${{ always() }}",
+            "        continue-on-error: true",
+            "        env:",
+            "          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}",
+            "        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php"
+          ]
+        }
+      ]
+    },
+    ".github/workflows/release.yml": {
+      "baseline_raw_sha256": "8f3df97121701a19c210fc4d09094373d1cc39fc45f491da86a50fcda8b7db12",
+      "current_raw_sha256": "05ccd7cf43d35cf93af50917eeb659f2c8b533df500ae46ab905093c1b17a659",
+      "hunks": [
+        {
+          "start": 93,
+          "before": [],
+          "after": [
+            "",
+            "      - name: Show closed admission refusal diagnostic (not acceptance)",
+            "        if: ${{ always() }}",
+            "        continue-on-error: true",
+            "        env:",
+            "          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}",
+            "        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php"
+          ]
+        }
+      ]
+    },
+    "docs/ci-cd-strategy.md": {
+      "baseline_raw_sha256": "450f82cf20ffb0b806f4910d684a3a9ad11816cd4782ff74d06d6093c0dbc5a8",
+      "current_raw_sha256": "61cc409d49082226b1fb0a7f4447f29d06979e0faf6968c0fce964a62c018339",
+      "hunks": [
+        {
+          "start": 69,
+          "before": [],
+          "after": [
+            "",
+            "### Closed admission refusal diagnostics",
+            "",
+            "Every runtime `qa` step in Docker E2E, release/package QA and compatibility",
+            "jobs is followed by an `always()` diagnostic step. It passes only the existing",
+            "`untrusted_admission_failure` output via `WSTM108_ADMISSION_FAILURE`, never",
+            "interpolates that value into a shell command, and uses the topology allowlist",
+            "already approved by the controller. The formatter accepts only a two-string",
+            "`phase`/`reason` JSON object (at most 256 bytes, unescaped members), with phase",
+            "`topology` and an approved refusal reason. Duplicate or extra keys, foreign",
+            "phases/reasons, malformed or oversized payloads produce a fixed invalid message;",
+            "absent output produces a fixed unavailable message. No raw payload, private",
+            "stream, authority path or exception is logged or uploaded.",
+            "",
+            "Formatter exit zero means only formatting completed, not that admission passed.",
+            "The best-effort diagnostic cannot override the original QA failure (including",
+            "exit 78), export/artifact eligibility, cleanup, custody or release gates. An",
+            "unavailable witness is not evidence of a missing grant, missing bare stack or",
+            "unsupported host. Runtime acceptance and native/Composer QA remain separate.",
+            "Existing sealed workflow and proof expectations are retained through an exact,",
+            "reversible outer CI-only transition; historical ledgers are not regenerated."
+          ]
+        }
+      ]
+    },
+    "tests/unit/ScoreProofEntryTransitionTest.php": {
+      "baseline_raw_sha256": "7cb53e640820ff0bb4049ed0e3ca713d233a95b230a610d50c82eeb720d6a0cf",
+      "current_raw_sha256": "8d7ad829a4b864deea29e52ac2d32f6b7756174ed83230c5c03a14068a739368",
+      "hunks": [
+        {
+          "start": 28,
+          "before": [
+            "\t\t\tself::assertSame( $hash, hash( 'sha256', $this->read( $path ) ), $path );"
+          ],
+          "after": [
+            "\t\t\tself::assertSame( $hash, hash( 'sha256', Wstm167CiDiagnosticTransition::restore( $path, $this->read( $path ) ) ), $path );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/UntrustedExportTest.php": {
+      "baseline_raw_sha256": "70c98abd61c52da9c02ca41c94b95f3cbf1a29f2012d78e97511d343778aef8b",
+      "current_raw_sha256": "bcd21e6a196e070ad1857fe8507239c63ff78a55ef27545fb7219557f7f190f1",
+      "hunks": [
+        {
+          "start": 7,
+          "before": [],
+          "after": [
+            "require_once __DIR__ . '/fixtures/ci-diagnostic-transition.php';"
+          ]
+        },
+        {
+          "start": 319,
+          "before": [
+            "\t\t$source = self::release_workflow();"
+          ],
+          "after": [
+            "\t\t$source = Wstm167CiDiagnosticTransition::restore( '.github/workflows/release.yml', self::release_workflow() );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/fixtures/score-proof-entry-transition.php": {
+      "baseline_raw_sha256": "fae4fef99bc1a102db5376d813cab6dfa3adced44e69f25fb312825a19b258e3",
+      "current_raw_sha256": "bf46a960448ed501133f706be21baedaf0d2561b9675ec080c9fc7980ac41408",
+      "hunks": [
+        {
+          "start": 5,
+          "before": [],
+          "after": [
+            "require_once __DIR__ . '/ci-diagnostic-transition.php';"
+          ]
+        },
+        {
+          "start": 19,
+          "before": [],
+          "after": [
+            "\t\tWstm167CiDiagnosticTransition::verify_dependencies( $read );"
+          ]
+        },
+        {
+          "start": 30,
+          "before": [],
+          "after": [
+            "\t\t$source = Wstm167CiDiagnosticTransition::restore( $path, $source );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/fixtures/untrusted-workflow-transition.php": {
+      "baseline_raw_sha256": "00745f0dc143ca9a292496113a52fe050ae62f20ca6be96ff1c02aa37274c62a",
+      "current_raw_sha256": "6d8ad7fff97c4c9d136a04641739aa718a43c30d9711bebd48042fd76d0d1d22",
+      "hunks": [
+        {
+          "start": 3,
+          "before": [],
+          "after": [
+            "",
+            "require_once __DIR__ . '/ci-diagnostic-transition.php';"
+          ]
+        },
+        {
+          "start": 10,
+          "before": [],
+          "after": [
+            "\t\t$source = Wstm167CiDiagnosticTransition::restore( $path, $source );"
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "includes/class-seo.php": "30f35eb3b65384e151dfaa4d8d3465e4a95b99e29a0d4df8f731e85eebe4df91",
+    "scripts/untrusted-admission-diagnostic.php": "0d0b3d993753e2a09016d75e7802797ddc40959511e22dcbe713193e1f4e3b4a",
+    "scripts/untrusted-host-topology.php": "acf569cce5b595e01d5f8208ec88159e511214f0697b97552ad0a79af9ed97aa",
+    "tests/e2e/abilities-manifest.json": "f09633e8e6e2fe88b18eefe5748e3eafd3a55ff62c17b54ec9cae76bd776029d",
+    "tests/e2e/untrusted-content-files.php": "46f2474fc9761366272c7b9fd5c57d7b7237829501cd38a9203b2d67f6bb7139",
+    "tests/unit/CiAdmissionDiagnosticTest.php": "77992069e16ffc9c2d2629a1ef22969e76ddb5e0dcdeafe2f350d321ba05deb4",
+    "tests/unit/UntrustedHostControllerTest.php": "78a6046e01400cc4ef2882f247459f229d3763c1a3660c0723d38f88141dc1e1",
+    "tests/unit/fixtures/admission-native-fixture-transition.json": "08cc480bd501c8a190699ef5a114fffd694332b4485bbc595ed13e0b87a8e99e",
+    "tests/unit/fixtures/authority-observer-transition.json": "88ff7a6b1d42d7839c793aa481b9099dd4631a49eabf39aa87100600b96fef58",
+    "tests/unit/fixtures/legacy-runtime-transition.json": "e713a22640ae27f2b3fc9de235fc32620cb6270b77a6bc3527d661dfa48b5b9d",
+    "tests/unit/fixtures/score-marker-transition.json": "bbc14f6fdf5184f515a93dedd19b29d707245e52bd4d17207a61b5fbfd8e2076",
+    "tests/unit/fixtures/score-proof-entry-transition.json": "e79abfdb00bcb85deff22b30c836b2bfbc2ac1e343a8b20dc9ba1311aaeb8ca8",
+    "tests/unit/fixtures/untrusted-workflow-transition.json": "f30822cfc6eb489c3993ffaacdc89862d87780335ff64e222e04cdf5c3a5e64e"
+  }
+}

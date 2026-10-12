@@ -26,23 +26,33 @@ wstm116_require_no_retention() {
 }
 
 wstm116_arm_retention() {
-	local owner="$1" source="$2" marker
+	local owner="$1" source="$2" marker identity
 	[[ "$owner" =~ ^[a-f0-9]{32}$ && "$source" =~ ^[a-f0-9]{40}$ ]] || return 1
 	wstm116_require_no_retention || return $?
 	marker="$(wstm116_retention_path)" || return $?
+	identity="$(wstm116_retention_bytes "$owner" "$source")" || return $?
 	mkdir -p build || return $?
-	( umask 077; set -o noclobber; printf 'owner=%s\nproject=%s\nsource=%s\n' "$owner" "$COMPOSE_PROJECT_NAME" "$source" > "$marker" ) || return $?
+	( umask 077; set -o noclobber; printf '%s\n' "$identity" > "$marker" ) || return $?
 	echo "Retention armed: owner=$owner project=$COMPOSE_PROJECT_NAME source=$source guard=$marker"
 }
 
 wstm116_clear_retention() {
-	local owner="$1" source="$2" marker
+	local owner="$1" source="$2" marker identity
 	marker="$(wstm116_retention_path)" || return $?
 	[[ -f "$marker" && ! -L "$marker" ]] || { echo "Retention identity unavailable; refusing retirement." >&2; return 1; }
-	cmp -s "$marker" <(printf 'owner=%s\nproject=%s\nsource=%s\n' "$owner" "$COMPOSE_PROJECT_NAME" "$source") ||
+	identity="$(wstm116_retention_bytes "$owner" "$source")" || return $?
+	cmp -s "$marker" <(printf '%s\n' "$identity") ||
 		{ echo "Retention ownership changed; refusing retirement." >&2; return 1; }
 	rm -- "$marker" || return $?
 	echo "Retention retired after verified runtime restoration and runner cleanup: project=$COMPOSE_PROJECT_NAME"
+}
+
+wstm116_retention_bytes() {
+	if [[ -n "${WSTM_QA_RUNTIME_PROFILE:-}${WSTM_PHP80_CONFIG+x}${WSTM_PHP80_CONFIG_SHA256+x}" ]]; then
+		"${WSTM108_HOST_PHP-php}" "$(dirname "${BASH_SOURCE[0]}")/qa-runtime.php" retention "$1" "$2"
+	else
+		printf 'owner=%s\nproject=%s\nsource=%s\n' "$1" "$COMPOSE_PROJECT_NAME" "$2"
+	fi
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then

@@ -7,6 +7,50 @@ use PHPUnit\Framework\TestCase;
 require_once __DIR__ . '/fixtures/untrusted-host-boundaries.php';
 
 final class UntrustedSyntheticTopologyTest extends TestCase {
+	private const INSTALLER_CORE = array( 'scripts/untrusted-export.php', 'scripts/untrusted-release.php', 'scripts/destructive-retention.sh',
+		'tests/e2e/untrusted-content-files.php', 'tests/e2e/untrusted-content-private-wire.php' );
+	private const INSTALLER_EDITED = array( 'scripts/untrusted-host-topology.php', 'scripts/untrusted-authority.php',
+		'scripts/untrusted-host-controller.php', 'scripts/untrusted-host-bootstrap.sh', 'scripts/untrusted-query.py' );
+	private const INSTALLER_SUPPORT = array( 'tests/e2e/bounded-list-controller.py' );
+
+	private static function stage_installer_graph( string $origin, string $copy, string $ending ): array {
+		$before = array();
+		foreach ( array_merge( self::INSTALLER_CORE, self::INSTALLER_EDITED, self::INSTALLER_SUPPORT ) as $path ) {
+			$bytes = str_replace( "\n", $ending, str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) ) );
+			$before[ $path ] = $bytes;
+			foreach ( array( $origin, $copy ) as $base ) {
+				if ( ! is_dir( dirname( $base . '/' . $path ) ) ) { self::assertTrue( mkdir( dirname( $base . '/' . $path ), 0700, true ) ); }
+				self::assertSame( strlen( $bytes ), file_put_contents( $base . '/' . $path, $bytes ) );
+			}
+		}
+		return $before;
+	}
+
+	/** @dataProvider endings */
+	public function test_owned_installer_graph_retains_query_and_real_supervisor_without_admitting_host( string $ending ): void {
+		$origin = realpath( sys_get_temp_dir() ) . '/wstm108-installer-graph-' . bin2hex( random_bytes( 16 ) );
+		$copy = $origin . '/build/work with spaces/checkout';
+		self::assertDirectoryDoesNotExist( $origin );
+		try {
+			$before = self::stage_installer_graph( $origin, $copy, $ending );
+			self::assertCount( 11, $before );
+			self::assertStringContainsString( 'ROOT / "tests/e2e/bounded-list-controller.py"', $before['scripts/untrusted-query.py'] );
+			foreach ( $before as $path => $bytes ) {
+				self::assertSame( $bytes, file_get_contents( $origin . '/' . $path ) );
+				self::assertSame( $bytes, file_get_contents( $copy . '/' . $path ) );
+			}
+			self::assertFileDoesNotExist( $origin . '/build/work with spaces/synthetic-host-boundaries.private.json' );
+		} finally {
+			if ( is_dir( $origin ) ) {
+				$children = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $origin, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::CHILD_FIRST );
+				foreach ( $children as $child ) {
+					self::assertTrue( $child->isDir() ? rmdir( $child->getPathname() ) : unlink( $child->getPathname() ) );
+				}
+				self::assertTrue( rmdir( $origin ) );
+			}
+		}
+	}
+
 	private static function identity(): array {
 		return array( 'dev' => 2049, 'ino' => 100, 'mode' => 0040700, 'nlink' => 2, 'uid' => 1000, 'gid' => 1000 );
 	}
@@ -30,6 +74,33 @@ final class UntrustedSyntheticTopologyTest extends TestCase {
 
 	public static function endings(): array {
 		return array( 'LF' => array( "\n" ), 'CRLF' => array( "\r\n" ) );
+	}
+
+	/** @dataProvider endings */
+	public function test_query_copy_preserves_native_php_owner_and_valid_python_path_literals( string $ending ): void {
+		$path = dirname( __DIR__, 2 ) . '/scripts/untrusted-query.py';
+		$original = file_get_contents( $path );
+		$source = str_replace( "\n", $ending, str_replace( "\r\n", "\n", $original ) );
+		$root = "/synthetic/quote' and \\slash/\u{2603}/\u{1f680}";
+		$docker = 'Path(' . json_encode( $root . '/bin/docker', JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . ')';
+		$owner = 'and identity.st_uid == (os.getuid() if binary == ' . $docker . ' else 0)';
+		$property = new ReflectionProperty( Wstm108_HostBoundaryFixture::class, 'substitutions' );
+		$property->setAccessible( true );
+		$old_sites = $property->getValue();
+		$property->setValue( null, array() );
+		try {
+			$copy = self::fixture( 'query_adapter', array( $source, $root ) );
+			self::assertSame( 1, substr_count( $copy, $owner ), 'Only the explicitly copied Docker executable uses the fixture owner.' );
+			self::assertStringNotContainsString( '\/', $docker, 'JSON slash escaping is not a Python path escape.' );
+			self::assertStringNotContainsString( 'and identity.st_uid == os.getuid()', $copy );
+			self::assertSame( $source, str_replace( array( $owner, $docker ),
+				array( 'and identity.st_uid == 0', 'Path("/usr/bin/docker")' ), $copy ) );
+			self::assertCount( 2, $property->getValue() );
+			foreach ( $property->getValue() as $site ) { self::assertSame( 1, $site['count'] ); }
+			self::assertSame( $original, file_get_contents( $path ), 'Production query source stays unchanged.' );
+		} finally {
+			$property->setValue( null, $old_sites );
+		}
 	}
 
 	/** @dataProvider endings */
@@ -270,19 +341,9 @@ PHP;
 		$origin = realpath( sys_get_temp_dir() ) . '/wstm108-installer-' . bin2hex( random_bytes( 16 ) );
 		$root = $origin . '/build/work with spaces';
 		$copy = $root . '/checkout';
-		$core = array( 'scripts/untrusted-export.php', 'scripts/untrusted-release.php', 'scripts/destructive-retention.sh',
-			'tests/e2e/untrusted-content-files.php', 'tests/e2e/untrusted-content-private-wire.php' );
-		$edited = array( 'scripts/untrusted-host-topology.php', 'scripts/untrusted-authority.php',
-			'scripts/untrusted-host-controller.php', 'scripts/untrusted-host-bootstrap.sh' );
-		$before = array();
-		foreach ( array_merge( $core, $edited ) as $path ) {
-			$bytes = str_replace( "\n", $ending, str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/' . $path ) ) );
-			$before[ $path ] = $bytes;
-			foreach ( array( $origin, $copy ) as $base ) {
-				if ( ! is_dir( dirname( $base . '/' . $path ) ) ) { self::assertTrue( mkdir( dirname( $base . '/' . $path ), 0700, true ) ); }
-				self::assertSame( strlen( $bytes ), file_put_contents( $base . '/' . $path, $bytes ) );
-			}
-		}
+		$core = self::INSTALLER_CORE;
+		$edited = self::INSTALLER_EDITED;
+		$before = self::stage_installer_graph( $origin, $copy, $ending );
 		if ( $alter_core ) {
 			self::assertSame( 7, file_put_contents( $copy . '/' . $core[0], 'changed' ) );
 		}
@@ -300,18 +361,20 @@ PHP;
 				if ( ! $alter_core ) { throw $error; }
 				self::assertStringContainsString( 'byte-identical retained core', $error->getMessage() );
 				self::assertFileDoesNotExist( $root . '/synthetic-host-boundaries.private.json' );
-				foreach ( array_merge( $core, $edited ) as $path ) {
+				foreach ( array_keys( $before ) as $path ) {
 					self::assertSame( $before[ $path ], file_get_contents( $origin . '/' . $path ) );
 					self::assertSame( $core[0] === $path ? 'changed' : $before[ $path ], file_get_contents( $copy . '/' . $path ) );
 				}
 				return;
 			}
 			foreach ( $before as $path => $bytes ) { self::assertSame( $bytes, file_get_contents( $origin . '/' . $path ) ); }
-			foreach ( $core as $path ) { self::assertSame( $before[ $path ], file_get_contents( $copy . '/' . $path ) ); }
+			foreach ( array_merge( $core, self::INSTALLER_SUPPORT ) as $path ) { self::assertSame( $before[ $path ], file_get_contents( $copy . '/' . $path ) ); }
 			$ledger = json_decode( file_get_contents( $root . '/synthetic-host-boundaries.private.json' ), true, 512, JSON_THROW_ON_ERROR );
 			self::assertStringContainsString( 'not real host, daemon or custody evidence', $ledger['claim'] );
 			self::assertSame( $core, array_keys( $ledger['unchanged_core'] ) );
-			self::assertCount( 9, $ledger['exact_sites'] );
+			self::assertCount( 11, $ledger['exact_sites'] );
+			self::assertSame( array( 'scripts/untrusted-query.py::copied-docker-executable', 'scripts/untrusted-query.py::copied-executable-owner' ),
+				array_values( array_filter( array_column( $ledger['exact_sites'], 'site' ), static fn( $site ) => 0 === strpos( $site, 'scripts/untrusted-query.py::' ) ) ) );
 			foreach ( $ledger['exact_sites'] as $site ) { self::assertSame( 1, $site['count'] ); }
 			foreach ( $edited as $path ) {
 				self::assertSame( hash( 'sha256', $before[ $path ] ), $ledger['before'][ basename( $path ) ] );

@@ -1,0 +1,1053 @@
+{
+  "schema": 1,
+  "base_commit": "32b67155ad90cd4bbc7f0dc832e8b86b69b98c50",
+  "predecessor_seal": "21ab59664f8a249323e9c94bbcf197965a3a42c562f6c271cc98b330a38007c7",
+  "reviewed_runtime_patch_sha256": "615dbe83ca3c7e36a175137c8656e6e2fa9b594e5f98f18fda949c4e7aec837a",
+  "reviewed_corrections_sha256": "7ff806906afc407cbe325a665a8638622e50ef7a642419606867dd5d6594373f",
+  "reviewed_corrections": [
+    {
+      "path": "scripts/untrusted-host-observation.php",
+      "patch_sha256": "1a00bed1a835086ce12fcb84902a8bf839f8e5523008e17b3aa741c6d4f6793f",
+      "before_raw_sha256": "0788679e05e627da179f75a10bfcebacf631fdd57477a89596dae9ab2d33640f",
+      "after_raw_sha256": "6d0bcbce303f013900cd81d9f8fa2b1accd3e964ef44a88eba4cb05da663032c"
+    },
+    {
+      "path": "scripts/untrusted-host-observation.php",
+      "patch_sha256": "72fcb806b8171bb9adccecb6e850931c12eba7986735968a859ac51b691542f0",
+      "before_raw_sha256": "6d0bcbce303f013900cd81d9f8fa2b1accd3e964ef44a88eba4cb05da663032c",
+      "after_raw_sha256": "faa638da75049961ed062b9e66a227fc833a10caf0955e422d36e9adefcbf13f"
+    },
+    {
+      "path": "tests/unit/ScopedHostObservationTransportTest.php",
+      "patch_sha256": "900c6fbc4bad9d37a5bd51d31259713546ef3730934d1da8695f806ca86efee0",
+      "before_raw_sha256": "2a8d83ff35bc6e15b932045507d138f66fde3d365f7dba61827266b97d63dbae",
+      "after_raw_sha256": "d6920aa85fdb0a77ec73e23a875ed1541e17d6cdd191985ca33b91bd2215115a"
+    },
+    {
+      "path": "tests/unit/ScopedHostObservationTransportTest.php",
+      "patch_sha256": "6540e98781e6812fe0daf7e51195d6006c1f2fd232b05eadeae0576239525af2",
+      "before_raw_sha256": "d6920aa85fdb0a77ec73e23a875ed1541e17d6cdd191985ca33b91bd2215115a",
+      "after_raw_sha256": "6aa817067b1ebc463235015ea6fc103427b14215e15239c8bd3318275c89a7e5"
+    },
+    {
+      "path": "tests/unit/fixtures/untrusted-host-boundaries.php",
+      "patch_sha256": "2cdef8f881d549d6d58768c368344e56425a5ee96e46695ec0dd302613402fc0",
+      "before_raw_sha256": "b78e20b583811c65a7a95b7cb7ab08566b2da3104d09fcf1212fe695c23d8b8e",
+      "after_raw_sha256": "c956a85abc92014ef2fd1d3e4ae4f870da53bf9c96857aac41eee633fc2cf678"
+    },
+    {
+      "path": "tests/unit/UntrustedHostTopologyTest.php",
+      "patch_sha256": "7b04938b97699f292609be50ddd441fa7aecd6fb7e5a23fbb986cd5cc90dd0f4",
+      "before_raw_sha256": "4a3462236a73bed0b2cf066c20eabeac78b00fc6777f8c939c57a2b7db0e6f0a",
+      "after_raw_sha256": "a47ba7420dab99a80a50ab10d655058974ed5d587cab5251c46033e20d36d0b3"
+    },
+    {
+      "path": "tests/unit/fixtures/untrusted-host-boundaries.php",
+      "patch_sha256": "a3942633040c91f85917d8465f4f6dd7bcbbfdfc5154d301aad0ebef306ab655",
+      "before_raw_sha256": "c956a85abc92014ef2fd1d3e4ae4f870da53bf9c96857aac41eee633fc2cf678",
+      "after_raw_sha256": "b2a7bbd67a7c043facbb75e389df5e96432e31437f6afd022474447ab703eb5e"
+    },
+    {
+      "path": "scripts/untrusted-host-topology.php",
+      "patch_sha256": "6a7e9c6eef0424428d37f884f0b0c7b74089d54586ed1796a4ebc14cd68313ea",
+      "before_raw_sha256": "490c9109bddc4fa34045c722a764e76fac4f60af560d02e7b7c48082129f88c7",
+      "after_raw_sha256": "ad2e85a9535ba08df2f8b478778d6369ef07fcd2b83876bcdc54d2c1a3cb18dc"
+    },
+    {
+      "path": "tests/unit/fixtures/untrusted-host-boundaries.php",
+      "patch_sha256": "51134815a8c9f94bb906fc73c5472ecbe5ac37156143be3b43c88038d24aba96",
+      "before_raw_sha256": "b2a7bbd67a7c043facbb75e389df5e96432e31437f6afd022474447ab703eb5e",
+      "after_raw_sha256": "bd3d64d92ff060f6dedda37a651c0fdbbb1564caab922e85ae39fa86b63e1830"
+    },
+    {
+      "path": "scripts/untrusted-host-controller.php",
+      "patch_sha256": "9c2ee2097b9aeb72002a83026616728fbab8ce367907c03db3a3f183d088b029",
+      "before_raw_sha256": "c8168ccd05ac6ddf619c4f2b7935cd914099886e50ef13303083df20234838f6",
+      "after_raw_sha256": "d9dff922cda71ccf12310fa88ff0c97f358d5f80c58b0ff3df7964c1535a2d05"
+    },
+    {
+      "path": "tests/unit/ScopedHostObservationTest.php",
+      "patch_sha256": "c8af0cb72cf62e44768e63cee03d20b394301b3d9a854d4219139a540b91c59d",
+      "before_raw_sha256": "54d745ada30cb04182fdbca54b98588b1e4e5497f51a9cacf6112d821ede3974",
+      "after_raw_sha256": "68dbf065d76df78c2318aa5755e1b329b0fffac2a2e1f6ba5831ddbe5f8f0ee7"
+    },
+    {
+      "path": "tests/unit/ScopedHostObservationTransportTest.php",
+      "patch_sha256": "d9171457f4dfb06bd8e77f481380ac8d6c797b30f9254ac2d5997742509b5d4d",
+      "before_raw_sha256": "6aa817067b1ebc463235015ea6fc103427b14215e15239c8bd3318275c89a7e5",
+      "after_raw_sha256": "5c48ac998278b9288748c1bc4d1605be296d9bc726cbc4b43f129e636468ef5c"
+    },
+    {
+      "path": "tests/unit/UntrustedHostTopologyTest.php",
+      "patch_sha256": "85bee423a9fa03ebeda6fea777e96e4233fd331fb3a9dcbff654c7b872056142",
+      "before_raw_sha256": "a47ba7420dab99a80a50ab10d655058974ed5d587cab5251c46033e20d36d0b3",
+      "after_raw_sha256": "75ec60ec7fde09d995417b3046ab6272b5043701d326b387a157f8cb98cb9887"
+    },
+    {
+      "path": "tests/unit/fixtures/untrusted-host-boundaries.php",
+      "patch_sha256": "76b8a5a9c14027bc41c344078b09287ee27c9e9892f8bae3618aacd66d64bda2",
+      "before_raw_sha256": "bd3d64d92ff060f6dedda37a651c0fdbbb1564caab922e85ae39fa86b63e1830",
+      "after_raw_sha256": "e10109d0401612da2d50c70430fa163d41a9252e0c835c1a8ea9ac70173873e7"
+    }
+  ],
+  "files": {
+    ".gitattributes": {
+      "current_raw_sha256": "12188a555ba62fef003378f3a8d523370441cf997cca352525e70fd156757f8e",
+      "baseline_raw_sha256": "11280eb6770436b244734978983862b890aa2d91ec53998667d6578ebd7af650",
+      "hunks": [
+        {
+          "start": 40,
+          "before": [],
+          "after": [
+            "scripts/untrusted-host-observation.php -text whitespace=cr-at-eol",
+            "tests/unit/ScopedHostObservationTest.php -text whitespace=cr-at-eol",
+            "tests/unit/ScopedHostObservationTransportTest.php -text whitespace=cr-at-eol",
+            "tests/unit/ScopedHostObservationTransitionTest.php -text whitespace=cr-at-eol",
+            "tests/unit/fixtures/scoped-host-observation-transition.php -text whitespace=cr-at-eol",
+            "tests/unit/fixtures/scoped-host-observation-transition.json -text whitespace=cr-at-eol"
+          ]
+        }
+      ]
+    },
+    ".github/PULL_REQUEST_TEMPLATE.md": {
+      "current_raw_sha256": "19317b551ba09fb1a1aa96ed427b6db8b5f6a8ee06231bdfbb2a4077413e48f2",
+      "baseline_raw_sha256": "44d49ec1872c72a0a7a74197a47fe91d7b6fdd71bd98e581f00a99969a5d3a98",
+      "hunks": [
+        {
+          "start": 22,
+          "before": [],
+          "after": [
+            "- [ ] Scoped privileged native observations are explicitly enabled only on approved disposable CI hosts; keep controller/capture/PHP nonroot, fixed verified system argv/proc targets, clean environment/closed stdin, bounded exit/EOF/original retention, complete fd/listener/namespace/mount/start-identity/race predicates, unchanged grants/custody and a reviewed exact-byte outer projection; distinguish adapters from native sudo/runtime/CI acceptance and cooperative I/O deadlines from a root-child cleanup certificate"
+          ]
+        }
+      ]
+    },
+    ".github/REPOSITORY_CHANGELOG.md": {
+      "current_raw_sha256": "4c34ada43f22a93881b445946d8db0c4a00bb785235429997e959bb15477f77c",
+      "baseline_raw_sha256": "279ff5d4dbd38e7790293e9b8e4b0298fd34944bb77b49329f75285082f1fc64",
+      "hunks": [
+        {
+          "start": 7,
+          "before": [],
+          "after": [
+            "",
+            "- Add explicitly opted-in read-only system observation for inaccessible",
+            "  Docker-daemon proc evidence on approved disposable CI hosts. Controller,",
+            "  capture and PHP remain nonroot; only verified fixed system reads and",
+            "  supervision are elevated. Preserve complete native admission, bounded",
+            "  original retention, grants and release checks through an exact outer",
+            "  source transition. Native/runtime/CI acceptance remains separate from",
+            "  parser or nonprivileged adapter results; filesystem deadlines are",
+            "  cooperative and do not certify root-child cleanup. Explicit Git attributes",
+            "  preserve all six added source-bound files without incidental newline",
+            "  conversion."
+          ]
+        }
+      ]
+    },
+    ".github/workflows/compatibility-qa.yml": {
+      "current_raw_sha256": "1c2ba738ac031cd33116d82a5500f3560da8f0c5586f9346fd47f08e1a7e0155",
+      "baseline_raw_sha256": "ca8c18c12b14d76d27be262da5ef2c2dd80ec7dbcb4fcbb7df86f3d9a381936f",
+      "hunks": [
+        {
+          "start": 116,
+          "before": [],
+          "after": [
+            "          WSTM108_HOST_INSPECTION: system-readonly-v1"
+          ]
+        },
+        {
+          "start": 384,
+          "before": [],
+          "after": [
+            "          WSTM108_HOST_INSPECTION: system-readonly-v1"
+          ]
+        },
+        {
+          "start": 594,
+          "before": [],
+          "after": [
+            "          WSTM108_HOST_INSPECTION: system-readonly-v1"
+          ]
+        },
+        {
+          "start": 767,
+          "before": [],
+          "after": [
+            "          WSTM108_HOST_INSPECTION: system-readonly-v1"
+          ]
+        }
+      ]
+    },
+    ".github/workflows/e2e-qa.yml": {
+      "current_raw_sha256": "58e9db2aa9bf215161a11852364bdfa631a214ebb128d7a432aa35bed60d4332",
+      "baseline_raw_sha256": "f2f4febd0da80b37263b2c32d306e24094ae5dd51787a65fd97e73fb210f716c",
+      "hunks": [
+        {
+          "start": 153,
+          "before": [],
+          "after": [
+            "          WSTM108_HOST_INSPECTION: system-readonly-v1"
+          ]
+        },
+        {
+          "start": 468,
+          "before": [],
+          "after": [
+            "          WSTM108_HOST_INSPECTION: system-readonly-v1"
+          ]
+        }
+      ]
+    },
+    ".github/workflows/release-package-qa.yml": {
+      "current_raw_sha256": "0db3ce18718506fb85f75efb936780af72f5e4c56c3f38afcd48786a99ed5205",
+      "baseline_raw_sha256": "ea39ebd603fd9d5f924d11106874e80d9efab37bfc7f5157a1d0f35a1a91b548",
+      "hunks": [
+        {
+          "start": 90,
+          "before": [],
+          "after": [
+            "          WSTM108_HOST_INSPECTION: system-readonly-v1"
+          ]
+        }
+      ]
+    },
+    ".github/workflows/release.yml": {
+      "current_raw_sha256": "087d1b5e88fbb5153bb826335678b3dc53fc2e822bcb72509b9e18c8c868f9bf",
+      "baseline_raw_sha256": "05ccd7cf43d35cf93af50917eeb659f2c8b533df500ae46ab905093c1b17a659",
+      "hunks": [
+        {
+          "start": 92,
+          "before": [],
+          "after": [
+            "          WSTM108_HOST_INSPECTION: system-readonly-v1"
+          ]
+        }
+      ]
+    },
+    "CONTRIBUTING.md": {
+      "current_raw_sha256": "c98626e647723937fff8ee7f2f6d43b95269c0a82e901586d52f19c99827b865",
+      "baseline_raw_sha256": "a6b710732f2448174018f7a63d0bdf5fdb6bab967401f54ba825e65216735eaa",
+      "hunks": [
+        {
+          "start": 70,
+          "before": [],
+          "after": [
+            "- **Scoped native host observation** \u2014 enable the exact versioned mode only on approved disposable hosted CI. Keep controller/capture/PHP nonroot and elevate only verified fixed system reads/supervision against the validated Docker PID. Retain complete observations, race checks, private originals, grants/custody and an exact outer source projection. The [QA policy](docs/qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts) distinguishes adapters, native sudo and actual runtime/CI acceptance, and cooperative I/O deadlines from a root-child cleanup certificate."
+          ]
+        },
+        {
+          "start": 268,
+          "before": [],
+          "after": [
+            "- [ ] Scoped privileged native observations are explicitly enabled only on approved disposable CI hosts; keep controller/capture/PHP nonroot, fixed verified system argv/proc targets, clean environment/closed stdin, bounded exit/EOF/original retention, complete fd/listener/namespace/mount/start-identity/race predicates, unchanged grants/custody and a reviewed exact-byte outer projection; distinguish adapters from native sudo/runtime/CI acceptance and cooperative I/O deadlines from a root-child cleanup certificate"
+          ]
+        }
+      ]
+    },
+    "README.md": {
+      "current_raw_sha256": "7415c3366b3e92f4e4373869ef55ddb781a5e6c7ce449064e3253a157eccb09f",
+      "baseline_raw_sha256": "888e8dda0ef730fa0e565c4e1110e285dc2bed34b85acfa38cba9019197f7f81",
+      "hunks": [
+        {
+          "start": 34,
+          "before": [],
+          "after": [
+            "",
+            "Disposable hosted QA explicitly opts into read-only system observation when",
+            "Docker-daemon proc evidence is inaccessible to the nonroot controller. Only",
+            "fixed verified system read/supervision tools are elevated; candidate code,",
+            "fixture authority and admission requirements are unchanged. Do not enable this",
+            "mode on shared/live hosts. See the",
+            "[inspection boundary and evidence limitations](docs/qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts)."
+          ]
+        }
+      ]
+    },
+    "docs/ci-cd-strategy.md": {
+      "current_raw_sha256": "bb82babddcf36c32bb55dcc239aeb34d6e30aaaf90b3928c1a6324b4f85a6ec5",
+      "baseline_raw_sha256": "82596fd1933ba50ba422bf3588794f6fd11e29cac275471f600424e6b2686215",
+      "hunks": [
+        {
+          "start": 28,
+          "before": [],
+          "after": [
+            "",
+            "### Scoped system observation on disposable hosts",
+            "",
+            "Approved disposable GitHub-hosted authority entries explicitly select",
+            "`WSTM108_HOST_INSPECTION=system-readonly-v1`; shared/live/self-hosted runners",
+            "must not select it. The [QA strategy](qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts)",
+            "defines the fixed sudo/system-read boundary, native executable/target checks,",
+            "private originals and supervision limitations. Controller/capture/PHP remain",
+            "nonroot, candidate code is never elevated, and inspection changes no grants,",
+            "fixtures, permissions, namespaces or mounts. All actual required runtime gates",
+            "remain mandatory; synthetic adapters and older CI cannot substitute. Preserve",
+            "the reviewed exact-byte outer projection ahead of every frozen seal."
+          ]
+        }
+      ]
+    },
+    "docs/qa-strategy.md": {
+      "current_raw_sha256": "c5edf6e2cad1f15ce44519f9835c61d043448961b513838966af5c1b2e7501fb",
+      "baseline_raw_sha256": "4b9fa0717a23af2abde5118bd948e24ac74b899621ba792008da74b297baf72d",
+      "hunks": [
+        {
+          "start": 15,
+          "before": [],
+          "after": [
+            "",
+            "### Opt-in read-only system observation on disposable CI hosts",
+            "",
+            "Disposable GitHub-hosted source, package and PHP-floor QA entries explicitly set",
+            "`WSTM108_HOST_INSPECTION=system-readonly-v1`. Unset preserves native unprivileged",
+            "reads; an unknown value refuses admission. Do not enable it on shared, live or",
+            "self-hosted systems. Inspection does not provision fixtures, reset a stack,",
+            "grant a lease or bypass any admission predicate.",
+            "",
+            "The controller, PHP and private capture remain nonroot. Verified absolute,",
+            "root-owned, non-group/world-writable system tools alone run through",
+            "`/usr/bin/sudo -n --user=root --`: a fixed root `/usr/bin/timeout` supervises",
+            "`/usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C` and one fixed `/usr/bin/find -P`,",
+            "`/usr/bin/stat` or `/usr/bin/head` read of the validated Docker PID's descriptors,",
+            "mount namespace or mount table. Tools require a matching native ELF64",
+            "little-endian Linux/System-V x86-64 or AArch64 header; only sudo may have set-ID",
+            "bits. No candidate PHP, Python, shell or script is elevated. A fixed nonroot",
+            "system timeout also bounds the sudo-entry transport.",
+            "",
+            "The positive PID/root hint, process/start identity, canonical root-owned socket,",
+            "unique listening inode, descriptor ownership, namespace identity, equal complete",
+            "mount tables and before/after identities remain mandatory. Missing tools, sudo",
+            "denial, partial/over-limit bytes, stderr, nonzero exit, deadline expiry and races",
+            "refuse without a success fallback. Stdin is closed and environments contain",
+            "only fixed `PATH` and `LC_ALL`; the native env entry clears sudo-added variables.",
+            "",
+            "Private originals precede parsing. An exclusively reserved observation child",
+            "uses the existing owned-child transition; helpers retain its handle and mode,",
+            "while candidate child environments receive neither. Release checks the complete",
+            "original inventory, identities, hashes, lengths, fixed argv and parsers.",
+            "Incomplete or changed observations retain private evidence and block release.",
+            "Public diagnostics expose only closed reasons, never raw process/filesystem data.",
+            "",
+            "One capture deadline starts before reservation/tool checks and covers streams,",
+            "exit/EOF, persistence and identity completion. Refusal uses nonblocking PHP",
+            "process-resource disposal, not a blocking reap or a signal to a possibly reused",
+            "PID; fixed system timers remain intact. These deadlines do not certify",
+            "root-child cleanup or hard preemption of synchronous filesystem/kernel I/O.",
+            "Late completion cannot be accepted, but blocked storage operations can return",
+            "after the deadline. Parser and nonprivileged transport adapters are not native",
+            "sudo, Docker admission, custody, owned runtime or required-check acceptance.",
+            "",
+            "The additive exact-byte outer projection restores the reviewed current-main",
+            "generation before its unchanged historical bridge. It does not regenerate any",
+            "accepted ledger or change original dependency hash assertions."
+          ]
+        }
+      ]
+    },
+    "docs/security-strategy.md": {
+      "current_raw_sha256": "e19bd761e71857bc9d465683959bb0ed823cc7703cca4207bcf818146389df2a",
+      "baseline_raw_sha256": "6b9c61a56e6311ede6992cdb0747b580d964ab81c2ddb635820cda60faaecee7",
+      "hunks": [
+        {
+          "start": 26,
+          "before": [],
+          "after": [
+            "",
+            "### Scoped repository QA host observation",
+            "",
+            "Only separately approved disposable hosted CI selects",
+            "`WSTM108_HOST_INSPECTION=system-readonly-v1`. The controller, capture and PHP",
+            "remain nonroot; verified fixed system read/supervision primitives alone run",
+            "through sudo against the validated Docker PID's descriptors, namespace and",
+            "mount table. Candidate code is not elevated, no capabilities/permissions/mounts",
+            "are changed, and namespace entry or container commands are not part of this",
+            "boundary. See the [QA inspection policy](qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts)",
+            "for clean environments, executable/target identity, complete observations,",
+            "private originals, refusal/release rules and cooperative I/O limitations.",
+            "Inspection cannot grant runtime or cleanup authority. Shared/live/self-hosted",
+            "systems must not opt in. Keep every earlier proof seal unchanged through a",
+            "reviewed outer source transition; native sudo and real runtime acceptance need",
+            "separate evidence from parser/transport adapters."
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-authority.php": {
+      "current_raw_sha256": "2b51459e0dd3f29fce6573e0970bb3ccfa720011c64e8784863024ea4b85abb2",
+      "baseline_raw_sha256": "0ec215878619cf588ace74446132ab44859bc291289818895db8513a06aeeb65",
+      "hunks": [
+        {
+          "start": 278,
+          "before": [
+            "\t\tforeach ( array( 'DOCKER_CONTEXT', 'DOCKER_HOST', 'DOCKER_TLS_VERIFY', 'DOCKER_CERT_PATH', 'DOCKER_TLS' ) as $key ) {"
+          ],
+          "after": [
+            "\t\tforeach ( array( 'DOCKER_CONTEXT', 'DOCKER_HOST', 'DOCKER_TLS_VERIFY', 'DOCKER_CERT_PATH', 'DOCKER_TLS',",
+            "\t\t\t'WSTM108_HOST_INSPECTION', 'WSTM108_HOST_OBSERVATION_CUSTODY' ) as $key ) {"
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-host-bootstrap.sh": {
+      "current_raw_sha256": "923ecab8621200fe10242e567815d20d8e492dc605b6121932f7774be5869eec",
+      "baseline_raw_sha256": "21de117d566440e6ee924f4cc9d7f7098918eba3b5fe70cf0d49d6ca21332868",
+      "hunks": [
+        {
+          "start": 57,
+          "before": [],
+          "after": [
+            "\tlocal inspection_args=()",
+            "\tif [[ -v WSTM108_HOST_INSPECTION ]]; then",
+            "\t\tinspection_args=( WSTM108_HOST_INSPECTION=\"$WSTM108_HOST_INSPECTION\" )",
+            "\tfi"
+          ]
+        },
+        {
+          "start": 83,
+          "before": [],
+          "after": [
+            "\t\t\"${inspection_args[@]}\" \\"
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-host-controller.php": {
+      "current_raw_sha256": "d9dff922cda71ccf12310fa88ff0c97f358d5f80c58b0ff3df7964c1535a2d05",
+      "baseline_raw_sha256": "6fd0adb5f62aa3746293cc4f849897799991d4f86cfbb095cee9c1b25b6332af",
+      "hunks": [
+        {
+          "start": 5,
+          "before": [],
+          "after": [
+            "require_once __DIR__ . '/untrusted-host-observation.php';"
+          ]
+        },
+        {
+          "start": 67,
+          "before": [],
+          "after": [
+            "\tprivate array $observation_captures = array();"
+          ]
+        },
+        {
+          "start": 87,
+          "before": [],
+          "after": [
+            "\t\tif ( Wstm108_HostObservation::enabled( $environment ) ) {",
+            "\t\t\tself::require( posix_geteuid() > 0 && ! isset( $environment['WSTM108_HOST_OBSERVATION_CUSTODY'] ), 'inspection-custody-already-set-or-root-controller' );",
+            "\t\t}",
+            "\t}",
+            "",
+            "\tprivate function reserve_observations(): void {",
+            "\t\tif ( ! Wstm108_HostObservation::enabled( $this->environment ) ) { return; }",
+            "\t\t$this->verify();",
+            "\t\t$directory = $this->directory . '/host-observations';",
+            "\t\tself::require( mkdir( $directory, 0700 ), 'exclusive-host-observation-reservation' );",
+            "\t\t$child = Wstm108_Files::directory( $directory );",
+            "\t\t$updated = Wstm108_Files::directory( $this->directory );",
+            "\t\tWstm108_HostTopology::owned_child_transition( $this->identity, $updated, $child );",
+            "\t\t$this->identity = $updated;",
+            "\t\t$this->environment['WSTM108_HOST_OBSERVATION_CUSTODY'] = base64_encode( json_encode( array(",
+            "\t\t\t'directory' => $directory, 'identity' => Wstm108_HostTopology::stable_identity( $child ),",
+            "\t\t), JSON_THROW_ON_ERROR ) );",
+            "\t\tself::require( putenv( 'WSTM108_HOST_OBSERVATION_CUSTODY=' . $this->environment['WSTM108_HOST_OBSERVATION_CUSTODY'] ), 'inspection-custody-environment' );"
+          ]
+        },
+        {
+          "start": 458,
+          "before": [],
+          "after": [
+            "\t\tif ( Wstm108_HostObservation::enabled( $this->environment ) ) {",
+            "\t\t\t$names[] = 'host-observations';",
+            "\t\t\t$this->observation_captures = Wstm108_HostObservation::retained( $this->environment, $this->observation_captures );",
+            "\t\t}"
+          ]
+        },
+        {
+          "start": 520,
+          "before": [],
+          "after": [
+            "\t\t$this->reserve_observations();"
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-host-topology.php": {
+      "current_raw_sha256": "ad2e85a9535ba08df2f8b478778d6369ef07fcd2b83876bcdc54d2c1a3cb18dc",
+      "baseline_raw_sha256": "2c0951d9097e3b9b8246e7247dabfd6034a5b50680bee7963827968f5866f3e8",
+      "hunks": [
+        {
+          "start": 33,
+          "before": [],
+          "after": [
+            "\t\t'invalid-host-inspection-mode',"
+          ]
+        },
+        {
+          "start": 214,
+          "before": [],
+          "after": [
+            "\t\tif ( Wstm108_HostObservation::enabled( getenv() ) ) {",
+            "\t\t\t$links = Wstm108_HostObservation::descriptors( Wstm108_HostObservation::read( 'descriptors', $pid ) );",
+            "\t\t\t$matched = array();",
+            "\t\t\tforeach ( $links as $descriptor => $link ) {",
+            "\t\t\t\tif ( 'socket:[' . $listener[0] . ']' === $link ) { $matched[] = (string) $descriptor; }",
+            "\t\t\t}",
+            "\t\t} else {"
+          ]
+        },
+        {
+          "start": 230,
+          "before": [],
+          "after": [
+            "\t\t}"
+          ]
+        },
+        {
+          "start": 232,
+          "before": [
+            "\t\t$namespace = self::stat( $process . '/ns/mnt' );"
+          ],
+          "after": [
+            "\t\t$namespace = Wstm108_HostObservation::enabled( getenv() )",
+            "\t\t\t? Wstm108_HostObservation::namespace_identity( Wstm108_HostObservation::read( 'namespace', $pid ) )",
+            "\t\t\t: self::stat( $process . '/ns/mnt' );"
+          ]
+        },
+        {
+          "start": 243,
+          "before": [],
+          "after": [
+            "\t\trequire_once __DIR__ . '/untrusted-host-observation.php';",
+            "\t\tWstm108_HostObservation::enabled( getenv() );",
+            "\t\tWstm108_HostObservation::begin_pass();"
+          ]
+        },
+        {
+          "start": 256,
+          "before": [],
+          "after": [
+            "\t\tself::require( $pid > 0 && $pid <= 2147483647, 'untrusted-pid-discovery-hint' );"
+          ]
+        },
+        {
+          "start": 259,
+          "before": [
+            "\t\tself::require( $mountinfo === self::read( '/proc/' . $pid . '/mountinfo', 4194304 ), 'daemon-mount-table-differs' );"
+          ],
+          "after": [
+            "\t\t$daemon_mountinfo = Wstm108_HostObservation::enabled( getenv() )",
+            "\t\t\t? Wstm108_HostObservation::read( 'mountinfo', $pid ) : self::read( '/proc/' . $pid . '/mountinfo', 4194304 );",
+            "\t\tself::require( $mountinfo === $daemon_mountinfo, 'daemon-mount-table-differs' );"
+          ]
+        },
+        {
+          "start": 265,
+          "before": [],
+          "after": [
+            "\t\tif ( Wstm108_HostObservation::enabled( getenv() ) ) {",
+            "\t\t\tself::require( $daemon_mountinfo === Wstm108_HostObservation::read( 'mountinfo', $pid ), 'peer-or-topology-changed-during-admission' );",
+            "\t\t}"
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-provenance.php": {
+      "current_raw_sha256": "07ce87a65e54a022ad371a49783ad25486138df4e1f141f77600afd940258beb",
+      "baseline_raw_sha256": "a29778e37416d68a31613e213b7508ae9facfac5964d8b7a6627c277f4660f9d",
+      "hunks": [
+        {
+          "start": 63,
+          "before": [
+            "\t'scripts/untrusted-host-topology.php', 'scripts/untrusted-host-bootstrap.sh', 'scripts/untrusted-host-controller.php', 'scripts/untrusted-export.php',"
+          ],
+          "after": [
+            "\t'scripts/untrusted-host-topology.php', 'scripts/untrusted-host-observation.php', 'scripts/untrusted-host-bootstrap.sh', 'scripts/untrusted-host-controller.php', 'scripts/untrusted-export.php',"
+          ]
+        }
+      ]
+    },
+    "tests/e2e/README.md": {
+      "current_raw_sha256": "f6a4a4d89eaad25bfa25483dbebf402e9ddb1433b3c996b3f5be9aa3de946867",
+      "baseline_raw_sha256": "2c8f7da19b6eb6e4f8168f3710201ec594d2adf68f151bfd698f46eb5292c980",
+      "hunks": [
+        {
+          "start": 17,
+          "before": [],
+          "after": [
+            "",
+            "Disposable hosted authority entries set",
+            "`WSTM108_HOST_INSPECTION=system-readonly-v1` for otherwise inaccessible native",
+            "Docker-daemon proc observations. The controller/capture/PHP remain nonroot;",
+            "only fixed verified system reads of the validated PID and their supervision",
+            "are elevated. Unset retains native reads, unknown modes refuse, and this mode",
+            "must not be enabled on shared/live hosts. Complete listener/fd/namespace/mount/",
+            "start-identity checks, original retention, grants and cleanup ownership remain",
+            "mandatory. Parser or transport adapters never substitute for actual sudo,",
+            "source/floor/original-ZIP, provider, benchmark or custody evidence. See the",
+            "[scoped inspection policy](../../docs/qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts),",
+            "including cooperative filesystem deadlines and the absence of a root-child",
+            "cleanup certificate."
+          ]
+        }
+      ]
+    },
+    "tests/unit/AdmissionNativeFixtureTransitionTest.php": {
+      "current_raw_sha256": "dc763d94692352382e9b0c90493ef7d35fe0c315b0c88cc52554c133a2c441cb",
+      "baseline_raw_sha256": "d3dd2402304fe875b284103fd3c24586b935fd67e64f586784528d87104a0271",
+      "hunks": [
+        {
+          "start": 8,
+          "before": [],
+          "after": [
+            "require_once __DIR__ . '/fixtures/scoped-host-observation-transition.php';"
+          ]
+        },
+        {
+          "start": 39,
+          "before": [],
+          "after": [
+            "\t\t\t$current = Wstm167ScopedHostObservationTransition::restore( $path, $current );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/CiBudgetControlFollowupTest.php": {
+      "current_raw_sha256": "61ac03fcec00f3be87ed0fb11041afb050f682d3090d3479a8f1d110931a92fe",
+      "baseline_raw_sha256": "666052a9c0454918a3dcf4cc5bb67ba9d31028264632f360c3ca131325b8aa68",
+      "hunks": [
+        {
+          "start": 7,
+          "before": [],
+          "after": [
+            "require_once __DIR__ . '/fixtures/scoped-host-observation-transition.php';"
+          ]
+        },
+        {
+          "start": 35,
+          "before": [
+            "\t\tself::assertSame( str_replace( $override, '', $current ), Wstm167CiBudgetControlTransition::restore( $path, $current ) );"
+          ],
+          "after": [
+            "\t\tself::assertSame( 4, substr_count( $current, \"          WSTM108_HOST_INSPECTION: system-readonly-v1\\n\" ) );",
+            "\t\tself::assertSame( 4, substr_count( $current, 'WSTM108_HOST_INSPECTION:' ) );",
+            "\t\t$before_observation = Wstm167ScopedHostObservationTransition::restore( $path, $current );",
+            "\t\tself::assertSame( str_replace( $override, '', $before_observation ), Wstm167CiBudgetControlTransition::restore( $path, $current ) );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/CurrentMainIntegrationTest.php": {
+      "current_raw_sha256": "aa8e798f546a55037f9d717b44ea8a9126894d1d9a0156820e6476fa62c1aadc",
+      "baseline_raw_sha256": "6efadfdf2f54da574c3c54eb3258fd2398ee82c28d4bdec01e36bb8383f01318",
+      "hunks": [
+        {
+          "start": 58,
+          "before": [
+            "\t\tforeach ( $map['dependencies'] as $path => $hash ) { self::assertSame( $hash, hash( 'sha256', $this->read( $path ) ), $path ); }"
+          ],
+          "after": [
+            "\t\tforeach ( $map['dependencies'] as $path => $hash ) { self::assertSame( $hash, hash( 'sha256', Wstm167ScopedHostObservationTransition::restore( $path, $this->read( $path ) ) ), $path ); }"
+          ]
+        }
+      ]
+    },
+    "tests/unit/ScoreProofEntryTransitionTest.php": {
+      "current_raw_sha256": "fa1543f009f7c8d014500fc91827632b1a869aa7582f57e56ca16e56fdc96273",
+      "baseline_raw_sha256": "8d7ad829a4b864deea29e52ac2d32f6b7756174ed83230c5c03a14068a739368",
+      "hunks": [
+        {
+          "start": 44,
+          "before": [],
+          "after": [
+            "\t\t$outer = Wstm167ScopedHostObservationTransition::load();"
+          ]
+        },
+        {
+          "start": 53,
+          "before": [
+            "\t\t\t\t\tself::assertSame( 'Score proof entry current source drift: ' . $path, $error->getMessage() );"
+          ],
+          "after": [
+            "\t\t\t\t\t$context = isset( $outer['files'][ $path ] ) ? 'CI diagnostic current source drift: ' : 'Score proof entry current source drift: ';",
+            "\t\t\t\t\tself::assertSame( $context . $path, $error->getMessage() );"
+          ]
+        },
+        {
+          "start": 62,
+          "before": [
+            "\t\t\t\t\tself::assertSame( 'Score proof entry dependency current source drift: ' . $path, $error->getMessage() );"
+          ],
+          "after": [
+            "\t\t\t\t\t$context = 'Score proof entry dependency current source drift: ';",
+            "\t\t\t\t\tif ( isset( $outer['files'][ $path ] ) ) {",
+            "\t\t\t\t\t\t$context = is_string( $foreign ) ? 'CI diagnostic current source drift: ' : 'CI diagnostic dependency drift: ';",
+            "\t\t\t\t\t} elseif ( isset( $outer['dependencies'][ $path ] ) ) {",
+            "\t\t\t\t\t\t$context = 'CI diagnostic dependency drift: ';",
+            "\t\t\t\t\t}",
+            "\t\t\t\t\tself::assertSame( $context . $path, $error->getMessage() );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/SelectedListenerTest.php": {
+      "current_raw_sha256": "f2431a5e294a0ea60978751ec73b2af75b9620ddabc5e2fafc3ba92251a91f89",
+      "baseline_raw_sha256": "310a645f6a796f4abd463fada16ab6c91633f3a7121ebe7f22629777839d6eda",
+      "hunks": [
+        {
+          "start": 113,
+          "before": [],
+          "after": [
+            "\t\t// Isolate the selected-listener change from the separately sealed observation transport.",
+            "\t\t$selected = Wstm167CurrentMainTransition::restore( 'scripts/untrusted-host-topology.php', $source );"
+          ]
+        },
+        {
+          "start": 116,
+          "before": [
+            "\t\t\tsubstr( $source, strpos( $source, '$descriptors = ' ) ) );"
+          ],
+          "after": [
+            "\t\t\tsubstr( $selected, strpos( $selected, '$descriptors = ' ) ) );"
+          ]
+        },
+        {
+          "start": 119,
+          "before": [
+            "\t\t\tsubstr( $source, strpos( $source, $prefix ), strpos( $source, $end ) - strpos( $source, $prefix ) ) );"
+          ],
+          "after": [
+            "\t\t\tsubstr( $selected, strpos( $selected, $prefix ), strpos( $selected, $end ) - strpos( $selected, $prefix ) ) );"
+          ]
+        },
+        {
+          "start": 125,
+          "before": [],
+          "after": [
+            "\t\tpreg_match_all( \"/self::require\\\\([^;]*'([a-z][a-z-]+)'\\\\s*\\\\);/\",",
+            "\t\t\t$this->read( 'scripts/untrusted-host-observation.php' ), $observation_matches );",
+            "\t\t$used_reasons = array_values( array_unique( array_merge( $matches[1], $observation_matches[1] ) ) );"
+          ]
+        },
+        {
+          "start": 129,
+          "before": [
+            "\t\tsort( $matches[1] ); sort( $reasons );",
+            "\t\tself::assertSame( $reasons, $matches[1] );"
+          ],
+          "after": [
+            "\t\tself::assertCount( count( $reasons ), array_unique( $reasons ) );",
+            "\t\tsort( $used_reasons ); sort( $reasons );",
+            "\t\tself::assertSame( $reasons, $used_reasons );"
+          ]
+        },
+        {
+          "start": 145,
+          "before": [
+            "\t\t\tself::assertSame( $hash, hash( 'sha256', $this->read( $path ) ), $path );"
+          ],
+          "after": [
+            "\t\t\tself::assertSame( $hash, hash( 'sha256', Wstm167CurrentMainTransition::restore( $path, $this->read( $path ) ) ), $path );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/UntrustedHostTopologyTest.php": {
+      "current_raw_sha256": "75ec60ec7fde09d995417b3046ab6272b5043701d326b387a157f8cb98cb9887",
+      "baseline_raw_sha256": "4a3462236a73bed0b2cf066c20eabeac78b00fc6777f8c939c57a2b7db0e6f0a",
+      "hunks": [
+        {
+          "start": 7,
+          "before": [],
+          "after": [
+            "require_once dirname( __DIR__, 2 ) . '/scripts/untrusted-host-observation.php';"
+          ]
+        },
+        {
+          "start": 11,
+          "before": [],
+          "after": [
+            "\tprivate static function observer_literal_reasons( string $source ): array {",
+            "\t\t$tokens = array_values( array_filter( token_get_all( $source ),",
+            "\t\t\tstatic fn( $token ) => ! is_array( $token ) || ! in_array( $token[0], array( T_WHITESPACE, T_COMMENT, T_DOC_COMMENT ), true ) ) );",
+            "\t\t$reasons = array();",
+            "\t\t$pairs = array( ')' => '(', ']' => '[', '}' => '{' );",
+            "\t\tfor ( $i = 0; $i + 3 < count( $tokens ); ++$i ) {",
+            "\t\t\tif ( ! is_array( $tokens[ $i ] ) || T_STRING !== $tokens[ $i ][0] || 'self' !== strtolower( $tokens[ $i ][1] )",
+            "\t\t\t\t|| ! is_array( $tokens[ $i + 1 ] ) || T_DOUBLE_COLON !== $tokens[ $i + 1 ][0]",
+            "\t\t\t\t|| ! is_array( $tokens[ $i + 2 ] ) || ! in_array( $tokens[ $i + 2 ][0], array( T_STRING, T_REQUIRE ), true )",
+            "\t\t\t\t|| 'require' !== strtolower( $tokens[ $i + 2 ][1] ) || '(' !== $tokens[ $i + 3 ] ) { continue; }",
+            "\t\t\t$stack = array( '(' ); $commas = 0; $argument = array();",
+            "\t\t\tfor ( $j = $i + 4; $j < count( $tokens ); ++$j ) {",
+            "\t\t\t\t$token = $tokens[ $j ];",
+            "\t\t\t\tif ( is_string( $token ) && in_array( $token, array( '(', '[', '{' ), true ) ) {",
+            "\t\t\t\t\t$stack[] = $token;",
+            "\t\t\t\t} elseif ( is_string( $token ) && isset( $pairs[ $token ] ) ) {",
+            "\t\t\t\t\tself::assertSame( $pairs[ $token ], array_pop( $stack ), 'Observer guard delimiters must balance.' );",
+            "\t\t\t\t\tif ( array() === $stack ) { break; }",
+            "\t\t\t\t}",
+            "\t\t\t\tif ( 1 === count( $stack ) && ',' === $token ) { ++$commas; $argument = array(); continue; }",
+            "\t\t\t\tif ( $commas > 0 ) { $argument[] = $token; }",
+            "\t\t\t}",
+            "\t\t\tself::assertSame( array(), $stack, 'Observer guard call must be complete.' );",
+            "\t\t\tself::assertLessThanOrEqual( 1, $commas, 'Observer guard has a condition and optional literal reason only.' );",
+            "\t\t\tif ( 0 === $commas ) { continue; }",
+            "\t\t\tself::assertCount( 1, $argument );",
+            "\t\t\tself::assertIsArray( $argument[0] );",
+            "\t\t\tself::assertSame( T_CONSTANT_ENCAPSED_STRING, $argument[0][0] );",
+            "\t\t\tself::assertSame( 1, preg_match( \"/^'([a-z][a-z-]+)'$/D\", $argument[0][1], $match ) );",
+            "\t\t\t$reasons[] = $match[1];",
+            "\t\t}",
+            "\t\treturn $reasons;",
+            "\t}",
+            "",
+            "\tpublic function test_observer_reason_extraction_ignores_nested_arguments_and_noncode(): void {",
+            "\t\t$source = <<<'PHP'",
+            "<?php",
+            "self::require( is_resource( fopen( '/synthetic/not-opened', 'rb' ) ) );",
+            "self::require( array( 'first', 'second' ) === array( 'first', 'second' ), 'actual-literal-reason' );",
+            "self::require( [ 'first', 'second' ] === [ 'first', 'second' ], 'another-literal-reason' );",
+            "// self::require( false, 'comment-only-reason' );",
+            "$not_code = \"self::require( false, 'quoted-only-reason' );\";",
+            "PHP;",
+            "\t\tself::assertSame( array( 'actual-literal-reason', 'another-literal-reason' ), self::observer_literal_reasons( $source ) );",
+            "\t}",
+            ""
+          ]
+        },
+        {
+          "start": 62,
+          "before": [
+            "\t\tself::assertSame( Wstm108_HostTopology::REFUSAL_REASONS, $matches[1] );"
+          ],
+          "after": [
+            "\t\tself::assertSame( array_slice( Wstm108_HostTopology::REFUSAL_REASONS, 0, 36 ), $matches[1] );"
+          ]
+        },
+        {
+          "start": 64,
+          "before": [],
+          "after": [
+            "\t\t$observer = file_get_contents( dirname( __DIR__, 2 ) . '/scripts/untrusted-host-observation.php' );",
+            "\t\t$observer_reasons = array_values( array_unique( self::observer_literal_reasons( $observer ) ) );",
+            "\t\tself::assertNotEmpty( $observer_reasons );",
+            "\t\tself::assertContains( 'invalid-host-inspection-mode', $observer_reasons );",
+            "\t\tself::assertCount( 37, Wstm108_HostTopology::REFUSAL_REASONS );",
+            "\t\tself::assertSame( Wstm108_HostTopology::REFUSAL_REASONS, array_values( array_unique( Wstm108_HostTopology::REFUSAL_REASONS ) ) );",
+            "\t\tself::assertSame( Wstm108_HostTopology::REFUSAL_REASONS, array_values( array_unique( array_merge( $matches[1], $observer_reasons ) ) ) );"
+          ]
+        },
+        {
+          "start": 82,
+          "before": [],
+          "after": [
+            "\t\t}",
+            "\t\t$observer_require = new ReflectionMethod( Wstm108_HostObservation::class, 'require' );",
+            "\t\t$observer_require->setAccessible( true );",
+            "\t\t$default_reason = $observer_require->getParameters()[1]->getDefaultValue();",
+            "\t\tself::assertSame( 'unreadable-kernel-evidence', $default_reason );",
+            "\t\tforeach ( array_merge( $observer_reasons, array( $default_reason ) ) as $reason ) {",
+            "\t\t\ttry {",
+            "\t\t\t\t$arguments = $reason === $default_reason ? array( false ) : array( false, $reason );",
+            "\t\t\t\t$observer_require->invokeArgs( null, $arguments );",
+            "\t\t\t\tself::fail( 'Observer-owned refusal must still throw.' );",
+            "\t\t\t} catch ( Wstm108_TopologyRefusal $error ) {",
+            "\t\t\t\tself::assertSame( 78, $error->getCode() );",
+            "\t\t\t\tself::assertSame( 'WSTM108 BLOCKED topology: ' . $reason, $error->getMessage() );",
+            "\t\t\t\tself::assertSame( array( 'phase' => 'topology', 'reason' => $reason ), Wstm108_HostTopology::failure_witness( $error ) );",
+            "\t\t\t}",
+            "\t\t}",
+            "\t}",
+            "",
+            "\tpublic function test_observer_invalid_mode_keeps_exact_refusal_and_closed_witness(): void {",
+            "\t\tself::assertFalse( Wstm108_HostObservation::enabled( array() ) );",
+            "\t\ttry {",
+            "\t\t\tWstm108_HostObservation::enabled( array( 'WSTM108_HOST_INSPECTION' => 'invalid-observer-test-mode' ) );",
+            "\t\t\tself::fail( 'An invalid inspection mode must refuse at its actual observer guard.' );",
+            "\t\t} catch ( Wstm108_TopologyRefusal $error ) {",
+            "\t\t\tself::assertSame( 78, $error->getCode() );",
+            "\t\t\tself::assertSame( 'WSTM108 BLOCKED topology: invalid-host-inspection-mode', $error->getMessage() );",
+            "\t\t\tself::assertSame( array( 'phase' => 'topology', 'reason' => 'invalid-host-inspection-mode' ), Wstm108_HostTopology::failure_witness( $error ) );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/fixtures/current-main-transition.php": {
+      "current_raw_sha256": "f0717ad52fd81460c4c8b9bea5bb0ac4bcadd0ec340f25fd007bad2c01d8b171",
+      "baseline_raw_sha256": "e8acc4d655fff477ecc40d4e5b6f75a6708c53dfa3c2e086dbb813038b29fdb3",
+      "hunks": [
+        {
+          "start": 3,
+          "before": [],
+          "after": [
+            "",
+            "require_once __DIR__ . '/scoped-host-observation-transition.php';"
+          ]
+        },
+        {
+          "start": 25,
+          "before": [],
+          "after": [
+            "\t\tWstm167ScopedHostObservationTransition::verify_dependencies( $read );"
+          ]
+        },
+        {
+          "start": 29,
+          "before": [],
+          "after": [
+            "\t\t\tif ( is_string( $source ) ) {",
+            "\t\t\t\t$source = Wstm167ScopedHostObservationTransition::restore( $path, $source );",
+            "\t\t\t}"
+          ]
+        },
+        {
+          "start": 46,
+          "before": [],
+          "after": [
+            "\t\t$source = Wstm167ScopedHostObservationTransition::restore( $path, $source, $context );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/fixtures/score-proof-entry-transition.php": {
+      "current_raw_sha256": "d6d366e1effcfadcdb7b0d2d3acefd27da5f4099c4ff6bbf95cfa8d61857dda7",
+      "baseline_raw_sha256": "bf46a960448ed501133f706be21baedaf0d2561b9675ec080c9fc7980ac41408",
+      "hunks": [
+        {
+          "start": 21,
+          "before": [
+            "\t\t\t$source = $read( $path );"
+          ],
+          "after": [
+            "\t\t\t$current = $read( $path );",
+            "\t\t\t$source = is_string( $current ) ? Wstm167ScopedHostObservationTransition::restore( $path, $current ) : $current;"
+          ]
+        },
+        {
+          "start": 26,
+          "before": [
+            "\t\t\tself::restore( $path, $source );"
+          ],
+          "after": [
+            "\t\t\tself::restore( $path, $current );"
+          ]
+        }
+      ]
+    },
+    "tests/unit/fixtures/untrusted-host-boundaries.php": {
+      "current_raw_sha256": "e10109d0401612da2d50c70430fa163d41a9252e0c835c1a8ea9ac70173873e7",
+      "baseline_raw_sha256": "b78e20b583811c65a7a95b7cb7ab08566b2da3104d09fcf1212fe695c23d8b8e",
+      "hunks": [
+        {
+          "start": 173,
+          "before": [],
+          "after": [
+            "\t\t$scoped_original = <<<'PHP'",
+            "\tpublic static function admit( string $endpoint ): array {",
+            "\t\trequire_once __DIR__ . '/untrusted-host-observation.php';",
+            "\t\tWstm108_HostObservation::enabled( getenv() );",
+            "\t\tWstm108_HostObservation::begin_pass();",
+            "\t\tself::require( 'Linux' === PHP_OS_FAMILY && function_exists( 'posix_geteuid' ), 'native-linux-prerequisite' );",
+            "\t\tself::require( in_array( $endpoint, array( 'unix:///run/docker.sock', 'unix:///var/run/docker.sock' ), true ), 'nonlocal-endpoint' );",
+            "\t\t$socket = realpath( substr( $endpoint, 7 ) );",
+            "\t\tself::require( '/run/docker.sock' === $socket, 'unrecognized-socket-alias' );",
+            "\t\t$socket_before = self::stat( $socket );",
+            "\t\tself::require( 0140000 === ( $socket_before['mode'] & 0170000 ) && 0 === $socket_before['uid'], 'nonroot-or-nonsocket-endpoint' );",
+            "\t\t$hint = Wstm108_Files::file( '/run/docker.pid' );",
+            "\t\tself::require( 0 === $hint['identity']['uid'] && 0 === ( $hint['identity']['mode'] & 0022 )",
+            "\t\t\t&& 1 === preg_match( '/^[1-9][0-9]{0,9}\\n?$/D', $hint['bytes'] ), 'untrusted-pid-discovery-hint' );",
+            "\t\t$pid = (int) trim( $hint['bytes'] );",
+            "\t\tself::require( $pid > 0 && $pid <= 2147483647, 'untrusted-pid-discovery-hint' );",
+            "\t\t$before = self::peer( $socket, $pid );",
+            "\t\t$mountinfo = self::read( '/proc/self/mountinfo', 4194304 );",
+            "\t\t$daemon_mountinfo = Wstm108_HostObservation::enabled( getenv() )",
+            "\t\t\t? Wstm108_HostObservation::read( 'mountinfo', $pid ) : self::read( '/proc/' . $pid . '/mountinfo', 4194304 );",
+            "\t\tself::require( $mountinfo === $daemon_mountinfo, 'daemon-mount-table-differs' );",
+            "\t\t$mounts = self::mounts( $mountinfo );",
+            "\t\tself::require( $before === self::peer( $socket, $pid ) && $socket_before === self::stat( $socket )",
+            "\t\t\t&& $mountinfo === self::read( '/proc/self/mountinfo', 4194304 ), 'peer-or-topology-changed-during-admission' );",
+            "\t\tif ( Wstm108_HostObservation::enabled( getenv() ) ) {",
+            "\t\t\tself::require( $daemon_mountinfo === Wstm108_HostObservation::read( 'mountinfo', $pid ), 'peer-or-topology-changed-during-admission' );",
+            "\t\t}",
+            "\t\tWstm108_Files::assert_file( '/run/docker.pid', $hint );",
+            "\t\treturn array( 'endpoint' => $endpoint, 'socket_identity' => $socket_before, 'peer' => $before,",
+            "\t\t\t'mountinfo_sha256' => hash( 'sha256', $mountinfo ), 'mounts' => $mounts );",
+            "\t}",
+            "PHP;",
+            "\t\t$normalized_source = str_replace( \"\\r\\n\", \"\\n\", $source );",
+            "\t\tself::require( 1 === substr_count( $normalized_source, $original ) + substr_count( $normalized_source, $scoped_original ),",
+            "\t\t\t'exact non-noop source substitution must match once' );",
+            "\t\t$original = 1 === substr_count( $normalized_source, $scoped_original ) ? $scoped_original : $original;"
+          ]
+        },
+        {
+          "start": 388,
+          "before": [
+            "\t\t\teval( 'namespace Wstm108DescriptorSyncFault; use \\Wstm108_Files; use \\Wstm108_HostTopology; use \\Wstm108_Export; use \\RuntimeException; use \\Throwable;"
+          ],
+          "after": [
+            "\t\t\teval( 'namespace Wstm108DescriptorSyncFault; use \\Wstm108_Files; use \\Wstm108_HostTopology; use \\Wstm108_HostObservation; use \\Wstm108_Export; use \\RuntimeException; use \\Throwable;"
+          ]
+        },
+        {
+          "start": 546,
+          "before": [
+            "\t\teval( 'namespace Wstm108ControllerSyncFault; use \\Wstm108_Files; use \\Wstm108_HostTopology; use \\Wstm108_Export; use \\RuntimeException; use \\Throwable;"
+          ],
+          "after": [
+            "\t\teval( 'namespace Wstm108ControllerSyncFault; use \\Wstm108_Files; use \\Wstm108_HostTopology; use \\Wstm108_HostObservation; use \\Wstm108_Export; use \\RuntimeException; use \\Throwable;"
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    ".github/compatibility-versions.json": "73865b94ad6ac10cbed9bec8a31b41911cbb35014b4a904734d9258f0718c19a",
+    ".github/workflows/coding-standards.yml": "1778f0179b3713aece5a60e14b734eeb3ce7416942cf00393635fe5dea260000",
+    ".github/workflows/import-issue-backlog.yml": "4a4a785a6e72a10f661ce4e52412ab1d8563a3000de8c9605ffb91e0ee1262fe",
+    ".github/workflows/unit-tests.yml": "588fe8eb8d437bdaedf84a18dc930f73c317671f061f355f5bbe08380d620917",
+    ".github/workflows/workflow-lint.yml": "0bda65329c2716fb19471ae5e1a464900c9d64ac9791ce4d2817ea35c595206c",
+    "composer.json": "3a231c527e8f04c6cec07edaac76b6c3611060dac97ec3ac90c1809dfa453506",
+    "composer.lock": "26699eda230d588c6895dfabd39c2362a22d84b9bbb0e69f15b11f8fe970de2a",
+    "docker-compose.yml": "cade04bfa0c3708c1f68e968a73e2ba7582730b48802fa9d3067f8b67dcf42a8",
+    "phpstan-baseline.neon": "d64cf0922b3cf04f83728bb3b14575e154a08fa714abe38cdc325660ab450382",
+    "phpstan.neon.dist": "8d5bd7a3d1ce85011c9eec064b8f9c07c895c4119e7ab9d07c141cd73f18b8f4",
+    "readme.txt": "239326e16a5675027865eeddbd863f5a99fb01e8e23fb46d28c7c6ddb5a640d7",
+    "scripts/untrusted-admission-diagnostic.php": "0d0b3d993753e2a09016d75e7802797ddc40959511e22dcbe713193e1f4e3b4a",
+    "scripts/untrusted-host-observation.php": "faa638da75049961ed062b9e66a227fc833a10caf0955e422d36e9adefcbf13f",
+    "tests/e2e/abilities-manifest.json": "f09633e8e6e2fe88b18eefe5748e3eafd3a55ff62c17b54ec9cae76bd776029d",
+    "tests/unit/CiAdmissionDiagnosticTest.php": "adb252540738114447833e99f07ba3cbc4484447064582b01bfcbdedfbe282c7",
+    "tests/unit/CompatibilityBaselinesTest.php": "7007e97ef0496d62322b2fc82660d9f4c8712170497a5e6b43af35fed54b6a99",
+    "tests/unit/ScopedHostObservationTest.php": "68dbf065d76df78c2318aa5755e1b329b0fffac2a2e1f6ba5831ddbe5f8f0ee7",
+    "tests/unit/ScopedHostObservationTransitionTest.php": "c89d02e4e0375fddd4b5d5da317381ae36c53210c04f4b7b561debdd8af53715",
+    "tests/unit/ScopedHostObservationTransportTest.php": "5c48ac998278b9288748c1bc4d1605be296d9bc726cbc4b43f129e636468ef5c",
+    "tests/unit/fixtures/admission-native-fixture-transition.json": "08cc480bd501c8a190699ef5a114fffd694332b4485bbc595ed13e0b87a8e99e",
+    "tests/unit/fixtures/array-syntax-transition.json": "b8d2ad18c87ee97c8eeb86f8601b6d1fce5af16842b7a4c4de9e886138ba53e0",
+    "tests/unit/fixtures/authority-observer-transition.json": "88ff7a6b1d42d7839c793aa481b9099dd4631a49eabf39aa87100600b96fef58",
+    "tests/unit/fixtures/bounded-admission-transition.json": "a45c96be6790c0380788529adc509955ffc9de64b472a5fae24bb46a9e13df5f",
+    "tests/unit/fixtures/bounded-integration-transition.json": "e847ac561c95854f66b5b04af627e992fa8886dd76eab018b730b07f42d290fa",
+    "tests/unit/fixtures/ci-budget-control-transition.json": "6126a718e4a19904fa4ee64c2b6cc159ee0cb82239a391dbb0ac73c1a10e0591",
+    "tests/unit/fixtures/ci-diagnostic-transition.json": "a1e215abbc4e0f8ae3bf47a7becda2ab474740a8b8192ca0223afc668aeae201",
+    "tests/unit/fixtures/comments-calibration-ledger.json": "c350dd9f4915c4b4f84940fa083ab46a807dac285d40007a536ddc041adf3b2d",
+    "tests/unit/fixtures/current-main-transition.json": "21ab59664f8a249323e9c94bbcf197965a3a42c562f6c271cc98b330a38007c7",
+    "tests/unit/fixtures/floor-selector-transition.json": "204877c9ff0325b4a6a90f040de918759d9ec45ed22b75a29a075de3451c2d78",
+    "tests/unit/fixtures/legacy-runtime-transition.json": "e713a22640ae27f2b3fc9de235fc32620cb6270b77a6bc3527d661dfa48b5b9d",
+    "tests/unit/fixtures/posts-extraction-transition.json": "2be14f26642f28014a9df9e99df36cb6697520b158938f1b3bad23e9da44c4f5",
+    "tests/unit/fixtures/scheduling-calibration-ledger.json": "30cad4e6931b82edb1ccf63c2fc429b02a1e9ccb79306d38b37a09d497a0a8a5",
+    "tests/unit/fixtures/score-marker-transition.json": "bbc14f6fdf5184f515a93dedd19b29d707245e52bd4d17207a61b5fbfd8e2076",
+    "tests/unit/fixtures/score-proof-entry-transition.json": "e79abfdb00bcb85deff22b30c836b2bfbc2ac1e343a8b20dc9ba1311aaeb8ca8",
+    "tests/unit/fixtures/selected-listener-transition.json": "d6bbca72dcd3f823bffee69b3cd03e4ff51232cc324d919b05191103d11c53ee",
+    "tests/unit/fixtures/selected-listener-transition.php": "a84165581f3b373ef5b41a8098e294d74c0f36c1a8a512efc9c5b3a4ded5512f",
+    "tests/unit/fixtures/selector-import-transition.json": "67e7fc5b92b672b8e56c6346c121f5837f9a1cb62257e31b4ae494c23c34f539",
+    "tests/unit/fixtures/shared-helper-transition.json": "1bdd69f8b930f9c744afe557800eeafd195f30eeaa9b61c9b81fff5267e426d6",
+    "tests/unit/fixtures/taxonomy-calibration-ledger.json": "e389a6346d111c7ac72e83083b4eeee8d396a4aa33b11ce6ca1942e80734022c",
+    "tests/unit/fixtures/untrusted-bounded-manifest-transition.json": "a86d8850ca345db59302cde04f14f1f75b1b06baf41e9f72df41db9e3954ed88",
+    "tests/unit/fixtures/untrusted-compact-delete-calibration.json": "3011a23c2ddd947127caccd4149ca85d17c2b532d97e5cf4e1dce0c7145e0544",
+    "tests/unit/fixtures/untrusted-import-inventory.json": "78211008ad27e0ec44c4241bfc621edf6b882f2b0605a2dea0d180dcdd578bae",
+    "tests/unit/fixtures/untrusted-manifest-inventory.json": "7fb86639b203b4b8f36aabd6a1893bd13eaec55fb2201c44a29ebd806dfc3db2",
+    "tests/unit/fixtures/untrusted-schema-integration-ledger.json": "6f7612776a8efef97c776e03277ace03bd8f013b1938dace1d737efc42ce5f15",
+    "tests/unit/fixtures/untrusted-typed-oracle-ledger.json": "1c91d8f3bf003057026aa13f8d0cbbfa44d80a94f2a5390abc8ac7e1a965f352",
+    "tests/unit/fixtures/untrusted-workflow-transition.json": "f30822cfc6eb489c3993ffaacdc89862d87780335ff64e222e04cdf5c3a5e64e"
+  }
+}

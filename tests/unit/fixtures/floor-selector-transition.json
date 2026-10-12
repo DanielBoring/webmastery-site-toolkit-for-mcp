@@ -1,0 +1,425 @@
+{
+  "schema": 1,
+  "base_inventory_sha256": "e07c37e624da09699068dc2846f6b453f0f463ca259f078db802345217f6ad5b",
+  "predecessor_seals": {
+    "style": "b8d2ad18c87ee97c8eeb86f8601b6d1fce5af16842b7a4c4de9e886138ba53e0",
+    "167": "e847ac561c95854f66b5b04af627e992fa8886dd76eab018b730b07f42d290fa",
+    "127": "2be14f26642f28014a9df9e99df36cb6697520b158938f1b3bad23e9da44c4f5",
+    "119": "1bdd69f8b930f9c744afe557800eeafd195f30eeaa9b61c9b81fff5267e426d6"
+  },
+  "files": {
+    "scripts/qa-compose.sh": {
+      "baseline_raw_sha256": "5f1565fc36b9ca565bfaa77c5f8d8fb4944b84b337c7c76d1ae64ee1df3fcfe4",
+      "current_raw_sha256": "e940bafe1fe200bbabb96d6fa59ed44608e0f164c63b507fadc6faea600e8b84",
+      "baseline_sha256": "5f1565fc36b9ca565bfaa77c5f8d8fb4944b84b337c7c76d1ae64ee1df3fcfe4",
+      "current_sha256": "e940bafe1fe200bbabb96d6fa59ed44608e0f164c63b507fadc6faea600e8b84",
+      "baseline_blob": "85c3936f9a3e706e8d702282cb6632693502a6fe",
+      "current_blob": "2a504d71f5355a11a1837d96494e4f1a2b576cbd",
+      "hunks": [
+        {
+          "start": 3,
+          "before": [],
+          "after": [
+            "\tif [[ -n \"${WSTM_QA_RUNTIME_PROFILE:-}${WSTM_PHP80_CONFIG+x}${WSTM_PHP80_CONFIG_SHA256+x}\" ]]; then",
+            "\t\tlocal selection argument command=\"${1:-}\" option_value=0",
+            "\t\tlocal WSTM_QA_COMPOSE_ARGV=()",
+            "\t\tlocal arguments=( \"$@\" )",
+            "\t\tif [[ -z \"$command\" || \"$command\" == -* ]]; then",
+            "\t\t\techo \"Floor Compose requires a subcommand, not caller-selected global options.\" >&2",
+            "\t\t\treturn 1",
+            "\t\tfi",
+            "\t\tfor argument in \"${arguments[@]:1}\"; do",
+            "\t\t\tif [[ \"$option_value\" == 1 ]]; then option_value=0; continue; fi",
+            "\t\t\tcase \"$argument\" in",
+            "\t\t\t\t-f*|-p*|--file*|--project-name*|--project-directory*|--env-file*|--profile*)",
+            "\t\t\t\t\techo \"Floor Compose selector cannot be overridden by call arguments.\" >&2",
+            "\t\t\t\t\treturn 1 ;;",
+            "\t\t\tesac",
+            "\t\t\tif [[ \"$argument\" == -[^-]* && \"$argument\" == *[fp]* ]]; then",
+            "\t\t\t\techo \"Floor Compose rejects combined caller-selected file/project flags.\" >&2",
+            "\t\t\t\treturn 1",
+            "\t\t\tfi",
+            "\t\t\tif [[ \"$command\" == exec ]]; then",
+            "\t\t\t\tcase \"$argument\" in",
+            "\t\t\t\t\t-e|--env|-u|--user|-w|--workdir|--index) option_value=1 ;;",
+            "\t\t\t\t\t-T|-d|-i|-t|--no-TTY|--detach|--interactive|--privileged|--env=*|--user=*|--workdir=*|--index=*) ;;",
+            "\t\t\t\t\t-*) echo \"Unrecognized floor exec option; refusing ambiguous selection.\" >&2; return 1 ;;",
+            "\t\t\t\t\t*) break ;; # Service begins exec's untouched child argv.",
+            "\t\t\t\tesac",
+            "\t\t\tfi",
+            "\t\tdone",
+            "\t\tselection=\"$(\"${WSTM108_HOST_PHP-php}\" \"$(dirname \"${BASH_SOURCE[0]}\")/qa-runtime.php\" shell)\" || return $?",
+            "\t\t# Only the closed, pinned source helper emits shell-quoted exports/argv.",
+            "\t\teval \"$selection\"",
+            "\t\t\"${WSTM_QA_COMPOSE_ARGV[@]}\" \"$@\"",
+            "\t\treturn $?",
+            "\tfi"
+          ]
+        }
+      ]
+    },
+    "scripts/destructive-retention.sh": {
+      "baseline_raw_sha256": "3025e5d078f161b3d447ce5327d7ab60f0e9c2ffbacdc1d58fd73126e29fcc44",
+      "current_raw_sha256": "6afccaf5f145b94f15bf0dd6a317286ded1ca5756e9d5b5801a4b0f08134a20b",
+      "baseline_sha256": "3025e5d078f161b3d447ce5327d7ab60f0e9c2ffbacdc1d58fd73126e29fcc44",
+      "current_sha256": "6afccaf5f145b94f15bf0dd6a317286ded1ca5756e9d5b5801a4b0f08134a20b",
+      "baseline_blob": "e093332f844296cbd492dc6e49792111df7fa434",
+      "current_blob": "cc7ef6fe6f7fed155e6e71813cf80da6de421ff8",
+      "hunks": [
+        {
+          "start": 28,
+          "before": [
+            "\tlocal owner=\"$1\" source=\"$2\" marker"
+          ],
+          "after": [
+            "\tlocal owner=\"$1\" source=\"$2\" marker identity"
+          ]
+        },
+        {
+          "start": 32,
+          "before": [],
+          "after": [
+            "\tidentity=\"$(wstm116_retention_bytes \"$owner\" \"$source\")\" || return $?"
+          ]
+        },
+        {
+          "start": 34,
+          "before": [
+            "\t( umask 077; set -o noclobber; printf 'owner=%s\\nproject=%s\\nsource=%s\\n' \"$owner\" \"$COMPOSE_PROJECT_NAME\" \"$source\" > \"$marker\" ) || return $?"
+          ],
+          "after": [
+            "\t( umask 077; set -o noclobber; printf '%s\\n' \"$identity\" > \"$marker\" ) || return $?"
+          ]
+        },
+        {
+          "start": 39,
+          "before": [
+            "\tlocal owner=\"$1\" source=\"$2\" marker"
+          ],
+          "after": [
+            "\tlocal owner=\"$1\" source=\"$2\" marker identity"
+          ]
+        },
+        {
+          "start": 42,
+          "before": [
+            "\tcmp -s \"$marker\" <(printf 'owner=%s\\nproject=%s\\nsource=%s\\n' \"$owner\" \"$COMPOSE_PROJECT_NAME\" \"$source\") ||"
+          ],
+          "after": [
+            "\tidentity=\"$(wstm116_retention_bytes \"$owner\" \"$source\")\" || return $?",
+            "\tcmp -s \"$marker\" <(printf '%s\\n' \"$identity\") ||"
+          ]
+        },
+        {
+          "start": 47,
+          "before": [],
+          "after": [
+            "}",
+            "",
+            "wstm116_retention_bytes() {",
+            "\tif [[ -n \"${WSTM_QA_RUNTIME_PROFILE:-}${WSTM_PHP80_CONFIG+x}${WSTM_PHP80_CONFIG_SHA256+x}\" ]]; then",
+            "\t\t\"${WSTM108_HOST_PHP-php}\" \"$(dirname \"${BASH_SOURCE[0]}\")/qa-runtime.php\" retention \"$1\" \"$2\"",
+            "\telse",
+            "\t\tprintf 'owner=%s\\nproject=%s\\nsource=%s\\n' \"$1\" \"$COMPOSE_PROJECT_NAME\" \"$2\"",
+            "\tfi"
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-release.php": {
+      "baseline_raw_sha256": "80a3ff9ff85c2b00bfef125831b45b6befaed10f4acf471a9650fe23d3fb593c",
+      "current_raw_sha256": "ed6cc46b5fcbe89bdecf34452e8e34f9ea2b3f5614e5ffd2161244989f5af3bd",
+      "baseline_sha256": "80a3ff9ff85c2b00bfef125831b45b6befaed10f4acf471a9650fe23d3fb593c",
+      "current_sha256": "ed6cc46b5fcbe89bdecf34452e8e34f9ea2b3f5614e5ffd2161244989f5af3bd",
+      "baseline_blob": "b4459ecbafeca06891a0da922d12a90e035021b7",
+      "current_blob": "5863273f563ca5c2248d499fef1b77c858d72df2",
+      "hunks": [
+        {
+          "start": 6,
+          "before": [],
+          "after": [
+            "require_once __DIR__ . '/qa-runtime.php';"
+          ]
+        },
+        {
+          "start": 45,
+          "before": [
+            "\t\tself::require( \"owner={$b['owner']}\\nproject={$b['project']}\\nsource={$b['source_sha']}\\n\" === $primary['bytes'], 'unchanged primary arm must precede companion creation.' );"
+          ],
+          "after": [
+            "\t\tself::require( $this->retention_bytes() === $primary['bytes'], 'unchanged primary arm must precede companion creation.' );"
+          ]
+        },
+        {
+          "start": 64,
+          "before": [],
+          "after": [
+            "\t\tself::require( $this->retention_bytes() === ( $record['primary']['bytes'] ?? null ), 'original floor/default runtime selection changed; retaining companion.' );"
+          ]
+        },
+        {
+          "start": 78,
+          "before": [],
+          "after": [
+            "\t}",
+            "",
+            "\tprivate function retention_bytes(): string {",
+            "\t\t$b = $this->host['binding'];",
+            "\t\t$environment = getenv();",
+            "\t\t$environment['COMPOSE_PROJECT_NAME'] = $b['project'];",
+            "\t\t$plan = WstmQaRuntime::selection( $environment, $this->host['checkout'] );",
+            "\t\tWstmQaRuntime::assert_binding( $plan, $b );",
+            "\t\tif ( 'php80-floor' === $plan['profile'] ) { wstm_php80_floor_private_inputs( $plan['config'] ); }",
+            "\t\treturn WstmQaRuntime::retention_bytes( $plan, $environment, $b['owner'], $b['project'], $b['source_sha'] );"
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-provenance.php": {
+      "baseline_raw_sha256": "5acecd6f4978ceea504fd2ea5786f65047cc4392132d8819bfbd2b428fe26644",
+      "current_raw_sha256": "bebc053381d6c1461e374f02cc2494456cf15b1b01675e72c3fa66a8e94c29d3",
+      "baseline_sha256": "5acecd6f4978ceea504fd2ea5786f65047cc4392132d8819bfbd2b428fe26644",
+      "current_sha256": "bebc053381d6c1461e374f02cc2494456cf15b1b01675e72c3fa66a8e94c29d3",
+      "baseline_blob": "5daa4c1a13ab617f24e131d18d06f02974e7ad6f",
+      "current_blob": "746aa1c0da29e7defc3153fa42c0d1b62a9b04d8",
+      "hunks": [
+        {
+          "start": 6,
+          "before": [],
+          "after": [
+            "require_once __DIR__ . '/qa-runtime.php';"
+          ]
+        },
+        {
+          "start": 38,
+          "before": [],
+          "after": [
+            "$runtime_selection = WstmQaRuntime::selection( getenv(), $root );",
+            "WstmQaRuntime::assert_binding( $runtime_selection, array( 'source_sha' => $source, 'tree_sha' => $tree, 'project' => $project, 'package_sha256' => null ) );"
+          ]
+        },
+        {
+          "start": 65,
+          "before": [
+            "\t'.github/workflows/release-package-qa.yml', '.github/workflows/compatibility-qa.yml', '.github/workflows/release.yml' ) as $name ) {"
+          ],
+          "after": [
+            "\t'.github/workflows/release-package-qa.yml', '.github/workflows/compatibility-qa.yml', '.github/workflows/release.yml',",
+            "\t'scripts/qa-runtime.php', 'scripts/verify-candidate-floor.php', 'scripts/compatibility-baselines.php',",
+            "\t'tests/fixtures/php80-floor/fixture.php' ) as $name ) {"
+          ]
+        },
+        {
+          "start": 69,
+          "before": [],
+          "after": [
+            "}",
+            "if ( 'php80-floor' === $runtime_selection['profile'] ) {",
+            "\tforeach ( array( 'Dockerfile', 'compose.yml', 'entrypoint.sh', 'router.php', 'README.md' ) as $name ) {",
+            "\t\t$path = 'tests/fixtures/php80-floor/' . $name;",
+            "\t\t$host_files[ $path ] = Wstm108_Files::file( $root . '/' . $path )['sha256'];",
+            "\t}"
+          ]
+        }
+      ]
+    },
+    "tests/unit/fixtures/bounded-integration-transition.php": {
+      "baseline_raw_sha256": "a90bcea5564c0f5075797aa843fb16063ea2ad7bab25b8fe19b97b75bbae76f9",
+      "current_raw_sha256": "b075f0883f4c4e4ea7c1519f90314a87eddfc7133c76042130a818026d03a5a8",
+      "baseline_sha256": "ac27ef3fe0af179583f4f88f533081f668f19332dd13f1d2ae1562dc04933e29",
+      "current_sha256": "b075f0883f4c4e4ea7c1519f90314a87eddfc7133c76042130a818026d03a5a8",
+      "baseline_blob": "8bfd6d93dd08da7752e7e92c49c46f5c5f3654ff",
+      "current_blob": "0cb950f5129651ba02fcec7250538c49d994707a",
+      "hunks": [
+        {
+          "start": 3,
+          "before": [],
+          "after": [
+            "require_once __DIR__ . '/floor-selector-transition.php';"
+          ]
+        },
+        {
+          "start": 23,
+          "before": [],
+          "after": [
+            "\t\tWstm167FloorSelectorTransition::verify_dependencies( $read );"
+          ]
+        },
+        {
+          "start": 25,
+          "before": [
+            "\t\t\t$source = Wstm119ArraySyntaxTransition::restore( $path, $read( $path ), 'Bounded integration dependency' );"
+          ],
+          "after": [
+            "\t\t\t$source = Wstm119ArraySyntaxTransition::restore( $path, Wstm167FloorSelectorTransition::restore( $path, $read( $path ) ), 'Bounded integration dependency' );"
+          ]
+        },
+        {
+          "start": 34,
+          "before": [
+            "\t\t$source = Wstm119ArraySyntaxTransition::restore( $path, $source, 'Bounded integration' );"
+          ],
+          "after": [
+            "\t\t$source = Wstm119ArraySyntaxTransition::restore( $path, Wstm167FloorSelectorTransition::restore( $path, $source ), 'Bounded integration' );"
+          ]
+        }
+      ]
+    },
+    "tests/fixtures/php80-floor/fixture.php": {
+      "baseline_raw_sha256": "551716768645716d0bb8c7c784cf1bcd8457b2126349dffae6b6b7e93857b688",
+      "current_raw_sha256": "d04151c54e19fd18b2b2d402797c6f208938e2e53fb843f3307e37cfd5f251e1",
+      "baseline_sha256": "551716768645716d0bb8c7c784cf1bcd8457b2126349dffae6b6b7e93857b688",
+      "current_sha256": "d04151c54e19fd18b2b2d402797c6f208938e2e53fb843f3307e37cfd5f251e1",
+      "baseline_blob": "5444824a25033f457070df9c0942fe6a30b05847",
+      "current_blob": "1bae9eda076eefa04e6983d2b70a5c9c8926ecb2",
+      "hunks": [
+        {
+          "start": 106,
+          "before": [],
+          "after": [
+            "\t\t'WORDPRESS_URL' => 'http://127.0.0.1:' . $config['http_port'],"
+          ]
+        },
+        {
+          "start": 114,
+          "before": [
+            "\t\t'harness_routing_required' => 'The admitted supervisor must bind these Compose arguments to every shared-harness compose call; qa-compose.sh is unchanged.',"
+          ],
+          "after": [
+            "\t\t'harness_routing_required' => 'Use the pinned explicit php80-floor selector for shared Compose and admitted discovery; separate admission, fixture grants and original capture remain required.',"
+          ]
+        }
+      ]
+    },
+    "tests/fixtures/php80-floor/README.md": {
+      "baseline_raw_sha256": "cc650d83a574996a066875f31c38891c2ea3a7c46715e3637bb2a4c63a403c2f",
+      "current_raw_sha256": "f82f52c8b2c6386b0bfbf6743422a4189de06c24ada9913cf7eab31d853457c7",
+      "baseline_sha256": "cc650d83a574996a066875f31c38891c2ea3a7c46715e3637bb2a4c63a403c2f",
+      "current_sha256": "f82f52c8b2c6386b0bfbf6743422a4189de06c24ada9913cf7eab31d853457c7",
+      "baseline_blob": "66b6a2b5fa2be6dd8fc67ecb9f21e4c8b20cafda",
+      "current_blob": "a1875634fb0b6b8d509f337bad53beb8dc2557eb",
+      "hunks": [
+        {
+          "start": 121,
+          "before": [
+            "## Remaining routing decision, deliberately not guessed"
+          ],
+          "after": [
+            "## Explicit source-only runtime selector"
+          ]
+        },
+        {
+          "start": 123,
+          "before": [
+            "The shared `qa-compose.sh` uses root/default Compose files (release mode adds",
+            "its existing file). The admitted #166 controller independently constructs",
+            "and discovers those same source-bound arguments; its finite bootstrap does",
+            "not pass arbitrary `COMPOSE_FILE` overrides. A PATH wrapper, environment-only",
+            "override or synthetic admitted inventory would therefore be wrong."
+          ],
+          "after": [
+            "Select this fixture with `WSTM_QA_RUNTIME_PROFILE=php80-floor`,",
+            "`WSTM_PHP80_CONFIG` (canonical private original config path), and",
+            "`WSTM_PHP80_CONFIG_SHA256` (its independently reviewed raw-byte hash).",
+            "The same closed 18-field config/planner selects shared Compose argv and",
+            "planned/live discovery. The image must already be an immutable built image ID;",
+            "project, artifact basename, Git commit/tree and candidate root must match.",
+            "The trusted proof interpreter remains native Linux PHP >=8.1."
+          ]
+        },
+        {
+          "start": 131,
+          "before": [
+            "The plan emits the exact standalone floor Compose argv, but **does not wire it",
+            "into `scripts/e2e-test.sh all`**. Before full floor acceptance, the owner must",
+            "review one explicit fixture selector bound consistently through the shared",
+            "harness, native discovery/execution, planned/live binds, retention/recovery",
+            "and source provenance. Any changes to these frozen consumers/dependencies",
+            "need the reviewed additive reversal, not regenerated old seals.",
+            "This separate routing/admission work is owned elsewhere; no shared consumer",
+            "is edited by this fixture patch. Until it is composed and genuinely admitted,",
+            "the build/server/probe/verifier support is prepared source, not a runnable",
+            "whole-harness acceptance claim. All offline fixture tests use synthetic",
+            "observations, not real HTTP, WordPress or leases."
+          ],
+          "after": [
+            "No `COMPOSE_FILE`, Compose profiles/env-file override, package input or",
+            "default/current/PHP81 image/port override is accepted alongside this selector.",
+            "Callers cannot override its project or Compose files. Shared calls re-read the",
+            "original nonsecret selector config and compare actual Git identity. Selecting",
+            "argv does not open WordPress/MySQL credential originals: their exact bytes are",
+            "checked by existing fixture verification and admitted retention/release stages.",
+            "The native discovery adapter retains existing topology admission, adds exact",
+            "planned/live image/service/bind checks, and refuses one-offs or replica ambiguity.",
+            "Retention adds the original config path/hash, runtime image and source tree to",
+            "the existing owner/project/source marker; release/recovery must reproduce these",
+            "exact bytes. Removing the selector cannot downgrade an interrupted floor run",
+            "to default cleanup. Prior outputs and ownership/cleanup rules are unchanged."
+          ]
+        },
+        {
+          "start": 144,
+          "before": [],
+          "after": [
+            "The selector confers no admission or fixture authority. Controller/bootstrap",
+            "composition and the pre-fixture capture/admission call sites must use this API;",
+            "their exact overlap fragments are provided separately for the owning agent.",
+            "Do not run a floor harness with only the shared-helper patch applied.",
+            "The default/current/PHP81 and original-ZIP paths remain unchanged when the",
+            "selector is absent. The new exact reversal precedes the unchanged style/#167/",
+            "#127/#119 histories, rather than regenerating old seals or historical oracles.",
+            "All offline selector tests use synthetic query observations, not real",
+            "WordPress, daemon admission, runtime custody or leases.",
+            ""
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "scripts/qa-runtime.php": {
+      "raw_sha256": "7ea68080241e6811a840467709a2c93792a742f329cd451dc2ed0ebb9173c3fb",
+      "sha256": "7ea68080241e6811a840467709a2c93792a742f329cd451dc2ed0ebb9173c3fb"
+    },
+    "scripts/verify-candidate-floor.php": {
+      "raw_sha256": "0b95dd54141a9cfbd07816b437da0cef67175af83b1de5bd8b78629a3a449223",
+      "sha256": "0b95dd54141a9cfbd07816b437da0cef67175af83b1de5bd8b78629a3a449223"
+    },
+    "scripts/compatibility-baselines.php": {
+      "raw_sha256": "724eb07f9917190157ddce7be8a95db630a81a316b99778238675bc244b2b56a",
+      "sha256": "724eb07f9917190157ddce7be8a95db630a81a316b99778238675bc244b2b56a"
+    },
+    "scripts/untrusted-authority.php": {
+      "raw_sha256": "0ec215878619cf588ace74446132ab44859bc291289818895db8513a06aeeb65",
+      "sha256": "0ec215878619cf588ace74446132ab44859bc291289818895db8513a06aeeb65"
+    },
+    "scripts/untrusted-host-topology.php": {
+      "raw_sha256": "acf569cce5b595e01d5f8208ec88159e511214f0697b97552ad0a79af9ed97aa",
+      "sha256": "acf569cce5b595e01d5f8208ec88159e511214f0697b97552ad0a79af9ed97aa"
+    },
+    "tests/e2e/untrusted-content-files.php": {
+      "raw_sha256": "46f2474fc9761366272c7b9fd5c57d7b7237829501cd38a9203b2d67f6bb7139",
+      "sha256": "46f2474fc9761366272c7b9fd5c57d7b7237829501cd38a9203b2d67f6bb7139"
+    },
+    "tests/fixtures/php80-floor/compose.yml": {
+      "raw_sha256": "f83e8cc82c4f2c5d43723cfd45fcfda2c3983f5e2d509d54fb884b5ad710470c",
+      "sha256": "f83e8cc82c4f2c5d43723cfd45fcfda2c3983f5e2d509d54fb884b5ad710470c"
+    },
+    "tests/fixtures/php80-floor/Dockerfile": {
+      "raw_sha256": "6988ef73cf848cf117126615dea051d58c792c0dac55e91c7128c9e45d760ae0",
+      "sha256": "6988ef73cf848cf117126615dea051d58c792c0dac55e91c7128c9e45d760ae0"
+    },
+    "tests/fixtures/php80-floor/router.php": {
+      "raw_sha256": "dd7703cd1c27ad4f1200f0c01256092b33ed4349a8560a8a88d2948b8ca2768c",
+      "sha256": "dd7703cd1c27ad4f1200f0c01256092b33ed4349a8560a8a88d2948b8ca2768c"
+    },
+    "tests/fixtures/php80-floor/entrypoint.sh": {
+      "raw_sha256": "cdf7f0bbe42271d4d57b93334652a934717bc38e73e24024a90572abbcf8c703",
+      "sha256": "cdf7f0bbe42271d4d57b93334652a934717bc38e73e24024a90572abbcf8c703"
+    },
+    "tests/unit/QaRuntimeSelectorTest.php": {
+      "raw_sha256": "7f040a7376bd027a053d42ef5c0daa5b75b622e66ae37aa0077abeb1d878993f",
+      "sha256": "7f040a7376bd027a053d42ef5c0daa5b75b622e66ae37aa0077abeb1d878993f"
+    }
+  }
+}

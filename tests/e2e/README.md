@@ -16,6 +16,19 @@ Docker, provider, cleanup, original-ZIP or runtime acceptance.
 
 For the full repository QA posture, including static checks, unit tests, release checks, and GitHub Actions trigger policy, see [`docs/qa-strategy.md`](../../docs/qa-strategy.md).
 
+Disposable hosted authority entries set
+`WSTM108_HOST_INSPECTION=system-readonly-v1` for otherwise inaccessible native
+Docker-daemon proc observations. The controller/capture/PHP remain nonroot;
+only fixed verified system reads of the validated PID and their supervision
+are elevated. Unset retains native reads, unknown modes refuse, and this mode
+must not be enabled on shared/live hosts. Complete listener/fd/namespace/mount/
+start-identity checks, original retention, grants and cleanup ownership remain
+mandatory. Parser or transport adapters never substitute for actual sudo,
+source/floor/original-ZIP, provider, benchmark or custody evidence. See the
+[scoped inspection policy](../../docs/qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts),
+including cooperative filesystem deadlines and the absence of a root-child
+cleanup certificate.
+
 Synthetic stage-proof unit fixtures release their runner graphs in per-case
 teardown because PHPUnit retains completed test instances. Phase fixtures build
 only their catalog/schema witnesses, not a complete runner proof. The ordinary
@@ -28,6 +41,16 @@ before executing its extracted final catch. Cross-platform subprocess tests
 check mapped/unmapped refusals and original exits; the full filesystem/I/O
 fault controls still require native Linux and are not covered by a Windows
 skip or these bootstrap regressions.
+
+Copied legacy package teardown RED controls restore both the unconditional
+retention guard and the parent EXIT trap before its failed child. Changing only
+the guard does not exercise parent teardown because the production parent arms
+cleanup only after child success. The source control still restores only its
+own unconditional guard. Exact source-driven mutations preserve pre-fixture
+admission; unknown, repeated or altered seams refuse. Both legacy control
+families retain their first failure, two-down and private-evidence-loss
+assertions. These controls are synthetic orchestration evidence, not runtime
+admission or recovery authorization.
 
 Release-runtime synthetic schema faults and legacy-schema negative controls use
 a fresh mode-0700 private untrusted-stage root for each source/package case.
@@ -53,6 +76,28 @@ The Docker QA suite has two layers:
 
 1. Ability Contract QA is ability-driven. Every registered `webmastery-site-toolkit-for-mcp/*` ability must be represented in `tests/e2e/abilities-manifest.json`.
 2. Full MCP E2E QA uses real MCP Adapter HTTP JSON-RPC requests against `/wp-json/mcp/mcp-adapter-default-server` to prove a remote MCP client can create, read, update, and delete content through the adapter transport.
+
+## Opt-in genuine PHP 8.0 floor fixture
+
+The [floor fixture source](../fixtures/php80-floor/README.md) supports an exact
+WordPress 6.9.x archive on a digest-pinned PHP 8.0.30 CLI base with mysqli.
+CLI and HTTP execute the same pinned PHP ELF; original version/SAPI/hash
+observations and the unchanged candidate/full-E2E verifier must agree.
+Private configuration, immutable built-image selection, native daemon/mount
+admission, storage and fixture grants remain separate requirements.
+The explicit `WSTM_QA_RUNTIME_PROFILE=php80-floor` selector requires original
+`WSTM_PHP80_CONFIG` and independently reviewed `WSTM_PHP80_CONFIG_SHA256`.
+Shared Compose and retention/release checks bind its immutable runtime image,
+actual candidate commit/tree/root, project and loopback HTTP URL. Conflicting
+ambient Compose, package, image/port/URL and project/file overrides are refused.
+Floor retention additionally binds the original config path/hash, image and
+source tree, including release checks after primary removal. Dropped/rebound
+selection cannot authorize default cleanup.
+Controller/bootstrap and early call sites revalidate the same original selection
+under bounded native capture. Selection is not daemon admission, fixture
+authorization, custody or benchmark acceptance.
+No current/PHP 8.1 lane or proof-host requirement changes, and offline fixture
+tests do not establish actual WordPress, admission or custody acceptance.
 
 ## Bounded-list coverage and oracle migration (3.0)
 
@@ -564,6 +609,36 @@ authenticated, exact readback-bound acknowledgment. Hosted runner teardown and
 ciphertext upload alone cannot satisfy it. The production untrusted
 export still contains exactly its original three safe files; none of these
 private paths, ciphertext files or receipts is added to that contract.
+
+## Pre-fixture admission and bounded selection
+
+Full E2E requires a previously owner-approved bare stack. Fresh native
+admission precedes artifact reset and managed lifecycle, with another pass
+before fixture setup and its cleanup trap. A refusal starts neither fixtures
+nor parent cleanup. Contract-only lifecycle/keep behavior is unchanged.
+
+The floor branch captures its original selector and refusal streams before
+default URL/image/port selection or environment scrubbing. Initial and
+per-action controller discovery revalidate the same config/source identities
+under the finite Linux pidfd supervisor. Original fd10/fd11 streams, EOF,
+observed exit and raw hashes are verified independently; all query originals
+are included in pre-release capture accounting. Exact base/release/floor
+Compose projections and pinned MySQL inspection are read-only allowlisted.
+Package QA refuses a floor selector before build/extraction, even offline.
+
+Run `python3 -B tests/unit/test_untrusted_query.py -v` on native Linux for
+isolated capture, original-exit, timeout, descriptor, floor-grammar and actual
+Bash-source order/cleanup controls. These synthetic probes do not admit Docker
+or WordPress. Genuine proof-host PHP interoperability and native safeguard
+lanes are separate from Windows unit/static checks.
+
+`UntrustedAdmissionPipelineTest` exercises the real PHP-to-Python query
+handoff and retained receipt on supported native proof hosts, using only the
+read-only routing frame (no Docker, lease or authority grant). Unsupported
+hosts prove pre-reservation refusal, not interoperability. Copied command
+fixtures retain root-owned native PHP identity; only the explicitly copied
+Docker executable uses the fixture owner's identity. The isolated cron
+ordering model counts both admission passes separately from fixture execution.
 
 ## Unreleased canonical error coverage
 

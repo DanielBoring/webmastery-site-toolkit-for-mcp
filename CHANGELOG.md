@@ -8,6 +8,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Changed
 
+- Correct SEO and readability score records to mark the present score field as untrusted, including integer, zero and null values. Preserve score values, pagination, object/key permissions and denied-record omissions.
 - Breaking development change for 3.0: bound content, media, orphan-media, and score lists to candidate windows of at most 100 plus one lookahead ID. Replace exact filtered totals with explicit next-page continuation; empty authorized windows can still continue.
 - Default post/page/custom-post-type and revision lists to summary projection, omitting content without changing excerpts or other stored values. Explicit full projection and existing get/write responses retain content.
 - Identify untrusted stored fields on authorized content, revision, block, metadata, comment, media, user/audit, and SEO records without rewriting their values, types, markup or nested maps. Summary projections mark only retained fields; compact trash responses and canonical errors remain unmarked. Markers are defense-in-depth, not prompt-injection prevention or authorization.

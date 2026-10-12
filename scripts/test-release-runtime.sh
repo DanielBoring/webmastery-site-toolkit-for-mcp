@@ -554,10 +554,15 @@ echo 'PASS synthetic source/original-ZIP precommit retention and terminal releas
 # The identical injected restoration failure must now lose its private evidence.
 # shellcheck disable=SC2030,SC2031 # Fault flags never leak between independent subprocesses.
 for outer in package source; do
+	export WSTM108_MOCK_LIVE="$WORK/legacy-retention-$outer"
+	mkdir -m 700 "$WSTM108_MOCK_LIVE"
 	script=scripts/release-qa.sh
 	[[ "$outer" != source ]] || script=scripts/e2e-test.sh
 	cp "$script" "$WORK/fixed-retention-$outer.sh"
-	sed 's/if ! wstm116_require_no_retention; then/if false; then/' "$WORK/fixed-retention-$outer.sh" > "$script"
+	# Parent cleanup is now armed only after a successful child. Restore that
+	# old trap ownership as well as the guard, exclusively in this RED copy.
+	php tests/unit/fixtures/untrusted-legacy-retention.php "$script" > "$WORK/legacy-retention-$outer.sh"
+	cp "$WORK/legacy-retention-$outer.sh" "$script"
 	: > "$TRACE"
 	status=0
 	(
@@ -570,8 +575,14 @@ for outer in package source; do
 			bash scripts/release-qa.sh
 		fi
 	) > "$WORK/legacy-retention-$outer.log" 2>&1 || status=$?
-	[[ "$status" == 47 ]]
-	[[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]]
+	[[ "$status" == 47 ]] || {
+		printf 'FAIL legacy teardown outer=%s expected_status=47 actual_status=%s\n' "$outer" "$status" >&2
+		exit 1
+	}
+	[[ "$(grep -c ' down -v --remove-orphans$' "$TRACE")" == 2 ]] || {
+		printf 'FAIL legacy teardown outer=%s: expected start reset and unconditional failure cleanup\n' "$outer" >&2
+		exit 1
+	}
 	test ! -e "$WORK/private-backup"
 	test ! -e "$WORK/readonly-probe"
 	test -f build/wstm116-retention-release-runtime-fixture
@@ -601,7 +612,8 @@ for outer in package source; do
 	script=scripts/release-qa.sh
 	[[ "$outer" != source ]] || script=scripts/e2e-test.sh
 	cp "$script" "$WORK/fixed-schema-retention-$outer.sh"
-	sed 's/if ! wstm116_require_no_retention; then/if false; then/' "$WORK/fixed-schema-retention-$outer.sh" > "$script"
+	php tests/unit/fixtures/untrusted-legacy-retention.php "$script" > "$WORK/legacy-schema-retention-$outer.sh"
+	cp "$WORK/legacy-schema-retention-$outer.sh" "$script"
 	# Attest this deliberate RED mutation instead of failing before schema acquisition.
 	commit_mock_outer "$script"
 	: > "$TRACE"

@@ -1,5 +1,9 @@
 <?php
 
+require_once __DIR__ . '/array-syntax-transition.php';
+require_once __DIR__ . '/floor-selector-transition.php';
+require_once __DIR__ . '/bounded-admission-transition.php';
+
 final class Wstm167SourceTransition {
 	public const SEAL = 'e847ac561c95854f66b5b04af627e992fa8886dd76eab018b730b07f42d290fa';
 	public const PREDECESSOR = '2be14f26642f28014a9df9e99df36cb6697520b158938f1b3bad23e9da44c4f5';
@@ -18,8 +22,11 @@ final class Wstm167SourceTransition {
 
 	public static function verify_dependencies( ?callable $read = null ): void {
 		$read = $read ?? static fn( $path ) => file_get_contents( dirname( __DIR__, 3 ) . '/' . $path );
+		Wstm166BoundedAdmissionTransition::verify_dependencies( $read );
+		$read = Wstm166BoundedAdmissionTransition::reader( $read );
+		Wstm167FloorSelectorTransition::verify_dependencies( $read );
 		foreach ( self::load()['dependencies'] as $path => $hash ) {
-			$source = str_replace( "\r\n", "\n", $read( $path ) );
+			$source = Wstm119ArraySyntaxTransition::restore( $path, Wstm167FloorSelectorTransition::restore( $path, $read( $path ) ), 'Bounded integration dependency' );
 			if ( ! hash_equals( $hash, hash( 'sha256', $source ) ) ) {
 				throw new RuntimeException( 'Bounded integration dependency current source drift: ' . $path );
 			}
@@ -28,7 +35,7 @@ final class Wstm167SourceTransition {
 
 	public static function restore( string $path, string $source ): string {
 		$map = self::load();
-		$source = str_replace( "\r\n", "\n", $source );
+		$source = Wstm119ArraySyntaxTransition::restore( $path, Wstm167FloorSelectorTransition::restore( $path, Wstm166BoundedAdmissionTransition::restore( $path, $source ) ), 'Bounded integration' );
 		if ( ! isset( $map['files'][ $path ] ) ) {
 			return $source;
 		}

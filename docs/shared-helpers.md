@@ -22,11 +22,43 @@ pagination/projection, not the authorization policies or historical oracles.
 | 9. SEO metadata tables | Consolidated | `Post_Meta::yoast_keys/seopress_keys/writable_keys`; inspection order retained, exactly 36 original protected write keys/types. Yoast SEO/readability scores and SEOPress news/video sitemap flags remain inspection-only entries, never new write grants. |
 | 10. Pagination clamps | Consolidated without changing policy | `Input::per_page/page/pagination` supports defaults/maxima and optional lower bound. Raw Comments/Users/Taxonomy and pre-count post query arguments keep their old maximum-only clamp via `minimum = null`; strict registered schemas remain authoritative. |
 | 11. Exactly-once slashing | Post/metadata boundary consolidated | `Post_Writes::insert/update/meta` accepts sanitized, unslashed values and applies one `wp_slash` immediately before the core write. Comments keep their distinct comment API boundary. No blanket recursive unslash, changed sanitization or comment/post API conflation. |
-| 12. Array-style enforcement | Intentionally deferred | Retain existing local styles and PHPCS policy. A repository-wide long/short-array conversion adds cosmetic churn and is not needed for these semantic extractions. |
+| 12. Array-style enforcement | Enforced for packaged production PHP | `Generic.Arrays.DisallowLongArraySyntax` requires `[]` literals throughout `includes` and the plugin bootstrap. Installed PHPCBF converted only 88 long literals in five files; all 1,223 existing short literals remain untouched. Array types, offsets and destructuring are not rewritten. |
 
 These distinctions are not unresolved duplicate implementations of the same
-policy. Row 8 provider-readiness merger, row 12 style enforcement and attempts
+policy. Row 8 provider-readiness merger and attempts
 to genericize domain-specific policies remain deliberately unimplemented.
+
+### Array syntax and historical provenance
+
+Short array literals are supported throughout the PHP 8.0+ support range and
+were already the predominant production style (1,223 short versus 88 long
+literals). Choosing `[]` minimizes churn; the WordPress standard remains active
+with its existing short-array prohibition excluded, while the explicit Generic
+rule rejects long literals. This is a documented repository preference, not a
+claim that WordPress Coding Standards itself prefers short arrays. Tests,
+scripts and vendor code are outside the production PHPCS file scope.
+
+`array-syntax-transition.json` adds 102 exact reversible hunks for five production
+files before the unchanged #167, #127 and #119 sealed historical transitions.
+Its independent seal binds raw and LF-normalized hashes, Git blobs, paths and
+predecessor seals. The #167 source and dependency entry points reverse this layer
+before comparing their existing hashes; historical ledgers are not regenerated.
+Live fixture callbacks still execute converted production code, never restored
+historical code. Targeted tests compare complete PHP token streams modulo
+literal syntax and whitespace, reject unrelated source/forged proof drift,
+retain prior chain safeguards and exercise the configured lint rule.
+
+The opt-in floor selector adds a separate exact outer
+`floor-selector-transition.json` layer for seven QA/test consumers and eleven
+dependencies before the unchanged syntax and #167/#127/#119 layers. Source
+selection does not change production abilities or grant runtime authority.
+Further bound admission/controller changes require another reviewed outer
+reversal, never regenerated historical seals.
+The composed `bounded-admission-transition.json` supplies that next exact
+reversal for eight QA consumers/bridge seams and their query/supervisor
+dependencies. Its projection precedes the unchanged floor and earlier layers.
+The separate observer/import-test reversal retains their accepted test history;
+neither layer changes packaged production or grants runtime authority.
 
 ## Public helpers and consumer policy
 
@@ -63,9 +95,11 @@ The actual-source registration fixture covers Posts, CPTs, Taxonomy, Comments,
 Media, Users, Site Info, Health, Database Health, Performance, Backups, Content
 Hygiene, Security, SEO, Site Kit, Webmaster Verification and Plugins. Its two
 fixture CPTs produce 85 registered abilities. Every one retains a manifest case,
-a success control and a forbidden role/capability control; the manifest still has
-589 cases, including 307 negative cases. No manifest or historical-ledger input,
-oracle, ordering or count is rewritten.
+a success control and a forbidden role/capability control. The shared-helper
+extraction preserved all 589 historical cases, including 307 negative cases;
+the composed #166/#167 manifest now has 601 cases, including 313 negative cases.
+The added controls do not rewrite historical-ledger inputs, oracles, ordering
+or counts.
 
 Health, Security, Site Info and Webmaster Verification retain their previously
 shared simple checks. Plugin operations retain network/admin policy. Object

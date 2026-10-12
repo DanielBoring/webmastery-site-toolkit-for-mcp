@@ -1,0 +1,506 @@
+{
+  "schema": 1,
+  "predecessor_seal": "204877c9ff0325b4a6a90f040de918759d9ec45ed22b75a29a075de3451c2d78",
+  "base_inventory_sha256": "80ad1ea415678431d4643231ac92e4baec1b54cb1bd24bf82389294007d5b2e7",
+  "files": {
+    "scripts/e2e-test.sh": {
+      "baseline_raw_sha256": "ae478af0762ee9ecf52918d8ba5fa848e5813cdf27e83a1acd4108dac474adc8",
+      "current_raw_sha256": "6c54d14155070437909b744efa08f6198aa3e370a2f6a11ab78f1893ccfac9d8",
+      "baseline_sha256": "ae478af0762ee9ecf52918d8ba5fa848e5813cdf27e83a1acd4108dac474adc8",
+      "current_sha256": "6c54d14155070437909b744efa08f6198aa3e370a2f6a11ab78f1893ccfac9d8",
+      "hunks": [
+        {
+          "start": 1,
+          "before": [],
+          "after": [
+            "set +x"
+          ]
+        },
+        {
+          "start": 6,
+          "before": [
+            "WORDPRESS_URL=\"${WORDPRESS_URL:-http://localhost}\""
+          ],
+          "after": [
+            "if [[ -z \"${WSTM_QA_RUNTIME_PROFILE:-}${WSTM_PHP80_CONFIG+x}${WSTM_PHP80_CONFIG_SHA256+x}\" ]]; then",
+            "\tWORDPRESS_URL=\"${WORDPRESS_URL:-http://localhost}\"",
+            "fi"
+          ]
+        },
+        {
+          "start": 40,
+          "before": [
+            "\tcompose down -v --remove-orphans"
+          ],
+          "after": [
+            "\tcompose down -v --remove-orphans || return $?"
+          ]
+        },
+        {
+          "start": 50,
+          "before": [
+            "\tif [ \"$E2E_MANAGE_COMPOSE\" != \"1\" ] || [ \"$E2E_KEEP_COMPOSE\" = \"1\" ]; then"
+          ],
+          "after": [
+            "\tif [ \"$E2E_MANAGE_COMPOSE\" != \"1\" ] || { [ \"$E2E_KEEP_COMPOSE\" = \"1\" ] && { [ \"$original\" = 0 ] || [ \"$QA_MODE\" = contract ]; }; }; then"
+          ]
+        },
+        {
+          "start": 587,
+          "before": [],
+          "after": [
+            "\tif [[ -n \"${WSTM_QA_RUNTIME_PROFILE:-}${WSTM_PHP80_CONFIG+x}${WSTM_PHP80_CONFIG_SHA256+x}\" ]]; then",
+            "\t\texport COMPOSE_PROJECT_NAME E2E_ARTIFACTS_DIR DEPENDENCY_POLICY E2E_MANAGE_COMPOSE",
+            "\t\tlocal runtime_selection",
+            "\t\truntime_selection=\"$(run_untrusted_runtime_selection shell)\" || return $?",
+            "\t\t# Only complete source-reviewed shell quoting from verified private originals.",
+            "\t\teval \"$runtime_selection\"",
+            "\tfi"
+          ]
+        },
+        {
+          "start": 606,
+          "before": [
+            "\ttrap cleanup_compose EXIT"
+          ],
+          "after": [
+            "\tif [[ \"$QA_MODE\" == contract ]]; then",
+            "\t\ttrap cleanup_compose EXIT",
+            "\telse",
+            "\t\t# A bare owned stack is a prerequisite, not something preflight creates.",
+            "\t\trun_untrusted_admission || return $?",
+            "\tfi"
+          ]
+        },
+        {
+          "start": 615,
+          "before": [
+            "\tstart_compose"
+          ],
+          "after": [
+            "\tstart_compose || return $?",
+            "\tif [[ \"$QA_MODE\" != contract ]]; then",
+            "\t\t# Managed lifecycle changes invalidate the preceding live inventory.",
+            "\t\trun_untrusted_admission || return $?",
+            "\t\ttrap cleanup_compose EXIT",
+            "\tfi"
+          ]
+        }
+      ]
+    },
+    "scripts/qa-runtime.php": {
+      "baseline_raw_sha256": "7ea68080241e6811a840467709a2c93792a742f329cd451dc2ed0ebb9173c3fb",
+      "current_raw_sha256": "553b29dc69d0acf8d4ef5a068b0eaa7084bf71fdf0017d5b2a9e6a9bc586ce0a",
+      "baseline_sha256": "7ea68080241e6811a840467709a2c93792a742f329cd451dc2ed0ebb9173c3fb",
+      "current_sha256": "553b29dc69d0acf8d4ef5a068b0eaa7084bf71fdf0017d5b2a9e6a9bc586ce0a",
+      "hunks": [
+        {
+          "start": 219,
+          "before": [],
+          "after": [
+            "\t\tif ( 'package' === $mode && 2 === count( $argv ) ) {",
+            "\t\t\tthrow new RuntimeException( 'Floor selection is incompatible with original-ZIP package QA.' );",
+            "\t\t}"
+          ]
+        },
+        {
+          "start": 223,
+          "before": [
+            "\t\tif ( 'shell' === $mode && 2 === count( $argv ) ) {"
+          ],
+          "after": [
+            "\t\tif ( 'frame' === $mode && 2 === count( $argv ) ) {",
+            "\t\t\techo json_encode( $plan, JSON_THROW_ON_ERROR ) . \"\\n\";",
+            "\t\t} elseif ( 'shell' === $mode && 2 === count( $argv ) ) {"
+          ]
+        }
+      ]
+    },
+    "scripts/release-qa.sh": {
+      "baseline_raw_sha256": "2d525f816c87ac7c300529a38642ad394f0cfd8ab42c210fd8ad35f37242be1c",
+      "current_raw_sha256": "bf816ab7aabf96e1acd1f3ddc7284736980a7ebb09e59068ea7aff76c649f3c3",
+      "baseline_sha256": "2d525f816c87ac7c300529a38642ad394f0cfd8ab42c210fd8ad35f37242be1c",
+      "current_sha256": "bf816ab7aabf96e1acd1f3ddc7284736980a7ebb09e59068ea7aff76c649f3c3",
+      "hunks": [
+        {
+          "start": 1,
+          "before": [],
+          "after": [
+            "set +x"
+          ]
+        },
+        {
+          "start": 6,
+          "before": [],
+          "after": [
+            "if [[ -n \"${WSTM_QA_RUNTIME_PROFILE:-}${WSTM_PHP80_CONFIG+x}${WSTM_PHP80_CONFIG_SHA256+x}\" ]]; then",
+            "\tE2E_SCRIPT_ROOT=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd -P)\"",
+            "\t# shellcheck source=scripts/untrusted-stage.sh",
+            "\tsource \"$E2E_SCRIPT_ROOT/untrusted-stage.sh\"",
+            "\tstatus=0",
+            "\trun_untrusted_runtime_selection package || status=$?",
+            "\t# Package selection must never succeed, including an incomplete helper result.",
+            "\tif [[ \"$status\" == 0 ]]; then echo \"Package runtime selection unexpectedly succeeded; refusing.\" >&2; exit 78; fi",
+            "\texit \"$status\"",
+            "fi"
+          ]
+        },
+        {
+          "start": 73,
+          "before": [],
+          "after": [
+            "# The child owns admitted failure cleanup. Until it succeeds, the parent must",
+            "# not tear down a bare stack after a pre-fixture refusal.",
+            "runtime_status=0",
+            "bash scripts/e2e-test.sh all || runtime_status=$?",
+            "if [[ \"$runtime_status\" != 0 ]]; then exit \"$runtime_status\"; fi"
+          ]
+        },
+        {
+          "start": 79,
+          "before": [
+            "bash scripts/e2e-test.sh all"
+          ],
+          "after": []
+        }
+      ]
+    },
+    "scripts/untrusted-host-bootstrap.sh": {
+      "baseline_raw_sha256": "b49a89d24f5445a47287826bad2fd647d290d52e267ec7f9ba00eab57447f7dc",
+      "current_raw_sha256": "21de117d566440e6ee924f4cc9d7f7098918eba3b5fe70cf0d49d6ca21332868",
+      "baseline_sha256": "b49a89d24f5445a47287826bad2fd647d290d52e267ec7f9ba00eab57447f7dc",
+      "current_sha256": "21de117d566440e6ee924f4cc9d7f7098918eba3b5fe70cf0d49d6ca21332868",
+      "hunks": [
+        {
+          "start": 56,
+          "before": [],
+          "after": [
+            "\tlocal runtime_args=()",
+            "\tif [[ -n \"${WSTM_QA_RUNTIME_PROFILE:-}${WSTM_PHP80_CONFIG+x}${WSTM_PHP80_CONFIG_SHA256+x}\" ]]; then",
+            "\t\truntime_args=( WSTM_QA_RUNTIME_PROFILE=\"${WSTM_QA_RUNTIME_PROFILE:-}\" WSTM_PHP80_CONFIG=\"${WSTM_PHP80_CONFIG:-}\" WSTM_PHP80_CONFIG_SHA256=\"${WSTM_PHP80_CONFIG_SHA256:-}\" )",
+            "\t\tlocal runtime_key",
+            "\t\t# Preserve original refusal inputs through scrubbing, never ambient selectors.",
+            "\t\tfor runtime_key in COMPOSE_FILE COMPOSE_PROFILES COMPOSE_ENV_FILES \\",
+            "\t\t\tPHP80_RUNTIME_IMAGE PHP80_MYSQL_IMAGE PHP80_CANDIDATE_ROOT PHP80_HTTP_PORT \\",
+            "\t\t\tPHP80_WP_CONFIG PHP80_WP_CONFIG_SHA256 PHP80_MYSQL_ENV_FILE E2E_MANAGE_COMPOSE WORDPRESS_URL; do",
+            "\t\t\tif [[ -v \"$runtime_key\" ]]; then runtime_args+=( \"$runtime_key=${!runtime_key}\" ); fi",
+            "\t\tdone",
+            "\tfi"
+          ]
+        },
+        {
+          "start": 78,
+          "before": [],
+          "after": [
+            "\t\t\"${runtime_args[@]}\" \\"
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-host-controller.php": {
+      "baseline_raw_sha256": "f1d4fdca08dfa610a9c313388151b4cc380642d6634a1cd2ba3889cad4411664",
+      "current_raw_sha256": "6fd0adb5f62aa3746293cc4f849897799991d4f86cfbb095cee9c1b25b6332af",
+      "baseline_sha256": "f1d4fdca08dfa610a9c313388151b4cc380642d6634a1cd2ba3889cad4411664",
+      "current_sha256": "6fd0adb5f62aa3746293cc4f849897799991d4f86cfbb095cee9c1b25b6332af",
+      "hunks": [
+        {
+          "start": 65,
+          "before": [],
+          "after": [
+            "\tprivate array $query_captures = array();"
+          ]
+        },
+        {
+          "start": 72,
+          "before": [],
+          "after": [
+            "\tprivate int $query_deadline = 0;",
+            "\tprivate int $query_count = 0;"
+          ]
+        },
+        {
+          "start": 185,
+          "before": [
+            "\tpublic function capture( string $name, array $command, string $cwd, array $environment ): array {"
+          ],
+          "after": [
+            "\tpublic function capture( string $name, array $command, string $cwd, array $environment, array $query_streams = array() ): array {"
+          ]
+        },
+        {
+          "start": 187,
+          "before": [],
+          "after": [
+            "\t\tself::require( array() === $query_streams || ( array( 10, 11 ) === array_keys( $query_streams )",
+            "\t\t\t&& is_resource( $query_streams[10] ) && is_resource( $query_streams[11] )",
+            "\t\t\t&& 1 === preg_match( '/-query-[1-9][0-9]*$/D', $name ) ), 'query-original-descriptors' );"
+          ]
+        },
+        {
+          "start": 215,
+          "before": [
+            "\t\t\t$process = proc_open( $command, array( 0 => array( 'file', '/dev/null', 'r' ), 1 => $streams['stdout'], 2 => $streams['stderr'],",
+            "\t\t\t\t3 => array( 'file', '/dev/null', 'w' ), 4 => array( 'file', '/dev/null', 'w' ), 5 => array( 'file', '/dev/null', 'w' ), 9 => array( 'file', '/dev/null', 'w' ) ),"
+          ],
+          "after": [
+            "\t\t\t$process = proc_open( $command, array_replace( array( 0 => array( 'file', '/dev/null', 'r' ), 1 => $streams['stdout'], 2 => $streams['stderr'],",
+            "\t\t\t\t3 => array( 'file', '/dev/null', 'w' ), 4 => array( 'file', '/dev/null', 'w' ), 5 => array( 'file', '/dev/null', 'w' ), 9 => array( 'file', '/dev/null', 'w' ) ), $query_streams ),"
+          ]
+        },
+        {
+          "start": 271,
+          "before": [],
+          "after": [
+            "\t\tif ( 0 === $this->query_deadline ) { $this->query_deadline = hrtime( true ) + 120000000000; }",
+            "\t\tif ( ++$this->query_count > 64 || hrtime( true ) >= $this->query_deadline ) {",
+            "\t\t\tthrow new RuntimeException( 'WSTM108 controller refused: admission-query-budget', 78 );",
+            "\t\t}",
+            "\t\tself::require( 1 === preg_match( '/^[a-z][a-z0-9-]{0,63}$/D', $prefix ), 'admission-query-prefix' );",
+            "\t\t$name = $prefix . '-query-' . ++$sequence;",
+            "\t\t$directory = $this->directory . '/' . $name . '-supervised';",
+            "\t\tself::require( mkdir( $directory, 0700 ), 'exclusive-query-reservation' );",
+            "\t\t$child = Wstm108_Files::directory( $directory );",
+            "\t\t$updated = Wstm108_Files::directory( $this->directory );",
+            "\t\tWstm108_HostTopology::owned_child_transition( $this->identity, $updated, $child );",
+            "\t\t$this->identity = $updated;",
+            "\t\t$request = Wstm108_Files::create( $directory . '/request.private.json', json_encode( array(",
+            "\t\t\t'argv' => $command, 'cwd' => dirname( __DIR__ ), 'deadline_ns' => $this->query_deadline,",
+            "\t\t), JSON_THROW_ON_ERROR ) );",
+            "\t\tself::sync_file( $directory . '/request.private.json', $request );",
+            "\t\t$python = realpath( '/usr/bin/python3' );",
+            "\t\tself::require( is_string( $python ), 'native-query-supervisor-unavailable' );",
+            "\t\t$interpreter = Wstm108_Files::file( $python );",
+            "\t\tself::require( 0 === $interpreter['identity']['uid'] && 0 === ( $interpreter['identity']['mode'] & 0022 )",
+            "\t\t\t&& 0 !== ( $interpreter['identity']['mode'] & 0111 ), 'native-query-supervisor-executable' );"
+          ]
+        },
+        {
+          "start": 294,
+          "before": [
+            "\t\t$capture = $this->capture( $prefix . '-query-' . ++$sequence, $command, dirname( __DIR__ ), $environment );",
+            "\t\t$this->successful_child( $capture, 'discovery-child-failed' );",
+            "\t\t$bytes = $capture['streams']['stdout']['bytes'];"
+          ],
+          "after": [
+            "\t\t$query_streams = array();",
+            "\t\t$query_originals = array();",
+            "\t\tforeach ( array( 10 => 'stdout', 11 => 'stderr' ) as $fd => $stream ) {",
+            "\t\t\t$mask = umask( 0077 );",
+            "\t\t\ttry { $handle = fopen( $directory . '/' . $stream . '.log', 'x+b' ); } finally { umask( $mask ); }",
+            "\t\t\tself::require( is_resource( $handle ), 'query-original-open' );",
+            "\t\t\t$query_streams[ $fd ] = $handle;",
+            "\t\t\t$query_originals[ $stream ] = Wstm108_Files::file( $directory . '/' . $stream . '.log' );",
+            "\t\t}",
+            "\t\ttry {",
+            "\t\t\t$capture = $this->capture( $name, array( $python, '-B', __DIR__ . '/untrusted-query.py', $directory . '/request.private.json' ),",
+            "\t\t\t\tdirname( __DIR__ ), $environment, $query_streams );",
+            "\t\t\t$this->successful_child( $capture, 'discovery-child-failed' );",
+            "\t\t\tself::require( \"WSTM108_QUERY_COMPLETE_V1\\n\" === $capture['streams']['stdout']['bytes'], 'supervised-query-framing' );",
+            "\t\t\tWstm108_Files::assert_file( $directory . '/request.private.json', $request );",
+            "\t\t\tWstm108_Files::assert_file( $python, $interpreter );",
+            "\t\t\t$receipt = json_decode( Wstm108_Files::file( $directory . '/receipt.json' )['bytes'], true, 512, JSON_THROW_ON_ERROR );",
+            "\t\t\tself::require( is_array( $receipt ) && $command === ( $receipt['argv'] ?? null ) && 0 === ( $receipt['exit_code'] ?? null )",
+            "\t\t\t\t&& true === ( $receipt['root_exit_observed'] ?? null ) && true === ( $receipt['stdout_eof'] ?? null )",
+            "\t\t\t\t&& true === ( $receipt['stderr_eof'] ?? null ) && false === ( $receipt['truncated'] ?? null )",
+            "\t\t\t\t&& array_key_exists( 'failure', $receipt ) && null === $receipt['failure']",
+            "\t\t\t\t&& array() === ( $receipt['secondary_errors'] ?? null ), 'supervised-query-receipt' );",
+            "\t\t\t$originals = array();",
+            "\t\t\tforeach ( array( 'stdout', 'stderr' ) as $stream ) {",
+            "\t\t\t\t$originals[ $stream ] = Wstm108_Files::read_bound( $directory . '/' . $stream . '.log', $query_originals[ $stream ]['identity'] );",
+            "\t\t\t\tself::require( strlen( $originals[ $stream ]['bytes'] ) === ( $receipt[ $stream . '_bytes' ] ?? null )",
+            "\t\t\t\t\t&& $originals[ $stream ]['sha256'] === ( $receipt[ $stream . '_sha256' ] ?? null )",
+            "\t\t\t\t\t&& 0 === ( $receipt[ $stream . '_diagnostic_bytes' ] ?? null )",
+            "\t\t\t\t\t&& 0 === ( $receipt[ $stream . '_observed_not_retained' ] ?? null ), 'supervised-query-original-stream' );",
+            "\t\t\t\tself::sync_file( $directory . '/' . $stream . '.log', $originals[ $stream ] );",
+            "\t\t\t}",
+            "\t\t\tself::require( '' === $originals['stderr']['bytes'], 'supervised-query-stderr' );",
+            "\t\t\t$files = array();",
+            "\t\t\tforeach ( array( 'request.private.json', 'stdout.log', 'stderr.log', 'stdout.overflow.bin', 'stderr.overflow.bin', 'terminal.json', 'receipt.json' ) as $file ) {",
+            "\t\t\t\t$files[ $file ] = self::metadata( Wstm108_Files::file( $directory . '/' . $file ) );",
+            "\t\t\t}",
+            "\t\t\t$this->query_captures[ basename( $directory ) ] = $files;",
+            "\t\t\t$this->verify();",
+            "\t\t\t$bytes = $originals['stdout']['bytes'];",
+            "\t\t} finally {",
+            "\t\t\tforeach ( $query_streams as $handle ) { fclose( $handle ); }",
+            "\t\t}"
+          ]
+        },
+        {
+          "start": 350,
+          "before": [],
+          "after": [
+            "\tprivate function begin_query_pass(): void {",
+            "\t\t$this->query_deadline = hrtime( true ) + 120000000000;",
+            "\t\t$this->query_count = 0;",
+            "\t}",
+            ""
+          ]
+        },
+        {
+          "start": 358,
+          "before": [
+            "\t\t$compose = array( 'docker', 'compose', '--project-name', $this->context['binding']['project'] );",
+            "\t\tif ( null !== $this->context['binding']['package_sha256'] ) { $compose = array_merge( $compose, array( '-f', 'docker-compose.yml', '-f', 'docker-compose.release.yml' ) ); }",
+            "\t\t$mounts = Wstm108_HostAuthority::discover_mounts( $this->context['binding']['project'], $compose,"
+          ],
+          "after": [
+            "\t\t$this->begin_query_pass();",
+            "\t\trequire_once __DIR__ . '/qa-runtime.php';",
+            "\t\t$runtime = $this->query( array( PHP_BINARY, __DIR__ . '/qa-runtime.php', 'frame' ), 'selection-' . $action );",
+            "\t\tWstmQaRuntime::assert_binding( $runtime, $this->context['binding'] );",
+            "\t\t$mounts = WstmQaRuntime::discover( $runtime,"
+          ]
+        },
+        {
+          "start": 447,
+          "before": [],
+          "after": [
+            "\t\tforeach ( $this->query_captures as $name => $files ) {",
+            "\t\t\t$names[] = $name;",
+            "\t\t\t$directory = $this->directory . '/' . $name;",
+            "\t\t\tWstm108_Files::directory( $directory );",
+            "\t\t\t$expected = array_merge( array( '.', '..' ), array_keys( $files ) );",
+            "\t\t\tsort( $expected, SORT_STRING );",
+            "\t\t\tself::require( $expected === scandir( $directory ), 'foreign-or-missing-query-capture' );",
+            "\t\t\tforeach ( $files as $file => $original ) {",
+            "\t\t\t\tself::require( self::metadata( Wstm108_Files::read_bound( $directory . '/' . $file, $original['identity'] ) ) === $original, 'query-original-capture-drift' );",
+            "\t\t\t}",
+            "\t\t}"
+          ]
+        },
+        {
+          "start": 481,
+          "before": [
+            "\t\tself::require( 1 === preg_match( '/^[a-f0-9]{32}$/D', $owner ) && in_array( $mode, array( 'contract', 'e2e', 'all' ), true )"
+          ],
+          "after": [
+            "\t\tself::require( 1 === preg_match( '/^[a-f0-9]{32}$/D', $owner ) && in_array( $mode, array( 'contract', 'e2e', 'all', 'admission' ), true )"
+          ]
+        },
+        {
+          "start": 495,
+          "before": [
+            "\t\t$compose = array( 'docker', 'compose', '--project-name', $project );",
+            "\t\tif ( '' !== ( $this->environment['E2E_PACKAGE_ZIP'] ?? '' ) ) { $compose = array_merge( $compose, array( '-f', 'docker-compose.yml', '-f', 'docker-compose.release.yml' ) ); }"
+          ],
+          "after": []
+        },
+        {
+          "start": 496,
+          "before": [
+            "\t\t$mounts = Wstm108_HostAuthority::discover_mounts( $project, $compose, array( $this, 'query' ), $root );"
+          ],
+          "after": [
+            "\t\t$this->begin_query_pass();",
+            "\t\trequire_once __DIR__ . '/qa-runtime.php';",
+            "\t\tif ( WstmQaRuntime::floor( $this->environment ) ) { $this->environment['E2E_ARTIFACTS_DIR'] = $artifact_base; }",
+            "\t\t$runtime = $this->query( array( PHP_BINARY, __DIR__ . '/qa-runtime.php', 'frame' ), 'selection' );",
+            "\t\t$this->environment = array_merge( $this->environment, $runtime['environment'] );",
+            "\t\t$mounts = WstmQaRuntime::discover( $runtime, array( $this, 'query' ), $root );"
+          ]
+        },
+        {
+          "start": 504,
+          "before": [],
+          "after": [
+            "\t\tif ( 'admission' === $mode ) {",
+            "\t\t\t$this->verify_controller_streams();",
+            "\t\t\treturn 0;",
+            "\t\t}"
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-provenance.php": {
+      "baseline_raw_sha256": "bebc053381d6c1461e374f02cc2494456cf15b1b01675e72c3fa66a8e94c29d3",
+      "current_raw_sha256": "a29778e37416d68a31613e213b7508ae9facfac5964d8b7a6627c277f4660f9d",
+      "baseline_sha256": "bebc053381d6c1461e374f02cc2494456cf15b1b01675e72c3fa66a8e94c29d3",
+      "current_sha256": "a29778e37416d68a31613e213b7508ae9facfac5964d8b7a6627c277f4660f9d",
+      "hunks": [
+        {
+          "start": 64,
+          "before": [],
+          "after": [
+            "\t'scripts/untrusted-query.py', 'tests/e2e/bounded-list-controller.py',"
+          ]
+        }
+      ]
+    },
+    "scripts/untrusted-stage.sh": {
+      "baseline_raw_sha256": "0fa46261d88f1c138e93861c451bc686a366d9cd5e99d1e1d7d9e3fa5da7bc3e",
+      "current_raw_sha256": "857c5170e7d24bb9b7ab3c606507159d26d0e65d136953ab24e6e8cfd02bb28d",
+      "baseline_sha256": "0fa46261d88f1c138e93861c451bc686a366d9cd5e99d1e1d7d9e3fa5da7bc3e",
+      "current_sha256": "857c5170e7d24bb9b7ab3c606507159d26d0e65d136953ab24e6e8cfd02bb28d",
+      "hunks": [
+        {
+          "start": 1,
+          "before": [],
+          "after": [
+            "",
+            "run_untrusted_runtime_selection() (",
+            "\tset +x",
+            "\texport -n SHELLOPTS BASHOPTS",
+            "\tunset BASH_ENV ENV",
+            "\tif [[ -z \"${WSTM108_HOST_AUTHORITY_ROOT:-}\" ]]; then",
+            "\t\tprintf 'WSTM108_QUERY_REFUSED_V1\\n' >&2",
+            "\t\texit 78",
+            "\tfi",
+            "\tlocal runtime_key",
+            "\tfor runtime_key in WSTM_QA_RUNTIME_PROFILE WSTM_PHP80_CONFIG WSTM_PHP80_CONFIG_SHA256 WSTM108_HOST_AUTHORITY_ROOT WSTM108_HOST_PHP \\",
+            "\t\tCOMPOSE_PROJECT_NAME E2E_ARTIFACTS_DIR DEPENDENCY_POLICY E2E_PACKAGE_ROOT E2E_PACKAGE_ZIP COMPOSE_FILE COMPOSE_PROFILES COMPOSE_ENV_FILES \\",
+            "\t\tWORDPRESS_IMAGE MYSQL_IMAGE WORDPRESS_PORT MYSQL_PORT WORDPRESS_URL E2E_MANAGE_COMPOSE \\",
+            "\t\tPHP80_RUNTIME_IMAGE PHP80_MYSQL_IMAGE PHP80_CANDIDATE_ROOT PHP80_HTTP_PORT PHP80_WP_CONFIG PHP80_WP_CONFIG_SHA256 PHP80_MYSQL_ENV_FILE; do",
+            "\t\tif [[ -v \"$runtime_key\" ]]; then export \"${runtime_key?}\"; fi",
+            "\tdone",
+            "\t/usr/bin/python3 -B \"$E2E_SCRIPT_ROOT/untrusted-query.py\" --runtime-selection \"$1\"",
+            ")",
+            "",
+            "run_untrusted_admission() {",
+            "\t# No receipt or environment flag can substitute for a fresh native pass.",
+            "\tlocal QA_MODE=admission",
+            "\trun_untrusted_content_qa",
+            "}"
+          ]
+        }
+      ]
+    },
+    "tests/unit/fixtures/bounded-integration-transition.php": {
+      "baseline_raw_sha256": "b075f0883f4c4e4ea7c1519f90314a87eddfc7133c76042130a818026d03a5a8",
+      "current_raw_sha256": "ea9d55ffbccb4bc7938a9ee4cedc4ce9ebfd6dc9eacef802060f61191f1c3243",
+      "baseline_sha256": "b075f0883f4c4e4ea7c1519f90314a87eddfc7133c76042130a818026d03a5a8",
+      "current_sha256": "ea9d55ffbccb4bc7938a9ee4cedc4ce9ebfd6dc9eacef802060f61191f1c3243",
+      "hunks": [
+        {
+          "start": 4,
+          "before": [],
+          "after": [
+            "require_once __DIR__ . '/bounded-admission-transition.php';"
+          ]
+        },
+        {
+          "start": 24,
+          "before": [],
+          "after": [
+            "\t\tWstm166BoundedAdmissionTransition::verify_dependencies( $read );",
+            "\t\t$read = Wstm166BoundedAdmissionTransition::reader( $read );"
+          ]
+        },
+        {
+          "start": 37,
+          "before": [
+            "\t\t$source = Wstm119ArraySyntaxTransition::restore( $path, Wstm167FloorSelectorTransition::restore( $path, $source ), 'Bounded integration' );"
+          ],
+          "after": [
+            "\t\t$source = Wstm119ArraySyntaxTransition::restore( $path, Wstm167FloorSelectorTransition::restore( $path, Wstm166BoundedAdmissionTransition::restore( $path, $source ) ), 'Bounded integration' );"
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "scripts/untrusted-query.py": "5747b31c142c2cc364687442e97546ac4e3c25d9d6082d70514165d6db96f855",
+    "tests/e2e/bounded-list-controller.py": "f8642e623de29e65edb17f2407f423953c1a5274236f17e113a8a802d5521360",
+    "tests/unit/fixtures/floor-selector-transition.json": "204877c9ff0325b4a6a90f040de918759d9ec45ed22b75a29a075de3451c2d78"
+  }
+}

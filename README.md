@@ -29,6 +29,22 @@ For release history, see [CHANGELOG.md](CHANGELOG.md).
 
 Maintainers: equivalent permission, post-list, response-field, SEO-key and write-boundary code uses [shared helpers](docs/shared-helpers.md). Posts now dispatches metadata, bulk operations, revisions, featured images and content patches to cohesive owners, with domain authorization in Post Access. This extraction does not change ability names, schemas, roles, authorized totals, response fields, or client escaping requirements.
 
+Production PHP uses PHPCS-enforced short `[]` array literals. The
+[syntax/provenance policy](docs/shared-helpers.md#array-syntax-and-historical-provenance)
+documents the minimal conversion and exact preservation of historical source proofs.
+
+Disposable hosted QA explicitly opts into read-only system observation when
+Docker-daemon proc evidence is inaccessible to the nonroot controller. Only
+fixed verified system read/supervision tools are elevated; candidate code,
+fixture authority and admission requirements are unchanged. Do not enable this
+mode on shared/live hosts. See the
+[inspection boundary and evidence limitations](docs/qa-strategy.md#opt-in-read-only-system-observation-on-disposable-ci-hosts).
+
+The current development QA baseline is **WordPress 7.1.2 with MCP Adapter
+0.6.1**. The default Docker image and compatibility metadata use that baseline;
+the declared WordPress 6.9 / PHP 8.0 plugin minimums are unchanged. See
+[QA Strategy](docs/qa-strategy.md) for the separate compatibility and runtime gates.
+
 **Unreleased 3.0 development:** this branch changes the error contract, not the
 2.6.0 stable tag. Clients must follow the [3.0 migration guide](docs/3.0-migration.md)
 before deploying it. Ability names, roles, inputs, defaults, and successful
@@ -127,6 +143,19 @@ limitations](docs/3.0-migration.md#bounded-list-windows-and-summary-projection).
 The plugin minimum remains **PHP 8.0**. The exact-candidate WordPress 6.9 /
 PHP 8.1 compatibility lane is not PHP 8.0 integration proof. Proof-tool hosts
 that require `fsync` need PHP 8.1+, independently of the plugin minimum.
+The opt-in [PHP 8.0 fixture source](tests/fixtures/php80-floor/README.md)
+provides pinned WordPress 6.9.x builds and same-ELF CLI/HTTP probes. Reviewed
+source-only selection uses `WSTM_QA_RUNTIME_PROFILE=php80-floor`,
+`WSTM_PHP80_CONFIG` and its independently reviewed `WSTM_PHP80_CONFIG_SHA256`.
+Shared Compose and retention checks bind the original config, immutable image
+and candidate identity, rejecting conflicting profile/project/file overrides.
+Controller/bootstrap and pre-fixture calls use the same bounded original
+selection. Full runtime QA checks fresh native admission before artifact reset
+and again before fixtures. Supply the existing independent private authority
+root, trusted proof-host PHP and Linux Python 3.11+/pidfd, alongside the
+separately approved bare stack and existing runtime grants. These read-only
+checks neither provision a stack nor turn selection into admission or a grant.
+The source-only floor fixture cannot run original-ZIP package QA.
 Genuine PHP 8.0 candidate integration and leased bounded-list numeric acceptance
 remain separate requirements. Interrupted benchmark cleanup has a
 [bounded recovery launcher](tests/e2e/README.md#bounded-cleanup-recovery);
@@ -463,6 +492,10 @@ apply. Markers never restore omitted/redacted fields.
 | SEO provider containing record | `title`, `url`, `metadata`, `raw_meta` |
 | SEO/readability score record | `title`, `url`, `score` |
 | Sitemap containing record / robots record | Sitemap: `url`, `entries`; robots: `url` |
+
+SEO/readability records mark `score` when its value is an integer (including
+zero) or `null`. Markers follow field presence, not value type. Object and
+score-key authorization still precede the read; denied records are not exposed.
 
 Compact post/page/CPT trash results remain exactly `{"id":123,"status":"trash"}`:
 they contain no stored text and do not acquire a marker or extra content fields.

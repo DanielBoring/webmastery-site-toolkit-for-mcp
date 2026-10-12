@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/untrusted-host-topology.php';
+require_once __DIR__ . '/untrusted-host-observation.php';
 require_once __DIR__ . '/untrusted-export.php';
 
 /** The controller retains originals and publication custody; children receive neither channel. */
@@ -63,12 +64,16 @@ final class Wstm108_HostController {
 	private array $state = array();
 	private array $failures = array();
 	private array $helper_captures = array();
+	private array $query_captures = array();
+	private array $observation_captures = array();
 	private int $first_failure = 0;
 	private ?array $publication = null;
 	private ?array $publication_channel = null;
 	private ?array $parent_identity = null;
 	private bool $reserving_authority_child = false;
 	private array $controller_streams = array();
+	private int $query_deadline = 0;
+	private int $query_count = 0;
 
 	public function __construct( string $directory, array $identity, array $environment ) {
 		Wstm108_Export::require_host();
@@ -80,6 +85,24 @@ final class Wstm108_HostController {
 		$this->identity = $identity;
 		$this->environment = $environment;
 		$this->verify();
+		if ( Wstm108_HostObservation::enabled( $environment ) ) {
+			self::require( posix_geteuid() > 0 && ! isset( $environment['WSTM108_HOST_OBSERVATION_CUSTODY'] ), 'inspection-custody-already-set-or-root-controller' );
+		}
+	}
+
+	private function reserve_observations(): void {
+		if ( ! Wstm108_HostObservation::enabled( $this->environment ) ) { return; }
+		$this->verify();
+		$directory = $this->directory . '/host-observations';
+		self::require( mkdir( $directory, 0700 ), 'exclusive-host-observation-reservation' );
+		$child = Wstm108_Files::directory( $directory );
+		$updated = Wstm108_Files::directory( $this->directory );
+		Wstm108_HostTopology::owned_child_transition( $this->identity, $updated, $child );
+		$this->identity = $updated;
+		$this->environment['WSTM108_HOST_OBSERVATION_CUSTODY'] = base64_encode( json_encode( array(
+			'directory' => $directory, 'identity' => Wstm108_HostTopology::stable_identity( $child ),
+		), JSON_THROW_ON_ERROR ) );
+		self::require( putenv( 'WSTM108_HOST_OBSERVATION_CUSTODY=' . $this->environment['WSTM108_HOST_OBSERVATION_CUSTODY'] ), 'inspection-custody-environment' );
 	}
 
 	private static function require( bool $condition, string $reason ): void {
@@ -180,8 +203,11 @@ final class Wstm108_HostController {
 		throw new RuntimeException( 'WSTM108 controller refused: ' . $reason, $code );
 	}
 
-	public function capture( string $name, array $command, string $cwd, array $environment ): array {
+	public function capture( string $name, array $command, string $cwd, array $environment, array $query_streams = array() ): array {
 		self::require( 1 === preg_match( '/^[a-z][a-z0-9-]{0,95}$/D', $name ) && array() !== $command, 'capture-action' );
+		self::require( array() === $query_streams || ( array( 10, 11 ) === array_keys( $query_streams )
+			&& is_resource( $query_streams[10] ) && is_resource( $query_streams[11] )
+			&& 1 === preg_match( '/-query-[1-9][0-9]*$/D', $name ) ), 'query-original-descriptors' );
 		$this->verify();
 		if ( array() !== $this->controller_streams ) { $this->verify_controller_streams(); }
 		$streams = array();
@@ -207,8 +233,8 @@ final class Wstm108_HostController {
 		try {
 			$this->verify();
 			// Direct inherited file descriptors preserve startup/fatal bytes too.
-			$process = proc_open( $command, array( 0 => array( 'file', '/dev/null', 'r' ), 1 => $streams['stdout'], 2 => $streams['stderr'],
-				3 => array( 'file', '/dev/null', 'w' ), 4 => array( 'file', '/dev/null', 'w' ), 5 => array( 'file', '/dev/null', 'w' ), 9 => array( 'file', '/dev/null', 'w' ) ),
+			$process = proc_open( $command, array_replace( array( 0 => array( 'file', '/dev/null', 'r' ), 1 => $streams['stdout'], 2 => $streams['stderr'],
+				3 => array( 'file', '/dev/null', 'w' ), 4 => array( 'file', '/dev/null', 'w' ), 5 => array( 'file', '/dev/null', 'w' ), 9 => array( 'file', '/dev/null', 'w' ) ), $query_streams ),
 				$pipes, $cwd, self::child_environment( $environment ) );
 			self::require( is_resource( $process ), 'capture-launch' );
 			$exit = proc_close( $process );
@@ -263,11 +289,71 @@ final class Wstm108_HostController {
 
 	public function query( array $command, string $prefix = 'admission' ): array|string {
 		static $sequence = 0;
+		if ( 0 === $this->query_deadline ) { $this->query_deadline = hrtime( true ) + 120000000000; }
+		if ( ++$this->query_count > 64 || hrtime( true ) >= $this->query_deadline ) {
+			throw new RuntimeException( 'WSTM108 controller refused: admission-query-budget', 78 );
+		}
+		self::require( 1 === preg_match( '/^[a-z][a-z0-9-]{0,63}$/D', $prefix ), 'admission-query-prefix' );
+		$name = $prefix . '-query-' . ++$sequence;
+		$directory = $this->directory . '/' . $name . '-supervised';
+		self::require( mkdir( $directory, 0700 ), 'exclusive-query-reservation' );
+		$child = Wstm108_Files::directory( $directory );
+		$updated = Wstm108_Files::directory( $this->directory );
+		Wstm108_HostTopology::owned_child_transition( $this->identity, $updated, $child );
+		$this->identity = $updated;
+		$request = Wstm108_Files::create( $directory . '/request.private.json', json_encode( array(
+			'argv' => $command, 'cwd' => dirname( __DIR__ ), 'deadline_ns' => $this->query_deadline,
+		), JSON_THROW_ON_ERROR ) );
+		self::sync_file( $directory . '/request.private.json', $request );
+		$python = realpath( '/usr/bin/python3' );
+		self::require( is_string( $python ), 'native-query-supervisor-unavailable' );
+		$interpreter = Wstm108_Files::file( $python );
+		self::require( 0 === $interpreter['identity']['uid'] && 0 === ( $interpreter['identity']['mode'] & 0022 )
+			&& 0 !== ( $interpreter['identity']['mode'] & 0111 ), 'native-query-supervisor-executable' );
 		$environment = $this->environment;
 		foreach ( array( 'DOCKER_CONTEXT', 'DOCKER_HOST', 'DOCKER_TLS', 'DOCKER_TLS_VERIFY', 'DOCKER_CERT_PATH' ) as $key ) { unset( $environment[ $key ] ); }
-		$capture = $this->capture( $prefix . '-query-' . ++$sequence, $command, dirname( __DIR__ ), $environment );
-		$this->successful_child( $capture, 'discovery-child-failed' );
-		$bytes = $capture['streams']['stdout']['bytes'];
+		$query_streams = array();
+		$query_originals = array();
+		foreach ( array( 10 => 'stdout', 11 => 'stderr' ) as $fd => $stream ) {
+			$mask = umask( 0077 );
+			try { $handle = fopen( $directory . '/' . $stream . '.log', 'x+b' ); } finally { umask( $mask ); }
+			self::require( is_resource( $handle ), 'query-original-open' );
+			$query_streams[ $fd ] = $handle;
+			$query_originals[ $stream ] = Wstm108_Files::file( $directory . '/' . $stream . '.log' );
+		}
+		try {
+			$capture = $this->capture( $name, array( $python, '-B', __DIR__ . '/untrusted-query.py', $directory . '/request.private.json' ),
+				dirname( __DIR__ ), $environment, $query_streams );
+			$this->successful_child( $capture, 'discovery-child-failed' );
+			self::require( "WSTM108_QUERY_COMPLETE_V1\n" === $capture['streams']['stdout']['bytes'], 'supervised-query-framing' );
+			Wstm108_Files::assert_file( $directory . '/request.private.json', $request );
+			Wstm108_Files::assert_file( $python, $interpreter );
+			$receipt = json_decode( Wstm108_Files::file( $directory . '/receipt.json' )['bytes'], true, 512, JSON_THROW_ON_ERROR );
+			self::require( is_array( $receipt ) && $command === ( $receipt['argv'] ?? null ) && 0 === ( $receipt['exit_code'] ?? null )
+				&& true === ( $receipt['root_exit_observed'] ?? null ) && true === ( $receipt['stdout_eof'] ?? null )
+				&& true === ( $receipt['stderr_eof'] ?? null ) && false === ( $receipt['truncated'] ?? null )
+				&& array_key_exists( 'failure', $receipt ) && null === $receipt['failure']
+				&& array() === ( $receipt['secondary_errors'] ?? null ), 'supervised-query-receipt' );
+			$originals = array();
+			foreach ( array( 'stdout', 'stderr' ) as $stream ) {
+				$originals[ $stream ] = Wstm108_Files::read_bound( $directory . '/' . $stream . '.log', $query_originals[ $stream ]['identity'] );
+				self::require( strlen( $originals[ $stream ]['bytes'] ) === ( $receipt[ $stream . '_bytes' ] ?? null )
+					&& $originals[ $stream ]['sha256'] === ( $receipt[ $stream . '_sha256' ] ?? null )
+					&& 0 === ( $receipt[ $stream . '_diagnostic_bytes' ] ?? null )
+					&& 0 === ( $receipt[ $stream . '_observed_not_retained' ] ?? null ), 'supervised-query-original-stream' );
+				self::sync_file( $directory . '/' . $stream . '.log', $originals[ $stream ] );
+			}
+			self::require( '' === $originals['stderr']['bytes'], 'supervised-query-stderr' );
+			$files = array();
+			foreach ( array( 'request.private.json', 'stdout.log', 'stderr.log', 'stdout.overflow.bin', 'stderr.overflow.bin', 'terminal.json', 'receipt.json' ) as $file ) {
+				$files[ $file ] = self::metadata( Wstm108_Files::file( $directory . '/' . $file ) );
+			}
+			$this->query_captures[ basename( $directory ) ] = $files;
+			$this->verify();
+			$bytes = $originals['stdout']['bytes'];
+		} finally {
+			foreach ( $query_streams as $handle ) { fclose( $handle ); }
+		}
 		if ( in_array( 'ps', $command, true ) ) {
 			$result = array();
 			foreach ( explode( "\n", rtrim( $bytes, "\n" ) ) as $line ) {
@@ -282,12 +368,19 @@ final class Wstm108_HostController {
 		return $value;
 	}
 
+	private function begin_query_pass(): void {
+		$this->query_deadline = hrtime( true ) + 120000000000;
+		$this->query_count = 0;
+	}
+
 	private function action( string $action ): void {
 		$environment = $this->environment;
 		$environment['WSTM108_HOST_STATE'] = base64_encode( json_encode( $this->state, JSON_THROW_ON_ERROR ) );
-		$compose = array( 'docker', 'compose', '--project-name', $this->context['binding']['project'] );
-		if ( null !== $this->context['binding']['package_sha256'] ) { $compose = array_merge( $compose, array( '-f', 'docker-compose.yml', '-f', 'docker-compose.release.yml' ) ); }
-		$mounts = Wstm108_HostAuthority::discover_mounts( $this->context['binding']['project'], $compose,
+		$this->begin_query_pass();
+		require_once __DIR__ . '/qa-runtime.php';
+		$runtime = $this->query( array( PHP_BINARY, __DIR__ . '/qa-runtime.php', 'frame' ), 'selection-' . $action );
+		WstmQaRuntime::assert_binding( $runtime, $this->context['binding'] );
+		$mounts = WstmQaRuntime::discover( $runtime,
 			fn( array $command ) => $this->query( $command, 'before-' . $action ), $this->environment['WSTM108_HOST_AUTHORITY_ROOT'] );
 		$environment['WSTM108_ADMITTED_MOUNTS'] = base64_encode( json_encode( $mounts, JSON_THROW_ON_ERROR ) );
 		$arguments = array( PHP_BINARY, __DIR__ . '/untrusted-authority.php', 'reserve' === $action ? 'reserve' : 'run',
@@ -363,6 +456,10 @@ final class Wstm108_HostController {
 		$this->verify_controller_streams();
 		self::require( 0 === $this->first_failure && array() === $this->failures, 'failed-producer-cannot-release' );
 		$names = array( '.', '..', 'controller.stderr.private', 'controller.stdout.private', 'export' );
+		if ( Wstm108_HostObservation::enabled( $this->environment ) ) {
+			$names[] = 'host-observations';
+			$this->observation_captures = Wstm108_HostObservation::retained( $this->environment, $this->observation_captures );
+		}
 		foreach ( $this->helper_captures as $name => $capture ) {
 			self::require( true === $capture['capture_complete'] && 0 === $capture['child_exit'], 'incomplete-producer-chain' );
 			$names[] = $name . '.intent.private.json';
@@ -370,6 +467,17 @@ final class Wstm108_HostController {
 			foreach ( array( 'stdout', 'stderr' ) as $stream ) {
 				$names[] = $name . '.' . $stream . '.private';
 				Wstm108_Files::assert_file( $this->directory . '/' . $name . '.' . $stream . '.private', $capture['streams'][ $stream ] );
+			}
+		}
+		foreach ( $this->query_captures as $name => $files ) {
+			$names[] = $name;
+			$directory = $this->directory . '/' . $name;
+			Wstm108_Files::directory( $directory );
+			$expected = array_merge( array( '.', '..' ), array_keys( $files ) );
+			sort( $expected, SORT_STRING );
+			self::require( $expected === scandir( $directory ), 'foreign-or-missing-query-capture' );
+			foreach ( $files as $file => $original ) {
+				self::require( self::metadata( Wstm108_Files::read_bound( $directory . '/' . $file, $original['identity'] ) ) === $original, 'query-original-capture-drift' );
 			}
 		}
 		sort( $names, SORT_STRING );
@@ -395,7 +503,7 @@ final class Wstm108_HostController {
 			&& 0100000 === ( $output_identity['mode'] & 0170000 ) && 0 === ( $output_identity['mode'] & 0022 ), 'publication-channel-owner' );
 		Wstm108_Files::read_bound( $output_path, $output_identity );
 		$owner = $arguments[5]; $mode = $arguments[6]; $artifact_base = $arguments[7];
-		self::require( 1 === preg_match( '/^[a-f0-9]{32}$/D', $owner ) && in_array( $mode, array( 'contract', 'e2e', 'all' ), true )
+		self::require( 1 === preg_match( '/^[a-f0-9]{32}$/D', $owner ) && in_array( $mode, array( 'contract', 'e2e', 'all', 'admission' ), true )
 			&& 1 === preg_match( '/^[a-zA-Z0-9_-]+$/D', $artifact_base ), 'bootstrap-nonsecret-inputs' );
 		self::require( $this->directory === $root . '/wstm108-bootstrap-' . $owner, 'bootstrap-owner-path' );
 		$intent_stream = fopen( 'php://fd/5', 'rb' );
@@ -409,12 +517,20 @@ final class Wstm108_HostController {
 		$run = array( 'id' => $this->environment['WSTM108_RUN_ID'], 'attempt' => $this->environment['WSTM108_RUN_ATTEMPT'], 'job' => $this->environment['WSTM108_JOB'] );
 		Wstm108_Export::run( $run );
 		$project = $this->environment['COMPOSE_PROJECT_NAME'];
-		$compose = array( 'docker', 'compose', '--project-name', $project );
-		if ( '' !== ( $this->environment['E2E_PACKAGE_ZIP'] ?? '' ) ) { $compose = array_merge( $compose, array( '-f', 'docker-compose.yml', '-f', 'docker-compose.release.yml' ) ); }
 		// Until this returns, only nonsecret endpoint/mount admission is permitted.
-		$mounts = Wstm108_HostAuthority::discover_mounts( $project, $compose, array( $this, 'query' ), $root );
+		$this->reserve_observations();
+		$this->begin_query_pass();
+		require_once __DIR__ . '/qa-runtime.php';
+		if ( WstmQaRuntime::floor( $this->environment ) ) { $this->environment['E2E_ARTIFACTS_DIR'] = $artifact_base; }
+		$runtime = $this->query( array( PHP_BINARY, __DIR__ . '/qa-runtime.php', 'frame' ), 'selection' );
+		$this->environment = array_merge( $this->environment, $runtime['environment'] );
+		$mounts = WstmQaRuntime::discover( $runtime, array( $this, 'query' ), $root );
 		Wstm108_HostAuthority::outside( dirname( $output_path ), $mounts['bind_sources'], $mounts['topology'] );
 		$this->verify();
+		if ( 'admission' === $mode ) {
+			$this->verify_controller_streams();
+			return 0;
+		}
 		self::require( mkdir( $this->directory . '/export', 0700 ), 'exclusive-export-reservation' );
 		$export_identity = Wstm108_Files::directory( $this->directory . '/export' );
 		$updated = Wstm108_Files::directory( $this->directory );

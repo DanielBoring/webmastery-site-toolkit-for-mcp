@@ -7,8 +7,8 @@ declare(strict_types=1);
 if ( 'Windows' === PHP_OS_FAMILY || ! isset( $base, $require, $command ) ) { throw new RuntimeException( 'Native capture control context required.' ); }
 $release_source = file_get_contents( dirname( __DIR__, 3 ) . '/scripts/untrusted-release.php' );
 $release_class = substr( $release_source, strpos( $release_source, 'final class Wstm108_ReleaseGuard' ) );
-eval( 'namespace Wstm108ClearWriteFault; use \Wstm108NativeWriteFault\Wstm108_HostAuthority; use \Wstm108_Files; use \Wstm108_Provenance; use \RuntimeException; use \Throwable; ' . $release_class );
-eval( 'namespace Wstm108PostcommitFault; use \Wstm108_HostAuthority; use \Wstm108_Files; use \Wstm108_Provenance; use \RuntimeException; use \Throwable;
+eval( 'namespace Wstm108ClearWriteFault; use \Wstm108NativeWriteFault\Wstm108_HostAuthority; use \Wstm108_Files; use \Wstm108_Provenance; use \WstmQaRuntime; use \RuntimeException; use \Throwable; ' . $release_class );
+eval( 'namespace Wstm108PostcommitFault; use \Wstm108_HostAuthority; use \Wstm108_Files; use \Wstm108_Provenance; use \WstmQaRuntime; use \RuntimeException; use \Throwable;
 function unlink($path) { if (!\unlink($path)) { return false; } throw new RuntimeException("injected postcommit acknowledgment failure", 75); }
 ' . $release_class );
 $files_source = file_get_contents( dirname( __DIR__, 2 ) . '/e2e/untrusted-content-files.php' );
@@ -25,7 +25,7 @@ function fwrite($handle, $bytes) {
 	return \fwrite($handle, $bytes);
 }
 ' . substr( $files_source, strpos( $files_source, 'final class Wstm108_Files' ) ) );
-eval( 'namespace Wstm108PartialCompanion; use \Wstm108_HostAuthority; use \Wstm108CompanionWriteFault\Wstm108_Files; use \Wstm108_Provenance; use \RuntimeException; use \Throwable; ' . $release_class );
+eval( 'namespace Wstm108PartialCompanion; use \Wstm108_HostAuthority; use \Wstm108CompanionWriteFault\Wstm108_Files; use \Wstm108_Provenance; use \WstmQaRuntime; use \RuntimeException; use \Throwable; ' . $release_class );
 eval( 'namespace Wstm108PrerequisiteNoise;
 final class Wstm108_Files {
 	public static function __callStatic($method, $arguments) {
@@ -36,7 +36,7 @@ final class Wstm108_Files {
 		return $result;
 	}
 }
-use \Wstm108_HostAuthority; use \Wstm108_Provenance; use \RuntimeException; use \Throwable; ' . $release_class );
+use \Wstm108_HostAuthority; use \Wstm108_Provenance; use \WstmQaRuntime; use \RuntimeException; use \Throwable; ' . $release_class );
 foreach ( array( 'partial-companion', 'partial-clear-capture', 'replacement', 'mode', 'receipt-replacement', 'guard-false', 'guard-throws', 'prerequisite-noise', 'success', 'postcommit-fault' ) as $case ) {
 	$diagnostic_case = array_search( $case, Wstm108_SyntheticDiagnostic::AUTHORITY_CASES, true );
 	Wstm108_SyntheticDiagnostic::authority_checkpoint( 10, $diagnostic_case );

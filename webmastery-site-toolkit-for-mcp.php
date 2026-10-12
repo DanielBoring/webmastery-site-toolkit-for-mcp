@@ -39,10 +39,10 @@ add_action( 'admin_notices', function () {
 
 // Register the webmastery-site-toolkit-for-mcp category before abilities are registered.
 add_action( 'wp_abilities_api_categories_init', function () {
-	wp_register_ability_category( 'webmastery-site-toolkit-for-mcp', array(
+	wp_register_ability_category( 'webmastery-site-toolkit-for-mcp', [
 		'label'       => 'Webmastery Site Toolkit for MCP',
 		'description' => 'WordPress site management abilities registered by Webmastery Site Toolkit for MCP.',
-	) );
+	] );
 } );
 
 // Register abilities — wp_register_ability() only works inside wp_abilities_api_init.

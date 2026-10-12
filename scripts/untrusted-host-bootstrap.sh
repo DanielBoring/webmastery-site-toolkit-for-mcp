@@ -54,6 +54,21 @@ wstm108_host_bootstrap() (
 	(( ( 8#$(stat -c %a -- "$php_binary") & 0022 ) == 0 )) || exit 1
 	controller="$E2E_SCRIPT_ROOT/untrusted-host-controller.php"
 	[[ "$controller" == "$(readlink -e -- "$controller")" ]] || exit 1
+	local runtime_args=()
+	local inspection_args=()
+	if [[ -v WSTM108_HOST_INSPECTION ]]; then
+		inspection_args=( WSTM108_HOST_INSPECTION="$WSTM108_HOST_INSPECTION" )
+	fi
+	if [[ -n "${WSTM_QA_RUNTIME_PROFILE:-}${WSTM_PHP80_CONFIG+x}${WSTM_PHP80_CONFIG_SHA256+x}" ]]; then
+		runtime_args=( WSTM_QA_RUNTIME_PROFILE="${WSTM_QA_RUNTIME_PROFILE:-}" WSTM_PHP80_CONFIG="${WSTM_PHP80_CONFIG:-}" WSTM_PHP80_CONFIG_SHA256="${WSTM_PHP80_CONFIG_SHA256:-}" )
+		local runtime_key
+		# Preserve original refusal inputs through scrubbing, never ambient selectors.
+		for runtime_key in COMPOSE_FILE COMPOSE_PROFILES COMPOSE_ENV_FILES \
+			PHP80_RUNTIME_IMAGE PHP80_MYSQL_IMAGE PHP80_CANDIDATE_ROOT PHP80_HTTP_PORT \
+			PHP80_WP_CONFIG PHP80_WP_CONFIG_SHA256 PHP80_MYSQL_ENV_FILE E2E_MANAGE_COMPOSE WORDPRESS_URL; do
+			if [[ -v "$runtime_key" ]]; then runtime_args+=( "$runtime_key=${!runtime_key}" ); fi
+		done
+	fi
 	exec env -i \
 		PATH=/usr/bin:/bin HOME="${HOME:?}" \
 		DOCKER_CONTEXT="${DOCKER_CONTEXT:-}" DOCKER_HOST="${DOCKER_HOST:-}" DOCKER_CONFIG="${DOCKER_CONFIG:-}" \
@@ -65,6 +80,8 @@ wstm108_host_bootstrap() (
 		DEPENDENCY_POLICY="${DEPENDENCY_POLICY:-pinned}" \
 		WORDPRESS_IMAGE="${WORDPRESS_IMAGE:-}" MYSQL_IMAGE="${MYSQL_IMAGE:-}" \
 		WORDPRESS_PORT="${WORDPRESS_PORT:-}" MYSQL_PORT="${MYSQL_PORT:-}" \
+		"${runtime_args[@]}" \
+		"${inspection_args[@]}" \
 		"$php_binary" "$controller" "$directory" "$root_before" "$root_after" "$child_identity" \
 		"$owner" "${QA_MODE:?}" "${E2E_ARTIFACTS_DIR:?}" "$GITHUB_OUTPUT" < /dev/null
 )

@@ -14,6 +14,74 @@ Related strategy guides:
 
 ## QA checks
 
+### Opt-in read-only system observation on disposable CI hosts
+
+Disposable GitHub-hosted source, package and PHP-floor QA entries explicitly set
+`WSTM108_HOST_INSPECTION=system-readonly-v1`. Unset preserves native unprivileged
+reads; an unknown value refuses admission. Do not enable it on shared, live or
+self-hosted systems. Inspection does not provision fixtures, reset a stack,
+grant a lease or bypass any admission predicate.
+
+The controller, PHP and private capture remain nonroot. Verified absolute,
+root-owned, non-group/world-writable system tools alone run through
+`/usr/bin/sudo -n --user=root --`: a fixed root `/usr/bin/timeout` supervises
+`/usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C` and one fixed `/usr/bin/find -P`,
+`/usr/bin/stat` or `/usr/bin/head` read of the validated Docker PID's descriptors,
+mount namespace or mount table. Tools require a matching native ELF64
+little-endian Linux/System-V x86-64 or AArch64 header; only sudo may have set-ID
+bits. No candidate PHP, Python, shell or script is elevated. A fixed nonroot
+system timeout also bounds the sudo-entry transport.
+
+The positive PID/root hint, process/start identity, canonical root-owned socket,
+unique listening inode, descriptor ownership, namespace identity, equal complete
+mount tables and before/after identities remain mandatory. Missing tools, sudo
+denial, partial/over-limit bytes, stderr, nonzero exit, deadline expiry and races
+refuse without a success fallback. Stdin is closed and environments contain
+only fixed `PATH` and `LC_ALL`; the native env entry clears sudo-added variables.
+
+Private originals precede parsing. An exclusively reserved observation child
+uses the existing owned-child transition; helpers retain its handle and mode,
+while candidate child environments receive neither. Release checks the complete
+original inventory, identities, hashes, lengths, fixed argv and parsers.
+Incomplete or changed observations retain private evidence and block release.
+Public diagnostics expose only closed reasons, never raw process/filesystem data.
+
+One capture deadline starts before reservation/tool checks and covers streams,
+exit/EOF, persistence and identity completion. Refusal uses nonblocking PHP
+process-resource disposal, not a blocking reap or a signal to a possibly reused
+PID; fixed system timers remain intact. These deadlines do not certify
+root-child cleanup or hard preemption of synchronous filesystem/kernel I/O.
+Late completion cannot be accepted, but blocked storage operations can return
+after the deadline. Parser and nonprivileged transport adapters are not native
+sudo, Docker admission, custody, owned runtime or required-check acceptance.
+
+The additive exact-byte outer projection restores the reviewed current-main
+generation before its unchanged historical bridge. It does not regenerate any
+accepted ledger or change original dependency hash assertions.
+
+Full source/package QA requires a separately approved bare owned stack before
+fixture execution. Read-only admission does not provision or tear down that
+stack. The harness checks native admission before clearing artifacts or managed
+reset, then checks the changed inventory again before installing fixtures or
+arming their cleanup. Contract-only lifecycle behavior remains separate.
+
+Native discovery and original floor selection use the existing Linux pidfd
+supervisor: ten seconds per query, at most 64 queries/120 seconds per discovery
+pass, and four MiB per original stream. Captures and failures remain private;
+closed diagnostics never publish exception text or originals. Filesystem
+verification is cooperative, not a hard storage-I/O deadline. The floor
+selector preserves original config/hash and conflicting inputs through the
+bootstrap. Source-only floor selection is incompatible with original-ZIP
+package QA, including offline package mode; its early refusal is captured
+before any build/extraction. Successful selection never substitutes for native
+admission, fixture authority, cleanup leases, custody or publication approval.
+
+The synthetic native-authority exception observer disables all observers before
+attempting its closed location record. A failed writer reports once and rethrows
+the original Throwable into PHP's default fatal handler, retaining the native
+255 exit and original private trace rather than delegating into another observer.
+This test-only behavior does not change production diagnostic channels.
+
 | GitHub Actions check | Command | What it proves | When it should run |
 | --- | --- | --- | --- |
 | 1 - Static QA | `composer qa:static` | PHP files parse, WordPress Coding Standards pass, PHPStan level 5 passes against reviewed baseline debt with working regression/ratchet guards, Composer dependencies have no known locked advisories, the E2E manifest is structurally valid, security-sensitive QA policy checks pass, and the diff has no whitespace errors. | Every PR and every push to `main`. |
@@ -45,6 +113,13 @@ WordPress/Docker nor invokes the benchmark entrypoint, reads private producer
 directories, or proves durable private custody, receiver completion, floor,
 transport or original-package correctness. Local `composer qa` remains PHP-only.
 
+The current compatibility baseline is WordPress 7.1.2 with MCP Adapter 0.6.1.
+The default Docker image is `wordpress:7.1.2-php8.2-apache`; other pinned
+dependencies and their digests are unchanged. `readme.txt` retains the
+major/minor `Tested up to: 7.1` header. This baseline update does not change
+the declared WordPress 6.9 / PHP 8.0 plugin minimums. The existing compatibility
+floor lane uses PHP 8.1 and is not genuine PHP 8.0 runtime evidence.
+
 ## PHPStan level 5 and baseline ratchet
 
 `composer phpstan` analyses the plugin entry point and all of `includes/` at level 5, explicitly targeting PHP 8.0 regardless of the local interpreter. `phpstan-baseline.neon` records pre-existing diagnostics, not permission to introduce new ones. Each generated ignore has an anchored message, identifier, positive count, and individual file path. There are no excluded production paths or identifier-only/global ignores. The existing `treatPhpDocTypesAsCertain: false` policy and WordPress stubs bootstrap are retained; no extra bootstrap constants or relaxed rules hide debt.
@@ -63,6 +138,11 @@ The initial reviewed baseline contains 35 diagnostics in 21 entries across nine 
 A green run means no diagnostics beyond that reviewed debt, not that these findings are fixed or that all mixed input/output types are sound. The baseline matches counts per message/identifier/file, not line or expression identity: replacing a removed error with the same error elsewhere in the same file can evade the count ratchet and still needs human diff review. This tooling change does not validate ability schemas, enums, output contracts, or runtime permissions.
 
 The PHPStan 2.2.15 update removes the now-unmatched sitemap offset entry. With `treatPhpDocTypesAsCertain: false`, the updated regex output inference no longer reports the null-coalescing fallback as redundant. The source fallback is unchanged; this is a baseline compatibility adjustment, not a runtime fix or proof that the sitemap debt was resolved.
+
+The current-main integration also retains the branch's later post-extraction
+debt reductions: the pinned 2.2.15 baseline remains exactly 17 entries / 30 errors.
+The initial table above is historical, not the current ignore inventory. Neither
+the removed sitemap offset nor removed posts entries are restored by the merge.
 
 ### Reducing debt
 

@@ -31,6 +31,7 @@ final class Wstm108_HostTopology {
 		'pid-hint-does-not-own-selected-listener', 'daemon-mount-namespace-differs', 'daemon-identity-changed-during-read',
 		'native-linux-prerequisite', 'nonlocal-endpoint', 'unrecognized-socket-alias', 'nonroot-or-nonsocket-endpoint',
 		'untrusted-pid-discovery-hint', 'daemon-mount-table-differs', 'peer-or-topology-changed-during-admission',
+		'invalid-host-inspection-mode',
 	);
 
 	public static function failure_witness( Throwable $error ): ?array {
@@ -172,6 +173,29 @@ final class Wstm108_HostTopology {
 		return array_intersect_key( $stat, array_flip( array( 'dev', 'ino', 'uid', 'gid', 'mode', 'nlink' ) ) );
 	}
 
+	/** Classify only canonical-path rows; connected streams are not listening inodes. */
+	public static function selected_listener( array $rows ): string {
+		$listeners = array();
+		$inodes = array();
+		foreach ( $rows as $columns ) {
+			self::require( is_array( $columns ) && array_keys( $columns ) === range( 0, 7 )
+				&& count( array_filter( $columns, 'is_string' ) ) === 8
+				&& 1 === preg_match( '/^(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{16}):$/D', $columns[0] )
+				&& 1 === preg_match( '/^[0-9a-fA-F]{8}$/D', $columns[1] ) && hexdec( $columns[1] ) > 0
+				&& '00000000' === $columns[2] && '0001' === $columns[4]
+				&& 1 === preg_match( '/^[1-9][0-9]{0,19}$/D', $columns[6] )
+				&& ( strlen( $columns[6] ) < 20 || strcmp( $columns[6], '18446744073709551615' ) <= 0 )
+				&& ! isset( $inodes[ $columns[6] ] )
+				&& in_array( $columns[7], array( '/run/docker.sock', '/var/run/docker.sock' ), true )
+				&& ( ( '00010000' === $columns[3] && '01' === $columns[5] )
+					|| ( '00000000' === $columns[3] && '03' === $columns[5] ) ), 'ambiguous-selected-listener' );
+			$inodes[ $columns[6] ] = true;
+			if ( '00010000' === $columns[3] ) { $listeners[] = $columns[6]; }
+		}
+		self::require( 1 === count( $listeners ), 'selected-listener-not-unique' );
+		return $listeners[0];
+	}
+
 	private static function peer( string $socket, int $pid ): array {
 		$process = '/proc/' . $pid;
 		$identity = self::stat( $process );
@@ -180,16 +204,21 @@ final class Wstm108_HostTopology {
 		self::require( 1 === preg_match( '/^([0-9]+) \(.+\) (.+)\n?$/D', $stat, $matches ) && (int) $matches[1] === $pid, 'ambiguous-process-identity' );
 		$fields = explode( ' ', rtrim( $matches[2], "\n" ) );
 		self::require( isset( $fields[19] ) && ctype_digit( $fields[19] ), 'missing-process-start-identity' );
-		$listener = array();
+		$rows = array();
 		foreach ( explode( "\n", self::read( '/proc/net/unix', 4194304 ) ) as $line ) {
-			$columns = preg_split( '/\s+/', trim( $line ), 8 );
-			if ( 8 !== count( $columns ) || ! in_array( $columns[7], array( '/run/docker.sock', '/var/run/docker.sock' ), true ) ) { continue; }
-			if ( realpath( $columns[7] ) !== $socket ) { continue; }
-			self::require( '00010000' === $columns[3] && '0001' === $columns[4] && '01' === $columns[5]
-				&& ctype_digit( $columns[6] ), 'ambiguous-selected-listener' );
-			$listener[] = $columns[6];
+			$columns = preg_split( '/\s+/', trim( $line ) );
+			$aliases = array_intersect( array( '/run/docker.sock', '/var/run/docker.sock' ), $columns );
+			if ( array() === $aliases || realpath( reset( $aliases ) ) !== $socket ) { continue; }
+			$rows[] = $columns;
 		}
-		self::require( 1 === count( $listener ), 'selected-listener-not-unique' );
+		$listener = array( self::selected_listener( $rows ) );
+		if ( Wstm108_HostObservation::enabled( getenv() ) ) {
+			$links = Wstm108_HostObservation::descriptors( Wstm108_HostObservation::read( 'descriptors', $pid ) );
+			$matched = array();
+			foreach ( $links as $descriptor => $link ) {
+				if ( 'socket:[' . $listener[0] . ']' === $link ) { $matched[] = (string) $descriptor; }
+			}
+		} else {
 		$descriptors = @scandir( $process . '/fd' );
 		self::require( is_array( $descriptors ) && count( $descriptors ) <= 8192, 'daemon-descriptors-inaccessible' );
 		$matched = array();
@@ -199,8 +228,11 @@ final class Wstm108_HostTopology {
 			self::require( is_string( $link ), 'daemon-descriptor-race-or-denial' );
 			if ( 'socket:[' . $listener[0] . ']' === $link ) { $matched[] = $descriptor; }
 		}
+		}
 		self::require( array() !== $matched, 'pid-hint-does-not-own-selected-listener' );
-		$namespace = self::stat( $process . '/ns/mnt' );
+		$namespace = Wstm108_HostObservation::enabled( getenv() )
+			? Wstm108_HostObservation::namespace_identity( Wstm108_HostObservation::read( 'namespace', $pid ) )
+			: self::stat( $process . '/ns/mnt' );
 		$self_namespace = self::stat( '/proc/self/ns/mnt' );
 		self::require( $namespace['dev'] === $self_namespace['dev'] && $namespace['ino'] === $self_namespace['ino'], 'daemon-mount-namespace-differs' );
 		self::require( $identity === self::stat( $process ), 'daemon-identity-changed-during-read' );
@@ -209,6 +241,9 @@ final class Wstm108_HostTopology {
 	}
 
 	public static function admit( string $endpoint ): array {
+		require_once __DIR__ . '/untrusted-host-observation.php';
+		Wstm108_HostObservation::enabled( getenv() );
+		Wstm108_HostObservation::begin_pass();
 		self::require( 'Linux' === PHP_OS_FAMILY && function_exists( 'posix_geteuid' ), 'native-linux-prerequisite' );
 		self::require( in_array( $endpoint, array( 'unix:///run/docker.sock', 'unix:///var/run/docker.sock' ), true ), 'nonlocal-endpoint' );
 		$socket = realpath( substr( $endpoint, 7 ) );
@@ -219,12 +254,18 @@ final class Wstm108_HostTopology {
 		self::require( 0 === $hint['identity']['uid'] && 0 === ( $hint['identity']['mode'] & 0022 )
 			&& 1 === preg_match( '/^[1-9][0-9]{0,9}\n?$/D', $hint['bytes'] ), 'untrusted-pid-discovery-hint' );
 		$pid = (int) trim( $hint['bytes'] );
+		self::require( $pid > 0 && $pid <= 2147483647, 'untrusted-pid-discovery-hint' );
 		$before = self::peer( $socket, $pid );
 		$mountinfo = self::read( '/proc/self/mountinfo', 4194304 );
-		self::require( $mountinfo === self::read( '/proc/' . $pid . '/mountinfo', 4194304 ), 'daemon-mount-table-differs' );
+		$daemon_mountinfo = Wstm108_HostObservation::enabled( getenv() )
+			? Wstm108_HostObservation::read( 'mountinfo', $pid ) : self::read( '/proc/' . $pid . '/mountinfo', 4194304 );
+		self::require( $mountinfo === $daemon_mountinfo, 'daemon-mount-table-differs' );
 		$mounts = self::mounts( $mountinfo );
 		self::require( $before === self::peer( $socket, $pid ) && $socket_before === self::stat( $socket )
 			&& $mountinfo === self::read( '/proc/self/mountinfo', 4194304 ), 'peer-or-topology-changed-during-admission' );
+		if ( Wstm108_HostObservation::enabled( getenv() ) ) {
+			self::require( $daemon_mountinfo === Wstm108_HostObservation::read( 'mountinfo', $pid ), 'peer-or-topology-changed-during-admission' );
+		}
 		Wstm108_Files::assert_file( '/run/docker.pid', $hint );
 		return array( 'endpoint' => $endpoint, 'socket_identity' => $socket_before, 'peer' => $before,
 			'mountinfo_sha256' => hash( 'sha256', $mountinfo ), 'mounts' => $mounts );

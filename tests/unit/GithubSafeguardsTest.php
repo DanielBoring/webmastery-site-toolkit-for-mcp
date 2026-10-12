@@ -71,7 +71,7 @@ final class GithubSafeguardsTest extends TestCase {
 		$root = dirname(__DIR__, 2);
 		$composer = json_decode(file_get_contents($root . '/composer.json'), true, 512, JSON_THROW_ON_ERROR);
 		self::assertSame(
-			array('@test:phpstan-baseline', '@test:release-safeguards', 'bash tests/destructive-stage-test.sh', 'bash tests/input-schema-stage-test.sh', 'bash tests/untrusted-stage-test.sh', 'bash tests/compatibility-download-test.sh', 'bash tests/compatibility-dependency-policy-test.sh'),
+			array('python3 -B -m unittest discover -s tests/unit -p test_untrusted_query.py -v', '@test:phpstan-baseline', '@test:release-safeguards', 'bash tests/destructive-stage-test.sh', 'bash tests/input-schema-stage-test.sh', 'bash tests/untrusted-stage-test.sh', 'bash tests/compatibility-download-test.sh', 'bash tests/compatibility-dependency-policy-test.sh'),
 			$composer['scripts']['test:ci-safeguards']
 		);
 		self::assertSame('php scripts/test-phpstan-baseline.php', $composer['scripts']['test:phpstan-baseline']);
@@ -136,7 +136,13 @@ final class GithubSafeguardsTest extends TestCase {
 		self::assertSame(1, preg_match('/for outer in package source; do\n\texport WSTM108_MOCK_LIVE="\$WORK\/legacy-schema-retention-\$outer"([\s\S]*?)\ndone/', $source, $matches));
 		$section = $matches[1];
 		self::assertSame(2, substr_count($section, 'commit_mock_outer "$script"'));
-		self::assertStringContainsString('> "$script"' . "\n\t# Attest this deliberate RED mutation instead of failing before schema acquisition.\n\t" . 'commit_mock_outer "$script"', $section);
+		self::assertStringContainsString(
+			'php tests/unit/fixtures/untrusted-legacy-retention.php "$script" > "$WORK/legacy-schema-retention-$outer.sh"' . "\n\t"
+			. 'cp "$WORK/legacy-schema-retention-$outer.sh" "$script"' . "\n\t"
+			. "# Attest this deliberate RED mutation instead of failing before schema acquisition.\n\t"
+			. 'commit_mock_outer "$script"',
+			$section
+		);
 		self::assertLessThan(strpos($section, 'status=0'), strpos($section, 'commit_mock_outer "$script"'));
 		self::assertStringContainsString('cp "$WORK/fixed-schema-retention-$outer.sh" "$script"' . "\n\t" . 'commit_mock_outer "$script"' . "\n\t" . 'rm build/wstm116-retention-release-runtime-fixture', $section);
 		foreach (array('[[ "$status" == 53 ]]', '== 2 ]]', 'test ! -e "$WORK/schema-journal"', 'test ! -e "$WORK/schema-probe"', 'test -f build/wstm116-retention-release-runtime-fixture') as $assertion) {

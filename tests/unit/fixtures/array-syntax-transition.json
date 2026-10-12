@@ -1,0 +1,1036 @@
+{
+  "schema": 1,
+  "base_commit": "cfe7897e4c6cd4d8ce08ca4a70c15ed64998859b",
+  "base_inventory_sha256": "8a08ba3565bf9d3dd3fc9195bde4ce6a47b13bd9226c2e559e0142b8fec9eae2",
+  "predecessor_seals": {
+    "119": "1bdd69f8b930f9c744afe557800eeafd195f30eeaa9b61c9b81fff5267e426d6",
+    "127": "2be14f26642f28014a9df9e99df36cb6697520b158938f1b3bad23e9da44c4f5",
+    "167": "e847ac561c95854f66b5b04af627e992fa8886dd76eab018b730b07f42d290fa"
+  },
+  "files": {
+    "webmastery-site-toolkit-for-mcp.php": {
+      "baseline_sha256": "d5daae004259b2b391882190def8d53cffd67c9ff747ee81c1ca603bcaed3c08",
+      "baseline_blob": "f1c1dafa5c92c8397c1c7e919ac83ed4adc0477e",
+      "current_sha256": "66ad568ed9018670c30ceda128af3c67cf18b63c62eb5bf6a76ddcdff3386ab2",
+      "current_blob": "6392390892888136fb038aa025619a2dec01c188",
+      "baseline_raw_sha256": "d5daae004259b2b391882190def8d53cffd67c9ff747ee81c1ca603bcaed3c08",
+      "current_raw_sha256": "66ad568ed9018670c30ceda128af3c67cf18b63c62eb5bf6a76ddcdff3386ab2",
+      "hunks": [
+        {
+          "start": 41,
+          "before": [
+            "\twp_register_ability_category( 'webmastery-site-toolkit-for-mcp', array("
+          ],
+          "after": [
+            "\twp_register_ability_category( 'webmastery-site-toolkit-for-mcp', ["
+          ]
+        },
+        {
+          "start": 44,
+          "before": [
+            "\t) );"
+          ],
+          "after": [
+            "\t] );"
+          ]
+        }
+      ]
+    },
+    "includes/class-backup-status.php": {
+      "baseline_sha256": "213d4519f7e8562518ed92aeb6a1fbfafa41432044de45a242dadac6f8abd2b6",
+      "baseline_blob": "6813416579d5c9b3006af4bfbd932b8508b73385",
+      "current_sha256": "d521e5caf92c422325a0fa2bf85e7f393bd36cc584b250facc5264eeeb759840",
+      "current_blob": "d65cdb484d4b3f2cd47d9178dbf861f0d2dc5e2a",
+      "baseline_raw_sha256": "213d4519f7e8562518ed92aeb6a1fbfafa41432044de45a242dadac6f8abd2b6",
+      "current_raw_sha256": "d521e5caf92c422325a0fa2bf85e7f393bd36cc584b250facc5264eeeb759840",
+      "hunks": [
+        {
+          "start": 6,
+          "before": [
+            "\tprivate const KNOWN_BACKUP_PLUGINS = array("
+          ],
+          "after": [
+            "\tprivate const KNOWN_BACKUP_PLUGINS = ["
+          ]
+        },
+        {
+          "start": 16,
+          "before": [
+            "\t);"
+          ],
+          "after": [
+            "\t];"
+          ]
+        },
+        {
+          "start": 19,
+          "before": [
+            "\t\twp_register_ability( 'webmastery-site-toolkit-for-mcp/backup-status', array("
+          ],
+          "after": [
+            "\t\twp_register_ability( 'webmastery-site-toolkit-for-mcp/backup-status', ["
+          ]
+        },
+        {
+          "start": 23,
+          "before": [
+            "\t\t\t'execute_callback'    => array( self::class, 'execute' ),",
+            "\t\t\t'permission_callback' => array( self::class, 'permission' ),",
+            "\t\t\t'meta'                => array(",
+            "\t\t\t\t'annotations' => array( 'readonly' => true, 'destructive' => false, 'idempotent' => true ),",
+            "\t\t\t\t'mcp'         => array( 'public' => true, 'type' => 'tool' ),",
+            "\t\t\t),",
+            "\t\t) );"
+          ],
+          "after": [
+            "\t\t\t'execute_callback'    => [ self::class, 'execute' ],",
+            "\t\t\t'permission_callback' => [ self::class, 'permission' ],",
+            "\t\t\t'meta'                => [",
+            "\t\t\t\t'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],",
+            "\t\t\t\t'mcp'         => [ 'public' => true, 'type' => 'tool' ],",
+            "\t\t\t],",
+            "\t\t] );"
+          ]
+        },
+        {
+          "start": 36,
+          "before": [
+            "\tpublic static function execute( $input = array() ) {"
+          ],
+          "after": [
+            "\tpublic static function execute( $input = [] ) {"
+          ]
+        },
+        {
+          "start": 41,
+          "before": [
+            "\t\t\treturn array("
+          ],
+          "after": [
+            "\t\t\treturn ["
+          ]
+        },
+        {
+          "start": 43,
+          "before": [
+            "\t\t\t\t'data'    => array("
+          ],
+          "after": [
+            "\t\t\t\t'data'    => ["
+          ]
+        },
+        {
+          "start": 49,
+          "before": [
+            "\t\t\t\t\t'active_known_plugins'   => array(),",
+            "\t\t\t\t),",
+            "\t\t\t);"
+          ],
+          "after": [
+            "\t\t\t\t\t'active_known_plugins'   => [],",
+            "\t\t\t\t],",
+            "\t\t\t];"
+          ]
+        },
+        {
+          "start": 56,
+          "before": [
+            "\t\treturn array("
+          ],
+          "after": [
+            "\t\treturn ["
+          ]
+        },
+        {
+          "start": 58,
+          "before": [
+            "\t\t\t'data'    => array("
+          ],
+          "after": [
+            "\t\t\t'data'    => ["
+          ]
+        },
+        {
+          "start": 65,
+          "before": [
+            "\t\t\t),",
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t\t],",
+            "\t\t];"
+          ]
+        },
+        {
+          "start": 70,
+          "before": [
+            "\t\t$plugins = array();"
+          ],
+          "after": [
+            "\t\t$plugins = [];"
+          ]
+        },
+        {
+          "start": 77,
+          "before": [
+            "\t\t\t$plugins[] = array("
+          ],
+          "after": [
+            "\t\t\t$plugins[] = ["
+          ]
+        },
+        {
+          "start": 82,
+          "before": [
+            "\t\t\t);"
+          ],
+          "after": [
+            "\t\t\t];"
+          ]
+        },
+        {
+          "start": 94,
+          "before": [
+            "\t\t\treturn self::format_latest_timestamp( get_option( 'backwpup_jobs', array() ) );"
+          ],
+          "after": [
+            "\t\t\treturn self::format_latest_timestamp( get_option( 'backwpup_jobs', [] ) );"
+          ]
+        },
+        {
+          "start": 159,
+          "before": [
+            "\t\t$timestamps = array();"
+          ],
+          "after": [
+            "\t\t$timestamps = [];"
+          ]
+        }
+      ]
+    },
+    "includes/class-performance-status.php": {
+      "baseline_sha256": "1d3886264c41bd3c031d2b8558e4f53dd019b8e3a1dfa6e1be379a9a01bd4148",
+      "baseline_blob": "a9dea5c391af6975052a984d4b67be769bb15ae6",
+      "current_sha256": "0499675cfd0077d5bb7ae558d2c7e9912ebd30263174ca4f185b20087d17e586",
+      "current_blob": "9d6c85352a27b178bed1ae14288335eff5e98e1a",
+      "baseline_raw_sha256": "1d3886264c41bd3c031d2b8558e4f53dd019b8e3a1dfa6e1be379a9a01bd4148",
+      "current_raw_sha256": "0499675cfd0077d5bb7ae558d2c7e9912ebd30263174ca4f185b20087d17e586",
+      "hunks": [
+        {
+          "start": 6,
+          "before": [
+            "\tprivate const KNOWN_PAGE_CACHE_PLUGINS = array("
+          ],
+          "after": [
+            "\tprivate const KNOWN_PAGE_CACHE_PLUGINS = ["
+          ]
+        },
+        {
+          "start": 21,
+          "before": [
+            "\t);"
+          ],
+          "after": [
+            "\t];"
+          ]
+        },
+        {
+          "start": 24,
+          "before": [
+            "\t\twp_register_ability( 'webmastery-site-toolkit-for-mcp/performance-status', array("
+          ],
+          "after": [
+            "\t\twp_register_ability( 'webmastery-site-toolkit-for-mcp/performance-status', ["
+          ]
+        },
+        {
+          "start": 28,
+          "before": [
+            "\t\t\t'execute_callback'    => array( self::class, 'execute' ),",
+            "\t\t\t'permission_callback' => array( self::class, 'permission' ),",
+            "\t\t\t'meta'                => array(",
+            "\t\t\t\t'annotations' => array( 'readonly' => true, 'destructive' => false, 'idempotent' => true ),",
+            "\t\t\t\t'mcp'         => array( 'public' => true, 'type' => 'tool' ),",
+            "\t\t\t),",
+            "\t\t) );"
+          ],
+          "after": [
+            "\t\t\t'execute_callback'    => [ self::class, 'execute' ],",
+            "\t\t\t'permission_callback' => [ self::class, 'permission' ],",
+            "\t\t\t'meta'                => [",
+            "\t\t\t\t'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],",
+            "\t\t\t\t'mcp'         => [ 'public' => true, 'type' => 'tool' ],",
+            "\t\t\t],",
+            "\t\t] );"
+          ]
+        },
+        {
+          "start": 41,
+          "before": [
+            "\tpublic static function execute( $input = array() ) {",
+            "\t\treturn array("
+          ],
+          "after": [
+            "\tpublic static function execute( $input = [] ) {",
+            "\t\treturn ["
+          ]
+        },
+        {
+          "start": 44,
+          "before": [
+            "\t\t\t'data'    => array("
+          ],
+          "after": [
+            "\t\t\t'data'    => ["
+          ]
+        },
+        {
+          "start": 51,
+          "before": [
+            "\t\t\t),",
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t\t],",
+            "\t\t];"
+          ]
+        },
+        {
+          "start": 58,
+          "before": [
+            "\t\treturn array("
+          ],
+          "after": [
+            "\t\treturn ["
+          ]
+        },
+        {
+          "start": 61,
+          "before": [
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t];"
+          ]
+        },
+        {
+          "start": 66,
+          "before": [
+            "\t\t$plugins        = array();"
+          ],
+          "after": [
+            "\t\t$plugins        = [];"
+          ]
+        },
+        {
+          "start": 70,
+          "before": [
+            "\t\t\t\t$plugins[] = array("
+          ],
+          "after": [
+            "\t\t\t\t$plugins[] = ["
+          ]
+        },
+        {
+          "start": 73,
+          "before": [
+            "\t\t\t\t);"
+          ],
+          "after": [
+            "\t\t\t\t];"
+          ]
+        },
+        {
+          "start": 77,
+          "before": [
+            "\t\treturn array("
+          ],
+          "after": [
+            "\t\treturn ["
+          ]
+        },
+        {
+          "start": 81,
+          "before": [
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t];"
+          ]
+        },
+        {
+          "start": 87,
+          "before": [
+            "\t\treturn array("
+          ],
+          "after": [
+            "\t\treturn ["
+          ]
+        },
+        {
+          "start": 90,
+          "before": [
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t];"
+          ]
+        },
+        {
+          "start": 96,
+          "before": [
+            "\t\treturn array("
+          ],
+          "after": [
+            "\t\treturn ["
+          ]
+        },
+        {
+          "start": 99,
+          "before": [
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t];"
+          ]
+        },
+        {
+          "start": 103,
+          "before": [
+            "\t\treturn array("
+          ],
+          "after": [
+            "\t\treturn ["
+          ]
+        },
+        {
+          "start": 106,
+          "before": [
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t];"
+          ]
+        },
+        {
+          "start": 112,
+          "before": [
+            "\t\treturn array("
+          ],
+          "after": [
+            "\t\treturn ["
+          ]
+        },
+        {
+          "start": 116,
+          "before": [
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t];"
+          ]
+        }
+      ]
+    },
+    "includes/class-plugins.php": {
+      "baseline_sha256": "f55e2ed756aa70e812f983d4164a31eef57e547b890bf9a9185222b12eb18fd4",
+      "baseline_blob": "190e3158ae9ecf70a469b538557b273b8c7f288a",
+      "current_sha256": "5900422f507f7f4e1ade13e0de64d9ed8841d56905447e5e36cc2c86bda2838d",
+      "current_blob": "01ba5ab1cd2e12141d45a987a09754d8ec20ec45",
+      "baseline_raw_sha256": "f55e2ed756aa70e812f983d4164a31eef57e547b890bf9a9185222b12eb18fd4",
+      "current_raw_sha256": "5900422f507f7f4e1ade13e0de64d9ed8841d56905447e5e36cc2c86bda2838d",
+      "hunks": [
+        {
+          "start": 7,
+          "before": [
+            "\t\t$active_plugins = get_option( 'active_plugins', array() );"
+          ],
+          "after": [
+            "\t\t$active_plugins = get_option( 'active_plugins', [] );"
+          ]
+        },
+        {
+          "start": 9,
+          "before": [
+            "\t\t\t$active_plugins = array();"
+          ],
+          "after": [
+            "\t\t\t$active_plugins = [];"
+          ]
+        },
+        {
+          "start": 13,
+          "before": [
+            "\t\t\t$network_plugins = get_site_option( 'active_sitewide_plugins', array() );"
+          ],
+          "after": [
+            "\t\t\t$network_plugins = get_site_option( 'active_sitewide_plugins', [] );"
+          ]
+        }
+      ]
+    },
+    "includes/class-webmaster-verification.php": {
+      "baseline_sha256": "04142720ac11e184a48b3b34e45a7f30493fc2dc8ab9cf1c762811075c6baff8",
+      "baseline_blob": "9d2457ee307491df2cb2c465419ae8c37c2715c4",
+      "current_sha256": "909fc4a41ad5a6cdf1e0996fd39d9c78e0752f6f662ee118aef688391d1eeea1",
+      "current_blob": "e1f4cf15389993c62f1ddc07e1c81a8907420986",
+      "baseline_raw_sha256": "04142720ac11e184a48b3b34e45a7f30493fc2dc8ab9cf1c762811075c6baff8",
+      "current_raw_sha256": "909fc4a41ad5a6cdf1e0996fd39d9c78e0752f6f662ee118aef688391d1eeea1",
+      "hunks": [
+        {
+          "start": 9,
+          "before": [
+            "\t\t\tarray("
+          ],
+          "after": [
+            "\t\t\t["
+          ]
+        },
+        {
+          "start": 13,
+          "before": [
+            "\t\t\t\t'execute_callback'    => array( self::class, 'execute' ),",
+            "\t\t\t\t'permission_callback' => array( self::class, 'permission' ),",
+            "\t\t\t\t'meta'                => array(",
+            "\t\t\t\t\t'annotations' => array( 'readonly' => true, 'destructive' => false, 'idempotent' => false ),",
+            "\t\t\t\t\t'mcp'         => array( 'public' => true, 'type' => 'tool' ),",
+            "\t\t\t\t),",
+            "\t\t\t)"
+          ],
+          "after": [
+            "\t\t\t\t'execute_callback'    => [ self::class, 'execute' ],",
+            "\t\t\t\t'permission_callback' => [ self::class, 'permission' ],",
+            "\t\t\t\t'meta'                => [",
+            "\t\t\t\t\t'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => false ],",
+            "\t\t\t\t\t'mcp'         => [ 'public' => true, 'type' => 'tool' ],",
+            "\t\t\t\t],",
+            "\t\t\t]"
+          ]
+        },
+        {
+          "start": 27,
+          "before": [
+            "\tpublic static function execute( $input = array() ) {"
+          ],
+          "after": [
+            "\tpublic static function execute( $input = [] ) {"
+          ]
+        },
+        {
+          "start": 36,
+          "before": [
+            "\t\t$google   = array();"
+          ],
+          "after": [
+            "\t\t$google   = [];"
+          ]
+        },
+        {
+          "start": 39,
+          "before": [
+            "\t\t\t$checks             = array_merge( array( 'google_site_kit' => $site_kit ), $checks );"
+          ],
+          "after": [
+            "\t\t\t$checks             = array_merge( [ 'google_site_kit' => $site_kit ], $checks );"
+          ]
+        },
+        {
+          "start": 44,
+          "before": [
+            "\t\treturn array("
+          ],
+          "after": [
+            "\t\treturn ["
+          ]
+        },
+        {
+          "start": 46,
+          "before": [
+            "\t\t\t'data'    => array("
+          ],
+          "after": [
+            "\t\t\t'data'    => ["
+          ]
+        },
+        {
+          "start": 51,
+          "before": [
+            "\t\t\t\t'google'      => array_merge( $google, array("
+          ],
+          "after": [
+            "\t\t\t\t'google'      => array_merge( $google, ["
+          ]
+        },
+        {
+          "start": 54,
+          "before": [
+            "\t\t\t\t) ),",
+            "\t\t\t\t'bing'        => array("
+          ],
+          "after": [
+            "\t\t\t\t] ),",
+            "\t\t\t\t'bing'        => ["
+          ]
+        },
+        {
+          "start": 59,
+          "before": [
+            "\t\t\t\t),"
+          ],
+          "after": [
+            "\t\t\t\t],"
+          ]
+        },
+        {
+          "start": 63,
+          "before": [
+            "\t\t\t\t'sitemaps'    => $checks['sitemap_reachability']['items'] ?? array(),",
+            "\t\t\t\t'limitations' => array("
+          ],
+          "after": [
+            "\t\t\t\t'sitemaps'    => $checks['sitemap_reachability']['items'] ?? [],",
+            "\t\t\t\t'limitations' => ["
+          ]
+        },
+        {
+          "start": 67,
+          "before": [
+            "\t\t\t\t),",
+            "\t\t\t),",
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t\t\t],",
+            "\t\t\t],",
+            "\t\t];"
+          ]
+        },
+        {
+          "start": 81,
+          "before": [
+            "\t\t$checks        = array("
+          ],
+          "after": [
+            "\t\t$checks        = ["
+          ]
+        },
+        {
+          "start": 100,
+          "before": [
+            "\t\t);",
+            "\t\t$public        = array("
+          ],
+          "after": [
+            "\t\t];",
+            "\t\t$public        = ["
+          ]
+        },
+        {
+          "start": 104,
+          "before": [
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t];"
+          ]
+        },
+        {
+          "start": 135,
+          "before": [
+            "\t\t\tarray("
+          ],
+          "after": [
+            "\t\t\t["
+          ]
+        },
+        {
+          "start": 139,
+          "before": [
+            "\t\t\t)"
+          ],
+          "after": [
+            "\t\t\t]"
+          ]
+        },
+        {
+          "start": 157,
+          "before": [
+            "\t\t\t\tarray( 'status_code' => $home_response['status_code'] )"
+          ],
+          "after": [
+            "\t\t\t\t[ 'status_code' => $home_response['status_code'] ]"
+          ]
+        },
+        {
+          "start": 167,
+          "before": [
+            "\t\t\t\tarray( 'found' => false )"
+          ],
+          "after": [
+            "\t\t\t\t[ 'found' => false ]"
+          ]
+        },
+        {
+          "start": 175,
+          "before": [
+            "\t\t\tarray("
+          ],
+          "after": [
+            "\t\t\t["
+          ]
+        },
+        {
+          "start": 178,
+          "before": [
+            "\t\t\t)"
+          ],
+          "after": [
+            "\t\t\t]"
+          ]
+        },
+        {
+          "start": 191,
+          "before": [
+            "\t\t\t\tarray( 'url' => $url )"
+          ],
+          "after": [
+            "\t\t\t\t[ 'url' => $url ]"
+          ]
+        },
+        {
+          "start": 200,
+          "before": [
+            "\t\t\t\tarray( 'url' => $url, 'status_code' => $response['status_code'] )"
+          ],
+          "after": [
+            "\t\t\t\t[ 'url' => $url, 'status_code' => $response['status_code'] ]"
+          ]
+        },
+        {
+          "start": 208,
+          "before": [
+            "\t\t\tarray( 'url' => $url, 'status_code' => $response['status_code'] )"
+          ],
+          "after": [
+            "\t\t\t[ 'url' => $url, 'status_code' => $response['status_code'] ]"
+          ]
+        },
+        {
+          "start": 223,
+          "before": [
+            "\t\t\t\tarray( 'host' => $host )"
+          ],
+          "after": [
+            "\t\t\t\t[ 'host' => $host ]"
+          ]
+        },
+        {
+          "start": 233,
+          "before": [
+            "\t\t\t\tarray( 'host' => $host )"
+          ],
+          "after": [
+            "\t\t\t\t[ 'host' => $host ]"
+          ]
+        },
+        {
+          "start": 237,
+          "before": [
+            "\t\t$txt_records = array();"
+          ],
+          "after": [
+            "\t\t$txt_records = [];"
+          ]
+        },
+        {
+          "start": 269,
+          "before": [
+            "\t\t\tarray("
+          ],
+          "after": [
+            "\t\t\t["
+          ]
+        },
+        {
+          "start": 275,
+          "before": [
+            "\t\t\t)"
+          ],
+          "after": [
+            "\t\t\t]"
+          ]
+        },
+        {
+          "start": 288,
+          "before": [
+            "\t\t\t\tarray( 'url' => $url, 'sitemap_urls' => array() )"
+          ],
+          "after": [
+            "\t\t\t\t[ 'url' => $url, 'sitemap_urls' => [] ]"
+          ]
+        },
+        {
+          "start": 297,
+          "before": [
+            "\t\t\t\tarray( 'url' => $url, 'status_code' => $response['status_code'], 'sitemap_urls' => array() )"
+          ],
+          "after": [
+            "\t\t\t\t[ 'url' => $url, 'status_code' => $response['status_code'], 'sitemap_urls' => [] ]"
+          ]
+        },
+        {
+          "start": 309,
+          "before": [
+            "\t\t\tarray("
+          ],
+          "after": [
+            "\t\t\t["
+          ]
+        },
+        {
+          "start": 313,
+          "before": [
+            "\t\t\t)"
+          ],
+          "after": [
+            "\t\t\t]"
+          ]
+        },
+        {
+          "start": 319,
+          "before": [
+            "\t\t\treturn array("
+          ],
+          "after": [
+            "\t\t\treturn ["
+          ]
+        },
+        {
+          "start": 324,
+          "before": [
+            "\t\t\t\t\tarray( 'items' => array() )"
+          ],
+          "after": [
+            "\t\t\t\t\t[ 'items' => [] ]"
+          ]
+        },
+        {
+          "start": 326,
+          "before": [
+            "\t\t\t);"
+          ],
+          "after": [
+            "\t\t\t];"
+          ]
+        },
+        {
+          "start": 329,
+          "before": [
+            "\t\t$items = array();"
+          ],
+          "after": [
+            "\t\t$items = [];"
+          ]
+        },
+        {
+          "start": 362,
+          "before": [
+            "\t\treturn array("
+          ],
+          "after": [
+            "\t\treturn ["
+          ]
+        },
+        {
+          "start": 367,
+          "before": [
+            "\t\t\t\tarray("
+          ],
+          "after": [
+            "\t\t\t\t["
+          ]
+        },
+        {
+          "start": 370,
+          "before": [
+            "\t\t\t\t)"
+          ],
+          "after": [
+            "\t\t\t\t]"
+          ]
+        },
+        {
+          "start": 372,
+          "before": [
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t];"
+          ]
+        },
+        {
+          "start": 379,
+          "before": [
+            "\t\t\treturn array("
+          ],
+          "after": [
+            "\t\t\treturn ["
+          ]
+        },
+        {
+          "start": 383,
+          "before": [
+            "\t\t\t);"
+          ],
+          "after": [
+            "\t\t\t];"
+          ]
+        },
+        {
+          "start": 388,
+          "before": [
+            "\t\t\treturn array("
+          ],
+          "after": [
+            "\t\t\treturn ["
+          ]
+        },
+        {
+          "start": 392,
+          "before": [
+            "\t\t\t);"
+          ],
+          "after": [
+            "\t\t\t];"
+          ]
+        },
+        {
+          "start": 395,
+          "before": [
+            "\t\treturn array("
+          ],
+          "after": [
+            "\t\treturn ["
+          ]
+        },
+        {
+          "start": 402,
+          "before": [
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t];"
+          ]
+        },
+        {
+          "start": 406,
+          "before": [
+            "\t\t$args = array("
+          ],
+          "after": [
+            "\t\t$args = ["
+          ]
+        },
+        {
+          "start": 410,
+          "before": [
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t];"
+          ]
+        },
+        {
+          "start": 414,
+          "before": [
+            "\t\t\treturn array("
+          ],
+          "after": [
+            "\t\t\treturn ["
+          ]
+        },
+        {
+          "start": 418,
+          "before": [
+            "\t\t\t);"
+          ],
+          "after": [
+            "\t\t\t];"
+          ]
+        },
+        {
+          "start": 421,
+          "before": [
+            "\t\treturn array("
+          ],
+          "after": [
+            "\t\treturn ["
+          ]
+        },
+        {
+          "start": 425,
+          "before": [
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t];"
+          ]
+        },
+        {
+          "start": 448,
+          "before": [
+            "\t\t$urls = array();"
+          ],
+          "after": [
+            "\t\t$urls = [];"
+          ]
+        },
+        {
+          "start": 458,
+          "before": [
+            "\tprivate static function result( $status, $message, $detail = null, $extra = array() ) {"
+          ],
+          "after": [
+            "\tprivate static function result( $status, $message, $detail = null, $extra = [] ) {"
+          ]
+        },
+        {
+          "start": 460,
+          "before": [
+            "\t\t\tarray("
+          ],
+          "after": [
+            "\t\t\t["
+          ]
+        },
+        {
+          "start": 463,
+          "before": [
+            "\t\t\t),"
+          ],
+          "after": [
+            "\t\t\t],"
+          ]
+        },
+        {
+          "start": 475,
+          "before": [
+            "\t\t$summary = array("
+          ],
+          "after": [
+            "\t\t$summary = ["
+          ]
+        },
+        {
+          "start": 479,
+          "before": [
+            "\t\t);"
+          ],
+          "after": [
+            "\t\t];"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -6,6 +6,119 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add explicitly opted-in read-only system observation for inaccessible
+  Docker-daemon proc evidence on approved disposable CI hosts. Controller,
+  capture and PHP remain nonroot; only verified fixed system reads and
+  supervision are elevated. Preserve complete native admission, bounded
+  original retention, grants and release checks through an exact outer
+  source transition. Native/runtime/CI acceptance remains separate from
+  parser or nonprivileged adapter results; filesystem deadlines are
+  cooperative and do not certify root-child cleanup. Explicit Git attributes
+  preserve all six added source-bound files without incidental newline
+  conversion.
+
+- Integrate approved current-main compatibility documentation additively with the
+  existing extraction, controller-component and provenance guidance. Retain the
+  exact WordPress 7.1.2 / MCP Adapter 0.6.1 defaults and alignment regression
+  already present on this branch, the PHPStan 2.2.15 lock and the stricter
+  17-entry / 30-error baseline; do not restore removed sitemap or posts debt.
+  Preserve every accepted proof seal with a reviewed exact outer integration.
+
+- Classify normal connected Unix stream rows separately from the unique selected
+  listening inode in the QA host-topology controller. Reject malformed or unknown
+  selected-path rows and preserve descriptor/PID/namespace/identity checks.
+  An owned nonroot socket probe reproduces the parser bug; hosted descriptor
+  access remains independently blocked, and no runtime acceptance is implied.
+  Preserve all accepted proof seals through an exact outer source reversal.
+
+- Give both unit/safeguard lanes a bounded 60-minute budget without skipping any
+  controls or changing matrix, permissions or aggregate gates. Original hosted
+  unit jobs passed units but were cancelled at the 15-minute limit; local native
+  PHP 8.4 completed all 14 guards in 16m38s, while the original hosted release
+  job's seven-command safeguard subset alone passed in 36m38s. Thirty minutes is
+  therefore unsupported by hosted evidence. The new 60-minute setting still
+  requires a genuine PR run; release limits, runtime deadlines and admission
+  policies are unchanged, and the subsequent package refusal reason is unknown.
+- Run only the exact-candidate compatibility diagnostic from the separately
+  approved workflow-tools checkout, not potentially older candidate code.
+  Preserve the eight closed, environment-only diagnostics, candidate isolation
+  and all accepted seals through a reviewed exact outer correction.
+
+- Surface only the controller's approved closed topology refusal witness after
+  runtime CI QA, including compatibility and release/package jobs. Treat absent
+  or invalid witnesses explicitly without exposing private streams or changing
+  QA, admission, artifact, cleanup or publishing conclusions. Preserve historical
+  workflow/proof seals through a minimal reviewed outer reversal.
+
+- Add integer/null and permission-denial regressions for SEO/readability score
+  markers, with a two-path reviewed outer source reversal at the existing
+  bounded source/dependency entry points. Keep historical seals, manifest
+  expectations and ledgers unchanged; reject source/proof omission or forgery.
+
+- Make the controller's missing-output-descriptor test clear explicitly occupied
+  fd3 through fd9 before launching native PHP, leaving lower slots for startup
+  allocations instead of reusing fd9. Keep production reporting, loaded extensions
+  and exact diagnostic-I/O refusal assertions.
+
+- Preserve reviewed source-bound fixture and configuration bytes during Git
+  staging and checkout instead of silently normalizing their line endings.
+  Keep the normal whitespace checks, allowing existing CRLF terminators only
+  for the explicitly byte-preserved paths.
+
+- Repair copied legacy teardown RED controls after package cleanup moved to the
+  child: restore the old parent EXIT trap before the failed child as well as
+  the old unconditional guard. Keep original failure exits, two-down and
+  evidence-loss assertions, fresh private case roots, native admission and all
+  production wrapper bytes. Reverse this test-only repair ahead of the unchanged
+  native-fixture seal; reject altered seams, sources, hunks and ledgers.
+
+- Repair native admission tests without changing runtime policy: explicitly
+  access the private uninitialized-directory property on PHP 8.0, and stage the
+  query adapter plus unchanged supervisor in the owned installer graph.
+  Retain LF/CRLF, altered-core and original-byte controls; require the nine
+  existing substitution sites and both newly introduced query sites.
+  Keep copied query paths valid Python literals and limit the fixture-owner
+  substitution to its copied Docker executable, retaining trusted native PHP
+  identity. Exercise real PHP-to-Python descriptor capture on supported native
+  hosts; unsupported engines prove refusal only. Update the isolated cron
+  ordering model to distinguish admission from later fixture execution.
+
+- Compose bounded native admission with exact PHP 8.0 selection before reset and
+  fixtures; capture original streams privately, preserve refusal inputs through
+  bootstrap and transfer package cleanup only after child success. Add exact
+  outer reversals without changing frozen history or supplying runtime grants.
+- Make the synthetic native-authority observer terminal before private reporting,
+  retaining the original Throwable and native fatal exit rather than recursively
+  invoking an earlier observer. Preserve the accepted selector imports/map and
+  verify their regression through the bounded-admission projection.
+
+- Restore native synthetic release fault controls by importing the floor
+  selector in all four extracted namespaces. Add an executable missing-import
+  regression and exact additive import-only reversal; preserve production
+  behavior, fault expectations and prior sealed source.
+
+- Add an opt-in exact-source PHP 8.0 fixture selector to shared Compose routing
+  and retention/release checks. Bind original config/image/source identities,
+  refuse conflicting profiles and preserve frozen source history through an
+  additive reversal. Native controller and bounded pre-fixture call sites now
+  share that selection; offline routing is not runtime acceptance.
+
+- Clarify that the shared-helper extraction preserved 589 historical manifest
+  cases, while the composed marker/bounded-list coverage contains 601 cases;
+  historical oracles remain unchanged.
+
+- Add opt-in genuine PHP 8.0 WordPress floor fixture build, CLI-server routing
+  and actual CLI/HTTP ELF/version verification support. Reuse verified archive
+  downloads and strict candidate dependency/full-E2E gates without inventing an
+  unsupported WordPress image tag or changing current/compatibility lanes.
+  Independent admission, grants and reviewed shared-harness selection remain
+  required.
+
+- Complete shared-helper array-style enforcement for packaged production PHP:
+  require short literals using the installed PHPCS rule, convert 88 long literals
+  in five files with PHPCBF, and add exact reversible source proofs plus token,
+  lint and forgery regressions without changing historical seals or runtime policy.
+
 - Bind deliberate legacy-schema RED wrapper mutations and their restoration to the existing disposable Git fixture. Keep committed-host provenance checks intact so the controls reach their injected schema failure instead of stopping at source drift; restrict binding to the two copied wrappers in the isolated mock checkout and preserve every exit, teardown and retention assertion.
 
 - Bind synthetic failed-runner retention assertions to the actual source planner instead of an obsolete fixed case total. Require the full ordered case inventory, exact passed/failed counts and one strictly typed injected failure; preserve private capture/body checks, cleanup, public exclusion, refusal exits and frozen production proofs.
@@ -39,6 +152,14 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 - Integrate the untrusted-record contract with the current 589-case closed-schema suite using an additional exact typed source ledger. Preserve both historical ledgers, four native parent rejections, and all role/no-write oracles; add marker assertions to the omitted-filter success control. Update synthetic source-prefix fixtures for explicit executable refusal conditionals and keep both schema and untrusted QA stages.
 - Surface only closed topology reason/phase witnesses on controller admission refusal. Check diagnostic opens, partial/zero writes, stream exceptions and flush failures; retain exit 78 and explicit non-success receipts when channels fail. Raw private diagnostics and all admission/custody policies remain unchanged.
 - Fix five ShellCheck findings in runtime safeguards and host bootstrap without changing executable identity/mode checks, literal PHP snippets, refusal exits or private trap handling.
+
+
+- Promote the current compatibility QA baseline and default Docker image to
+  WordPress 7.1.2, retaining MCP Adapter 0.6.1 and all dependency digests.
+  Document the unchanged support floor and add a regression keeping baseline
+  metadata, the default image, the current matrix lane and readme header aligned.
+
+- Update PHPStan from 2.2.14 to 2.2.15 and remove only the now-unmatched sitemap offset baseline entry. Preserve the sitemap fallback, PHP 8.0 analysis target, PHPDoc certainty policy, and strict unmatched-ignore ratchet; all other dependency pins and baseline entries are unchanged.
 
 - Shorten the Unreleased upgrade notice to Plugin Check's 300-character limit while retaining its migration guidance. Record exact-tree schema package results with cleanup, memory-measurement and pending integration/floor caveats; preserve prior failure records. Documentation only; no runtime or version change.
 

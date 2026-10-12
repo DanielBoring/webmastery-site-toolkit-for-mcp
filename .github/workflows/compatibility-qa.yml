@@ -114,7 +114,15 @@ jobs:
           E2E_MANAGE_COMPOSE: 1
           E2E_KEEP_COMPOSE: 1
           WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
+          WSTM108_HOST_INSPECTION: system-readonly-v1
         run: bash scripts/e2e-test.sh all
+      - name: Show closed admission refusal diagnostic (not acceptance)
+        working-directory: ${{ github.workspace }}/candidate-floor-tools
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}
+        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php
       - name: Observe exact candidate compatibility (PHP 8.0 remains required)
         id: runtime
         if: always() && steps.prepare.outcome == 'success'
@@ -374,7 +382,14 @@ jobs:
           E2E_MANAGE_COMPOSE: 1
           E2E_KEEP_COMPOSE: 1
           WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
+          WSTM108_HOST_INSPECTION: system-readonly-v1
         run: bash scripts/e2e-test.sh all
+      - name: Show closed admission refusal diagnostic (not acceptance)
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}
+        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php
       - name: Verify independently published untrusted export
         id: untrusted-export-check
         if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
@@ -577,7 +592,14 @@ jobs:
         id: qa
         env:
           WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
+          WSTM108_HOST_INSPECTION: system-readonly-v1
         run: bash scripts/release-qa.sh
+      - name: Show closed admission refusal diagnostic (not acceptance)
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}
+        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php
       - name: Verify independently published untrusted export
         id: untrusted-export-check
         if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
@@ -743,7 +765,14 @@ jobs:
         id: qa
         env:
           WSTM108_HOST_AUTHORITY_ROOT: ${{ runner.temp }}
+          WSTM108_HOST_INSPECTION: system-readonly-v1
         run: bash scripts/release-qa.sh
+      - name: Show closed admission refusal diagnostic (not acceptance)
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          WSTM108_ADMISSION_FAILURE: ${{ steps.qa.outputs.untrusted_admission_failure }}
+        run: php -d display_errors=0 -d log_errors=0 scripts/untrusted-admission-diagnostic.php
       - name: Verify independently published untrusted export
         id: untrusted-export-check
         if: ${{ always() && steps.qa.outputs.untrusted_export_ready == 'true' && steps.qa.outputs.untrusted_export_status == 'published' }}
