@@ -6,6 +6,13 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Inventory every PHPUnit/Python test file and existing safeguard/runtime
+  command, distinguishing production units from QA tooling and real-runtime
+  evidence. Add opt-in per-test and stage timing reports without changing
+  discovery, selecting tests, accepting skipped/failed checks, or caching passes.
+  Keep payloads and raw JUnit private; regression-test incomplete inventories,
+  original command failures, exclusive evidence and malformed profiles.
+
 - Increase the serial tag-validation job budget from 65 to 120 minutes after
   the first 3.0.0 tag run exhausted its budget during original-ZIP testing.
   Keep every validation, artifact-integrity and protected-publication gate;

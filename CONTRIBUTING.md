@@ -110,6 +110,14 @@ dependency/download controls and applicable product regressions. Local
 results do not replace required exact-head PR-event checks or original-ZIP
 package QA for release-bound changes.
 
+When adding PHP/Python tests or changing safeguard commands, update
+`tests/qa-suites.json`; `python3 -B scripts/qa-profile.py inventory` rejects
+missing or duplicate classifications and command drift. Classification and
+timing do not select or skip tests. Follow the
+[measurement procedure](docs/qa-strategy.md#suite-classification-and-measurement)
+before proposing reuse, parallelization or deduplication, and retain full
+main/release coverage and the original failure status.
+
 Destructive safety orchestration must retain eight serial boundary/trash-mode invocations, an actual native registration audit before test-only MU capabilities, matching real CLI/HTTP configuration, exclusive evidence reservation before credentials, and token-owned exact restoration on every exit. Keep failed journals and original failure status; do not replace real source/floor/original-package proof with mocked orchestration. See `tests/e2e/README.md`.
 
 When query shapes change, fault fixtures must attest an actual hit on each
