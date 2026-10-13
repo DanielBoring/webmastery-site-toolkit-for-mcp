@@ -6,6 +6,12 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Increase the serial tag-validation job budget from 65 to 120 minutes after
+  the first 3.0.0 tag run exhausted its budget during original-ZIP testing.
+  Keep every validation, artifact-integrity and protected-publication gate;
+  regression-check the exact frozen workflow apart from this one budget change.
+  This does not modify or retry the immutable 3.0.0 tag.
+
 - Route historical assessment freshness probes and Compose lifecycle through
   the same admitted QA engine as ownership checks, and regression-test that the
   default Docker context cannot receive those calls.
