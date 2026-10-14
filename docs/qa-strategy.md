@@ -55,6 +55,126 @@ write beneath the test tree, so use an owned writable copy inside that
 environment, with the original checkout mounted read-only. Do not copy retained
 runtime evidence or use the unit copy to bypass the runtime retention guard.
 
+## Suite classification and measurement
+
+`tests/qa-suites.json` accounts for all 109 PHPUnit files, the five Python
+regression files and the existing Composer safeguard/runtime entry points.
+Its file-level primary-target classification separates 30 production helper,
+callback and bootstrap unit files from 79 QA-tooling/model/fixture-oracle files.
+Mixed files retain all their tests; neither category is a speed claim.
+Production units use doubles and subprocesses, not a real WordPress bootstrap.
+For example, `MetadataTransportTest` exercises the QA transport shim and
+`InputSchemaLifecycleTest` models lifecycle; neither is actual HTTP acceptance.
+Real WordPress contracts, authenticated MCP integration, original-ZIP product
+checks and publishing checks remain separate evidence layers.
+
+`python3 -B scripts/qa-profile.py inventory` fails on missing/duplicate files,
+unknown categories or safeguard-command drift. It does not modify PHPUnit's
+directory-wide discovery or run/select tests. The existing opt-in Adapter
+assessment Python tests are inventoried, not silently added to the normal
+safeguard command. All existing safeguard commands still run.
+
+For an owned writable Linux unit snapshot, retain the original checkout
+read-only and record its exact commit, any uncommitted changes, actual PHP/image
+identity and command status. Add `--log-junit` to the unchanged full PHPUnit
+command only for an explicit profiling run:
+
+```bash
+php -d memory_limit=128M vendor/phpunit/phpunit/phpunit \
+  --configuration=phpunit.xml.dist --log-junit /private/unit.xml
+python3 -B scripts/qa-profile.py junit /private/unit.xml \
+  --source "$EXACT_SOURCE_SHA" --php "$ACTUAL_PHP_VERSION" \
+  --scope full --output /private/unit-timings.json
+```
+
+Check the PHPUnit exit status before parsing; parsing success is not test
+success. A full diagnostic requires every classified class, not proof of
+every expected data-provider invocation. Compare test/assertion counts with
+the original complete PHPUnit output. Focused reports explicitly record
+missing classes and cannot establish full-suite acceptance. Per-test durations
+are PHPUnit's recorded case time, including case-level fixture work.
+Discovery, shared setup and process/orchestration overhead can fall outside
+that time; it cannot separate phases or be summed into elapsed job time.
+The converter drops paths, messages, output and data-provider labels, preserves
+failure/error/skipped outcomes, and rejects invalid durations and unclassified
+tests. Keep raw JUnit private. Measure peak memory under the existing 128 MiB
+limit before enabling additional logging in hosted required checks.
+
+For command-level phases, use separate fresh outputs and preserve the command's
+original exit status:
+
+```bash
+python3 -B scripts/qa-profile.py record --source "$EXACT_SOURCE_SHA" \
+  --lane "linux-php8.4" --suite mixed-phpunit --phase execution \
+  --output /private/unit-stage.json -- \
+  php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist
+```
+
+Wrap independently executed setup/execution/cleanup commands separately.
+Do not wrap a combined package command as execution-only. The recorder reserves
+evidence before execution, refuses replacement and never captures command
+arguments or child output into public JSON. Child stdout/stderr remain the
+caller's responsibility; do not upload them as profiling artifacts.
+Its caller-supplied SHA/lane describe provenance, not automatic attestation.
+An interrupted/partial report, or a zero exit from a setup/cleanup command,
+is never product acceptance.
+
+Existing Actions timings can be inspected without rerunning expensive QA:
+
+```bash
+gh api "repos/OWNER/REPO/actions/runs/RUN_ID/jobs?per_page=100" > /private/jobs.json
+python3 -B scripts/qa-profile.py jobs /private/jobs.json \
+  --output /private/hosted-stages.json
+```
+
+Use the attempt-specific jobs endpoint when inspecting an earlier attempt.
+The parser rejects incomplete pagination and mixed source/run/attempt data.
+Setup, job-level execution and cleanup/export steps are distinguished; unknown
+or composite steps remain mixed/control. Internal package/setup/fixture/cleanup
+durations cannot be recovered from one outer timestamp. Cancelled durations
+are observed partial time, not a complete-stage estimate.
+
+Initial observations on October 12, 2026, from identical trees at reviewed
+`c348804` and merged main `2f9842b`:
+
+| Hosted execution step | PR run 38257385962 | Main run 38269501887 |
+| --- | ---: | ---: |
+| PHPUnit, PHP 8.0 | 1,789 s | 1,820 s |
+| PHPUnit, PHP 8.4 | 994 s | 916 s |
+| Safeguards, PHP 8.0 | 527 s | 554 s |
+| Safeguards, PHP 8.4 | 374 s | 411 s |
+
+These are repeated-code observations on different commits/events/runners, not
+controlled speedup measurements. The failed `v3.0.0` run 38273601311 spent
+1,799 s in static/units, 474 s in safeguards and 1,630 s in an interrupted
+composite package/checker step before the outer timeout. A prior successful
+package step took 1,733 s; that does not prove how long the interrupted
+release's package-plus-pinned/current-checker step needed.
+
+An isolated, nonroot local Linux profile of exact main `2f9842b`, using
+PHP 8.4.25 and PHPUnit 9.6.34 with JUnit enabled, passed all 4,646 tests and
+205,535 assertions in 637.038 s at 106.01 MiB peak, within the unchanged
+128 MiB limit. Its 1,921 production-unit cases totalled 11.302 s of recorded
+case time; 2,725 QA-tooling cases totalled 526.461 s. The 84 cases in
+`UntrustedSemanticReplayTest` accounted for 455.830 s. Recorded case times
+totalled 537.764 s, not the elapsed suite duration. This identifies a profiling
+target, not permission to remove independent faults or reuse mutable evidence.
+Local/container and hosted measurements are not interchangeable benchmarks.
+A second focused run of the same 84 replay cases on the same source/PHP
+passed 2,409 assertions in 444.124 s at 70.00 MiB peak; recorded case time
+was 444.041 s, 2.6% below the first run's class subtotal. Full-versus-focused
+context and surrounding workload differ. No implementation changed, so this
+is repeatability/variance evidence, not an optimization or full-suite pass.
+
+Before optimization, repeat the expensive classes/stages on the same code and
+interpreter, separating cold setup from execution and owned cleanup. Report
+variance, original failures, test/assertion counts and instrumentation memory.
+Remove duplicates only after proving the same failure mode and preserving
+allowed/denied, persisted-no-write, destructive, real HTTP, original-ZIP and
+Plugin Check evidence. No timing report caches acceptance across sources.
+This measurement phase changes no job layout, coverage, release artifact flow,
+required gate or publication protection.
+
 ## Execution location
 
 Run development QA where the coding session runs. A local coding session,

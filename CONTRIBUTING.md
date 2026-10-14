@@ -110,6 +110,14 @@ dependency/download controls and applicable product regressions. Local
 results do not replace required exact-head PR-event checks or original-ZIP
 package QA for release-bound changes.
 
+When adding PHP/Python tests or changing safeguard commands, update
+`tests/qa-suites.json`; `python3 -B scripts/qa-profile.py inventory` rejects
+missing or duplicate classifications and command drift. Classification and
+timing do not select or skip tests. Follow the
+[measurement procedure](docs/qa-strategy.md#suite-classification-and-measurement)
+before proposing reuse, parallelization or deduplication, and retain full
+main/release coverage and the original failure status.
+
 Destructive safety orchestration must retain eight serial boundary/trash-mode invocations, an actual native registration audit before test-only MU capabilities, matching real CLI/HTTP configuration, exclusive evidence reservation before credentials, and token-owned exact restoration on every exit. Keep failed journals and original failure status; do not replace real source/floor/original-package proof with mocked orchestration. See `tests/e2e/README.md`.
 
 When query shapes change, fault fixtures must attest an actual hit on each
@@ -416,6 +424,17 @@ If recovery needs workflow fixes, follow the [guarded recovery runbook](docs/rel
 ---
 
 ## Release process (maintainers)
+
+Fresh validation without an original successful artifact is a separate,
+input-free, reviewed policy in `fresh-release-validation.yml`, currently locked
+to the immutable 3.0.0 source/tag. It must run all original-source checks and seal
+new control/source/run provenance, not reuse failed evidence or substitute a
+local package. Run `php scripts/test-release-fresh-validation.php` and the
+existing recovery/control regressions when changing it. Future target identities
+require a reviewed policy change; control tags, dispatch and production approval
+are separately authorized actions. The PR checklist must cover this distinction:
+fresh validation locks the original immutable source/tag and seals new run/control
+provenance instead of relabeling failed or missing evidence.
 
 See [`docs/release-strategy.md`](docs/release-strategy.md) for the complete release governance model and official GitHub/WordPress references.
 

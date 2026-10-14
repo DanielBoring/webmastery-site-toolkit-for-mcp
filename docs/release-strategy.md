@@ -69,6 +69,22 @@ The tag workflow owns release validation, WordPress.org SVN deployment, and GitH
 
 Do not manually upload an unvalidated zip to GitHub releases.
 
+The serial tag-validation job has a 120-minute outer budget for static/unit QA,
+release safeguards, original-ZIP product QA and both Plugin Check versions.
+This is an execution budget, not a passing result or a relaxation of any test,
+cleanup, integrity or production-approval requirement. Run `composer
+test:ci-safeguards` and `composer lint:workflows` when changing this workflow.
+
+The first `v3.0.0` attempt (run `38273601311`) exhausted its former 65-minute
+budget after static/unit QA and safeguards passed, while package QA was still
+running. It produced no sealed bundle and reached no production approval.
+That immutable tag retains its original workflow: merging a later budget fix
+does not change a rerun. Existing-artifact recovery requires a successful
+original validation and sealed artifact; neither local/PR packages nor partial
+tag-run results qualify. A new validation/publication path requires separate
+maintainer authorization. No release retry, new tag or publication is implied
+by this budget fix.
+
 ## WordPress.org release flow
 
 WordPress.org uses SVN as the release repository. GitHub remains the development repository.
@@ -121,6 +137,85 @@ Main CI enforcement is **active**, verified on September 17, 2026: `main-ci-gate
 At that verification, PR #140's MCP Adapter 0.6.1 candidate had passed compatibility and PR package QA but remained open and unmerged. Main at `3dae8aa` used 0.5.0. The checked-in adapter baseline is now 0.6.1; baseline validation or adoption does not authorize a production release. Future Actions-created PR workflows still require maintainer approval before their genuine PR checks can satisfy the ruleset.
 
 ### Partial failure recovery
+
+#### Fresh validation when the immutable release has no validated artifact
+
+`fresh-release-validation.yml` is a distinct, input-free recovery entry point
+for **v3.0.0 only**. It does not change the original tag, rerun its frozen
+workflow, reuse partial evidence, or pretend a new ZIP is the failed run's ZIP.
+Its reviewed policy locks the annotated tag object
+`4bcc5bae61b7867bcb6f186713beeaeb5ed9b722` and original source
+`2f9842bb943fb27030cabe8060ad0b10c007ac14`. Future versions require a separately
+reviewed policy/workflow change with exact immutable identities and regressions;
+there is no caller-controlled version, source, path, artifact or workflow.
+
+After normal PR review, exact-head gates and a separately authorized merge,
+authorize an annotated `v-release-recovery-*` control tag on that merged control
+commit, then explicitly dispatch this workflow on that tag. Do not dispatch on
+`main` or `v3.0.0`. The existing tag-only environment policy remains intact;
+control-tag pushes are excluded from the normal release workflow. Creating or
+dispatching a control tag is not implied by reviewing this implementation.
+
+The trusted control checks both actor permissions, the remote control tag,
+original annotated release tag and current-main ancestry **before** original
+source execution. A separate checkout of the locked source installs its own
+locked dependencies and runs its complete static/unit and release safeguard
+commands. Its package builder runs once; original-ZIP runtime, cleanup proof,
+safe evidence export and pinned/current Plugin Check remain mandatory. The
+**control workflow's 120-minute job budget**, not the old tag's 65-minute YAML,
+governs this execution. No test or source byte is upgraded from current main.
+
+The original source's bundle helper seals package/notes/assets/source hashes.
+The trusted control adds an exact `fresh_validation` manifest identity:
+original release source/tag, reviewed workflow/control source/tag, repository,
+workflow and **new** run/attempt. The immutable upload is named
+`fresh-release-RUN-ATTEMPT`. After the user's `wordpress-org` approval, the
+publish job independently rechecks authorization, both remote tags, ancestry,
+the successful fresh-validation job and every mandatory step, upload timestamps,
+artifact membership/expiry/digest and the sealed manifest. It downloads only
+that artifact and uses the original source's existing package verifier,
+version-progression, SVN/public-listing and GitHub checks under the same shared
+publish lock. It never builds after approval. GitHub attestation identifies the
+actual control workflow; the manifest identifies the original package source.
+
+Existing `release.yml` artifact recovery still requires a successful original
+tag-push validation and retained sealed artifact: failed/cancelled/no-artifact
+runs remain rejected. Fresh validation does not weaken those semantics.
+Interrupted fresh publication may be partial: retain the new artifact and
+inspect destination hashes. Rerunning only publish retains the successful QA
+attempt via the validation job output; expired/deleted artifacts or changed
+tags/permissions block it. Do not substitute a local ZIP or start another build
+without a separately reviewed recovery decision.
+
+#### Preventing budget failures on future upgrades
+
+Keep comprehensive acceptance and the protected publish gate. Prefer local
+Docker preflight of the exact final installable package **before tagging**, then
+authoritative hosted validation/sealing of the exact tag. A local pass identifies
+failures cheaply but does not establish GitHub run/artifact provenance or
+authorize production. Record actual PHP/engine/checker versions and source/ZIP
+hashes; changes to final bytes invalidate earlier acceptance.
+
+Use `scripts/qa-profile.py` to inspect completed hosted job steps and local
+per-test/stage diagnostics; separate setup, execution and cleanup, and retain
+failed/partial runs rather than estimating their unfinished duration. The failed
+65-minute tag run recorded roughly 1,799 seconds static/unit, 474 safeguards,
+and 1,630 **partial** package/checker seconds. Later independent PR package jobs
+took about 36--39 minutes; PHP 8.0 full units took about 29--30 minutes and PHP
+8.4 about 15--16 minutes. These different-source/lane observations are planning
+evidence, not additive controlled release benchmarks. The 120-minute budget
+adds headroom but does not guarantee completion. Review complete repeat
+release-stage timings before tagging; investigate consumption above 80% of
+the outer budget rather than merely raising it or assuming a partial pass.
+
+The measured replay hotspot spent about 96% of selected elapsed time exporting
+independent evidence; authoritative journal read/persist guards dominated.
+Do not remove fault cases, share mutable evidence or cache authoritative state
+to obtain a faster green result. Split independent slow tooling and production
+units only after a reviewed dependency/provenance design and repeat comparisons
+show a worthwhile reduction while every failure still blocks the release.
+For now retain the existing comprehensive gates, diagnostic inventory and
+required-check names; no broad framework rewrite is necessary.
 
 The workflow deploys to WordPress.org SVN before creating the GitHub Release. If SVN succeeds but GitHub Release creation or listing verification fails, the version may already be public. A verification timeout is not a rollback and must be reported as partial publication.
 
