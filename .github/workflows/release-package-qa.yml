@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened]
+  schedule:
+    - cron: '23 7 * * *'
 
 permissions: {}
 
@@ -31,6 +33,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          QA_SCOPE: package
         run: bash scripts/qa-changes.sh >> "$GITHUB_OUTPUT"
 
   release-package-qa:

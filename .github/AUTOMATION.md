@@ -9,8 +9,9 @@ This repository uses GitHub Actions for layered WordPress.org plugin QA plus tag
 | `pull_request` (`opened`, `synchronize`, `reopened`) | `.github/workflows/coding-standards.yml` | Runs `1 - Static QA` on every PR. |
 | `pull_request` (`opened`, `synchronize`, `reopened`) | `.github/workflows/unit-tests.yml` | Runs `2 - Unit Tests` on every PR. |
 | `schedule` (nightly) | `.github/workflows/unit-tests.yml` | Runs product units plus the full QA-tooling suite and CI safeguards on `main`, so tooling regressions surface within a day even when a PR skipped them. |
-| `pull_request` (`opened`, `synchronize`, `reopened`) | `.github/workflows/e2e-qa.yml` | Detects runtime-impacting files, then runs `3 - Ability Contract QA` and `4 - Full MCP E2E QA` when in scope. |
-| release-impacting `pull_request` or `workflow_dispatch` | `.github/workflows/release-package-qa.yml` | Runs `5 - Release Package QA` without publishing a GitHub release. |
+| `pull_request` (`opened`, `synchronize`, `reopened`) | `.github/workflows/e2e-qa.yml` | Detects runtime-impacting files (`scripts/qa-changes.sh`, `runtime` scope), then runs `3 - Ability Contract QA` and `4 - Full MCP E2E QA` when in scope. |
+| ZIP-input `pull_request`, nightly `schedule`, or `workflow_dispatch` | `.github/workflows/release-package-qa.yml` | Runs `5 - Release Package QA` without publishing a GitHub release. |
+| nightly `schedule`, floor-lane `pull_request`, or `workflow_dispatch` | `.github/workflows/minimum-runtime-qa.yml` | Runs the WordPress 6.9 / PHP 8.0 product runtime and `Minimum runtime QA gate`. |
 | `schedule` or `workflow_dispatch` | `.github/workflows/compatibility-qa.yml` | Discovers current upstream versions, runs `6 - Compatibility QA` against baseline and candidate combinations, and opens a reviewed baseline-update PR after successful scheduled candidate tests. |
 | `workflow_dispatch` | `.github/workflows/import-issue-backlog.yml` | Previews or imports Markdown files from `ISSUES/` as GitHub Issues, preserving titles, labels, and bodies while skipping duplicates. |
 | `push` to `main` | Static, unit, and Docker QA workflows | Re-runs the appropriate numbered checks after merge. |

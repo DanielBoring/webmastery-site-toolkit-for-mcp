@@ -24,10 +24,10 @@ publishing. The
 | Workflow | Triggers | Purpose |
 | --- | --- | --- |
 | `1 - Static QA` | PR, main push, manual | PHP syntax, WPCS, PHPStan/baseline guard, locked audit, manifest/security policy and whitespace. |
-| `2 - Unit Tests` | PR, main push, manual | Genuine PHP 8.0/8.4 PHPUnit and separate applicable safeguard matrices with one stable aggregate. |
+| `2 - Unit Tests` | PR, main push, nightly, manual | Product PHPUnit on PHP 8.0/8.4; QA-tooling PHPUnit and CI safeguards on PHP 8.4 when applicable; one stable aggregate. |
 | `3-4 - Docker QA` | PR, main push, manual | Runtime change detection, Ability Contract QA, Full MCP E2E QA, safe evidence and summaries. |
-| `5 - Release Package QA` | Every PR, manual; product jobs are change-aware | Original-ZIP installed product checks and always-reporting `Package QA gate`; no directory checker requirement. |
-| Minimum runtime QA | Every PR, main push, manual; product job is change-aware | Actual WordPress 6.9 / PHP 8.0.30 contract/HTTP execution and `Minimum runtime QA gate`. |
+| `5 - Release Package QA` | Every PR (runs only for ZIP-input changes), nightly, manual | Original-ZIP installed product checks and always-reporting `Package QA gate`; no directory checker requirement. |
+| Minimum runtime QA | PRs changing the floor lane itself, nightly, manual | Actual WordPress 6.9 / PHP 8.0.30 contract/HTTP execution and `Minimum runtime QA gate`. |
 | WordPress.org publishing checks | Manual | Pristine original-ZIP Plugin Check, separately reported without product acceptance or publication. |
 | `5 - Release` | Release tag, guarded recovery dispatch | Main ancestry, Static/Unit/package QA and protected serialized publication. Recovery reuses original validated evidence through a reviewed control tag. |
 | `6 - Compatibility QA` | Weekly schedule, manual | Official upstream discovery, pinned/candidate combinations and reviewed baseline-update PRs. |
@@ -38,8 +38,9 @@ publishing. The
 
 Every PR needs `1 - Static QA` and `2 - Unit Tests`. Runtime, ability and
 security-sensitive changes also need actual `3 - Ability Contract QA` and
-`4 - Full MCP E2E QA`. Release-impacting changes need `5 - Release Package QA`
-and workflow lint before merge. Broad compatibility is scheduled/manual unless
+`4 - Full MCP E2E QA`. Changes to ZIP inputs need `5 - Release Package QA`
+and workflow lint before merge; other plugin changes reach package and
+minimum-runtime QA through the nightly run on `main`. Broad compatibility is scheduled/manual unless
 a supported combination or dependency change makes it relevant to the PR.
 
 Product unit tests (`composer qa:unit`, the `product` PHPUnit suite) run as a

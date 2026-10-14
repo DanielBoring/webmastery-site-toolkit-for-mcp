@@ -2,10 +2,16 @@ name: Minimum runtime QA
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '23 7 * * *'
+  # Only changes to the floor lane itself run it on a PR; the nightly run on
+  # main and a pre-release dispatch cover plugin changes.
   pull_request:
     types: [opened, synchronize, reopened]
-  push:
-    branches: [main]
+    paths:
+      - '.github/workflows/minimum-runtime-qa.yml'
+      - 'scripts/qa-floor.sh'
+      - 'tests/fixtures/php80-floor/**'
 
 permissions: {}
 

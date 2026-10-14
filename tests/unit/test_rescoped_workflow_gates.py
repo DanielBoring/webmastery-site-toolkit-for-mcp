@@ -435,12 +435,18 @@ refuse compose exec -T wordpress wp --allow-root core version
         docker = jobs(source("e2e-qa.yml"))
         detector = docker["changes"]
         for required in (
-            'git merge-base "$BASE_SHA" "$HEAD_SHA"',
-            'git diff --name-only "$MERGE_BASE" "$HEAD_SHA"',
-            'if [ "$status" -ne 1 ]; then',
-            'echo "Runtime change detection failed." >&2',
+            "          fetch-depth: 0\n",
+            "          QA_SCOPE: runtime\n",
+            'run: bash scripts/qa-changes.sh >> "$GITHUB_OUTPUT"',
         ):
             self.assertIn(required, detector)
+        shared = (ROOT / "scripts" / "qa-changes.sh").read_text(encoding="utf-8")
+        for required in (
+            'git merge-base "${BASE_SHA:?PR base required}" "${HEAD_SHA:?PR head required}"',
+            'git diff --name-only "$merge_base" "$HEAD_SHA"',
+            '[[ "$status" == 1 ]] || { echo "QA change detection failed." >&2; exit "$status"; }',
+        ):
+            self.assertIn(required, shared)
         gate = next(job for job in docker.values()
                     if "run: php scripts/docker-qa-gate.php" in job)
         for required in (
