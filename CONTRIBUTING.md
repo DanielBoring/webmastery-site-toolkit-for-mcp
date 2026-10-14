@@ -425,6 +425,17 @@ If recovery needs workflow fixes, follow the [guarded recovery runbook](docs/rel
 
 ## Release process (maintainers)
 
+Fresh validation without an original successful artifact is a separate,
+input-free, reviewed policy in `fresh-release-validation.yml`, currently locked
+to the immutable 3.0.0 source/tag. It must run all original-source checks and seal
+new control/source/run provenance, not reuse failed evidence or substitute a
+local package. Run `php scripts/test-release-fresh-validation.php` and the
+existing recovery/control regressions when changing it. Future target identities
+require a reviewed policy change; control tags, dispatch and production approval
+are separately authorized actions. The PR checklist must cover this distinction:
+fresh validation locks the original immutable source/tag and seals new run/control
+provenance instead of relabeling failed or missing evidence.
+
 See [`docs/release-strategy.md`](docs/release-strategy.md) for the complete release governance model and official GitHub/WordPress references.
 
 1. Update the `Version` header in `webmastery-site-toolkit-for-mcp.php`

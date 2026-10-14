@@ -1,5 +1,16 @@
 # CI/CD strategy
 
+Fresh validation of immutable `v3.0.0` is a separate input-free manual workflow,
+not a new version or rerun of the frozen tag workflow. Its reviewed 120-minute
+control job first admits the annotated control tag/current-main ancestry and
+locked original source, then runs that source's complete acceptance and creates
+a newly identified immutable artifact. Existing successful-artifact recovery
+stays unchanged. Neither workflow is dispatched as part of PR checks.
+Both publication paths retain the same protected `wordpress-org` environment,
+shared non-cancelling publish lock, postapproval provenance/version checks and
+same-ZIP destinations. Main required-check names and full discovery are unchanged.
+See [fresh-validation and budget prevention](release-strategy.md#fresh-validation-when-the-immutable-release-has-no-validated-artifact).
+
 Local coding sessions use local disposable containers for development QA.
 GitHub cloud-agent sessions use containers in their execution environment or
 GitHub Actions. Actions also runs independent pull request checks, real Docker

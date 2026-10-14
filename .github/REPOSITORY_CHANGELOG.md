@@ -6,6 +6,15 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add input-free, explicitly locked fresh validation for the immutable 3.0.0
+  source when its frozen workflow produced no validated artifact. Keep existing
+  successful-artifact recovery unchanged, rerun every mandatory original-source
+  gate with reviewed 120-minute control logic, seal new run/control provenance,
+  and revalidate it before protected same-artifact publication.
+- Document measured release budget headroom, final-package preflight and the
+  distinction between local diagnostics, hosted acceptance and production
+  approval; do not remove fault coverage or cache mutable fixture evidence.
+
 - Inventory every PHPUnit/Python test file and existing safeguard/runtime
   command, distinguishing production units from QA tooling and real-runtime
   evidence. Add opt-in per-test and stage timing reports without changing

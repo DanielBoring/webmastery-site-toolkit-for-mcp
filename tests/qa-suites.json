@@ -144,7 +144,8 @@
       "bash tests/destructive-stage-test.sh",
       "bash tests/input-schema-stage-test.sh",
       "bash tests/compatibility-download-test.sh",
-      "bash tests/compatibility-dependency-policy-test.sh"
+      "bash tests/compatibility-dependency-policy-test.sh",
+      "php scripts/test-release-fresh-validation.php"
     ],
     "test:release-safeguards": [
       "php scripts/test-release-safeguards.php",
