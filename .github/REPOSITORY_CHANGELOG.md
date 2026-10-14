@@ -6,6 +6,11 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Update WordPress analysis stubs to 7.1.2 while retaining tested PHPStan 2.2.16
+  within the 2.2 series. PHPStan 2.3.1 incorrectly reports a referenced,
+  by-reference download-stream capture as unused; do not remove the ownership
+  guard or suppress diagnostics to accept the tooling upgrade.
+
 - Promote the tested development baseline to WordPress 7.1.3, MCP Adapter 0.7.0,
   Yoast 28.6 and SEOPress 10.3, with the verified Adapter archive digest.
   Keep WordPress 6.9 / PHP 8.0 support floors and the published 3.0.0 artifact
