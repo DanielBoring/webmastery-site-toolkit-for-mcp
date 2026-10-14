@@ -29,7 +29,7 @@ case "${QA_SCOPE:-default}" in
 		;;
 	runtime)
 		# Inverted: every path is relevant unless it is a known non-runtime path.
-		ignored='^(docs/|ISSUES/|\.wordpress-org/|tests/unit/|tests/qa-suites\.json$|[^/"]+\.md$|LICENSE$|\.github/(ISSUE_TEMPLATE/|[^/]+\.(md|yml|json)$|workflows/[^/]+\.yml$)|scripts/(test-release-|release-(recovery|fresh-validation|tag-check|control-check|publish-check|plugin-check)\.|build-release\.sh$|release-qa\.sh$|qa-profile\.py$|adapter-|update-compatibility-baselines\.php$|workflow-lint\.php$|import-issues\.sh$))'
+		ignored='^(docs/|ISSUES/|\.wordpress-org/|tests/unit/|tests/qa-suites\.json$|[^/"]+\.md$|LICENSE$|\.github/(ISSUE_TEMPLATE/|[^/]+\.(md|yml|json)$|workflows/[^/]+\.yml$)|scripts/(test-release-|release-(recovery|fresh-validation|tag-check|control-check|publish-check|plugin-check|checks-gate)\.|build-release\.sh$|release-qa\.sh$|qa-profile\.py$|adapter-|update-compatibility-baselines\.php$|workflow-lint\.php$|import-issues\.sh$))'
 		always='^\.github/(compatibility-versions\.json|workflows/e2e-qa\.yml)$'
 		;;
 	package)

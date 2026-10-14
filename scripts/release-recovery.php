@@ -120,8 +120,7 @@ function recovery_resolve(array $input, callable $api, int $now): array {
 	release_require(is_array($qa['steps'] ?? null), 'Missing original QA steps.');
 	$required = array(
 		'Gate exact tag and current main ancestry',
-		'Gate static and unit QA before packaging or production approval',
-		'Test release safeguard regressions',
+		'Require passing main QA on the tagged commit',
 		'Validate source metadata',
 		'Build once and test the package with pinned and current Plugin Check',
 		'Seal original ZIP, scoped notes, listing assets and source manifest',

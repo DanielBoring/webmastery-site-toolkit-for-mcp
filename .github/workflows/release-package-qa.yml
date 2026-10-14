@@ -66,6 +66,7 @@ jobs:
           bash scripts/test-release-plugin-check.sh
           bash scripts/test-release-runtime.sh
           php scripts/test-release-recovery.php
+          php scripts/test-release-checks-gate.php
           bash scripts/test-release-control-check.sh
           bash scripts/test-release-publish-prerequisites.sh
 

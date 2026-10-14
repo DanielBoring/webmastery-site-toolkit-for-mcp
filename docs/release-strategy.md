@@ -48,8 +48,14 @@ Before tagging a release:
 4. Move plugin-facing notes from `CHANGELOG.md` `## Unreleased` into the release section.
 5. Add matching `readme.txt` changelog and upgrade notice entries.
 6. Keep repository-only notes in `.github/REPOSITORY_CHANGELOG.md`.
-7. Run or confirm `composer qa`.
-8. Run or confirm `composer qa:release`.
+7. Merge the release changes to `main` and let its push checks finish.
+8. Make sure `5 - Release Package QA` and Minimum runtime QA have succeeded on
+   that exact `main` commit. The nightly run covers this when nothing merged
+   since; otherwise dispatch both on `main`:
+   `gh workflow run release-package-qa.yml --ref main` and
+   `gh workflow run minimum-runtime-qa.yml --ref main`.
+   To check readiness before tagging, run
+   `php scripts/release-checks-gate.php DanielBoring/webmastery-site-toolkit-for-mcp "$(git rev-parse origin/main)"`.
 9. Review the latest `6 - Compatibility QA` result for upstream drift.
 10. Confirm no unexpected Plugin Check findings remain.
 11. Confirm the `wordpress-org` GitHub Environment approval gate and SVN secrets are configured before pushing a release tag that should publish to WordPress.org.
@@ -59,9 +65,9 @@ Before tagging a release:
 The tag workflow owns release validation, WordPress.org SVN deployment, and GitHub release creation:
 
 1. Maintainer pushes `vX.Y.Z`.
-2. `.github/workflows/release.yml` requires an exact `vX.Y.Z` tag in fetched `main` history and runs Static QA plus Unit Tests.
+2. `.github/workflows/release.yml` requires an exact `vX.Y.Z` tag in fetched `main` history. `scripts/release-checks-gate.php` then requires that the tagged commit already passed `1 - Static QA`, `2 - Unit Tests`, `Docker QA gate`, `5 - Release Package QA` and the WordPress 6.9 / PHP 8.0 product runtime on `main`. The last two must have actually run, not been skipped. A missing or failed check stops the release and names the workflow to dispatch. The release promotes that evidence rather than re-running it.
 3. Release validation checks source/archive metadata, requirements, the tested WordPress baseline, and nonempty version entries in the changelog and upgrade-notice sections.
-4. `scripts/release-qa.sh` builds the release ZIP once, validates exact source/archive hashes, and mounts an extraction of that original ZIP as the production plugin root for contract/transport QA. Explicit harness-only binds do not expose the checkout or its development dependencies. WordPress Plugin Check receives a separate pristine extraction of the same ZIP; both the runtime production bytes and original archive digest must remain unchanged after QA. Only the exact empty host-side nested-bind placeholders are allowed in the runtime tree. The release path also checks the current Plugin Check version rather than relying only on an older pin.
+4. `scripts/release-qa.sh --publishing` builds the release ZIP once, validates exact source/archive hashes, and runs WordPress Plugin Check against a pristine extraction of that ZIP with both the pinned and the current Plugin Check versions. The original archive digest must remain unchanged. Product behavior of the ZIP was already proven by `5 - Release Package QA` on the same commit.
 5. The validated ZIP, notes, listing assets, source SHA, and integrity manifest are retained as a run-scoped artifact.
 6. The validation job writes a **Ready for GitHub production approval** summary with the release/source/run/attempt/artifact identity. **Publish release (GitHub approval required)** then waits for DanielBoring's GitHub approval in the protected `wordpress-org` environment. This is not WordPress.org staff review.
 7. The publish job explicitly installs and verifies host Subversion before its first preflight, verifies the original artifact and tag object/source, serializes production updates across all release tags, and rejects a version that would regress the published release.
@@ -69,17 +75,17 @@ The tag workflow owns release validation, WordPress.org SVN deployment, and GitH
 
 Do not manually upload an unvalidated zip to GitHub releases.
 
-The serial tag-validation job has a 120-minute outer budget for static/unit QA,
-release safeguards, original-ZIP product QA and both Plugin Check versions.
-This is an execution budget, not a passing result or a relaxation of any test,
-cleanup, integrity or production-approval requirement. Run `composer
+The tag-validation job has a 30-minute budget. It checks the tag, confirms
+main's QA results for the tagged commit, builds the ZIP and runs both Plugin
+Check versions; it is expected to take about 10 minutes. Run `composer
 test:ci-safeguards` and `composer lint:workflows` when changing this workflow.
 
 The first `v3.0.0` attempt (run `38273601311`) exhausted its former 65-minute
 budget after static/unit QA and safeguards passed, while package QA was still
 running. It produced no sealed bundle and reached no production approval.
-That immutable tag retains its original workflow: merging a later budget fix
-does not change a rerun. Existing-artifact recovery requires a successful
+That immutable tag retains its original workflow: merging a later workflow fix
+does not change a rerun. The release job was later reworked to rely on main's
+QA results instead of re-running them serially. Existing-artifact recovery requires a successful
 original validation and sealed artifact; neither local/PR packages nor partial
 tag-run results qualify. A new validation/publication path requires separate
 maintainer authorization. No release retry, new tag or publication is implied
