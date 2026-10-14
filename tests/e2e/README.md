@@ -48,7 +48,8 @@ For broader source/package acceptance, use the candidate's documented
 Do not run them concurrently in one checkout: its retention guard deliberately
 blocks lifecycle changes while another proof is active or cleanup is unresolved.
 To assess Adapter 0.7.0, explicitly set `MCP_ADAPTER_ZIP` and the verified
-`MCP_ADAPTER_SHA256`; the default QA baseline remains 0.6.1.
+`MCP_ADAPTER_SHA256` when overriding the pinned version; the default QA baseline
+is now 0.7.0.
 Existing proof guards admit only those two assessed versions. The 2025-11-25
 HTTP clients must send the matching `MCP-Protocol-Version` header on session
 requests, including notifications and cleanup; Adapter 0.7.0 rejects its absence.
