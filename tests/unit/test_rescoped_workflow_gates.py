@@ -518,7 +518,7 @@ echo "864 actual Docker gate cases passed.\n";
         self.assertNotIn("pull_request", text)
         release = jobs(text)["release-qa"]
         self.assertIn("    timeout-minutes: 30\n", release)
-        self.assertIn("    permissions:\n      contents: read\n      checks: read\n    outputs:", release)
+        self.assertIn("    permissions:\n      contents: read\n      actions: read\n      checks: read\n    outputs:", release)
         steps = re.findall(r"^      - name: (.+)$", release, re.M)
         self.assertEqual([
             "Checkout complete tag history without persistent credentials",

@@ -284,7 +284,7 @@ The [PR template](.github/PULL_REQUEST_TEMPLATE.md) uses this checklist:
 - [ ] Capability checks use the narrowest relevant WordPress capability, authorize every returned object, and fail with `WP_Error`
 - [ ] Inputs are sanitized or validated with WordPress APIs or strict schema checks
 - [ ] Response shape is unchanged, or the contract change is documented
-- [ ] New or changed abilities have positive and permission-denied cases in `tests/e2e/abilities-manifest.json`
+- [ ] New or changed abilities have positive cases in `tests/e2e/abilities-manifest.json`, plus permission-denied cases where permissions apply
 - [ ] User-facing docs are updated (`README.md`, `readme.txt`, `tests/e2e/README.md`)
 - [ ] Changelog: plugin-facing changes in `CHANGELOG.md`, repository/CI changes in `.github/REPOSITORY_CHANGELOG.md`
 - [ ] `composer phpcs`, PHPStan without new baseline debt, E2E manifest validation and `git diff --check` pass

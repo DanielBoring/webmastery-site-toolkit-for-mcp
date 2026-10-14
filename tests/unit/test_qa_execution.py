@@ -337,6 +337,8 @@ source scripts/qa-changes.sh
             ("package", "includes/class-posts.php\ndocs/x.md", "false"),
             ("package", "readme.txt", "true"),
             ("package", "scripts/build-release.sh", "true"),
+            ("package", "scripts/create-release-zip.php", "true"),
+            ("package", "LICENSE", "true"),
             ("package", '"quoted-path.md"', "true"),
         ):
             with self.subTest(scope=scope, paths=paths):

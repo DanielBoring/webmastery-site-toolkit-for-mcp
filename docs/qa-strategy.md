@@ -42,7 +42,7 @@ runs when its inputs change, decided by `scripts/qa-changes.sh`:
 | --- | --- | --- |
 | `default` | QA-tooling units and CI safeguards | Any QA-relevant file changes (source, tests, scripts, workflows, Composer, Compose). |
 | `runtime` | Docker QA (Contract + Full MCP E2E) | Any change except a known non-runtime path: docs and Markdown, `tests/unit/`, `.github/` metadata and other workflows, and release-only scripts. Unknown or quoted paths always run. |
-| `package` | Release Package QA | ZIP inputs change: main plugin file, `readme.txt`, `.gitattributes`, `assets/`, `.wordpress-org/`, and the build and package scripts. |
+| `package` | Release Package QA | ZIP inputs change: main plugin file, `readme.txt`, `LICENSE`, `.gitattributes`, `assets/`, `.wordpress-org/`, and the build, archive and package scripts. |
 
 The minimum-runtime lane runs on PRs only when its own workflow, `qa-floor.sh`
 or the PHP 8.0 fixture changes. `schedule` and `workflow_dispatch` always run

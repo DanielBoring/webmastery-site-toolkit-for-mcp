@@ -24,22 +24,43 @@ function release_checks_required(): array {
 	);
 }
 
-/** Returns a list of problems; an empty list means the commit may be released. */
+/** Events that produce main-branch evidence; pull-request runs on the same commit do not count. */
+const RELEASE_CHECKS_EVENTS = array('push', 'schedule', 'workflow_dispatch');
+
+/**
+ * Returns a list of problems; an empty list means the commit may be released.
+ * A check run counts only when its workflow run is the expected workflow file,
+ * on main, from a push, schedule or dispatch, for exactly this commit.
+ */
 function release_checks_problems(string $repository, string $sha, callable $api): array {
 	release_require(RELEASE_CHECKS_REPOSITORY === $repository, 'Release checks are restricted to the release repository.');
 	recovery_sha($sha);
-	$runs = recovery_collection($api, 'repos/' . $repository . '/commits/' . $sha . '/check-runs', 'check_runs');
+	$base = 'repos/' . $repository;
+	// Map each check suite to the workflow run that produced it.
+	$suites = array();
+	foreach (recovery_collection($api, $base . '/actions/runs?head_sha=' . $sha, 'workflow_runs') as $run) {
+		$suite = $run['check_suite_id'] ?? null;
+		if (is_int($suite) || is_string($suite)) {
+			$suites[recovery_id($suite)] = $run;
+		}
+	}
+	$runs = recovery_collection($api, $base . '/commits/' . $sha . '/check-runs', 'check_runs');
 	$latest = array();
 	foreach ($runs as $run) {
 		$name = $run['name'] ?? null;
 		if (!is_string($name) || !array_key_exists($name, release_checks_required())) {
 			continue;
 		}
-		// Only GitHub Actions results for this exact commit count as evidence.
-		if ('github-actions' !== ($run['app']['slug'] ?? null) || $sha !== ($run['head_sha'] ?? null)) {
+		if ('github-actions' !== ($run['app']['slug'] ?? null) || $sha !== ($run['head_sha'] ?? null) || 'completed' !== ($run['status'] ?? null)) {
 			continue;
 		}
-		if ('completed' !== ($run['status'] ?? null)) {
+		$suite = $run['check_suite']['id'] ?? null;
+		$workflow = (is_int($suite) || is_string($suite)) ? ($suites[(string) $suite] ?? null) : null;
+		if (!is_array($workflow)
+			|| '.github/workflows/' . release_checks_required()[$name] !== ($workflow['path'] ?? null)
+			|| 'main' !== ($workflow['head_branch'] ?? null)
+			|| !in_array($workflow['event'] ?? null, RELEASE_CHECKS_EVENTS, true)
+			|| $sha !== ($workflow['head_sha'] ?? null)) {
 			continue;
 		}
 		$completed = recovery_time($run['completed_at'] ?? null);
@@ -50,9 +71,9 @@ function release_checks_problems(string $repository, string $sha, callable $api)
 	$problems = array();
 	foreach (release_checks_required() as $name => $workflow) {
 		if (!isset($latest[$name])) {
-			$problems[] = sprintf('"%s" has not completed on %s. Dispatch it on main while main is at this commit: gh workflow run %s --ref main', $name, $sha, $workflow);
+			$problems[] = sprintf('"%s" has not completed on main for %s. Dispatch it on main while main is at this commit: gh workflow run %s --ref main', $name, $sha, $workflow);
 		} elseif ('success' !== $latest[$name]['conclusion']) {
-			$problems[] = sprintf('"%s" latest result on %s is "%s", not success. Fix it, or re-run %s on main.', $name, $sha, (string) $latest[$name]['conclusion'], $workflow);
+			$problems[] = sprintf('"%s" latest main result for %s is "%s", not success. Fix it, or re-run %s on main.', $name, $sha, (string) $latest[$name]['conclusion'], $workflow);
 		}
 	}
 	return $problems;

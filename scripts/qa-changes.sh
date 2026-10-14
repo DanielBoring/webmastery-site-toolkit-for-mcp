@@ -33,7 +33,7 @@ case "${QA_SCOPE:-default}" in
 		always='^\.github/(compatibility-versions\.json|workflows/e2e-qa\.yml)$'
 		;;
 	package)
-		relevant='^("|\.gitattributes$|readme\.txt$|webmastery-site-toolkit-for-mcp\.php$|assets/|\.wordpress-org/|docker-compose\.release\.yml$|\.github/workflows/release-package-qa\.yml$|scripts/(build-release\.sh|release-tools\.php|release-lib\.php|validate-release-package\.php|release-qa\.sh|release-plugin-check\.sh|product-artifacts\.php|qa-run\.sh|qa-changes\.sh)$)'
+		relevant='^("|\.gitattributes$|readme\.txt$|LICENSE$|webmastery-site-toolkit-for-mcp\.php$|assets/|\.wordpress-org/|docker-compose\.release\.yml$|\.github/workflows/release-package-qa\.yml$|scripts/(build-release\.sh|create-release-zip\.php|release-tools\.php|release-lib\.php|validate-release-package\.php|release-qa\.sh|release-plugin-check\.sh|product-artifacts\.php|qa-run\.sh|qa-changes\.sh)$)'
 		;;
 	*)
 		echo "Unknown QA change-detection scope." >&2
