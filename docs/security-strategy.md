@@ -1,5 +1,15 @@
 # Security strategy
 
+Release recovery has two distinct provenance paths. Existing-artifact recovery
+must still reject failed, cancelled, incomplete or missing original QA evidence.
+Input-free fresh validation is separately reviewed and locks an immutable
+release source/tag before execution; it seals a **new** successful run/attempt
+and reviewed control identity, never claims the failed run validated the ZIP.
+Both paths independently recheck actor authorization, tag/main ancestry,
+artifact integrity and version progression after the same protected
+`wordpress-org` approval. Neither local diagnostics nor a control-tag push
+authorize publication. See the release strategy's fresh-validation runbook.
+
 This public WordPress.org plugin exposes MCP abilities. Security policy governs
 access to WordPress data and site-changing actions; the
 [QA strategy](qa-strategy.md) defines the corresponding evidence. See the

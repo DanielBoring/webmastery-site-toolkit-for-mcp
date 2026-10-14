@@ -6,6 +6,28 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add input-free, explicitly locked fresh validation for the immutable 3.0.0
+  source when its frozen workflow produced no validated artifact. Keep existing
+  successful-artifact recovery unchanged, rerun every mandatory original-source
+  gate with reviewed 120-minute control logic, seal new run/control provenance,
+  and revalidate it before protected same-artifact publication.
+- Document measured release budget headroom, final-package preflight and the
+  distinction between local diagnostics, hosted acceptance and production
+  approval; do not remove fault coverage or cache mutable fixture evidence.
+
+- Inventory every PHPUnit/Python test file and existing safeguard/runtime
+  command, distinguishing production units from QA tooling and real-runtime
+  evidence. Add opt-in per-test and stage timing reports without changing
+  discovery, selecting tests, accepting skipped/failed checks, or caching passes.
+  Keep payloads and raw JUnit private; regression-test incomplete inventories,
+  original command failures, exclusive evidence and malformed profiles.
+
+- Increase the serial tag-validation job budget from 65 to 120 minutes after
+  the first 3.0.0 tag run exhausted its budget during original-ZIP testing.
+  Keep every validation, artifact-integrity and protected-publication gate;
+  regression-check the exact frozen workflow apart from this one budget change.
+  This does not modify or retry the immutable 3.0.0 tag.
+
 - Route historical assessment freshness probes and Compose lifecycle through
   the same admitted QA engine as ownership checks, and regression-test that the
   default Docker context cannot receive those calls.

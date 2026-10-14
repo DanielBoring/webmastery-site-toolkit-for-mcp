@@ -482,9 +482,12 @@ echo "864 actual Docker gate cases passed.\n";
         self.assertIn(b"864 actual Docker gate cases passed.", result.stdout)
 
     def test_main_release_policy_is_unchanged_by_framework_removal(self):
-        # Exact main policy includes tag/metadata/recovery/control/environment
-        # approval guards and both publication destinations, not only job names.
-        digest = hashlib.sha256(source("release.yml").encode()).hexdigest()
+        # Only the approved validation-job budget differs from the frozen policy.
+        text = source("release.yml")
+        self.assertIn("    timeout-minutes: 120\n", jobs(text)["release-qa"])
+        self.assertEqual(1, text.count("    timeout-minutes: 120\n"))
+        policy = text.replace("    timeout-minutes: 120\n", "    timeout-minutes: 65\n", 1)
+        digest = hashlib.sha256(policy.encode()).hexdigest()
         self.assertEqual(
             "0c19c4426972eaeaa835c35f70e79b8dac9b2fde4333f714618a292b26d970a8",
             digest,
