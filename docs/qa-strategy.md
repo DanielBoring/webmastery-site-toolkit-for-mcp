@@ -21,7 +21,7 @@ and [release strategy](release-strategy.md) for the related policies.
 | Check | Command | Required evidence |
 | --- | --- | --- |
 | `1 - Static QA` | `composer qa:static` | PHP syntax, WPCS, PHPStan level 5 and baseline ratchet, locked dependency audit, manifest/security policy and whitespace checks. |
-| `2 - Unit Tests` | `composer qa:unit`, `composer test:ci-safeguards` | Genuine PHP 8.0/8.4 unit tests and separate safeguard matrices. The stable aggregate requires all applicable jobs to succeed. |
+| `2 - Unit Tests` | `composer qa:unit`, `composer qa:tooling`, `composer test:ci-safeguards` | Product unit tests on genuine PHP 8.0 and 8.4 on every run; QA-tooling unit tests and CI safeguards on PHP 8.4 when tooling-relevant files change, nightly and on dispatch. The stable aggregate requires product units plus every applicable tooling job. |
 | `3 - Ability Contract QA` | `composer qa:contract` | Actual WordPress registration and manifest execution, allowed/denied roles, response shape, persisted no-write checks and clean debug log. |
 | `4 - Full MCP E2E QA` | `composer qa:e2e` | Actual HTTP JSON-RPC authentication, sessions, discovery, CRUD, authorization and cleanup through MCP Adapter. |
 | `5 - Release Package QA` / `Package QA gate` | `composer qa:package` | Original-ZIP layout/metadata/hash validation and contract/transport/product checks against installed production contents; no directory checker requirement. |
@@ -32,9 +32,13 @@ and [release strategy](release-strategy.md) for the related policies.
 | Workflow lint | `.github/workflows/workflow-lint.yml` | Actionlint, ShellCheck and zizmor using the maintained pinned lint tools. |
 
 Static QA runs its full toolchain on PHP 8.0 and syntax checks on PHP 8.4.
-Unit and safeguard jobs use actual interpreters on both versions and have
-separate 60-minute limits. A failed, cancelled or unexpectedly skipped matrix
-job cannot produce a successful `2 - Unit Tests` aggregate. Workflow lint is
+PHPUnit has two suites, mirrored from `tests/qa-suites.json`: `product` (tests
+of plugin code, seconds to run) and `qa-tooling` (tests of QA, release and
+evidence tooling, about 98% of unit runtime). Product units run on PHP 8.0 and
+8.4 on every PR. QA-tooling units and CI safeguards run once, on PHP 8.4, in
+parallel jobs whenever `scripts/qa-changes.sh` reports a QA-relevant change,
+and on the nightly schedule. A failed, cancelled or unexpectedly skipped job
+cannot produce a successful `2 - Unit Tests` aggregate. Workflow lint is
 independent of the local PHP toolchain.
 
 The primary runtime baseline is WordPress 7.1.3, PHP 8.2 and MCP Adapter 0.7.0.

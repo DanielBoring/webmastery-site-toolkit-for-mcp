@@ -6,9 +6,120 @@
 	convertNoticesToExceptions="true"
 	convertWarningsToExceptions="true"
 >
+	<!-- Suite membership mirrors tests/qa-suites.json; scripts/qa-profile.py inventory fails on drift. -->
 	<testsuites>
-		<testsuite name="Unit">
-			<directory>tests/unit</directory>
+		<testsuite name="product">
+			<file>tests/unit/AbilityCallbackTest.php</file>
+			<file>tests/unit/BoundedListTest.php</file>
+			<file>tests/unit/CommentsHelpersTest.php</file>
+			<file>tests/unit/CustomPostTypesHelpersTest.php</file>
+			<file>tests/unit/DatabaseTablePrivacyTest.php</file>
+			<file>tests/unit/DestructiveSafetyTest.php</file>
+			<file>tests/unit/DiagnosticsTest.php</file>
+			<file>tests/unit/InputBoundaryTest.php</file>
+			<file>tests/unit/MediaUrlTest.php</file>
+			<file>tests/unit/MetadataBoundaryTest.php</file>
+			<file>tests/unit/NativeInputValidationTest.php</file>
+			<file>tests/unit/PermissionDefaultTest.php</file>
+			<file>tests/unit/PermissionsCharacterizationTest.php</file>
+			<file>tests/unit/PermissionsLoadingTest.php</file>
+			<file>tests/unit/PermissionsTest.php</file>
+			<file>tests/unit/PluginInventoryTest.php</file>
+			<file>tests/unit/PostParentTest.php</file>
+			<file>tests/unit/PostSchedulingTest.php</file>
+			<file>tests/unit/PostsCharacterizationTest.php</file>
+			<file>tests/unit/PostsExtractionTest.php</file>
+			<file>tests/unit/PostsHelpersTest.php</file>
+			<file>tests/unit/ResponseTest.php</file>
+			<file>tests/unit/SeoAnalysisTest.php</file>
+			<file>tests/unit/SeoMetadataBoundaryTest.php</file>
+			<file>tests/unit/SeoScoreMarkerTest.php</file>
+			<file>tests/unit/SharedHelpersTest.php</file>
+			<file>tests/unit/SiteKitPermissionsTest.php</file>
+			<file>tests/unit/SiteKitUrlTest.php</file>
+			<file>tests/unit/TaxonomyWriteTest.php</file>
+			<file>tests/unit/UntrustedContentTest.php</file>
+		</testsuite>
+		<testsuite name="qa-tooling">
+			<file>tests/unit/ArraySyntaxTest.php</file>
+			<file>tests/unit/BoundFileReaderTest.php</file>
+			<file>tests/unit/BoundedBenchmarkFixtureTest.php</file>
+			<file>tests/unit/BoundedIntegrationTest.php</file>
+			<file>tests/unit/BoundedListManifestTest.php</file>
+			<file>tests/unit/BoundedManifestProjectionTest.php</file>
+			<file>tests/unit/BoundedMarkerManifestTest.php</file>
+			<file>tests/unit/BoundedProbeVerifierTest.php</file>
+			<file>tests/unit/BoundedVerifierTest.php</file>
+			<file>tests/unit/CacheWitnessBoundaryTest.php</file>
+			<file>tests/unit/CommentsCalibrationTest.php</file>
+			<file>tests/unit/CommentsProofTest.php</file>
+			<file>tests/unit/CompatibilityBaselinesTest.php</file>
+			<file>tests/unit/CoverageManifestTest.php</file>
+			<file>tests/unit/DatabasePrivacyCleanupTest.php</file>
+			<file>tests/unit/DatabasePrivacyExpirationTest.php</file>
+			<file>tests/unit/DatabasePrivacyGuardTest.php</file>
+			<file>tests/unit/DestructiveBooleanLedgerTest.php</file>
+			<file>tests/unit/DestructiveBootTest.php</file>
+			<file>tests/unit/DestructiveCleanupProofTest.php</file>
+			<file>tests/unit/DestructiveCleanupTest.php</file>
+			<file>tests/unit/DestructiveDiagnosticsTest.php</file>
+			<file>tests/unit/DestructiveLifecycleTest.php</file>
+			<file>tests/unit/DestructiveNativeBoundaryTest.php</file>
+			<file>tests/unit/DestructivePackageOwnershipTest.php</file>
+			<file>tests/unit/DestructiveProofTest.php</file>
+			<file>tests/unit/DestructiveUploadsTest.php</file>
+			<file>tests/unit/DestructiveWireTest.php</file>
+			<file>tests/unit/ErrorContractAssertionsTest.php</file>
+			<file>tests/unit/EvidenceBoundaryTest.php</file>
+			<file>tests/unit/FreshInstallPreparationTest.php</file>
+			<file>tests/unit/GithubSafeguardsTest.php</file>
+			<file>tests/unit/HttpQuietInstallationTest.php</file>
+			<file>tests/unit/InputProofTest.php</file>
+			<file>tests/unit/InputSchemaBootTest.php</file>
+			<file>tests/unit/InputSchemaCleanupTest.php</file>
+			<file>tests/unit/InputSchemaDiagnosticsTest.php</file>
+			<file>tests/unit/InputSchemaLifecycleTest.php</file>
+			<file>tests/unit/InputSchemaProofTest.php</file>
+			<file>tests/unit/LegacyArtifactsTest.php</file>
+			<file>tests/unit/MediaManifestTest.php</file>
+			<file>tests/unit/MetadataBatchFixtureTest.php</file>
+			<file>tests/unit/MetadataMigrationTest.php</file>
+			<file>tests/unit/MetadataTransportTest.php</file>
+			<file>tests/unit/PackageMountPreparationTest.php</file>
+			<file>tests/unit/ProductArtifactsTest.php</file>
+			<file>tests/unit/ProductEvidenceVerifierTest.php</file>
+			<file>tests/unit/ProductLiveCleanupTest.php</file>
+			<file>tests/unit/ProductRuntimeContextTest.php</file>
+			<file>tests/unit/ProductRuntimeSafetyTest.php</file>
+			<file>tests/unit/ProductSetupBoundaryTest.php</file>
+			<file>tests/unit/ProductStageArtifactsTest.php</file>
+			<file>tests/unit/ProductSummaryTest.php</file>
+			<file>tests/unit/QaAssertionTransitionTest.php</file>
+			<file>tests/unit/ReferenceProbeBoundaryTest.php</file>
+			<file>tests/unit/RuntimeCalibrationTest.php</file>
+			<file>tests/unit/SchedulingCalibrationTest.php</file>
+			<file>tests/unit/SchemaIntegrationLedgerTest.php</file>
+			<file>tests/unit/TaxonomyCalibrationTest.php</file>
+			<file>tests/unit/UntrustedBoundedCompositionTest.php</file>
+			<file>tests/unit/UntrustedCompactDeleteTest.php</file>
+			<file>tests/unit/UntrustedConvergenceTest.php</file>
+			<file>tests/unit/UntrustedCredentialBoundaryTest.php</file>
+			<file>tests/unit/UntrustedEntrypointTest.php</file>
+			<file>tests/unit/UntrustedFilesTest.php</file>
+			<file>tests/unit/UntrustedHygieneManifestTest.php</file>
+			<file>tests/unit/UntrustedManifestProjectionTest.php</file>
+			<file>tests/unit/UntrustedManifestTest.php</file>
+			<file>tests/unit/UntrustedPlanTest.php</file>
+			<file>tests/unit/UntrustedPrivateWireTest.php</file>
+			<file>tests/unit/UntrustedResourcesTest.php</file>
+			<file>tests/unit/UntrustedSchemaIntegrationTest.php</file>
+			<file>tests/unit/UntrustedSemanticReplayTest.php</file>
+			<file>tests/unit/UntrustedSessionReadBoundaryTest.php</file>
+			<file>tests/unit/UntrustedTypedOracleTest.php</file>
+			<file>tests/unit/UntrustedUploadPrerequisiteTest.php</file>
+			<file>tests/unit/UntrustedWireTest.php</file>
+			<file>tests/unit/WebmasterVerificationPolicyTest.php</file>
+			<file>tests/unit/WebmasterVerificationTest.php</file>
 		</testsuite>
 	</testsuites>
 </phpunit>

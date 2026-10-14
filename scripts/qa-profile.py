@@ -27,6 +27,24 @@ RUNTIME = {
 }
 
 
+PHPUNIT_SUITES = {"product": "production-unit", "qa-tooling": "qa-tooling-unit"}
+
+
+def phpunit_suites(root=ROOT):
+    """Return each phpunit.xml.dist suite's file names, relative to tests/unit, sorted."""
+    path = root / "phpunit.xml.dist"
+    if not path.is_file():
+        raise ValueError("Missing phpunit.xml.dist")
+    tree = ET.fromstring(read_bytes(path).decode("utf-8"))
+    suites = {}
+    for suite in tree.iter("testsuite"):
+        if suite.find("directory") is not None:
+            raise ValueError("PHPUnit suites must list files, not directories")
+        names = [f.text.strip().removeprefix("tests/unit/") for f in suite.iter("file")]
+        suites[suite.attrib["name"]] = sorted(names)
+    return suites
+
+
 def read_bytes(path):
     with Path(path).open("rb") as stream:
         data = stream.read(MAX_BYTES + 1)
@@ -49,6 +67,12 @@ def inventory(root=ROOT, catalog=CATALOG):
               for p in (root / "tests" / "unit").rglob("*Test.php")}
     if set(files) != actual:
         raise ValueError("Unaccounted PHPUnit files: " + repr(sorted(set(files) ^ actual)))
+    suites = phpunit_suites(root)
+    for suite, category in PHPUNIT_SUITES.items():
+        if suites.get(suite) != sorted(categories[category]):
+            raise ValueError("phpunit.xml.dist suite drift: " + suite)
+    if set(suites) != set(PHPUNIT_SUITES):
+        raise ValueError("Unknown or missing phpunit.xml.dist suites")
     python = data["python"]
     actual_python = {p.name for p in (root / "tests" / "unit").glob("test_*.py")}
     if len(python) != len(set(python)) or set(python) != actual_python:
@@ -63,7 +87,7 @@ def inventory(root=ROOT, catalog=CATALOG):
         raise ValueError("Missing, extra or changed runtime classification")
     expected_runtime = {command.split(" ", 1)[1] for command in RUNTIME.values()}
     actual_runtime = {name for name in scripts if name.startswith("qa:")}
-    actual_runtime -= {"qa:static", "qa:unit"}
+    actual_runtime -= {"qa:static", "qa:unit", "qa:tooling"}
     if actual_runtime != expected_runtime:
         raise ValueError("Unaccounted Composer runtime entry points")
     return data

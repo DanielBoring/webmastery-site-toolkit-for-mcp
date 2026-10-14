@@ -314,10 +314,11 @@ Environment-specific notes for GitHub Actions, Windows PowerShell, and Windows G
 | `composer qa` | Fast local default: Static QA plus Unit Tests |
 | `composer qa:static` | PHP/Python AST lint, mock-only HOST prerequisite controls, PHPCS, PHPStan level 5 plus baseline regression guards, Composer audit, manifest structure validation, security QA validation, and `git diff --check` |
 | `composer test:host-prerequisites` | Three fixed mock-only prerequisite/provisioning/driver suites; never native hardening or HOST acquisition |
-| `composer qa:unit` | PHPUnit unit tests |
+| `composer qa:unit` | PHPUnit `product` suite: unit tests of plugin code (seconds) |
+| `composer qa:tooling` | PHPUnit `qa-tooling` suite: tests of QA, release and evidence tooling (several minutes); run when you change `scripts/` or `tests/` tooling |
 | `composer lint:workflows` | Actionlint, ShellCheck, and offline zizmor using the required versions already on `PATH` |
 | `composer test:release-safeguards` | Package/metadata/artifact, package-runtime orchestration and checker regressions plus local Git tag/ancestry fixtures; requires PHP ZipArchive and Bash, not Docker |
-| `composer test:ci-safeguards` | Python prerequisite mocks, existing Python controls, PHPStan baseline guards, all release safeguards, and verified-download and pinned/floating dependency tests; also runs in the PHP 8.0/8.4 CI unit jobs |
+| `composer test:ci-safeguards` | Python prerequisite mocks, existing Python controls, PHPStan baseline guards, all release safeguards, and verified-download and pinned/floating dependency tests; also runs in the PHP 8.4 CI safeguards job when QA-relevant files change |
 | `composer test:phpstan-baseline` | Isolated inherited-config proof that new type errors, excess counts, and stale baseline entries fail; resolved debt can be ratcheted down |
 | `composer validate:security-qa` | Static security QA policy checks for risky permission callbacks and required permission-hardening manifest cases |
 | `composer qa:contract` | Docker Ability Contract QA against an already-running Compose stack |

@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import subprocess
 import unittest
@@ -28,13 +29,6 @@ def jobs(text):
                        if index + 1 < len(matches) else len(body)]
         for index, match in enumerate(matches)
     }
-
-
-def gate_command(text):
-    match = re.search(r"^        run: (test .+)$", text, re.M)
-    if match is None:
-        raise AssertionError("Expected a single strict shell gate")
-    return match[1]
 
 
 def artifact_uploads(text):
@@ -186,12 +180,13 @@ Write-Output ('mock-result:' + (ConvertTo-Json -InputObject $result -Compress -D
 
     def test_composer_test_steps_defer_timeout_to_bounded_jobs(self):
         unit = jobs(source("unit-tests.yml"))
-        for name, title, command in (
-            ("unit-tests", "Run Unit Tests", "composer qa:unit"),
-            ("ci-safeguards", "Run CI safeguards regression tests", "composer test:ci-safeguards"),
+        for name, title, command, minutes in (
+            ("unit-tests", "Run product unit tests", "composer qa:unit", 15),
+            ("qa-tooling", "Run QA-tooling unit tests", "composer qa:tooling", 45),
+            ("ci-safeguards", "Run CI safeguards regression tests", "composer test:ci-safeguards", 45),
         ):
             with self.subTest(job=name):
-                self.assertIn("    timeout-minutes: 60\n", unit[name])
+                self.assertIn(f"    timeout-minutes: {minutes}\n", unit[name])
                 self.assertIn(
                     "      - name: " + title + "\n"
                     "        env:\n"
@@ -270,71 +265,97 @@ refuse compose exec -T wordpress wp --allow-root core version
         )
         self.assertEqual(0, result.returncode, result.stderr.decode(errors="replace"))
 
-    def test_independent_required_php_jobs(self):
+    def test_product_units_cover_both_php_and_tooling_runs_when_applicable(self):
         unit = jobs(source("unit-tests.yml"))
         self.assertEqual(
-            {"unit-tests", "ci-safeguards", "unit-tests-gate"}, set(unit)
+            {"changes", "unit-tests", "qa-tooling", "ci-safeguards", "unit-tests-gate"}, set(unit)
         )
+        self.assertIn("run: bash scripts/qa-changes.sh >> \"$GITHUB_OUTPUT\"", unit["changes"])
+        self.assertIn("          fetch-depth: 0\n", unit["changes"])
+        product = unit["unit-tests"]
+        for required in (
+            "      fail-fast: false\n",
+            "        php: ['8.0', '8.4']\n",
+            "      contents: read\n",
+            "          php-version: ${{ matrix.php }}\n",
+            "          tools: composer:v2\n",
+            "        run: composer install --no-interaction --prefer-dist --no-progress\n",
+            "        run: composer qa:unit\n",
+            'test "$(php -r \'echo PHP_MAJOR_VERSION, ".", PHP_MINOR_VERSION;\')" = "$MATRIX_PHP"',
+        ):
+            self.assertIn(required, product)
+        self.assertNotRegex(product, re.compile(r"^    (if|needs):", re.M))
         for name, command in (
-            ("unit-tests", "composer qa:unit"),
+            ("qa-tooling", "composer qa:tooling"),
             ("ci-safeguards", "composer test:ci-safeguards"),
         ):
             with self.subTest(job=name):
                 job = unit[name]
                 for required in (
-                    "    timeout-minutes: 60\n",
-                    "      fail-fast: false\n",
-                    "        php: ['8.0', '8.4']\n",
+                    "    needs: changes\n",
+                    "    if: needs.changes.outputs.should-run == 'true'\n",
                     "      contents: read\n",
-                    "          php-version: ${{ matrix.php }}\n",
+                    "          php-version: '8.4'\n",
                     "          tools: composer:v2\n",
                     "        run: composer install --no-interaction --prefer-dist --no-progress\n",
                     "        run: " + command + "\n",
-                    'test "$(php -r \'echo PHP_MAJOR_VERSION, ".", PHP_MINOR_VERSION;\')" = "$MATRIX_PHP"',
                 ):
                     self.assertIn(required, job)
-                self.assertNotRegex(job, re.compile(r"^    (if|needs):", re.M), name)
-                self.assertNotIn("continue-on-error:", job)
-                self.assertEqual(1, job.count("shivammathur/setup-php@"))
+                self.assertNotIn("matrix", job)
+        for job in unit.values():
+            self.assertNotIn("continue-on-error:", job)
         self.assertNotIn("composer test:ci-safeguards", unit["unit-tests"])
+        self.assertNotIn("composer qa:tooling", unit["unit-tests"])
         self.assertNotIn("composer qa:unit", unit["ci-safeguards"])
         gate = unit["unit-tests-gate"]
         self.assertIn("    name: 2 - Unit Tests\n", gate)
-        self.assertIn("    needs: [unit-tests, ci-safeguards]\n", gate)
+        self.assertIn("    needs: [changes, unit-tests, qa-tooling, ci-safeguards]\n", gate)
         self.assertIn("    if: ${{ always() }}\n", gate)
-        self.assertIn("UNIT_RESULT: ${{ needs.unit-tests.result }}", gate)
-        self.assertIn("SAFEGUARD_RESULT: ${{ needs.ci-safeguards.result }}", gate)
-        self.assertNotIn("continue-on-error:", gate)
+        for required in (
+            "DETECTOR: ${{ needs.changes.result }}",
+            "SHOULD_RUN: ${{ needs.changes.outputs.should-run }}",
+            "UNIT_RESULT: ${{ needs.unit-tests.result }}",
+            "TOOLING_RESULT: ${{ needs.qa-tooling.result }}",
+            "SAFEGUARD_RESULT: ${{ needs.ci-safeguards.result }}",
+            'test "$UNIT_RESULT" = success',
+            'php scripts/qa-check-gate.php "$DETECTOR" "$SHOULD_RUN" "$TOOLING_RESULT"',
+            'php scripts/qa-check-gate.php "$DETECTOR" "$SHOULD_RUN" "$SAFEGUARD_RESULT"',
+        ):
+            self.assertIn(required, gate)
+        self.assertIn("  schedule:\n", source("unit-tests.yml"))
 
     def test_actual_aggregate_shell_rejects_failure_cancellation_skip_and_unknown(self):
-        command = gate_command(jobs(source("unit-tests.yml"))["unit-tests-gate"])
-        states = ("success", "failure", "cancelled", "skipped", "", "unknown")
-        script = ["set -eu", "gate() { " + command + "; }"]
-        for unit, safeguard in itertools.product(states, repeat=2):
+        gate = jobs(source("unit-tests.yml"))["unit-tests-gate"]
+        block = re.search(r"^        run: \|\n((?:          .+\n?)+)", gate, re.M)
+        self.assertIsNotNone(block, "Expected the gate's multi-line run block")
+        commands = "\n".join(line.strip() for line in block[1].splitlines())
+        states = ("success", "failure", "cancelled", "skipped", "")
+        # Actions runs a run block as `bash -e`; execute it the same way per case.
+        script = ["set -u", "GATE=" + shlex.quote(commands),
+                  'gate() { bash --noprofile --norc -e -c "$GATE" >/dev/null 2>&1; }']
+        cases = 0
+        for detector, should, unit, tooling, safeguard in itertools.product(
+            ("success", "failure"), ("true", "false"), ("success", "failure", "skipped"), states, states
+        ):
+            ran = should == "true" and tooling == safeguard == "success"
+            skipped = should == "false" and tooling == safeguard == "skipped"
+            expected = detector == "success" and unit == "success" and (ran or skipped)
             script.extend((
-                "UNIT_RESULT=" + "'" + unit + "'",
-                "SAFEGUARD_RESULT=" + "'" + safeguard + "'",
+                f"DETECTOR='{detector}' SHOULD_RUN='{should}' UNIT_RESULT='{unit}'"
+                f" TOOLING_RESULT='{tooling}' SAFEGUARD_RESULT='{safeguard}'",
+                "export DETECTOR SHOULD_RUN UNIT_RESULT TOOLING_RESULT SAFEGUARD_RESULT",
                 "if gate; then observed=0; else observed=1; fi",
-                "test \"$observed\" = " +
-                ("0" if unit == safeguard == "success" else "1"),
+                f"test \"$observed\" = {0 if expected else 1} || {{ echo 'unexpected:' "
+                f"'{detector} {should} {unit} {tooling} {safeguard}' >&2; exit 1; }}",
             ))
-        # Each PHP cell is an independent required execution; a bad cell makes
-        # its matrix result non-success, including cancellation and skipping.
-        for cells in itertools.product(states, repeat=4):
-            unit = "success" if cells[0] == cells[1] == "success" else "failure"
-            safeguard = "success" if cells[2] == cells[3] == "success" else "failure"
-            script.extend((
-                "UNIT_RESULT='" + unit + "'; SAFEGUARD_RESULT='" + safeguard + "'",
-                "if gate; then observed=0; else observed=1; fi",
-                "test \"$observed\" = " +
-                ("0" if all(cell == "success" for cell in cells) else "1"),
-            ))
+            cases += 1
         result = subprocess.run(
             ["bash", "--noprofile", "--norc"], input=("\n".join(script) + "\n").encode(),
-            capture_output=True, cwd=ROOT, timeout=30,
+            capture_output=True, cwd=ROOT, timeout=120,
             env={**os.environ, "BASH_ENV": os.devnull},
         )
         self.assertEqual(0, result.returncode, result.stderr.decode(errors="replace"))
+        self.assertEqual(300, cases)
 
     def test_no_removed_framework_calls_or_synthetic_placeholder(self):
         obsolete = (
@@ -371,7 +392,7 @@ refuse compose exec -T wordpress wp --allow-root core version
                 for action in re.findall(r"^\s+uses: (\S+)", text, re.M):
                     self.assertRegex(action, r"^[^@]+@[0-9a-f]{40}$")
 
-    def test_composer_keeps_main_static_and_full_unit_discovery(self):
+    def test_composer_keeps_main_static_and_split_unit_suites(self):
         composer = json.loads((ROOT / "composer.json").read_text(encoding="utf-8"))
         scripts = composer["scripts"]
         self.assertEqual([
@@ -380,9 +401,14 @@ refuse compose exec -T wordpress wp --allow-root core version
             "@validate:security-qa", "@diff-check",
         ], scripts["qa:static"])
         self.assertEqual(
-            "php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist",
+            "php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist --testsuite product",
             scripts["qa:unit"],
         )
+        self.assertEqual(
+            "php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist --testsuite qa-tooling",
+            scripts["qa:tooling"],
+        )
+        self.assertEqual(["@qa:static", "@qa:unit"], scripts["qa"])
         self.assertEqual([
             "php scripts/test-release-safeguards.php",
             "bash scripts/test-release-tag-check.sh",
