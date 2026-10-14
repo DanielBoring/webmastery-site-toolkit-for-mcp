@@ -6,6 +6,11 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Update the pinned PHP setup and artifact upload/download actions consistently
+  across normal and fresh-validation workflows. Permit only these exact reviewed
+  pin replacements in the frozen release-policy regression; retain its original
+  fingerprint and every validation, provenance and protected-publication check.
+
 - Add input-free, explicitly locked fresh validation for the immutable 3.0.0
   source when its frozen workflow produced no validated artifact. Keep existing
   successful-artifact recovery unchanged, rerun every mandatory original-source

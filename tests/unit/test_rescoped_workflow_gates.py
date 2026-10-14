@@ -482,15 +482,33 @@ echo "864 actual Docker gate cases passed.\n";
         self.assertIn(b"864 actual Docker gate cases passed.", result.stdout)
 
     def test_main_release_policy_is_unchanged_by_framework_removal(self):
-        # Only the approved validation-job budget differs from the frozen policy.
+        # Normalize only reviewed budget/pin changes, not arbitrary action refs.
         text = source("release.yml")
         self.assertIn("    timeout-minutes: 120\n", jobs(text)["release-qa"])
         self.assertEqual(1, text.count("    timeout-minutes: 120\n"))
         policy = text.replace("    timeout-minutes: 120\n", "    timeout-minutes: 65\n", 1)
+        unreviewed = policy.replace(
+            "cf430e030ddbb5b0abf93d22962f4752f3646cd9", "0" * 40
+        )
+        for current, frozen in (
+            ("shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0",
+             "shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2"),
+            ("actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2",
+             "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1"),
+            ("actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2",
+             "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1"),
+        ):
+            policy = policy.replace(current, frozen)
+            unreviewed = unreviewed.replace(current, frozen)
         digest = hashlib.sha256(policy.encode()).hexdigest()
         self.assertEqual(
             "0c19c4426972eaeaa835c35f70e79b8dac9b2fde4333f714618a292b26d970a8",
             digest,
+        )
+        self.assertNotEqual(digest, hashlib.sha256(unreviewed.encode()).hexdigest())
+        self.assertNotEqual(
+            digest,
+            hashlib.sha256(policy.replace("cancel-in-progress: false", "cancel-in-progress: true").encode()).hexdigest(),
         )
 
     def test_compatibility_preserves_main_campaign_and_honest_floor_label(self):
