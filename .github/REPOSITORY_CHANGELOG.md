@@ -6,6 +6,11 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Update WordPress analysis stubs to 7.1.2 while retaining tested PHPStan 2.2.16
+  within the 2.2 series. PHPStan 2.3.1 incorrectly reports a referenced,
+  by-reference download-stream capture as unused; do not remove the ownership
+  guard or suppress diagnostics to accept the tooling upgrade.
+
 - Add input-free, explicitly locked fresh validation for the immutable 3.0.0
   source when its frozen workflow produced no validated artifact. Keep existing
   successful-artifact recovery unchanged, rerun every mandatory original-source
