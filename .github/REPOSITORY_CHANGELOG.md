@@ -6,6 +6,11 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Promote the tested development baseline to WordPress 7.1.3, MCP Adapter 0.7.0,
+  Yoast 28.6 and SEOPress 10.3, with the verified Adapter archive digest.
+  Keep WordPress 6.9 / PHP 8.0 support floors and the published 3.0.0 artifact
+  unchanged; baseline adoption requires current-head source/package acceptance.
+
 - Add input-free, explicitly locked fresh validation for the immutable 3.0.0
   source when its frozen workflow produced no validated artifact. Keep existing
   successful-artifact recovery unchanged, rerun every mandatory original-source
