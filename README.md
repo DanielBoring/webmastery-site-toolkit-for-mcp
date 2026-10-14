@@ -52,8 +52,8 @@ Docker is the default. The explicit Podman API adapter requires a connected
 Podman engine, Docker CLI/Compose and a local socket. Its runtime compatibility
 has not been verified; it is not a supported replacement yet.
 
-The current development QA baseline is **WordPress 7.1.2 with MCP Adapter
-0.6.1**. The default Docker image and compatibility metadata use that baseline;
+The current development QA baseline is **WordPress 7.1.3 with MCP Adapter
+0.7.0**. The default Docker image and compatibility metadata use that baseline;
 the declared WordPress 6.9 / PHP 8.0 plugin minimums are unchanged. See
 [QA Strategy](docs/qa-strategy.md) for the separate compatibility and runtime gates.
 

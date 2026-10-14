@@ -37,7 +37,7 @@ separate 60-minute limits. A failed, cancelled or unexpectedly skipped matrix
 job cannot produce a successful `2 - Unit Tests` aggregate. Workflow lint is
 independent of the local PHP toolchain.
 
-The primary runtime baseline is WordPress 7.1.2, PHP 8.2 and MCP Adapter 0.6.1.
+The primary runtime baseline is WordPress 7.1.3, PHP 8.2 and MCP Adapter 0.7.0.
 Dependency versions and executable-download digests come from
 `.github/compatibility-versions.json`. `readme.txt` retains `Tested up to: 7.1`.
 The advertised minimums remain WordPress 6.9 and PHP 8.0.
@@ -699,12 +699,15 @@ also passed. The runtime campaign preceded those unit-fixture corrections;
 original-ZIP acceptance and a final-candidate runtime rerun remain blocked.
 These results do not establish Podman support or GitHub PR-event behavior.
 
-Adapter 0.6.1 remains the supported, pinned baseline. The attempted Adapter
+At that historical checkpoint, Adapter 0.6.1 remained the pinned baseline. The attempted Adapter
 0.7.0 campaign stopped at the product proof's explicit 0.6.1 version check,
 before proof actors were created. This is a harness compatibility refusal,
 not a reproduced plugin regression or the historical HTTP 400 failure.
-Adapter 0.7.0 support is deferred; latest/combined compatibility acceptance and
-baseline promotion remain blocked. The failed run's stack and private evidence
+Adapter 0.7.0 promotion was blocked in that campaign. A later successful
+[compatibility campaign](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/actions/runs/38295107636)
+covered the proposed dependency set and its source/package checks; current PR
+acceptance must still pass on the updated head before promotion.
+The failed run's stack and private evidence
 remain retained because its resource ledger did not establish cleanup.
 Do not clear the checkout-wide retention marker or rerun runtime/package QA
 in this checkout until a reviewed recovery proves cleanup.
