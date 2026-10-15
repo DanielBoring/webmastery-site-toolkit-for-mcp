@@ -6,6 +6,14 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Give `scripts/qa-changes.sh` named scopes and use it in Docker QA (`runtime`)
+  and Release Package QA (`package`) instead of one broad path list. Docs,
+  unit-test-only, other-workflow and release-only script changes no longer run
+  the Docker runtime suites; package QA runs on PRs only for ZIP inputs. Package
+  QA and the WordPress 6.9 / PHP 8.0 lane now run nightly on `main` and on
+  dispatch; the floor lane runs on PRs only when its own files change. Unknown
+  and Git-quoted paths still run everything.
+
 - Split PHPUnit into `product` and `qa-tooling` suites, mirrored from
   `tests/qa-suites.json` and checked for drift by the suite inventory. Product
   units still run on PHP 8.0 and 8.4 on every PR; QA-tooling units and CI

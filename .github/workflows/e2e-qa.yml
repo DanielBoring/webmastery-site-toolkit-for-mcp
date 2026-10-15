@@ -38,38 +38,8 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           BEFORE_SHA: ${{ github.event.before }}
           CURRENT_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            echo "should-run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            MERGE_BASE="$(git merge-base "$BASE_SHA" "$HEAD_SHA")"
-            CHANGED_FILES="$(git diff --name-only "$MERGE_BASE" "$HEAD_SHA")"
-          else
-            if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
-              CHANGED_FILES="$(git ls-tree -r --name-only "$CURRENT_SHA")"
-            else
-              CHANGED_FILES="$(git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA")"
-            fi
-          fi
-
-          printf '%s\n' "$CHANGED_FILES"
-
-          # Conservatively test Git-quoted paths (e.g. names containing newlines or non-ASCII).
-          if grep -E '^("|\.github/compatibility-versions\.json|\.github/workflows/|docker-compose(\.release)?\.yml|scripts/|tests/|includes/|webmastery-site-toolkit-for-mcp\.php|readme\.txt|composer\.(json|lock)|phpcs\.xml\.dist|phpstan\.neon\.dist|phpunit\.xml\.dist|assets/)' <<< "$CHANGED_FILES" > /dev/null; then
-            echo "should-run=true" >> "$GITHUB_OUTPUT"
-          else
-            status=$?
-            if [ "$status" -ne 1 ]; then
-              echo "Runtime change detection failed." >&2
-              exit "$status"
-            fi
-            echo "should-run=false" >> "$GITHUB_OUTPUT"
-          fi
+          QA_SCOPE: runtime
+        run: bash scripts/qa-changes.sh >> "$GITHUB_OUTPUT"
 
   ability-contract-qa:
     name: 3 - Ability Contract QA

@@ -1,6 +1,7 @@
 """Execute launcher engine controls with API doubles, never a real container engine."""
 
 import json
+import re
 import os
 from pathlib import Path
 import shutil
@@ -189,12 +190,25 @@ echo "Term persistence and diagnostic mutation controls passed.\n";
             ("minimum-runtime-qa.yml", "php80-runtime", "minimum-runtime-gate"),
         ):
             text = (ROOT / ".github" / "workflows" / file).read_text()
-            self.assertNotIn("    paths:", text)
+            self.assertIn("  schedule:\n", text)
+            self.assertIn("  workflow_dispatch:\n", text)
+            self.assertNotIn("  push:\n", text)
             self.assertIn(f"needs: [changes, {producer}]", text)
             gate_text = text.split(f"\n  {gate}:", 1)[1]
             self.assertIn("if: ${{ always() }}", gate_text)
             self.assertIn('run: php scripts/qa-check-gate.php "$DETECTOR" "$SHOULD_RUN" "$RESULT"', gate_text)
             self.assertNotIn("actions/upload-artifact@", gate_text)
+        package = (ROOT / ".github" / "workflows" / "release-package-qa.yml").read_text()
+        self.assertNotIn("    paths:", package)
+        self.assertIn("          QA_SCOPE: package\n", package)
+        floor = (ROOT / ".github" / "workflows" / "minimum-runtime-qa.yml").read_text()
+        paths = re.search(r"    paths:\n((?:      - .+\n)+)", floor)
+        self.assertIsNotNone(paths)
+        self.assertEqual(
+            ["'.github/workflows/minimum-runtime-qa.yml'", "'scripts/qa-floor.sh'",
+             "'tests/fixtures/php80-floor/**'"],
+            [line.strip()[2:] for line in paths[1].splitlines()],
+        )
         for file, count in (("e2e-qa.yml", 2), ("compatibility-qa.yml", 1)):
             text = (ROOT / ".github" / "workflows" / file).read_text()
             self.assertEqual(count, text.count("E2E_ARTIFACTS_DIR: e2e-artifacts"))
@@ -310,6 +324,35 @@ source scripts/qa-changes.sh
             })
             self.assertEqual(0, result.returncode, result.stderr.decode())
             self.assertIn(f"should-run={selected}".encode(), result.stdout)
+        for scope, paths, selected in (
+            ("runtime", "README.md\ndocs/qa-strategy.md\ntests/unit/ResponseTest.php", "false"),
+            ("runtime", ".github/workflows/unit-tests.yml\nscripts/test-release-runtime.sh", "false"),
+            ("runtime", "scripts/release-tools.php", "true"),
+            ("runtime", ".github/workflows/e2e-qa.yml", "true"),
+            ("runtime", ".github/compatibility-versions.json", "true"),
+            ("runtime", "includes/class-posts.php", "true"),
+            ("runtime", "tests/e2e/ability-runner.php", "true"),
+            ("runtime", "unknown-new-path.txt", "true"),
+            ("runtime", '"quoted-path.md"', "true"),
+            ("package", "includes/class-posts.php\ndocs/x.md", "false"),
+            ("package", "readme.txt", "true"),
+            ("package", "scripts/build-release.sh", "true"),
+            ("package", "scripts/create-release-zip.php", "true"),
+            ("package", "LICENSE", "true"),
+            ("package", '"quoted-path.md"', "true"),
+        ):
+            with self.subTest(scope=scope, paths=paths):
+                result = self.run_control(body, {
+                    "EVENT_NAME": "pull_request", "BASE_SHA": "base", "HEAD_SHA": "head",
+                    "MOCK_CHANGED": paths, "QA_SCOPE": scope,
+                })
+                self.assertEqual(0, result.returncode, result.stderr.decode())
+                self.assertIn(f"should-run={selected}".encode(), result.stdout)
+        result = self.run_control(body, {
+            "EVENT_NAME": "pull_request", "BASE_SHA": "base", "HEAD_SHA": "head",
+            "MOCK_CHANGED": "README.md", "QA_SCOPE": "unknown",
+        })
+        self.assertEqual(78, result.returncode)
         for event in ("schedule", "workflow_dispatch"):
             result = self.run_control(body, {"EVENT_NAME": event, "MOCK_CHANGED": "README.md"})
             self.assertEqual(0, result.returncode, result.stderr.decode())

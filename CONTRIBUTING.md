@@ -96,8 +96,10 @@ Product QA is separate from directory publishing checks. Use `--package` or
 `-Package` for original-ZIP plugin behavior, and `--publishing` or `-Publishing`
 for Plugin Check without product acceptance. `--release`/`-Release` retains
 both requirements. No result establishes WordPress.org approval or listing.
-`Package QA gate` and `Minimum runtime QA gate` report on every applicable PR,
-but their activation in the live branch ruleset is a separate rollout step.
+`Package QA gate` reports on every PR and runs package QA when ZIP inputs
+change. The minimum-runtime lane runs nightly and on dispatch rather than on
+every PR. Neither is a required merge check; both must be green on the commit
+you tag for release.
 
 PHPStan runs at level 5 with a reviewed, file/message/identifier/count-scoped baseline and a PHP 8.0 analysis target. New diagnostics must be fixed rather than added to the baseline. When fixing existing debt, lower the matching count or remove the resolved entry in the same PR; unmatched entries fail full-project analysis. Run `composer phpstan` without individual-file arguments and `composer test:phpstan-baseline` to verify the ratchet. See the [baseline review and regeneration policy](docs/qa-strategy.md#phpstan-level-5-and-baseline-ratchet).
 
