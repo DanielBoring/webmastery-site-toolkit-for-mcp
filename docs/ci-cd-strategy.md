@@ -29,7 +29,7 @@ publishing. The
 | `5 - Release Package QA` | Every PR (runs only for ZIP-input changes), nightly, manual | Original-ZIP installed product checks and always-reporting `Package QA gate`; no directory checker requirement. |
 | Minimum runtime QA | PRs changing the floor lane itself, nightly, manual | Actual WordPress 6.9 / PHP 8.0.30 contract/HTTP execution and `Minimum runtime QA gate`. |
 | WordPress.org publishing checks | Manual | Pristine original-ZIP Plugin Check, separately reported without product acceptance or publication. |
-| `5 - Release` | Release tag, guarded recovery dispatch | Main ancestry, Static/Unit/package QA and protected serialized publication. Recovery reuses original validated evidence through a reviewed control tag. |
+| `5 - Release` | Release tag, guarded recovery dispatch | Main ancestry, required passing main QA on the tagged commit (including package and minimum-runtime QA), ZIP build with pinned and current Plugin Check, and protected serialized publication. Recovery reuses original validated evidence through a reviewed control tag. |
 | `6 - Compatibility QA` | Weekly schedule, manual | Official upstream discovery, pinned/candidate combinations and reviewed baseline-update PRs. |
 | `7 - Issue Backlog Import` | Manual | Serialized dry-run-first backlog preview/import. |
 | Workflow lint | PR, main push, manual | Actions syntax, shell lint and workflow security using pinned tools. |

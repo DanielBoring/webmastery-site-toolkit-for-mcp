@@ -9,7 +9,7 @@ function recovery_fixture(): array {
 	$run = array('id' => 456, 'repository' => $repo, 'head_repository' => $repo, 'workflow_id' => 789, 'path' => '.github/workflows/release.yml', 'event' => 'push', 'status' => 'completed', 'conclusion' => 'failure', 'head_sha' => str_repeat('a', 40), 'head_branch' => 'v2.6.0', 'run_attempt' => 1);
 	$artifact = array('id' => 100, 'name' => 'release-456-1', 'expired' => false, 'size_in_bytes' => 1000, 'digest' => 'sha256:' . str_repeat('b', 64), 'created_at' => '2026-09-21T13:21:56Z', 'expires_at' => '2026-10-21T13:21:55Z', 'workflow_run' => array('id' => 456, 'repository_id' => 123, 'head_repository_id' => 123, 'head_sha' => $run['head_sha'], 'head_branch' => 'v2.6.0'));
 	$steps = array();
-	foreach (array('Gate exact tag and current main ancestry', 'Gate static and unit QA before packaging or production approval', 'Test release safeguard regressions', 'Validate source metadata', 'Build once and test the package with pinned and current Plugin Check', 'Seal original ZIP, scoped notes, listing assets and source manifest', 'Upload immutable run-scoped validated bundle') as $name) {
+	foreach (array('Gate exact tag and current main ancestry', 'Require passing main QA on the tagged commit', 'Validate source metadata', 'Build once and test the package with pinned and current Plugin Check', 'Seal original ZIP, scoped notes, listing assets and source manifest', 'Upload immutable run-scoped validated bundle') as $name) {
 		$steps[] = array('name' => $name, 'status' => 'completed', 'conclusion' => 'success', 'started_at' => '2026-09-21T13:21:54Z', 'completed_at' => '2026-09-21T13:21:56Z');
 	}
 	return array(
@@ -138,7 +138,7 @@ foreach (array('repository', 'head_repository') as $field) {
 foreach (array('id' => 457, 'repository_id' => 124, 'head_repository_id' => 124, 'head_sha' => str_repeat('d', 40), 'head_branch' => 'v2.5.0') as $field => $value) {
 	$reject('artifact identity ' . $field, static function (&$f) use ($field, $value): void { $f['artifact']['workflow_run'][$field] = $value; }, 'Artifact run/source/repository');
 }
-foreach (range(0, 6) as $index) {
+foreach (array_keys(recovery_fixture()['job']['steps']) as $index) {
 	$reject('required QA step failure ' . $index, static function (&$f) use ($index): void { $f['job']['steps'][$index]['conclusion'] = 'skipped'; }, 'required QA step');
 }
 $reject('duplicate required QA step', static function (&$f): void { $f['job']['steps'][] = $f['job']['steps'][0]; }, 'required QA step');

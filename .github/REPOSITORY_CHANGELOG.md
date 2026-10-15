@@ -6,6 +6,15 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Make the tag release promote main's QA results instead of re-running them.
+  `scripts/release-checks-gate.php` requires that the tagged commit already
+  passed Static, Unit, Docker, Release Package QA and the WordPress 6.9 /
+  PHP 8.0 runtime in their expected workflows on `main` (push, schedule or
+  dispatch; pull-request runs do not count), then the job builds the ZIP and runs the pinned
+  and current Plugin Check. The release job budget drops from 120 to 30 minutes.
+  Recovery now expects the new step names. The byte-digest freeze of
+  `release.yml` is replaced by a test of the release policy itself.
+
 - Give `scripts/qa-changes.sh` named scopes and use it in Docker QA (`runtime`)
   and Release Package QA (`package`) instead of one broad path list. Docs,
   unit-test-only, other-workflow and release-only script changes no longer run

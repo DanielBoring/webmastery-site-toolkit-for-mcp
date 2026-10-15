@@ -23,9 +23,11 @@ jobs:
     name: 5 - Validate Release
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 30
     permissions:
       contents: read
+      actions: read
+      checks: read
     outputs:
       version: ${{ steps.metadata.outputs.version }}
       source-sha: ${{ steps.metadata.outputs.source-sha }}
@@ -53,21 +55,11 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      - name: Install locked development dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: Gate static and unit QA before packaging or production approval
-        run: composer qa
-
-      - name: Test release safeguard regressions
-        run: |
-          php scripts/test-release-safeguards.php
-          bash scripts/test-release-tag-check.sh
-          bash scripts/test-release-plugin-check.sh
-          bash scripts/test-release-runtime.sh
-          php scripts/test-release-recovery.php
-          bash scripts/test-release-control-check.sh
-          bash scripts/test-release-publish-prerequisites.sh
+      - name: Require passing main QA on the tagged commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: php scripts/release-checks-gate.php "$REPOSITORY" "$(git rev-parse 'HEAD^{commit}')"
 
       - name: Validate source metadata
         id: metadata
@@ -88,7 +80,7 @@ jobs:
           COMPOSE_PROJECT_NAME: wstm-release-qa-${{ github.run_id }}-${{ github.run_attempt }}
           RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
           REQUIRE_CURRENT_PLUGIN_CHECK: '1'
-        run: bash scripts/release-qa.sh "$RELEASE_VERSION"
+        run: bash scripts/release-qa.sh --publishing "$RELEASE_VERSION"
 
       - name: Seal original ZIP, scoped notes, listing assets and source manifest
         env:

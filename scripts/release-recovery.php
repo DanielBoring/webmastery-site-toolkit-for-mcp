@@ -39,7 +39,7 @@ function recovery_collection(callable $api, string $path, string $key): array {
 	$items = array();
 	$total = null;
 	for ($page = 1; $page <= 100; ++$page) {
-		$data = $api($path . '?per_page=100&page=' . $page);
+		$data = $api($path . (str_contains($path, '?') ? '&' : '?') . 'per_page=100&page=' . $page);
 		release_require(is_int($data['total_count'] ?? null) && $data['total_count'] >= 0 && is_array($data[$key] ?? null), 'Malformed paginated evidence.');
 		release_require(null === $total || $total === $data['total_count'], 'Evidence changed during pagination.');
 		$total = $data['total_count'];
@@ -120,8 +120,7 @@ function recovery_resolve(array $input, callable $api, int $now): array {
 	release_require(is_array($qa['steps'] ?? null), 'Missing original QA steps.');
 	$required = array(
 		'Gate exact tag and current main ancestry',
-		'Gate static and unit QA before packaging or production approval',
-		'Test release safeguard regressions',
+		'Require passing main QA on the tagged commit',
 		'Validate source metadata',
 		'Build once and test the package with pinned and current Plugin Check',
 		'Seal original ZIP, scoped notes, listing assets and source manifest',
