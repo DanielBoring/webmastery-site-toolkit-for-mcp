@@ -42,7 +42,8 @@
 			"@validate:security-qa",
 			"@diff-check"
 		],
-		"qa:unit": "php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist",
+		"qa:tooling": "php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist --testsuite qa-tooling",
+		"qa:unit": "php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist --testsuite product",
 		"test": [
 			"@qa:unit"
 		],

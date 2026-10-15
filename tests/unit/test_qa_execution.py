@@ -310,6 +310,10 @@ source scripts/qa-changes.sh
             })
             self.assertEqual(0, result.returncode, result.stderr.decode())
             self.assertIn(f"should-run={selected}".encode(), result.stdout)
+        for event in ("schedule", "workflow_dispatch"):
+            result = self.run_control(body, {"EVENT_NAME": event, "MOCK_CHANGED": "README.md"})
+            self.assertEqual(0, result.returncode, result.stderr.decode())
+            self.assertIn(b"should-run=true", result.stdout)
         result = self.run_control(body, {"EVENT_NAME": "unknown"})
         self.assertEqual(78, result.returncode)
         result = self.run_control(body, {

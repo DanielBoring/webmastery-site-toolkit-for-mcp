@@ -6,6 +6,13 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Split PHPUnit into `product` and `qa-tooling` suites, mirrored from
+  `tests/qa-suites.json` and checked for drift by the suite inventory. Product
+  units still run on PHP 8.0 and 8.4 on every PR; QA-tooling units and CI
+  safeguards now run once, on PHP 8.4, in parallel, when QA-relevant files
+  change and nightly. `composer qa` therefore runs product units only; use
+  `composer qa:tooling` for tooling changes. Required check names are unchanged.
+
 - Update WordPress analysis stubs to 7.1.2 while retaining tested PHPStan 2.2.16
   within the 2.2 series. PHPStan 2.3.1 incorrectly reports a referenced,
   by-reference download-stream capture as unused; do not remove the ownership

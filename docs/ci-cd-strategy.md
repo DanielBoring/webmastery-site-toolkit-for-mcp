@@ -42,18 +42,20 @@ security-sensitive changes also need actual `3 - Ability Contract QA` and
 and workflow lint before merge. Broad compatibility is scheduled/manual unless
 a supported combination or dependency change makes it relevant to the PR.
 
-Unit tests and safeguards run as separate PHP 8.0/8.4 matrices, each with a
-60-minute limit and `fail-fast: false`. They retain applicable main/product
-regressions, baseline controls, narrow permissions and interpreter selection.
-The `2 - Unit Tests` aggregate requires every applicable matrix result to be
-successful; failure, cancellation or unexpected skip cannot pass it. Separate
-jobs prevent completed units from consuming the safeguard budget.
+Product unit tests (`composer qa:unit`, the `product` PHPUnit suite) run as a
+PHP 8.0/8.4 matrix with a 15-minute limit and `fail-fast: false`. QA-tooling
+unit tests (`composer qa:tooling`) and CI safeguards run as two parallel PHP 8.4
+jobs with 45-minute limits when `scripts/qa-changes.sh` reports a QA-relevant
+change, on the nightly schedule and on dispatch. The `2 - Unit Tests` aggregate
+requires product units to succeed and each tooling job to have run and
+succeeded, or to have been skipped by a successful detector; failure,
+cancellation or unexpected skip cannot pass it.
 
-Suite classification and optional timing reports are diagnostics, not change
-selection or gate inputs. `composer qa:unit` still discovers the complete
-`tests/unit` directory, and `composer test:ci-safeguards` retains every existing
-command plus the profiler/inventory regressions. Required check names,
-interpreter lanes, memory limits and failure/skip handling are unchanged.
+`tests/qa-suites.json` is the source of the PHPUnit suite split;
+`scripts/qa-profile.py inventory` fails if `phpunit.xml.dist` drifts from it or
+a test file is unclassified. Running PHPUnit without `--testsuite` still runs
+both suites. Required check names, memory limits and failure/skip handling are
+unchanged.
 Do not upload raw JUnit, fixture output or data-provider labels. The
 [measurement procedure](qa-strategy.md#suite-classification-and-measurement)
 defines provenance, repeated comparisons and unresolved composite-stage timings.

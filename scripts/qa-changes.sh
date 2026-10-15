@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-if [[ "${EVENT_NAME:?Workflow event required}" == workflow_dispatch ]]; then
+if [[ "${EVENT_NAME:?Workflow event required}" == workflow_dispatch || "$EVENT_NAME" == schedule ]]; then
 	echo "should-run=true"
 	exit 0
 fi

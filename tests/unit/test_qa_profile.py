@@ -23,8 +23,39 @@ class QaProfileTest(unittest.TestCase):
         self.assertEqual(109, sum(len(v) for v in catalog["phpunit"].values()))
         self.assertEqual(5, len(catalog["python"]))
         xml = (ROOT / "phpunit.xml.dist").read_text()
-        self.assertIn("<directory>tests/unit</directory>", xml)
+        self.assertNotIn("<directory>", xml)
         self.assertNotIn("<exclude>", xml)
+        suites = PROFILE.phpunit_suites()
+        self.assertEqual(sorted(catalog["phpunit"]["production-unit"]), suites["product"])
+        self.assertEqual(sorted(catalog["phpunit"]["qa-tooling-unit"]), suites["qa-tooling"])
+
+    def test_phpunit_suite_drift_fails_inventory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            unit = root / "tests" / "unit"
+            unit.mkdir(parents=True)
+            (unit / "ProductTest.php").touch()
+            (unit / "ToolTest.php").touch()
+            catalog = root / "catalog.json"
+            catalog.write_text(json.dumps({"schema_version": 1, "phpunit": {
+                "production-unit": ["ProductTest.php"], "qa-tooling-unit": ["ToolTest.php"]},
+                "python": []}))
+            for product, tooling in (
+                (["ToolTest.php"], ["ProductTest.php"]),
+                (["ProductTest.php"], []),
+                (["ProductTest.php", "ToolTest.php"], ["ToolTest.php"]),
+            ):
+                files = lambda names: "".join(f"<file>tests/unit/{n}</file>" for n in names)
+                (root / "phpunit.xml.dist").write_text(
+                    f'<phpunit><testsuites><testsuite name="product">{files(product)}</testsuite>'
+                    f'<testsuite name="qa-tooling">{files(tooling)}</testsuite></testsuites></phpunit>')
+                with self.subTest(product=product, tooling=tooling), self.assertRaises(ValueError):
+                    PROFILE.inventory(root, catalog)
+            (root / "phpunit.xml.dist").write_text(
+                '<phpunit><testsuites><testsuite name="all"><directory>tests/unit</directory>'
+                '</testsuite></testsuites></phpunit>')
+            with self.assertRaises(ValueError):
+                PROFILE.inventory(root, catalog)
 
     def test_missing_duplicate_and_new_test_files_fail_inventory(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -85,6 +116,7 @@ class QaProfileTest(unittest.TestCase):
                     (unit / name).touch()
             for name in catalog["python"]:
                 (unit / name).touch()
+            (root / "phpunit.xml.dist").write_text((ROOT / "phpunit.xml.dist").read_text())
             catalog_path = root / "catalog.json"
             catalog_path.write_text(json.dumps(catalog))
             composer = json.loads((ROOT / "composer.json").read_text())
@@ -104,6 +136,7 @@ class QaProfileTest(unittest.TestCase):
                     (unit / name).touch()
             for name in catalog["python"]:
                 (unit / name).touch()
+            (root / "phpunit.xml.dist").write_text((ROOT / "phpunit.xml.dist").read_text())
             path = root / "catalog.json"
             original = json.loads((ROOT / "composer.json").read_text())
             composer = root / "composer.json"

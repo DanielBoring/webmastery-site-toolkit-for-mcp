@@ -178,15 +178,27 @@ final class GithubSafeguardsTest extends TestCase {
 
 	public function test_unit_and_safeguard_jobs_are_independent_bounded_and_required(): void {
 		$workflow = str_replace("\r\n", "\n", file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/unit-tests.yml'));
-		foreach (array('unit-tests' => 'composer qa:unit', 'ci-safeguards' => 'composer test:ci-safeguards') as $job => $command) {
+		$jobs = array(
+			'unit-tests'    => array('composer qa:unit', 'timeout-minutes: 15', "php: ['8.0', '8.4']"),
+			'qa-tooling'    => array('composer qa:tooling', 'timeout-minutes: 45', "php-version: '8.4'"),
+			'ci-safeguards' => array('composer test:ci-safeguards', 'timeout-minutes: 45', "php-version: '8.4'"),
+		);
+		foreach ($jobs as $job => $controls) {
 			self::assertSame(1, preg_match('/^  ' . preg_quote($job, '/') . ':\n([\s\S]*?)(?=^  [a-z][a-z-]*:|\z)/m', $workflow, $section));
-			foreach (array('timeout-minutes: 60', 'fail-fast: false', "php: ['8.0', '8.4']", "COMPOSER_PROCESS_TIMEOUT: '0'", 'run: ' . $command) as $control) {
+			foreach (array('run: ' . $controls[0], $controls[1], $controls[2], "COMPOSER_PROCESS_TIMEOUT: '0'") as $control) {
 				self::assertStringContainsString($control, $section[1]);
 			}
-			self::assertDoesNotMatchRegularExpression('/^    (if|needs):/m', $section[1]);
+			if ('unit-tests' === $job) {
+				self::assertStringContainsString('fail-fast: false', $section[1]);
+				self::assertDoesNotMatchRegularExpression('/^    (if|needs):/m', $section[1]);
+			} else {
+				self::assertStringContainsString("if: needs.changes.outputs.should-run == 'true'", $section[1]);
+			}
 		}
-		self::assertMatchesRegularExpression('/unit-tests-gate:\s+name: 2 - Unit Tests\s+needs: \[unit-tests, ci-safeguards\]\s+if: \$\{\{ always\(\) \}\}/', $workflow);
-		self::assertStringContainsString('test "$UNIT_RESULT" = success && test "$SAFEGUARD_RESULT" = success', $workflow);
+		self::assertMatchesRegularExpression('/unit-tests-gate:\s+name: 2 - Unit Tests\s+needs: \[changes, unit-tests, qa-tooling, ci-safeguards\]\s+if: \$\{\{ always\(\) \}\}/', $workflow);
+		self::assertStringContainsString('test "$UNIT_RESULT" = success', $workflow);
+		self::assertStringContainsString('php scripts/qa-check-gate.php "$DETECTOR" "$SHOULD_RUN" "$TOOLING_RESULT"', $workflow);
+		self::assertStringContainsString('php scripts/qa-check-gate.php "$DETECTOR" "$SHOULD_RUN" "$SAFEGUARD_RESULT"', $workflow);
 		self::assertStringNotContainsString('continue-on-error', $workflow);
 		self::assertStringNotContainsString('controller-components', $workflow);
 		self::assertStringNotContainsString('bounded-list-controller.py ', $workflow);
