@@ -42,10 +42,17 @@ When asked to add, change, or release abilities, complete all applicable steps b
      - E2E workflow or manifest validation
      - `git diff --check`
    - Expect GitHub Actions to run the authoritative PR checks again after push or PR creation.
-   - Run development runtime QA where this session executes: local Docker for local app/CLI sessions, cloud containers or Actions for cloud-agent sessions. Use `scripts/qa-run.sh all` and `scripts/qa-run.sh package`; do not silently dispatch cloud QA from a local session.
+   - Run development runtime QA where this session executes: local Docker for local app/CLI sessions, cloud containers or Actions for cloud-agent sessions. Use `scripts/qa-run.sh all` for plugin changes, and add `scripts/qa-run.sh package` when ZIP inputs change; do not silently dispatch cloud QA from a local session.
+   - Run `composer qa:tooling` when you change `scripts/` or `tests/` tooling; `composer qa` covers product unit tests only.
    - Keep product/package results separate from `scripts/qa-run.sh publishing`. `scripts/qa-run.sh release` preserves combined release requirements. Record blocked checks, actual engine/interpreter versions, and unverified Podman configurations; do not provision a Podman machine without user approval.
    - If PHP, Composer, Docker, or another required tool is unavailable locally, state that clearly in the final response.
 
-6. Final response
+6. Keep QA proportionate
+   - Respect the CI budgets in `docs/qa-strategy.md#ci-budgets-and-pruning`. If a change would push PR checks or the release job over budget, say so and propose moving work off the critical path (nightly, change-scoped or parallel) instead of adding serial steps.
+   - A new gate, safeguard or QA-tooling test must name the specific failure it prevents. Do not add a check that duplicates one that already catches the same failure.
+   - Propose removing gates and tooling tests that have not failed in a quarter, as readily as you propose adding them. Prefer readable policy tests over byte-for-byte or digest freezes of workflow files.
+   - Keep PR descriptions short: what changed and why, then the commands you ran and their results. Leave detailed evidence in CI logs and artifacts.
+
+7. Final response
    - Summarize changed files and the meaningful outcome.
    - Mention any validation that could not run due to missing local tools.

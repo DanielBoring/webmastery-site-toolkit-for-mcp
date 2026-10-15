@@ -279,21 +279,19 @@ See [the requirement matrix and completed extraction map](docs/shared-helpers.md
 7. Review the WordPress.org Detailed Plugin Guidelines when the change affects naming, readme text, privacy/external calls, licensing/assets, or release packaging
 8. Open a PR with a clear description of what changed and why
 
-The [PR template](.github/PULL_REQUEST_TEMPLATE.md) and these acceptance
-requirements apply together:
+The [PR template](.github/PULL_REQUEST_TEMPLATE.md) uses this checklist:
 
-- [ ] Use narrow capability checks, object/status filtering and sensitive-field omissions; preserve effective delegated and metadata authorization.
-- [ ] Sanitize/validate inputs without rewriting existing response values merely to add markers.
-- [ ] Scoped privileged native observations are explicitly enabled only on approved disposable CI hosts; keep controller/capture/PHP nonroot, fixed verified system argv/proc targets, clean environment/closed stdin, bounded exit/EOF/original retention, complete fd/listener/namespace/mount/start-identity/race predicates, unchanged grants/custody and a reviewed exact-byte outer projection; distinguish adapters from native sudo/runtime/CI acceptance and cooperative I/O deadlines from a root-child cleanup certificate
-- [ ] HOST package repair is scoped to release-package-qa (PHP8.2), ability-contract-qa and full-mcp-e2e-qa (PHP8.4) on owned disposable GitHub-hosted runners; verify signatures/fingerprint and source archives, distinguish closed transaction authorization for incoming/retained maintainers and triggers from refreshed installed owner/version/digests and configuration eligibility, preserve fixed installation operations and original budgets, distinguish approved normal package/session housekeeping (including other versions) from configuration hardening, scheduler observations and certified root-child cleanup, restrict fixed chmod0644 to CLI php.ini and package-bound mods-available/sockets.ini with its exact conf.d alias, preserve the permission/inventory chain, withhold candidate PHP on failed acquisition, and retain Python AST plus all three mock-only prerequisite suites without local native provisioning.
-- [ ] Successful values/types are preserved except for documented contract changes; failures use canonical code/reason/message/object-details, native permissions retain `WP_Error`, and MCP gateway/individual-tool errors plus foreign-namespace isolation are covered (real HTTP errors have `isError:true`, one JSON text block, and omitted wire `structuredContent`, internally null)
-- [ ] Untrusted-field changes preserve exact values/types/markup, use unique present-only record-local names, retain privacy omissions and unavailable SEO fields, and never mark canonical errors or diagnostic error subrecords.
-- [ ] Annotation changes compare registered hints with actual Adapter individual `tools/list` output; distinguish gateway/get-info metadata, unit/source checks, and real runtime evidence.
-- [ ] Audit all registered abilities against the E2E manifest, adding allowed/denied cases and missing-path assertions where relevant.
-- [ ] Update user-facing docs, migration/QA guidance, and `CHANGELOG.md` under `## Unreleased`; put repository/CI/contributor changes in `.github/REPOSITORY_CHANGELOG.md`.
-- [ ] Run `composer phpcs`, E2E manifest validation, relevant E2E QA, and `git diff --check`; document missing tools or runtime blockers rather than claiming unrun checks passed.
-- [ ] Development runtime QA ran where the session executes; engine, genuine PHP lane, package results and any blocked checks are recorded separately from WordPress.org publishing findings.
-- [ ] Review WordPress.org guideline impacts, including privacy, external communication, licensing, packaging and unsupported security claims.
+- [ ] Capability checks use the narrowest relevant WordPress capability, authorize every returned object, and fail with `WP_Error`
+- [ ] Inputs are sanitized or validated with WordPress APIs or strict schema checks
+- [ ] Response shape is unchanged, or the contract change is documented
+- [ ] New or changed abilities have positive cases in `tests/e2e/abilities-manifest.json`, plus permission-denied cases where permissions apply
+- [ ] User-facing docs are updated (`README.md`, `readme.txt`, `tests/e2e/README.md`)
+- [ ] Changelog: plugin-facing changes in `CHANGELOG.md`, repository/CI changes in `.github/REPOSITORY_CHANGELOG.md`
+- [ ] `composer phpcs`, PHPStan without new baseline debt, E2E manifest validation and `git diff --check` pass
+- [ ] Relevant E2E QA passes, or failures are unrelated and explained
+- [ ] Workflow or shell changes pass `composer lint:workflows`, and CI stays within the budgets in `docs/qa-strategy.md`
+- [ ] WordPress.org guideline impact was considered for naming, readme, privacy, external calls, licensing, assets or packaging
+- [ ] Area-specific items in `docs/qa-harness-reference.md#area-specific-review-checklist` were checked where they apply
 
 For the #108 runtime probes, require `WSTM108_ALLOW_DISPOSABLE=1` and an owned
 isolated test installation. The opt-in is not a Docker lease; never run

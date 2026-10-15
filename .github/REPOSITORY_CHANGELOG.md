@@ -6,6 +6,17 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add CI budgets and a pruning rule. `docs/qa-strategy.md` sets wall-clock
+  budgets for PR checks and the release job, and `.github/copilot-instructions.md`
+  asks agents to name the failure each new gate prevents, propose removing
+  gates that have not failed in a quarter, and keep PR descriptions short.
+- Condense `docs/qa-strategy.md` to a policy summary. Harness internals move
+  verbatim to `docs/qa-harness-reference.md`, past measurements and rollout
+  history stay in git history, and the broken `#environment-notes` link now
+  resolves. The PR template and CONTRIBUTING share a short checklist; the
+  previous detailed items are kept as an area-specific checklist in the
+  harness reference.
+
 - Make the tag release promote main's QA results instead of re-running them.
   `scripts/release-checks-gate.php` requires that the tagged commit already
   passed Static, Unit, Docker, Release Package QA and the WordPress 6.9 /

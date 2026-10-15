@@ -34,28 +34,12 @@ Production PHP uses PHPCS-enforced short `[]` array literals. The
 documents the repository preference and behavior-preserving checks.
 
 Product QA checks plugin behavior, permissions, compatibility and the installed
-release package. WordPress.org approval or directory listing is not a QA result.
-Local coding sessions use local containers; cloud-agent sessions use their cloud
-containers or Actions. Both use `scripts/qa-run.sh`, with no automatic cloud fallback.
-Run `composer qa:local` for source runtime checks and `composer qa:package` for
-original-ZIP product checks. `composer qa:publishing` runs separate directory checks;
-`composer qa:release` retains the combined release requirements.
-
-Local and hosted runtime QA use an owned disposable container project with
-loopback HTTP, no database host port, read-only source/package mounts and
-nonroot candidate CLI/HTTP workers. The Docker engine and reviewed images are
-trusted environment prerequisites, not whole-host attestation. Raw product
-evidence stays private; only validated summaries are uploaded. See
-[QA Strategy](docs/qa-strategy.md).
-
-Docker is the default. The explicit Podman API adapter requires a connected
-Podman engine, Docker CLI/Compose and a local socket. Its runtime compatibility
-has not been verified; it is not a supported replacement yet.
-
-The current development QA baseline is **WordPress 7.1.3 with MCP Adapter
-0.7.0**. The default Docker image and compatibility metadata use that baseline;
-the declared WordPress 6.9 / PHP 8.0 plugin minimums are unchanged. See
-[QA Strategy](docs/qa-strategy.md) for the separate compatibility and runtime gates.
+release package; WordPress.org approval is not a QA result. The development QA
+baseline is **WordPress 7.1.3 with MCP Adapter 0.7.0**; the plugin's WordPress
+6.9 / PHP 8.0 minimums are unchanged. Runtime QA uses disposable Docker
+containers locally and in CI. See [QA strategy](docs/qa-strategy.md) for what
+runs when, and the [QA harness reference](docs/qa-harness-reference.md) for
+details.
 
 **Released 2.6.0 and Adapter 0.7.0:** the unchanged production ZIP has passed
 isolated HTTP checks against both Adapter 0.6.1 and 0.7.0. All 75 native-install
