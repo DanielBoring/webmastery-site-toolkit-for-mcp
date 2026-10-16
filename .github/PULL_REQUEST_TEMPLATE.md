@@ -19,6 +19,7 @@
 - [ ] Changelog: plugin-facing changes in `CHANGELOG.md`, repository/CI changes in `.github/REPOSITORY_CHANGELOG.md`
 - [ ] `composer phpcs`, PHPStan without new baseline debt, E2E manifest validation and `git diff --check` pass
 - [ ] Relevant E2E QA passes, or failures are unrelated and explained
-- [ ] Workflow or shell changes pass `composer lint:workflows`, and CI stays within the budgets in `docs/qa-strategy.md`
+- [ ] Workflow or shell changes pass `composer lint:workflows`, and CI stays within the budgets in `docs/00-sdlc-overview.md#ci-budgets-and-pruning`
+- [ ] Workflow, trigger or gate changes update the matching numbered doc in `docs/` and the diagrams in `docs/images/` (`.drawio` source and PNG)
 - [ ] WordPress.org guideline impact was considered for naming, readme, privacy, external calls, licensing, assets or packaging
-- [ ] Area-specific items in `docs/qa-harness-reference.md#area-specific-review-checklist` were checked where they apply
+- [ ] Area-specific items in `docs/reference/review-checklist.md` were checked where they apply

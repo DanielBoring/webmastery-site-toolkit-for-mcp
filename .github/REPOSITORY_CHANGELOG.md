@@ -20,6 +20,30 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
   the required static check.
 - Remove the v3.0.0-only fresh-validation workflow and the one-off issue
   backlog importer, with their scripts and tests.
+- Restructure the QA and process docs to match the workflow numbering.
+  `docs/00-sdlc-overview.md` is the entry point, with a TL;DR, an SDLC
+  lifecycle diagram, a QA flow diagram, the check map, change scopes,
+  schedules, gates and budgets. Each workflow has a matching doc
+  (`docs/01-static-qa.md` to `docs/10-adapter-assessment.md`) written from its
+  YAML: what it proves, when it runs, what each job does, how to run it
+  locally and how to read failures. `docs/90-security-strategy.md` and
+  `docs/91-ci-cd-platform.md` cover security and GitHub settings;
+  `docs/reference/` holds release history, the area-specific review checklist,
+  shared helpers, the 3.0 migration guide and the Adapter 0.7 assessment.
+  Diagram sources are `docs/images/*.drawio`.
+- Remove `docs/qa-strategy.md`, `docs/qa-harness-reference.md`,
+  `docs/ci-cd-strategy.md`, `docs/release-strategy.md`, `.github/AUTOMATION.md`,
+  `.github/SETUP-COMPLETE.md`, `BACKLOG.md` and `ISSUES/`; their content moved
+  to the numbered docs or `docs/reference/release-history.md` (the `ISSUES/`
+  files are GitHub issues #105 to #128).
+- Correct drift found while rewriting the docs: the release no longer re-runs
+  static and unit QA, all eight compatibility lanes always run, the
+  `CompatibilityBaselinesTest` filter belongs to `composer qa:tooling`, local
+  Docker QA uses the `qa-local` wrappers rather than raw `docker compose`, and
+  WordPress 6.9 on PHP 8.0 is now tested over HTTP by `06 - Minimum Runtime QA`.
+- Add a rule to the PR template, `CONTRIBUTING.md` and the agent instructions:
+  workflow, trigger or gate changes update the matching numbered doc and the
+  diagrams.
 
 - Add CI budgets and a pruning rule. `docs/qa-strategy.md` sets wall-clock
   budgets for PR checks and the release job, and `.github/copilot-instructions.md`

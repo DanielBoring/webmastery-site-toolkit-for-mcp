@@ -55,7 +55,7 @@ https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
 
 Yes. The unchanged 2.6.0 production ZIP passed isolated local HTTP checks against Adapter 0.6.1 and 0.7.0 on WordPress 7.1.2/PHP 8.2 and WordPress 6.9/PHP 8.1. All 75 native-install abilities were discovered and projected as individual tools. Representative reads, draft writes, permission denials and errors passed, including the 2026-07-28 sessionless protocol. These checks do not cover every callback or optional provider. No live or staging site was used. This historical result is separate from 3.0.0 release-package validation.
 
-Assessment: https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/mcp-adapter-0.7-assessment.md
+Assessment: https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/reference/mcp-adapter-0.7-assessment.md
 
 = Was the pre-release 3.0 snapshot tested with the new Adapter? =
 
@@ -65,7 +65,7 @@ An independent production ZIP from main commit 115b577bf59e4d3c33b0ccc78d9317e09
 
 Failures now use success:false and an error object with code, reason, message, and object-shaped details. Seven categories replace mixed codes; precise legacy reasons move to reason. MCP Adapter 0.6.1 tool errors carry this JSON in one text block with isError:true; structuredContent is omitted on HTTP (internally null). Error normalization preserves successful payloads and gateway success wrapping; separate metadata projections and additive untrusted_fields markers change success contracts as described below. Bulk summaries are non-atomic; inspect every item even when the batch succeeds. Provider diagnostics are redacted without bypassing capability checks. WordPress 6.9 / PHP 8.0 minimums are unchanged. Metadata/SEO reads now enforce effective object/key authorization; migration never grants capabilities.
 
-Migration matrix and examples: https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/3.0-migration.md
+Migration matrix and examples: https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/reference/3.0-migration.md
 
 Permanent media/category/tag deletion and both bulk post operations now require the exact JSON boolean confirm:true, including bulk previews. Bulk requests accept at most 100 raw IDs and process duplicates once; dry_run:true reports would-act successes without mutation. These explicitly documented changes add a preview marker and media in_use boolean to successful responses.
 
@@ -218,7 +218,7 @@ SEO Analyze Post uses the exact diagnostics "Focus keyword found in title." and 
 
 3.0 field markers, annotation hints, and confirmation interlocks are defense-in-depth, not a security boundary, capability check, content filter, or prompt-injection guarantee. Optional text-only content_format output is not implemented.
 
-See the [Agent threat model](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/security-strategy.md#agent-threat-model) and [Response format](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/README.md#response-format). A successful MCP gateway response does not necessarily mean the inner ability succeeded.
+See the [Agent threat model](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/90-security-strategy.md#agent-threat-model) and [Response format](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/README.md#response-format). A successful MCP gateway response does not necessarily mean the inner ability succeeded.
 
 = What do untrusted_fields markers mean in 3.0? =
 
