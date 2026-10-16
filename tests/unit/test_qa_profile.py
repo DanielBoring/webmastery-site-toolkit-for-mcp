@@ -167,7 +167,7 @@ class QaProfileTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "jobs.json"
             job = {"id": 1, "head_sha": "a" * 40, "run_id": 2, "run_attempt": 1,
-                   "name": "5 - Validate Release", "status": "completed", "conclusion": "cancelled",
+                   "name": "08 - Release / validate", "status": "completed", "conclusion": "cancelled",
                    "steps": [{"name": "Build once and test the package with pinned and current Plugin Check",
                               "status": "completed", "conclusion": "cancelled",
                               "started_at": "2026-10-12T15:00:00Z", "completed_at": "2026-10-12T15:01:00Z"}]}

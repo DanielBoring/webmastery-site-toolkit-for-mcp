@@ -16,11 +16,11 @@ const RELEASE_CHECKS_REPOSITORY = 'DanielBoring/webmastery-site-toolkit-for-mcp'
  */
 function release_checks_required(): array {
 	return array(
-		'1 - Static QA'                           => 'coding-standards.yml',
-		'2 - Unit Tests'                          => 'unit-tests.yml',
-		'Docker QA gate'                          => 'e2e-qa.yml',
-		'5 - Release Package QA'                  => 'release-package-qa.yml',
-		'WordPress 6.9 / PHP 8.0 product runtime' => 'minimum-runtime-qa.yml',
+		'01 - Static QA'                                => '01-static-qa.yml',
+		'02 - Unit Tests'                               => '02-unit-tests.yml',
+		'03-04 - Docker QA'                             => '03-04-docker-qa.yml',
+		'05 - Release Package QA / package'             => '05-release-package-qa.yml',
+		'06 - Minimum Runtime QA / WordPress 6.9 PHP 8.0' => '06-minimum-runtime-qa.yml',
 	);
 }
 

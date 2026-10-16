@@ -8,7 +8,7 @@
 <!-- e.g. webmastery-site-toolkit-for-mcp/list-media — leave blank for bug fixes -->
 
 ## Testing
-<!-- The commands you ran and their results, e.g. composer qa, composer qa:tooling, scripts/qa-local.sh --contract --e2e. Say what you could not run and why. Required PR checks: 1 - Static QA, 2 - Unit Tests, Docker QA gate. -->
+<!-- The commands you ran and their results, e.g. composer qa, composer qa:tooling, scripts/qa-local.sh --contract --e2e. Say what you could not run and why. Required PR checks: 01 - Static QA, 02 - Unit Tests, 03-04 - Docker QA. -->
 
 ## Checklist
 - [ ] Capability checks use the narrowest relevant WordPress capability, authorize every returned object, and fail with `WP_Error`

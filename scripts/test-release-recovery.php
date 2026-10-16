@@ -6,7 +6,7 @@ require_once __DIR__ . '/release-recovery.php';
 
 function recovery_fixture(): array {
 	$repo = array('id' => 123, 'full_name' => 'DanielBoring/webmastery-site-toolkit-for-mcp');
-	$run = array('id' => 456, 'repository' => $repo, 'head_repository' => $repo, 'workflow_id' => 789, 'path' => '.github/workflows/release.yml', 'event' => 'push', 'status' => 'completed', 'conclusion' => 'failure', 'head_sha' => str_repeat('a', 40), 'head_branch' => 'v2.6.0', 'run_attempt' => 1);
+	$run = array('id' => 456, 'repository' => $repo, 'head_repository' => $repo, 'workflow_id' => 789, 'path' => '.github/workflows/08-release.yml', 'event' => 'push', 'status' => 'completed', 'conclusion' => 'failure', 'head_sha' => str_repeat('a', 40), 'head_branch' => 'v2.6.0', 'run_attempt' => 1);
 	$artifact = array('id' => 100, 'name' => 'release-456-1', 'expired' => false, 'size_in_bytes' => 1000, 'digest' => 'sha256:' . str_repeat('b', 64), 'created_at' => '2026-09-21T13:21:56Z', 'expires_at' => '2026-10-21T13:21:55Z', 'workflow_run' => array('id' => 456, 'repository_id' => 123, 'head_repository_id' => 123, 'head_sha' => $run['head_sha'], 'head_branch' => 'v2.6.0'));
 	$steps = array();
 	foreach (array('Gate exact tag and current main ancestry', 'Require passing main QA on the tagged commit', 'Validate source metadata', 'Build once and test the package with pinned and current Plugin Check', 'Seal original ZIP, scoped notes, listing assets and source manifest', 'Upload immutable run-scoped validated bundle') as $name) {
@@ -16,11 +16,11 @@ function recovery_fixture(): array {
 		'input' => array('run-id' => '456', 'artifact-id' => '100', 'repository' => $repo['full_name'], 'event' => 'workflow_dispatch', 'ref' => 'refs/tags/v-release-recovery-fixture', 'actor' => 'DanielBoring', 'triggering-actor' => 'DanielBoring'),
 		'repo' => $repo,
 		'permission' => array('permission' => 'admin', 'user' => array('login' => 'DanielBoring')),
-		'workflow' => array('id' => 789, 'path' => '.github/workflows/release.yml', 'state' => 'active'),
+		'workflow' => array('id' => 789, 'path' => '.github/workflows/08-release.yml', 'state' => 'active'),
 		'run' => $run,
 		'attempt' => $run,
 		'artifact' => $artifact,
-		'job' => array('id' => 999, 'name' => '5 - Validate Release', 'status' => 'completed', 'conclusion' => 'success', 'run_id' => 456, 'run_attempt' => 1, 'head_sha' => $run['head_sha'], 'head_branch' => 'v2.6.0', 'steps' => $steps, 'started_at' => '2026-09-21T13:16:44Z', 'completed_at' => '2026-09-21T13:21:58Z'),
+		'job' => array('id' => 999, 'name' => '08 - Release / validate', 'status' => 'completed', 'conclusion' => 'success', 'run_id' => 456, 'run_attempt' => 1, 'head_sha' => $run['head_sha'], 'head_branch' => 'v2.6.0', 'steps' => $steps, 'started_at' => '2026-09-21T13:16:44Z', 'completed_at' => '2026-09-21T13:21:58Z'),
 		'tag' => array('ref' => 'refs/tags/v2.6.0', 'object' => array('type' => 'tag', 'sha' => str_repeat('c', 40))),
 		'annotation' => array('sha' => str_repeat('c', 40), 'tag' => 'v2.6.0', 'object' => array('type' => 'commit', 'sha' => $run['head_sha'])),
 	);
@@ -31,7 +31,7 @@ function recovery_fixture_api(array $fixture, string $path): array {
 	$routes = array(
 		$base => $fixture['repo'],
 		$base . '/collaborators/DanielBoring/permission' => $fixture['permission'],
-		$base . '/actions/workflows/release.yml' => $fixture['workflow'],
+		$base . '/actions/workflows/08-release.yml' => $fixture['workflow'],
 		$base . '/actions/runs/456' => $fixture['run'],
 		$base . '/actions/artifacts/100' => $fixture['artifact'],
 		$base . '/actions/runs/456/artifacts?per_page=100&page=1' => $fixture['artifacts-page'] ?? array('total_count' => 1, 'artifacts' => array($fixture['artifact'])),
@@ -277,7 +277,7 @@ foreach ($postapproval_mutations as $name => $mutate) {
 	});
 }
 $test('workflow lanes preserve protected original-artifact publication', static function (): void {
-	$workflow = release_read(dirname(__DIR__) . '/.github/workflows/release.yml');
+	$workflow = release_read(dirname(__DIR__) . '/.github/workflows/08-release.yml');
 	foreach (array(
 		"- '!v-release-recovery-*'",
 		"if: github.event_name == 'push'",
@@ -289,7 +289,7 @@ $test('workflow lanes preserve protected original-artifact publication', static 
 		'group: wordpress-org-production-publish',
 		'cancel-in-progress: false',
 		'name: wordpress-org',
-		'name: Publish release (GitHub approval required)',
+		'name: 08 - Release / publish (GitHub approval required)',
 		'actions: read',
 		'run-id: ${{ env.ORIGINAL_RUN_ID }}',
 		'artifact-ids: ${{ env.ARTIFACT_ID }}',
@@ -302,14 +302,14 @@ $test('workflow lanes preserve protected original-artifact publication', static 
 	) as $required) {
 		release_require(str_contains($workflow, $required), 'Missing workflow guard: ' . $required);
 	}
-	release_require(1 === substr_count($workflow, 'name: Publish release (GitHub approval required)'), 'Publication pipeline duplicated.');
+	release_require(1 === substr_count($workflow, 'name: 08 - Release / publish (GitHub approval required)'), 'Publication pipeline duplicated.');
 	$recovery = explode("\n  publish:", explode("\n  recover:", $workflow)[1])[0];
 	release_require(!str_contains($recovery, 'release-qa.sh') && !str_contains($recovery, 'composer qa') && !str_contains($recovery, 'build-release'), 'Recovery rebuilds or reruns original QA.');
 	release_require(!preg_match('/run:.*\$\{\{\s*inputs\./', $workflow), 'Dispatch input interpolated into shell.');
 	release_require(2 === substr_count($workflow, 'NOT WordPress.org staff review'), 'Both lanes need preapproval explanation.');
 });
 $test('postapproval control and resolver gates precede frozen checkout, download and secrets', static function (): void {
-	$workflow = release_read(dirname(__DIR__) . '/.github/workflows/release.yml');
+	$workflow = release_read(dirname(__DIR__) . '/.github/workflows/08-release.yml');
 	$publish = explode("\n  publish:", $workflow)[1];
 	$prior = -1;
 	foreach (array('name: Checkout recovery control ref again after approval', 'bash scripts/release-control-check.sh verify', 'name: Set up PHP', 'php scripts/release-recovery.php verify-approved', 'name: Checkout validated source without persistent credentials', 'name: Download only the original QA job', 'SVN_USERNAME: ${{ secrets.SVN_USERNAME }}') as $required) {

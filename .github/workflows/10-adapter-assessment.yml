@@ -1,10 +1,10 @@
-name: Released plugin Adapter assessment
+name: 10 - Adapter Assessment
 
 on:
   workflow_dispatch:
   pull_request:
     paths:
-      - '.github/workflows/adapter-release-assessment.yml'
+      - '.github/workflows/10-adapter-assessment.yml'
       - 'scripts/adapter-release-assessment.*'
       - 'scripts/adapter-candidate-assessment.py'
       - 'tests/e2e/adapter-release-*'
@@ -15,6 +15,7 @@ permissions:
 
 jobs:
   released-adapter:
+    name: 10 - Adapter Assessment
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:

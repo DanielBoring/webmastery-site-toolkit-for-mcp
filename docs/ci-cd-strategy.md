@@ -1,5 +1,7 @@
 # CI/CD strategy
 
+> **Retired:** the v3.0.0 fresh-validation workflow below was removed after 3.0.0 published.
+
 Fresh validation of immutable `v3.0.0` is a separate input-free manual workflow,
 not a new version or rerun of the frozen tag workflow. Its reviewed 120-minute
 control job first admits the annotated control tag/current-main ancestry and
@@ -23,22 +25,21 @@ publishing. The
 
 | Workflow | Triggers | Purpose |
 | --- | --- | --- |
-| `1 - Static QA` | PR, main push, manual | PHP syntax, WPCS, PHPStan/baseline guard, locked audit, manifest/security policy and whitespace. |
-| `2 - Unit Tests` | PR, main push, nightly, manual | Product PHPUnit on PHP 8.0/8.4; QA-tooling PHPUnit and CI safeguards on PHP 8.4 when applicable; one stable aggregate. |
-| `3-4 - Docker QA` | PR, main push, manual | Runtime change detection, Ability Contract QA, Full MCP E2E QA, safe evidence and summaries. |
-| `5 - Release Package QA` | Every PR (runs only for ZIP-input changes), nightly, manual | Original-ZIP installed product checks and always-reporting `Package QA gate`; no directory checker requirement. |
-| Minimum runtime QA | PRs changing the floor lane itself, nightly, manual | Actual WordPress 6.9 / PHP 8.0.30 contract/HTTP execution and `Minimum runtime QA gate`. |
+| `01 - Static QA` | PR, main push, manual | PHP syntax, WPCS, PHPStan/baseline guard, locked audit, manifest/security policy and whitespace. |
+| `02 - Unit Tests` | PR, main push, nightly, manual | Product PHPUnit on PHP 8.0/8.4; QA-tooling PHPUnit and CI safeguards on PHP 8.4 when applicable; one stable aggregate. |
+| `03-04 - Docker QA` | PR, main push, manual | Runtime change detection, Ability Contract QA, Full MCP E2E QA, safe evidence and summaries. |
+| `05 - Release Package QA` | Every PR (runs only for ZIP-input changes), nightly, manual | Original-ZIP installed product checks and always-reporting `05 - Release Package QA`; no directory checker requirement. |
+| `06 - Minimum Runtime QA` | PRs changing the floor lane itself, nightly, manual | Actual WordPress 6.9 / PHP 8.0.30 contract/HTTP execution and `06 - Minimum Runtime QA`. |
 | WordPress.org publishing checks | Manual | Pristine original-ZIP Plugin Check, separately reported without product acceptance or publication. |
-| `5 - Release` | Release tag, guarded recovery dispatch | Main ancestry, required passing main QA on the tagged commit (including package and minimum-runtime QA), ZIP build with pinned and current Plugin Check, and protected serialized publication. Recovery reuses original validated evidence through a reviewed control tag. |
-| `6 - Compatibility QA` | Weekly schedule, manual | Official upstream discovery, pinned/candidate combinations and reviewed baseline-update PRs. |
-| `7 - Issue Backlog Import` | Manual | Serialized dry-run-first backlog preview/import. |
-| Workflow lint | PR, main push, manual | Actions syntax, shell lint and workflow security using pinned tools. |
+| `08 - Release` | Release tag, guarded recovery dispatch | Main ancestry, required passing main QA on the tagged commit (including package and minimum-runtime QA), ZIP build with pinned and current Plugin Check, and protected serialized publication. Recovery reuses original validated evidence through a reviewed control tag. |
+| `07 - Compatibility QA` | Weekly schedule, manual | Official upstream discovery, pinned/candidate combinations and reviewed baseline-update PRs. |
+| Workflow lint (job in `01 - Static QA`) | PR, main push, manual | Actions syntax, shell lint and workflow security using pinned tools; part of the required `01 - Static QA` result. |
 
 ## Pull request policy
 
-Every PR needs `1 - Static QA` and `2 - Unit Tests`. Runtime, ability and
-security-sensitive changes also need actual `3 - Ability Contract QA` and
-`4 - Full MCP E2E QA`. Changes to ZIP inputs need `5 - Release Package QA`
+Every PR needs `01 - Static QA` and `02 - Unit Tests`. Runtime, ability and
+security-sensitive changes also need actual `03 - Ability Contract QA` and
+`04 - Full MCP E2E QA`. Changes to ZIP inputs need `05 - Release Package QA`
 and workflow lint before merge; other plugin changes reach package and
 minimum-runtime QA through the nightly run on `main`. Broad compatibility is scheduled/manual unless
 a supported combination or dependency change makes it relevant to the PR.
@@ -47,7 +48,7 @@ Product unit tests (`composer qa:unit`, the `product` PHPUnit suite) run as a
 PHP 8.0/8.4 matrix with a 15-minute limit and `fail-fast: false`. QA-tooling
 unit tests (`composer qa:tooling`) and CI safeguards run as two parallel PHP 8.4
 jobs with 45-minute limits when `scripts/qa-changes.sh` reports a QA-relevant
-change, on the nightly schedule and on dispatch. The `2 - Unit Tests` aggregate
+change, on the nightly schedule and on dispatch. The `02 - Unit Tests` aggregate
 requires product units to succeed and each tooling job to have run and
 succeeded, or to have been skipped by a successful detector; failure,
 cancellation or unexpected skip cannot pass it.
@@ -61,7 +62,7 @@ Do not upload raw JUnit, fixture output or data-provider labels. The
 [measurement procedure](qa-strategy.md#suite-classification-and-measurement)
 defines provenance, repeated comparisons and unresolved composite-stage timings.
 
-`Docker QA gate` is a stable required result for runtime and non-runtime PRs.
+`03-04 - Docker QA` is a stable required result for runtime and non-runtime PRs.
 It rejects failed/cancelled detection, malformed outputs and missing/failed
 runtime results. Skipped runtime jobs are accepted only when successful
 detection explicitly identifies non-runtime changes.
@@ -82,8 +83,8 @@ before changing code or test expectations.
 
 ## Branch protection
 
-`main-ci-gates` requires exactly `1 - Static QA`, `2 - Unit Tests` and
-`Docker QA gate`, bound to GitHub Actions. Stable aggregate names avoid
+`main-ci-gates` requires exactly `01 - Static QA`, `02 - Unit Tests` and
+`03-04 - Docker QA`, bound to GitHub Actions. Stable aggregate names avoid
 ambiguous matrix-expanded checks. Do not weaken protection or bypass a failed
 check to merge. The new package and minimum-runtime aggregates always report,
 but are not yet activated in this live ruleset. Activate them only after merged

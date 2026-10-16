@@ -7,8 +7,8 @@ use PHPUnit\Framework\TestCase;
 final class DestructivePackageOwnershipTest extends TestCase {
 	public static function callers(): array {
 		return array(
-			array( 'release-package-qa.yml', 'Run Release Package QA', 'wstm-package-qa' ),
-			array( 'release.yml', 'Build once and test the package with pinned and current Plugin Check', 'wstm-release-qa' ),
+			array( '05-release-package-qa.yml', 'Run Release Package QA', 'wstm-package-qa' ),
+			array( '08-release.yml', 'Build once and test the package with pinned and current Plugin Check', 'wstm-release-qa' ),
 		);
 	}
 
@@ -21,15 +21,15 @@ final class DestructivePackageOwnershipTest extends TestCase {
 		self::assertStringContainsString( "        env:\n", $body );
 		$assignment = '          COMPOSE_PROJECT_NAME: ' . $prefix . '-${{ github.run_id }}-${{ github.run_attempt }}';
 		self::assertStringContainsString( $assignment, $body );
-		$command = 'release-package-qa.yml' === $file ? 'run: bash scripts/qa-run.sh package' : 'run: bash scripts/release-qa.sh';
+		$command = '05-release-package-qa.yml' === $file ? 'run: bash scripts/qa-run.sh package' : 'run: bash scripts/release-qa.sh';
 		self::assertStringContainsString( $command, $body );
 		self::assertLessThan( strpos( $body, $command ), strpos( $body, $assignment ) );
 	}
 
 	public function test_outer_workflow_teardown_cannot_bypass_retention(): void {
 		$root = dirname( __DIR__, 2 ) . '/.github/workflows/';
-		$source = str_replace( "\r\n", "\n", file_get_contents( $root . 'e2e-qa.yml' ) );
-		$compatibility = str_replace( "\r\n", "\n", file_get_contents( $root . 'compatibility-qa.yml' ) );
+		$source = str_replace( "\r\n", "\n", file_get_contents( $root . '03-04-docker-qa.yml' ) );
+		$compatibility = str_replace( "\r\n", "\n", file_get_contents( $root . '07-compatibility-qa.yml' ) );
 		self::assertSame( 2, substr_count( $source, 'bash scripts/destructive-retention.sh cleanup' ) );
 		self::assertSame( 1, substr_count( $compatibility, 'bash scripts/destructive-retention.sh cleanup' ) );
 		foreach ( array( 'ability-contract-qa' => $source, 'full-mcp-e2e-qa' => $source, 'compatibility-qa' => $compatibility ) as $job => $workflow ) {

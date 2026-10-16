@@ -11,7 +11,7 @@ foreach ($tools as $tool => $version) {
 	$output = array();
 	exec($tool . ' --version 2>&1', $output, $status);
 	if (0 !== $status || !preg_match('/(?<![0-9.])' . preg_quote($version, '/') . '(?![0-9.])/', implode("\n", $output))) {
-		fwrite(STDERR, "Required tool missing or wrong version: {$tool} {$version}. Install the pinned release on PATH (see .github/workflows/workflow-lint.yml).\n");
+		fwrite(STDERR, "Required tool missing or wrong version: {$tool} {$version}. Install the pinned release on PATH (see the workflow-lint job in .github/workflows/01-static-qa.yml).\n");
 		$failed = true;
 	}
 }

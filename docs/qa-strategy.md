@@ -17,16 +17,16 @@ Related: [CI/CD strategy](ci-cd-strategy.md), [release strategy](release-strateg
 
 | Check | Command | Required evidence |
 | --- | --- | --- |
-| `1 - Static QA` | `composer qa:static` | PHP syntax, WPCS, PHPStan level 5 and baseline ratchet, locked dependency audit, manifest/security policy and whitespace checks. |
-| `2 - Unit Tests` | `composer qa:unit`, `composer qa:tooling`, `composer test:ci-safeguards` | Product unit tests on genuine PHP 8.0 and 8.4 on every run; QA-tooling unit tests and CI safeguards on PHP 8.4 when tooling-relevant files change, nightly and on dispatch. The stable aggregate requires product units plus every applicable tooling job. |
-| `3 - Ability Contract QA` | `composer qa:contract` | Actual WordPress registration and manifest execution, allowed/denied roles, response shape, persisted no-write checks and clean debug log. |
-| `4 - Full MCP E2E QA` | `composer qa:e2e` | Actual HTTP JSON-RPC authentication, sessions, discovery, CRUD, authorization and cleanup through MCP Adapter. |
-| `5 - Release Package QA` / `Package QA gate` | `composer qa:package` | Original-ZIP layout/metadata/hash validation and contract/transport/product checks against installed production contents; no directory checker requirement. |
-| Minimum runtime / `Minimum runtime QA gate` | `bash scripts/qa-floor.sh` | Digest-pinned WordPress 6.9 on genuine PHP 8.0.30, actual CLI/HTTP lane observations and the same source acceptance tests. |
+| `01 - Static QA` | `composer qa:static` | PHP syntax, WPCS, PHPStan level 5 and baseline ratchet, locked dependency audit, manifest/security policy and whitespace checks. |
+| `02 - Unit Tests` | `composer qa:unit`, `composer qa:tooling`, `composer test:ci-safeguards` | Product unit tests on genuine PHP 8.0 and 8.4 on every run; QA-tooling unit tests and CI safeguards on PHP 8.4 when tooling-relevant files change, nightly and on dispatch. The stable aggregate requires product units plus every applicable tooling job. |
+| `03 - Ability Contract QA` | `composer qa:contract` | Actual WordPress registration and manifest execution, allowed/denied roles, response shape, persisted no-write checks and clean debug log. |
+| `04 - Full MCP E2E QA` | `composer qa:e2e` | Actual HTTP JSON-RPC authentication, sessions, discovery, CRUD, authorization and cleanup through MCP Adapter. |
+| `05 - Release Package QA` | `composer qa:package` | Original-ZIP layout/metadata/hash validation and contract/transport/product checks against installed production contents; no directory checker requirement. |
+| `06 - Minimum Runtime QA` | `bash scripts/qa-floor.sh` | Digest-pinned WordPress 6.9 on genuine PHP 8.0.30, actual CLI/HTTP lane observations and the same source acceptance tests. |
 | WordPress.org publishing checks | `composer qa:publishing` | Plugin Check against a pristine original-ZIP extraction. Setup is not product acceptance or directory approval. |
 | Combined release verification | `composer qa:release` | Both original-ZIP product QA and publishing checks; existing publication controls remain unchanged. |
-| `6 - Compatibility QA` | `.github/workflows/compatibility-qa.yml` | Scheduled/manual upstream discovery, supported combinations, exact resolved versions and reviewed baseline promotion. |
-| Workflow lint | `.github/workflows/workflow-lint.yml` | Actionlint, ShellCheck and zizmor using the maintained pinned lint tools. |
+| `07 - Compatibility QA` | `.github/workflows/07-compatibility-qa.yml` | Scheduled/manual upstream discovery, supported combinations, exact resolved versions and reviewed baseline promotion. |
+| Workflow lint (in `01 - Static QA`) | `composer lint:workflows` | Actionlint, ShellCheck and zizmor using the maintained pinned lint tools; failure fails `01 - Static QA`. |
 
 The primary runtime baseline is WordPress 7.1.3, PHP 8.2 and MCP Adapter 0.7.0,
 pinned in `.github/compatibility-versions.json`. The advertised minimums remain
@@ -50,11 +50,11 @@ every scope in full. Unit tooling, package QA and the minimum-runtime lane run
 nightly on `main`, so plugin changes reach the ZIP and WordPress 6.9 / PHP 8.0
 checks within a day.
 
-The `main-ci-gates` ruleset requires `1 - Static QA`, `2 - Unit Tests` and
-`Docker QA gate`. Each is an aggregate job: it passes only when change detection
+The `main-ci-gates` ruleset requires `01 - Static QA`, `02 - Unit Tests` and
+`03-04 - Docker QA`. Each is an aggregate job: it passes only when change detection
 succeeded and every applicable job succeeded, or was skipped because detection
 said it did not apply. Failure, cancellation or an unexpected skip fails it.
-`Package QA gate` and `Minimum runtime QA gate` follow the same rule but are not
+`05 - Release Package QA` and `06 - Minimum Runtime QA` follow the same rule but are not
 merge requirements. Instead, a release requires both suites to have actually
 run and passed on the tagged commit; see [release strategy](release-strategy.md).
 

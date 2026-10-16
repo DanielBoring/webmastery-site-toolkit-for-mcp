@@ -278,7 +278,7 @@ final class DestructiveLifecycleTest extends TestCase {
 	}
 
 	public function test_workflows_retain_failed_and_successful_stage_directories(): void {
-		foreach ( array( 'e2e-qa.yml' => 2, 'release-package-qa.yml' => 1 ) as $file => $count ) {
+		foreach ( array( '03-04-docker-qa.yml' => 2, '05-release-package-qa.yml' => 1 ) as $file => $count ) {
 			$text = file_get_contents( $this->plugin . '/.github/workflows/' . $file );
 			self::assertSame( $count, preg_match_all( '/name: Upload destructive safety (?:contract|HTTP|package) evidence\\R\\s+if: \\$\\{\\{ always\\(\\) \\}\\}[\\s\\S]*?path: e2e-artifacts\\/destructive-\\*\\/\\R\\s+if-no-files-found: error\\R\\s+retention-days: 7/', $text ) );
 		}

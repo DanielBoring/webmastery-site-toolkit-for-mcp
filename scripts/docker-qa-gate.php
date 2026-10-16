@@ -16,6 +16,6 @@ function docker_qa_gate_passes(string $detector, string $should_run, string $con
 
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
 	$passed = count($argv) === 5 && docker_qa_gate_passes($argv[1], $argv[2], $argv[3], $argv[4]);
-	fwrite($passed ? STDOUT : STDERR, $passed ? "Docker QA gate passed.\n" : "Docker QA gate failed: detector or runtime checks did not complete as expected.\n");
+	fwrite($passed ? STDOUT : STDERR, $passed ? "03-04 - Docker QA gate passed.\n" : "03-04 - Docker QA gate failed: detector or runtime checks did not complete as expected.\n");
 	exit($passed ? 0 : 1);
 }

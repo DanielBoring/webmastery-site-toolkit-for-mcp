@@ -1,4 +1,4 @@
-name: 5 - Release Package QA
+name: 05 - Release Package QA
 
 on:
   workflow_dispatch:
@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   changes:
+    name: 05 - Release Package QA / detect changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -37,7 +38,7 @@ jobs:
         run: bash scripts/qa-changes.sh >> "$GITHUB_OUTPUT"
 
   release-package-qa:
-    name: 5 - Release Package QA
+    name: 05 - Release Package QA / package
     needs: changes
     if: needs.changes.outputs.should-run == 'true'
     runs-on: ubuntu-latest
@@ -144,7 +145,7 @@ jobs:
           retention-days: 7
 
   package-gate:
-    name: Package QA gate
+    name: 05 - Release Package QA
     needs: [changes, release-package-qa]
     if: ${{ always() }}
     runs-on: ubuntu-latest

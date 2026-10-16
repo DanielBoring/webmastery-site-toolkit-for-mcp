@@ -1,4 +1,4 @@
-name: 6 - Compatibility QA
+name: 07 - Compatibility QA
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   discover-versions:
-    name: Discover compatibility versions
+    name: 07 - Compatibility QA / discover versions
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -66,7 +66,7 @@ jobs:
           retention-days: 30
 
   compatibility-qa:
-    name: 6 - Compatibility QA (${{ matrix.label }})
+    name: 07 - Compatibility QA / ${{ matrix.label }}
     needs: discover-versions
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -177,7 +177,7 @@ jobs:
           retention-days: 30
 
   current-plugin-check:
-    name: 6 - Current Plugin Check package
+    name: 07 - Compatibility QA / current Plugin Check
     needs: [discover-versions, compatibility-qa]
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -248,7 +248,7 @@ jobs:
           retention-days: 30
 
   open-update-pr:
-    name: Test proposed commit and open compatibility PR
+    name: 07 - Compatibility QA / open baseline PR
     needs: [discover-versions, compatibility-qa, current-plugin-check]
     if: >-
       needs.compatibility-qa.result == 'success' &&
@@ -365,7 +365,7 @@ jobs:
           cat compatibility-artifacts/pr-body.md >> "$GITHUB_STEP_SUMMARY"
 
   report:
-    name: 6 - Compatibility result report
+    name: 07 - Compatibility QA
     if: always()
     needs: [discover-versions, compatibility-qa, current-plugin-check, open-update-pr]
     runs-on: ubuntu-latest
@@ -417,7 +417,7 @@ jobs:
           } > report.md
           cat report.md >> "$GITHUB_STEP_SUMMARY"
           if [ "$EVENT_NAME" = schedule ] && [ "$failure" = true ]; then
-            previous="$(gh api "repos/$GH_REPO/actions/workflows/compatibility-qa.yml/runs?event=schedule&status=completed&per_page=10" \
+            previous="$(gh api "repos/$GH_REPO/actions/workflows/07-compatibility-qa.yml/runs?event=schedule&status=completed&per_page=10" \
               --jq ".workflow_runs | map(select(.id != $RUN_ID)) | sort_by(.created_at) | reverse | .[0].conclusion // \"none\"")"
             if [ "$previous" = failure ] || [ "$previous" = timed_out ]; then
               title="Compatibility QA: persistent scheduled failure"

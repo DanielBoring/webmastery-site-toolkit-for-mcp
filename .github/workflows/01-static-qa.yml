@@ -1,4 +1,4 @@
-name: Workflow lint
+name: 01 - Static QA
 
 on:
   workflow_dispatch:
@@ -14,8 +14,57 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  static-qa:
+    name: 01 - Static QA / PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.0', '8.4']
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        shell: bash
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php-${{ matrix.php }}-composer-${{ hashFiles('composer.json', 'composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-${{ matrix.php }}-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run Static QA
+        if: matrix.php == '8.0'
+        run: composer qa:static
+
+      - name: Check PHP 8.4 syntax
+        if: matrix.php == '8.4'
+        run: composer lint:php
+
   workflow-lint:
-    name: Workflow lint
+    name: 01 - Static QA / workflow lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -45,3 +94,16 @@ jobs:
 
       - name: Lint all repository workflows and shell scripts
         run: php scripts/workflow-lint.php
+
+  static-qa-gate:
+    name: 01 - Static QA
+    needs: [static-qa, workflow-lint]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every PHP static check and workflow lint
+        env:
+          RESULT: ${{ needs.static-qa.result }}
+          LINT_RESULT: ${{ needs.workflow-lint.result }}
+        run: test "$RESULT" = success && test "$LINT_RESULT" = success

@@ -5,7 +5,7 @@ REPO_ROOT="$(pwd)"
 WORK="$REPO_ROOT/build/release-prerequisite-tests-$$"
 mkdir -p "$WORK/bin"
 trap 'rm -rf "$WORK"' EXIT
-WORKFLOW="$REPO_ROOT/.github/workflows/release.yml"
+WORKFLOW="$REPO_ROOT/.github/workflows/08-release.yml"
 awk '/name: Install and verify publish-host Subversion before first use/ { found=1; next }
 	found && /run: \|/ { block=1; next }
 	block && /^          / { sub(/^          /, ""); print; next }

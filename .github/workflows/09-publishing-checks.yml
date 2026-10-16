@@ -1,4 +1,4 @@
-name: WordPress.org publishing checks
+name: 09 - Publishing Checks
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   publishing-qa:
-    name: Publishing checks (not product acceptance)
+    name: 09 - Publishing Checks
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

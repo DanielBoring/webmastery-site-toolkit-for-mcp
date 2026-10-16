@@ -96,7 +96,7 @@ Product QA is separate from directory publishing checks. Use `--package` or
 `-Package` for original-ZIP plugin behavior, and `--publishing` or `-Publishing`
 for Plugin Check without product acceptance. `--release`/`-Release` retains
 both requirements. No result establishes WordPress.org approval or listing.
-`Package QA gate` reports on every PR and runs package QA when ZIP inputs
+`05 - Release Package QA` reports on every PR and runs package QA when ZIP inputs
 change. The minimum-runtime lane runs nightly and on dispatch rather than on
 every PR. Neither is a required merge check; both must be green on the commit
 you tag for release.
@@ -130,7 +130,7 @@ baseline to make a subsequent control pass. Boundary-oracle migrations preserve
 typed inputs, actors and direct interlocks; unrelated historical ledgers remain
 unchanged.
 
-`composer lint:workflows` requires actionlint 1.7.12, ShellCheck 0.11.0, and zizmor 1.30.1 on `PATH`. Install the pinned upstream releases and verify their checksums as shown in `.github/workflows/workflow-lint.yml`; the command rejects missing or mismatched versions.
+`composer lint:workflows` requires actionlint 1.7.12, ShellCheck 0.11.0, and zizmor 1.30.1 on `PATH`. Install the pinned upstream releases and verify their checksums as shown in `.github/workflows/01-static-qa.yml`; the command rejects missing or mismatched versions.
 
 The repo strategy docs explain how maintainers operate the project:
 
@@ -297,7 +297,7 @@ For the #108 runtime probes, require `WSTM108_ALLOW_DISPOSABLE=1` and an owned
 isolated test installation. The opt-in is not a Docker lease; never run
 mutating fixtures on shared/live sites.
 
-Before merge, require successful `1 - Static QA`, `2 - Unit Tests`, and `Docker QA gate` checks from real PR runs. The Docker gate accepts skipped runtime jobs only after successful change detection identifies a non-runtime change. Fork and read-only bot PRs retain job summaries without requiring a writable comment token.
+Before merge, require successful `01 - Static QA`, `02 - Unit Tests`, and `03-04 - Docker QA` checks from real PR runs. The Docker gate accepts skipped runtime jobs only after successful change detection identifies a non-runtime change. Fork and read-only bot PRs retain job summaries without requiring a writable comment token.
 
 GitHub Actions-created baseline PRs need a maintainer to approve their PR-event workflows. Manually dispatched QA is useful for investigation but does not satisfy required branch-ruleset checks. Do not substitute a green dispatch run for a green PR check.
 
@@ -413,10 +413,10 @@ Release checklist:
 4. Update `Stable tag`, plugin changelog entries, and upgrade notice in `readme.txt`.
 5. Confirm the generated zip uses the `webmastery-site-toolkit-for-mcp` directory slug.
 6. Run the official WordPress Plugin Check utility against the generated `webmastery-site-toolkit-for-mcp` package and confirm there are no unexpected errors.
-7. Review the latest scheduled/manual `6 - Compatibility QA` result for upstream WordPress/PHP/plugin dependency drift.
+7. Review the latest scheduled/manual `07 - Compatibility QA` result for upstream WordPress/PHP/plugin dependency drift.
 8. Confirm the protected `wordpress-org` GitHub Environment and `SVN_USERNAME` / `SVN_PASSWORD` GitHub Actions secrets are configured.
 9. Tag and push `vX.Y.Z` to trigger the release workflow.
-10. Review the ready-for-approval summary and approve **Publish release (GitHub approval required)** after release QA passes. The `wordpress-org` environment is a GitHub production gate, not WordPress.org staff review.
+10. Review the ready-for-approval summary and approve **08 - Release / publish (GitHub approval required)** after release QA passes. The `wordpress-org` environment is a GitHub production gate, not WordPress.org staff review.
 
 Release tags must point into reviewed `main` history. Release QA must run static/unit checks as well as package validation. Approve the source SHA and validated artifact, not a rebuilt replacement. Publishing is serialized across all release tags; if SVN succeeds but a later step fails, follow the partial-failure procedure rather than moving a tag or starting a different build.
 
@@ -425,6 +425,8 @@ If recovery needs workflow fixes, follow the [guarded recovery runbook](docs/rel
 ---
 
 ## Release process (maintainers)
+
+> **Retired:** the v3.0.0 fresh-validation workflow and its tests were removed after 3.0.0 published; the paragraph below is history.
 
 Fresh validation without an original successful artifact is a separate,
 input-free, reviewed policy in `fresh-release-validation.yml`, currently locked
