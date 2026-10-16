@@ -1,4 +1,4 @@
-name: 5 - Release
+name: 08 - Release
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       original-run-id:
-        description: 'Original tag-push release run ID with successful Validate Release'
+        description: 'Original tag-push release run ID with a successful 08 - Release / validate job'
         required: true
         type: string
       original-artifact-id:
@@ -20,7 +20,7 @@ permissions: {}
 
 jobs:
   release-qa:
-    name: 5 - Validate Release
+    name: 08 - Release / validate
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -109,14 +109,14 @@ jobs:
         run: |
           {
             echo "## Ready for GitHub production approval"
-            echo "Approve **Publish release (GitHub approval required)** in **Review deployments**."
+            echo "Approve **08 - Release / publish (GitHub approval required)** in **Review deployments**."
             echo "The environment is still named **wordpress-org**. This is DanielBoring's GitHub deployment approval, NOT WordPress.org staff review."
             echo "Destinations: WordPress.org SVN and GitHub Releases. No new package will be built after approval."
             echo "Release: v${RELEASE_VERSION}; source: ${SOURCE_SHA}; original QA run: ${GITHUB_RUN_ID}, attempt: ${GITHUB_RUN_ATTEMPT}; artifact: ${ARTIFACT_ID}."
           } >> "$GITHUB_STEP_SUMMARY"
 
   recover:
-    name: Resolve original validated release (read-only)
+    name: 08 - Release / resolve recovery (read-only)
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -171,7 +171,7 @@ jobs:
           git merge-base --is-ancestor "$SOURCE_SHA" refs/remotes/origin/main
           {
             echo "## Ready for GitHub production approval - original artifact recovery"
-            echo "Approve **Publish release (GitHub approval required)** in **Review deployments**."
+            echo "Approve **08 - Release / publish (GitHub approval required)** in **Review deployments**."
             echo "The environment is still named **wordpress-org**. This is DanielBoring's GitHub deployment approval, NOT WordPress.org staff review."
             echo "Control tag ${GITHUB_REF_NAME} selects reviewed workflow logic only; it is NOT a plugin release."
             echo "Approved control tag object: ${CONTROL_TAG_OBJECT}; original artifact archive digest: ${ARTIFACT_DIGEST}."
@@ -180,7 +180,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   publish:
-    name: Publish release (GitHub approval required)
+    name: 08 - Release / publish (GitHub approval required)
     needs: [release-qa, recover]
     if: >-
       ${{ !cancelled() &&

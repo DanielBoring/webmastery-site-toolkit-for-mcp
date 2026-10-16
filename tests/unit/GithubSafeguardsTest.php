@@ -41,9 +41,9 @@ final class GithubSafeguardsTest extends TestCase {
 	}
 
 	public function test_workflow_gate_is_unconditional_and_uses_all_results(): void {
-		$workflow = file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/e2e-qa.yml');
+		$workflow = file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/03-04-docker-qa.yml');
 		self::assertIsString($workflow);
-		self::assertMatchesRegularExpression('/docker-qa-gate:\s+name: Docker QA gate\s+needs: \[changes, ability-contract-qa, full-mcp-e2e-qa\]\s+if: \$\{\{ always\(\) \}\}/', $workflow);
+		self::assertMatchesRegularExpression('/docker-qa-gate:\s+name: 03-04 - Docker QA\s+needs: \[changes, ability-contract-qa, full-mcp-e2e-qa\]\s+if: \$\{\{ always\(\) \}\}/', $workflow);
 		foreach (array('needs.changes.result', 'needs.changes.outputs.should-run', 'needs.ability-contract-qa.result', 'needs.full-mcp-e2e-qa.result') as $input) {
 			self::assertStringContainsString($input, $workflow);
 		}
@@ -58,7 +58,7 @@ final class GithubSafeguardsTest extends TestCase {
 			self::assertStringNotContainsString('lint:workflows', json_encode($composer['scripts'][$script]));
 		}
 		$helper = file_get_contents($root . '/scripts/workflow-lint.php');
-		$workflow = file_get_contents($root . '/.github/workflows/workflow-lint.yml');
+		$workflow = file_get_contents($root . '/.github/workflows/01-static-qa.yml');
 		foreach (array('1.7.12', '0.11.0', '1.30.1') as $version) {
 			self::assertStringContainsString($version, $helper);
 			self::assertStringContainsString('/v' . $version . '/', $workflow);
@@ -71,7 +71,7 @@ final class GithubSafeguardsTest extends TestCase {
 		$root = dirname(__DIR__, 2);
 		$composer = json_decode(file_get_contents($root . '/composer.json'), true, 512, JSON_THROW_ON_ERROR);
 		self::assertSame(
-			array('python3 -B -m unittest discover -s tests/unit -p test_rescoped_workflow_gates.py -v', 'python3 -B -m unittest discover -s tests/unit -p test_qa_execution.py -v', 'python3 -B -m unittest discover -s tests/unit -p test_catalog_ordering.py -v', 'python3 -B -m unittest discover -s tests/unit -p test_qa_profile.py -v', 'bash tests/qa-compose-safety-test.sh', 'bash tests/legacy-artifact-stage-test.sh', 'bash tests/owned-bootstrap-origin-test.sh', '@test:phpstan-baseline', '@test:release-safeguards', 'bash tests/destructive-stage-test.sh', 'bash tests/input-schema-stage-test.sh', 'bash tests/compatibility-download-test.sh', 'bash tests/compatibility-dependency-policy-test.sh', 'php scripts/test-release-fresh-validation.php'),
+			array('python3 -B -m unittest discover -s tests/unit -p test_rescoped_workflow_gates.py -v', 'python3 -B -m unittest discover -s tests/unit -p test_qa_execution.py -v', 'python3 -B -m unittest discover -s tests/unit -p test_catalog_ordering.py -v', 'python3 -B -m unittest discover -s tests/unit -p test_qa_profile.py -v', 'bash tests/qa-compose-safety-test.sh', 'bash tests/legacy-artifact-stage-test.sh', 'bash tests/owned-bootstrap-origin-test.sh', '@test:phpstan-baseline', '@test:release-safeguards', 'bash tests/destructive-stage-test.sh', 'bash tests/input-schema-stage-test.sh', 'bash tests/compatibility-download-test.sh', 'bash tests/compatibility-dependency-policy-test.sh'),
 			$composer['scripts']['test:ci-safeguards']
 		);
 		self::assertSame('php scripts/test-phpstan-baseline.php', $composer['scripts']['test:phpstan-baseline']);
@@ -80,11 +80,11 @@ final class GithubSafeguardsTest extends TestCase {
 			array('php scripts/test-release-safeguards.php', 'bash scripts/test-release-tag-check.sh', 'bash scripts/test-release-plugin-check.sh', 'bash scripts/test-release-runtime.sh', 'php scripts/test-release-recovery.php', 'php scripts/test-release-checks-gate.php', 'bash scripts/test-release-control-check.sh', 'bash scripts/test-release-publish-prerequisites.sh'),
 			$composer['scripts']['test:release-safeguards']
 		);
-		$workflow = file_get_contents($root . '/.github/workflows/unit-tests.yml');
+		$workflow = file_get_contents($root . '/.github/workflows/02-unit-tests.yml');
 		self::assertStringContainsString('run: composer test:ci-safeguards', $workflow);
 		self::assertStringContainsString('extensions: zip', $workflow);
 		// Release safeguards run in package QA and CI safeguards; the release job relies on main's results.
-		foreach (array('release-package-qa.yml') as $file) {
+		foreach (array('05-release-package-qa.yml') as $file) {
 			$release_workflow = file_get_contents($root . '/.github/workflows/' . $file);
 			self::assertStringContainsString('bash scripts/test-release-runtime.sh', $release_workflow);
 			self::assertStringContainsString('php scripts/test-release-recovery.php', $release_workflow);
@@ -94,7 +94,7 @@ final class GithubSafeguardsTest extends TestCase {
 	}
 
 	public function test_compatibility_promotion_only_blocks_open_pull_requests(): void {
-		$workflow = file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/compatibility-qa.yml');
+		$workflow = file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/07-compatibility-qa.yml');
 		self::assertIsString($workflow);
 		self::assertStringContainsString('gh pr list --state open', $workflow);
 		self::assertStringNotContainsString('gh pr list --state all', $workflow);
@@ -178,7 +178,7 @@ final class GithubSafeguardsTest extends TestCase {
 	}
 
 	public function test_unit_and_safeguard_jobs_are_independent_bounded_and_required(): void {
-		$workflow = str_replace("\r\n", "\n", file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/unit-tests.yml'));
+		$workflow = str_replace("\r\n", "\n", file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/02-unit-tests.yml'));
 		$jobs = array(
 			'unit-tests'    => array('composer qa:unit', 'timeout-minutes: 15', "php: ['8.0', '8.4']"),
 			'qa-tooling'    => array('composer qa:tooling', 'timeout-minutes: 45', "php-version: '8.4'"),
@@ -196,7 +196,7 @@ final class GithubSafeguardsTest extends TestCase {
 				self::assertStringContainsString("if: needs.changes.outputs.should-run == 'true'", $section[1]);
 			}
 		}
-		self::assertMatchesRegularExpression('/unit-tests-gate:\s+name: 2 - Unit Tests\s+needs: \[changes, unit-tests, qa-tooling, ci-safeguards\]\s+if: \$\{\{ always\(\) \}\}/', $workflow);
+		self::assertMatchesRegularExpression('/unit-tests-gate:\s+name: 02 - Unit Tests\s+needs: \[changes, unit-tests, qa-tooling, ci-safeguards\]\s+if: \$\{\{ always\(\) \}\}/', $workflow);
 		self::assertStringContainsString('test "$UNIT_RESULT" = success', $workflow);
 		self::assertStringContainsString('php scripts/qa-check-gate.php "$DETECTOR" "$SHOULD_RUN" "$TOOLING_RESULT"', $workflow);
 		self::assertStringContainsString('php scripts/qa-check-gate.php "$DETECTOR" "$SHOULD_RUN" "$SAFEGUARD_RESULT"', $workflow);
@@ -233,7 +233,7 @@ final class GithubSafeguardsTest extends TestCase {
 		self::assertStringContainsString("source: ./\n        target: " . $plugin . "\n        read_only: true", $base);
 		self::assertStringContainsString('- qa_artifacts:/qa-artifacts', $base);
 		self::assertStringNotContainsString('./e2e-artifacts', $base);
-		$workflow = file_get_contents($root . '/.github/workflows/release-package-qa.yml');
+		$workflow = file_get_contents($root . '/.github/workflows/05-release-package-qa.yml');
 		self::assertStringContainsString('bash scripts/qa-changes.sh', $workflow);
 		$detector = file_get_contents($root . '/scripts/qa-changes.sh');
 		self::assertStringContainsString('docker-compose[^/]*', $detector);

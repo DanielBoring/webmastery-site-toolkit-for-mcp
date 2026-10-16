@@ -49,14 +49,14 @@ Before tagging a release:
 5. Add matching `readme.txt` changelog and upgrade notice entries.
 6. Keep repository-only notes in `.github/REPOSITORY_CHANGELOG.md`.
 7. Merge the release changes to `main` and let its push checks finish.
-8. Make sure `5 - Release Package QA` and Minimum runtime QA have succeeded on
+8. Make sure `05 - Release Package QA` and `06 - Minimum Runtime QA` have succeeded on
    that exact `main` commit. The nightly run covers this when nothing merged
    since; otherwise dispatch both on `main`:
-   `gh workflow run release-package-qa.yml --ref main` and
-   `gh workflow run minimum-runtime-qa.yml --ref main`.
+   `gh workflow run 05-release-package-qa.yml --ref main` and
+   `gh workflow run 06-minimum-runtime-qa.yml --ref main`.
    To check readiness before tagging, run
    `php scripts/release-checks-gate.php DanielBoring/webmastery-site-toolkit-for-mcp "$(git rev-parse origin/main)"`.
-9. Review the latest `6 - Compatibility QA` result for upstream drift.
+9. Review the latest `07 - Compatibility QA` result for upstream drift.
 10. Confirm no unexpected Plugin Check findings remain.
 11. Confirm the `wordpress-org` GitHub Environment approval gate and SVN secrets are configured before pushing a release tag that should publish to WordPress.org.
 
@@ -65,11 +65,11 @@ Before tagging a release:
 The tag workflow owns release validation, WordPress.org SVN deployment, and GitHub release creation:
 
 1. Maintainer pushes `vX.Y.Z`.
-2. `.github/workflows/release.yml` requires an exact `vX.Y.Z` tag in fetched `main` history. `scripts/release-checks-gate.php` then requires that the tagged commit already passed `1 - Static QA`, `2 - Unit Tests`, `Docker QA gate`, `5 - Release Package QA` and the WordPress 6.9 / PHP 8.0 product runtime on `main`. Each result must come from its expected workflow file running on `main` from a push, the nightly schedule or a manual dispatch; pull-request runs of the same commit do not count. The last two must have actually run, not been skipped. A missing or failed check stops the release and names the workflow to dispatch. The release promotes that evidence rather than re-running it.
+2. `.github/workflows/08-release.yml` requires an exact `vX.Y.Z` tag in fetched `main` history. `scripts/release-checks-gate.php` then requires that the tagged commit already passed `01 - Static QA`, `02 - Unit Tests`, `03-04 - Docker QA`, `05 - Release Package QA` and the 06 - Minimum Runtime QA / WordPress 6.9 PHP 8.0 on `main`. Each result must come from its expected workflow file running on `main` from a push, the nightly schedule or a manual dispatch; pull-request runs of the same commit do not count. The last two must have actually run, not been skipped. A missing or failed check stops the release and names the workflow to dispatch. The release promotes that evidence rather than re-running it.
 3. Release validation checks source/archive metadata, requirements, the tested WordPress baseline, and nonempty version entries in the changelog and upgrade-notice sections.
-4. `scripts/release-qa.sh --publishing` builds the release ZIP once, validates exact source/archive hashes, and runs WordPress Plugin Check against a pristine extraction of that ZIP with both the pinned and the current Plugin Check versions. The original archive digest must remain unchanged. Product behavior of the ZIP was already proven by `5 - Release Package QA` on the same commit.
+4. `scripts/release-qa.sh --publishing` builds the release ZIP once, validates exact source/archive hashes, and runs WordPress Plugin Check against a pristine extraction of that ZIP with both the pinned and the current Plugin Check versions. The original archive digest must remain unchanged. Product behavior of the ZIP was already proven by `05 - Release Package QA` on the same commit.
 5. The validated ZIP, notes, listing assets, source SHA, and integrity manifest are retained as a run-scoped artifact.
-6. The validation job writes a **Ready for GitHub production approval** summary with the release/source/run/attempt/artifact identity. **Publish release (GitHub approval required)** then waits for DanielBoring's GitHub approval in the protected `wordpress-org` environment. This is not WordPress.org staff review.
+6. The validation job writes a **Ready for GitHub production approval** summary with the release/source/run/attempt/artifact identity. **08 - Release / publish (GitHub approval required)** then waits for DanielBoring's GitHub approval in the protected `wordpress-org` environment. This is not WordPress.org staff review.
 7. The publish job explicitly installs and verifies host Subversion before its first preflight, verifies the original artifact and tag object/source, serializes production updates across all release tags, and rejects a version that would regress the published release.
 8. SVN receives the contents extracted from the validated ZIP; GitHub receives that original ZIP and build provenance. WordPress.org publication is checked with bounded retries.
 
@@ -122,7 +122,7 @@ Build provenance describes the actual GitHub ZIP and executing workflow; it is n
 
 Avoid frequent small SVN commits. WordPress.org guidance treats SVN as a release repository, not the day-to-day development repository.
 
-WordPress.org SVN is production. There is no separate WordPress.org test SVN for this plugin. Use pull request QA, `5 - Release Package QA`, optional manual compatibility checks, staging WordPress installs, and the protected environment approval gate before publishing.
+WordPress.org SVN is production. There is no separate WordPress.org test SVN for this plugin. Use pull request QA, `05 - Release Package QA`, optional manual compatibility checks, staging WordPress installs, and the protected environment approval gate before publishing.
 
 ### GitHub environment and secrets
 
@@ -136,15 +136,17 @@ Recommended settings:
 4. Restrict release-tag creation, updates, and deletion through the tag ruleset. Repository administrators have the explicit tag-rule bypass, not an environment-approval bypass.
 5. Use the WordPress.org SVN-specific password, not the normal WordPress.org account password.
 
-The environment's reviewer/self-review/admin-bypass settings, tag-only `v*` deployment policy, and release-tag creation/update/deletion restrictions were read back again on September 21, 2026 during recovery planning. Secret values were not read. Keep the environment ID `wordpress-org` unchanged: it holds the established secrets and protections, so that name may still appear under **Review deployments** even though the job is named **Publish release (GitHub approval required)**. Recheck effective settings before releases; documentation alone does not enforce them.
+The environment's reviewer/self-review/admin-bypass settings, tag-only `v*` deployment policy, and release-tag creation/update/deletion restrictions were read back again on September 21, 2026 during recovery planning. Secret values were not read. Keep the environment ID `wordpress-org` unchanged: it holds the established secrets and protections, so that name may still appear under **Review deployments** even though the job is named **08 - Release / publish (GitHub approval required)**. Recheck effective settings before releases; documentation alone does not enforce them.
 
-Main CI enforcement is **active**, verified on September 17, 2026: `main-ci-gates` requires `1 - Static QA`, `2 - Unit Tests`, and `Docker QA gate` from GitHub Actions. The [setup evidence](../.github/SETUP-COMPLETE.md#rollout-evidence) records the completed initial rollout, including all five approved bot PR workflows. Activation does not replace per-release package QA or protected production approval.
+Main CI enforcement is **active**, verified on September 17, 2026: `main-ci-gates` requires `01 - Static QA`, `02 - Unit Tests`, and `03-04 - Docker QA` from GitHub Actions. The [setup evidence](../.github/SETUP-COMPLETE.md#rollout-evidence) records the completed initial rollout, including all five approved bot PR workflows. Activation does not replace per-release package QA or protected production approval.
 
 At that verification, PR #140's MCP Adapter 0.6.1 candidate had passed compatibility and PR package QA but remained open and unmerged. Main at `3dae8aa` used 0.5.0. The checked-in adapter baseline is now 0.6.1; baseline validation or adoption does not authorize a production release. Future Actions-created PR workflows still require maintainer approval before their genuine PR checks can satisfy the ruleset.
 
 ### Partial failure recovery
 
 #### Fresh validation when the immutable release has no validated artifact
+
+> **Retired.** `fresh-release-validation.yml` was removed after v3.0.0 published. This section is kept as history until the docs restructure moves it to the release history.
 
 `fresh-release-validation.yml` is a distinct, input-free recovery entry point
 for **v3.0.0 only**. It does not change the original tag, rerun its frozen
@@ -184,7 +186,7 @@ version-progression, SVN/public-listing and GitHub checks under the same shared
 publish lock. It never builds after approval. GitHub attestation identifies the
 actual control workflow; the manifest identifies the original package source.
 
-Existing `release.yml` artifact recovery still requires a successful original
+Existing `08-release.yml` artifact recovery still requires a successful original
 tag-push validation and retained sealed artifact: failed/cancelled/no-artifact
 runs remain rejected. Fresh validation does not weaken those semantics.
 Interrupted fresh publication may be partial: retain the new artifact and
@@ -248,7 +250,7 @@ Recovery runbook:
 
 1. Preserve the failed run, successful Validate Release job, original artifact ID/name/expiry, release tag object, source SHA and original package digest. An overall failed run is expected after failed publication; failed or absent QA is never acceptable.
 2. Review and merge the source-only CI fix through normal PR checks. With separate explicit authorization, the coordinator creates and pushes a new annotated `v-release-recovery-*` tag identifying that merged commit. Tag creation remains subject to the existing release-tag ruleset. Never modify the original `vX.Y.Z` tag or tag unreviewed code.
-3. The coordinator dispatches `release.yml` **on that control tag**, passing only `original-run-id` and `original-artifact-id` as decimal IDs. Both the dispatch actor and any rerun triggering actor must retain repository write access. No caller-selected source, package path or replacement version is accepted.
+3. The coordinator dispatches `08-release.yml` **on that control tag**, passing only `original-run-id` and `original-artifact-id` as decimal IDs. Both the dispatch actor and any rerun triggering actor must retain repository write access. No caller-selected source, package path or replacement version is accepted.
 4. The read-only resolver proves same-repository push/release-workflow identity, source/tag identity and current main ancestry. It derives the original attempt from `release-RUN-ATTEMPT`, checks that attempt explicitly, requires exactly one successful Validate Release job and its required successful QA/seal/upload steps, and checks artifact ownership, unique run membership, expiry and upload timing. It never substitutes the latest attempt or requires the failed publication run to have succeeded overall.
 5. Review the resolver's ready-for-approval summary, including the control-tag object and original artifact archive digest. DanielBoring approves the production deployment under **Review deployments**; `wordpress-org` denotes the destination/environment, not an external WordPress.org review queue. Approval of the original failed run does not remove this fresh recovery approval gate.
 6. Before switching away from the trusted control checkout, the one shared publish job compares the control-tag object with the preapproval object (even a recreated annotation on the same commit is rejected), and reruns the read-only resolver after approval. Original run/job/artifact provenance, expiry and actor authorization must still pass; source, release-tag object, version, run, attempt, artifact ID and archive digest must all match the approved identity. Only then does it check out the exact original release source, download that original run's artifact by ID, and verify its manifest against the **original** run ID, source and version. It rechecks the original remote tag object/peeled source and current main ancestry. Host Subversion is provisioned before preflight; the same stale-version, duplicate, attestation, exact SVN/public-package and original GitHub ZIP checks then apply. No download or SVN-secret use precedes these postapproval identity gates.

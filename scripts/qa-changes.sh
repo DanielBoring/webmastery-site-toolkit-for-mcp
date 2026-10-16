@@ -29,11 +29,11 @@ case "${QA_SCOPE:-default}" in
 		;;
 	runtime)
 		# Inverted: every path is relevant unless it is a known non-runtime path.
-		ignored='^(docs/|ISSUES/|\.wordpress-org/|tests/unit/|tests/qa-suites\.json$|[^/"]+\.md$|LICENSE$|\.github/(ISSUE_TEMPLATE/|[^/]+\.(md|yml|json)$|workflows/[^/]+\.yml$)|scripts/(test-release-|release-(recovery|fresh-validation|tag-check|control-check|publish-check|plugin-check|checks-gate)\.|build-release\.sh$|release-qa\.sh$|qa-profile\.py$|adapter-|update-compatibility-baselines\.php$|workflow-lint\.php$|import-issues\.sh$))'
-		always='^\.github/(compatibility-versions\.json|workflows/e2e-qa\.yml)$'
+		ignored='^(docs/|ISSUES/|\.wordpress-org/|tests/unit/|tests/qa-suites\.json$|[^/"]+\.md$|LICENSE$|\.github/(ISSUE_TEMPLATE/|[^/]+\.(md|yml|json)$|workflows/[^/]+\.yml$)|scripts/(test-release-|release-(recovery|tag-check|control-check|publish-check|plugin-check|checks-gate)\.|build-release\.sh$|release-qa\.sh$|qa-profile\.py$|adapter-|update-compatibility-baselines\.php$|workflow-lint\.php$))'
+		always='^\.github/(compatibility-versions\.json|workflows/03-04-docker-qa\.yml)$'
 		;;
 	package)
-		relevant='^("|\.gitattributes$|readme\.txt$|LICENSE$|webmastery-site-toolkit-for-mcp\.php$|assets/|\.wordpress-org/|docker-compose\.release\.yml$|\.github/workflows/release-package-qa\.yml$|scripts/(build-release\.sh|create-release-zip\.php|release-tools\.php|release-lib\.php|validate-release-package\.php|release-qa\.sh|release-plugin-check\.sh|product-artifacts\.php|qa-run\.sh|qa-changes\.sh)$)'
+		relevant='^("|\.gitattributes$|readme\.txt$|LICENSE$|webmastery-site-toolkit-for-mcp\.php$|assets/|\.wordpress-org/|docker-compose\.release\.yml$|\.github/workflows/05-release-package-qa\.yml$|scripts/(build-release\.sh|create-release-zip\.php|release-tools\.php|release-lib\.php|validate-release-package\.php|release-qa\.sh|release-plugin-check\.sh|product-artifacts\.php|qa-run\.sh|qa-changes\.sh)$)'
 		;;
 	*)
 		echo "Unknown QA change-detection scope." >&2

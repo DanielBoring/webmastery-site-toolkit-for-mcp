@@ -62,7 +62,7 @@ function recovery_run(array $run, string $repository, string $repository_id, str
 	release_require(recovery_id($run['id'] ?? null) === $run_id, 'Run ID mismatch.');
 	release_require(($run['repository']['full_name'] ?? null) === $repository && recovery_id($run['repository']['id'] ?? null) === $repository_id, 'Run repository mismatch.');
 	release_require(($run['head_repository']['full_name'] ?? null) === $repository && recovery_id($run['head_repository']['id'] ?? null) === $repository_id, 'Run head repository mismatch.');
-	release_require('push' === ($run['event'] ?? null) && '.github/workflows/release.yml' === ($run['path'] ?? null) && recovery_id($run['workflow_id'] ?? null) === $workflow_id, 'Original run must be the tag-push release workflow.');
+	release_require('push' === ($run['event'] ?? null) && '.github/workflows/08-release.yml' === ($run['path'] ?? null) && recovery_id($run['workflow_id'] ?? null) === $workflow_id, 'Original run must be the tag-push release workflow.');
 	release_require('completed' === ($run['status'] ?? null) && in_array($run['conclusion'] ?? null, array('success', 'failure'), true), 'Original run must be completed, not pending or cancelled.');
 	recovery_sha($run['head_sha'] ?? null);
 	release_require(is_string($run['head_branch'] ?? null) && str_starts_with($run['head_branch'], 'v'), 'Missing original release tag.');
@@ -85,8 +85,8 @@ function recovery_resolve(array $input, callable $api, int $now): array {
 		$permission = $api($base . '/collaborators/' . rawurlencode($actor) . '/permission');
 		release_require(($permission['user']['login'] ?? null) === $actor && in_array($permission['permission'] ?? null, array('admin', 'write', 'maintain'), true), 'Recovery actor requires repository write authorization.');
 	}
-	$workflow = $api($base . '/actions/workflows/release.yml');
-	release_require('.github/workflows/release.yml' === ($workflow['path'] ?? null) && 'active' === ($workflow['state'] ?? null), 'Release workflow identity mismatch.');
+	$workflow = $api($base . '/actions/workflows/08-release.yml');
+	release_require('.github/workflows/08-release.yml' === ($workflow['path'] ?? null) && 'active' === ($workflow['state'] ?? null), 'Release workflow identity mismatch.');
 	$workflow_id = recovery_id($workflow['id'] ?? null);
 	$run = $api($base . '/actions/runs/' . $run_id);
 	recovery_run($run, $repository, $repository_id, $workflow_id, $run_id);
@@ -112,10 +112,10 @@ function recovery_resolve(array $input, callable $api, int $now): array {
 	recovery_run($original, $repository, $repository_id, $workflow_id, $run_id);
 	release_require(recovery_id($original['run_attempt']) === $attempt && $original['head_sha'] === $run['head_sha'] && $original['head_branch'] === $run['head_branch'], 'Original attempt/source mismatch.');
 	$jobs = recovery_collection($api, $base . '/actions/runs/' . $run_id . '/attempts/' . $attempt . '/jobs', 'jobs');
-	$qa = array_values(array_filter($jobs, static fn($job) => '5 - Validate Release' === ($job['name'] ?? null)));
-	release_require(1 === count($qa), 'Expected exactly one original Validate Release job.');
+	$qa = array_values(array_filter($jobs, static fn($job) => '08 - Release / validate' === ($job['name'] ?? null)));
+	release_require(1 === count($qa), 'Expected exactly one original 08 - Release / validate job.');
 	$qa = $qa[0];
-	release_require('completed' === ($qa['status'] ?? null) && 'success' === ($qa['conclusion'] ?? null), 'Original Validate Release job did not succeed.');
+	release_require('completed' === ($qa['status'] ?? null) && 'success' === ($qa['conclusion'] ?? null), 'Original 08 - Release / validate job did not succeed.');
 	release_require(recovery_id($qa['run_id'] ?? null) === $run_id && recovery_id($qa['run_attempt'] ?? null) === $attempt && ($qa['head_sha'] ?? null) === $run['head_sha'] && ($qa['head_branch'] ?? null) === $run['head_branch'], 'QA job source/run/attempt mismatch.');
 	release_require(is_array($qa['steps'] ?? null), 'Missing original QA steps.');
 	$required = array(

@@ -6,22 +6,21 @@ This repository uses GitHub Actions for layered WordPress.org plugin QA plus tag
 
 | Event | Workflow file | Behavior |
 |------|------|------|
-| `pull_request` (`opened`, `synchronize`, `reopened`) | `.github/workflows/coding-standards.yml` | Runs `1 - Static QA` on every PR. |
-| `pull_request` (`opened`, `synchronize`, `reopened`) | `.github/workflows/unit-tests.yml` | Runs `2 - Unit Tests` on every PR. |
-| `schedule` (nightly) | `.github/workflows/unit-tests.yml` | Runs product units plus the full QA-tooling suite and CI safeguards on `main`, so tooling regressions surface within a day even when a PR skipped them. |
-| `pull_request` (`opened`, `synchronize`, `reopened`) | `.github/workflows/e2e-qa.yml` | Detects runtime-impacting files (`scripts/qa-changes.sh`, `runtime` scope), then runs `3 - Ability Contract QA` and `4 - Full MCP E2E QA` when in scope. |
-| ZIP-input `pull_request`, nightly `schedule`, or `workflow_dispatch` | `.github/workflows/release-package-qa.yml` | Runs `5 - Release Package QA` without publishing a GitHub release. |
-| nightly `schedule`, floor-lane `pull_request`, or `workflow_dispatch` | `.github/workflows/minimum-runtime-qa.yml` | Runs the WordPress 6.9 / PHP 8.0 product runtime and `Minimum runtime QA gate`. |
-| `schedule` or `workflow_dispatch` | `.github/workflows/compatibility-qa.yml` | Discovers current upstream versions, runs `6 - Compatibility QA` against baseline and candidate combinations, and opens a reviewed baseline-update PR after successful scheduled candidate tests. |
-| `workflow_dispatch` | `.github/workflows/import-issue-backlog.yml` | Previews or imports Markdown files from `ISSUES/` as GitHub Issues, preserving titles, labels, and bodies while skipping duplicates. |
+| `pull_request` (`opened`, `synchronize`, `reopened`) | `.github/workflows/01-static-qa.yml` | Runs `01 - Static QA` on every PR. |
+| `pull_request` (`opened`, `synchronize`, `reopened`) | `.github/workflows/02-unit-tests.yml` | Runs `02 - Unit Tests` on every PR. |
+| `schedule` (nightly) | `.github/workflows/02-unit-tests.yml` | Runs product units plus the full QA-tooling suite and CI safeguards on `main`, so tooling regressions surface within a day even when a PR skipped them. |
+| `pull_request` (`opened`, `synchronize`, `reopened`) | `.github/workflows/03-04-docker-qa.yml` | Detects runtime-impacting files (`scripts/qa-changes.sh`, `runtime` scope), then runs `03 - Ability Contract QA` and `04 - Full MCP E2E QA` when in scope. |
+| ZIP-input `pull_request`, nightly `schedule`, or `workflow_dispatch` | `.github/workflows/05-release-package-qa.yml` | Runs `05 - Release Package QA` without publishing a GitHub release. |
+| nightly `schedule`, floor-lane `pull_request`, or `workflow_dispatch` | `.github/workflows/06-minimum-runtime-qa.yml` | Runs `06 - Minimum Runtime QA`, the WordPress 6.9 / PHP 8.0 product runtime. |
+| `schedule` or `workflow_dispatch` | `.github/workflows/07-compatibility-qa.yml` | Discovers current upstream versions, runs `07 - Compatibility QA` against baseline and candidate combinations, and opens a reviewed baseline-update PR after successful scheduled candidate tests. |
 | `push` to `main` | Static, unit, and Docker QA workflows | Re-runs the appropriate numbered checks after merge. |
 | `workflow_dispatch` | Static, unit, Docker, or release-package QA workflows | Runs the selected QA layer on demand; does not publish or satisfy required PR checks. |
-| `pull_request`, `push` to `main`, `workflow_dispatch` | Workflow lint | Runs actionlint, ShellCheck, and zizmor separately from local Composer QA, including its Python AST and mock-only prerequisite controls. |
-| `push` tag `v*` | `.github/workflows/release.yml` | Requires main ancestry and static/unit QA, validates the package, waits for `wordpress-org` approval, and publishes the validated artifact. |
+| `pull_request`, `push` to `main`, `workflow_dispatch` | `.github/workflows/01-static-qa.yml` (workflow-lint job) | Runs actionlint, ShellCheck, and zizmor separately from local Composer QA, including its Python AST and mock-only prerequisite controls. |
+| `push` tag `v*` | `.github/workflows/08-release.yml` | Requires main ancestry and static/unit QA, validates the package, waits for `wordpress-org` approval, and publishes the validated artifact. |
 
 ## Workflow details
 
-### Docker QA (`e2e-qa.yml`)
+### Docker QA (`03-04-docker-qa.yml`)
 
 **Execution flow**
 1. Detect whether changed files are runtime-impacting.
@@ -30,7 +29,7 @@ This repository uses GitHub Actions for layered WordPress.org plugin QA plus tag
 4. Always publish available JSON summaries with bounded retention; collect detailed logs on failure.
 5. Post a PR comment from an isolated, checkout-free job only when the PR context permits writes. Fork and read-only bot runs retain job summaries.
 6. Always clean up the run's disposable Docker resources.
-7. Report `Docker QA gate`: require successful change detection and both runtime jobs, or positively identified non-runtime changes with intentionally skipped jobs. Failed detection, invalid outputs, and failure-induced skips cannot pass the gate.
+7. Report `03-04 - Docker QA`: require successful change detection and both runtime jobs, or positively identified non-runtime changes with intentionally skipped jobs. Failed detection, invalid outputs, and failure-induced skips cannot pass the gate.
 
 **PR comment data sources**
 - Result and workflow URL come from the current workflow run.
@@ -54,7 +53,7 @@ This repository uses GitHub Actions for layered WordPress.org plugin QA plus tag
 - Actions are pinned to immutable SHAs.
 - Static QA blocks risky `permission_callback => '__return_true'` ability registrations unless they are explicitly reviewed and allow-listed.
 
-### Compatibility QA (`compatibility-qa.yml`)
+### Compatibility QA (`07-compatibility-qa.yml`)
 
 The weekly/manual compatibility matrix reads pinned versions from `.github/compatibility-versions.json`, queries the official WordPress version API and the latest stable MCP Adapter GitHub release, then isolates the main upstream change surfaces:
 
@@ -72,7 +71,7 @@ After all required candidate checks pass, `scripts/update-compatibility-baseline
 
 The repository permits Actions to create PRs. PRs created with `GITHUB_TOKEN` generate approval-required PR-event runs: a maintainer must select **Approve workflows to run**. Those checks, not dispatched runs, must satisfy branch protection. A GitHub App is an alternative if automatic check startup becomes necessary; no long-lived token is required for the current flow.
 
-### Release (`release.yml`)
+### Release (`08-release.yml`)
 
 **Execution flow**
 1. Trigger on tag push matching `v*`.
@@ -93,9 +92,6 @@ The repository permits Actions to create PRs. PRs created with `GITHUB_TOKEN` ge
 ## Issue and PR process
 
 - Use normal issue triage and branch-based PR flow.
-- Backlog Markdown files under `ISSUES/` are source documents; merging them does not create GitHub Issues automatically.
-- Run `7 - Issue Backlog Import` manually with `dry_run` enabled to preview candidates. Re-run it with `dry_run` disabled to create them.
-- The importer uses each file's `title` and `labels` front matter, strips the front matter from the issue body, and adds an invisible source marker. Existing issues with the same marker or exact title are skipped, so reruns are safe.
 - Include `Closes #N` / `Fixes #N` / `Resolves #N` in PR body when merge should close an issue.
 - GitHub native issue closing handles closure on merge; no custom close workflow is used.
 
@@ -112,10 +108,10 @@ The E2E bootstrap installs and activates Yoast SEO and SEOPress from WordPress.o
 
 ## Active main CI enforcement
 
-Require the stable checks `1 - Static QA`, `2 - Unit Tests`, and `Docker QA gate` from GitHub Actions before every merge. The Docker gate enforces the runtime-dependent checks without allowing a failed prerequisite to appear as an intentional skip. Do not require workflow-level path-filtered Release Package QA.
+Require the stable checks `01 - Static QA`, `02 - Unit Tests`, and `03-04 - Docker QA` from GitHub Actions before every merge. The Docker gate enforces the runtime-dependent checks without allowing a failed prerequisite to appear as an intentional skip. Do not require workflow-level path-filtered Release Package QA.
 
 The `main-ci-gates` ruleset (23522901) is **active**, verified on September 17, 2026. Under explicit maintainer authorization, enforcement was activated only after all five genuine PR-event workflows for bot PR #140 passed. It targets only `main`, has no excluded refs or bypass actors, and binds exactly the three checks above to GitHub Actions integration 15368. Only enforcement changed; both `strict_required_status_checks_policy` and `do_not_enforce_on_create` remain `false`. See [SETUP-COMPLETE.md](SETUP-COMPLETE.md) for read-back details, public run evidence, and separately dated settings.
 
 Initial rollout is complete, but routine approvals remain: future `GITHUB_TOKEN`-created PRs need maintainer workflow approval, and baseline merges and production releases need their own review. At the September 17 verification, PR #140 was open and `main` at `3dae8aa` used MCP Adapter 0.5.0. The checked-in adapter baseline is now 0.6.1; the historical rollout checks do not replace current-source compatibility and PR checks for baseline promotion.
 
-Keep `6 - Compatibility QA` scheduled/manual until the matrix is stable enough to promote selected jobs to branch protection. Manual dispatch tests versions without opening a PR unless `open_update_pr` is selected.
+Keep `07 - Compatibility QA` scheduled/manual until the matrix is stable enough to promote selected jobs to branch protection. Manual dispatch tests versions without opening a PR unless `open_update_pr` is selected.

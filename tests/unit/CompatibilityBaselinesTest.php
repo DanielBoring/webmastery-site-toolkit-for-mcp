@@ -75,7 +75,7 @@ final class CompatibilityBaselinesTest extends TestCase {
 
 	/** @dataProvider workflowJobProvider */
 	public function testWorkflowCliPromotionAndNoOp( string $job ): void {
-		$workflow = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/compatibility-qa.yml' ) );
+		$workflow = str_replace( "\r\n", "\n", file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/07-compatibility-qa.yml' ) );
 		self::assertSame( 1, preg_match( '/^  ' . preg_quote( $job, '/' ) . ':\n(.*?)(?=^  [a-z-]+:|\z)/ms', $workflow, $section ) );
 		self::assertSame( 1, preg_match( '/for key in ([a-z0-9_ ]+); do/', $section[1], $loop ) );
 		$keys = explode( ' ', $loop[1] );
@@ -301,7 +301,7 @@ final class CompatibilityBaselinesTest extends TestCase {
 	}
 
 	public function testCurrentCheckerRequiresRuntimeEvidenceBeforeUpdatingCandidateMetadata(): void {
-		$workflow = file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/compatibility-qa.yml' );
+		$workflow = file_get_contents( dirname( __DIR__, 2 ) . '/.github/workflows/07-compatibility-qa.yml' );
 		$start    = strpos( $workflow, '  current-plugin-check:' );
 		$end      = strpos( $workflow, '  open-update-pr:' );
 		self::assertNotFalse( $start );

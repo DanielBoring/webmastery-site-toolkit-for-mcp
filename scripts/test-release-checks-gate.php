@@ -81,12 +81,12 @@ $test('all five gates succeeded on the commit', static function (): void {
 	release_require(array() === checks_problems(checks_green()), 'Green commit was blocked.');
 });
 $test('missing package QA names the workflow to dispatch', static function () use ($blocked): void {
-	$runs = array_values(array_filter(checks_green(), static fn($run) => '5 - Release Package QA' !== $run['name']));
-	$blocked($runs, 'gh workflow run release-package-qa.yml --ref main');
+	$runs = array_values(array_filter(checks_green(), static fn($run) => '05 - Release Package QA / package' !== $run['name']));
+	$blocked($runs, 'gh workflow run 05-release-package-qa.yml --ref main');
 });
 $test('missing floor run names the workflow to dispatch', static function () use ($blocked): void {
-	$runs = array_values(array_filter(checks_green(), static fn($run) => 'WordPress 6.9 / PHP 8.0 product runtime' !== $run['name']));
-	$blocked($runs, 'gh workflow run minimum-runtime-qa.yml --ref main');
+	$runs = array_values(array_filter(checks_green(), static fn($run) => '06 - Minimum Runtime QA / WordPress 6.9 PHP 8.0' !== $run['name']));
+	$blocked($runs, 'gh workflow run 06-minimum-runtime-qa.yml --ref main');
 });
 foreach (array('skipped', 'failure', 'cancelled', 'neutral', 'timed_out') as $conclusion) {
 	$test("a {$conclusion} producer job does not count", static function () use ($blocked, $conclusion): void {
@@ -97,40 +97,40 @@ foreach (array('skipped', 'failure', 'cancelled', 'neutral', 'timed_out') as $co
 }
 $test('a later failure overrides an earlier success', static function () use ($blocked): void {
 	$runs = checks_green();
-	$runs[] = checks_run(99, '2 - Unit Tests', 'failure', '2026-10-14T11:00:00Z');
-	$blocked($runs, '"2 - Unit Tests" latest main result');
+	$runs[] = checks_run(99, '02 - Unit Tests', 'failure', '2026-10-14T11:00:00Z');
+	$blocked($runs, '"02 - Unit Tests" latest main result');
 });
 $test('a later success overrides an earlier failure', static function (): void {
 	$runs = checks_green();
-	$runs[1] = checks_run(2, '2 - Unit Tests', 'failure', '2026-10-14T09:00:00Z');
-	$runs[] = checks_run(99, '2 - Unit Tests', 'success', '2026-10-14T11:00:00Z');
+	$runs[1] = checks_run(2, '02 - Unit Tests', 'failure', '2026-10-14T09:00:00Z');
+	$runs[] = checks_run(99, '02 - Unit Tests', 'success', '2026-10-14T11:00:00Z');
 	release_require(array() === checks_problems($runs), 'Later success should release.');
 });
 $test('in-progress runs are not evidence', static function () use ($blocked): void {
 	$runs = checks_green();
-	$runs[0] = checks_run(1, '1 - Static QA', 'success', '2026-10-14T10:00:00Z', array('status' => 'in_progress', 'conclusion' => null));
-	$blocked($runs, '"1 - Static QA" has not completed');
+	$runs[0] = checks_run(1, '01 - Static QA', 'success', '2026-10-14T10:00:00Z', array('status' => 'in_progress', 'conclusion' => null));
+	$blocked($runs, '"01 - Static QA" has not completed');
 });
 $test('non-Actions apps and other commits are not evidence', static function () use ($blocked): void {
 	$runs = checks_green();
 	$runs[2]['app']['slug'] = 'some-other-app';
-	$blocked($runs, '"Docker QA gate" has not completed');
+	$blocked($runs, '"03-04 - Docker QA" has not completed');
 	$runs = checks_green();
 	$runs[2]['head_sha'] = str_repeat('b', 40);
-	$blocked($runs, '"Docker QA gate" has not completed');
+	$blocked($runs, '"03-04 - Docker QA" has not completed');
 });
 $test('pull-request runs on the same commit are not main evidence', static function () use ($blocked): void {
-	$workflow_runs = checks_workflow_runs(array('5 - Release Package QA' => array('event' => 'pull_request', 'head_branch' => 'feature')));
+	$workflow_runs = checks_workflow_runs(array('05 - Release Package QA / package' => array('event' => 'pull_request', 'head_branch' => 'feature')));
 	$problems = checks_problems(checks_green(), null, $workflow_runs);
-	release_require(1 === count($problems) && str_contains($problems[0], '"5 - Release Package QA" has not completed on main'), 'PR run counted: ' . json_encode($problems));
+	release_require(1 === count($problems) && str_contains($problems[0], '"05 - Release Package QA / package" has not completed on main'), 'PR run counted: ' . json_encode($problems));
 });
 $test('only main push, schedule and dispatch runs count', static function (): void {
 	foreach (array('push', 'schedule', 'workflow_dispatch') as $event) {
-		$workflow_runs = checks_workflow_runs(array('Docker QA gate' => array('event' => $event)));
+		$workflow_runs = checks_workflow_runs(array('03-04 - Docker QA' => array('event' => $event)));
 		release_require(array() === checks_problems(checks_green(), null, $workflow_runs), $event . ' main run was rejected.');
 	}
 	foreach (array('pull_request', 'pull_request_target', 'merge_group') as $event) {
-		$workflow_runs = checks_workflow_runs(array('Docker QA gate' => array('event' => $event)));
+		$workflow_runs = checks_workflow_runs(array('03-04 - Docker QA' => array('event' => $event)));
 		release_require(1 === count(checks_problems(checks_green(), null, $workflow_runs)), $event . ' run was accepted.');
 	}
 });
@@ -140,9 +140,9 @@ $test('a same-named job in another workflow or branch is not evidence', static f
 		array('head_branch' => 'release-candidate'),
 		array('head_sha' => str_repeat('b', 40)),
 	) as $override) {
-		$workflow_runs = checks_workflow_runs(array('WordPress 6.9 / PHP 8.0 product runtime' => $override));
+		$workflow_runs = checks_workflow_runs(array('06 - Minimum Runtime QA / WordPress 6.9 PHP 8.0' => $override));
 		$problems = checks_problems(checks_green(), null, $workflow_runs);
-		release_require(1 === count($problems) && str_contains($problems[0], 'gh workflow run minimum-runtime-qa.yml'), 'Foreign run counted: ' . json_encode($override));
+		release_require(1 === count($problems) && str_contains($problems[0], 'gh workflow run 06-minimum-runtime-qa.yml'), 'Foreign run counted: ' . json_encode($override));
 	}
 	$runs = checks_green();
 	unset($runs[2]['check_suite']);
@@ -158,8 +158,8 @@ $test('invalid inputs and inconsistent pagination fail closed', static function 
 		static fn() => release_checks_problems('someone/else', CHECKS_SHA, checks_api(checks_green())),
 		static fn() => release_checks_problems(RELEASE_CHECKS_REPOSITORY, 'not-a-sha', checks_api(checks_green())),
 		static fn() => checks_problems(checks_green(), 99),
-		static fn() => checks_problems(array_merge(checks_green(), array(checks_run(1, '1 - Static QA')))),
-		static fn() => checks_problems(array(checks_run(1, '1 - Static QA', 'success', 'yesterday'))),
+		static fn() => checks_problems(array_merge(checks_green(), array(checks_run(1, '01 - Static QA')))),
+		static fn() => checks_problems(array(checks_run(1, '01 - Static QA', 'success', 'yesterday'))),
 	) as $index => $call) {
 		$threw = false;
 		try {

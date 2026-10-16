@@ -1,4 +1,4 @@
-name: Minimum runtime QA
+name: 06 - Minimum Runtime QA
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
-      - '.github/workflows/minimum-runtime-qa.yml'
+      - '.github/workflows/06-minimum-runtime-qa.yml'
       - 'scripts/qa-floor.sh'
       - 'tests/fixtures/php80-floor/**'
 
@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   changes:
+    name: 06 - Minimum Runtime QA / detect changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -44,7 +45,7 @@ jobs:
         run: bash scripts/qa-changes.sh >> "$GITHUB_OUTPUT"
 
   php80-runtime:
-    name: WordPress 6.9 / PHP 8.0 product runtime
+    name: 06 - Minimum Runtime QA / WordPress 6.9 PHP 8.0
     needs: changes
     if: needs.changes.outputs.should-run == 'true'
     runs-on: ubuntu-latest
@@ -78,7 +79,7 @@ jobs:
           retention-days: 7
 
   minimum-runtime-gate:
-    name: Minimum runtime QA gate
+    name: 06 - Minimum Runtime QA
     needs: [changes, php80-runtime]
     if: ${{ always() }}
     runs-on: ubuntu-latest

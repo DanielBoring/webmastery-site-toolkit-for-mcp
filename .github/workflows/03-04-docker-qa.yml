@@ -1,4 +1,4 @@
-name: 3-4 - Docker QA
+name: 03-04 - Docker QA
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   changes:
-    name: Detect Docker QA changes
+    name: 03-04 - Docker QA / detect changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -42,7 +42,7 @@ jobs:
         run: bash scripts/qa-changes.sh >> "$GITHUB_OUTPUT"
 
   ability-contract-qa:
-    name: 3 - Ability Contract QA
+    name: 03 - Ability Contract QA
     needs: changes
     if: needs.changes.outputs.should-run == 'true'
     runs-on: ubuntu-latest
@@ -304,7 +304,7 @@ jobs:
           retention-days: 7
 
   full-mcp-e2e-qa:
-    name: 4 - Full MCP E2E QA
+    name: 04 - Full MCP E2E QA
     needs: changes
     if: needs.changes.outputs.should-run == 'true'
     runs-on: ubuntu-latest
@@ -446,7 +446,7 @@ jobs:
           retention-days: 7
 
   docker-qa-gate:
-    name: Docker QA gate
+    name: 03-04 - Docker QA
     needs: [changes, ability-contract-qa, full-mcp-e2e-qa]
     if: ${{ always() }}
     runs-on: ubuntu-latest
@@ -467,7 +467,7 @@ jobs:
         run: php scripts/docker-qa-gate.php "$DETECTOR" "$SHOULD_RUN" "$CONTRACT" "$TRANSPORT"
 
   comment-pr:
-    name: Docker QA PR comment
+    name: 03-04 - Docker QA / PR comment
     needs: [changes, ability-contract-qa, full-mcp-e2e-qa]
     if: ${{ always() && !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' && github.event.pull_request.user.login != 'dependabot[bot]' && needs.changes.result == 'success' && needs.changes.outputs.should-run == 'true' }}
     runs-on: ubuntu-latest
@@ -534,7 +534,7 @@ jobs:
           gh api "repos/$OWNER/$REPO/issues/$ISSUE_NUMBER/comments" --method POST -f body="$BODY"
 
   skip-summary:
-    name: Docker QA skip summary
+    name: 03-04 - Docker QA / skip summary
     needs: changes
     if: needs.changes.result == 'success' && needs.changes.outputs.should-run == 'false'
     runs-on: ubuntu-latest

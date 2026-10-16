@@ -178,7 +178,7 @@ Write-Output ('mock-result:' + (ConvertTo-Json -InputObject $result -Compress -D
                     self.assertEqual(2, len(children))
 
     def test_composer_test_steps_defer_timeout_to_bounded_jobs(self):
-        unit = jobs(source("unit-tests.yml"))
+        unit = jobs(source("02-unit-tests.yml"))
         for name, title, command, minutes in (
             ("unit-tests", "Run product unit tests", "composer qa:unit", 15),
             ("qa-tooling", "Run QA-tooling unit tests", "composer qa:tooling", 45),
@@ -206,9 +206,9 @@ Write-Output ('mock-result:' + (ConvertTo-Json -InputObject $result -Compress -D
             )
         ]
         for name, inherited, summaries in (
-            ("e2e-qa.yml", 34, 2),
-            ("release-package-qa.yml", 8, 1),
-            ("compatibility-qa.yml", 9, 0),
+            ("03-04-docker-qa.yml", 34, 2),
+            ("05-release-package-qa.yml", 8, 1),
+            ("07-compatibility-qa.yml", 9, 0),
         ):
             uploads = artifact_uploads(source(name))
             paths = [path for _, selected in uploads for path in selected]
@@ -226,7 +226,7 @@ Write-Output ('mock-result:' + (ConvertTo-Json -InputObject $result -Compress -D
                             self.assertFalse(fnmatch.fnmatchcase(raw, pattern))
             for job in jobs(source(name)).values():
                 if "run: bash scripts/e2e-test.sh " in job or "run: bash scripts/release-qa.sh" in job:
-                    if name != "compatibility-qa.yml":
+                    if name != "07-compatibility-qa.yml":
                         self.assertEqual(1, job.count("          path: " + safe + "\n"))
             self.assertNotRegex(
                 source(name), r"(?m)^\s*(?:run: )?(?:cat|tee|touch|cp|echo).+product-qa\.summary"
@@ -265,7 +265,7 @@ refuse compose exec -T wordpress wp --allow-root core version
         self.assertEqual(0, result.returncode, result.stderr.decode(errors="replace"))
 
     def test_product_units_cover_both_php_and_tooling_runs_when_applicable(self):
-        unit = jobs(source("unit-tests.yml"))
+        unit = jobs(source("02-unit-tests.yml"))
         self.assertEqual(
             {"changes", "unit-tests", "qa-tooling", "ci-safeguards", "unit-tests-gate"}, set(unit)
         )
@@ -307,7 +307,7 @@ refuse compose exec -T wordpress wp --allow-root core version
         self.assertNotIn("composer qa:tooling", unit["unit-tests"])
         self.assertNotIn("composer qa:unit", unit["ci-safeguards"])
         gate = unit["unit-tests-gate"]
-        self.assertIn("    name: 2 - Unit Tests\n", gate)
+        self.assertIn("    name: 02 - Unit Tests\n", gate)
         self.assertIn("    needs: [changes, unit-tests, qa-tooling, ci-safeguards]\n", gate)
         self.assertIn("    if: ${{ always() }}\n", gate)
         for required in (
@@ -321,10 +321,10 @@ refuse compose exec -T wordpress wp --allow-root core version
             'php scripts/qa-check-gate.php "$DETECTOR" "$SHOULD_RUN" "$SAFEGUARD_RESULT"',
         ):
             self.assertIn(required, gate)
-        self.assertIn("  schedule:\n", source("unit-tests.yml"))
+        self.assertIn("  schedule:\n", source("02-unit-tests.yml"))
 
     def test_actual_aggregate_shell_rejects_failure_cancellation_skip_and_unknown(self):
-        gate = jobs(source("unit-tests.yml"))["unit-tests-gate"]
+        gate = jobs(source("02-unit-tests.yml"))["unit-tests-gate"]
         block = re.search(r"^        run: \|\n((?:          .+\n?)+)", gate, re.M)
         self.assertIsNotNone(block, "Expected the gate's multi-line run block")
         commands = "\n".join(line.strip() for line in block[1].splitlines())
@@ -356,6 +356,57 @@ refuse compose exec -T wordpress wp --allow-root core version
         self.assertEqual(0, result.returncode, result.stderr.decode(errors="replace"))
         self.assertEqual(300, cases)
 
+    def test_static_qa_requires_php_checks_and_workflow_lint(self):
+        # Workflow lint lives in 01 - Static QA so a broken workflow blocks merge.
+        static = jobs(source("01-static-qa.yml"))
+        self.assertEqual({"static-qa", "workflow-lint", "static-qa-gate"}, set(static))
+        self.assertIn("run: php scripts/workflow-lint.php", static["workflow-lint"])
+        gate = static["static-qa-gate"]
+        self.assertIn("    name: 01 - Static QA\n", gate)
+        self.assertIn("    needs: [static-qa, workflow-lint]\n", gate)
+        self.assertIn("    if: ${{ always() }}\n", gate)
+        command = re.search(r"^        run: (test .+)$", gate, re.M)[1]
+        states = ("success", "failure", "cancelled", "skipped", "")
+        script = ["set -u"]
+        for static_result, lint_result in itertools.product(states, repeat=2):
+            expected = 0 if static_result == lint_result == "success" else 1
+            script.extend((
+                f"RESULT='{static_result}' LINT_RESULT='{lint_result}'",
+                f"if ( {command} ); then observed=0; else observed=1; fi",
+                f"test \"$observed\" = {expected} || exit 1",
+            ))
+        result = subprocess.run(["bash", "--noprofile", "--norc"], input=("\n".join(script) + "\n").encode(),
+                                capture_output=True, cwd=ROOT, timeout=30, env={**os.environ, "BASH_ENV": os.devnull})
+        self.assertEqual(0, result.returncode, result.stderr.decode(errors="replace"))
+        self.assertFalse((WORKFLOWS / "workflow-lint.yml").exists())
+
+    def test_workflow_files_and_names_share_one_numbering(self):
+        # File NN-name.yml, workflow name "NN - Name", summary job named like the workflow.
+        expected = {
+            "01-static-qa.yml": ("01 - Static QA", "static-qa-gate"),
+            "02-unit-tests.yml": ("02 - Unit Tests", "unit-tests-gate"),
+            "03-04-docker-qa.yml": ("03-04 - Docker QA", "docker-qa-gate"),
+            "05-release-package-qa.yml": ("05 - Release Package QA", "package-gate"),
+            "06-minimum-runtime-qa.yml": ("06 - Minimum Runtime QA", "minimum-runtime-gate"),
+            "07-compatibility-qa.yml": ("07 - Compatibility QA", "report"),
+            "08-release.yml": ("08 - Release", None),
+            "09-publishing-checks.yml": ("09 - Publishing Checks", "publishing-qa"),
+            "10-adapter-assessment.yml": ("10 - Adapter Assessment", "released-adapter"),
+        }
+        self.assertEqual(set(expected), {p.name for p in WORKFLOWS.glob("*.yml")})
+        for name, (title, summary) in expected.items():
+            with self.subTest(workflow=name):
+                text = source(name)
+                self.assertTrue(text.startswith("name: " + title + "\n"))
+                prefix = title.split(" - ", 1)[0]
+                for job, body in jobs(text).items():
+                    label = re.search(r"^    name: (.+)$", body, re.M)
+                    self.assertIsNotNone(label, job)
+                    if job == summary:
+                        self.assertEqual(title, label[1])
+                    else:
+                        self.assertRegex(label[1], r"^(" + re.escape(prefix) + r"|03|04) - ")
+
     def test_no_removed_framework_calls_or_synthetic_placeholder(self):
         obsolete = (
             "host-prerequisite", "host-php-apt", "provision-php",
@@ -366,8 +417,8 @@ refuse compose exec -T wordpress wp --allow-root core version
             "test_kernel_mount_holder", "test:host-prerequisites",
         )
         texts = {name: source(name) for name in (
-            "unit-tests.yml", "e2e-qa.yml", "release-package-qa.yml",
-            "compatibility-qa.yml", "release.yml",
+            "02-unit-tests.yml", "03-04-docker-qa.yml", "05-release-package-qa.yml",
+            "07-compatibility-qa.yml", "08-release.yml",
         )}
         texts["composer.json"] = (ROOT / "composer.json").read_text(encoding="utf-8")
         for name in (
@@ -380,7 +431,7 @@ refuse compose exec -T wordpress wp --allow-root core version
             for forbidden in obsolete:
                 with self.subTest(file=name, token=forbidden):
                     self.assertNotIn(forbidden, text)
-        for name in ("unit-tests.yml", "e2e-qa.yml", "release-package-qa.yml"):
+        for name in ("02-unit-tests.yml", "03-04-docker-qa.yml", "05-release-package-qa.yml"):
             self.assertIn("  pull_request:\n", texts[name])
             self.assertNotIn("pull_request_target:", texts[name])
         for name, text in texts.items():
@@ -432,7 +483,7 @@ refuse compose exec -T wordpress wp --allow-root core version
         self.assertEqual("8.0.0", composer["config"]["platform"]["php"])
 
     def test_runtime_and_package_preserve_main_checks_and_fail_closed_detector(self):
-        docker = jobs(source("e2e-qa.yml"))
+        docker = jobs(source("03-04-docker-qa.yml"))
         detector = docker["changes"]
         for required in (
             "          fetch-depth: 0\n",
@@ -467,21 +518,21 @@ refuse compose exec -T wordpress wp --allow-root core version
             self.assertIn("shivammathur/setup-php@", docker[name])
             self.assertNotIn("continue-on-error:", docker[name])
         self.assertIn("Check WordPress debug log for errors", docker["ability-contract-qa"])
-        for text in (source("e2e-qa.yml"), source("compatibility-qa.yml")):
+        for text in (source("03-04-docker-qa.yml"), source("07-compatibility-qa.yml")):
             self.assertNotIn("--allow-root", text)
             self.assertNotIn("docker compose exec", text)
             self.assertNotIn("docker compose down", text)
             self.assertNotIn("docker compose up", text)
             self.assertIn("bash scripts/qa-compose.sh exec -T", text)
-        package = source("release-package-qa.yml")
+        package = source("05-release-package-qa.yml")
         composer = json.loads((ROOT / "composer.json").read_text(encoding="utf-8"))
         for command in composer["scripts"]["test:release-safeguards"]:
             self.assertIn(command, package)
         self.assertIn("run: bash scripts/qa-run.sh package", package)
         self.assertIn("php-version: '8.2'", package)
         self.assertNotIn("continue-on-error:", package)
-        for text in (source("e2e-qa.yml"), source("compatibility-qa.yml"),
-                     package, source("release.yml")):
+        for text in (source("03-04-docker-qa.yml"), source("07-compatibility-qa.yml"),
+                     package, source("08-release.yml")):
             self.assertNotRegex(text, r"\bmkdir[^\n]*\be2e-artifacts\b")
             self.assertNotRegex(text, r"\brm[^\n]*\be2e-artifacts\b")
 
@@ -514,7 +565,7 @@ echo "864 actual Docker gate cases passed.\n";
         self.assertIn(b"864 actual Docker gate cases passed.", result.stdout)
 
     def test_release_promotes_main_evidence_and_runs_only_publishing_checks(self):
-        text = source("release.yml")
+        text = source("08-release.yml")
         self.assertNotIn("pull_request", text)
         release = jobs(text)["release-qa"]
         self.assertIn("    timeout-minutes: 30\n", release)
@@ -549,7 +600,7 @@ echo "864 actual Docker gate cases passed.\n";
         self.assertIn("      cancel-in-progress: false\n", publish)
 
     def test_compatibility_preserves_main_campaign_and_honest_floor_label(self):
-        compatibility = source("compatibility-qa.yml")
+        compatibility = source("07-compatibility-qa.yml")
         self.assertNotIn("  pull_request:", compatibility)
         self.assertIn("  schedule:", compatibility)
         for required in (

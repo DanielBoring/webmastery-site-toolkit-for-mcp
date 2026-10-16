@@ -1355,7 +1355,7 @@ These counts make it visible when an enhancement adds new ability coverage.
 
 Full E2E artifacts also include `mcp-crud-summary.json` for the secondary protocol-level CRUD QA phase.
 
-GitHub Actions retains available JSON summaries on successful runs as well as failures, with bounded retention. Fork/read-only bot PRs use job summaries without requiring a write token for comments. `Docker QA gate` accepts skipped Docker jobs only when successful change detection explicitly identifies a non-runtime change.
+GitHub Actions retains available JSON summaries on successful runs as well as failures, with bounded retention. Fork/read-only bot PRs use job summaries without requiring a write token for comments. `03-04 - Docker QA` accepts skipped Docker jobs only when successful change detection explicitly identifies a non-runtime change.
 
 ## Local product stages and environment
 

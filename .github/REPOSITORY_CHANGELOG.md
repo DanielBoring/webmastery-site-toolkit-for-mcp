@@ -6,6 +6,21 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Renumber every workflow with two digits so file names, workflow names and
+  documentation match: `01-static-qa.yml` (01 - Static QA) through
+  `10-adapter-assessment.yml` (10 - Adapter Assessment). Each workflow's
+  summary job carries the workflow name; other jobs use `NN - Name / detail`.
+  Required checks become `01 - Static QA`, `02 - Unit Tests` and
+  `03-04 - Docker QA`; update the `main-ci-gates` ruleset to match. The release
+  is now `08 - Release` (it previously shared 5 with package QA), minimum
+  runtime is `06` and compatibility is `07`. The release gate, recovery tooling
+  and guard tests use the new names and paths; recovery applies to releases
+  validated under `08-release.yml`.
+- Fold workflow lint into `01 - Static QA` as a job; a lint failure now fails
+  the required static check.
+- Remove the v3.0.0-only fresh-validation workflow and the one-off issue
+  backlog importer, with their scripts and tests.
+
 - Add CI budgets and a pruning rule. `docs/qa-strategy.md` sets wall-clock
   budgets for PR checks and the release job, and `.github/copilot-instructions.md`
   asks agents to name the failure each new gate prevents, propose removing

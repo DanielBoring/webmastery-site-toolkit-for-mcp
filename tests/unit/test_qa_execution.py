@@ -186,8 +186,8 @@ echo "Term persistence and diagnostic mutation controls passed.\n";
 
     def test_product_workflows_report_only_same_job_artifacts_and_fail_closed_gates(self):
         for file, producer, gate in (
-            ("release-package-qa.yml", "release-package-qa", "package-gate"),
-            ("minimum-runtime-qa.yml", "php80-runtime", "minimum-runtime-gate"),
+            ("05-release-package-qa.yml", "release-package-qa", "package-gate"),
+            ("06-minimum-runtime-qa.yml", "php80-runtime", "minimum-runtime-gate"),
         ):
             text = (ROOT / ".github" / "workflows" / file).read_text()
             self.assertIn("  schedule:\n", text)
@@ -198,18 +198,18 @@ echo "Term persistence and diagnostic mutation controls passed.\n";
             self.assertIn("if: ${{ always() }}", gate_text)
             self.assertIn('run: php scripts/qa-check-gate.php "$DETECTOR" "$SHOULD_RUN" "$RESULT"', gate_text)
             self.assertNotIn("actions/upload-artifact@", gate_text)
-        package = (ROOT / ".github" / "workflows" / "release-package-qa.yml").read_text()
+        package = (ROOT / ".github" / "workflows" / "05-release-package-qa.yml").read_text()
         self.assertNotIn("    paths:", package)
         self.assertIn("          QA_SCOPE: package\n", package)
-        floor = (ROOT / ".github" / "workflows" / "minimum-runtime-qa.yml").read_text()
+        floor = (ROOT / ".github" / "workflows" / "06-minimum-runtime-qa.yml").read_text()
         paths = re.search(r"    paths:\n((?:      - .+\n)+)", floor)
         self.assertIsNotNone(paths)
         self.assertEqual(
-            ["'.github/workflows/minimum-runtime-qa.yml'", "'scripts/qa-floor.sh'",
+            ["'.github/workflows/06-minimum-runtime-qa.yml'", "'scripts/qa-floor.sh'",
              "'tests/fixtures/php80-floor/**'"],
             [line.strip()[2:] for line in paths[1].splitlines()],
         )
-        for file, count in (("e2e-qa.yml", 2), ("compatibility-qa.yml", 1)):
+        for file, count in (("03-04-docker-qa.yml", 2), ("07-compatibility-qa.yml", 1)):
             text = (ROOT / ".github" / "workflows" / file).read_text()
             self.assertEqual(count, text.count("E2E_ARTIFACTS_DIR: e2e-artifacts"))
 
@@ -291,7 +291,7 @@ echo "Actual runner independent oracle controls passed.\n";
         self.assertEqual(2, rejected.returncode, "Value-gated diagnostic assertions must fail the executable regression.")
 
     def test_contract_workflow_preserves_stack_until_version_and_debug_reporting(self):
-        contract = jobs((ROOT / ".github" / "workflows" / "e2e-qa.yml").read_text())["ability-contract-qa"]
+        contract = jobs((ROOT / ".github" / "workflows" / "03-04-docker-qa.yml").read_text())["ability-contract-qa"]
         environment = contract.split("    steps:", 1)[0]
         self.assertIn("      E2E_KEEP_COMPOSE: 1", environment)
         ordered = ["Run Ability Contract QA", "Collect tested versions and contract summary",
@@ -326,9 +326,9 @@ source scripts/qa-changes.sh
             self.assertIn(f"should-run={selected}".encode(), result.stdout)
         for scope, paths, selected in (
             ("runtime", "README.md\ndocs/qa-strategy.md\ntests/unit/ResponseTest.php", "false"),
-            ("runtime", ".github/workflows/unit-tests.yml\nscripts/test-release-runtime.sh", "false"),
+            ("runtime", ".github/workflows/02-unit-tests.yml\nscripts/test-release-runtime.sh", "false"),
             ("runtime", "scripts/release-tools.php", "true"),
-            ("runtime", ".github/workflows/e2e-qa.yml", "true"),
+            ("runtime", ".github/workflows/03-04-docker-qa.yml", "true"),
             ("runtime", ".github/compatibility-versions.json", "true"),
             ("runtime", "includes/class-posts.php", "true"),
             ("runtime", "tests/e2e/ability-runner.php", "true"),

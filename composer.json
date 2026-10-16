@@ -60,8 +60,7 @@
 			"bash tests/destructive-stage-test.sh",
 			"bash tests/input-schema-stage-test.sh",
 			"bash tests/compatibility-download-test.sh",
-			"bash tests/compatibility-dependency-policy-test.sh",
-			"php scripts/test-release-fresh-validation.php"
+			"bash tests/compatibility-dependency-policy-test.sh"
 		],
 		"test:phpstan-baseline": "php scripts/test-phpstan-baseline.php",
 		"test:release-safeguards": [

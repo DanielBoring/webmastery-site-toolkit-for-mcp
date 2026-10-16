@@ -359,7 +359,7 @@ contract/HTTP product acceptance did not run. `composer qa:release` combines
 both for release verification. Report product and checker findings separately.
 Plugin Check can find defects relevant to users, but its directory-specific
 requirements are publishing checks, not evidence that plugin behavior works.
-The manual `publishing-qa.yml` workflow reports checker verdicts independently.
+The manual `09-publishing-checks.yml` workflow reports checker verdicts independently.
 The protected release workflow retains its combined command and prerequisites.
 
 ## Compatibility and release readiness
@@ -371,7 +371,7 @@ versions, refuse unavailable images/dependencies and propose only successful
 updates in maintainer-reviewed PRs. Do not auto-merge baseline promotions.
 
 The PHP 8.1 WordPress compatibility lane does not prove the advertised PHP 8.0
-minimum. `minimum-runtime-qa.yml` separately builds actual PHP 8.0.30 with
+minimum. `06-minimum-runtime-qa.yml` separately builds actual PHP 8.0.30 with
 WordPress 6.9 from digest-pinned bases and signed frozen Debian packages.
 This EOL stack is a disposable compatibility fixture, not a production
 recommendation. An image build alone is not runtime acceptance.
