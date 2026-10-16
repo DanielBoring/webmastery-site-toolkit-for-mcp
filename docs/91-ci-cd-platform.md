@@ -41,6 +41,9 @@ empty while its checks were renamed to the names below (see
 | `release-tag-protection` | `refs/tags/v*` | Creation, update and deletion restricted; repository admins have an explicit bypass. |
 
 The repository allows **squash merge only** and deletes merged branches.
+`main-pr-no-required-approvals` still lists merge, squash and rebase; aligning
+it, and deciding whether rulesets should live as code, is tracked in
+[issue #192](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/issues/192).
 
 Do not weaken protection or bypass a failed check to merge. 05 and 06 always
 report but are not merge requirements; the release requires them instead
