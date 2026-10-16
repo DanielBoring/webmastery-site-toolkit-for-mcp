@@ -27,32 +27,28 @@ Use it to let an agent draft or update content, manage media and comments, inspe
 
 For release history, see [CHANGELOG.md](CHANGELOG.md).
 
-Maintainers: equivalent permission, post-list, response-field, SEO-key and write-boundary code uses [shared helpers](docs/shared-helpers.md). Posts now dispatches metadata, bulk operations, revisions, featured images and content patches to cohesive owners, with domain authorization in Post Access. This extraction does not change ability names, schemas, roles, authorized totals, response fields, or client escaping requirements.
+Maintainers: equivalent permission, post-list, response-field, SEO-key and write-boundary code uses [shared helpers](docs/reference/shared-helpers.md). Posts now dispatches metadata, bulk operations, revisions, featured images and content patches to cohesive owners, with domain authorization in Post Access. This extraction does not change ability names, schemas, roles, authorized totals, response fields, or client escaping requirements.
 
 Production PHP uses PHPCS-enforced short `[]` array literals. The
-[array syntax policy](docs/shared-helpers.md#array-syntax-and-historical-provenance)
+[array syntax policy](docs/reference/shared-helpers.md#array-syntax-and-historical-provenance)
 documents the repository preference and behavior-preserving checks.
 
-Product QA checks plugin behavior, permissions, compatibility and the installed
-release package; WordPress.org approval is not a QA result. The development QA
-baseline is **WordPress 7.1.3 with MCP Adapter 0.7.0**; the plugin's WordPress
-6.9 / PHP 8.0 minimums are unchanged. Runtime QA uses disposable Docker
-containers locally and in CI. See [QA strategy](docs/qa-strategy.md) for what
-runs when, and the [QA harness reference](docs/qa-harness-reference.md) for
-details.
+Every change is tested against real WordPress in disposable Docker
+containers before it merges, and every release ships only a ZIP that already
+passed. See [How this plugin is tested and released](#how-this-plugin-is-tested-and-released).
 
 **Released 2.6.0 and Adapter 0.7.0:** the unchanged production ZIP has passed
 isolated HTTP checks against both Adapter 0.6.1 and 0.7.0. All 75 native-install
 abilities remain discoverable and individually schema-valid; representative
 execution, permission and error checks include the new sessionless protocol.
 No plugin migration was needed for these checks. See the
-[assessment and limits](docs/mcp-adapter-0.7-assessment.md). A separate,
+[assessment and limits](docs/reference/mcp-adapter-0.7-assessment.md). A separate,
 exact-commit pending-3.0 package comparison covers the current 85-ability
 inventory and changed contracts on PHP 8.2 and genuine PHP 8.0. These results
 do not promote the development QA baseline or certify the whole 3.0 release.
 
 **3.0.0 is a breaking upgrade from 2.6.0.** Follow the
-[migration checklist](docs/3.0-migration.md#upgrade-checklist) before upgrading:
+[migration checklist](docs/reference/3.0-migration.md#upgrade-checklist) before upgrading:
 bounded pagination and summary defaults, strict inputs, separate metadata writes,
 destructive confirmation/previews, canonical errors, database identifier privacy,
 and record-relative untrusted-field markers change client contracts.
@@ -151,12 +147,13 @@ These are not transactional snapshots: edits can shift offset windows. Database
 offset/search and content scanning costs can still grow with site size. Controlled
 payload/memory benchmarks are not universal limits on large titles/excerpts,
 metadata, taxonomy, or plugin filters. See the [typed migration contract and
-limitations](docs/3.0-migration.md#bounded-list-windows-and-summary-projection).
+limitations](docs/reference/3.0-migration.md#bounded-list-windows-and-summary-projection).
 
-The plugin minimum remains **PHP 8.0**. Genuine PHP 8.0/8.4 static and unit
-checks are separate from WordPress HTTP integration. The WordPress 6.9 /
-PHP 8.1 compatibility lane and local PHP 8.2 HTTP evidence do not prove PHP 8.0
-HTTP compatibility. See [QA scope and runtime requirements](docs/qa-strategy.md).
+The plugin minimum remains **PHP 8.0**. Static and unit checks run on genuine
+PHP 8.0 and 8.4; WordPress 6.9 on genuine PHP 8.0 is tested through WP-CLI and
+HTTP by [06 - Minimum Runtime QA](docs/06-minimum-runtime-qa.md) nightly and
+before every release. The WordPress 6.9 / PHP 8.1 compatibility lane does not
+substitute for it.
 Product QA uses an explicitly owned disposable Docker project, nonroot
 candidate execution, read-only source/package mounts and private evidence.
 The trusted engine and image initialization are environment assumptions, not
@@ -165,7 +162,7 @@ evidence; recovery does not turn an interrupted campaign into passing acceptance
 
 The bounded implementation uses the shared Post Access and Post Content
 owners, with metadata, revisions and block patches in their extracted owners.
-The [product integration map](docs/shared-helpers.md#product-integration-and-evidence)
+The [product integration map](docs/reference/shared-helpers.md#product-integration-and-evidence)
 records current owner contracts and separate source/package evidence
 requirements. The ordinary manifest preserves all 601 cases and adds only reviewed
 record-relative assertions. Full-content HTTP proofs request `fields:"full"`;
@@ -188,7 +185,7 @@ Registered global/subtype policies and WordPress's effective `map_meta_cap` / `u
 
 **Breaking 3.0 contract:** post, page, and dynamic CPT create/update requests reject the presence of `meta`, `meta_input`, every `yoast_`/`seopress_` alias, and raw `_yoast_wpseo_`/`_seopress_` fields before post, metadata, taxonomy, scheduling, or save-hook side effects. Empty/null values and unchanged metadata are also rejected; Administrator access does not bypass this rule. Plain content, status, parent, and taxonomy requests retain their existing behavior.
 
-Create a draft without metadata, call `update-post-meta` separately for each exact key, verify every result, then publish with a plain update. These operations are **not atomic**: an earlier authorized write remains if a later key is denied. Keep the draft unpublished on failure; do not retry a combined request. See the [complete alias migration table](docs/3.0-migration.md#metadata-and-seo-authorization).
+Create a draft without metadata, call `update-post-meta` separately for each exact key, verify every result, then publish with a plain update. These operations are **not atomic**: an earlier authorized write remains if a later key is denied. Keep the draft unpublished on failure; do not retry a combined request. See the [complete alias migration table](docs/reference/3.0-migration.md#metadata-and-seo-authorization).
 
 Separate SEO inspection, analysis, and score abilities also require effective `edit_post` plus `edit_post_meta` for each real object/key before reading it. Denied fields are omitted from raw and normalized metadata and reported in `unavailable_fields`, not advertised as visible plain text. Analysis skips checks that cannot be evaluated; scores filter permission within the bounded candidate window and return no exact totals. Opaque generated Yoast head output is unavailable because extensible generated output cannot be authorized by a fixed key list. URL-only head requests return `unsupported`.
 
@@ -234,7 +231,7 @@ For example, preview a bounded selection with `{"ids":[123,456],"confirm":true,"
 
 Media deletion scans the same known references as orphan-media inspection: `_thumbnail_id` metadata and literal attachment URL/GUID strings in post content. A hit returns `precondition_failed/media_in_use` unless `force:true`; successful deletion always includes `data.in_use` as a boolean. Even forced deletion scans and fails closed on query errors, returning a safe canonical error, never SQL details. This is **not proof of universal non-use**: serialized settings, custom metadata, transformed image URLs, external sites, and concurrent edits may be missed.
 
-These interlocks do not grant capabilities, prove human approval, or prevent prompt injection. Clients must independently bind approval to the action and exact IDs. Single post/page/CPT soft-delete inputs are unchanged. See the [migration guide](docs/3.0-migration.md#destructive-operation-interlocks).
+These interlocks do not grant capabilities, prove human approval, or prevent prompt injection. Clients must independently bind approval to the action and exact IDs. Single post/page/CPT soft-delete inputs are unchanged. See the [migration guide](docs/reference/3.0-migration.md#destructive-operation-interlocks).
 
 ### Targeted content patching
 
@@ -448,7 +445,7 @@ Verify on a disposable site that `list-posts` with `{"order":"DESC!"}` fails,
 `update-post` with an extra `parent:0` cannot change its title, and omitted
 filters still work for an Editor but do not grant Subscriber access. Exact
 error-layer differences are in the
-[migration guide](docs/3.0-migration.md#strict-input-schemas-and-raw-permissions).
+[migration guide](docs/reference/3.0-migration.md#strict-input-schemas-and-raw-permissions).
 
 ## Response format
 
@@ -458,7 +455,7 @@ The owned ability subclass retains core input/output validation, permission reda
 
 For MCP Adapter **0.6.1**, owned gateway and individual-tool failures set `isError:true` with the canonical JSON envelope in one text block. Native code/data and structured error content are not retained by the Adapter, so clients must decode that text. The Adapter sets structured content to null internally; actual HTTP responses omit the `structuredContent` key. Clients may accept absence or explicit null, but neither carries a structured error payload. Success through the gateway retains its extra `success/data` wrapper. Foreign plugin results are not intercepted. Check HTTP/JSON-RPC failures separately.
 
-Bulk operations remain non-atomic: top-level `success:true` means the batch was processed, including an all-failed batch. Inspect counts and every `{id,code,reason,message,details}` failure. See the [migration matrix, mappings, examples, and Adapter limitation](docs/3.0-migration.md).
+Bulk operations remain non-atomic: top-level `success:true` means the batch was processed, including an all-failed batch. Inspect counts and every `{id,code,reason,message,details}` failure. See the [migration matrix, mappings, examples, and Adapter limitation](docs/reference/3.0-migration.md).
 
 For comment permission checks, use a disposable site: a custom account with only `read` and `moderate_comments` must be denied when updating, approving, trashing, or marking a comment as spam on a post it cannot edit. Confirm both comment content and status remain unchanged, including when an update supplies a status. An Editor with access to that post should succeed.
 
@@ -540,7 +537,7 @@ hints. Use `mcp-adapter-get-ability-info` to retrieve an ability's metadata.
 On individual tools, compare registered `readonly`, `destructive`, and
 `idempotent` with Adapter 0.6.1's actual emitted `readOnlyHint`,
 `destructiveHint`, and `idempotentHint`. The
-[assessment](docs/mcp-adapter-0.7-assessment.md) distinguishes pre-release
+[assessment](docs/reference/mcp-adapter-0.7-assessment.md) distinguishes pre-release
 annotation proof from release-package validation. Markers travel with result
 data in both exposure modes.
 
@@ -580,7 +577,7 @@ confirmation is not independent human approval.
 - Use **Editor** for routine content work and a separate **Administrator** account only for sensitive audits or plugin management.
 - WordPress capability checks gate every ability.
 - Updating or moderating comments requires both `moderate_comments` and WordPress's object-specific `edit_comment` capability. Custom roles cannot moderate another author's post or a custom post type without its mapped edit capabilities. This does not change comment listing or reply permissions.
-- Treat retrieved site content as untrusted data, never as instructions or approval. Use the least-privileged account that fits the task, bounded selections, independent previews/diffs, and explicit client-side approval for dangerous changes or transmission to a specific destination. See the [Agent threat model](docs/security-strategy.md#agent-threat-model) for control limits and recovery guidance.
+- Treat retrieved site content as untrusted data, never as instructions or approval. Use the least-privileged account that fits the task, bounded selections, independent previews/diffs, and explicit client-side approval for dangerous changes or transmission to a specific destination. See the [Agent threat model](docs/90-security-strategy.md#agent-threat-model) for control limits and recovery guidance.
 - List abilities for posts, pages, custom post types, media, and SEO scores filter every returned object before exposing full details; private, trashed, draft, pending, and scheduled content is only returned when WordPress grants the matching object/status capability.
 - Creating or updating content as `publish`, `private`, or `future` requires the relevant publish capability, and bulk publishing requires `publish_posts`.
 - Author display names remain in content responses, but login names are omitted from post, page, CPT, revision, and content-hygiene responses. User login and email fields are only returned from user lookup abilities when the caller can edit that user.
@@ -597,14 +594,40 @@ confirmation is not independent human approval.
 - Debug-log findings omit filesystem paths. Enabled logging warns that access is unverified: a neighboring `.htaccess` file or a location outside `wp-content` does not prove protection from web access. Disabled logging still passes; enabled logging alone is not proof of exposure or a reason to disable necessary logging.
 - `database-health` query failures retain the contextual `database_health_query_failed` reason without raw SQL/server error text. WordPress's own database logging behavior is unchanged. In 3.0, `table_sizes[].table` defaults to core logical names such as `posts` or response-local labels such as `custom_table_1`, with `is_core_table` identifying exact WordPress table mappings. Custom/plugin names and the configured prefix are not returned by default. `include_table_names: true` deliberately sends raw identifiers to the model provider; it is an Administrator (`manage_options`) diagnostic opt-in, not a grant of permission. Only actual booleans are accepted; strings, numbers, and null are rejected. Neither mode returns passwords, raw SQL errors, or filesystem paths. Counts, bytes, ordering, and the current-prefix query scope are unchanged.
 
-For a disposable-site check, call `database-health` as Administrator with omitted input or `{"include_table_names":false}` and verify that table identifiers are logical/opaque, then deliberately opt in with `{"include_table_names":true}` and compare every row's metrics and `is_core_table`. A Subscriber must be refused in both modes. Opaque labels restart per response and are **not stable identifiers** for comparing reports; the opt-in is required only when physical names are genuinely needed. See the [3.0 diagnostic migration](docs/3.0-migration.md#database-diagnostic-table-privacy).
+For a disposable-site check, call `database-health` as Administrator with omitted input or `{"include_table_names":false}` and verify that table identifiers are logical/opaque, then deliberately opt in with `{"include_table_names":true}` and compare every row's metrics and `is_core_table`. A Subscriber must be refused in both modes. Opaque labels restart per response and are **not stable identifiers** for comparing reports; the opt-in is required only when physical names are genuinely needed. See the [3.0 diagnostic migration](docs/reference/3.0-migration.md#database-diagnostic-table-privacy).
 
 Read the [full security model](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#security) before giving an agent Administrator credentials.
 
 Report suspected vulnerabilities through [private vulnerability reporting](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/security/advisories/new), not public issues. See [SECURITY.md](SECURITY.md) for supported versions and reporting guidance.
 
+## How this plugin is tested and released
+
+- **Three checks gate every merge:** `01 - Static QA` (syntax, coding
+  standards, PHPStan, dependency audit, security policy, workflow lint),
+  `02 - Unit Tests` (PHP 8.0 and 8.4) and `03-04 - Docker QA` (every ability
+  through WordPress, then through the real MCP transport, with allowed and
+  denied roles).
+- **Checks are scoped to what changed.** Docs-only PRs finish in minutes;
+  plugin changes run the full Docker suite in about 16 minutes.
+- **Nightly on `main`:** `05 - Release Package QA` installs and tests the
+  built ZIP, and `06 - Minimum Runtime QA` tests WordPress 6.9 on PHP 8.0.
+  **Weekly:** `07 - Compatibility QA` tests new WordPress and MCP Adapter
+  releases and proposes reviewed baseline updates.
+- **A release promotes proven evidence.** Tag `vX.Y.Z` requires 01–06 to have
+  passed on that exact `main` commit, builds the ZIP once, runs Plugin Check,
+  and publishes the same ZIP to WordPress.org and GitHub only after the
+  maintainer approves.
+- The development baseline is **WordPress 7.1.3, PHP 8.2 and MCP Adapter
+  0.7.0**; the advertised minimums stay WordPress 6.9 and PHP 8.0.
+  WordPress.org approval is not a QA result.
+
+![QA flow: pull request checks, re-runs on main, nightly and weekly checks, and the release path](docs/images/qa-flow.png)
+
+Full details: [SDLC overview](docs/00-sdlc-overview.md), with one document per
+check (`docs/01-static-qa.md` to `docs/10-adapter-assessment.md`).
+
 ## Contributing
 
 New abilities and feature requests are tracked in [GitHub Issues](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/issues). The project follows [Semantic Versioning](https://semver.org/); see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-policy) for release and QA expectations.
 
-Maintainers and contributors can start with the [Software Development Lifecycle](docs/sdlc-overview.md) for a map of how issues, implementation, QA, releases, and maintenance fit together.
+Maintainers and contributors can start with the [SDLC overview](docs/00-sdlc-overview.md) for a map of how issues, implementation, QA, releases, and maintenance fit together.

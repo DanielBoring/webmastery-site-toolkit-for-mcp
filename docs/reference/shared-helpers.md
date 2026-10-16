@@ -145,7 +145,7 @@ individual-tool and annotation labels. Bounded-list QA retains 336 large and
 reference/cache/projection probes and unchanged-state/cleanup readbacks.
 Private original records are replayed independently, and current live
 resource absence is checked before fixture/marker retirement. See
-[the runtime instructions](../tests/e2e/README.md#local-product-stages-and-environment).
+[the runtime instructions](../../tests/e2e/README.md#local-product-stages-and-environment).
 
 Local static/unit evidence does not replace authorized real WordPress/MCP,
 PHP-floor or original-ZIP runtime checks. No Docker or live-site mutation is

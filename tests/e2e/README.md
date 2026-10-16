@@ -1,6 +1,6 @@
 # Ability Contract and Full MCP E2E QA
 
-For the full repository QA posture, including static checks, unit tests, release checks, and GitHub Actions trigger policy, see [`docs/qa-strategy.md`](../../docs/qa-strategy.md).
+For the full repository QA posture, including static checks, unit tests, release checks, and GitHub Actions trigger policy, see [`docs/00-sdlc-overview.md#qa-at-a-glance`](../../docs/00-sdlc-overview.md#qa-at-a-glance).
 
 The Docker QA suite has two layers:
 
@@ -29,7 +29,7 @@ Run the guard/parser tests with
 `python -B -m unittest discover -s tests/unit -p test_adapter_release_assessment.py -v`.
 The focused PR/manual workflow runs native WordPress 7.1.2/PHP 8.2 and
 WordPress 6.9/PHP 8.1 lanes. See the
-[assessment](../../docs/mcp-adapter-0.7-assessment.md) for provenance, measured
+[assessment](../../docs/reference/mcp-adapter-0.7-assessment.md) for provenance, measured
 results and what this does not establish.
 
 ### Exact pending-3.0 candidate mode
@@ -89,7 +89,7 @@ All manifest failures require `expect_error_shape:"canonical"`, a seven-category
 details, unknown reason mappings, and false wire success. Existing state,
 permission, hash, scheduled CRUD, and bulk-item assertions are retained.
 Canonical core schema/permission messages are intentionally fixed and do not
-echo input values. See the [3.0 migration guide](../../docs/3.0-migration.md).
+echo input values. See the [3.0 migration guide](../../docs/reference/3.0-migration.md).
 
 Historical baseline comparisons require the pre-migration runner from 2.6.0;
 the current strict canonical parser intentionally rejects those old envelopes.
@@ -327,7 +327,7 @@ SEO unit probes reject reads of each of 40 denied keys before they occur,
 check authorized score pagination and total counts, prohibit opaque head
 requests, and enforce the overview's single 100-ID query / at most 400 reads.
 Unit observations are not substitutes for actual WordPress/provider/HTTP QA.
-The [migration guide](../../docs/3.0-migration.md#metadata-and-seo-authorization)
+The [migration guide](../../docs/reference/3.0-migration.md#metadata-and-seo-authorization)
 documents all changed user-facing contracts.
 
 ## Strict input-schema coverage and acceptance ledger (3.0)
@@ -715,7 +715,7 @@ part of its interval; neither host-wide isolation nor interference is establishe
 Local unit/static results do not establish the source-derived HTTP expectations.
 Actual direct/native/raw-permission/gateway/individual proof, runtime coverage
 audit, and integration with concurrent changes remain pending. Optional output
-schemas are explicitly deferred; the [migration guide](../../docs/3.0-migration.md#strict-input-schemas-and-raw-permissions)
+schemas are explicitly deferred; the [migration guide](../../docs/reference/3.0-migration.md#strict-input-schemas-and-raw-permissions)
 documents open maps, validation scope, and exact failure-layer differences.
 
 ### Historical frozen-parent integration and remaining runtime gates
@@ -839,7 +839,7 @@ Current coverage is 75 base registered abilities plus 5 generated abilities per 
 ## Ranked coverage reconciliation (#120)
 
 This ledger reconciles all ten groups in
-[`ISSUES/19-close-test-coverage-gaps-ranked-by-blast-radius.md`](../../ISSUES/19-close-test-coverage-gaps-ranked-by-blast-radius.md).
+[issue #120](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/issues/120).
 It is a requirement/evidence map, not a test-count-based closure claim. Groups
 1/6/7/9/10 originated in the partial #160 follow-up; groups 2/3/8 have dedicated
 real-core suites, group 4 is supplied by #105/#157, and group 5 combines #159
@@ -1417,7 +1417,7 @@ original frames. Retain object/list/scalar distinctions and actual raw request/
 response bindings. Label counts, supplied passed flags, HMACs or successful
 copying alone do not establish semantic acceptance or live resource absence.
 Current client/operator protections are documented in the
-[agent threat model](../../docs/security-strategy.md#agent-threat-model).
+[agent threat model](../../docs/90-security-strategy.md#agent-threat-model).
 
 Capture original responses and per-case records once, with one complete final
 summary. Repeated cumulative summary snapshots are not required proof.
@@ -1492,7 +1492,7 @@ preserves the exact authorized values and types.
 Windowed content/media/score/orphan lists return `items`, `page`, `per_page`
 and `next_page` without exact filtered totals. Empty candidate windows may
 continue. Post/page/CPT/revision lists default to summary; use `fields:"full"`
-for content. See the [migration contract](../../docs/3.0-migration.md#bounded-list-windows-and-summary-projection).
+for content. See the [migration contract](../../docs/reference/3.0-migration.md#bounded-list-windows-and-summary-projection).
 Existing typed migration/permission/no-write guards remain; do not regenerate
 their goldens or relax canonical errors to accept a new result.
 

@@ -6,6 +6,13 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+### Changed
+
+- Update the documentation links in `readme.txt` for the reorganized `docs/`
+  folder (3.0 migration guide, MCP Adapter 0.7 assessment and agent threat
+  model). The links on the 3.0.0 WordPress.org plugin page point to the old
+  paths and will not resolve until the next release updates the listing.
+
 ## 3.0.0
 
 ### Changed

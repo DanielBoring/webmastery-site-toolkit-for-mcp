@@ -48,9 +48,10 @@ When asked to add, change, or release abilities, complete all applicable steps b
    - If PHP, Composer, Docker, or another required tool is unavailable locally, state that clearly in the final response.
 
 6. Keep QA proportionate
-   - Respect the CI budgets in `docs/qa-strategy.md#ci-budgets-and-pruning`. If a change would push PR checks or the release job over budget, say so and propose moving work off the critical path (nightly, change-scoped or parallel) instead of adding serial steps.
+   - Respect the CI budgets in `docs/00-sdlc-overview.md#ci-budgets-and-pruning`. If a change would push PR checks or the release job over budget, say so and propose moving work off the critical path (nightly, change-scoped or parallel) instead of adding serial steps.
    - A new gate, safeguard or QA-tooling test must name the specific failure it prevents. Do not add a check that duplicates one that already catches the same failure.
    - Propose removing gates and tooling tests that have not failed in a quarter, as readily as you propose adding them. Prefer readable policy tests over byte-for-byte or digest freezes of workflow files.
+   - Workflows and docs share one numbering: `.github/workflows/NN-name.yml` is named `NN - Name` and described by `docs/NN-name.md`. When you change a workflow's triggers, jobs or gate, update that doc's "What the workflow does" section and, if the flow changed, `docs/images/*.drawio` and its exported PNG in the same PR.
    - Keep PR descriptions short: what changed and why, then the commands you ran and their results. Leave detailed evidence in CI logs and artifacts.
 
 7. Final response

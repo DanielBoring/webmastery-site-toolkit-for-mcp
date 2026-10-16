@@ -39,7 +39,7 @@ final class MetadataMigrationTest extends TestCase {
 	}
 
 	public function test_all_removed_aliases_have_an_exact_documented_migration(): void {
-		$guide = file_get_contents( dirname( __DIR__, 2 ) . '/docs/3.0-migration.md' );
+		$guide = file_get_contents( dirname( __DIR__, 2 ) . '/docs/reference/3.0-migration.md' );
 		foreach ( wstm110_batch_aliases() as $alias => [ $key ] ) {
 			self::assertStringContainsString( "| `{$alias}` | `{$key}` |", $guide );
 		}

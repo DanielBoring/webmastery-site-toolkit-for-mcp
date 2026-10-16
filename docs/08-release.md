@@ -1,15 +1,111 @@
-# Release Strategy
+# 08 - Release
 
-Release strategy explains how reviewed repository changes become a GitHub release and a WordPress.org plugin update. CI/CD strategy explains the automation mechanics; QA strategy explains the validation layers.
+Workflow: [`.github/workflows/08-release.yml`](../.github/workflows/08-release.yml)
+· Gates: **production publication** · Overview: [00 - SDLC overview](00-sdlc-overview.md)
 
-See the [Software Development Lifecycle](sdlc-overview.md) for where release fits in the complete development process.
+How reviewed changes become a GitHub Release and a WordPress.org plugin
+update: versioning, readiness, the release workflow, publication, recovery,
+hotfixes and rollback.
 
-## Release goals
+## What it proves
+
+The tagged commit is on `main`, already passed checks 01–06 there, matches
+its version metadata, and builds to a ZIP that passes Plugin Check with both
+the pinned and current checker. Then, after a human approves, that exact ZIP
+is what reaches WordPress.org SVN and the GitHub Release.
+
+### Release goals
 
 1. Ship only reviewed, tested, package-ready plugin files.
 2. Keep GitHub release artifacts, WordPress.org SVN state, plugin headers, `readme.txt`, and changelogs aligned.
 3. Avoid publishing a release until release package QA, Plugin Check, and security-sensitive validation pass.
 4. Make hotfixes fast without bypassing release safety checks.
+
+## When it runs
+
+- **Push of a tag matching `v*`** (but not `v-release-recovery-*`): the normal
+  release path.
+- **Manual dispatch on a `v-release-recovery-*` control tag** with
+  `original-run-id` and `original-artifact-id`: the guarded recovery path
+  (see [Recovery](#recovery-when-the-frozen-workflow-itself-needs-a-fix)).
+  Dispatch on a branch or ordinary release tag is rejected.
+
+## What the workflow does
+
+| Job | Timeout | Runs on | Does |
+| --- | --- | --- | --- |
+| `08 - Release / validate` | 30 min | Tag push | The validation steps below; `contents`, `actions` and `checks: read`. |
+| `08 - Release / resolve recovery (read-only)` | 10 min | Recovery dispatch | Proves the control tag is annotated and in `main`, resolves the original successful validate job and its sealed artifact (`scripts/release-recovery.php resolve`), and writes the ready-for-approval summary. |
+| `08 - Release / publish (GitHub approval required)` | 30 min | After either job above | Waits for approval in the `wordpress-org` environment, then the publish steps below. |
+
+`08 - Release / validate`:
+
+1. **Tag and ancestry.** `scripts/release-tag-check.sh` requires an exact
+   `vX.Y.Z` tag whose commit is in freshly fetched `main`.
+2. **Main evidence.** `scripts/release-checks-gate.php` requires that the
+   tagged commit already passed `01 - Static QA`, `02 - Unit Tests`,
+   `03-04 - Docker QA`, `05 - Release Package QA / package` and
+   `06 - Minimum Runtime QA / WordPress 6.9 PHP 8.0`. Each result must come
+   from its expected workflow file running on `main` from a push, the nightly
+   schedule or a manual dispatch; PR runs of the same commit do not count.
+   05 and 06 must have actually run, not been skipped. A missing or failed
+   check stops the release and names the workflow to dispatch.
+3. **Metadata.** The tag must equal `v` + the plugin version.
+4. **Build and Plugin Check.** `scripts/release-qa.sh --publishing` with
+   `REQUIRE_CURRENT_PLUGIN_CHECK=1` builds the ZIP once, validates source and
+   archive metadata, requirements, the tested WordPress baseline and nonempty
+   changelog and upgrade-notice entries, validates exact hashes, and runs
+   Plugin Check on a pristine extraction with the pinned and current versions.
+   The archive digest must not change. Product behavior of the ZIP was already
+   proven by 05 on the same commit.
+5. **Seal.** `release-tools.php bundle` seals the ZIP, scoped notes, listing
+   assets, source SHA and integrity manifest; it is uploaded as
+   `release-<run>-<attempt>` (30 days, uncompressed).
+6. **Ready for approval.** The job summary names the release, source, run,
+   attempt and artifact for the approver.
+
+`08 - Release / publish`:
+
+1. For recovery: recheck the control tag after approval, rerun the resolver
+   (`verify-approved`) and require the identity to match what was approved.
+2. Check out the validated source, install and verify host Subversion.
+3. Download only the original validate job's artifact and verify every byte,
+   the tag object and `main` ancestry again.
+4. `scripts/release-publish-check.sh preflight` rejects a version that would
+   regress the published one and decides whether to deploy, resume or stop.
+5. Attest build provenance for the exact ZIP.
+6. Deploy the extracted package to SVN with
+   `10up/action-wordpress-plugin-deploy` (pinned), only if that SVN tag is not
+   already published.
+7. Verify SVN and, with bounded retries, the public listing.
+8. Create the GitHub Release with the original ZIP if it does not exist yet.
+9. On failure after preflight, report possible partial publication.
+
+The publish job is serialized across all tags by one non-cancelling
+concurrency group, `wordpress-org-production-publish`.
+
+## Run locally
+
+```bash
+# Is main ready to tag? (read-only; uses the GitHub API)
+php scripts/release-checks-gate.php DanielBoring/webmastery-site-toolkit-for-mcp "$(git rev-parse origin/main)"
+composer qa:release              # package QA + Plugin Check, needs Docker
+composer test:release-safeguards # release tooling regressions, no Docker
+```
+
+Run `composer test:ci-safeguards` and `composer lint:workflows` when changing
+this workflow.
+
+## Reading failures
+
+- **Tag check:** the tag is not `vX.Y.Z` or not in `main`. Do not move it; fix
+  forward with a new version.
+- **Main evidence:** the message names the missing workflow. Dispatch it on
+  `main`, wait for success, then rerun the failed job.
+- **Plugin Check:** any ERROR, malformed report or unknown finding type
+  blocks; warnings stay visible. See [09](09-publishing-checks.md).
+- **Publish:** see [Partial failure recovery](#partial-failure-recovery).
+  Production failures can involve approval, SVN or GitHub Release publication.
 
 ## Versioning policy
 
@@ -60,36 +156,20 @@ Before tagging a release:
 10. Confirm no unexpected Plugin Check findings remain.
 11. Confirm the `wordpress-org` GitHub Environment approval gate and SVN secrets are configured before pushing a release tag that should publish to WordPress.org.
 
-## Tag release flow
+## Release budget
 
-The tag workflow owns release validation, WordPress.org SVN deployment, and GitHub release creation:
+The validate job has a 30-minute budget and is expected to take about 10
+minutes. Prefer a local Docker preflight of the exact final installable
+package **before tagging**, then authoritative hosted validation and sealing
+of the exact tag. A local pass finds failures cheaply but does not establish
+GitHub run or artifact provenance or authorize production. Record actual PHP,
+engine and checker versions and source and ZIP hashes; changes to final bytes
+invalidate earlier acceptance. Review complete release-stage timings, and
+investigate consumption above 80% of the budget rather than raising it. Do not
+remove fault cases, share mutable evidence or cache authoritative state to get
+a faster green result. History: [release history](reference/release-history.md).
 
-1. Maintainer pushes `vX.Y.Z`.
-2. `.github/workflows/08-release.yml` requires an exact `vX.Y.Z` tag in fetched `main` history. `scripts/release-checks-gate.php` then requires that the tagged commit already passed `01 - Static QA`, `02 - Unit Tests`, `03-04 - Docker QA`, `05 - Release Package QA` and the 06 - Minimum Runtime QA / WordPress 6.9 PHP 8.0 on `main`. Each result must come from its expected workflow file running on `main` from a push, the nightly schedule or a manual dispatch; pull-request runs of the same commit do not count. The last two must have actually run, not been skipped. A missing or failed check stops the release and names the workflow to dispatch. The release promotes that evidence rather than re-running it.
-3. Release validation checks source/archive metadata, requirements, the tested WordPress baseline, and nonempty version entries in the changelog and upgrade-notice sections.
-4. `scripts/release-qa.sh --publishing` builds the release ZIP once, validates exact source/archive hashes, and runs WordPress Plugin Check against a pristine extraction of that ZIP with both the pinned and the current Plugin Check versions. The original archive digest must remain unchanged. Product behavior of the ZIP was already proven by `05 - Release Package QA` on the same commit.
-5. The validated ZIP, notes, listing assets, source SHA, and integrity manifest are retained as a run-scoped artifact.
-6. The validation job writes a **Ready for GitHub production approval** summary with the release/source/run/attempt/artifact identity. **08 - Release / publish (GitHub approval required)** then waits for DanielBoring's GitHub approval in the protected `wordpress-org` environment. This is not WordPress.org staff review.
-7. The publish job explicitly installs and verifies host Subversion before its first preflight, verifies the original artifact and tag object/source, serializes production updates across all release tags, and rejects a version that would regress the published release.
-8. SVN receives the contents extracted from the validated ZIP; GitHub receives that original ZIP and build provenance. WordPress.org publication is checked with bounded retries.
-
-Do not manually upload an unvalidated zip to GitHub releases.
-
-The tag-validation job has a 30-minute budget. It checks the tag, confirms
-main's QA results for the tagged commit, builds the ZIP and runs both Plugin
-Check versions; it is expected to take about 10 minutes. Run `composer
-test:ci-safeguards` and `composer lint:workflows` when changing this workflow.
-
-The first `v3.0.0` attempt (run `38273601311`) exhausted its former 65-minute
-budget after static/unit QA and safeguards passed, while package QA was still
-running. It produced no sealed bundle and reached no production approval.
-That immutable tag retains its original workflow: merging a later workflow fix
-does not change a rerun. The release job was later reworked to rely on main's
-QA results instead of re-running them serially. Existing-artifact recovery requires a successful
-original validation and sealed artifact; neither local/PR packages nor partial
-tag-run results qualify. A new validation/publication path requires separate
-maintainer authorization. No release retry, new tag or publication is implied
-by this budget fix.
+Do not manually upload an unvalidated ZIP to GitHub Releases.
 
 ## WordPress.org release flow
 
@@ -99,13 +179,8 @@ Release build and validation scripts require PHP with ZipArchive. The release wo
 
 Plugin Check reports are parsed independently of the command exit status. Any ERROR, malformed report, or unknown finding type blocks release; existing warnings stay visible without being treated as errors. `REQUIRE_CURRENT_PLUGIN_CHECK=1` checks the same ZIP with both the pinned and current checker versions. The release workflow requires both; local `PLUGIN_CHECK_VERSION=latest` selects only the current checker.
 
-Each package QA invocation reserves fresh `build/release-qa-<owner>` checker
-and runtime extractions. Plugin Check copies the pristine ZIP contents into a
-separate, exclusively created directory for each checker version; it never
-deletes an occupied destination or reuses existing reports. The owned outer
-package trap handles teardown, including failed runtime runs. Missing product
-cleanup proof keeps retention armed and blocks that teardown. Raw product
-evidence stays private; only the validated closed product summary is uploaded.
+Package reservations and teardown are described in
+[05 - Release Package QA](05-release-package-qa.md#package-reservations).
 
 Automated process:
 
@@ -124,6 +199,16 @@ Avoid frequent small SVN commits. WordPress.org guidance treats SVN as a release
 
 WordPress.org SVN is production. There is no separate WordPress.org test SVN for this plugin. Use pull request QA, `05 - Release Package QA`, optional manual compatibility checks, staging WordPress installs, and the protected environment approval gate before publishing.
 
+### WordPress.org deployment
+
+- The SVN deploy step uses `10up/action-wordpress-plugin-deploy` pinned to an
+  immutable commit.
+- `SVN_USERNAME` and `SVN_PASSWORD` are stored only in the protected
+  `wordpress-org` environment. Do not duplicate them as repository secrets.
+- The workflow deploys the curated package and supported listing assets from
+  `.wordpress-org/`. Unrecognized files such as `logo.png` are not Plugin
+  Directory assets and must not enter the deploy artifact.
+
 ### GitHub environment and secrets
 
 Use a protected GitHub Environment named `wordpress-org` for real SVN publishing.
@@ -138,92 +223,24 @@ Recommended settings:
 
 The environment's reviewer/self-review/admin-bypass settings, tag-only `v*` deployment policy, and release-tag creation/update/deletion restrictions were read back again on September 21, 2026 during recovery planning. Secret values were not read. Keep the environment ID `wordpress-org` unchanged: it holds the established secrets and protections, so that name may still appear under **Review deployments** even though the job is named **08 - Release / publish (GitHub approval required)**. Recheck effective settings before releases; documentation alone does not enforce them.
 
-Main CI enforcement is **active**, verified on September 17, 2026: `main-ci-gates` requires `01 - Static QA`, `02 - Unit Tests`, and `03-04 - Docker QA` from GitHub Actions. The [setup evidence](../.github/SETUP-COMPLETE.md#rollout-evidence) records the completed initial rollout, including all five approved bot PR workflows. Activation does not replace per-release package QA or protected production approval.
+### Environment and publication gates
 
-At that verification, PR #140's MCP Adapter 0.6.1 candidate had passed compatibility and PR package QA but remained open and unmerged. Main at `3dae8aa` used 0.5.0. The checked-in adapter baseline is now 0.6.1; baseline validation or adoption does not authorize a production release. Future Actions-created PR workflows still require maintainer approval before their genuine PR checks can satisfy the ruleset.
+The `wordpress-org` environment protects **08 - Release / publish (GitHub
+approval required)**. Normal validation or the recovery resolver identifies the
+exact source, tag, run, attempt and artifact before approval. Approval is
+repository production approval, not WordPress.org staff review.
 
-### Partial failure recovery
+The September 21, 2026 read-back recorded DanielBoring as reviewer, self-review
+allowed for solo maintenance and administrator environment bypass disabled.
+Only `v*` tags may deploy. Administrator control over tag creation does not
+bypass production approval.
 
-#### Fresh validation when the immutable release has no validated artifact
+One shared publish concurrency group serializes normal and recovery
+publication without cancelling an active deployment. There is no separate
+WordPress.org test SVN; use PR checks, package QA and staging installations
+first.
 
-> **Retired.** `fresh-release-validation.yml` was removed after v3.0.0 published. This section is kept as history until the docs restructure moves it to the release history.
-
-`fresh-release-validation.yml` is a distinct, input-free recovery entry point
-for **v3.0.0 only**. It does not change the original tag, rerun its frozen
-workflow, reuse partial evidence, or pretend a new ZIP is the failed run's ZIP.
-Its reviewed policy locks the annotated tag object
-`4bcc5bae61b7867bcb6f186713beeaeb5ed9b722` and original source
-`2f9842bb943fb27030cabe8060ad0b10c007ac14`. Future versions require a separately
-reviewed policy/workflow change with exact immutable identities and regressions;
-there is no caller-controlled version, source, path, artifact or workflow.
-
-After normal PR review, exact-head gates and a separately authorized merge,
-authorize an annotated `v-release-recovery-*` control tag on that merged control
-commit, then explicitly dispatch this workflow on that tag. Do not dispatch on
-`main` or `v3.0.0`. The existing tag-only environment policy remains intact;
-control-tag pushes are excluded from the normal release workflow. Creating or
-dispatching a control tag is not implied by reviewing this implementation.
-
-The trusted control checks both actor permissions, the remote control tag,
-original annotated release tag and current-main ancestry **before** original
-source execution. A separate checkout of the locked source installs its own
-locked dependencies and runs its complete static/unit and release safeguard
-commands. Its package builder runs once; original-ZIP runtime, cleanup proof,
-safe evidence export and pinned/current Plugin Check remain mandatory. The
-**control workflow's 120-minute job budget**, not the old tag's 65-minute YAML,
-governs this execution. No test or source byte is upgraded from current main.
-
-The original source's bundle helper seals package/notes/assets/source hashes.
-The trusted control adds an exact `fresh_validation` manifest identity:
-original release source/tag, reviewed workflow/control source/tag, repository,
-workflow and **new** run/attempt. The immutable upload is named
-`fresh-release-RUN-ATTEMPT`. After the user's `wordpress-org` approval, the
-publish job independently rechecks authorization, both remote tags, ancestry,
-the successful fresh-validation job and every mandatory step, upload timestamps,
-artifact membership/expiry/digest and the sealed manifest. It downloads only
-that artifact and uses the original source's existing package verifier,
-version-progression, SVN/public-listing and GitHub checks under the same shared
-publish lock. It never builds after approval. GitHub attestation identifies the
-actual control workflow; the manifest identifies the original package source.
-
-Existing `08-release.yml` artifact recovery still requires a successful original
-tag-push validation and retained sealed artifact: failed/cancelled/no-artifact
-runs remain rejected. Fresh validation does not weaken those semantics.
-Interrupted fresh publication may be partial: retain the new artifact and
-inspect destination hashes. Rerunning only publish retains the successful QA
-attempt via the validation job output; expired/deleted artifacts or changed
-tags/permissions block it. Do not substitute a local ZIP or start another build
-without a separately reviewed recovery decision.
-
-#### Preventing budget failures on future upgrades
-
-Keep comprehensive acceptance and the protected publish gate. Prefer local
-Docker preflight of the exact final installable package **before tagging**, then
-authoritative hosted validation/sealing of the exact tag. A local pass identifies
-failures cheaply but does not establish GitHub run/artifact provenance or
-authorize production. Record actual PHP/engine/checker versions and source/ZIP
-hashes; changes to final bytes invalidate earlier acceptance.
-
-Use `scripts/qa-profile.py` to inspect completed hosted job steps and local
-per-test/stage diagnostics; separate setup, execution and cleanup, and retain
-failed/partial runs rather than estimating their unfinished duration. The failed
-65-minute tag run recorded roughly 1,799 seconds static/unit, 474 safeguards,
-and 1,630 **partial** package/checker seconds. Later independent PR package jobs
-took about 36--39 minutes; PHP 8.0 full units took about 29--30 minutes and PHP
-8.4 about 15--16 minutes. These different-source/lane observations are planning
-evidence, not additive controlled release benchmarks. The 120-minute budget
-adds headroom but does not guarantee completion. Review complete repeat
-release-stage timings before tagging; investigate consumption above 80% of
-the outer budget rather than merely raising it or assuming a partial pass.
-
-The measured replay hotspot spent about 96% of selected elapsed time exporting
-independent evidence; authoritative journal read/persist guards dominated.
-Do not remove fault cases, share mutable evidence or cache authoritative state
-to obtain a faster green result. Split independent slow tooling and production
-units only after a reviewed dependency/provenance design and repeat comparisons
-show a worthwhile reduction while every failure still blocks the release.
-For now retain the existing comprehensive gates, diagnostic inventory and
-required-check names; no broad framework rewrite is necessary.
+## Partial failure recovery
 
 The workflow deploys to WordPress.org SVN before creating the GitHub Release. If SVN succeeds but GitHub Release creation or listing verification fails, the version may already be public. A verification timeout is not a rollback and must be reported as partial publication.
 
@@ -233,7 +250,7 @@ Do not move/delete/recreate the tag or rebuild a replacement ZIP for recovery. I
 
 If GitHub Release creation somehow succeeds while WordPress.org deployment does not, treat the release as partially published: fix the SVN deployment issue, re-run the protected publish job when safe, or publish a follow-up patch release if the failed state could affect users.
 
-### Recovery when the frozen workflow itself needs a fix
+## Recovery when the frozen workflow itself needs a fix
 
 A rerun uses the original workflow revision. It cannot acquire a later prerequisite fix, such as installing host `svn` before publication preflight. Use the guarded `workflow_dispatch` path only after the CI fix has been reviewed and merged; it resumes an existing successful QA artifact without building or rerunning its QA.
 
@@ -248,16 +265,17 @@ The recovery control tag is **not a plugin release** and never determines the pl
 
 Recovery runbook:
 
-1. Preserve the failed run, successful Validate Release job, original artifact ID/name/expiry, release tag object, source SHA and original package digest. An overall failed run is expected after failed publication; failed or absent QA is never acceptable.
+1. Preserve the failed run, successful `08 - Release / validate` job, original artifact ID/name/expiry, release tag object, source SHA and original package digest. An overall failed run is expected after failed publication; failed or absent QA is never acceptable.
 2. Review and merge the source-only CI fix through normal PR checks. With separate explicit authorization, the coordinator creates and pushes a new annotated `v-release-recovery-*` tag identifying that merged commit. Tag creation remains subject to the existing release-tag ruleset. Never modify the original `vX.Y.Z` tag or tag unreviewed code.
 3. The coordinator dispatches `08-release.yml` **on that control tag**, passing only `original-run-id` and `original-artifact-id` as decimal IDs. Both the dispatch actor and any rerun triggering actor must retain repository write access. No caller-selected source, package path or replacement version is accepted.
-4. The read-only resolver proves same-repository push/release-workflow identity, source/tag identity and current main ancestry. It derives the original attempt from `release-RUN-ATTEMPT`, checks that attempt explicitly, requires exactly one successful Validate Release job and its required successful QA/seal/upload steps, and checks artifact ownership, unique run membership, expiry and upload timing. It never substitutes the latest attempt or requires the failed publication run to have succeeded overall.
+4. The read-only resolver proves same-repository push/release-workflow identity, source/tag identity and current main ancestry. It derives the original attempt from `release-RUN-ATTEMPT`, checks that attempt explicitly, requires exactly one successful `08 - Release / validate` job and its required successful QA/seal/upload steps, and checks artifact ownership, unique run membership, expiry and upload timing. It never substitutes the latest attempt or requires the failed publication run to have succeeded overall.
 5. Review the resolver's ready-for-approval summary, including the control-tag object and original artifact archive digest. DanielBoring approves the production deployment under **Review deployments**; `wordpress-org` denotes the destination/environment, not an external WordPress.org review queue. Approval of the original failed run does not remove this fresh recovery approval gate.
 6. Before switching away from the trusted control checkout, the one shared publish job compares the control-tag object with the preapproval object (even a recreated annotation on the same commit is rejected), and reruns the read-only resolver after approval. Original run/job/artifact provenance, expiry and actor authorization must still pass; source, release-tag object, version, run, attempt, artifact ID and archive digest must all match the approved identity. Only then does it check out the exact original release source, download that original run's artifact by ID, and verify its manifest against the **original** run ID, source and version. It rechecks the original remote tag object/peeled source and current main ancestry. Host Subversion is provisioned before preflight; the same stale-version, duplicate, attestation, exact SVN/public-package and original GitHub ZIP checks then apply. No download or SVN-secret use precedes these postapproval identity gates.
 
 Any missing, expired, malformed, ambiguous, unauthorized or mismatched evidence stops recovery. Do not rebuild a replacement ZIP, manually upload one, weaken environment approval or retag to make a check pass.
 
-For the failed 2.6.0 publication, the approved recovery inputs are run `35604575508` and artifact `10641392617` (`release-35604575508-1`). Preserve source `1503b88750d1c0b9534ee5ecaf661b844d1f7ce3`, annotated `v2.6.0` object `5b7edb3fc7f4a83e66c432f2cb6c45186a8ef44a`, and package SHA-256 `577f4f2a5f1a6ca2c9ac32d3cb24d3600a8aecfedb2e11dcd812d768c73de188`. Current main contains unreleased 3.0 work and must not be packaged as 2.6.0. These recorded identities are an operator verification checklist, not authorization to create a control tag or dispatch automatically.
+Recorded identities from past recoveries are in the
+[release history](reference/release-history.md).
 
 ## WordPress.org guideline governance
 

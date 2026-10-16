@@ -30,4 +30,4 @@ report, including WordPress.org communication when appropriate.
 
 For non-security bugs and feature requests, use the
 [public issue templates](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/issues/new/choose).
-See [the security strategy](docs/security-strategy.md) for maintainer procedures.
+See [the security strategy](docs/90-security-strategy.md) for maintainer procedures.

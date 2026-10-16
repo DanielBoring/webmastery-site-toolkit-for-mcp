@@ -64,10 +64,10 @@ This plugin follows [WordPress Coding Standards](https://developer.wordpress.org
 - **Strict callback inputs** — declare exact types/enums and fixed property sets. The owned registration filter closes fixed objects and checks structural/type/enum/range/item constraints before raw permission and execute callbacks; it does not replace core format/combinator validation. Registered native validation must call the parent once first, preserve its error identity and empty-schema behavior, then validate strict types before permissions. Preserve normalization, lifecycle filters, actual authorization denials and direct destructive diagnostics; zero-work means original callbacks/capability/query/mutation boundaries, not all core hooks. Mark genuine extension maps explicitly open, preserve polymorphic metadata, test omitted versus null values and unknown keys with zero-work counters, and keep permission failures native `WP_Error`. Test schema/guard mutations, parent detach/omission, and direct/native/gateway/individual boundaries without weakening layer-specific errors.
 - **Permission defaults** — standalone registered permission checks materialize a declared default only for null input with an exact object-root type, before the existing parent permission call once. Do not replay normalization filters, expand nullable/scalar-root handling, coerce explicit input, or relax raw callbacks. Cover Adapter empty-object normalization, allowed/denied users, nested nulls, invalid defaults, core lifecycle/reentrancy and unchanged diagnostic privacy.
 - **Security-sensitive abilities** — include allowed and denied manifest cases for abilities that expose private data, user identity, environment/plugin details, destructive actions, uploads, or status transitions; use `assert_missing_paths` when lower-privilege responses must hide fields
-- **Metadata boundaries** — reject metadata containers and reserved SEO aliases in general create/update before mutation, including empty/null values. Use real-object effective key capabilities for separate writes and SEO reads; prove denied calls have no writes/hooks or forbidden reads across direct, ability, gateway, and individual-tool execution. Preserve plain-content and draft/write/publish migration controls; see `docs/3.0-migration.md`.
+- **Metadata boundaries** — reject metadata containers and reserved SEO aliases in general create/update before mutation, including empty/null values. Use real-object effective key capabilities for separate writes and SEO reads; prove denied calls have no writes/hooks or forbidden reads across direct, ability, gateway, and individual-tool execution. Preserve plain-content and draft/write/publish migration controls; see `docs/reference/3.0-migration.md`.
 - **Untrusted result fields (3.0)** — add unique record-local `untrusted_fields` names only for present fields, including null/empty values. Preserve original values/types/HTML/block markup and container maps; never restore redacted values or put markers in canonical errors or diagnostic error subrecords. Keep SEO head output unavailable and all #110/#118 authorization/error evidence intact. See the field table in `README.md` and disposable-runtime requirements in `tests/e2e/README.md`.
 - **Destructive interlocks** — retain exact boolean confirmation for the five guarded abilities, raw bulk bounds before normalization, and strict optional flags. Prove previews/denials leave posts, metadata, terms, files, cron, and mutation hooks unchanged; distinguish permission-callback rejection from direct/per-item denial. Media force must never bypass capability or reference-query failure. Preserve existing caller assertions when adding confirmation.
-- **Delegated permissions** — require a local WordPress capability floor plus the exact upstream route permission in both permission and direct execution paths. Test missing/non-callable upstream checks, and distinguish controlled fixtures from version-specific real-provider inspection; see the Site Kit policy in `docs/security-strategy.md`.
+- **Delegated permissions** — require a local WordPress capability floor plus the exact upstream route permission in both permission and direct execution paths. Test missing/non-callable upstream checks, and distinguish controlled fixtures from version-specific real-provider inspection; see the Site Kit policy in `docs/90-security-strategy.md`.
 - **Prefer WordPress APIs** — use WordPress API functions (`get_posts()`, `wp_insert_post()`, etc.) for normal reads and writes. Direct `$wpdb` reads are reserved for administrator-only diagnostics such as database health checks and the narrow attachment-reference exception below. Prepare variable values and surface query errors without exposing SQL diagnostics.
 - **Bounded attachment-reference reads** — the shared orphan-list/media-deletion checker may use prepared direct SQL for non-administrator callers only after the caller's existing ability and per-object authorization checks. Check at most 100 attachment candidates, restrict thumbnail lookup to their IDs, and batch at most two escaped literal URL/GUID patterns per attachment with at most 50 patterns per content query. Preserve the existing all-post-type/status reference scope and return only per-candidate reference truth internally, never matching content, referring IDs, or sitewide counts. These bounds do not imply constant database scan time. Null, failed, or incomplete query results must fail closed, including forced deletion. Retain allowed/denied, literal-escaping, per-attachment parity, query-budget, and no-write/failure controls in `BoundedListTest` and `DestructiveSafetyTest`; real benchmark/MCP evidence remains separately required.
 - **No output buffering** — abilities return arrays or `WP_Error` objects; the MCP Adapter handles serialization
@@ -80,7 +80,7 @@ composer install
 composer qa
 ```
 
-`composer qa` runs the normal fast pre-PR checks: Static QA plus Unit Tests. See [`docs/qa-strategy.md`](docs/qa-strategy.md) for the full QA posture, including when to run Ability Contract QA, Full MCP E2E QA, Release Package QA, and Compatibility QA.
+`composer qa` runs the normal fast pre-PR checks: Static QA plus Unit Tests. See the [SDLC overview](docs/00-sdlc-overview.md#qa-at-a-glance) for the full QA posture, including when to run Ability Contract QA, Full MCP E2E QA, Release Package QA, and Compatibility QA.
 
 Run development runtime QA where the coding session runs. Local Copilot app,
 CLI and editor sessions use local Docker; cloud-agent sessions use available
@@ -101,7 +101,7 @@ change. The minimum-runtime lane runs nightly and on dispatch rather than on
 every PR. Neither is a required merge check; both must be green on the commit
 you tag for release.
 
-PHPStan runs at level 5 with a reviewed, file/message/identifier/count-scoped baseline and a PHP 8.0 analysis target. New diagnostics must be fixed rather than added to the baseline. When fixing existing debt, lower the matching count or remove the resolved entry in the same PR; unmatched entries fail full-project analysis. Run `composer phpstan` without individual-file arguments and `composer test:phpstan-baseline` to verify the ratchet. See the [baseline review and regeneration policy](docs/qa-strategy.md#phpstan-level-5-and-baseline-ratchet).
+PHPStan runs at level 5 with a reviewed, file/message/identifier/count-scoped baseline and a PHP 8.0 analysis target. New diagnostics must be fixed rather than added to the baseline. When fixing existing debt, lower the matching count or remove the resolved entry in the same PR; unmatched entries fail full-project analysis. Run `composer phpstan` without individual-file arguments and `composer test:phpstan-baseline` to verify the ratchet. See the [baseline review and regeneration policy](docs/01-static-qa.md#phpstan-level-5-and-baseline-ratchet).
 
 Workflow and shell changes also need the dedicated workflow lint checks. These
 tools are separate from the normal `composer qa` path. Genuine PHP 8.0/8.4
@@ -116,7 +116,7 @@ When adding PHP/Python tests or changing safeguard commands, update
 `tests/qa-suites.json`; `python3 -B scripts/qa-profile.py inventory` rejects
 missing or duplicate classifications and command drift. Classification and
 timing do not select or skip tests. Follow the
-[measurement procedure](docs/qa-strategy.md#suite-classification-and-measurement)
+[measurement procedure](docs/02-unit-tests.md#suite-classification-and-measurement)
 before proposing reuse, parallelization or deduplication, and retain full
 main/release coverage and the original failure status.
 
@@ -132,13 +132,15 @@ unchanged.
 
 `composer lint:workflows` requires actionlint 1.7.12, ShellCheck 0.11.0, and zizmor 1.30.1 on `PATH`. Install the pinned upstream releases and verify their checksums as shown in `.github/workflows/01-static-qa.yml`; the command rejects missing or mismatched versions.
 
-The repo strategy docs explain how maintainers operate the project:
+The numbered docs explain how maintainers operate the project. Each check doc
+shares its number with the GitHub Actions workflow it describes:
 
-- [`docs/sdlc-overview.md`](docs/sdlc-overview.md) maps the complete lifecycle from issue intake through design, implementation, QA, release, and maintenance.
-- [`docs/qa-strategy.md`](docs/qa-strategy.md) explains the validation layers, what each check proves, and when each check runs.
-- [`docs/ci-cd-strategy.md`](docs/ci-cd-strategy.md) covers GitHub Actions, branch protection, workflow permissions, scheduled checks, and artifact policy.
-- [`docs/security-strategy.md`](docs/security-strategy.md) covers ability permissions, sensitive data, dependency and secret handling, and vulnerability response.
-- [`docs/release-strategy.md`](docs/release-strategy.md) covers versioning, release readiness, GitHub releases, WordPress.org SVN publishing, hotfixes, and rollback policy.
+- [`docs/00-sdlc-overview.md`](docs/00-sdlc-overview.md): the lifecycle, a TL;DR of all QA, what runs when, budgets and gates. Start here.
+- [`docs/01-static-qa.md`](docs/01-static-qa.md) to [`docs/10-adapter-assessment.md`](docs/10-adapter-assessment.md): one document per check: what it proves, when it runs, what the workflow does, how to run it locally and how to read failures.
+- [`docs/08-release.md`](docs/08-release.md): versioning, release readiness, publication, recovery, hotfixes and rollback.
+- [`docs/90-security-strategy.md`](docs/90-security-strategy.md): ability permissions, sensitive data, dependency and secret handling, vulnerability response.
+- [`docs/91-ci-cd-platform.md`](docs/91-ci-cd-platform.md): rulesets, workflow permissions, environments, artifacts and the PR process.
+- [`docs/reference/`](docs/reference/): release history, the area-specific review checklist, shared helpers, the 3.0 migration guide and the Adapter 0.7 assessment.
 
 ---
 
@@ -148,7 +150,7 @@ The repo strategy docs explain how maintainers operate the project:
 
 `Webmastery_MCP_Plugins::active_basenames()` supplies backup and performance diagnostics with uncached option-based inventory: local values first, followed by network option keys only on multisite, then string conversion, deduplication, and numeric reindexing. Non-array local/network options are ignored. The helper does not load the plugin API, mutate options, or check plugin-management capabilities; each diagnostic retains its existing `manage_options` permission callback.
 
-This is the identical diagnostic-inventory portion of #119. Do not use inventory membership as a substitute for SEO or Site Kit provider readiness: Yoast uses runtime constants/classes/functions, SEOPress combines readiness signals with its existing local-option cast, and Site Kit combines core plugin APIs with loaded-provider and installed/version information. Those provider policies remain separate; the [shared-helper map](docs/shared-helpers.md) records the other consolidated rows and deliberate distinctions.
+This is the identical diagnostic-inventory portion of #119. Do not use inventory membership as a substitute for SEO or Site Kit provider readiness: Yoast uses runtime constants/classes/functions, SEOPress combines readiness signals with its existing local-option cast, and Site Kit combines core plugin APIs with loaded-provider and installed/version information. Those provider policies remain separate; the [shared-helper map](docs/reference/shared-helpers.md) records the other consolidated rows and deliberate distinctions.
 
 `PluginInventoryTest` characterizes the actual shared helper and both diagnostic forwarding methods through isolated WordPress stubs, including fresh filtered reads, malformed options, exact response shapes, and unchanged capability checks. These units complement, rather than replace, the existing diagnostic allowed/denied E2E manifest cases and real WordPress/MCP checks.
 
@@ -160,7 +162,7 @@ Each group of abilities lives in its own file under `includes/`. Follow the exis
 2. **Register** the ability inside the class's `register()` method using `wp_register_ability()`
 3. **Use the `webmastery-site-toolkit-for-mcp/` prefix** for the ability name (e.g., `webmastery-site-toolkit-for-mcp/list-media`)
 4. **Require the narrowest relevant capability** in `permission_callback` — use object-specific checks when an input ID is available and never skip the check
-5. **Return a consistent shape** — preserve successful values/types, allowing only documented contract changes such as additive record-local markers; use `Webmastery_MCP_Response::error()` for canonical failures and `local_error()` for safe native permission/helper diagnostics. Never trust provider messages/data based on a familiar code. Cover direct execution, native permission, gateway, individual-tool, and foreign-namespace isolation; see `docs/3.0-migration.md`.
+5. **Return a consistent shape** — preserve successful values/types, allowing only documented contract changes such as additive record-local markers; use `Webmastery_MCP_Response::error()` for canonical failures and `local_error()` for safe native permission/helper diagnostics. Never trust provider messages/data based on a familiar code. Cover direct execution, native permission, gateway, individual-tool, and foreign-namespace isolation; see `docs/reference/3.0-migration.md`.
 6. **Require the class file** in `webmastery-site-toolkit-for-mcp.php` inside the `wp_abilities_api_init` action and call `ClassName::register()`
 7. **Add E2E manifest coverage** in `tests/e2e/abilities-manifest.json`; include both allowed and denied roles when permissions differ by role or capability, plus missing-path assertions when sensitive fields should be absent
 8. **Update docs and changelogs** when behavior is user-facing: `README.md`, `readme.txt`, relevant markdown files, and `CHANGELOG.md` under `## Unreleased`. Changelog entries should use plugin-facing release-note wording rather than raw internal ability namespace strings unless the exact MCP tool name is necessary. Repository, CI, contributor, GitHub platform, template, or agent workflow changes belong in `.github/REPOSITORY_CHANGELOG.md`.
@@ -264,7 +266,7 @@ Related file map:
 
 The existing recursive `includes/` release map includes the helper without a packaging allowlist change. This is behavior-preserving repository maintenance, not a new ability or a user-facing permission policy change.
 
-See [the requirement matrix and completed extraction map](docs/shared-helpers.md) before changing an owner or list policy. Preserve object/key authorization, bounded candidate windows, continuation and ordering, provider readiness, and caller-specific clamps. Keep full/summary values and record-local markers consistent across owners. Update current-source bindings and their regression controls when bound source changes; retain historical evidence without treating deferred reversible-transition fixtures as active QA.
+See [the requirement matrix and completed extraction map](docs/reference/shared-helpers.md) before changing an owner or list policy. Preserve object/key authorization, bounded candidate windows, continuation and ordering, provider readiness, and caller-specific clamps. Keep full/summary values and record-local markers consistent across owners. Update current-source bindings and their regression controls when bound source changes; retain historical evidence without treating deferred reversible-transition fixtures as active QA.
 
 ---
 
@@ -289,9 +291,10 @@ The [PR template](.github/PULL_REQUEST_TEMPLATE.md) uses this checklist:
 - [ ] Changelog: plugin-facing changes in `CHANGELOG.md`, repository/CI changes in `.github/REPOSITORY_CHANGELOG.md`
 - [ ] `composer phpcs`, PHPStan without new baseline debt, E2E manifest validation and `git diff --check` pass
 - [ ] Relevant E2E QA passes, or failures are unrelated and explained
-- [ ] Workflow or shell changes pass `composer lint:workflows`, and CI stays within the budgets in `docs/qa-strategy.md`
+- [ ] Workflow or shell changes pass `composer lint:workflows`, and CI stays within the budgets in `docs/00-sdlc-overview.md#ci-budgets-and-pruning`
+- [ ] Workflow, trigger or gate changes update the matching numbered doc in `docs/` and the diagrams in `docs/images/` (`.drawio` source and PNG)
 - [ ] WordPress.org guideline impact was considered for naming, readme, privacy, external calls, licensing, assets or packaging
-- [ ] Area-specific items in `docs/qa-harness-reference.md#area-specific-review-checklist` were checked where they apply
+- [ ] Area-specific items in `docs/reference/review-checklist.md` were checked where they apply
 
 For the #108 runtime probes, require `WSTM108_ALLOW_DISPOSABLE=1` and an owned
 isolated test installation. The opt-in is not a Docker lease; never run
@@ -307,7 +310,7 @@ GitHub Actions-created baseline PRs need a maintainer to approve their PR-event 
 
 Use the fastest command that covers your change:
 
-Environment-specific notes for GitHub Actions, Windows PowerShell, and Windows Git Bash live in [`docs/qa-strategy.md`](docs/qa-strategy.md#environment-notes).
+Environment-specific notes for GitHub Actions, Windows PowerShell, and Windows Git Bash live in the [SDLC overview](docs/00-sdlc-overview.md#environment-notes).
 
 | Command | What it runs |
 | --- | --- |
@@ -418,35 +421,22 @@ Release checklist:
 9. Tag and push `vX.Y.Z` to trigger the release workflow.
 10. Review the ready-for-approval summary and approve **08 - Release / publish (GitHub approval required)** after release QA passes. The `wordpress-org` environment is a GitHub production gate, not WordPress.org staff review.
 
-Release tags must point into reviewed `main` history. Release QA must run static/unit checks as well as package validation. Approve the source SHA and validated artifact, not a rebuilt replacement. Publishing is serialized across all release tags; if SVN succeeds but a later step fails, follow the partial-failure procedure rather than moving a tag or starting a different build.
+Release tags must point into reviewed `main` history. The release requires checks 01–06 to have passed on that exact `main` commit, then builds the ZIP once and runs Plugin Check. Approve the source SHA and validated artifact, not a rebuilt replacement. Publishing is serialized across all release tags; if SVN succeeds but a later step fails, follow the partial-failure procedure rather than moving a tag or starting a different build.
 
-If recovery needs workflow fixes, follow the [guarded recovery runbook](docs/release-strategy.md#recovery-when-the-frozen-workflow-itself-needs-a-fix). A separately authorized annotated `v-release-recovery-*` control tag on the reviewed merged fix satisfies the existing tag-only environment policy; it is not a plugin release and its push never triggers release QA/publication. Only dispatch on that control tag may resume the original successful QA run/artifact, without rebuilding or modifying the original release tag. Keep the `wordpress-org` environment ID, protections and scoped secrets unchanged. `composer test:release-safeguards` covers resolver provenance/authorization, control-ref entrypoints and host-SVN prerequisite failures with mocks/local Git fixtures, without Docker or production writes.
+If recovery needs workflow fixes, follow the [guarded recovery runbook](docs/08-release.md#recovery-when-the-frozen-workflow-itself-needs-a-fix). A separately authorized annotated `v-release-recovery-*` control tag on the reviewed merged fix satisfies the existing tag-only environment policy; it is not a plugin release and its push never triggers release QA/publication. Only dispatch on that control tag may resume the original successful QA run/artifact, without rebuilding or modifying the original release tag. Keep the `wordpress-org` environment ID, protections and scoped secrets unchanged. `composer test:release-safeguards` covers resolver provenance/authorization, control-ref entrypoints and host-SVN prerequisite failures with mocks/local Git fixtures, without Docker or production writes.
 
 ---
 
 ## Release process (maintainers)
 
-> **Retired:** the v3.0.0 fresh-validation workflow and its tests were removed after 3.0.0 published; the paragraph below is history.
-
-Fresh validation without an original successful artifact is a separate,
-input-free, reviewed policy in `fresh-release-validation.yml`, currently locked
-to the immutable 3.0.0 source/tag. It must run all original-source checks and seal
-new control/source/run provenance, not reuse failed evidence or substitute a
-local package. Run `php scripts/test-release-fresh-validation.php` and the
-existing recovery/control regressions when changing it. Future target identities
-require a reviewed policy change; control tags, dispatch and production approval
-are separately authorized actions. The PR checklist must cover this distinction:
-fresh validation locks the original immutable source/tag and seals new run/control
-provenance instead of relabeling failed or missing evidence.
-
-See [`docs/release-strategy.md`](docs/release-strategy.md) for the complete release governance model and official GitHub/WordPress references.
+See [`docs/08-release.md`](docs/08-release.md) for the complete release governance model and official GitHub/WordPress references.
 
 1. Update the `Version` header in `webmastery-site-toolkit-for-mcp.php`
 2. Move plugin-facing `CHANGELOG.md` notes from `## Unreleased` into the release version
 3. Add release notes to `readme.txt` under `== Changelog ==` and `== Upgrade Notice ==`
 4. Commit: `git commit -m "chore: release v1.x.x"`
 5. Tag and push: `git tag v1.x.x && git push origin v1.x.x`
-6. GitHub Actions runs contract, transport, package, and Plugin Check validation
+6. `08 - Release` confirms checks 01–06 passed on the tagged `main` commit (dispatch 05 and 06 on `main` first if the nightly run has not covered it), builds the ZIP and runs Plugin Check
 7. Approve the protected `wordpress-org` environment when the validated tag should publish to WordPress.org
 8. GitHub Actions deploys the curated build directory to WordPress.org SVN and creates the GitHub Release automatically
 9. Verify the WordPress.org Plugin Directory page updates as expected
