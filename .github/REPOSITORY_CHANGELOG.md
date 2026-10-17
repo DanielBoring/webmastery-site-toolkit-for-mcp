@@ -44,6 +44,18 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 - Add a rule to the PR template, `CONTRIBUTING.md` and the agent instructions:
   workflow, trigger or gate changes update the matching numbered doc and the
   diagrams.
+- Keep rulesets as code (#192). `.github/rulesets/*.json` holds the desired
+  state of each ruleset, and the new `11 - Ruleset Audit` workflow
+  (`scripts/ruleset-drift.py`) compares them with the live rulesets weekly and
+  on PRs that change them; its tests also require `main-ci-gates` to name the
+  01, 02 and 03-04 summary jobs. Restore the required checks on
+  `main-ci-gates`, rename `main-pr-no-required-approvals` to
+  `main-pull-requests` and allow squash merges only, matching the repository
+  setting. Document the release-tag bypass, the ruleset naming convention and
+  the change procedure in `docs/91-ci-cd-platform.md`. Ruleset files and the
+  drift script no longer trigger Docker QA. GitHub shows bypass actors only to
+  admins, so CI skips them and names the rulesets it skipped; an admin run
+  before each release checks them.
 
 - Add CI budgets and a pruning rule. `docs/qa-strategy.md` sets wall-clock
   budgets for PR checks and the release job, and `.github/copilot-instructions.md`

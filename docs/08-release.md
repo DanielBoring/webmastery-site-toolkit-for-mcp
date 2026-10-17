@@ -155,6 +155,7 @@ Before tagging a release:
 9. Review the latest `07 - Compatibility QA` result for upstream drift.
 10. Confirm no unexpected Plugin Check findings remain.
 11. Confirm the `wordpress-org` GitHub Environment approval gate and SVN secrets are configured before pushing a release tag that should publish to WordPress.org.
+12. As an admin, run `python3 scripts/ruleset-drift.py` to confirm the rulesets match `.github/rulesets/`, including bypass actors (CI cannot see those).
 
 ## Release budget
 

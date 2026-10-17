@@ -21,7 +21,7 @@ class QaProfileTest(unittest.TestCase):
     def test_every_php_and_python_test_file_is_classified_once(self):
         catalog = PROFILE.inventory()
         self.assertEqual(109, sum(len(v) for v in catalog["phpunit"].values()))
-        self.assertEqual(5, len(catalog["python"]))
+        self.assertEqual(6, len(catalog["python"]))
         xml = (ROOT / "phpunit.xml.dist").read_text()
         self.assertNotIn("<directory>", xml)
         self.assertNotIn("<exclude>", xml)

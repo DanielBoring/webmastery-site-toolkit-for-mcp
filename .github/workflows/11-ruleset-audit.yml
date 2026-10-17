@@ -1,0 +1,41 @@
+name: 11 - Ruleset Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '47 9 * * 1'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/rulesets/**'
+      - '.github/workflows/11-ruleset-audit.yml'
+      - 'scripts/ruleset-drift.py'
+      - 'tests/unit/test_ruleset_drift.py'
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ruleset-audit:
+    name: 11 - Ruleset Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Test the drift check
+        run: python3 -B -m unittest discover -s tests/unit -p test_ruleset_drift.py -v
+
+      - name: Compare live rulesets with .github/rulesets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/ruleset-drift.py

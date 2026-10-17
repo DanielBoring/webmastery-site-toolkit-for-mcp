@@ -23,6 +23,12 @@ documents. The retired workflows were removed after v3.0.0 published.
 | `adapter-release-assessment.yml` | `10-adapter-assessment.yml` |
 | `fresh-release-validation.yml`, `import-issue-backlog.yml` | removed |
 
+`main-ci-gates` had its required checks removed on October 16, 2026 so the
+renamed checks could report, and ran empty until they were restored with the
+new names. That gap is why rulesets became code with a weekly drift check
+(`11 - Ruleset Audit`, issue #192). The same change renamed
+`main-pr-no-required-approvals` to `main-pull-requests`.
+
 Recovery tooling resolves releases validated under `08-release.yml`; 2.6.0 and
 3.0.0 were already published under the old names.
 

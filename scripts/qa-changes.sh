@@ -29,7 +29,7 @@ case "${QA_SCOPE:-default}" in
 		;;
 	runtime)
 		# Inverted: every path is relevant unless it is a known non-runtime path.
-		ignored='^(docs/|ISSUES/|\.wordpress-org/|tests/unit/|tests/qa-suites\.json$|[^/"]+\.md$|LICENSE$|\.github/(ISSUE_TEMPLATE/|[^/]+\.(md|yml|json)$|workflows/[^/]+\.yml$)|scripts/(test-release-|release-(recovery|tag-check|control-check|publish-check|plugin-check|checks-gate)\.|build-release\.sh$|release-qa\.sh$|qa-profile\.py$|adapter-|update-compatibility-baselines\.php$|workflow-lint\.php$))'
+		ignored='^(docs/|\.wordpress-org/|tests/unit/|tests/qa-suites\.json$|[^/"]+\.md$|LICENSE$|\.github/(ISSUE_TEMPLATE/|[^/]+\.(md|yml|json)$|workflows/[^/]+\.yml$)|scripts/(test-release-|release-(recovery|tag-check|control-check|publish-check|plugin-check|checks-gate)\.|build-release\.sh$|release-qa\.sh$|qa-profile\.py$|adapter-|update-compatibility-baselines\.php$|workflow-lint\.php$|ruleset-drift\.py$)|\.github/rulesets/)'
 		always='^\.github/(compatibility-versions\.json|workflows/03-04-docker-qa\.yml)$'
 		;;
 	package)

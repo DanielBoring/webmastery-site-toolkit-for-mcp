@@ -312,7 +312,7 @@ git() {
 source scripts/qa-changes.sh
 """
         for paths, selected in (
-            ("README.md\ndocs/qa-strategy.md", "false"),
+            ("README.md\ndocs/00-sdlc-overview.md", "false"),
             ("scripts/qa-compose.sh", "true"),
             ("docker-compose.release.yml", "true"),
             ("tests/fixtures/php80-floor/Dockerfile", "true"),
@@ -325,8 +325,9 @@ source scripts/qa-changes.sh
             self.assertEqual(0, result.returncode, result.stderr.decode())
             self.assertIn(f"should-run={selected}".encode(), result.stdout)
         for scope, paths, selected in (
-            ("runtime", "README.md\ndocs/qa-strategy.md\ntests/unit/ResponseTest.php", "false"),
+            ("runtime", "README.md\ndocs/00-sdlc-overview.md\ntests/unit/ResponseTest.php", "false"),
             ("runtime", ".github/workflows/02-unit-tests.yml\nscripts/test-release-runtime.sh", "false"),
+            ("runtime", ".github/rulesets/main-ci-gates.json\nscripts/ruleset-drift.py", "false"),
             ("runtime", "scripts/release-tools.php", "true"),
             ("runtime", ".github/workflows/03-04-docker-qa.yml", "true"),
             ("runtime", ".github/compatibility-versions.json", "true"),

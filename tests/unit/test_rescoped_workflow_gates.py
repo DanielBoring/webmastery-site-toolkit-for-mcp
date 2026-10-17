@@ -392,6 +392,7 @@ refuse compose exec -T wordpress wp --allow-root core version
             "08-release.yml": ("08 - Release", None),
             "09-publishing-checks.yml": ("09 - Publishing Checks", "publishing-qa"),
             "10-adapter-assessment.yml": ("10 - Adapter Assessment", "released-adapter"),
+            "11-ruleset-audit.yml": ("11 - Ruleset Audit", "ruleset-audit"),
         }
         self.assertEqual(set(expected), {p.name for p in WORKFLOWS.glob("*.yml")})
         for name, (title, summary) in expected.items():

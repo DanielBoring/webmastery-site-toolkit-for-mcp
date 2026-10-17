@@ -624,7 +624,7 @@ Report suspected vulnerabilities through [private vulnerability reporting](https
 ![QA flow: pull request checks, re-runs on main, nightly and weekly checks, and the release path](docs/images/qa-flow.png)
 
 Full details: [SDLC overview](docs/00-sdlc-overview.md), with one document per
-check (`docs/01-static-qa.md` to `docs/10-adapter-assessment.md`).
+check (`docs/01-static-qa.md` to `docs/11-ruleset-audit.md`).
 
 ## Contributing
 
