@@ -73,6 +73,23 @@ class RulesetDriftTest(unittest.TestCase):
         self.assertIn("main-history-protection: live rule required_linear_history is not in the file", findings)
         self.assertTrue(any("main-ci-gates: bypass_actors" in line for line in findings), findings)
 
+    def test_bypass_actors_hidden_from_non_admin_tokens_are_skipped_and_named(self):
+        # GitHub omits bypass_actors for tokens without admin access, such as GITHUB_TOKEN.
+        for ruleset in self.live.values():
+            del ruleset["bypass_actors"]
+        self.assertEqual([], drift.compare(self.desired, self.live))
+        self.assertEqual(sorted(self.desired), drift.unverified_bypass(self.desired, self.live))
+        with tempfile.TemporaryDirectory() as tmp:
+            live_file = Path(tmp, "live.json")
+            live_file.write_text(json.dumps(list(self.live.values())), encoding="utf-8")
+            out = io.StringIO()
+            with redirect_stdout(out):
+                self.assertEqual(0, drift.main(["--live", str(live_file), "--dir", str(RULESETS)]))
+            self.assertIn("Bypass actors not checked", out.getvalue())
+        self.live["main-ci-gates"]["rules"] = []
+        self.assertEqual(["main-ci-gates: rule required_status_checks missing live"],
+                         drift.compare(self.desired, self.live))
+
     def test_missing_and_unexpected_rulesets_are_reported(self):
         renamed = self.live.pop("main-pull-requests")
         renamed["name"] = "main-pr-no-required-approvals"

@@ -14,6 +14,11 @@ that the file does not mention are ignored, so a new GitHub default does not
 fail the check; add the key to the file to start checking it. Lists are
 compared without regard to order.
 
+GitHub returns `bypass_actors` only to repository admins, so the workflow
+token cannot see them. When a live ruleset has no `bypass_actors` field the
+check skips that comparison and says so; run the script locally as an admin
+to check bypass actors too.
+
 Usage:
   python3 scripts/ruleset-drift.py [--repo OWNER/REPO] [--dir DIR] [--live FILE]
 
@@ -83,6 +88,8 @@ def compare(desired, live):
     for name in sorted(set(desired) & set(live)):
         want, have = desired[name], live[name]
         for field in ("target", "enforcement", "conditions", "bypass_actors"):
+            if field == "bypass_actors" and field not in have:
+                continue  # not visible to this token; reported by unverified_bypass()
             expected, actual = norm(want[field]), norm(have.get(field, MISSING))
             if expected != actual:
                 findings.append(f"{name}: {field} expected {show(expected)}, live {show(actual)}")
@@ -99,6 +106,11 @@ def compare(desired, live):
                 if expected != actual:
                     findings.append(f"{name}: {kind}.{key} expected {show(expected)}, live {show(actual)}")
     return findings
+
+
+def unverified_bypass(desired, live):
+    """Rulesets whose bypass actors this token cannot see, so were not compared."""
+    return sorted(name for name in set(desired) & set(live) if "bypass_actors" not in live[name])
 
 
 def fetch_live(repo):
@@ -127,6 +139,7 @@ def main(argv=None):
                 raise ValueError(f"two live rulesets are named {ruleset['name']!r}")
             live[ruleset["name"]] = ruleset
         findings = compare(desired, live)
+        unverified = unverified_bypass(desired, live)
     except (ValueError, KeyError, OSError, subprocess.CalledProcessError, json.JSONDecodeError) as error:
         print(f"ERROR {error}", file=sys.stderr)
         return 2
@@ -137,6 +150,9 @@ def main(argv=None):
         report += ["", "Apply the file in Settings > Rules > Rulesets, or update the file in a PR if the live change is intended."]
     else:
         report = [f"No ruleset drift: {len(desired)} rulesets match .github/rulesets/."]
+    if unverified:
+        report += ["", "Bypass actors not checked (only visible to repository admins): " + ", ".join(unverified) + ".",
+                   "Run `python3 scripts/ruleset-drift.py` locally as an admin to check them."]
     text = "\n".join(report)
     print(text)
     summary = os.environ.get("GITHUB_STEP_SUMMARY")

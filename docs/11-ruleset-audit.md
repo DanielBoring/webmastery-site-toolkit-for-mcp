@@ -39,13 +39,16 @@ The tests also require `main-ci-gates` to list exactly the names of the
 summary jobs of 01, 02 and 03-04, so renaming one of those workflows without
 updating the ruleset fails CI.
 
-Permissions: `contents: read`. Rulesets of a public repository are readable
-with the default token.
+Permissions: `contents: read`. The default token can read every ruleset
+field except `bypass_actors`, which GitHub returns only to repository admins.
+The workflow therefore checks everything else and lists the rulesets whose
+bypass actors it could not see; run the script locally as an admin (for
+example before a release) to check bypass actors as well.
 
 ## Run locally
 
 ```bash
-python3 -B scripts/ruleset-drift.py          # uses gh api; needs gh auth
+python3 -B scripts/ruleset-drift.py          # uses gh api; as an admin it also checks bypass actors
 python3 -B -m unittest discover -s tests/unit -p test_ruleset_drift.py -v
 ```
 

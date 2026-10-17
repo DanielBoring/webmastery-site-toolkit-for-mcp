@@ -53,7 +53,9 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
   `main-pull-requests` and allow squash merges only, matching the repository
   setting. Document the release-tag bypass, the ruleset naming convention and
   the change procedure in `docs/91-ci-cd-platform.md`. Ruleset files and the
-  drift script no longer trigger Docker QA.
+  drift script no longer trigger Docker QA. GitHub shows bypass actors only to
+  admins, so CI skips them and names the rulesets it skipped; an admin run
+  before each release checks them.
 
 - Add CI budgets and a pruning rule. `docs/qa-strategy.md` sets wall-clock
   budgets for PR checks and the release job, and `.github/copilot-instructions.md`

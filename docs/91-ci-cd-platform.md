@@ -33,7 +33,8 @@ Each check's own behavior is in its numbered document; the overview is
 The desired state of every ruleset is checked in as JSON under
 [`.github/rulesets/`](../.github/rulesets/), one file per ruleset, named after
 it. [11 - Ruleset Audit](11-ruleset-audit.md) compares the live rulesets with
-those files weekly and on every PR that changes them. The files, not this
+those files weekly and on every PR that changes them (bypass actors are
+visible only to admins, so CI skips them; an admin run checks them too). The files, not this
 table, are the source of truth.
 
 | Ruleset | Target | Rules |
