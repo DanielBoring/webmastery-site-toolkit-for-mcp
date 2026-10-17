@@ -1,0 +1,37 @@
+{
+  "name": "main-ci-gates",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": [
+        "refs/heads/main"
+      ]
+    }
+  },
+  "rules": [
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {
+            "context": "01 - Static QA",
+            "integration_id": 15368
+          },
+          {
+            "context": "02 - Unit Tests",
+            "integration_id": 15368
+          },
+          {
+            "context": "03-04 - Docker QA",
+            "integration_id": 15368
+          }
+        ]
+      }
+    }
+  ],
+  "bypass_actors": []
+}

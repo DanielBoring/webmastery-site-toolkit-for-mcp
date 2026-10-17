@@ -22,6 +22,8 @@ numbered document covers one GitHub Actions workflow with the same number.
   GitHub approval before publishing the same ZIP to WordPress.org and GitHub.
 - **Budgets:** PR checks about 20 minutes, docs-only PRs about 5, the release
   job about 15 (excluding the approval wait).
+- **The protection is checked too.** `11 - Ruleset Audit` compares the live
+  GitHub rulesets with `.github/rulesets/` every week.
 - **Humans decide** scope, risk, merges, releases and what to do with findings.
   Automation prepares evidence; it does not approve.
 
@@ -104,6 +106,7 @@ separately from plugin behavior.
 | 08 | `08 - Release` | `08-release.yml` | Tag `vX.Y.Z`, guarded recovery dispatch | Publication |
 | 09 | `09 - Publishing Checks` | `09-publishing-checks.yml` | Manual | Nothing (diagnostic) |
 | 10 | `10 - Adapter Assessment` | `10-adapter-assessment.yml` | PRs changing assessment files, manual | Nothing (assessment) |
+| 11 | `11 - Ruleset Audit` | `11-ruleset-audit.yml` | Weekly, PRs changing `.github/rulesets/`, manual | Nothing (repository guard) |
 
 Naming rule: file `NN-name.yml`, workflow `NN - Name`, summary job named
 exactly like the workflow, other jobs `NN - Name / detail`. The Docker
@@ -132,10 +135,11 @@ manual runs always run every scope. Git-quoted (unusual) paths always count.
 | Daily 06:41 | 02 - Unit Tests (full tooling and safeguards) |
 | Daily 07:23 | 05 - Release Package QA, 06 - Minimum Runtime QA |
 | Monday 09:17 | 07 - Compatibility QA |
+| Monday 09:47 | 11 - Ruleset Audit |
 
 ### Merge and release gates
 
-Ruleset `main-ci-gates` requires `01 - Static QA`, `02 - Unit Tests` and
+Ruleset `main-ci-gates` (desired state in `.github/rulesets/`, checked weekly by 11) requires `01 - Static QA`, `02 - Unit Tests` and
 `03-04 - Docker QA`. Each summary job passes only when change detection
 succeeded and every applicable job succeeded, or was skipped because
 detection said it did not apply. Failure, cancellation or an unexpected skip
@@ -223,6 +227,7 @@ the PNG whenever a workflow, trigger or gate changes.
 | [08 - Release](08-release.md) | Versioning, readiness, publication, recovery, hotfix and rollback |
 | [09 - Publishing Checks](09-publishing-checks.md) | On-demand Plugin Check |
 | [10 - Adapter Assessment](10-adapter-assessment.md) | Released 2.6.0 ZIP against MCP Adapter 0.6.1 and 0.7.0 |
+| [11 - Ruleset Audit](11-ruleset-audit.md) | Live GitHub rulesets against `.github/rulesets/` |
 | [90 - Security strategy](90-security-strategy.md) | Threat model, permissions, privacy, dependencies, vulnerability response |
 | [91 - CI/CD platform](91-ci-cd-platform.md) | Rulesets, permissions, environments, artifacts, PR process |
 | [reference/](reference/) | Release history, review checklist, shared helpers, 3.0 migration, Adapter 0.7 assessment |

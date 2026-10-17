@@ -136,10 +136,10 @@ The numbered docs explain how maintainers operate the project. Each check doc
 shares its number with the GitHub Actions workflow it describes:
 
 - [`docs/00-sdlc-overview.md`](docs/00-sdlc-overview.md): the lifecycle, a TL;DR of all QA, what runs when, budgets and gates. Start here.
-- [`docs/01-static-qa.md`](docs/01-static-qa.md) to [`docs/10-adapter-assessment.md`](docs/10-adapter-assessment.md): one document per check: what it proves, when it runs, what the workflow does, how to run it locally and how to read failures.
+- [`docs/01-static-qa.md`](docs/01-static-qa.md) to [`docs/11-ruleset-audit.md`](docs/11-ruleset-audit.md): one document per check: what it proves, when it runs, what the workflow does, how to run it locally and how to read failures.
 - [`docs/08-release.md`](docs/08-release.md): versioning, release readiness, publication, recovery, hotfixes and rollback.
 - [`docs/90-security-strategy.md`](docs/90-security-strategy.md): ability permissions, sensitive data, dependency and secret handling, vulnerability response.
-- [`docs/91-ci-cd-platform.md`](docs/91-ci-cd-platform.md): rulesets, workflow permissions, environments, artifacts and the PR process.
+- [`docs/91-ci-cd-platform.md`](docs/91-ci-cd-platform.md): rulesets (desired state in `.github/rulesets/`), workflow permissions, environments, artifacts and the PR process.
 - [`docs/reference/`](docs/reference/): release history, the area-specific review checklist, shared helpers, the 3.0 migration guide and the Adapter 0.7 assessment.
 
 ---
@@ -292,7 +292,7 @@ The [PR template](.github/PULL_REQUEST_TEMPLATE.md) uses this checklist:
 - [ ] `composer phpcs`, PHPStan without new baseline debt, E2E manifest validation and `git diff --check` pass
 - [ ] Relevant E2E QA passes, or failures are unrelated and explained
 - [ ] Workflow or shell changes pass `composer lint:workflows`, and CI stays within the budgets in `docs/00-sdlc-overview.md#ci-budgets-and-pruning`
-- [ ] Workflow, trigger or gate changes update the matching numbered doc in `docs/` and the diagrams in `docs/images/` (`.drawio` source and PNG)
+- [ ] Workflow, trigger or gate changes update the matching numbered doc in `docs/` and the diagrams in `docs/images/` (`.drawio` source and PNG); ruleset changes update `.github/rulesets/` and pass `11 - Ruleset Audit`
 - [ ] WordPress.org guideline impact was considered for naming, readme, privacy, external calls, licensing, assets or packaging
 - [ ] Area-specific items in `docs/reference/review-checklist.md` were checked where they apply
 

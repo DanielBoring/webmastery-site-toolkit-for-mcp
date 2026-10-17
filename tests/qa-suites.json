@@ -120,7 +120,8 @@
     "test_catalog_ordering.py",
     "test_qa_execution.py",
     "test_qa_profile.py",
-    "test_rescoped_workflow_gates.py"
+    "test_rescoped_workflow_gates.py",
+    "test_ruleset_drift.py"
   ],
   "runtime": {
     "wordpress-contract": "composer qa:contract",

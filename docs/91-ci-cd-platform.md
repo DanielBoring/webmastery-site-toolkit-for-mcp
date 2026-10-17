@@ -21,6 +21,8 @@ Each check's own behavior is in its numbered document; the overview is
 - **Pinning.** Actions are pinned to full commit SHAs with a version comment;
   downloaded tools are pinned by version and SHA-256. Dependabot proposes
   updates; they get ordinary review.
+- **Rulesets.** Changes go through `.github/rulesets/` in the same PR; see
+  [Changing a ruleset](#changing-a-ruleset).
 - **Concurrency.** PR runs cancel superseded runs for the same PR. 07 and the
   release publish job never cancel.
 - **Diagrams.** When a workflow, trigger or gate changes, update
@@ -28,31 +30,55 @@ Each check's own behavior is in its numbered document; the overview is
 
 ## Rulesets and merge settings
 
-Verify with `gh api repos/DanielBoring/webmastery-site-toolkit-for-mcp/rulesets`.
-Last read back October 16, 2026; at that point `main-ci-gates` was temporarily
-empty while its checks were renamed to the names below (see
-[`.github/REPOSITORY_CHANGELOG.md`](../.github/REPOSITORY_CHANGELOG.md)).
+The desired state of every ruleset is checked in as JSON under
+[`.github/rulesets/`](../.github/rulesets/), one file per ruleset, named after
+it. [11 - Ruleset Audit](11-ruleset-audit.md) compares the live rulesets with
+those files weekly and on every PR that changes them. The files, not this
+table, are the source of truth.
 
 | Ruleset | Target | Rules |
 | --- | --- | --- |
-| `main-ci-gates` (23522901) | `refs/heads/main` | Required status checks `01 - Static QA`, `02 - Unit Tests`, `03-04 - Docker QA` from GitHub Actions (integration 15368). Not "up to date before merge"; no bypass actors. |
-| `main-pr-no-required-approvals` | `refs/heads/main` | PR required; 0 approvals; review threads must be resolved. |
-| `main-history-protection` | `refs/heads/main` | No deletion, no force-push. |
-| `release-tag-protection` | `refs/tags/v*` | Creation, update and deletion restricted; repository admins have an explicit bypass. |
+| `main-ci-gates` | `refs/heads/main` | Required status checks `01 - Static QA`, `02 - Unit Tests`, `03-04 - Docker QA` from GitHub Actions (integration 15368). Not "up to date before merge"; enforced on branch creation; no bypass actors. |
+| `main-pull-requests` | `refs/heads/main` | PR required; squash merge only; 0 approvals; review threads must be resolved; no bypass actors. |
+| `main-history-protection` | `refs/heads/main` | No deletion, no force-push; no bypass actors. |
+| `release-tag-protection` | `refs/tags/v*` | Creation, update and deletion restricted; repository admins bypass (`always`). |
 
-The repository allows **squash merge only** and deletes merged branches.
-`main-pr-no-required-approvals` still lists merge, squash and rebase; aligning
-it, and deciding whether rulesets should live as code, is tracked in
-[issue #192](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/issues/192).
+The repository setting also allows **squash merge only** and deletes merged
+branches. Squash merges keep `main` history linear, so there is no separate
+linear-history rule.
+
+**Why the tag bypass exists.** `release-tag-protection` restricts *creating*
+`v*` tags, so without a bypass nobody could tag a release. The admin bypass is
+how the maintainer creates `vX.Y.Z` release tags and `v-release-recovery-*`
+control tags (which the same pattern covers). Tagging still does not publish
+anything without approval in the `wordpress-org` environment
+(see [08](08-release.md#environment-and-publication-gates)).
+
+**Naming.** Rulesets are named `<target>-<purpose>` in kebab case. They do not
+use the `NN - Name` numbering, which is reserved for a workflow, its checks and
+its doc; the rulesets are configuration, audited together by workflow 11 and
+documented here.
 
 Do not weaken protection or bypass a failed check to merge. 05 and 06 always
 report but are not merge requirements; the release requires them instead
 (see [08](08-release.md)).
 
+### Changing a ruleset
+
+1. Open a PR that changes the file in `.github/rulesets/` (and this table).
+   `11 - Ruleset Audit` fails on the PR, showing the difference.
+2. Apply the same change in Settings → Rules → Rulesets.
+3. Re-run `11 - Ruleset Audit` on the PR; it passes once live matches the file.
+4. Merge.
+
+A new ruleset can be created from its file with **New ruleset → Import a
+ruleset**.
+
 **Renaming a required check.** GitHub offers only check names that have
 already reported. To rename one: remove it from `main-ci-gates`, merge the
 rename once all its checks pass on the PR, then add the new name (it now
-exists) and read the ruleset back.
+exists), update `main-ci-gates.json` and confirm with 11. The drift test also
+fails if the required names stop matching the 01, 02 and 03-04 summary jobs.
 
 Never force-push `main`, delete unrelated branches or use environment approval
 as a branch-protection bypass. Bot-created PRs may need maintainer approval
