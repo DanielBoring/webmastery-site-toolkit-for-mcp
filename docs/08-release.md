@@ -154,8 +154,8 @@ Before tagging a release:
    `php scripts/release-checks-gate.php DanielBoring/webmastery-site-toolkit-for-mcp "$(git rev-parse origin/main)"`.
 9. Review the latest `07 - Compatibility QA` result for upstream drift.
 10. Confirm no unexpected Plugin Check findings remain.
-11. Confirm the `wordpress-org` GitHub Environment approval gate and SVN secrets are configured before pushing a release tag that should publish to WordPress.org.
-12. As an admin, run `python3 scripts/ruleset-drift.py` to confirm the rulesets match `.github/rulesets/`, including bypass actors (CI cannot see those).
+11. Confirm the latest `11 - Ruleset Audit` passed (it checks the `wordpress-org` approval gate), and that the environment still lists the `SVN_USERNAME` and `SVN_PASSWORD` secrets (the audit cannot see secrets).
+12. As an admin, run `python3 scripts/ruleset-drift.py` to also check ruleset bypass actors, which CI cannot see.
 
 ## Release budget
 
@@ -222,7 +222,7 @@ Recommended settings:
 4. Restrict release-tag creation, updates, and deletion through the tag ruleset. Repository administrators have the explicit tag-rule bypass, not an environment-approval bypass.
 5. Use the WordPress.org SVN-specific password, not the normal WordPress.org account password.
 
-The environment's reviewer/self-review/admin-bypass settings, tag-only `v*` deployment policy, and release-tag creation/update/deletion restrictions were last read back on October 19, 2026 (the ruleset side is checked by [11 - Ruleset Audit](11-ruleset-audit.md)). Secret values were not read. Keep the environment ID `wordpress-org` unchanged: it holds the established secrets and protections, so that name may still appear under **Review deployments** even though the job is named **08 - Release / publish (GitHub approval required)**. Recheck effective settings before releases; documentation alone does not enforce them.
+The environment's reviewer/self-review/admin-bypass settings, tag-only `v*` deployment policy, and release-tag creation/update/deletion restrictions were last read back by hand on October 19, 2026, and are now checked weekly by [11 - Ruleset Audit](11-ruleset-audit.md) against `.github/environments/wordpress-org.json`. Secret values were not read. Keep the environment ID `wordpress-org` unchanged: it holds the established secrets and protections, so that name may still appear under **Review deployments** even though the job is named **08 - Release / publish (GitHub approval required)**. Recheck effective settings before releases; documentation alone does not enforce them.
 
 ### Environment and publication gates
 

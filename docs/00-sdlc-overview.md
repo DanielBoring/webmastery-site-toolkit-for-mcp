@@ -23,7 +23,8 @@ numbered document covers one GitHub Actions workflow with the same number.
 - **Budgets:** PR checks about 20 minutes, docs-only PRs about 5, the release
   job about 15 (excluding the approval wait).
 - **The protection is checked too.** `11 - Ruleset Audit` compares the live
-  GitHub rulesets with `.github/rulesets/` every week.
+  GitHub rulesets and the `wordpress-org` release environment with
+  `.github/rulesets/` and `.github/environments/` every week.
 - **Humans decide** scope, risk, merges, releases and what to do with findings.
   Automation prepares evidence; it does not approve.
 
@@ -106,7 +107,7 @@ separately from plugin behavior.
 | 08 | `08 - Release` | `08-release.yml` | Tag `vX.Y.Z`, guarded recovery dispatch | Publication |
 | 09 | `09 - Publishing Checks` | `09-publishing-checks.yml` | Manual | Nothing (diagnostic) |
 | 10 | `10 - Adapter Assessment` | `10-adapter-assessment.yml` | PRs changing assessment files, manual | Nothing (assessment) |
-| 11 | `11 - Ruleset Audit` | `11-ruleset-audit.yml` | Weekly, PRs changing `.github/rulesets/`, manual | Nothing (repository guard) |
+| 11 | `11 - Ruleset Audit` | `11-ruleset-audit.yml` | Weekly, PRs changing `.github/rulesets/` or `.github/environments/`, manual | Nothing (repository guard) |
 
 Naming rule: file `NN-name.yml`, workflow `NN - Name`, summary job named
 exactly like the workflow, other jobs `NN - Name / detail`. The Docker
@@ -227,7 +228,7 @@ the PNG whenever a workflow, trigger or gate changes.
 | [08 - Release](08-release.md) | Versioning, readiness, publication, recovery, hotfix and rollback |
 | [09 - Publishing Checks](09-publishing-checks.md) | On-demand Plugin Check |
 | [10 - Adapter Assessment](10-adapter-assessment.md) | Released 2.6.0 ZIP against MCP Adapter 0.6.1 and 0.7.0 |
-| [11 - Ruleset Audit](11-ruleset-audit.md) | Live GitHub rulesets against `.github/rulesets/` |
+| [11 - Ruleset Audit](11-ruleset-audit.md) | Live GitHub rulesets and the release environment against `.github/rulesets/` and `.github/environments/` |
 | [90 - Security strategy](90-security-strategy.md) | Threat model, permissions, privacy, dependencies, vulnerability response |
 | [91 - CI/CD platform](91-ci-cd-platform.md) | Rulesets, permissions, environments, artifacts, PR process |
 | [reference/](reference/) | Release history, review checklist, shared helpers, 3.0 migration, Adapter 0.7 assessment |
