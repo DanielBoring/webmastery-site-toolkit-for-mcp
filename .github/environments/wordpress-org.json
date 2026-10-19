@@ -2,7 +2,7 @@
   "name": "wordpress-org",
   "can_admins_bypass": false,
   "required_reviewers": {
-    "prevent_self_review": true,
+    "prevent_self_review": false,
     "reviewers": [
       {
         "type": "User",
