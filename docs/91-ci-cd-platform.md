@@ -119,8 +119,8 @@ approval.
 ## Other GitHub controls
 
 Repository files cannot prove live settings; read these back before the next
-production release. The environment API is not readable by workflow tokens,
-so this is a manual check (Settings → Environments).
+production release. `11 - Ruleset Audit` does not cover environments, so
+this is a manual check (Settings → Environments).
 
 - `wordpress-org` requires DanielBoring's approval, permits self-review for solo
   maintenance, disallows administrator bypass and accepts only `v*` tags; its
