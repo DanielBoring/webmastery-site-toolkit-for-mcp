@@ -44,7 +44,8 @@ The environment comparison, per file in `.github/environments/`:
 - Admin bypass, required reviewers and **Prevent self-review**, the wait timer,
   the deployment branch policy and the allowed branch and tag patterns must
   match exactly.
-- Any other protection rule type (for example a custom GitHub App rule) is drift.
+- Any other protection rule is drift, including an enabled custom GitHub App
+  rule (read from the separate `deployment_protection_rules` endpoint).
 - Secret names are not compared; the workflow token cannot list them.
 
 The tests also require `08 - Release` to deploy only to environments that have

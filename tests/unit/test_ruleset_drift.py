@@ -53,6 +53,7 @@ def environment_response():
             "deployment_branch_policy": {"protected_branches": False, "custom_branch_policies": True},
         },
         "policies": {"total_count": 1, "branch_policies": [{"id": 9, "node_id": "y", "name": "v*", "type": "tag"}]},
+        "custom_rules": {"total_count": 0, "custom_deployment_protection_rules": []},
     }
 
 
@@ -153,7 +154,7 @@ class EnvironmentDriftTest(unittest.TestCase):
         self.raw = environment_response()
 
     def findings(self):
-        live = {"wordpress-org": drift.environment_state(self.raw["environment"], self.raw["policies"])}
+        live = {"wordpress-org": drift.environment_state(self.raw["environment"], self.raw["policies"], self.raw["custom_rules"])}
         return drift.compare_environments(self.desired, live)
 
     def test_matching_environment_has_no_drift(self):
@@ -175,6 +176,15 @@ class EnvironmentDriftTest(unittest.TestCase):
         findings = "\n".join(self.findings())
         for text in ("can_admins_bypass", "required_reviewers", "wait_timer", "live protection rule custom_app"):
             self.assertIn(text, findings)
+
+    def test_enabled_custom_app_rule_is_reported(self):
+        # Custom GitHub App rules come from GET .../deployment_protection_rules, not the environment response.
+        rule = {"id": 7, "node_id": "z", "enabled": True, "app": {"id": 1, "slug": "deploy-gate"}}
+        self.raw["custom_rules"] = {"total_count": 1, "custom_deployment_protection_rules": [rule]}
+        self.assertEqual(["environment wordpress-org: live protection rule custom app deploy-gate is not in the file"],
+                         self.findings())
+        rule["enabled"] = False
+        self.assertEqual([], self.findings())
 
     def test_removed_reviewer_rule_is_reported(self):
         self.raw["environment"]["protection_rules"] = [{"id": 3, "type": "branch_policy"}]

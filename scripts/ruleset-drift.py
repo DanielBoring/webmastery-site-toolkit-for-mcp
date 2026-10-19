@@ -24,9 +24,9 @@ to check bypass actors too.
 
 Each file in the environments directory is the desired state of one
 environment: admin bypass, required reviewers and self-review, wait timer,
-the deployment branch policy and the allowed branch or tag patterns. Other
-protection rule types (for example custom GitHub App rules) are reported as
-drift. A missing environment is drift: GitHub would recreate it with no
+the deployment branch policy and the allowed branch or tag patterns. Any
+other protection rule, including an enabled custom GitHub App rule (read from
+the separate deployment_protection_rules endpoint), is reported as drift. A missing environment is drift: GitHub would recreate it with no
 protection the next time a job deploys to it. Secret names are not compared;
 the workflow token cannot list them.
 
@@ -35,7 +35,8 @@ Usage:
                                    [--environments-dir DIR] [--live-environments FILE]
 
 --live reads a JSON array of rulesets, and --live-environments a JSON object of
-{name: {"environment": ..., "policies": ...}} API responses, instead of calling
+{name: {"environment": ..., "policies": ..., "custom_rules": ...}} API responses,
+instead of calling
 `gh api`.
 """
 
@@ -141,8 +142,9 @@ def load_desired_environments(directory):
     return desired
 
 
-def environment_state(environment, policies):
-    """Reduce GET environment and GET deployment-branch-policies responses to the file's shape.
+def environment_state(environment, policies, custom_rules=None):
+    """Reduce the environment, deployment-branch-policies and deployment_protection_rules
+    responses to the file's shape.
 
     `environment` is None when GitHub answered 404 (the environment does not exist).
     """
@@ -163,6 +165,9 @@ def environment_state(environment, policies):
             state["wait_timer"] = rule.get("wait_timer", 0)
         elif kind != "branch_policy":  # branch_policy is described by deployment_branch_policy
             state["other_rules"].append(kind)
+    for rule in (custom_rules or {}).get("custom_deployment_protection_rules") or []:
+        if rule.get("enabled", True):
+            state["other_rules"].append("custom app " + str((rule.get("app") or {}).get("slug") or rule.get("id")))
     state["deployment_branch_policy"] = environment.get("deployment_branch_policy")
     state["deployment_policies"] = [
         {"type": item.get("type", "branch"), "name": item.get("name")}
@@ -209,8 +214,13 @@ def fetch_environments(repo, names):
     live = {}
     for name in names:
         environment = gh_json(f"repos/{repo}/environments/{name}")
-        policies = gh_json(f"repos/{repo}/environments/{name}/deployment-branch-policies?per_page=100") if environment else None
-        live[name] = {"environment": environment, "policies": policies}
+        policies = custom = None
+        if environment:
+            policies = gh_json(f"repos/{repo}/environments/{name}/deployment-branch-policies?per_page=100")
+            custom = gh_json(f"repos/{repo}/environments/{name}/deployment_protection_rules")
+            if custom is None:
+                raise ValueError(f"environment {name}: deployment_protection_rules not found")
+        live[name] = {"environment": environment, "policies": policies, "custom_rules": custom}
     return live
 
 
@@ -248,7 +258,8 @@ def main(argv=None):
             raw_envs = json.loads(Path(args.live_environments).read_text(encoding="utf-8"))
         else:
             raw_envs = fetch_environments(args.repo, sorted(desired_envs))
-        live_envs = {name: environment_state(raw_envs.get(name, {}).get("environment"), raw_envs.get(name, {}).get("policies"))
+        live_envs = {name: environment_state(raw_envs.get(name, {}).get("environment"), raw_envs.get(name, {}).get("policies"),
+                                             raw_envs.get(name, {}).get("custom_rules"))
                      for name in desired_envs}
         env_findings = compare_environments(desired_envs, live_envs)
         env_unverified = unverified_environment_fields(desired_envs, live_envs)
