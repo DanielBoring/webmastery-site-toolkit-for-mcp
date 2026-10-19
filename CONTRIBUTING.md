@@ -292,7 +292,7 @@ The [PR template](.github/PULL_REQUEST_TEMPLATE.md) uses this checklist:
 - [ ] `composer phpcs`, PHPStan without new baseline debt, E2E manifest validation and `git diff --check` pass
 - [ ] Relevant E2E QA passes, or failures are unrelated and explained
 - [ ] Workflow or shell changes pass `composer lint:workflows`, and CI stays within the budgets in `docs/00-sdlc-overview.md#ci-budgets-and-pruning`
-- [ ] Workflow, trigger or gate changes update the matching numbered doc in `docs/` and the diagrams in `docs/images/` (`.drawio` source and PNG); ruleset changes update `.github/rulesets/` and pass `11 - Ruleset Audit`
+- [ ] Workflow, trigger or gate changes update the matching numbered doc in `docs/` and the diagrams in `docs/images/` (`.drawio` source and PNG); ruleset and environment changes update `.github/rulesets/` or `.github/environments/` and pass `11 - Ruleset Audit`
 - [ ] WordPress.org guideline impact was considered for naming, readme, privacy, external calls, licensing, assets or packaging
 - [ ] Area-specific items in `docs/reference/review-checklist.md` were checked where they apply
 

@@ -118,14 +118,16 @@ approval.
 
 ## Other GitHub controls
 
-Repository files cannot prove live settings; read these back before the next
-production release. `11 - Ruleset Audit` does not cover environments, so
-this is a manual check (Settings → Environments).
-
 - `wordpress-org` requires DanielBoring's approval, permits self-review for solo
-  maintenance, disallows administrator bypass and accepts only `v*` tags; its
-  only secrets are `SVN_USERNAME` and `SVN_PASSWORD`. Last read back October 19,
-  2026; see [08](08-release.md#environment-and-publication-gates).
+  maintenance, disallows administrator bypass and accepts only `v*` tags. The
+  desired state is
+  [`.github/environments/wordpress-org.json`](../.github/environments/wordpress-org.json),
+  checked weekly by [11 - Ruleset Audit](11-ruleset-audit.md). Change it the
+  same way as a ruleset (file in a PR, apply in Settings → Environments,
+  re-run 11, merge).
+- Its only secrets are `SVN_USERNAME` and `SVN_PASSWORD`. The audit cannot list
+  secrets, so check their names by hand before a release (last read back
+  October 19, 2026; see [08](08-release.md#environment-and-publication-gates)).
 - A `copilot` environment also exists, with no protection rules or secrets; no
   workflow in this repository uses it.
 - SVN credentials are environment-scoped, not repository secrets.

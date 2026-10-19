@@ -60,6 +60,11 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
   (reviewer, self-review, admin bypass, `v*` tag policy, secrets) in
   `docs/08-release.md` and `docs/91-ci-cd-platform.md`, and note the unused
   `copilot` environment. Closes #192.
+- Audit the `wordpress-org` release environment in `11 - Ruleset Audit`.
+  `.github/environments/wordpress-org.json` holds its desired state (admin
+  bypass, reviewers, self-review, wait timer, deployment policy, `v*` tags), and
+  the workflow compares it with the live environment using `actions: read`. A
+  missing environment is drift. Secret names stay a manual pre-release check.
 
 - Add CI budgets and a pruning rule. `docs/qa-strategy.md` sets wall-clock
   budgets for PR checks and the release job, and `.github/copilot-instructions.md`
