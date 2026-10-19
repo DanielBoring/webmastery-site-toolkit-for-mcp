@@ -65,6 +65,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
   bypass, reviewers, self-review, wait timer, deployment policy, `v*` tags), and
   the workflow compares it with the live environment using `actions: read`. A
   missing environment is drift. Secret names stay a manual pre-release check.
+- Delete the unused, empty `copilot` environment; `wordpress-org` is now the
+  only environment.
 
 - Add CI budgets and a pruning rule. `docs/qa-strategy.md` sets wall-clock
   budgets for PR checks and the release job, and `.github/copilot-instructions.md`
