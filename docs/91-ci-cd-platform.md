@@ -118,15 +118,20 @@ approval.
 
 ## Other GitHub controls
 
-Last verified September 16, 2026 (repository files cannot prove live settings;
-read back before the next production release):
+Repository files cannot prove live settings; read these back before the next
+production release. `11 - Ruleset Audit` does not cover environments, so
+this is a manual check (Settings → Environments).
 
 - `wordpress-org` requires DanielBoring's approval, permits self-review for solo
-  maintenance, disallows administrator bypass and accepts only `v*` tags
-  (re-read September 21, 2026; see [08](08-release.md#environment-and-publication-gates)).
+  maintenance, disallows administrator bypass and accepts only `v*` tags; its
+  only secrets are `SVN_USERNAME` and `SVN_PASSWORD`. Last read back October 19,
+  2026; see [08](08-release.md#environment-and-publication-gates).
+- A `copilot` environment also exists, with no protection rules or secrets; no
+  workflow in this repository uses it.
 - SVN credentials are environment-scoped, not repository secrets.
 - Private vulnerability reporting, Dependabot alerts and security updates,
-  secret scanning and push protection are enabled.
+  secret scanning and push protection are enabled (last verified September 16,
+  2026).
 
 ## Routine maintainer approvals
 

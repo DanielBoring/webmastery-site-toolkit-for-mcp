@@ -222,7 +222,7 @@ Recommended settings:
 4. Restrict release-tag creation, updates, and deletion through the tag ruleset. Repository administrators have the explicit tag-rule bypass, not an environment-approval bypass.
 5. Use the WordPress.org SVN-specific password, not the normal WordPress.org account password.
 
-The environment's reviewer/self-review/admin-bypass settings, tag-only `v*` deployment policy, and release-tag creation/update/deletion restrictions were read back again on September 21, 2026 during recovery planning. Secret values were not read. Keep the environment ID `wordpress-org` unchanged: it holds the established secrets and protections, so that name may still appear under **Review deployments** even though the job is named **08 - Release / publish (GitHub approval required)**. Recheck effective settings before releases; documentation alone does not enforce them.
+The environment's reviewer/self-review/admin-bypass settings, tag-only `v*` deployment policy, and release-tag creation/update/deletion restrictions were last read back on October 19, 2026 (the ruleset side is checked by [11 - Ruleset Audit](11-ruleset-audit.md)). Secret values were not read. Keep the environment ID `wordpress-org` unchanged: it holds the established secrets and protections, so that name may still appear under **Review deployments** even though the job is named **08 - Release / publish (GitHub approval required)**. Recheck effective settings before releases; documentation alone does not enforce them.
 
 ### Environment and publication gates
 
@@ -231,9 +231,13 @@ approval required)**. Normal validation or the recovery resolver identifies the
 exact source, tag, run, attempt and artifact before approval. Approval is
 repository production approval, not WordPress.org staff review.
 
-The September 21, 2026 read-back recorded DanielBoring as reviewer, self-review
-allowed for solo maintenance and administrator environment bypass disabled.
-Only `v*` tags may deploy. Administrator control over tag creation does not
+The October 19, 2026 read-back (Settings → Environments → `wordpress-org`)
+recorded DanielBoring as the required reviewer, **Prevent self-review** off
+for solo maintenance, **Allow administrators to bypass** off, no wait timer,
+and deployments limited to the tag rule `v*` (which also covers the
+`v-release-recovery-*` control tags). `SVN_USERNAME` and `SVN_PASSWORD` are
+the only environment secrets; there are no environment variables. Only `v*`
+tags may deploy. Administrator control over tag creation does not
 bypass production approval.
 
 One shared publish concurrency group serializes normal and recovery
