@@ -128,8 +128,11 @@ approval.
 - Its only secrets are `SVN_USERNAME` and `SVN_PASSWORD`. The audit cannot list
   secrets, so check their names by hand before a release (last read back
   October 19, 2026; see [08](08-release.md#environment-and-publication-gates)).
-- A `copilot` environment also exists, with no protection rules or secrets; no
-  workflow in this repository uses it.
+- `wordpress-org` is the only environment. An unused, empty `copilot`
+  environment was deleted on October 19, 2026; Copilot cloud agent secrets and
+  variables now live under the repository's **Agents** settings, not in an
+  environment. If the agent recreates a `copilot` environment, check that it
+  has no secrets before keeping it.
 - SVN credentials are environment-scoped, not repository secrets.
 - Private vulnerability reporting, Dependabot alerts and security updates,
   secret scanning and push protection are enabled (last verified September 16,
