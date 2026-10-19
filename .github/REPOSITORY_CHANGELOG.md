@@ -56,6 +56,10 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
   drift script no longer trigger Docker QA. GitHub shows bypass actors only to
   admins, so CI skips them and names the rulesets it skipped; an admin run
   before each release checks them.
+- Record the October 19, 2026 read-back of the `wordpress-org` environment
+  (reviewer, self-review, admin bypass, `v*` tag policy, secrets) in
+  `docs/08-release.md` and `docs/91-ci-cd-platform.md`, and note the unused
+  `copilot` environment. Closes #192.
 
 - Add CI budgets and a pruning rule. `docs/qa-strategy.md` sets wall-clock
   budgets for PR checks and the release job, and `.github/copilot-instructions.md`
