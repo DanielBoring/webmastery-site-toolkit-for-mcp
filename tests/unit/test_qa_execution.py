@@ -327,7 +327,7 @@ source scripts/qa-changes.sh
         for scope, paths, selected in (
             ("runtime", "README.md\ndocs/00-sdlc-overview.md\ntests/unit/ResponseTest.php", "false"),
             ("runtime", ".github/workflows/02-unit-tests.yml\nscripts/test-release-runtime.sh", "false"),
-            ("runtime", ".github/rulesets/main-ci-gates.json\nscripts/ruleset-drift.py", "false"),
+            ("runtime", ".github/rulesets/main-ci-gates.json\n.github/environments/wordpress-org.json\nscripts/ruleset-drift.py", "false"),
             ("runtime", "scripts/release-tools.php", "true"),
             ("runtime", ".github/workflows/03-04-docker-qa.yml", "true"),
             ("runtime", ".github/compatibility-versions.json", "true"),

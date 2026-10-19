@@ -1,0 +1,24 @@
+{
+  "name": "wordpress-org",
+  "can_admins_bypass": false,
+  "required_reviewers": {
+    "prevent_self_review": false,
+    "reviewers": [
+      {
+        "type": "User",
+        "login": "DanielBoring"
+      }
+    ]
+  },
+  "wait_timer": 0,
+  "deployment_branch_policy": {
+    "protected_branches": false,
+    "custom_branch_policies": true
+  },
+  "deployment_policies": [
+    {
+      "type": "tag",
+      "name": "v*"
+    }
+  ]
+}
