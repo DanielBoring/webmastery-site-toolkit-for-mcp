@@ -300,6 +300,34 @@ echo "Actual runner independent oracle controls passed.\n";
         self.assertEqual(sorted(positions), positions)
         self.assertIn("run: bash scripts/destructive-retention.sh cleanup", contract)
 
+    def test_change_detection_lists_both_sides_of_renames(self):
+        # Without --no-renames, git reports only a rename's destination, so a
+        # runtime file moved to an ignored Markdown name would skip Docker QA.
+        body = r"""
+git() {
+    case "$1" in
+        merge-base) printf 'base\n' ;;
+        diff)
+            if [[ " $* " == *" --no-renames "* ]]; then
+                printf 'includes/runtime.php\nincludes/runtime.md\n'
+            else
+                printf 'includes/runtime.md\n'
+            fi
+            ;;
+        *) return 99 ;;
+    esac
+}
+source scripts/qa-changes.sh
+"""
+        for event_env in (
+            {"EVENT_NAME": "pull_request", "BASE_SHA": "base", "HEAD_SHA": "head"},
+            {"EVENT_NAME": "push", "BEFORE_SHA": "before", "CURRENT_SHA": "head"},
+        ):
+            with self.subTest(event=event_env["EVENT_NAME"]):
+                result = self.run_control(body, {**event_env, "QA_SCOPE": "runtime"})
+                self.assertEqual(0, result.returncode, result.stderr.decode())
+                self.assertIn(b"should-run=true", result.stdout)
+
     def test_change_detection_refuses_unknown_events_and_git_failures(self):
         body = r"""
 git() {

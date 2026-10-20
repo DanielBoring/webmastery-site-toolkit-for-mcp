@@ -6,12 +6,12 @@ if [[ "${EVENT_NAME:?Workflow event required}" == workflow_dispatch || "$EVENT_N
 fi
 if [[ "$EVENT_NAME" == pull_request ]]; then
 	merge_base="$(git merge-base "${BASE_SHA:?PR base required}" "${HEAD_SHA:?PR head required}")"
-	changed="$(git diff --name-only "$merge_base" "$HEAD_SHA")"
+	changed="$(git diff --no-renames --name-only "$merge_base" "$HEAD_SHA")"
 elif [[ "$EVENT_NAME" == push ]]; then
 	if [[ "${BEFORE_SHA:?Push base required}" == 0000000000000000000000000000000000000000 ]]; then
 		changed="$(git ls-tree -r --name-only "${CURRENT_SHA:?Push head required}")"
 	else
-		changed="$(git diff --name-only "$BEFORE_SHA" "${CURRENT_SHA:?Push head required}")"
+		changed="$(git diff --no-renames --name-only "$BEFORE_SHA" "${CURRENT_SHA:?Push head required}")"
 	fi
 else
 	echo "Unsupported QA change-detection event." >&2
@@ -25,6 +25,8 @@ printf '%s\n' "$changed" >&2
 #            reads them; readme.txt stays in the default and package scopes)
 #   package  inputs to the built plugin ZIP and its package QA
 # Git-quoted paths (leading ") always count, so unusual names never skip checks.
+# --no-renames lists both sides of a rename, so moving runtime code to an
+# ignored name (for example includes/x.php -> includes/x.md) still counts.
 case "${QA_SCOPE:-default}" in
 	default)
 		relevant='^("|\.github/compatibility-versions\.json|\.github/workflows/|docker-compose[^/]*\.yml|scripts/|tests/|includes/|webmastery-site-toolkit-for-mcp\.php|readme\.txt|composer\.(json|lock)|phpcs\.xml\.dist|phpstan[^/]*|phpunit\.xml\.dist|assets/|CHANGELOG\.md|LICENSE)'

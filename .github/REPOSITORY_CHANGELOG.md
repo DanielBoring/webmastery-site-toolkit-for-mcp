@@ -12,7 +12,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
   full suite) and `readme.txt`. No runtime suite reads these files.
   `readme.txt` still triggers the `02 - Unit Tests` tooling checks and
   `05 - Release Package QA`, and other `.txt` or unknown paths still run the
-  full suite.
+  full suite. Change detection now lists both sides of renames, so moving
+  runtime code to an ignored name still runs the suites.
 
 - Renumber every workflow with two digits so file names, workflow names and
   documentation match: `01-static-qa.yml` (01 - Static QA) through
