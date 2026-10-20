@@ -114,7 +114,7 @@ Only for the optional Site Kit status, module, permission, and PageSpeed abiliti
 
 Module, permission, and PageSpeed abilities require the WordPress read capability before any upstream work, plus the exact Site Kit route's permission check. Missing providers, routes, or callable permission checks deny access. Read alone is not sufficient; a Subscriber is allowed only when Site Kit also authorizes that user. Status retains its separate manage_options requirement.
 
-The official Site Kit 1.187.0 routes were inspected without Google data calls on a disposable installation. Module-list and permission routes require Site Kit splash or dashboard access; this version's PageSpeed route resolves to Site Kit setup or post-insights access. Effective checks also depend on setup, authentication, sharing, and network state. This does not establish compatibility for every historical version or grant ordinary Subscribers dashboard access. See the repository's ability contracts reference (docs/reference/ability-contracts.md) for exact capability names, and its E2E guide for version-specific sources.
+The official Site Kit 1.187.0 routes were inspected without Google data calls on a disposable installation. Module-list and permission routes require Site Kit splash or dashboard access; this version's PageSpeed route resolves to Site Kit setup or post-insights access. Effective checks also depend on setup, authentication, sharing, and network state. This does not establish compatibility for every historical version or grant ordinary Subscribers dashboard access. Exact upstream capability names and their version-specific sources are in the [Site Kit route table](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/tests/e2e/README.md#site-kit-permission-regressions); the [Google Site Kit contract](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/reference/ability-contracts.md#google-site-kit) describes how the plugin applies them.
 
 PageSpeed requests are limited to URLs on the current site and are processed by Google's PageSpeed service through Site Kit. Responses omit OAuth scopes and proxy details, module owner identities, screenshots, third-party entity lists, and full Lighthouse payloads.
 
@@ -236,7 +236,7 @@ Permissions and privacy remain unchanged. Content and media retain their object/
 
 Markers accompany data through both gateway and individual tools. The default tools/list advertises three gateway tools, not per-ability hints; use mcp-adapter-get-ability-info for the ability metadata. Compare actual Adapter readOnlyHint, destructiveHint and idempotentHint against registered readonly, destructive and idempotent values on individual tools. The assessment distinguishes measured pre-release annotation proof from release-package validation.
 
-For exact field names, examples and disposable-site verification, see the "Untrusted result fields" section of the repository's ability contracts reference (docs/reference/ability-contracts.md).
+For exact field names and examples, see [Untrusted result fields](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/reference/ability-contracts.md#untrusted-result-fields); for disposable-site checks, see [manual verification](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/tests/e2e/README.md#untrusted-result-fields).
 
 = Where is the full documentation? =
 

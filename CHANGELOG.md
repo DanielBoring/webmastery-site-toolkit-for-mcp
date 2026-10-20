@@ -14,7 +14,7 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   paths and will not resolve until the next release updates the listing.
 - Point the `readme.txt` FAQ references for response format, untrusted result
   fields and Site Kit capability names to the new ability contracts reference
-  instead of the repository README.
+  and E2E guide, as direct links, instead of the repository README.
 
 ## 3.0.0
 
