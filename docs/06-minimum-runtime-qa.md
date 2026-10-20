@@ -10,6 +10,9 @@ The plugin works on its advertised minimums: WordPress 6.9 on genuine PHP
 acceptance tests as 03-04. The PHP 8.1 lane in 07 does not prove the PHP 8.0
 minimum; this check does.
 
+The WordPress 6.9 / PHP 8.1 compatibility lane does not substitute for this
+genuine PHP 8.0 run.
+
 ## When it runs
 
 - **Nightly** at 07:23 UTC on `main`, and **manual dispatch**.

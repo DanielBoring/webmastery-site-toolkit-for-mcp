@@ -2,7 +2,8 @@
 
 How work moves from an idea or defect to a maintained WordPress.org release,
 and how each change is tested on the way. This is the entry point: every other
-numbered document covers one GitHub Actions workflow with the same number.
+numbered document covers one GitHub Actions workflow with the same number, and
+the [document map](#document-map) indexes every document in the repository.
 
 ## TL;DR
 
@@ -217,18 +218,54 @@ the PNG whenever a workflow, trigger or gate changes.
 
 ## Document map
 
+This is the index of every document in the repository. Start here when you
+are looking for something.
+
+### Using the plugin
+
 | Doc | Covers |
 | --- | --- |
+| [README](../README.md) | What the plugin is, quickstart, requirements, install, connect and verify |
+| [Plugin guide](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/) | Setup, roles, every ability by name, safe workflows (hosted on virtuallyboring.com) |
+| [Ability contracts](reference/ability-contracts.md) | Exact inputs, permissions, paging, errors, safety interlocks and result fields |
+| [3.0 migration guide](reference/3.0-migration.md) | Breaking changes from 2.x and how to update MCP clients |
+| [readme.txt](../readme.txt) | The WordPress.org listing: description, FAQ, changelog and upgrade notices |
+| [Changelog](../CHANGELOG.md) | Plugin release notes |
+
+### Building and testing
+
+| Doc | Covers |
+| --- | --- |
+| [Contributing](../CONTRIBUTING.md) | Development workflow, adding abilities, versioning and the PR checklist |
+| [PR template](../.github/PULL_REQUEST_TEMPLATE.md) | The checklist every pull request fills in |
+| [Review checklist](reference/review-checklist.md) | Area-specific review items |
+| [Agent instructions](../AGENTS.md) | Rules for AI coding agents; points to [`.github/copilot-instructions.md`](../.github/copilot-instructions.md) |
+| [Code of conduct](../.github/CODE_OF_CONDUCT.md) | Community standards for contributors |
+| [Shared helpers](reference/shared-helpers.md) | Which shared classes own permissions, lists, metadata and writes, and deliberate differences |
 | [01 - Static QA](01-static-qa.md) | Syntax, coding standards, PHPStan ratchet, dependency audit, manifest and security policy, workflow lint |
 | [02 - Unit Tests](02-unit-tests.md) | Product and QA-tooling PHPUnit suites, CI safeguards |
 | [03-04 - Docker QA](03-04-docker-qa.md) | Ability contract and full MCP E2E against real WordPress; the disposable QA harness |
+| [E2E guide](../tests/e2e/README.md) | E2E suites, coverage ledgers, local QA entry points and manual disposable-site checks |
 | [05 - Release Package QA](05-release-package-qa.md) | The built ZIP, installed and tested |
 | [06 - Minimum Runtime QA](06-minimum-runtime-qa.md) | WordPress 6.9 on genuine PHP 8.0 |
 | [07 - Compatibility QA](07-compatibility-qa.md) | Upstream version lanes and baseline promotion |
+| [10 - Adapter Assessment](10-adapter-assessment.md) | Released 2.6.0 ZIP against MCP Adapter 0.6.1 and 0.7.0 |
+| [MCP Adapter 0.7 assessment](reference/mcp-adapter-0.7-assessment.md) | Detailed Adapter 0.7 findings and the 3.0.0 release preparation results |
+
+### Releasing and operating
+
+| Doc | Covers |
+| --- | --- |
 | [08 - Release](08-release.md) | Versioning, readiness, publication, recovery, hotfix and rollback |
 | [09 - Publishing Checks](09-publishing-checks.md) | On-demand Plugin Check |
-| [10 - Adapter Assessment](10-adapter-assessment.md) | Released 2.6.0 ZIP against MCP Adapter 0.6.1 and 0.7.0 |
+| [Release history](reference/release-history.md) | Dated release and platform records and retired procedures, kept for audit |
+| [Repository changelog](../.github/REPOSITORY_CHANGELOG.md) | Repository, CI and contributor changes |
 | [11 - Ruleset Audit](11-ruleset-audit.md) | Live GitHub rulesets and the release environment against `.github/rulesets/` and `.github/environments/` |
-| [90 - Security strategy](90-security-strategy.md) | Threat model, permissions, privacy, dependencies, vulnerability response |
 | [91 - CI/CD platform](91-ci-cd-platform.md) | Rulesets, permissions, environments, artifacts, PR process |
-| [reference/](reference/) | Release history, review checklist, shared helpers, 3.0 migration, Adapter 0.7 assessment |
+
+### Security
+
+| Doc | Covers |
+| --- | --- |
+| [90 - Security strategy](90-security-strategy.md) | Threat model, permissions, privacy, image-download safeguards, dependencies, vulnerability response |
+| [Security policy](../SECURITY.md) | Supported versions and how to report a vulnerability |

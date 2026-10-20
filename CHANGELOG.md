@@ -12,6 +12,9 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   folder (3.0 migration guide, MCP Adapter 0.7 assessment and agent threat
   model). The links on the 3.0.0 WordPress.org plugin page point to the old
   paths and will not resolve until the next release updates the listing.
+- Point the `readme.txt` FAQ references for response format, untrusted result
+  fields and Site Kit capability names to the new ability contracts reference
+  and E2E guide, as direct links, instead of the repository README.
 
 ## 3.0.0
 
