@@ -21,6 +21,8 @@ printf '%s\n' "$changed" >&2
 # QA_SCOPE selects which changes require the calling workflow's checks.
 #   default  any QA-relevant file (unit tooling, safeguards)
 #   runtime  anything except paths known not to affect the Docker runtime suites
+#            (Markdown anywhere and readme.txt are documentation: no runtime suite
+#            reads them; readme.txt stays in the default and package scopes)
 #   package  inputs to the built plugin ZIP and its package QA
 # Git-quoted paths (leading ") always count, so unusual names never skip checks.
 case "${QA_SCOPE:-default}" in
@@ -29,7 +31,7 @@ case "${QA_SCOPE:-default}" in
 		;;
 	runtime)
 		# Inverted: every path is relevant unless it is a known non-runtime path.
-		ignored='^(docs/|\.wordpress-org/|tests/unit/|tests/qa-suites\.json$|[^/"]+\.md$|LICENSE$|\.github/(ISSUE_TEMPLATE/|[^/]+\.(md|yml|json)$|workflows/[^/]+\.yml$)|scripts/(test-release-|release-(recovery|tag-check|control-check|publish-check|plugin-check|checks-gate)\.|build-release\.sh$|release-qa\.sh$|qa-profile\.py$|adapter-|update-compatibility-baselines\.php$|workflow-lint\.php$|ruleset-drift\.py$)|\.github/(rulesets|environments)/)'
+		ignored='^(docs/|\.wordpress-org/|tests/unit/|tests/qa-suites\.json$|[^"]+\.md$|readme\.txt$|LICENSE$|\.github/(ISSUE_TEMPLATE/|[^/]+\.(md|yml|json)$|workflows/[^/]+\.yml$)|scripts/(test-release-|release-(recovery|tag-check|control-check|publish-check|plugin-check|checks-gate)\.|build-release\.sh$|release-qa\.sh$|qa-profile\.py$|adapter-|update-compatibility-baselines\.php$|workflow-lint\.php$|ruleset-drift\.py$)|\.github/(rulesets|environments)/)'
 		always='^\.github/(compatibility-versions\.json|workflows/03-04-docker-qa\.yml)$'
 		;;
 	package)

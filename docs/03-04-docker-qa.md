@@ -23,9 +23,13 @@ reported separately. Neither tests the built ZIP; that is 05.
 
 - Every PR, every push to `main`, and manual dispatch. Not scheduled.
 - The runtime jobs run only when `scripts/qa-changes.sh` (`runtime` scope)
-  finds a runtime-impacting change. Docs, Markdown, `tests/unit/`, `.github/`
-  metadata, other workflows and release-only scripts skip them; unknown paths,
-  this workflow and `compatibility-versions.json` always run them.
+  finds a runtime-impacting change. Docs, Markdown files anywhere (including
+  `tests/e2e/README.md`), `readme.txt`, `tests/unit/`, `.github/` metadata,
+  other workflows and release-only scripts skip them; unknown paths (including
+  other `.txt` files), this workflow and `compatibility-versions.json` always
+  run them. No runtime suite reads `readme.txt`; it still triggers
+  `02 - Unit Tests` tooling checks and `05 - Release Package QA`, which tests
+  the ZIP that ships it.
 - A newer push to the same PR cancels the older run.
 
 ## What the workflow does

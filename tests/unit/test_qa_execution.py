@@ -326,6 +326,11 @@ source scripts/qa-changes.sh
             self.assertIn(f"should-run={selected}".encode(), result.stdout)
         for scope, paths, selected in (
             ("runtime", "README.md\ndocs/00-sdlc-overview.md\ntests/unit/ResponseTest.php", "false"),
+            ("runtime", "tests/e2e/README.md\ndocs/reference/3.0-migration.md\n.github/ISSUE_TEMPLATE/bug_report.md", "false"),
+            ("runtime", "readme.txt\nCHANGELOG.md", "false"),
+            ("runtime", "tests/e2e/README.md\ntests/e2e/ability-runner.php", "true"),
+            ("runtime", "readme.txt\nincludes/class-posts.php", "true"),
+            ("runtime", "includes/readme.txt", "true"),
             ("runtime", ".github/workflows/02-unit-tests.yml\nscripts/test-release-runtime.sh", "false"),
             ("runtime", ".github/rulesets/main-ci-gates.json\n.github/environments/wordpress-org.json\nscripts/ruleset-drift.py", "false"),
             ("runtime", "scripts/release-tools.php", "true"),

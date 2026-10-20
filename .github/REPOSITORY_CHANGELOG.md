@@ -6,6 +6,14 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- `03-04 - Docker QA` no longer runs its runtime suites for documentation-only
+  changes anywhere in the repository: Markdown files in any folder (previously
+  only top-level Markdown was skipped, so `tests/e2e/README.md` triggered the
+  full suite) and `readme.txt`. No runtime suite reads these files.
+  `readme.txt` still triggers the `02 - Unit Tests` tooling checks and
+  `05 - Release Package QA`, and other `.txt` or unknown paths still run the
+  full suite.
+
 - Renumber every workflow with two digits so file names, workflow names and
   documentation match: `01-static-qa.yml` (01 - Static QA) through
   `10-adapter-assessment.yml` (10 - Adapter Assessment). Each workflow's
