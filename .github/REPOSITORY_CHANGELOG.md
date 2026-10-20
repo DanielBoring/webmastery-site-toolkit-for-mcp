@@ -6,6 +6,14 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- `03-04 - Docker QA` no longer runs its runtime suites for documentation-only
+  changes anywhere in the repository: Markdown files in any folder (previously
+  only top-level Markdown was skipped, so `tests/e2e/README.md` triggered the
+  full suite) and `readme.txt`. No runtime suite reads these files.
+  `readme.txt` still triggers the `02 - Unit Tests` tooling checks and
+  `05 - Release Package QA`, and other `.txt` or unknown paths still run the
+  full suite. Change detection now lists both sides of renames, so moving
+  runtime code to an ignored name still runs the suites.
 - Rework `README.md` into a short, search-friendly landing page (about 12 KB,
   down from 64 KB): H1 title, keyword-rich introduction, WordPress.org badge
   and links, ability summary, quickstart, requirements, install, connect,

@@ -495,7 +495,8 @@ refuse compose exec -T wordpress wp --allow-root core version
         shared = (ROOT / "scripts" / "qa-changes.sh").read_text(encoding="utf-8")
         for required in (
             'git merge-base "${BASE_SHA:?PR base required}" "${HEAD_SHA:?PR head required}"',
-            'git diff --name-only "$merge_base" "$HEAD_SHA"',
+            'git diff --no-renames --name-only "$merge_base" "$HEAD_SHA"',
+            'git diff --no-renames --name-only "$BEFORE_SHA" "${CURRENT_SHA:?Push head required}"',
             '[[ "$status" == 1 ]] || { echo "QA change detection failed." >&2; exit "$status"; }',
         ):
             self.assertIn(required, shared)

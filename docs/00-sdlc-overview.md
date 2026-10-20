@@ -126,7 +126,7 @@ manual runs always run every scope. Git-quoted (unusual) paths always count.
 | Scope | Used by | Runs when |
 | --- | --- | --- |
 | `default` | 02 QA-tooling and CI-safeguard jobs, 06 | Any QA-relevant file changes: source, tests, scripts, workflows, Composer, Compose, `readme.txt`, `CHANGELOG.md`. |
-| `runtime` | 03-04 runtime jobs | Any change except known non-runtime paths: docs and Markdown, `tests/unit/`, `.github/` metadata and other workflows, `.wordpress-org/`, release-only scripts. `03-04-docker-qa.yml` and `compatibility-versions.json` always run. |
+| `runtime` | 03-04 runtime jobs | Any change except known non-runtime paths: docs, Markdown files anywhere, `readme.txt`, `tests/unit/`, `.github/` metadata and other workflows, `.wordpress-org/`, release-only scripts. `03-04-docker-qa.yml` and `compatibility-versions.json` always run. |
 | `package` | 05 | ZIP inputs: main plugin file, `readme.txt`, `LICENSE`, `.gitattributes`, `assets/`, `.wordpress-org/`, the build, archive and package scripts, and the workflow itself. |
 
 06 also has a workflow path filter, so on PRs it runs only when its workflow,
