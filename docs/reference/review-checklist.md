@@ -29,7 +29,7 @@ shortened. The short checklist is in
 - [ ] The trusted local/hosted Docker engine and image initialization are documented environment assumptions, not whole-host provenance or attestation claims; no candidate code runs as root and cleanup affects only verified owned resources
 - [ ] New ability names use the `webmastery-site-toolkit-for-mcp/` prefix and set accurate `annotations` (`readonly`, `destructive`, `idempotent`)
 - [ ] If this PR adds or changes `webmastery-site-toolkit-for-mcp/*` abilities, `tests/e2e/abilities-manifest.json` includes matching positive and negative cases where permissions apply
-- [ ] User-facing changes update relevant docs (`README.md`, `readme.txt`, `tests/e2e/README.md`, or other affected markdown)
+- [ ] User-facing changes update relevant docs (`docs/reference/ability-contracts.md`, `readme.txt`, `tests/e2e/README.md`, or other affected markdown); `README.md` changes only for quickstart, requirements, install/connect or ability-area changes
 - [ ] Plugin-facing changes update `CHANGELOG.md` under `## Unreleased`
 - [ ] Repository, CI, contributor, GitHub platform, template, or agent workflow changes update `.github/REPOSITORY_CHANGELOG.md` under `## Unreleased`
 - [ ] Local QA checked with `composer qa` and relevant Docker/release wrappers, including original-ZIP checks for release-bound changes, or missing tools/runtime blockers are documented above

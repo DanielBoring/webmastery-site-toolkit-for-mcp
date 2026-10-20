@@ -14,6 +14,22 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
   `05 - Release Package QA`, and other `.txt` or unknown paths still run the
   full suite. Change detection now lists both sides of renames, so moving
   runtime code to an ignored name still runs the suites.
+- Rework `README.md` into a short, search-friendly landing page (about 12 KB,
+  down from 64 KB): H1 title, keyword-rich introduction, WordPress.org badge
+  and links, ability summary, quickstart, requirements, install, connect,
+  verify, safety summary and a documentation table. Move the detailed ability
+  behavior to the new `docs/reference/ability-contracts.md`; move manual
+  disposable-site checks to `tests/e2e/README.md`; move QA internals,
+  image-download safeguards, strict-input implementation notes and the Site
+  Kit route table to the E2E guide, security strategy, 3.0 migration guide
+  and `docs/06-minimum-runtime-qa.md`. Repoint links to the old README
+  sections.
+- Make the `docs/00-sdlc-overview.md` document map the index of every
+  document in the repository.
+- Contributor rules, the PR template, the review checklist and agent
+  instructions now send behavior documentation to the ability contracts
+  reference and limit README changes to quickstart, requirements,
+  install/connect and ability-area changes.
 
 - Renumber every workflow with two digits so file names, workflow names and
   documentation match: `01-static-qa.yml` (01 - Static QA) through

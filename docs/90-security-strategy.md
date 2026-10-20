@@ -70,7 +70,7 @@ write. Optional text-only `content_format` output is not implemented.
 Affected successful records have an additive `untrusted_fields` array of unique
 names relative to that record. Mark only fields actually present, including
 null/empty values; names are neither dotted paths nor a global list. See the
-[coverage and example](../README.md#untrusted-result-fields-30).
+[coverage and example](reference/ability-contracts.md#untrusted-result-fields).
 
 Preserve existing values, types, HTML and block delimiters returned by the
 normalizer. Existing write sanitization remains; markers do not promise raw
@@ -106,7 +106,7 @@ Their hints describe the gateways, not individual abilities. Retrieve metadata
 with `mcp-adapter-get-ability-info` before interpreting a target's hints, and
 never treat hints as approval. Markers accompany both transport forms.
 Inspect actual server output before depending on hints or shape; see
-[response format](../README.md#response-format).
+[response format](reference/ability-contracts.md#errors-and-response-format).
 
 ## Ability permission policy
 
@@ -147,7 +147,17 @@ module/permission/PageSpeed use a local `read` floor plus available upstream
 route permissions/sharing, rechecked before provider work. Data uses normal
 REST dispatch. Roles alone cannot grant provider access; inactive or unavailable
 routes can deny Administrators. Fixtures do not establish real-provider
-compatibility; see [supported operations](../README.md#google-site-kit-compatibility-abilities).
+compatibility; see [supported operations](reference/ability-contracts.md#google-site-kit).
+
+## Image URL download safeguards
+
+The existing `wp_max_upload_size()` limit is enforced during retrieval: the temporary file is capped at the limit plus one sentinel byte, and oversized responses are cancelled instead of drained. The actual file size and allowed image MIME are still checked before sideloading. Empty files, incomplete PNG/JPEG/GIF headers, HTTP length mismatches, and failed integrity checks are rejected; image headers/dimensions are not proof of complete image integrity. Generic or incorrect HTTP Content-Type alone does not reject valid image bytes. Zero, invalid, or overflowing upload limits return `invalid_upload_limit` rather than disabling the bound.
+
+Downloads retain WordPress's safe HTTP API, redirect limits, TLS verification, 200-only success, and Content-MD5 verification. A/AAAA answers and CNAME targets are checked before the initial request and through the request's redirect hook; private/reserved addresses, local names, failed DNS resolution, cyclic aliases, and alias chains exceeding 16 lookups are rejected. The IPv6 documentation prefix `2001:db8::/32` is rejected explicitly because native PHP reserved-range flags differ across versions. This is defense in depth, **not DNS pinning or complete rebinding protection**: DNS and the connection can still resolve differently. IPv6 literals and AAAA-only hosts remain unsupported by the core safe-URL path. Core's same-site exception does not override the plugin's private-address checks.
+
+The bound applies per response, not to aggregate redirect traffic, headers, or socket buffering. Native cancellation can receive buffered data beyond the limit. cURL bounds decoded file bytes, but a compressed input chunk can expand into multiple decoded callbacks before cancellation; this is not a decoded-work or CPU quota. Fsockopen retains core's streamed encoded-byte behavior and may reject compressed/chunked images that cURL accepts; the plugin does not add an unbounded decompression stage. Formats enabled through WordPress filters retain core MIME handling; the basic PNG/JPEG/GIF header check does not impose a new decoder requirement on SVG, HEIC, AVIF, or other formats.
+
+The download captures its temporary-file identity before ordinary HTTP argument filters and removes its scoped hooks afterward, so nested requests are not limited accidentally. Installed plugins still control WordPress HTTP hooks and can override or preempt requests; this is not an isolation boundary against arbitrary trusted plugin code.
 
 ## Diagnostic privacy
 
@@ -174,6 +184,8 @@ runs separately. This bounds warm repeats, not concurrent cold misses: no
 cross-request lock/coalescing guarantee exists and core may evict early.
 HTTP/DNS/plugin fixtures, real capability/transient tests and actual MCP
 transport provide distinct evidence.
+
+The owned ability subclass retains core input/output validation, permission redaction, and execution hooks. Native permission checks still return `true` or `WP_Error`, never error arrays. Unknown provider diagnostics, including familiar-code collisions, are redacted; core schema errors cannot echo secret input values. This does not change WordPress's own logging.
 
 ## Destructive-operation interlocks
 
