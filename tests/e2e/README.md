@@ -1318,7 +1318,17 @@ Full MCP E2E also runs `site-kit-mcp-runner.php` through real HTTP JSON-RPC and 
 
 For a separate real-provider inspection, use a disposable installation with the official Site Kit package active and the Site Kit MU-plugin fixture absent. Verify the package using `wp plugin verify-checksums google-site-kit`, then run `wp --user=<test-user> eval-file wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/inspect-site-kit-permissions.php`. The inspector calls only registered GET permission callbacks, records their source file/lines and effective capability checks, and blocks/records any attempted external HTTP. It never dispatches a data callback or needs Google credentials. Do not install the real provider into a running manifest fixture: the manifest creates a placeholder plugin file at the same slug.
 
-Confirmed inspection: WordPress.org Site Kit **1.187.0**, WordPress **7.1**, PHP **8.2**, unconnected single-site setup. Administrator callbacks allowed; ordinary Subscriber callbacks denied; zero data callbacks or HTTP attempts. The [README capability table](../../README.md#google-site-kit-compatibility-abilities) records exact route semantics and tagged sources. This is not a real connected/shared-dashboard or Google API integration test, nor proof of compatibility across historical versions. Reinspect when supported upstream versions or the minimum version change; no dependency pin or support minimum was changed by these tests.
+Confirmed inspection: WordPress.org Site Kit **1.187.0**, WordPress **7.1**, PHP **8.2**, unconnected single-site setup. Administrator callbacks allowed; ordinary Subscriber callbacks denied; zero data callbacks or HTTP attempts. The route table below records exact route semantics and tagged sources. This is not a real connected/shared-dashboard or Google API integration test, nor proof of compatibility across historical versions. Reinspect when supported upstream versions or the minimum version change; no dependency pin or support minimum was changed by these tests.
+
+**Upstream permission inspection:** the official WordPress.org Site Kit **1.187.0** package was checksum-verified and inspected on a disposable WordPress 7.1 / PHP 8.2 installation, without Google credentials or data/API calls. These are version-specific observations, not guarantees about historical or future releases:
+
+| GET route under `/google-site-kit/v1` | Site Kit 1.187.0 permission semantics |
+| --- | --- |
+| `/core/modules/data/list` | `googlesitekit_view_splash` OR `googlesitekit_view_dashboard` ([source](https://plugins.svn.wordpress.org/google-site-kit/tags/1.187.0/includes/Core/Modules/REST_Modules_Controller.php), lines 209-225) |
+| `/core/user/data/permissions` | `googlesitekit_view_splash` OR `googlesitekit_view_dashboard` ([source](https://plugins.svn.wordpress.org/google-site-kit/tags/1.187.0/includes/Core/Permissions/Permissions.php), lines 709-718) |
+| `/modules/pagespeed-insights/data/pagespeed` | Registered through the generic module/datapoint route. The resolver honors a permission-aware datapoint's own check; this version's PageSpeed definition uses the default `googlesitekit_setup` OR `googlesitekit_view_posts_insights` ([controller](https://plugins.svn.wordpress.org/google-site-kit/tags/1.187.0/includes/Core/Modules/REST_Modules_Controller.php), lines 613-623, 655-657, 1027-1058; [datapoint](https://plugins.svn.wordpress.org/google-site-kit/tags/1.187.0/includes/Modules/PageSpeed_Insights.php), lines 77-84). |
+
+These effective Site Kit capabilities incorporate setup, authentication, verification, sharing, and network rules; they are not fixed WordPress role checks. In 1.187.0 the default dynamic grants map dashboard/insights capabilities to `edit_posts` and setup/authentication to `manage_options`, with additional restrictions. The unconnected inspection allowed the administrator's route permission checks and denied an ordinary Subscriber's; no PageSpeed data request was executed. This plugin does **not** add an `edit_posts` or `manage_options` floor to the delegated abilities, so a Subscriber whom Site Kit legitimately authorizes is not excluded locally. The controlled shared-Subscriber fixture proves that local behavior, not that an ordinary Subscriber receives all real Site Kit routes. Unknown versions remain route-probed; reverify these semantics when supported upstream versions or the minimum version change.
 
 The runner fails early if either dependency is not active. Coexistence assertions seed SEOPress meta on a post that receives Yoast-backed updates and verify those Yoast paths do not mutate SEOPress meta; separate SEOPress assertions verify SEOPress-specific write and read paths.
 
@@ -1366,6 +1376,12 @@ port. Source/package mounts are read-only. Candidate PHP and WP-CLI run as
 UID/GID 33:33; a fixed trusted directory initialization alone runs as root.
 No engine socket, whole-host attestation or production/shared WordPress is
 part of this test environment.
+
+Product QA uses an explicitly owned disposable Docker project, nonroot
+candidate execution, read-only source/package mounts and private evidence.
+The trusted engine and image initialization are environment assumptions, not
+whole-host attestation. Failed cleanup retains owned resources and original
+evidence; recovery does not turn an interrupted campaign into passing acceptance.
 
 `scripts/qa-local.sh` and `scripts/qa-local.ps1` generate distinct source/package
 projects and output paths. Raw entrypoints require an explicit project, managed
@@ -1436,7 +1452,44 @@ Live cleanup requires a single unconditional literal-true cron definition.
 A completed top-level brace before that definition is supported; nested,
 conditional, namespace, duplicate and false-policy forms still refuse.
 
+Manual checks of record markers use
+[explicit disposable-runtime opt-in](#manual-verification-on-a-disposable-site);
+examples are not runtime proof.
+Its serial source/package stage uses exclusive MU loaders rather than config
+edits and retains source-bound catalog, typed-wire and cleanup evidence.
+Original wire/process bytes stay private; public reports contain validated
+catalog/hint projections and hash/length/verdict witnesses. Unexpected failed
+responses retain evidence even when resource cleanup succeeds. The proof
+requires an explicitly independent native POSIX host authority root and
+validated prepare/retire outcomes; native-Windows positive authority remains
+blocked. Missing or incomplete restoration proof retains the disposable runtime.
+An independently bound companion guard covers the unchanged primary guard's
+unlink/output interval. Its final unlink is the irreversible release commit,
+after all required checks and local receipt writes. The public release receipt
+records **precommit authorization**, not committed release or successful QA.
+A later failed/lost acknowledgment remains nonzero/unknown; it must not be
+reported as a retained guard or a green runtime run.
+
 ### Bounded-list coverage and oracle migration (3.0)
+
+Only fresh SQL failures advance the current blog's post-query cache
+generation to prevent cached false EOFs; ordinary warm caches remain supported.
+Failures remain errors even when a later native priming read clears WordPress's
+last database error. The scoped check adds no queries and does not treat a stale
+error on a zero-query cache hit as a new failure.
+Controlled payload/memory benchmarks are not universal limits on large
+titles/excerpts, metadata, taxonomy, or plugin filters.
+
+The bounded implementation uses the shared Post Access and Post Content
+owners, with metadata, revisions and block patches in their extracted owners.
+The [product integration map](../../docs/reference/shared-helpers.md#product-integration-and-evidence)
+records current owner contracts and separate source/package evidence
+requirements. The ordinary manifest preserves all 601 cases and adds only reviewed
+record-relative assertions. Full-content HTTP proofs request `fields:"full"`;
+separate default/explicit-summary cases require omitted content and its marker.
+Source and installed original-ZIP acceptance remain separate. Unit or isolated
+controls do not replace actual runtime measurement, independent evidence replay
+or verified owned cleanup.
 
 Product QA runs once before legacy suites, on the fresh owned installation.
 During installation and default preparation, the owned HTTP service and its
@@ -1595,3 +1648,69 @@ creation. Changes stop subsequent writes without foreign cleanup. This is
 observation-based custody on a trusted disposable host, not atomic protection
 against a swap inside a filesystem call; the corresponding regression permits
 that call's directory but requires refusal before any further creation.
+
+## Manual verification on a disposable site
+
+These hand checks complement the automated suites above. Run them only on a
+disposable WordPress site you own, never on a production or shared site. The
+behavior they check is described in the
+[ability contracts](../../docs/reference/ability-contracts.md).
+
+### Standalone metadata authorization
+
+For verification on a disposable site, register a nonprotected string key with an authorization callback requiring `manage_options`, seed a draft, and call the standalone abilities as its Author without primitive metadata grants. An explicit read, an upsert (including the same value), and a deletion must return `forbidden`; the listing must omit the key and storage must remain unchanged. An Administrator with effective object/key permission can use it. A combined create/update containing that key must instead return `invalid_input` with reason `metadata_requires_separate_call`, leaving posts, metadata, terms, and save hooks untouched.
+
+### Backslash persistence
+
+On a disposable draft, call `update-post-meta` with `{"post_id":123,"meta_key":"_yoast_wpseo_metadesc","meta_value":"C:\\path\\"}`, then read the same explicit key using `get-post-meta`. Compare storage with `data.current_value` from the update response, allowing provider sanitization.
+
+### Default category deletion
+
+On a disposable site, a `delete-category` request with `{ "category_id": <default-category-ID>, "confirm": true }` must fail and a subsequent `get-category` must still find it.
+
+### Patch preservation
+
+To verify patch preservation on a disposable site, use an account with effective `unfiltered_html`, save a Custom HTML block beside a paragraph, and call `list-content-blocks`. Patch only the paragraph with `patch-content-block`, supplying its path and the returned content/block hashes as preconditions. List the blocks again: the untouched Custom HTML block's hash should be unchanged. For an exact patch, use the original raw markup as `old_content`, not rendered or sanitized HTML.
+
+### Image URL uploads
+
+For example, on a disposable site, upload an image you control with `{"image_url":"https://your-public-host.example/image.png","post_id":123,"set_featured":true,"title":"Example","alt_text":"Example image","caption":"Example caption"}`. Verify the returned attachment metadata and the target's featured image.
+
+### Scheduling
+
+On a disposable test site, verify a future create with an explicit offset, an update with no new date, and a malformed-date attempt. Check the actual status and stored local/GMT dates, and confirm the rejected attempt left the item unchanged. The automated regression matrix is described in [the E2E guide](#scheduling-regressions).
+
+### Parent assignments
+
+On a test site, verify an allowed page-parent update, a denied update under
+another user's inaccessible parent, and a detach with `parent: 0`. Include a
+title change with the denied request and confirm that the title is unchanged.
+
+### Strict inputs
+
+Verify on a disposable site that `list-posts` with `{"order":"DESC!"}` fails,
+`update-post` with an extra `parent:0` cannot change its title, and omitted
+filters still work for an Editor but do not grant Subscriber access.
+
+### Comment permissions
+
+For comment permission checks, use a disposable site: a custom account with only `read` and `moderate_comments` must be denied when updating, approving, trashing, or marking a comment as spam on a post it cannot edit. Confirm both comment content and status remain unchanged, including when an update supplies a status. An Editor with access to that post should succeed.
+
+### Scheduling error format
+
+On a disposable site, also try an authorized future create with `scheduled_date:"bad date"`: the wire error must be `invalid_input/invalid_scheduled_date`, with no created post.
+
+### Untrusted result fields
+
+To verify on an owned disposable site, read a seeded draft as its authorized
+Author and compare marked values with the existing normalized response,
+including HTML and backslashes. Check each marked key exists exactly once,
+then repeat as a denied Subscriber: no content or markers may be added to its
+canonical error. Check lower-privilege user lookup omissions and denied SEO
+keys without reintroducing values or marker names. The
+[dedicated QA guidance](#untrusted-content-coverage-30-108)
+requires explicit disposable-runtime opt-in; examples are not runtime proof.
+
+### Database table privacy
+
+For a disposable-site check, call `database-health` as Administrator with omitted input or `{"include_table_names":false}` and verify that table identifiers are logical/opaque, then deliberately opt in with `{"include_table_names":true}` and compare every row's metrics and `is_core_table`. A Subscriber must be refused in both modes. Opaque labels restart per response and are **not stable identifiers** for comparing reports; the opt-in is required only when physical names are genuinely needed. See the [3.0 diagnostic migration](../../docs/reference/3.0-migration.md#database-diagnostic-table-privacy).

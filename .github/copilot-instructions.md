@@ -21,7 +21,8 @@ When asked to add, change, or release abilities, complete all applicable steps b
    - For permissioned abilities, include allowed and denied role or capability cases.
 
 2. Update documentation
-   - Update `README.md` for user-facing behavior, role requirements, ability tables, verification examples, and security notes.
+   - Update `docs/reference/ability-contracts.md` for user-facing behavior, role requirements, inputs, result fields, and security notes; add manual verification examples to `tests/e2e/README.md`.
+   - Keep `README.md` short: update it only when the quickstart, requirements, install/connect steps, or ability areas change, and link to detailed docs rather than copying them.
    - Update `readme.txt` for WordPress.org-facing description, FAQ, changelog, and upgrade notice when applicable.
    - Update related markdown files such as `tests/e2e/README.md`, `CONTRIBUTING.md`, and `.github/PULL_REQUEST_TEMPLATE.md`.
 

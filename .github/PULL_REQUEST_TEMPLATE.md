@@ -15,7 +15,7 @@
 - [ ] Inputs are sanitized or validated with WordPress APIs or strict schema checks
 - [ ] Response shape is unchanged, or the contract change is documented
 - [ ] New or changed abilities have positive cases in `tests/e2e/abilities-manifest.json`, plus permission-denied cases where permissions apply
-- [ ] User-facing docs are updated (`README.md`, `readme.txt`, `tests/e2e/README.md`)
+- [ ] User-facing docs are updated (`docs/reference/ability-contracts.md`, `readme.txt`, `tests/e2e/README.md`; `README.md` only when the quickstart, requirements, install/connect steps or ability areas change)
 - [ ] Changelog: plugin-facing changes in `CHANGELOG.md`, repository/CI changes in `.github/REPOSITORY_CHANGELOG.md`
 - [ ] `composer phpcs`, PHPStan without new baseline debt, E2E manifest validation and `git diff --check` pass
 - [ ] Relevant E2E QA passes, or failures are unrelated and explained
