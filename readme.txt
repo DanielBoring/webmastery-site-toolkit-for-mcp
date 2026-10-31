@@ -51,6 +51,10 @@ https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
 
 == Frequently Asked Questions ==
 
+= Why did MCP calls suddenly become unavailable? =
+
+A host or security layer can return an HTML CAPTCHA with HTTP 403, while an expired MCP Adapter session produces a separate session error. Check the actual response; a generic unavailable message alone does not identify the cause. For diagnosis and safe retry guidance, see https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/reference/troubleshooting.md
+
 = Has released 2.6.0 been checked against MCP Adapter 0.7.0? =
 
 Yes. The unchanged 2.6.0 production ZIP passed isolated local HTTP checks against Adapter 0.6.1 and 0.7.0 on WordPress 7.1.2/PHP 8.2 and WordPress 6.9/PHP 8.1. All 75 native-install abilities were discovered and projected as individual tools. Representative reads, draft writes, permission denials and errors passed, including the 2026-07-28 sessionless protocol. These checks do not cover every callback or optional provider. No live or staging site was used. This historical result is separate from 3.0.0 release-package validation.
