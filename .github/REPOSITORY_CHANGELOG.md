@@ -6,6 +6,11 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Admit MCP Adapter 0.7.1 to the current source/package untrusted-content and
+  error-contract proofs so compatibility lanes reach the runtime assertions.
+  Keep unknown future versions rejected, preserve all validation and cleanup
+  safeguards, and leave the tested dependency baseline unchanged. Document
+  the scheduled failure evidence and local reproduction command.
 - `03-04 - Docker QA` no longer runs its runtime suites for documentation-only
   changes anywhere in the repository: Markdown files in any folder (previously
   only top-level Markdown was skipped, so `tests/e2e/README.md` triggered the

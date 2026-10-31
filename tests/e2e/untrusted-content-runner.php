@@ -257,7 +257,7 @@ try {
 			$summary['adapter'] = array( 'plugin' => $path, 'version' => $plugin['Version'] );
 		}
 	}
-	wstm108_assert( in_array( $summary['adapter']['version'] ?? null, array( '0.6.1', '0.7.0' ), true ), 'This proof requires an assessed installed Adapter version (0.6.1 or 0.7.0).' );
+	wstm108_assert( in_array( $summary['adapter']['version'] ?? null, array( '0.6.1', '0.7.0', '0.7.1' ), true ), 'This proof only admits Adapter versions 0.6.1, 0.7.0 or 0.7.1; passing requires the complete runtime assertions.' );
 	$summary['providers'] = array(
 		'yoast' => defined( 'WPSEO_VERSION' ) || defined( 'WPSEO_FILE' ) || class_exists( 'WPSEO_Options' ) || function_exists( 'wpseo_init' ),
 		'seopress' => defined( 'SEOPRESS_VERSION' ) || defined( 'SEOPRESS_PRO_VERSION' ) || class_exists( 'SEOPress' ) || function_exists( 'seopress_activation' ) || in_array( 'wp-seopress/seopress.php', (array) get_option( 'active_plugins', array() ), true ),
