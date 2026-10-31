@@ -9,6 +9,7 @@
       "DatabaseTablePrivacyTest.php",
       "DestructiveSafetyTest.php",
       "DiagnosticsTest.php",
+      "FeaturedImageTest.php",
       "InputBoundaryTest.php",
       "MediaUrlTest.php",
       "MetadataBoundaryTest.php",

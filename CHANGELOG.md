@@ -6,6 +6,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+- Add opt-in compact confirmations for setting/removing featured images, including previous/current attachment IDs and the current URL, without returning the post body. The default full response and existing permissions/errors remain unchanged.
+
 ### Changed
 
 - Update the documentation links in `readme.txt` for the reorganized `docs/`

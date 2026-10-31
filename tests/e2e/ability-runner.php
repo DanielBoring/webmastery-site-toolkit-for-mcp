@@ -1215,8 +1215,11 @@ $summary['taxonomy_write_regressions'] = array(
 	'passed' => $taxonomy_summary['passed'],
 	'failed' => $taxonomy_summary['failed'],
 );
+require_once __DIR__ . '/featured-image-runner.php';
+$featured_image_summary = wstm206_run_featured_image_tests();
+$summary['featured_image_regressions'] = $featured_image_summary;
 e2e_write_summary( $summary );
 
 $patch_html_summary = ( new WSTM115_Patch_HTML_Tests( $roles ) )->run();
 
-exit( $summary['failed'] > 0 || $patch_html_summary['failed'] > 0 || $taxonomy_summary['failed'] > 0 ? 1 : 0 );
+exit( $summary['failed'] > 0 || $patch_html_summary['failed'] > 0 || $taxonomy_summary['failed'] > 0 || $featured_image_summary['failed'] > 0 ? 1 : 0 );
