@@ -52,7 +52,11 @@ final class Webmastery_MCP_Response {
 		if ( $error instanceof Webmastery_MCP_Error && is_array( $data ) && isset( $data['webmastery_error'] ) && self::is_error( $data['webmastery_error'] ) ) {
 			return $data['webmastery_error'];
 		}
-		$reason = (string) $error->get_error_code();
+		$reason     = (string) $error->get_error_code();
+		$diagnostic = class_exists( Webmastery_MCP_Input::class ) ? Webmastery_MCP_Input::error_details( $error ) : [];
+		if ( [] !== $diagnostic ) {
+			return self::legacy_error( 'ability_invalid_input', 'Ability input does not match its schema.', $diagnostic );
+		}
 		if ( ! $error instanceof Webmastery_MCP_Local_Error ) {
 			// A familiar provider code is not provenance. Never publish its message or data.
 			$core_messages = [

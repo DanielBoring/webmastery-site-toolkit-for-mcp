@@ -262,6 +262,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 = Unreleased =
 
 * Correct SEO Analyze Post internal/external link counts for bare/www hosts, HTTP/HTTPS, protocol-relative URLs and relative references; exclude non-web schemes and compare complete hostnames.
+* Identify failing schema fields and reasons in invalid-input errors across native and MCP calls, without exposing supplied values or unknown property names.
 
 = 3.0.0 =
 
