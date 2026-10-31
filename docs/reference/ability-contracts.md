@@ -306,6 +306,15 @@ These optional read-only abilities use Site Kit's registered internal REST route
 
 Site Kit does not publish these routes as a supported third-party API. The adapter checks route availability at runtime and returns `site_kit_unavailable` or `site_kit_unsupported` instead of assuming a specific Site Kit implementation.
 
+PageSpeed accepts an optional `url` (defaults to the site home URL) and an optional
+`strategy` (`mobile` or `desktop`, defaults to `mobile` when omitted). Both `{}`
+and `{"url":"https://your-site.example/page/"}` request mobile analysis. Explicit
+`null`, other types, and unsupported strategies such as `both` are rejected.
+The permission callback and execution use the same resolved URL and strategy;
+same-site URL validation and Site Kit authorization still apply. The successful
+result retains `data.requested_url`, `data.strategy`, `data.id`,
+`data.analysis_timestamp`, `data.field_data`, `data.categories`, and `data.audits`.
+
 The three delegated abilities check `read` before plugin discovery, route lookup, or upstream work in both permission and direct execution callbacks. This is a minimum, not an access grant: the exact upstream GET route must expose a callable permission check, and normal WordPress REST dispatch still enforces it. Missing providers, routes, or usable permission callbacks fail closed. Status keeps its separate `manage_options` gate, without an additional `read` requirement.
 
 This plugin does **not** add an `edit_posts` or `manage_options` floor to the

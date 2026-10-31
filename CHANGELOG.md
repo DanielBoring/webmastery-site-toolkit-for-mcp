@@ -18,6 +18,9 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   across native and MCP calls, without echoing input values or unknown keys.
 - Flag Classic content in List Content Blocks and guide partial edits to Patch Post Content without changing block values, hashes or permissions.
 
+- Default PageSpeed analysis to mobile when the strategy is omitted, including
+  empty-input calls. Explicit desktop analysis and Site Kit permissions are unchanged.
+
 - Update the documentation links in `readme.txt` for the reorganized `docs/`
   folder (3.0 migration guide, MCP Adapter 0.7 assessment and agent threat
   model). The links on the 3.0.0 WordPress.org plugin page point to the old

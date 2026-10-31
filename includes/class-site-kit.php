@@ -57,6 +57,7 @@ class Webmastery_MCP_Site_Kit {
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
+				'default'    => [],
 				'properties' => [
 					'url'      => [
 						'type'        => 'string',
@@ -66,10 +67,10 @@ class Webmastery_MCP_Site_Kit {
 					'strategy' => [
 						'type'        => 'string',
 						'enum'        => [ 'mobile', 'desktop' ],
-						'description' => 'PageSpeed device strategy.',
+						'default'     => 'mobile',
+						'description' => 'PageSpeed device strategy. Defaults to mobile.',
 					],
 				],
-				'required'   => [ 'strategy' ],
 			],
 			'execute_callback'    => [ self::class, 'execute_pagespeed' ],
 			'permission_callback' => [ self::class, 'permission_pagespeed' ],
@@ -129,12 +130,14 @@ class Webmastery_MCP_Site_Kit {
 			return $permission;
 		}
 
+		$validated = self::validate_pagespeed_input( $input );
+		if ( is_wp_error( $validated ) ) {
+			return $validated;
+		}
+
 		return self::check_route_permission(
 			self::REST_ROOT . '/modules/pagespeed-insights/data/pagespeed',
-			[
-				'url'      => esc_url_raw( $input['url'] ?? '' ),
-				'strategy' => sanitize_key( $input['strategy'] ?? '' ),
-			]
+			$validated
 		);
 	}
 
@@ -304,7 +307,7 @@ class Webmastery_MCP_Site_Kit {
 	}
 
 	private static function validate_pagespeed_input( $input ) {
-		$strategy = sanitize_key( $input['strategy'] ?? '' );
+		$strategy = array_key_exists( 'strategy', $input ) ? $input['strategy'] : 'mobile';
 		if ( ! in_array( $strategy, [ 'mobile', 'desktop' ], true ) ) {
 			return Webmastery_MCP_Response::local_error( 'invalid_strategy', 'Strategy must be mobile or desktop.' );
 		}

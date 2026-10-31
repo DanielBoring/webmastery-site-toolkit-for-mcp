@@ -127,4 +127,75 @@ final class SiteKitPermissionsTest extends TestCase {
 			$this->assertSame( 0, $GLOBALS['wstm125']['calls']['routes'] );
 		}
 	}
+
+	public static function pagespeed_defaults(): array {
+		return array(
+			array( array(), 'http://localhost/', 'mobile' ),
+			array( array( 'url' => 'http://localhost/sample-page/' ), 'http://localhost/sample-page/', 'mobile' ),
+			array( array( 'strategy' => 'mobile' ), 'http://localhost/', 'mobile' ),
+			array( array( 'strategy' => 'desktop' ), 'http://localhost/', 'desktop' ),
+		);
+	}
+
+	/** @dataProvider pagespeed_defaults */
+	public function test_pagespeed_defaults_reach_permission_and_dispatch( array $input, string $url, string $strategy ): void {
+		$this->assertTrue( Webmastery_MCP_Site_Kit::permission_pagespeed( $input ) );
+		$result = Webmastery_MCP_Site_Kit::execute_pagespeed( $input );
+		$this->assertTrue( $result['success'] );
+		$this->assertSame( $strategy, $result['data']['strategy'] );
+		$this->assertSame( $url, $result['data']['requested_url'] );
+		$expected = array( '/google-site-kit/v1/modules/pagespeed-insights/data/pagespeed', array( 'url' => $url, 'strategy' => $strategy ) );
+		$this->assertSame( $expected, $GLOBALS['wstm125']['permission_requests'][0] );
+		$this->assertSame( $expected, $GLOBALS['wstm125']['permission_requests'][2] );
+		$this->assertSame( $expected, $GLOBALS['wstm125']['data_requests'][1] );
+	}
+
+	public function test_pagespeed_schema_advertises_optional_mobile_default(): void {
+		Webmastery_MCP_Site_Kit::register();
+		$args = $GLOBALS['wstm_test_abilities']['webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed'];
+		$schema = $args['input_schema'];
+		$this->assertSame( array(), $schema['default'] );
+		$this->assertNotContains( 'strategy', $schema['required'] ?? array() );
+		$this->assertSame( 'mobile', $schema['properties']['strategy']['default'] );
+		$this->assertSame( array( 'mobile', 'desktop' ), $schema['properties']['strategy']['enum'] );
+		$this->assertNull( Webmastery_MCP_Input::validate( array(), $schema ) );
+		$this->assertNull( Webmastery_MCP_Input::validate( array( 'url' => 'http://localhost/' ), $schema ) );
+		foreach ( array( null, false, 1, array( 'mobile' ), 'both', '', 'Mobile', 'mobile!' ) as $strategy ) {
+			$this->assertInstanceOf( WP_Error::class, Webmastery_MCP_Input::validate( array( 'strategy' => $strategy ), $schema ) );
+			foreach ( array( 'permission_pagespeed', 'execute_pagespeed' ) as $method ) {
+				$result = Webmastery_MCP_Site_Kit::$method( array( 'strategy' => $strategy ) );
+				$this->assertSame( 'invalid_strategy', $result->get_error_code() );
+			}
+		}
+		$this->assertSame( 0, $GLOBALS['wstm125']['calls']['routes'] );
+		unset( $GLOBALS['wstm_test_abilities'] );
+	}
+
+	public function test_omitted_strategy_preserves_local_and_upstream_denials(): void {
+		foreach ( array( 'permission_pagespeed', 'execute_pagespeed' ) as $method ) {
+			$GLOBALS['wstm_test_user_caps'] = array();
+			$this->assertSame( 'forbidden', Webmastery_MCP_Site_Kit::$method()->get_error_code() );
+			$this->assertSame( 0, $GLOBALS['wstm125']['calls']['routes'] );
+		}
+		$GLOBALS['wstm_test_user_caps'] = array( 'read' );
+		foreach ( array( 'false', 'null', 'error', 'missing-route', 'missing-callback', 'uncallable-callback' ) as $mode ) {
+			$GLOBALS['wstm125']['mode'] = $mode;
+			foreach ( array( 'permission_pagespeed', 'execute_pagespeed' ) as $method ) {
+				$result = Webmastery_MCP_Site_Kit::$method();
+				$this->assertInstanceOf( WP_Error::class, $result );
+				$this->assertSame( 0, $GLOBALS['wstm125']['calls']['data'] );
+			}
+		}
+	}
+
+	public function test_omitted_strategy_does_not_bypass_either_exact_upstream_route(): void {
+		$GLOBALS['wstm125']['denied_path'] = '/google-site-kit/v1/modules/pagespeed-insights/data/pagespeed';
+		$this->assertSame( 'forbidden', Webmastery_MCP_Site_Kit::permission_pagespeed()->get_error_code() );
+		$this->assertSame( 'forbidden', Webmastery_MCP_Site_Kit::execute_pagespeed()->get_error_code() );
+		$this->assertCount( 1, $GLOBALS['wstm125']['data_requests'] );
+		$this->assertSame( '/google-site-kit/v1/core/modules/data/list', $GLOBALS['wstm125']['data_requests'][0][0] );
+		$GLOBALS['wstm125']['denied_path'] = '/google-site-kit/v1/core/modules/data/list';
+		$this->assertSame( 'forbidden', Webmastery_MCP_Site_Kit::execute_pagespeed()->get_error_code() );
+		$this->assertCount( 1, $GLOBALS['wstm125']['data_requests'] );
+	}
 }

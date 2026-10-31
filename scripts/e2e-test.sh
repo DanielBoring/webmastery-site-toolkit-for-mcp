@@ -467,6 +467,7 @@ run_metadata_boundary_qa() (
 				wordpress php -d memory_limit=1G "${CONTAINER_PLUGIN_ROOT}/tests/e2e/${runner}-runner.php"
 		done
 	done
+	compose exec -T -e WSTM202_DISPOSABLE=1 wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/site-kit-defaults-runner.php"
 )
 
 run_destructive_safety_qa() (
