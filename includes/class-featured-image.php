@@ -17,8 +17,9 @@ final class Webmastery_MCP_Featured_Image {
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
-					'post_id'       => [ 'type' => 'integer', 'description' => 'Post or page ID' ],
-					'attachment_id' => [ 'type' => 'integer', 'description' => 'Image attachment ID to use as the featured image' ],
+					'post_id'         => [ 'type' => 'integer', 'description' => 'Post or page ID' ],
+					'attachment_id'   => [ 'type' => 'integer', 'description' => 'Image attachment ID to use as the featured image' ],
+					'response_format' => self::response_format_schema(),
 				],
 				'required'   => [ 'post_id', 'attachment_id' ],
 			],
@@ -39,13 +40,15 @@ final class Webmastery_MCP_Featured_Image {
 					return Webmastery_MCP_Response::legacy_error( 'unsupported_mime_type', 'Attachment must be an image.' );
 				}
 
-				$result = set_post_thumbnail( $post->ID, $attachment_id );
+				$format      = $input['response_format'] ?? 'full';
+				$previous_id = 'compact' === $format ? (int) get_post_thumbnail_id( $post->ID ) : 0;
+				$result      = set_post_thumbnail( $post->ID, $attachment_id );
 
 				if ( ! $result ) {
 					return Webmastery_MCP_Response::legacy_error( 'featured_image_failed', 'Failed to set featured image.' );
 				}
 
-				return [ 'success' => true, 'data' => Webmastery_MCP_Posts::normalize( $post->ID ) ];
+				return self::response( (int) $post->ID, $format, $previous_id );
 			},
 			'permission_callback' => Webmastery_MCP_Post_Access::featured_image_permission(),
 			'meta'                => [
@@ -63,7 +66,8 @@ final class Webmastery_MCP_Featured_Image {
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
-					'post_id' => [ 'type' => 'integer', 'description' => 'Post or page ID' ],
+					'post_id'         => [ 'type' => 'integer', 'description' => 'Post or page ID' ],
+					'response_format' => self::response_format_schema(),
 				],
 				'required'   => [ 'post_id' ],
 			],
@@ -74,9 +78,11 @@ final class Webmastery_MCP_Featured_Image {
 					return Webmastery_MCP_Response::from_wp_error( $post );
 				}
 
+				$format      = $input['response_format'] ?? 'full';
+				$previous_id = 'compact' === $format ? (int) get_post_thumbnail_id( $post->ID ) : 0;
 				delete_post_thumbnail( $post->ID );
 
-				return [ 'success' => true, 'data' => Webmastery_MCP_Posts::normalize( $post->ID ) ];
+				return self::response( (int) $post->ID, $format, $previous_id );
 			},
 			'permission_callback' => Webmastery_MCP_Post_Access::featured_image_permission(),
 			'meta'                => [
@@ -84,5 +90,30 @@ final class Webmastery_MCP_Featured_Image {
 				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
 			],
 		] );
+	}
+
+	private static function response_format_schema(): array {
+		return [
+			'type'        => 'string',
+			'enum'        => [ 'full', 'compact' ],
+			'default'     => 'full',
+			'description' => 'Full returns the existing normalized post; compact returns only featured-image confirmation fields.',
+		];
+	}
+
+	private static function response( int $post_id, string $format, int $previous_id ): array {
+		if ( 'compact' !== $format ) {
+			return [ 'success' => true, 'data' => Webmastery_MCP_Posts::normalize( $post_id ) ];
+		}
+
+		$current_id = (int) get_post_thumbnail_id( $post_id );
+		// Match the media response's object gate without changing assignment eligibility.
+		$url = $current_id && current_user_can( 'edit_post', $current_id ) ? wp_get_attachment_url( $current_id ) : false;
+		return Webmastery_MCP_Response::ok( Webmastery_MCP_Untrusted::mark( [
+			'post_id'                    => $post_id,
+			'featured_image_id'          => $current_id,
+			'featured_image_url'         => false === $url ? null : $url,
+			'previous_featured_image_id' => $previous_id,
+		], [ 'featured_image_url' ] ) );
 	}
 }

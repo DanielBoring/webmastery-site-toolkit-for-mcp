@@ -23,6 +23,7 @@ table shows it.
 - [Category and tag permissions](#category-and-tag-permissions)
 - [Destructive-operation interlocks](#destructive-operation-interlocks)
 - [Targeted content patching](#targeted-content-patching)
+- [Featured-image write responses](#featured-image-write-responses)
 - [Image URL uploads](#image-url-uploads)
 - [Scheduling](#scheduling)
 - [Parent assignments](#parent-assignments)
@@ -264,6 +265,51 @@ WordPress's normal save pipeline still applies. Preserving markup that KSES woul
 
 Block-path, block-hash, and heading patches retain the existing WordPress parse/serialize behavior, which can normalize noncanonical block delimiters and omit empty freeform separators. They are not raw byte-splicing operations. Exact patches do not parse or serialize the surrounding content.
 
+## Featured-image write responses
+
+`set-featured-image` and `remove-featured-image` accept optional
+`response_format: "full" | "compact"`. Omission and explicit `"full"` preserve
+exactly the existing normalized post/page in `data`, including stored content.
+Choose `"compact"` for a small confirmation without post normalization or body,
+excerpt, author, taxonomy, or unrelated metadata reads for the response. This
+option applies only to these two abilities; it differs from list `fields`.
+
+```json
+{"post_id":123,"attachment_id":456,"response_format":"compact"}
+```
+
+A successful set returns:
+
+```json
+{"success":true,"data":{"post_id":123,"featured_image_id":456,"featured_image_url":"https://example.test/wp-content/uploads/image.png","previous_featured_image_id":0,"untrusted_fields":["featured_image_url"]}}
+```
+
+A successful remove normally returns the same record with `featured_image_id: 0`,
+`featured_image_url: null`, and the previous attachment ID. The previous ID is
+captured immediately before the operation, after target authorization and (for
+set) attachment validation; the current ID is read after the core operation.
+The URL is the current attachment's original URL from `wp_get_attachment_url`,
+or null when no image/URL is available or the caller lacks `edit_post` for that
+attachment (the existing media response authorization boundary). It remains marked even when null.
+Concurrent edits or site filters can affect these observations; this is not an
+atomic compare-and-swap or an undo transaction.
+
+Permissions stay unchanged: post/page targets only, `edit_posts` or `edit_pages`
+as appropriate plus target `edit_post`; set also requires an existing image
+attachment. Compact adds no post-meta or media-edit write permission; its URL read gate
+does not change whether the assignment succeeds. Invalid
+projection values, including explicit null and `"summary"`, fail the strict
+input boundary before capability checks, queries, or mutations. Existing errors
+and core mutation behavior are retained: setting an already selected image can
+still return `featured_image_failed`; removing an absent image succeeds. Remove
+continues to return success if core deletion returns false, with compact
+reporting the actual remaining image rather than assuming removal succeeded.
+
+To reverse a change, a separately authorized caller can set the recorded
+previous attachment ID, or remove the image when it was zero. The attachment
+must still exist and be eligible; these abilities do not restore deleted media.
+Clients needing the post after a compact write can call `get-post` or `get-page`.
+
 ## Image URL uploads
 
 `webmastery-site-toolkit-for-mcp/upload-image` requires `upload_files` (normally Author or above), plus `edit_post` for an optional target post or page. The download is capped at the
@@ -373,6 +419,7 @@ apply. Markers never restore omitted/redacted fields.
 | Successful record | Fields marked when present |
 | --- | --- |
 | Post, page, or CPT record (including responses reusing these normalizers) | `title`, `content`, `excerpt`, `slug`, `url`, `author_name` |
+| Compact featured-image write `data` record | `featured_image_url`, including null or redacted URL |
 | Revision | `author_name`, `title`, `content`, `excerpt` |
 | Block | `block_name`, `text`, `html`, `attrs` |
 | `patch-content-block` data record | `content` |

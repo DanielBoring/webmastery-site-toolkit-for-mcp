@@ -6,6 +6,13 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+### Added
+
+- Add opt-in compact featured-image confirmations with previous/current IDs and
+  a permission-guarded nullable URL. Full responses remain the default.
+- Flag Classic content in List Content Blocks and guide partial edits to Patch
+  Post Content without changing block values, hashes or permissions.
+
 ### Fixed
 
 - Correct SEO Analyze Post link counts across bare/www hosts, HTTP/HTTPS,
@@ -16,7 +23,6 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 - Add bounded schema field paths and failure reasons to invalid-input errors
   across native and MCP calls, without echoing input values or unknown keys.
-- Flag Classic content in List Content Blocks and guide partial edits to Patch Post Content without changing block values, hashes or permissions.
 
 - Default PageSpeed analysis to mobile when the strategy is omitted, including
   empty-input calls. Explicit desktop analysis and Site Kit permissions are unchanged.

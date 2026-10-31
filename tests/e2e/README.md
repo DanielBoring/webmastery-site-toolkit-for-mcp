@@ -1847,3 +1847,42 @@ fail without returning content, `is_classic` or `hint`. Empty content has no
 existing exact/heading target. The existing allowed/denied manifest cases stay
 unchanged; classification assertions run separately in product units and the
 real-core patch probe. Static/unit results alone do not establish real-core QA.
+
+### Compact featured-image confirmations
+
+The normal owned contract run (`scripts/qa-run.sh all`) and package run execute
+`featured-image-runner.php` from `ability-runner.php`. Its current cases are
+separate from the unchanged 601 manifest cases and frozen historical marker
+inventories. The existing manifest still checks legacy full responses and
+permission denials. `e2e-summary.json` adds `featured_image_regressions`, including
+case results, actual returned responses, persisted-image checks, measured counters,
+and cleanup errors. Each case retains observations before assertions so failed
+comparisons and partial observer failures remain reviewable after fixture cleanup.
+No separate stack or runtime gate is required.
+
+On a disposable site, as an Editor, run `set-featured-image` with
+`{"post_id":123,"attachment_id":456,"response_format":"compact"}`. Confirm that
+`data` contains only `post_id`, `featured_image_id`, `featured_image_url`,
+`previous_featured_image_id`, and the URL's record-local `untrusted_fields`.
+Compare IDs and URL with actual WordPress state. An Author setting an existing
+foreign image on their own post retains assignment eligibility, but must receive
+a null URL when attachment `edit_post` is denied; the runtime covers this case. Replace the image and check the
+previous ID, then remove it with
+`{"post_id":123,"response_format":"compact"}` twice: the second remove should
+report previous/current IDs zero and URL null. Repeat on a page.
+
+Omit `response_format`, then try explicit `"full"`: both must retain the existing
+full normalized post, including long stored content. Re-setting the same image
+retains the existing `featured_image_failed` behavior. Missing/non-image
+attachments retain their existing errors and leave the selected image intact.
+A Subscriber must be denied without reading thumbnail metadata. Invalid
+`response_format` values (null, boolean, integer, empty string, `"COMPACT"`,
+`"summary"`) must fail before capability calls, metadata reads, or queries.
+Unit spies additionally prove compact skips full normalization and preserves
+core false-return behavior; those forced failures are not storage-failure tests.
+The runtime case observer checks that compact never requests author display-name
+normalization. Owned posts and uploaded media are removed in `finally`, with row and upload-file
+absence checks.
+
+The previous ID supports a separate authorized reversal while that attachment
+still exists; it cannot restore a deleted attachment.

@@ -248,6 +248,10 @@ Markers accompany data through both gateway and individual tools. The default to
 
 For exact field names and examples, see [Untrusted result fields](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/reference/ability-contracts.md#untrusted-result-fields); for disposable-site checks, see [manual verification](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/tests/e2e/README.md#untrusted-result-fields).
 
+= Can featured-image writes return a small confirmation? =
+
+Set response_format to compact on set-featured-image or remove-featured-image. The success/data record contains post_id, featured_image_id, featured_image_url (null when unavailable or the attachment is not readable under the existing media edit_post gate), previous_featured_image_id and a record-local URL marker. Omitting the option or choosing full preserves the existing normalized post including content. Permissions, attachment eligibility and repeated-call errors stay unchanged. The previous ID supports a separate authorized reversal only while that attachment exists; no deleted media is restored. See the featured-image contract in the full documentation.
+
 = Where is the full documentation? =
 
 The complete ability reference and client setup guide are maintained at:
@@ -279,6 +283,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Explain Site Kit access denials with tentative Dashboard sharing and Google sign-in guidance, without extra diagnostic reads or exposing provider errors.
 
 * Breaking: SEO and readability score audits default to published posts/pages. Explicit status:"any" retains the previous scope; specific status filters, permissions and bounded pagination are unchanged.
+
+* Featured-image writes accept response_format:compact for a small confirmation with previous/current IDs and URL. Omission or response_format:full retains the existing full post response.
 
 = 3.0.0 =
 
