@@ -20,6 +20,8 @@ function webmastery_mcp_read_baselines( string $path ): array {
 		'wp_cli_sha512'      => '/^[a-f0-9]{128}$/D',
 		'yoast'              => '/^\d+\.\d+(?:\.\d+)*$/D',
 		'seopress'           => '/^\d+\.\d+(?:\.\d+)*$/D',
+		'wp69_yoast'         => '/^\d+\.\d+(?:\.\d+)*$/D',
+		'wp69_seopress'      => '/^\d+\.\d+(?:\.\d+)*$/D',
 		'plugin_check'       => '/^\d+\.\d+(?:\.\d+)*$/D',
 	);
 	foreach ( $patterns as $key => $pattern ) {

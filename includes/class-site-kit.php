@@ -10,6 +10,9 @@ class Webmastery_MCP_Site_Kit {
 
 	private const PERMISSIONS_MINIMUM_VERSION = '1.82.0';
 
+	// Fixed guidance: a denial alone does not establish this user's authentication or sharing state.
+	private const FORBIDDEN_GUIDANCE = 'Google Site Kit denied this request. Possible causes include missing Dashboard sharing access or a Google account sign-in/reauthentication requirement. An authorized administrator can review access for this user\'s role to the relevant service using the sharing icon in the Site Kit dashboard header. Eligible users can sign in to Google in Site Kit as this WordPress user. For diagnosis, use get-site-kit-status (requires manage_options) and get-site-kit-permissions where permitted.';
+
 	public static function register() {
 		self::register_status();
 		self::register_modules();
@@ -57,6 +60,7 @@ class Webmastery_MCP_Site_Kit {
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
+				'default'    => [],
 				'properties' => [
 					'url'      => [
 						'type'        => 'string',
@@ -66,10 +70,10 @@ class Webmastery_MCP_Site_Kit {
 					'strategy' => [
 						'type'        => 'string',
 						'enum'        => [ 'mobile', 'desktop' ],
-						'description' => 'PageSpeed device strategy.',
+						'default'     => 'mobile',
+						'description' => 'PageSpeed device strategy. Defaults to mobile.',
 					],
 				],
-				'required'   => [ 'strategy' ],
 			],
 			'execute_callback'    => [ self::class, 'execute_pagespeed' ],
 			'permission_callback' => [ self::class, 'permission_pagespeed' ],
@@ -129,12 +133,14 @@ class Webmastery_MCP_Site_Kit {
 			return $permission;
 		}
 
+		$validated = self::normalize_pagespeed_input( $input );
+		if ( is_wp_error( $validated ) ) {
+			return $validated;
+		}
+
 		return self::check_route_permission(
 			self::REST_ROOT . '/modules/pagespeed-insights/data/pagespeed',
-			[
-				'url'      => esc_url_raw( $input['url'] ?? '' ),
-				'strategy' => sanitize_key( $input['strategy'] ?? '' ),
-			]
+			$validated
 		);
 	}
 
@@ -303,21 +309,28 @@ class Webmastery_MCP_Site_Kit {
 		];
 	}
 
-	private static function validate_pagespeed_input( $input ) {
-		$strategy = sanitize_key( $input['strategy'] ?? '' );
+	private static function normalize_pagespeed_input( $input ) {
+		$strategy = array_key_exists( 'strategy', $input ) ? $input['strategy'] : 'mobile';
 		if ( ! in_array( $strategy, [ 'mobile', 'desktop' ], true ) ) {
 			return Webmastery_MCP_Response::local_error( 'invalid_strategy', 'Strategy must be mobile or desktop.' );
 		}
 
-		$url = empty( $input['url'] ) ? home_url( '/' ) : esc_url_raw( $input['url'] );
-		if ( '' === $url || ! self::is_same_site_url( $url ) ) {
-			return Webmastery_MCP_Response::local_error( 'invalid_url', 'PageSpeed URL must be an HTTP or HTTPS URL on the current site.' );
-		}
-
 		return [
-			'url'      => $url,
+			'url'      => empty( $input['url'] ) ? home_url( '/' ) : esc_url_raw( $input['url'] ),
 			'strategy' => $strategy,
 		];
+	}
+
+	private static function validate_pagespeed_input( $input ) {
+		$validated = self::normalize_pagespeed_input( $input );
+		if ( is_wp_error( $validated ) ) {
+			return $validated;
+		}
+		// Keep domain validation in execution so core does not mask invalid_url as a permission denial.
+		if ( '' === $validated['url'] || ! self::is_same_site_url( $validated['url'] ) ) {
+			return Webmastery_MCP_Response::local_error( 'invalid_url', 'PageSpeed URL must be an HTTP or HTTPS URL on the current site.' );
+		}
+		return $validated;
 	}
 
 	private static function is_same_site_url( $url ) {
@@ -362,7 +375,7 @@ class Webmastery_MCP_Site_Kit {
 
 		$allowed = call_user_func( $callback, $request );
 		if ( is_wp_error( $allowed ) || false === $allowed || null === $allowed ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Google Site Kit does not permit the current user to access this data.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', self::FORBIDDEN_GUIDANCE );
 		}
 
 		return true;
@@ -393,7 +406,8 @@ class Webmastery_MCP_Site_Kit {
 				$data['upstream_code'] = sanitize_key( $error->get_error_code() );
 			}
 
-			return Webmastery_MCP_Response::local_error( $code, 'Google Site Kit could not complete the request.', $data );
+			$message = 'forbidden' === $code ? self::FORBIDDEN_GUIDANCE : 'Google Site Kit could not complete the request.';
+			return Webmastery_MCP_Response::local_error( $code, $message, $data );
 		}
 
 		$data = $response->get_data();

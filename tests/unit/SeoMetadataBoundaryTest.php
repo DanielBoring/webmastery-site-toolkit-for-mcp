@@ -157,6 +157,51 @@ final class SeoMetadataBoundaryTest extends TestCase {
 	/**
 	 * @dataProvider score_keys
 	 */
+	public function test_scores_default_to_published_content_and_preserve_explicit_status_filters( string $slug, string $key ): void {
+		$this->seed_overview();
+		Probe::$posts = array_slice( Probe::$posts, 0, 6, true );
+		foreach ( array( 'publish', 'draft', 'pending', 'private', 'future', 'publish' ) as $index => $status ) {
+			$id = $index + 1;
+			Probe::$posts[ $id ]->post_status = $status;
+			Probe::$metadata[ $id ][ $key ] = (string) $id;
+		}
+		$ability = Probe::$abilities[ 'webmastery-site-toolkit-for-mcp/' . $slug ];
+		self::assertSame( 'publish', $ability['input_schema']['properties']['status']['default'] );
+		foreach ( array( '' => array( 1, 6 ), 'any' => range( 1, 6 ), 'draft' => array( 2 ), 'pending' => array( 3 ), 'private' => array( 4 ), 'future' => array( 5 ) ) as $status => $expected ) {
+			$input = '' === $status ? array() : array( 'status' => $status );
+			$result = $this->execute( $slug, $input );
+			self::assertTrue( $result['success'] );
+			self::assertSame( $expected, array_column( $result['data']['items'], 'post_id' ) );
+			self::assertSame( '' === $status ? 'publish' : $status, end( Probe::$queries )['post_status'] );
+			self::assertNull( $result['data']['next_page'] );
+			self::assertArrayNotHasKey( 'total', $result['data'] );
+			self::assertArrayNotHasKey( 'total_pages', $result['data'] );
+		}
+		foreach ( array( array(), array( 'status' => 'any' ), array( 'status' => 'private' ) ) as $input ) {
+			Probe::$reads = array();
+			Probe::$denied_objects = array( 1, 4 );
+			Probe::$denied_by_id[6] = array( $key );
+			$result = $this->execute( $slug, $input );
+			self::assertSame( array(), array_intersect( array( 1, 4, 6 ), array_column( $result['data']['items'], 'post_id' ) ) );
+			foreach ( Probe::$reads as $read ) {
+				self::assertNotContains( $read[0], array( 1, 4, 6 ), 'Denied object/key must never be read.' );
+			}
+		}
+		Probe::$deny_base = true;
+		Probe::$queries = Probe::$reads = array();
+		foreach ( array( array(), array( 'status' => 'any' ), array( 'status' => 'draft' ), array( 'status' => 'pending' ), array( 'status' => 'private' ) ) as $input ) {
+			self::assertInstanceOf( WP_Error::class, ( $ability['permission_callback'] )( $input ) );
+			$result = $this->execute( $slug, $input );
+			self::assertFalse( $result['success'] );
+			self::assertSame( 'forbidden', $result['error']['code'] );
+		}
+		self::assertSame( array(), Probe::$queries );
+		self::assertSame( array(), Probe::$reads );
+	}
+
+	/**
+	 * @dataProvider score_keys
+	 */
 	public function test_scores_filter_key_permissions_within_candidate_windows( string $slug, string $key ): void {
 		$this->seed_overview();
 		for ( $id = 1; $id <= 101; $id++ ) {

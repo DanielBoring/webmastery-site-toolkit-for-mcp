@@ -59,14 +59,14 @@ final class DestructiveNativeBoundaryTest extends TestCase {
 		return $input;
 	}
 
-	private function assert_error( $result, string $code, string $reason, string $message ): void {
+	private function assert_error( $result, string $code, string $reason, string $message, array $details = array() ): void {
 		self::assertIsArray( $result );
 		self::assertSame( array( 'success', 'error' ), array_keys( $result ) );
 		self::assertFalse( $result['success'] );
 		self::assertSame( array( 'code', 'reason', 'message', 'details' ), array_keys( $result['error'] ) );
 		self::assertSame( array( $code, $reason, $message ), array_values( array_diff_key( $result['error'], array( 'details' => true ) ) ) );
 		self::assertInstanceOf( stdClass::class, $result['error']['details'] );
-		self::assertSame( array(), get_object_vars( $result['error']['details'] ) );
+		self::assertSame( $details, get_object_vars( $result['error']['details'] ) );
 	}
 
 	/** @dataProvider manifest_inputs */
@@ -90,7 +90,7 @@ final class DestructiveNativeBoundaryTest extends TestCase {
 			Probe::$events = array();
 			$ability = new Webmastery_MCP_Ability( $name, $args );
 			$result = $ability->execute( $input );
-			$this->assert_error( $result, 'invalid_input', 'ability_invalid_input', 'Ability input does not match its schema.' );
+			$this->assert_error( $result, 'invalid_input', 'ability_invalid_input', 'Ability input does not match its schema.', array( 'field' => '$.' . $history['flag'], 'reason' => 'type' ) );
 			self::assertSame( array( 1, 0, 0 ), array( $ability->parent_validations, $ability->permission_calls, $ability->execute_calls ) );
 			self::assertSame( array(
 				'wp_ability_invoked', 'wp_pre_execute_ability', 'normalize_input',
@@ -102,7 +102,7 @@ final class DestructiveNativeBoundaryTest extends TestCase {
 			$permission = $ability->check_permissions( $input );
 			self::assertInstanceOf( WP_Error::class, $permission );
 			self::assertSame( 'invalid_input', $permission->get_error_code() );
-			$this->assert_error( Webmastery_MCP_Response::from_wp_error( $permission ), 'invalid_input', 'ability_invalid_input', 'Ability input does not match its schema.' );
+			$this->assert_error( Webmastery_MCP_Response::from_wp_error( $permission ), 'invalid_input', 'ability_invalid_input', 'Ability input does not match its schema.', array( 'field' => '$.' . $history['flag'], 'reason' => 'type' ) );
 			self::assertSame( array(), Probe::$events, 'Raw permission rejection must not invoke original authorization.' );
 			self::assertSame( $before, Probe::snapshot() );
 

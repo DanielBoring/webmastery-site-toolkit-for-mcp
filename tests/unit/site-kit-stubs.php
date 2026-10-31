@@ -51,24 +51,33 @@ final class Wstm125RestServer {
 
 function wstm125_permission( $request ) {
 	++$GLOBALS['wstm125']['calls']['permission'];
+	$GLOBALS['wstm125']['permission_requests'][] = array( $request->path, $request->params );
+	if ( ( $GLOBALS['wstm125']['denied_path'] ?? null ) === $request->path ) {
+		return false;
+	}
 	switch ( $GLOBALS['wstm125']['mode'] ) {
 		case 'false':
 			return false;
 		case 'null':
 			return null;
 		case 'error':
-			return new WP_Error( 'upstream_denied', 'Fixture denial.' );
+			return new WP_Error( 'upstream_denied', 'PRIVATE provider message', array( 'context' => 'PRIVATE provider data' ) );
 		default:
 			return true;
 	}
 }
 
 function rest_do_request( $request ) {
+	$GLOBALS['wstm125']['dispatch_paths'][] = $request->path;
 	// WordPress skips absent permission callbacks; the adapter must fail closed first.
 	$allowed = 'missing-callback' === $GLOBALS['wstm125']['mode'] ? true : wstm125_permission( $request );
 	$error = is_wp_error( $allowed ) || false === $allowed || null === $allowed;
+	if ( $request->path === ( $GLOBALS['wstm125']['error_path'] ?? '' ) ) {
+		$error = true;
+	}
 	if ( ! $error ) {
 		++$GLOBALS['wstm125']['calls']['data'];
+		$GLOBALS['wstm125']['data_requests'][] = array( $request->path, $request->params );
 	}
 	return new Wstm125RestResponse( $error, $request->path );
 }
@@ -84,10 +93,10 @@ final class Wstm125RestResponse {
 		return $this->error;
 	}
 	public function get_status() {
-		return $this->error ? 403 : 200;
+		return $this->error ? ( $GLOBALS['wstm125']['error_status'] ?? 403 ) : 200;
 	}
 	public function as_error() {
-		return new WP_Error( 'upstream_denied', 'Fixture denial.' );
+		return new WP_Error( 'PRIVATE_provider_code', 'PRIVATE provider message', array( 'context' => 'PRIVATE provider data' ) );
 	}
 	public function get_data() {
 		return str_ends_with( $this->path, '/core/modules/data/list' )

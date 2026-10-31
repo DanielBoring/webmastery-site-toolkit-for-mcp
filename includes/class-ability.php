@@ -9,6 +9,7 @@ final class Webmastery_MCP_Ability extends WP_Ability {
 	public function validate_input( $input = null ) {
 		$result = parent::validate_input( $input );
 		if ( is_wp_error( $result ) ) {
+			Webmastery_MCP_Input::annotate_error( $result, $input, $this->get_input_schema() );
 			return $result;
 		}
 		$schema = $this->get_input_schema();

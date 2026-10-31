@@ -43,6 +43,11 @@ final class PostsExtractionTest extends TestCase {
 				unset( $current['input_schema']['properties']['fields'] );
 				$current['description'] = $definition['description'];
 			}
+			if ( in_array( $name, array( 'webmastery-site-toolkit-for-mcp/set-featured-image', 'webmastery-site-toolkit-for-mcp/remove-featured-image' ), true ) ) {
+				self::assertSame( array( 'full', 'compact' ), $current['input_schema']['properties']['response_format']['enum'] );
+				self::assertSame( 'full', $current['input_schema']['properties']['response_format']['default'] );
+				unset( $current['input_schema']['properties']['response_format'] );
+			}
 			unset( $definition['execute_callback'], $definition['permission_callback'], $current['execute_callback'], $current['permission_callback'] );
 			self::assertSame( $definition, $current, $name );
 		}
@@ -108,6 +113,46 @@ final class PostsExtractionTest extends TestCase {
 			self::assertSame( $calls, State::$calls, $name );
 			self::assertFalse( $before['success'] );
 		}
+	}
+
+	public function testClassicInspectionRetainsBlocksHashesAndPermissionBoundaries(): void {
+		$definition = Registrations::$after['webmastery-site-toolkit-for-mcp/list-content-blocks'];
+		$paragraph = '<!-- wp:paragraph --><p>Block</p><!-- /wp:paragraph -->';
+		foreach ( array( '<h2>Classic</h2>', '', " \n\t", $paragraph, '<p>Raw</p>' . $paragraph, '<!-- wp:freeform --><p>Classic block</p><!-- /wp:freeform -->', '<!-- wp:broken' ) as $index => $content ) {
+			$classic = $index < 3;
+			$block = array( 'blockName' => $classic ? null : 'core/paragraph', 'innerHTML' => $content, 'innerBlocks' => array(), 'attrs' => array() );
+			$GLOBALS['wstm207_blocks'] = array( $block );
+			foreach ( array( 'post', 'page' ) as $type ) {
+				State::$posts = array( 42 => (object) array( 'ID' => 42, 'post_type' => $type, 'post_content' => $content ) );
+				$input = array( 'content_id' => 42, 'content_type' => $type );
+				State::$allowed = true;
+				self::assertTrue( $definition['permission_callback']( $input ) );
+				$result = $definition['execute_callback']( $input );
+				self::assertTrue( $result['success'] );
+				$data = $result['data'];
+				self::assertSame( $classic, $data['is_classic'] );
+				self::assertSame( hash( 'sha256', $content ), $data['content_hash'] );
+				self::assertSame( $classic, array_key_exists( 'hint', $data ) );
+				if ( $classic ) {
+					self::assertSame( 'This post has no block markup. Use patch-post-content with target_type exact to change part of it.', $data['hint'] );
+				}
+				if ( $classic && '' === trim( $content ) ) {
+					self::assertSame( array(), $data['blocks'] );
+				} else {
+					self::assertSame( array( array( 'path' => '0', 'block_name' => $block['blockName'], 'text' => trim( strip_tags( $content ) ), 'html' => $content, 'attrs' => array(), 'inner_block_count' => 0, 'hash' => hash( 'sha256', $content ), 'untrusted_fields' => array( 'block_name', 'text', 'html', 'attrs' ) ) ), $data['blocks'] );
+				}
+				self::assertArrayNotHasKey( 'untrusted_fields', $data );
+				State::$allowed = false;
+				Registrations::$reads = array();
+				self::assertInstanceOf( WP_Error::class, $definition['permission_callback']( $input ) );
+				$denied = $definition['execute_callback']( $input );
+				self::assertFalse( $denied['success'] );
+				self::assertArrayNotHasKey( 'data', $denied );
+				self::assertNotContains( 'has_blocks', Registrations::$reads );
+				self::assertNotContains( 'parse_blocks', Registrations::$reads );
+			}
+		}
+		unset( $GLOBALS['wstm207_blocks'] );
 	}
 
 	public function testAllFeatureRegistrationMethodsRemainAtTheirCurrentOwners(): void {

@@ -81,6 +81,48 @@ try {
 	$ability = wp_get_ability( $name );
 	webmastery_mcp_e2e_assert( $ability instanceof Webmastery_MCP_Ability, 'Owned ability class was not installed.' );
 	webmastery_mcp_e2e_assert( ! wp_get_ability( 'wstm118-foreign/probe' ) instanceof Webmastery_MCP_Ability, 'Foreign ability class was intercepted.' );
+	// Additive #203 cases belong to this error stage, not the frozen 152-case schema stage.
+	$diagnostic_cases = array(
+		'required' => array( array(), '$.diagnostic.strategy', 'required' ),
+		'unknown' => array( array( 'strategy' => 'mobile', 'WSTM118_PRIVATE_SENTINEL key' => 'private value' ), '$.diagnostic.*', 'unknown_property' ),
+		'enum' => array( array( 'strategy' => 'WSTM118_PRIVATE_SENTINEL value' ), '$.diagnostic.strategy', 'enum' ),
+		'item-type' => array( array( 'strategy' => 'mobile', 'rows' => array( '1' ) ), '$.diagnostic.rows[]', 'type' ),
+		'item-bound' => array( array( 'strategy' => 'mobile', 'rows' => array( 0 ) ), '$.diagnostic.rows[]', 'bounds' ),
+		'array-bound' => array( array( 'strategy' => 'mobile', 'rows' => array() ), '$.diagnostic.rows', 'bounds' ),
+		'map-key' => array( array( 'strategy' => 'mobile', 'map' => array( 'WSTM118_PRIVATE_SENTINEL key' => 'private value' ) ), '$.diagnostic.map.*', 'type' ),
+	);
+	foreach ( $diagnostic_cases as $label => [ $diagnostic, $field, $reason ] ) {
+		$input = array( 'diagnostic' => (object) $diagnostic );
+		$expected = array( 'field' => $field, 'reason' => $reason );
+		foreach ( array( 'direct', 'permission', 'validation', 'ability', 'gateway', 'individual' ) as $boundary ) {
+			$record( "{$boundary}/input-diagnostic/{$label}", static function () use ( $boundary, $ability, $input, $expected, $call, $name, $assert_reason ) {
+				$GLOBALS['wstm118_counts'] = array_fill_keys( array( 'permission', 'execute', 'before', 'after' ), 0 );
+				$before = serialize( $input );
+				if ( in_array( $boundary, array( 'gateway', 'individual' ), true ) ) {
+					$result = wstm118_wire_error( $call( $boundary, $name, $input ) );
+				} elseif ( 'direct' === $boundary ) {
+					$callback = new ReflectionProperty( WP_Ability::class, 'execute_callback' );
+					$callback->setAccessible( true );
+					$result = ( $callback->getValue( $ability ) )( $input );
+				} elseif ( 'permission' === $boundary ) {
+					$result = Webmastery_MCP_Response::from_wp_error( $ability->check_permissions( $input ) );
+				} elseif ( 'validation' === $boundary ) {
+					$native = $ability->validate_input( $input );
+					webmastery_mcp_e2e_assert( is_wp_error( $native ) && 'ability_invalid_input' === $native->get_error_code(), 'Native validation error changed.' );
+					$result = Webmastery_MCP_Response::from_wp_error( $native );
+				} else {
+					$result = $ability->execute( $input );
+				}
+				$assert_reason( $result, 'ability_invalid_input' );
+				webmastery_mcp_e2e_assert( $expected === (array) $result['error']['details'], 'Safe input diagnostic did not survive the boundary.' );
+				webmastery_mcp_e2e_assert( $before === serialize( $input ), 'Input diagnostic mutated caller input.' );
+				if ( ! in_array( $boundary, array( 'gateway', 'individual' ), true ) ) {
+					webmastery_mcp_e2e_assert( array_fill_keys( array( 'permission', 'execute', 'before', 'after' ), 0 ) === $GLOBALS['wstm118_counts'], 'Invalid input reached the original callback or action.' );
+				}
+				return array( 'field' => $expected['field'], 'reason' => $expected['reason'] );
+			} );
+		}
+	}
 	foreach ( array( 'execute', 'permission' ) as $kind ) {
 		$record( "registration/{$kind}-callback", static function () use ( $kind ) {
 			$evidence = $GLOBALS['wstm118_registration'][ $kind ];

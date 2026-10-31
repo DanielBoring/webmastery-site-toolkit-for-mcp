@@ -38,6 +38,14 @@ final class TaxonomyCalibrationTest extends TestCase {
 		return Wstm117Calibration\json( $value );
 	}
 
+	private function diagnostic_oracle( stdClass $oracle ): stdClass {
+		$expected = json_decode( $this->typed( $oracle ), false, 512, JSON_THROW_ON_ERROR );
+		if ( 'ability_invalid_input' === $expected->error->reason ) {
+			$expected->error->details = (object) array( 'field' => '$.*', 'reason' => 'unknown_property' );
+		}
+		return $expected;
+	}
+
 	public function test_pinned_ledger_derives_exact_156_to_164_classification_without_git_or_network(): void {
 		$ledger = $this->ledger();
 		self::assertSame( $this->typed( $ledger ), $this->typed( Wstm117Calibration\derive( $ledger ) ) );
@@ -87,7 +95,7 @@ final class TaxonomyCalibrationTest extends TestCase {
 				$evidence = $row['evidence'];
 				self::assertSame( $this->typed( $pair->$input_key ), $this->typed( $evidence['input'] ) );
 				self::assertSame( $this->typed( $pair->$input_key ), $this->typed( $call['input'] ) );
-				self::assertSame( $this->typed( $pair->$oracle_key ), $this->typed( $evidence['result'] ) );
+				self::assertSame( $this->typed( $this->diagnostic_oracle( $pair->$oracle_key ) ), $this->typed( $evidence['result'] ) );
 				self::assertSame( $pair->path, $call['path'] );
 				self::assertSame( $pair->actor, $evidence['actor'] );
 				self::assertSame( $pair->capability->name, $evidence['capability'] );
@@ -140,7 +148,7 @@ final class TaxonomyCalibrationTest extends TestCase {
 		foreach ( $records as $i => $row ) {
 			self::assertFalse( $row['passed'] );
 			self::assertSame( $this->ledger()->calibration_pairs[ $i ]->label, $row['label'] );
-			self::assertSame( $this->typed( $this->ledger()->calibration_pairs[ $i ]->new_original_oracle ), $this->typed( $row['evidence'] ) );
+			self::assertSame( $this->typed( $this->diagnostic_oracle( $this->ledger()->calibration_pairs[ $i ]->new_original_oracle ) ), $this->typed( $row['evidence'] ) );
 			self::assertSame( array(), Probe::$calls[ $i ]['events'] );
 			self::assertSame( Probe::$calls[ $i ]['before'], Probe::$calls[ $i ]['after'] );
 		}
@@ -155,7 +163,7 @@ final class TaxonomyCalibrationTest extends TestCase {
 			$error = $args['permission_callback']( (array) $pair->original_input );
 			self::assertInstanceOf( WP_Error::class, $error );
 			self::assertSame( 'invalid_input', $error->get_error_code() );
-			self::assertSame( $this->typed( $pair->new_original_oracle ), $this->typed( json_decode( $error->get_error_message(), false, 512, JSON_THROW_ON_ERROR ) ) );
+			self::assertSame( $this->typed( $this->diagnostic_oracle( $pair->new_original_oracle ) ), $this->typed( json_decode( $error->get_error_message(), false, 512, JSON_THROW_ON_ERROR ) ) );
 			self::assertSame( array(), Probe::$events );
 			self::assertTrue( $args['permission_callback']( (array) $pair->minimal_input ) );
 			self::assertSame( $this->typed( $pair->new_minimal_oracle ), $this->typed( $args['execute_callback']( (array) $pair->minimal_input ) ) );

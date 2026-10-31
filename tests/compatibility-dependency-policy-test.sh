@@ -2,6 +2,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+policy_test_root="$root"
 matrix="$(php "$root/scripts/compatibility-matrix.php" "$root/.github/compatibility-versions.json" "$root/.github/compatibility-versions.json")"
 grep -F '"label":"wp69-php81-compatibility","wordpress-image":"wordpress:6.9-php8.1-apache"' <<< "$matrix" >/dev/null
 if grep -Eq '"label":"supported-floor"|wordpress:6\.9-php8\.0-apache' <<< "$matrix"; then
@@ -52,7 +53,25 @@ wp() { printf '%s\n' "$*"; }
 MCP_ADAPTER_ZIP=https://example.invalid/adapter.zip
 MCP_ADAPTER_SHA256=unused-by-mocked-transport
 
+# Model a later global promotion: the real loader must still select the
+# independently maintained WordPress 6.9 pins, never the global SEO versions.
+baseline() {
+	case "$1" in
+		yoast) printf '%s\n' '99.1' ;;
+		seopress) printf '%s\n' '99.2' ;;
+		*) host_php "$policy_test_root/scripts/compatibility-baselines.php" "$1" ;;
+	esac
+}
+DEPENDENCY_POLICY=wp69-seo
+load_dependencies
+[[ "$YOAST_VERSION" == "$(baseline wp69_yoast)" && "$SEOPRESS_VERSION" == "$(baseline wp69_seopress)" ]]
+output="$(install_plugins)"
+grep -Fx "plugin install wordpress-seo --version=$(baseline wp69_yoast) --activate --force" <<< "$output"
+grep -Fx "plugin install wp-seopress --version=$(baseline wp69_seopress) --activate --force" <<< "$output"
+
 DEPENDENCY_POLICY=pinned
+load_dependencies
+[[ "$YOAST_VERSION" == 99.1 && "$SEOPRESS_VERSION" == 99.2 ]]
 YOAST_VERSION=28.5
 SEOPRESS_VERSION=10.2
 output="$(install_plugins)"
@@ -60,8 +79,8 @@ grep -Fx 'plugin install wordpress-seo --version=28.5 --activate --force' <<< "$
 grep -Fx 'plugin install wp-seopress --version=10.2 --activate --force' <<< "$output"
 
 DEPENDENCY_POLICY=latest-seo
-YOAST_VERSION=latest
-SEOPRESS_VERSION=latest
+load_dependencies
+[[ "$YOAST_VERSION" == latest && "$SEOPRESS_VERSION" == latest ]]
 output="$(install_plugins)"
 grep -Fx 'plugin install wordpress-seo --activate --force' <<< "$output"
 grep -Fx 'plugin install wp-seopress --activate --force' <<< "$output"
@@ -69,6 +88,11 @@ if grep -q -- '--version=' <<< "$output"; then
 	echo 'Floating SEO must omit --version rather than request a release literally named latest.' >&2
 	exit 1
 fi
+if ( DEPENDENCY_POLICY=unknown; load_dependencies ) >/dev/null 2>&1; then
+	echo 'Unknown dependency policies must fail instead of installing floating SEO.' >&2
+	exit 1
+fi
+grep -Fx 'export DEPENDENCY_POLICY=wp69-seo' "$policy_test_root/scripts/qa-floor.sh" >/dev/null
 assert_cron_isolated() {
 	if [ "$cron_configured" != 1 ]; then
 		echo 'Request-triggered cron must be disabled before bootstrap and fixtures.' >&2

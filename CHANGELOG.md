@@ -6,8 +6,35 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+### Added
+
+- Add opt-in compact featured-image confirmations with previous/current IDs and
+  a permission-guarded nullable URL. Full responses remain the default.
+- Flag Classic content in List Content Blocks and guide partial edits to Patch
+  Post Content without changing block values, hashes or permissions.
+
+### Fixed
+
+- Correct SEO Analyze Post link counts across bare/www hosts, HTTP/HTTPS,
+  protocol-relative URLs and relative references. Compare complete hostnames
+  and exclude non-web schemes from internal/external counts.
+
 ### Changed
 
+- Add bounded schema field paths and failure reasons to invalid-input errors
+  across native and MCP calls, without echoing input values or unknown keys.
+
+- Default PageSpeed analysis to mobile when the strategy is omitted, including
+  empty-input calls. Explicit desktop analysis and Site Kit permissions are unchanged.
+- Explain Site Kit access denials with possible Dashboard sharing or Google
+  sign-in/reauthentication causes, the dashboard sharing location, and authorized
+  status/permission diagnostics. Preserve existing authorization and error
+  privacy without extra diagnostic reads after denial.
+
+
+- Breaking: default SEO and readability score audits to published posts/pages.
+  Clients needing the previous scope must explicitly request `status:"any"`;
+  specific status filters, permissions and bounded pagination are unchanged.
 - Update the documentation links in `readme.txt` for the reorganized `docs/`
   folder (3.0 migration guide, MCP Adapter 0.7 assessment and agent threat
   model). The links on the 3.0.0 WordPress.org plugin page point to the old

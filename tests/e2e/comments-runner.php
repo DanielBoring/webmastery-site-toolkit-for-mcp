@@ -199,7 +199,9 @@ try {
 							$message = ! $moderate ? 'Requires moderate_comments capability.' : 'Requires edit_comment capability for this comment.';
 						}
 						wstm105_assert( $reason === wstm118_error_reason( $result ), 'Wrong canonical failure reason.' );
-						wstm105_assert( $message === $result['error']['message'] && '{}' === wp_json_encode( $result['error']['details'] ), 'Error message or empty details changed.' );
+						$details = 'fixed' === $mode && 'ability_invalid_input' === $reason
+							? array( 'field' => '$.comment_id', 'reason' => 'missing_id' === $invalid ? 'required' : 'type' ) : array();
+						wstm105_assert( $message === $result['error']['message'] && $details === (array) $result['error']['details'], 'Error message or schema details changed.' );
 						if ( 'http' === $boundary ) {
 							wstm105_assert( wp_json_encode( $result ) === $raw['content'][0]['text'], 'Canonical raw MCP error text changed.' );
 						}

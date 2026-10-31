@@ -41,7 +41,24 @@ final class CommentsCalibrationTest extends TestCase {
 		return Wstm105Calibration\json( $value );
 	}
 
-	private function assert_error( $actual, $expected ): void {
+	private function assert_error( $actual, $expected, $input = null, string $action = '' ): void {
+		if ( 'ability_invalid_input' === $expected->reason ) {
+			// Preserve the historical sealed oracle; add only independently expected #203 details.
+			$expected = clone $expected;
+			$field = '$.comment_id';
+			$reason = 'required';
+			if ( ! is_array( $input ) && ! $input instanceof stdClass ) {
+				$field = '$';
+				$reason = 'type';
+			} elseif ( array_key_exists( 'comment_id', (array) $input ) ) {
+				if ( 'update' === $action && ! array_key_exists( 'content', (array) $input ) ) {
+					$field = '$.content';
+				} else {
+					$reason = 'type';
+				}
+			}
+			$expected->details = (object) array( 'field' => $field, 'reason' => $reason );
+		}
 		self::assertSame( $this->typed( (object) array( 'success' => false, 'error' => $expected ) ), $this->typed( $actual ) );
 	}
 
@@ -156,8 +173,11 @@ final class CommentsCalibrationTest extends TestCase {
 
 	private function assert_ability_provenance_bridge( string $source, string $historical_hash ): void {
 		$source = str_replace( "\r\n", "\n", $source );
-		self::assertSame( '9a237e25baa11fc823fcdaee45277d1ca9462ca04af462e33dede511bdb0edf5', hash( 'sha256', $source ), 'Current Ability source drift.' );
-		self::assertSame( '2214514af8462ddefdf63a87f26040d990e21aa3', hash( 'sha1', 'blob ' . strlen( $source ) . "\0" . $source ), 'Current Ability Git blob drift.' );
+		$binding = wstm_test_product_binding( 'includes/class-ability.php' );
+		self::assertSame( $binding[0], hash( 'sha256', $source ), 'Current Ability source drift.' );
+		self::assertSame( $binding[1], hash( 'sha1', 'blob ' . strlen( $source ) . "\0" . $source ), 'Current Ability Git blob drift.' );
+		$source = str_replace( "\t\t\tWebmastery_MCP_Input::annotate_error( \$result, \$input, \$this->get_input_schema() );\n", '', $source, $diagnostics );
+		self::assertSame( 1, $diagnostics, 'Reverse exactly the approved diagnostic association, retaining the parent error return.' );
 		$restored = str_replace( self::ABILITY_PERMISSION_ANCHOR . self::ABILITY_DEFAULT_GUARD, self::ABILITY_PERMISSION_ANCHOR, $source, $replacements );
 		self::assertSame( 1, $replacements, 'Reverse exactly one approved four-line addition at check_permissions.' );
 		self::assertSame( '9591998817fa5feb17cb08cd2f93e023f21a720d7b4b4b05875dbb4ff9993c78', hash( 'sha256', $restored ), 'Restored historical Ability source drift.' );
@@ -315,7 +335,7 @@ final class CommentsCalibrationTest extends TestCase {
 			if ( $row->schema_invalid ) {
 				self::assertInstanceOf( WP_Error::class, $permission );
 				self::assertSame( 'invalid_input', $permission->get_error_code() );
-				$this->assert_error( json_decode( $permission->get_error_message(), false, 512, JSON_THROW_ON_ERROR ), $row->new_permission->decoded );
+				$this->assert_error( json_decode( $permission->get_error_message(), false, 512, JSON_THROW_ON_ERROR ), $row->new_permission->decoded, $input, $row->action );
 				self::assertSame( array(), Probe::$events, $row->label . ':original callbacks/capabilities/queries' );
 				++$schema_rejected;
 			} else {
@@ -323,7 +343,7 @@ final class CommentsCalibrationTest extends TestCase {
 				self::assertSame( array( 'permission_callback', array( 'cap', 'moderate_comments', array() ), 'execute_callback', array( 'cap', 'moderate_comments', array() ) ), Probe::$events );
 				++$deferred;
 			}
-			$this->assert_error( $result, $row->new_execute );
+			$this->assert_error( $result, $row->new_execute, $input, $row->action );
 			self::assertSame( $before, Probe::snapshot(), $row->label . ':no write' );
 		}
 		self::assertSame( array( 41, 3 ), array( $schema_rejected, $deferred ) );
@@ -350,7 +370,7 @@ final class CommentsCalibrationTest extends TestCase {
 				$result = (array) $decoded;
 				$result['error'] = (array) $decoded->error;
 			}
-			$this->assert_error( $result, $row->new );
+			$this->assert_error( $result, $row->new, $row->input, $row->action );
 			Wstm105Calibration\assert_runner_response( $this->runner(), $row, $result );
 			try {
 				Wstm105Calibration\assert_runner_response( $old, $row, $result );
@@ -390,7 +410,7 @@ final class CommentsCalibrationTest extends TestCase {
 			Wstm105Calibration\seed();
 			Probe::reset();
 			$before = Probe::snapshot();
-			$this->assert_error( $ability->execute( (array) $row->input ), $row->old );
+			$this->assert_error( $ability->execute( (array) $row->input ), $row->old, $row->input, $row->action );
 			self::assertFalse( $row->changed );
 			self::assertSame( $this->typed( $row->old ), $this->typed( $row->new ) );
 			self::assertSame( array( 1, 0, 0 ), array( $ability->parent_validations, $ability->permission_calls, $ability->execute_calls ) );
@@ -430,7 +450,7 @@ final class CommentsCalibrationTest extends TestCase {
 					self::assertSame( 42, $result['data']['id'] );
 					self::assertSame( $status, $result['data']['status'] );
 				} else {
-					$this->assert_error( $result, $row->new );
+					$this->assert_error( $result, $row->new, $row->input, $row->action );
 					self::assertSame( $before, Probe::snapshot(), $row->label );
 				}
 				if ( in_array( $row->invalid, array( 'zero', 'negative_missing', 'negative_existing', 'global_zero' ), true ) ) {

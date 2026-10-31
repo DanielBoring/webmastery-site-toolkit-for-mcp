@@ -72,7 +72,8 @@ function wstm117_delete_missing_pair( $ability, $execute, $input, $taxonomy, $sl
 		}
 		$passed = null === $oracle_failure && $reason === $actual_reason
 			&& ( $schema_negative ? 'invalid_input' : 'not_found' ) === $result['error']['code']
-			&& $message === $result['error']['message'] && '{}' === wp_json_encode( $result['error']['details'] )
+			&& $message === $result['error']['message']
+			&& ( $schema_negative ? array( 'field' => '$.*', 'reason' => 'unknown_property' ) : array() ) === (array) $result['error']['details']
 			&& $before === $after && array() === $hooks && $actor === get_current_user_id()
 			&& true === $can_delete && true === current_user_can( $capability )
 			&& ( ! $schema_negative || ( 0 === $cap_calls && 0 === $query_calls ) );

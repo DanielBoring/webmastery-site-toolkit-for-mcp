@@ -16,7 +16,9 @@
 			<file>tests/unit/DatabaseTablePrivacyTest.php</file>
 			<file>tests/unit/DestructiveSafetyTest.php</file>
 			<file>tests/unit/DiagnosticsTest.php</file>
+			<file>tests/unit/FeaturedImageTest.php</file>
 			<file>tests/unit/InputBoundaryTest.php</file>
+			<file>tests/unit/InputDiagnosticsTest.php</file>
 			<file>tests/unit/MediaUrlTest.php</file>
 			<file>tests/unit/MetadataBoundaryTest.php</file>
 			<file>tests/unit/NativeInputValidationTest.php</file>

@@ -192,16 +192,22 @@ final class Webmastery_MCP_Content_Patch {
 					return Webmastery_MCP_Response::from_wp_error( $post );
 				}
 
-				$blocks = self::parse_editable_blocks( $post->post_content );
+				$blocks     = self::parse_editable_blocks( $post->post_content );
+				$is_classic = ! has_blocks( $post->post_content );
+				$data       = [
+					'id'           => $post->ID,
+					'type'         => $post->post_type,
+					'content_hash' => self::content_hash( $post->post_content ),
+					'blocks'       => self::flatten_blocks( $blocks ),
+					'is_classic'   => $is_classic,
+				];
+				if ( $is_classic ) {
+					$data['hint'] = 'This post has no block markup. Use patch-post-content with target_type exact to change part of it.';
+				}
 
 				return [
 					'success' => true,
-					'data'    => [
-						'id'           => $post->ID,
-						'type'         => $post->post_type,
-						'content_hash' => self::content_hash( $post->post_content ),
-						'blocks'       => self::flatten_blocks( $blocks ),
-					],
+					'data'    => $data,
 				];
 			},
 			'permission_callback' => Webmastery_MCP_Post_Access::content_permission(),

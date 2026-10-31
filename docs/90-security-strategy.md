@@ -149,6 +149,12 @@ REST dispatch. Roles alone cannot grant provider access; inactive or unavailable
 routes can deny Administrators. Fixtures do not establish real-provider
 compatibility; see [supported operations](reference/ability-contracts.md#google-site-kit).
 
+Provider permission denials and REST 401/403 use bounded, plugin-authored
+guidance about possible Dashboard sharing or Google sign-in requirements.
+No diagnostic routes are read to infer a cause after denial. Local capability
+failures stay generic, unusable upstream checks fail closed, and canonical
+errors continue to omit provider messages, codes and data.
+
 ## Image URL download safeguards
 
 The existing `wp_max_upload_size()` limit is enforced during retrieval: the temporary file is capped at the limit plus one sentinel byte, and oversized responses are cancelled instead of drained. The actual file size and allowed image MIME are still checked before sideloading. Empty files, incomplete PNG/JPEG/GIF headers, HTTP length mismatches, and failed integrity checks are rejected; image headers/dimensions are not proof of complete image integrity. Generic or incorrect HTTP Content-Type alone does not reject valid image bytes. Zero, invalid, or overflowing upload limits return `invalid_upload_limit` rather than disabling the bound.

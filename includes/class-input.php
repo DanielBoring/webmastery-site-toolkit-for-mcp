@@ -6,6 +6,13 @@ defined( 'ABSPATH' ) || exit;
  * Validate raw callback input without coercion, queries, or capability hooks.
  */
 final class Webmastery_MCP_Input {
+	/**
+	 * Schema-derived diagnostics tied to error identity, never error data.
+	 *
+	 * @var WeakMap<WP_Error, array{field: string, reason: string}>|null
+	 */
+	private static ?WeakMap $diagnostics = null;
+
 	public static function per_page( array $input, int $default_per_page = 20, int $maximum = 100, ?int $minimum = 1 ): int {
 		$value = (int) ( $input['per_page'] ?? $default_per_page );
 		return min( null === $minimum ? $value : max( $minimum, $value ), $maximum );
@@ -107,13 +114,63 @@ final class Webmastery_MCP_Input {
 	}
 
 	public static function validate( $value, array $schema ): ?WP_Error {
-		if ( ! self::matches( $value, $schema ) ) {
-			return Webmastery_MCP_Response::local_error( 'ability_invalid_input', 'Ability input does not match its schema.' );
+		$diagnostic = self::diagnose( $value, $schema );
+		if ( null !== $diagnostic ) {
+			$error = Webmastery_MCP_Response::local_error( 'ability_invalid_input', 'Ability input does not match its schema.' );
+			self::remember( $error, $diagnostic );
+			return $error;
 		}
 		return null;
 	}
 
-	private static function matches( $value, array $schema ): bool {
+	public static function annotate_error( WP_Error $error, $value, array $schema ): void {
+		// Keep the parent object, message and data intact. Never parse its diagnostics.
+		if ( 'ability_invalid_input' === $error->get_error_code() ) {
+			self::remember( $error, self::diagnose( $value, $schema ) );
+		}
+	}
+
+	public static function error_details( WP_Error $error ): array {
+		return 'ability_invalid_input' === $error->get_error_code() ? ( self::$diagnostics[ $error ] ?? [] ) : [];
+	}
+
+	/**
+	 * Replace a diagnostic without retaining its error object.
+	 *
+	 * @param WP_Error                                  $error Error identity.
+	 * @param array{field: string, reason: string}|null $diagnostic Safe schema diagnostic.
+	 */
+	private static function remember( WP_Error $error, ?array $diagnostic ): void {
+		self::$diagnostics ??= new WeakMap();
+		unset( self::$diagnostics[ $error ] );
+		if ( null !== $diagnostic ) {
+			self::$diagnostics[ $error ] = $diagnostic;
+		}
+	}
+
+	private static function child_path( string $path, string $suffix ): string {
+		// Bound output without changing how deeply validation checks the input.
+		if ( '...' === substr( $path, -3 ) ) {
+			return $path;
+		}
+		return strlen( $path . $suffix ) > 240 ? $path . '...' : $path . $suffix;
+	}
+
+	private static function property_path( string $path, $key ): string {
+		// Only declared schema names reach this method; other keys use a wildcard.
+		$suffix = is_string( $key ) && preg_match( '/^[A-Za-z_][A-Za-z0-9_-]{0,63}$/D', $key ) ? '.' . $key : '.*';
+		return self::child_path( $path, $suffix );
+	}
+
+	/**
+	 * Find the first strict failure without reading provider diagnostics.
+	 *
+	 * @param mixed  $value Raw input.
+	 * @param array  $schema Public schema.
+	 * @param string $path Bounded schema path.
+	 * @return array{field: string, reason: string}|null
+	 */
+	private static function diagnose( $value, array $schema, string $path = '$' ): ?array {
 		if ( isset( $schema['type'] ) ) {
 			$valid_type = false;
 			foreach ( (array) $schema['type'] as $type ) {
@@ -123,26 +180,27 @@ final class Webmastery_MCP_Input {
 				}
 			}
 			if ( ! $valid_type ) {
-				return false;
+				return [ 'field' => $path, 'reason' => 'type' ];
 			}
 		}
 		if ( isset( $schema['enum'] ) && ! in_array( $value, $schema['enum'], true ) ) {
-			return false;
+			return [ 'field' => $path, 'reason' => 'enum' ];
 		}
 		if ( is_int( $value ) || is_float( $value ) ) {
 			if ( ( isset( $schema['minimum'] ) && $value < $schema['minimum'] )
 				|| ( isset( $schema['maximum'] ) && $value > $schema['maximum'] ) ) {
-				return false;
+				return [ 'field' => $path, 'reason' => 'bounds' ];
 			}
 		}
 		if ( 'array' === ( $schema['type'] ?? null ) ) {
 			if ( ( isset( $schema['minItems'] ) && count( $value ) < $schema['minItems'] )
 				|| ( isset( $schema['maxItems'] ) && count( $value ) > $schema['maxItems'] ) ) {
-				return false;
+				return [ 'field' => $path, 'reason' => 'bounds' ];
 			}
 			foreach ( $value as $item ) {
-				if ( ! self::matches( $item, $schema['items'] ?? [] ) ) {
-					return false;
+				$diagnostic = self::diagnose( $item, $schema['items'] ?? [], self::child_path( $path, '[]' ) );
+				if ( null !== $diagnostic ) {
+					return $diagnostic;
 				}
 			}
 		}
@@ -150,23 +208,27 @@ final class Webmastery_MCP_Input {
 			$object = (array) $value;
 			foreach ( $schema['required'] ?? [] as $key ) {
 				if ( ! array_key_exists( $key, $object ) ) {
-					return false;
+					$field = array_key_exists( $key, $schema['properties'] ?? [] ) ? self::property_path( $path, $key ) : self::child_path( $path, '.*' );
+					return [ 'field' => $field, 'reason' => 'required' ];
 				}
 			}
 			foreach ( $object as $key => $item ) {
 				if ( array_key_exists( $key, $schema['properties'] ?? [] ) ) {
-					if ( ! self::matches( $item, $schema['properties'][ $key ] ) ) {
-						return false;
+					$diagnostic = self::diagnose( $item, $schema['properties'][ $key ], self::property_path( $path, $key ) );
+					if ( null !== $diagnostic ) {
+						return $diagnostic;
 					}
 				} elseif ( false === ( $schema['additionalProperties'] ?? true ) ) {
-					return false;
-				} elseif ( is_array( $schema['additionalProperties'] ?? null )
-					&& ! self::matches( $item, $schema['additionalProperties'] ) ) {
-					return false;
+					return [ 'field' => self::child_path( $path, '.*' ), 'reason' => 'unknown_property' ];
+				} elseif ( is_array( $schema['additionalProperties'] ?? null ) ) {
+					$diagnostic = self::diagnose( $item, $schema['additionalProperties'], self::child_path( $path, '.*' ) );
+					if ( null !== $diagnostic ) {
+						return $diagnostic;
+					}
 				}
 			}
 		}
-		return true;
+		return null;
 	}
 
 	private static function is_type( $value, string $type ): bool {

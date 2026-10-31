@@ -51,6 +51,10 @@ https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
 
 == Frequently Asked Questions ==
 
+= Why did MCP calls suddenly become unavailable? =
+
+A host or security layer can return an HTML CAPTCHA with HTTP 403, while an expired MCP Adapter session produces a separate session error. Check the actual response; a generic unavailable message alone does not identify the cause. For diagnosis and safe retry guidance, see https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/reference/troubleshooting.md
+
 = Has released 2.6.0 been checked against MCP Adapter 0.7.0? =
 
 Yes. The unchanged 2.6.0 production ZIP passed isolated local HTTP checks against Adapter 0.6.1 and 0.7.0 on WordPress 7.1.2/PHP 8.2 and WordPress 6.9/PHP 8.1. All 75 native-install abilities were discovered and projected as individual tools. Representative reads, draft writes, permission denials and errors passed, including the 2026-07-28 sessionless protocol. These checks do not cover every callback or optional provider. No live or staging site was used. This historical result is separate from 3.0.0 release-package validation.
@@ -70,6 +74,8 @@ Migration matrix and examples: https://github.com/DanielBoring/webmastery-site-t
 Permanent media/category/tag deletion and both bulk post operations now require the exact JSON boolean confirm:true, including bulk previews. Bulk requests accept at most 100 raw IDs and process duplicates once; dry_run:true reports would-act successes without mutation. These explicitly documented changes add a preview marker and media in_use boolean to successful responses.
 
 Post/page/custom-post-type, media, orphan-media, and score lists now return candidate windows with items, page, per_page, and next_page instead of exact total/total_pages. Continue until next_page is null, including after empty or short windows. Existing roles and object/key permissions still apply; per_page caps candidates at 100, not visible results.
+
+In the Unreleased update after 3.0.0, SEO and readability score audits default to published posts/pages (status:"publish"). Explicit status:"any" retains the previous scope across otherwise eligible statuses; specific draft/pending/private/future filters remain available. Keep the same status on every page. This changes the audit selection, not access permissions or pagination.
 
 Post/page/custom-post-type and revision lists default to fields:"summary", which omits content only. Request fields:"full" for unchanged stored content. Excerpts and other values are unchanged; get/write responses stay full. These are not transactional snapshots or constant-time database queries, and summary payloads have no universal byte limit. Orphan-reference queries are batched over bounded candidates; scan errors still block forced media deletion.
 
@@ -114,9 +120,13 @@ Only for the optional Site Kit status, module, permission, and PageSpeed abiliti
 
 Module, permission, and PageSpeed abilities require the WordPress read capability before any upstream work, plus the exact Site Kit route's permission check. Missing providers, routes, or callable permission checks deny access. Read alone is not sufficient; a Subscriber is allowed only when Site Kit also authorizes that user. Status retains its separate manage_options requirement.
 
+Site Kit permission denials and REST 401/403 include guidance about possible Dashboard sharing or Google sign-in/reauthentication requirements. An authorized administrator can review role access using the sharing icon in the Site Kit dashboard header. Status (manage_options required) and permissions diagnostics remain subject to their own authorization. The message does not diagnose a specific cause or trigger additional reads after denial.
+
 The official Site Kit 1.187.0 routes were inspected without Google data calls on a disposable installation. Module-list and permission routes require Site Kit splash or dashboard access; this version's PageSpeed route resolves to Site Kit setup or post-insights access. Effective checks also depend on setup, authentication, sharing, and network state. This does not establish compatibility for every historical version or grant ordinary Subscribers dashboard access. Exact upstream capability names and their version-specific sources are in the [Site Kit route table](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/tests/e2e/README.md#site-kit-permission-regressions); the [Google Site Kit contract](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/reference/ability-contracts.md#google-site-kit) describes how the plugin applies them.
 
 PageSpeed requests are limited to URLs on the current site and are processed by Google's PageSpeed service through Site Kit. Responses omit OAuth scopes and proxy details, module owner identities, screenshots, third-party entity lists, and full Lighthouse payloads.
+
+PageSpeed defaults to the site home URL and the mobile strategy when omitted. Set strategy to desktop for desktop analysis. Explicit null strategy values, other types, and unsupported strategies such as both are rejected.
 
 = Can Subscribers check public webmaster verification? =
 
@@ -238,6 +248,10 @@ Markers accompany data through both gateway and individual tools. The default to
 
 For exact field names and examples, see [Untrusted result fields](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/reference/ability-contracts.md#untrusted-result-fields); for disposable-site checks, see [manual verification](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/tests/e2e/README.md#untrusted-result-fields).
 
+= Can featured-image writes return a small confirmation? =
+
+Set response_format to compact on set-featured-image or remove-featured-image. The success/data record contains post_id, featured_image_id, featured_image_url (null when unavailable or the attachment is not readable under the existing media edit_post gate), previous_featured_image_id and a record-local URL marker. Omitting the option or choosing full preserves the existing normalized post including content. Permissions, attachment eligibility and repeated-call errors stay unchanged. The previous ID supports a separate authorized reversal only while that attachment exists; no deleted media is restored. See the featured-image contract in the full documentation.
+
 = Where is the full documentation? =
 
 The complete ability reference and client setup guide are maintained at:
@@ -260,6 +274,17 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 == Changelog ==
 
 = Unreleased =
+
+* Correct SEO Analyze Post internal/external link counts for bare/www hosts, HTTP/HTTPS, protocol-relative URLs and relative references; exclude non-web schemes and compare complete hostnames.
+* Identify failing schema fields and reasons in invalid-input errors across native and MCP calls, without exposing supplied values or unknown property names.
+* Flag Classic content in List Content Blocks and guide partial edits to Patch Post Content while preserving blocks, hashes and permissions.
+
+* Default PageSpeed analysis to mobile when strategy is omitted, including empty-input calls; retain explicit desktop analysis and Site Kit authorization.
+* Explain Site Kit access denials with tentative Dashboard sharing and Google sign-in guidance, without extra diagnostic reads or exposing provider errors.
+
+* Breaking: SEO and readability score audits default to published posts/pages. Explicit status:"any" retains the previous scope; specific status filters, permissions and bounded pagination are unchanged.
+
+* Featured-image writes accept response_format:compact for a small confirmation with previous/current IDs and URL. Omission or response_format:full retains the existing full post response.
 
 = 3.0.0 =
 
@@ -345,6 +370,9 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Add block inspection, single-block replacement, and safer partial post body edits.
 
 == Upgrade Notice ==
+
+= Unreleased =
+SEO/readability score lists now default to status:"publish". Clients needing the prior scope must explicitly send status:"any" on every page. See the migration guide.
 
 = 3.0.0 =
 3.0 breaks client contracts. Review the FAQ before upgrading: bounded lists, summary/full output, strict inputs, separate metadata writes, destructive confirmation, canonical errors, identifier privacy and untrusted-field markers.

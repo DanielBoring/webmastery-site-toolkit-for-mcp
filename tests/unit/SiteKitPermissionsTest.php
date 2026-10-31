@@ -14,6 +14,7 @@ final class SiteKitPermissionsTest extends TestCase {
 			'active' => true,
 			'version' => '1.183.0',
 			'mode' => 'allow',
+			'dispatch_paths' => array(),
 			'calls' => array( 'plugin' => 0, 'routes' => 0, 'permission' => 0, 'data' => 0 ),
 		);
 	}
@@ -72,7 +73,109 @@ final class SiteKitPermissionsTest extends TestCase {
 				$this->assertInstanceOf( WP_Error::class, $result, "{$prefix}: {$mode}" );
 				$this->assertSame( 'forbidden', $result->get_error_code() );
 				$this->assertSame( 0, $GLOBALS['wstm125']['calls']['data'] );
+					$this->assert_guidance( Webmastery_MCP_Response::from_wp_error( $result ) );
 			}
+		}
+	}
+
+	private function assert_guidance( array $result ): void {
+		$this->assertSame( 'forbidden', $result['error']['code'] );
+		$this->assertSame( 'forbidden', $result['error']['reason'] );
+		$this->assertSame( '{}', json_encode( $result['error']['details'] ) );
+		$message = $result['error']['message'];
+		foreach ( array( 'Possible causes', 'Dashboard sharing', 'sign-in/reauthentication', 'sharing icon', 'dashboard header', 'get-site-kit-status', 'requires manage_options', 'get-site-kit-permissions', 'where permitted' ) as $text ) {
+			$this->assertStringContainsString( $text, $message );
+		}
+		$this->assertStringNotContainsString( 'PRIVATE', json_encode( $result ) );
+		$this->assertLessThan( 600, strlen( $message ) );
+	}
+
+	/** @dataProvider delegated_methods */
+	public function test_dispatch_authentication_failures_have_safe_guidance_without_diagnostic_reads( string $method ): void {
+		$paths = array(
+			'modules' => '/google-site-kit/v1/core/modules/data/list',
+			'permissions' => '/google-site-kit/v1/core/user/data/permissions',
+			'pagespeed' => '/google-site-kit/v1/modules/pagespeed-insights/data/pagespeed',
+		);
+		foreach ( array( 401, 403, 429, 500 ) as $status ) {
+			$GLOBALS['wstm125']['error_path'] = $paths[ $method ];
+			$GLOBALS['wstm125']['error_status'] = $status;
+			$GLOBALS['wstm125']['dispatch_paths'] = array();
+			$result = $this->invoke( 'execute', $method );
+			$this->assertInstanceOf( WP_Error::class, $result );
+			$public = Webmastery_MCP_Response::from_wp_error( $result );
+			if ( in_array( $status, array( 401, 403 ), true ) ) {
+				$this->assert_guidance( $public );
+			} else {
+				$this->assertSame( 'upstream_failed', $public['error']['code'] );
+				$this->assertSame( 'site_kit_request_failed', $public['error']['reason'] );
+				$this->assertSame( 'Google Site Kit could not complete the request.', $public['error']['message'] );
+			}
+			$this->assertStringNotContainsString( 'PRIVATE', json_encode( $public ) );
+			$this->assertSame( '{}', json_encode( $public['error']['details'] ) );
+			$this->assertSame( 'pagespeed' === $method ? array( $paths['modules'], $paths[ $method ] ) : array( $paths[ $method ] ), $GLOBALS['wstm125']['dispatch_paths'] );
+		}
+	}
+
+	/**
+	 * Native lifecycle and Adapter-result doubles, not real-core or HTTP evidence.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_guidance_survives_native_permission_and_mcp_boundaries_with_negative_controls(): void {
+		require_once __DIR__ . '/fixtures/native-input-ability.php';
+		require_once dirname( __DIR__, 2 ) . '/includes/class-ability.php';
+		function wp_get_ability( $name ) {
+			return $GLOBALS['wstm204_ability'];
+		}
+		Webmastery_MCP_Site_Kit::register();
+		foreach ( array( 'list-site-kit-modules', 'get-site-kit-permissions', 'get-site-kit-pagespeed' ) as $short ) {
+			$name = 'webmastery-site-toolkit-for-mcp/' . $short;
+			$args = Webmastery_MCP_Input::register_args( Webmastery_MCP_Response::register_args( $GLOBALS['wstm_test_abilities'][ $name ], $name ), $name );
+			$ability = new Webmastery_MCP_Ability( $name, $args );
+			$GLOBALS['wstm204_ability'] = $ability;
+			$input = 'get-site-kit-pagespeed' === $short ? array( 'strategy' => 'mobile' ) : array();
+			foreach ( array( 'false', 'null', 'error', 'missing-callback', 'uncallable-callback', 'missing-route', 'no-read', 'dispatch-401', 'dispatch-403', 'dispatch-500' ) as $mode ) {
+				$GLOBALS['wstm_test_user_caps'] = 'no-read' === $mode ? array() : array( 'read' );
+				$GLOBALS['wstm125']['mode'] = $mode;
+				$GLOBALS['wstm125']['error_path'] = '/google-site-kit/v1/' . ( 'get-site-kit-pagespeed' === $short ? 'modules/pagespeed-insights/data/pagespeed' : ( 'get-site-kit-permissions' === $short ? 'core/user/data/permissions' : 'core/modules/data/list' ) );
+				$GLOBALS['wstm125']['error_status'] = (int) substr( $mode, -3 );
+				$GLOBALS['wstm125']['dispatch_paths'] = array();
+				$GLOBALS['wstm125']['calls'] = array( 'plugin' => 0, 'routes' => 0, 'permission' => 0, 'data' => 0 );
+				$dispatch = 0 === strpos( $mode, 'dispatch-' );
+				$result = $dispatch ? $ability->execute( $input ) : $ability->check_permissions( $input );
+				$public = is_wp_error( $result ) ? Webmastery_MCP_Response::from_wp_error( $result ) : $result;
+				if ( in_array( $mode, array( 'false', 'null', 'error', 'dispatch-401', 'dispatch-403' ), true ) ) {
+					$this->assert_guidance( $public );
+				} else {
+					$this->assertStringNotContainsString( 'Dashboard sharing', $public['error']['message'] );
+					$this->assertSame( 'no-read' === $mode ? 'forbidden' : ( $dispatch ? 'upstream_failed' : 'unsupported' ), $public['error']['code'] );
+				}
+				$this->assertStringNotContainsString( 'PRIVATE', json_encode( $public ) );
+				foreach ( array( $name, 'mcp-adapter/execute-ability' ) as $tool_ability ) {
+					$tool = new class( $tool_ability ) {
+						private string $name;
+						public function __construct( string $name ) { $this->name = $name; }
+						public function get_observability_context(): array { return array( 'ability_name' => $this->name ); }
+					};
+					$carried = 'mcp-adapter/execute-ability' === $tool_ability && ! is_wp_error( $result ) ? array( 'success' => true, 'data' => $result ) : $result;
+					$wire = Webmastery_MCP_Response::mcp_result( $carried, array( 'ability_name' => $name ), 'unused', $tool );
+					$this->assertInstanceOf( WP_Error::class, $wire );
+					$this->assertSame( json_encode( $public ), $wire->get_error_message() );
+				}
+				if ( ! $dispatch ) {
+					$this->assertSame( array(), $GLOBALS['wstm125']['dispatch_paths'] );
+					$this->assertSame( 0, $GLOBALS['wstm125']['calls']['data'] );
+					$this->assertSame( 'no-read' === $mode ? 0 : 1, $GLOBALS['wstm125']['calls']['routes'] );
+				}
+				if ( 'no-read' === $mode ) {
+					$this->assertSame( 0, array_sum( $GLOBALS['wstm125']['calls'] ) );
+				}
+			}
+			// Core masks a failed execute-time permission preflight; keep its native category.
+			$GLOBALS['wstm125']['mode'] = 'error';
+			$this->assertSame( 'ability_invalid_permissions', $ability->execute( $input )['error']['reason'] );
 		}
 	}
 
@@ -126,5 +229,87 @@ final class SiteKitPermissionsTest extends TestCase {
 			$this->assertInstanceOf( WP_Error::class, Webmastery_MCP_Site_Kit::execute_pagespeed( $input ) );
 			$this->assertSame( 0, $GLOBALS['wstm125']['calls']['routes'] );
 		}
+	}
+
+	public static function pagespeed_defaults(): array {
+		return array(
+			array( array(), 'http://localhost/', 'mobile' ),
+			array( array( 'url' => 'http://localhost/sample-page/' ), 'http://localhost/sample-page/', 'mobile' ),
+			array( array( 'strategy' => 'mobile' ), 'http://localhost/', 'mobile' ),
+			array( array( 'strategy' => 'desktop' ), 'http://localhost/', 'desktop' ),
+		);
+	}
+
+	/** @dataProvider pagespeed_defaults */
+	public function test_pagespeed_defaults_reach_permission_and_dispatch( array $input, string $url, string $strategy ): void {
+		$this->assertTrue( Webmastery_MCP_Site_Kit::permission_pagespeed( $input ) );
+		$result = Webmastery_MCP_Site_Kit::execute_pagespeed( $input );
+		$this->assertTrue( $result['success'] );
+		$this->assertSame( $strategy, $result['data']['strategy'] );
+		$this->assertSame( $url, $result['data']['requested_url'] );
+		$expected = array( '/google-site-kit/v1/modules/pagespeed-insights/data/pagespeed', array( 'url' => $url, 'strategy' => $strategy ) );
+		$this->assertSame( $expected, $GLOBALS['wstm125']['permission_requests'][0] );
+		$this->assertSame( $expected, $GLOBALS['wstm125']['permission_requests'][2] );
+		$this->assertSame( $expected, $GLOBALS['wstm125']['data_requests'][1] );
+	}
+
+	public function test_pagespeed_schema_advertises_optional_mobile_default(): void {
+		Webmastery_MCP_Site_Kit::register();
+		$args = $GLOBALS['wstm_test_abilities']['webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed'];
+		$schema = $args['input_schema'];
+		$this->assertSame( array(), $schema['default'] );
+		$this->assertNotContains( 'strategy', $schema['required'] ?? array() );
+		$this->assertSame( 'mobile', $schema['properties']['strategy']['default'] );
+		$this->assertSame( array( 'mobile', 'desktop' ), $schema['properties']['strategy']['enum'] );
+		$this->assertNull( Webmastery_MCP_Input::validate( array(), $schema ) );
+		$this->assertNull( Webmastery_MCP_Input::validate( array( 'url' => 'http://localhost/' ), $schema ) );
+		foreach ( array( null, false, 1, array( 'mobile' ), 'both', '', 'Mobile', 'mobile!' ) as $strategy ) {
+			$this->assertInstanceOf( WP_Error::class, Webmastery_MCP_Input::validate( array( 'strategy' => $strategy ), $schema ) );
+			foreach ( array( 'permission_pagespeed', 'execute_pagespeed' ) as $method ) {
+				$result = Webmastery_MCP_Site_Kit::$method( array( 'strategy' => $strategy ) );
+				$this->assertSame( 'invalid_strategy', $result->get_error_code() );
+			}
+		}
+		$this->assertSame( 0, $GLOBALS['wstm125']['calls']['routes'] );
+		unset( $GLOBALS['wstm_test_abilities'] );
+	}
+
+	public function test_omitted_strategy_preserves_local_and_upstream_denials(): void {
+		foreach ( array( 'permission_pagespeed', 'execute_pagespeed' ) as $method ) {
+			$GLOBALS['wstm_test_user_caps'] = array();
+			$this->assertSame( 'forbidden', Webmastery_MCP_Site_Kit::$method()->get_error_code() );
+			$this->assertSame( 0, $GLOBALS['wstm125']['calls']['routes'] );
+		}
+		$GLOBALS['wstm_test_user_caps'] = array( 'read' );
+		foreach ( array( 'false', 'null', 'error', 'missing-route', 'missing-callback', 'uncallable-callback' ) as $mode ) {
+			$GLOBALS['wstm125']['mode'] = $mode;
+			foreach ( array( 'permission_pagespeed', 'execute_pagespeed' ) as $method ) {
+				$result = Webmastery_MCP_Site_Kit::$method();
+				$this->assertInstanceOf( WP_Error::class, $result );
+				$this->assertSame( 0, $GLOBALS['wstm125']['calls']['data'] );
+			}
+		}
+	}
+
+	public function test_omitted_strategy_does_not_bypass_either_exact_upstream_route(): void {
+		$GLOBALS['wstm125']['denied_path'] = '/google-site-kit/v1/modules/pagespeed-insights/data/pagespeed';
+		$this->assertSame( 'forbidden', Webmastery_MCP_Site_Kit::permission_pagespeed()->get_error_code() );
+		$this->assertSame( 'forbidden', Webmastery_MCP_Site_Kit::execute_pagespeed()->get_error_code() );
+		$this->assertCount( 1, $GLOBALS['wstm125']['data_requests'] );
+		$this->assertSame( '/google-site-kit/v1/core/modules/data/list', $GLOBALS['wstm125']['data_requests'][0][0] );
+		$GLOBALS['wstm125']['denied_path'] = '/google-site-kit/v1/core/modules/data/list';
+		$this->assertSame( 'forbidden', Webmastery_MCP_Site_Kit::execute_pagespeed()->get_error_code() );
+		$this->assertCount( 1, $GLOBALS['wstm125']['data_requests'] );
+	}
+
+	public function test_external_url_permission_delegates_but_execution_rejects_before_data(): void {
+		$input = array( 'url' => 'https://example.com/' );
+		$this->assertTrue( Webmastery_MCP_Site_Kit::permission_pagespeed( $input ) );
+		$this->assertSame( array( '/google-site-kit/v1/modules/pagespeed-insights/data/pagespeed', array( 'url' => 'https://example.com/', 'strategy' => 'mobile' ) ), $GLOBALS['wstm125']['permission_requests'][0] );
+		$this->assertSame( 'invalid_url', Webmastery_MCP_Site_Kit::execute_pagespeed( $input )->get_error_code() );
+		$this->assertSame( 0, $GLOBALS['wstm125']['calls']['data'] );
+		$GLOBALS['wstm125']['mode'] = 'false';
+		$this->assertSame( 'forbidden', Webmastery_MCP_Site_Kit::permission_pagespeed( $input )->get_error_code() );
+		$this->assertSame( 0, $GLOBALS['wstm125']['calls']['data'] );
 	}
 }

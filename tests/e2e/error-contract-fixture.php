@@ -61,7 +61,15 @@ add_action( 'wp_abilities_api_init', static function () {
 		'label' => 'Disposable error-contract probe',
 		'description' => 'Controlled non-production failure fixture.',
 		'category' => 'webmastery-site-toolkit-for-mcp',
-		'input_schema' => array( 'type' => 'object', 'properties' => array( 'mode' => array( 'type' => 'string' ), 'probe' => array( 'type' => 'integer' ) ) ),
+		'input_schema' => array( 'type' => 'object', 'properties' => array(
+			'mode' => array( 'type' => 'string' ),
+			'probe' => array( 'type' => 'integer' ),
+			'diagnostic' => array( 'type' => 'object', 'required' => array( 'strategy' ), 'properties' => array(
+				'strategy' => array( 'type' => 'string', 'enum' => array( 'mobile', 'desktop' ) ),
+				'rows' => array( 'type' => 'array', 'items' => array( 'type' => 'integer', 'minimum' => 1 ), 'minItems' => 1, 'maxItems' => 2 ),
+				'map' => array( 'type' => 'object', 'additionalProperties' => array( 'type' => 'integer' ) ),
+			) ),
+		) ),
 		'output_schema' => array( 'type' => 'object', 'properties' => array( 'data' => array( 'type' => 'object', 'properties' => array( 'typed_value' => array( 'type' => 'integer' ) ) ) ) ),
 		'execute_callback' => 'wstm118_probe',
 		'permission_callback' => 'wstm118_permission',

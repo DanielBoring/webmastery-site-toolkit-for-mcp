@@ -174,7 +174,7 @@ final class PermissionDefaultTest extends TestCase {
 
 	public function test_raw_callbacks_and_public_validation_do_not_materialize_database_default(): void {
 		list( $ability, $args ) = $this->database_ability();
-		$this->assert_error( $args['permission_callback']( null ) );
+		$this->assert_error( $args['permission_callback']( null ), 'invalid_input', 'ability_invalid_input', array( 'field' => '$', 'reason' => 'type' ) );
 		$execute = $args['execute_callback']( null );
 		self::assertSame( 'invalid_input', $execute['error']['code'] );
 		self::assertSame( 'ability_invalid_input', $execute['error']['reason'] );
@@ -185,6 +185,37 @@ final class PermissionDefaultTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['wstm_test_cap_calls'] );
 		self::assertSame( array(), $GLOBALS['wpdb']->queries );
 		self::assertSame( array( 'parent_validate_input', 'wp_ability_validate_input' ), $ability->events );
+	}
+
+	public function test_pagespeed_empty_adapter_input_uses_registered_default_but_explicit_strategy_null_fails(): void {
+		require_once __DIR__ . '/site-kit-stubs.php';
+		require_once dirname( __DIR__, 2 ) . '/includes/class-site-kit.php';
+		$GLOBALS['wstm_test_user_caps'] = array( 'read' );
+		$GLOBALS['wstm125'] = array( 'active' => true, 'version' => '1.183.0', 'mode' => 'allow', 'calls' => array( 'plugin' => 0, 'routes' => 0, 'permission' => 0, 'data' => 0 ) );
+		Webmastery_MCP_Site_Kit::register();
+		$name = 'webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed';
+		$ability = new Webmastery_MCP_Ability( $name, $this->wrapped( $GLOBALS['wstm_test_abilities'][ $name ], $name ) );
+		self::assertTrue( $ability->check_permissions( null ) );
+		$result = $ability->execute( null );
+		self::assertTrue( $result['success'] );
+		self::assertSame( 'mobile', $result['data']['strategy'] );
+		self::assertSame( 'http://localhost/', $result['data']['requested_url'] );
+		$external = array( 'url' => 'https://example.com/' );
+		self::assertTrue( $ability->check_permissions( $external ) );
+		$data_calls = $GLOBALS['wstm125']['calls']['data'];
+		// This lifecycle double does not implement URI format; the real-core runtime matrix covers it.
+		unset( $ability->input_schema['properties']['url']['format'] );
+		$rejected = $ability->execute( $external );
+		self::assertSame( 'invalid_input', $rejected['error']['code'] );
+		self::assertSame( 'invalid_url', $rejected['error']['reason'] );
+		self::assertSame( $data_calls, $GLOBALS['wstm125']['calls']['data'] );
+		$calls = $GLOBALS['wstm125']['calls'];
+		$this->assert_error( $ability->check_permissions( array( 'strategy' => null ) ), 'invalid_input', 'ability_invalid_input', array( 'field' => '$.strategy', 'reason' => 'type' ) );
+		self::assertSame( 'invalid_input', $ability->execute( array( 'strategy' => null ) )['error']['code'] );
+		self::assertSame( $calls, $GLOBALS['wstm125']['calls'] );
+		$GLOBALS['wstm_test_user_caps'] = array();
+		$this->assert_error( $ability->check_permissions( null ), 'forbidden', 'forbidden' );
+		self::assertSame( $calls, $GLOBALS['wstm125']['calls'] );
 	}
 
 	public function test_lifecycle_double_accepts_description_annotation_but_rejects_unknown_constraints(): void {
@@ -207,7 +238,7 @@ final class PermissionDefaultTest extends TestCase {
 			$GLOBALS['wstm_test_user_caps'] = $admin ? array( 'manage_options' ) : array( 'read' );
 			list( $ability ) = $this->database_ability();
 			$input = array( 'include_table_names' => $value );
-			$this->assert_error( $ability->check_permissions( $input ) );
+			$this->assert_error( $ability->check_permissions( $input ), 'invalid_input', 'ability_invalid_input', array( 'field' => '$.include_table_names', 'reason' => 'type' ) );
 			self::assertSame( array( $input ), $ability->permission_inputs );
 			$this->assert_preflight_only( $ability );
 			self::assertSame( array(), $this->permissions );
@@ -228,7 +259,10 @@ final class PermissionDefaultTest extends TestCase {
 		$schema = $this->schema();
 		$schema['default'] = $default;
 		$ability = $this->ability( $schema );
-		$this->assert_error( $ability->check_permissions() );
+		$details = is_array( $default ) && array_key_exists( 'unknown', $default )
+			? array( 'field' => '$.*', 'reason' => 'unknown_property' )
+			: array( 'field' => is_array( $default ) && array_key_exists( 'include_table_names', $default ) ? '$.include_table_names' : '$', 'reason' => 'type' );
+		$this->assert_error( $ability->check_permissions(), 'invalid_input', 'ability_invalid_input', $details );
 		self::assertSame( array( $default ), $ability->permission_inputs );
 		self::assertSame( array(), $this->permissions );
 		self::assertSame( array(), $GLOBALS['wstm_test_cap_calls'] );
@@ -237,7 +271,7 @@ final class PermissionDefaultTest extends TestCase {
 
 	public function test_required_default_is_checked_not_assumed_valid(): void {
 		$schema = $this->schema() + array( 'required' => array( 'include_table_names' ) );
-		$this->assert_error( $this->ability( $schema )->check_permissions() );
+		$this->assert_error( $this->ability( $schema )->check_permissions(), 'invalid_input', 'ability_invalid_input', array( 'field' => '$.include_table_names', 'reason' => 'required' ) );
 		self::assertSame( array(), $this->permissions );
 		$schema['default'] = (object) array( 'include_table_names' => true );
 		$ability = $this->ability( $schema );
@@ -268,7 +302,7 @@ final class PermissionDefaultTest extends TestCase {
 			self::assertTrue( $result );
 			self::assertSame( array( null ), $this->permissions );
 		} else {
-			$this->assert_error( $result );
+			$this->assert_error( $result, 'invalid_input', 'ability_invalid_input', array( 'field' => '$', 'reason' => 'type' ) );
 			self::assertSame( array(), $this->permissions );
 		}
 		self::assertSame( array( null ), $ability->permission_inputs );
@@ -405,7 +439,7 @@ final class PermissionDefaultTest extends TestCase {
 		self::assertTrue( $ability->check_permissions() );
 		self::assertSame( array( array() ), $ability->permission_inputs );
 		$ability = $this->ability( array( 'type' => 'boolean', 'default' => true ), null, $class );
-		$this->assert_error( $ability->check_permissions() );
+		$this->assert_error( $ability->check_permissions(), 'invalid_input', 'ability_invalid_input', array( 'field' => '$', 'reason' => 'type' ) );
 		$ability = $this->ability( array( 'type' => array( 'object', 'null' ), 'default' => array() ), null, $class );
 		self::assertTrue( $ability->check_permissions() );
 		self::assertSame( array( null ), $ability->permission_inputs );

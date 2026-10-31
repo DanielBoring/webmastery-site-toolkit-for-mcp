@@ -315,6 +315,11 @@ authorization fixture. With both real SEO providers active, it expects 252 cases
 primitive-grant controls; eight analysis cases; two score-filter cases; bounded
 overview observations; and URL-only head refusal. Individual HTTP requires the
 temporary `wstm118-individual` server after the normal registration audit.
+The two score cases also check the advertised `publish` default, omitted-status
+inclusion/exclusion as an owned fixture moves through publish/draft/private/pending,
+and explicit status/`any` inclusion before the existing denied-key/no-read check.
+They retain each original call within the existing case inventory; no schema
+ledger or manifest count changes are needed for this default change.
 These runners retain raw responses and observer evidence, revoke their own
 application passwords, and remove owned objects/options. Unit transport seams
 prove strict error handling, discovery ambiguity, required observer evidence,
@@ -770,6 +775,11 @@ capability/query work. The 16 HTTP failures were observed in genuine frozen
 `5b39f6a` CI; the 32 direct changes are source-derived and verified against the
 actual registered production wrappers in isolated tests. The corresponding 32
 native-ability cases already expected schema rejection and are unchanged.
+The later field-diagnostic addition changes only the current schema details to
+exact public paths/reasons; baseline mode and sealed historical ledgers retain
+their original empty details. Current comment, taxonomy and destructive
+assertions retain every original case, error category/message, authorization
+and no-work check while checking the additive details independently.
 Changed cases are not legacy compatibility claims. All typed runner inputs,
 ordering, capability facts and no-write snapshots remain intact; the integrated
 real-runtime rerun is still pending.
@@ -811,6 +821,10 @@ HTTP session-close and application-password revocation failures are recorded ind
 `tests/fixtures/seo-analysis.php` supplies five inert-marker scenarios to the unit tests, ability manifest fixtures, and existing MCP HTTP CRUD runner: Yoast found/missing with a competing SEOPress value, SEOPress found/missing after empty-Yoast fallback, and no keyword. Contract cases compare the complete `good` and `issues` arrays (including check IDs, severity, and every diagnostic message), exact keyword/title metrics, provider source, and score through existing `assert_values` placeholders. All earlier cases, including permission negatives, remain intact.
 
 The HTTP runner creates a separate owned SEO post, updates plain content and each authorized metadata key in separate calls, confirms stored metadata, executes SEO analysis through the actual MCP gateway, and retains each response in `mcp-crud-summary.json` under `seo_analysis`. It also rejects inert markers in every diagnostic message. The original CRUD post remains scheduled for its existing future-post deletion scenario; an extra read verifies its state before deletion. Dedicated SEO cleanup runs even after a case failure, records its response, and fails the summary for unsuccessful cleanup, wrong IDs/statuses, or exceptions. Unit tests additionally cover exact markup, quote, and backslash retention for both providers and both branches, plus unchanged response keys for fully authorized analysis. Run `composer qa:unit -- --filter SeoAnalysisTest`, then managed `scripts/e2e-test.sh all` for actual WordPress and transport evidence.
+
+The same fixture file also provides `wstm201_seo_link_case($wordpress_url)`: nine same-site references (bare/www and mixed-case hosts, HTTP/HTTPS, protocol-relative, root/path/parent-relative, query-only and fragment-only), four external references (including a protocol-relative host, hostname-prefix lookalike and userinfo lookalike), plus ignored `mailto:` and `tel:` links. Product units, the registered ability setup check as an Editor, and the existing MCP HTTP runner check both exact counts and complete findings. The setup check creates and deletes a separate owned draft, restores its original actor, and retains its response and cleanup result under `seo_link_classification` in `e2e-summary.json`; failure affects the existing runner exit. The HTTP runner reuses its separately owned SEO post and retains the `link_classification` response in `seo_analysis`. The 601-case contract manifest and its existing positive, role-denied and metadata authorization assertions remain intact. Unit cases additionally cover both home host variants, home subdirectory paths, ports, distinct subdomains, HTML entities, whitespace, empty/malformed links, and ignored `javascript:`/`ftp:` schemes. These tests classify stored URLs without contacting linked hosts and add no runtime stage or gate.
+
+For a manual check on a disposable site with home URL `https://www.example.test`, create an owned draft containing `<a href="http://example.test/one">one</a> <a href="../two">two</a> <a href="#part">part</a> <a href="//other.test/three">three</a> <a href="mailto:contact@example.test">email</a>`. As an Editor allowed to edit that draft, call `seo-analyze-post` with its integer `post_id`; expect `internal_links: 3`, `external_links: 1`, and `3 internal link(s) found.` in `good` instead of the no-internal-links issue. Repeat with a bare home host and a www link, then with `https://www.example.test.other.test/three` to confirm exact hostname boundaries. A Subscriber must still receive the existing permission denial. Remove only the owned draft afterward. Automated source and original-ZIP evidence comes from `scripts/qa-run.sh all` and `scripts/qa-run.sh package`, respectively.
 
 This only covers separating focus-keyword data from diagnostics. It adds no field markers, does not verify all annotations or resolve #108, and is not a prompt-injection prevention test.
 
@@ -1120,8 +1134,9 @@ callback's exact `invalid_input` / `ability_invalid_input` envelope. Each is
 immediately followed by `direct-existing-future-overdue`, using the same fixture
 and fully constructed payload with only `status` removed. These schema-valid
 direct calls retain the exact `invalid_input` / `scheduled_date_too_soon` purpose.
-Both require the canonical message, empty object details, unchanged state,
-zero observed mutation hooks and the unchanged metadata sentinel. The other
+The schema failure requires `details:{"field":"$.status","reason":"enum"}`;
+the scheduling failure retains empty object details. Both require the canonical
+message, unchanged state, zero observed mutation hooks and the unchanged metadata sentinel. The other
 260 cases keep their original inputs, boundaries and expectations.
 
 `SchedulingCalibrationTest` and its sealed typed ledger derive the whole actual
@@ -1153,7 +1168,7 @@ The 3.0 strict-schema calibration expands this separate runner from **156 to
 or tag, missing or wrong-taxonomy ID, wrapped or direct) retain their identical
 integer IDs, `name: "Must not write"` and `confirm: true`. Their unadvertised
 `name` field now has the exact `invalid_input` / `ability_invalid_input` schema
-expectation, empty object details and unchanged-state/write-hook assertions.
+expectation, `details:{"field":"$.*","reason":"unknown_property"}` and unchanged-state/write-hook assertions.
 Each original precedes a new counterpart removing only `name`; that counterpart
 retains the original authorized `not_found` purpose, message, ID and state
 checks. The other 148 original cases are unchanged.
@@ -1316,9 +1331,56 @@ The E2E bootstrap installs Yoast SEO from WordPress.org with the `wordpress-seo`
 
 ### Site Kit permission regressions
 
+PageSpeed defaults to `mobile` when `strategy` is omitted. On an authorized test
+site, call `get-site-kit-pagespeed` with `{}`, then with
+`{"url":"https://your-site.example/page/"}`: expect the home URL or supplied
+same-site URL and `data.strategy:"mobile"`. Explicit `{"strategy":"desktop"}`
+must still return desktop analysis. `{"strategy":null}`, boolean/array values,
+and `{"strategy":"both"}` must fail validation. Repeat the omitted-strategy
+calls as an ordinary Subscriber without Site Kit access: expect denial.
+
+The automated `site-kit-defaults-runner.php` runs after metadata boundary QA
+in the owned disposable source/package suite, with `WSTM202_DISPOSABLE=1`.
+It covers permission/direct callbacks, native execution, HTTP gateway and
+individual tools using temporary users/passwords that it removes afterward.
+The controlled upstream fixture requires normalized URL/strategy parameters;
+unit request spies separately verify the exact strategy reaching permission and dispatch.
+External URLs retain execution-stage `invalid_input` / `invalid_url` for an
+authorized caller; permission checks still delegate the normalized parameters
+to Site Kit. Native/HTTP callers denied by Site Kit retain permission errors,
+while direct execution validates URLs before any provider data dispatch.
+Local no-read denial is checked separately from upstream denial. These current
+regressions preserve the historical 601-case manifest and 152-case schema
+inventories and their existing allowed/denied assertions.
+
 The Site Kit fixture is **not the real Google plugin**. Its dashboard grant models an allowed upstream route, including the distinct `wstm125_read` and `wstm125_no_read` custom roles and a shared Subscriber. The manifest retains ordinary Subscriber upstream denial, adds local no-read denial despite an upstream grant, and preserves response projection and same-site URL assertions. `validate:security-qa` requires these cases for all three delegated abilities.
 
 Ability Contract QA also runs `site-kit-permissions-runner.php`: 126 permission/direct-execution cases cover all three abilities, local read/no-read and Subscriber users, upstream allow/false/null/WP_Error, and missing/non-callable permission callbacks or routes. Instrumented route lookup, permission, data, and HTTP counters must remain zero for no-read callers. Read users must still pass upstream authorization; a denied or unsupported target must not execute its controller. Unit tests additionally cover provider discovery counts, missing providers, version diagnostics, input validation, and the unchanged status `manage_options` gate (including a custom user without `read`).
+
+The same cases assert actionable, tentative Dashboard sharing/Google sign-in
+guidance on upstream denials, no diagnostic dispatch after denial, generic local
+read failures, and omission of a private upstream message/data sentinel.
+`SiteKitPermissionsTest` additionally models dispatched 401/403 versus 429/500
+and native permission/execute, gateway and individual-tool result boundaries.
+These unit lifecycle/Adapter doubles are not real-core or HTTP evidence. Native
+execute-time permission failures retain WordPress's generic permission masking;
+preflight and dispatched 401/403 preserve the authored guidance.
+
+Manual verification on an owned disposable fixture installation:
+
+1. As an ordinary Subscriber, call each delegated Site Kit ability. Confirm
+   `forbidden` names possible sharing/sign-in causes, the dashboard-header
+   sharing icon, and the status/permissions diagnostics without asserting the
+   user is disconnected or a service is definitely unshared.
+2. Run `site-kit-permissions-runner.php` to verify local no-read users perform
+   zero provider work and missing/non-callable checks stay unsupported.
+3. Run `site-kit-mcp-runner.php` to check the authored denial through real HTTP
+   gateway preflight. The default endpoint's no-read rejection remains separate.
+4. For a connected-provider review, an authorized administrator can consult
+   [Google's sharing instructions](https://sitekit.withgoogle.com/documentation/features/dashboard-sharing/)
+   and inspect the dashboard header sharing icon. Keep this separate from
+   controlled fixtures; the automated checks do not change sharing settings,
+   sign in to Google, or establish a specific real-account failure cause.
 
 Full MCP E2E also runs `site-kit-mcp-runner.php` through real HTTP JSON-RPC and temporary Application Passwords. It verifies allowed read-only custom users, allowed fixture-shared Subscribers, denied ordinary Subscribers, and safe response projections for all three abilities. MCP Adapter 0.5.0 rejects no-read users at its default HTTP endpoint with 403 **before ability execution**; that boundary result is recorded separately and is not evidence of the ability-level floor. The direct WordPress and unit cases establish that floor. Results are written under `e2e-artifacts/issue125-permission-summary.json` and `e2e-artifacts/issue125-mcp-summary.json`.
 
@@ -1339,6 +1401,15 @@ These effective Site Kit capabilities incorporate setup, authentication, verific
 The runner fails early if either dependency is not active. Coexistence assertions seed SEOPress meta on a post that receives Yoast-backed updates and verify those Yoast paths do not mutate SEOPress meta; separate SEOPress assertions verify SEOPress-specific write and read paths.
 
 Routine QA uses reviewed WP-CLI, MCP Adapter, SEO-plugin, and Plugin Check pins from `.github/compatibility-versions.json`. WP-CLI and adapter downloads must pass digest verification before execution/installation. Candidate overrides must supply the matching digest; do not reuse the baseline digest for a different release. The scheduled compatibility workflow explicitly opts into floating dependencies and records the versions it actually tests.
+
+For a WordPress 6.9 runtime, set `DEPENDENCY_POLICY=wp69-seo` to select the
+separately maintained `wp69_yoast` and `wp69_seopress` pins. The compatibility
+matrix and genuine PHP 8.0 launcher select this policy explicitly. Global SEO
+baseline promotion preserves these floor pins; `latest-seo` continues testing
+current providers on latest WordPress. See the [provider policy](../../docs/07-compatibility-qa.md#provider-policy-by-runtime)
+before updating the floor pins. Verify selection without Docker using
+`bash tests/compatibility-dependency-policy-test.sh`; runtime acceptance still
+requires the full suites on both WordPress 6.9 lanes.
 
 Set `MCP_CRUD_ENDPOINT` only when you need the secondary CRUD runner to target a non-default MCP Adapter endpoint. By default it uses `http://localhost/wp-json/mcp/mcp-adapter-default-server` from inside the WordPress container.
 
@@ -1662,6 +1733,45 @@ disposable WordPress site you own, never on a production or shared site. The
 behavior they check is described in the
 [ability contracts](../../docs/reference/ability-contracts.md).
 
+### Input validation diagnostics
+
+Call `get-post` with `{"id":2447}` and expect `invalid_input` /
+`ability_invalid_input` with `details:{"field":"$.post_id","reason":"required"}`.
+Use `{"post_id":2447,"private-extra-key":"private-value"}` and expect
+`details:{"field":"$.*","reason":"unknown_property"}` without either private
+string. A numeric-string `post_id` should identify `$.post_id` and `type`.
+Repeat via native execution, the gateway, and individually exposed tools; decode the single MCP
+error text block and compare details. No ID aliases are accepted.
+
+The existing separate error-contract runner adds 42 diagnostic cases across
+direct callbacks, permission checks, native validation/execution and both HTTP
+exposure modes. It checks required/unknown/type/enum/bounds, nested array and
+dynamic-map privacy, immutable input, and local original-callback/action counts.
+This does not change the historical 152-case schema stage, its configuration,
+resource identity/cleanup evidence, or the ability manifest inventory. Unit
+composition tests use a lifecycle double; source and original-ZIP Docker runs
+remain required to establish actual WordPress/MCP behavior.
+
+### Published SEO and readability audit defaults
+
+With Yoast active, prepare owned published, draft, pending, and private posts
+and pages. As an Editor with effective score-key access, call both
+`get-seo-scores` and `get-readability-scores` with `{"per_page":100}`. Follow
+every `next_page` with identical filters until null, including empty windows;
+verify only the published fixtures appear. Repeat with `{"status":"any"}`
+to include the otherwise eligible unpublished fixtures, then with each explicit
+`draft`, `pending`, and `private` filter to verify only that status is selected.
+Score records do not expose status: determine expected membership independently
+from the owned fixture IDs and native post status before invoking either tool.
+Check post/page selection and `modified_after` independently when those filters
+are used. No run should expose exact `total` or `total_pages` fields.
+
+Repeat with denied object/score-key access: denied fixtures must be omitted
+without score reads, and empty windows may still continue. A Subscriber must
+remain denied with omitted status and explicit `any`. With Yoast inactive,
+expect empty items, `yoast_active:false`, and `next_page:null`. Retain raw
+responses and restore/remove only your owned fixtures after verification.
+
 ### Standalone metadata authorization
 
 For verification on a disposable site, register a nonprotected string key with an authorization callback requiring `manage_options`, seed a draft, and call the standalone abilities as its Author without primitive metadata grants. An explicit read, an upsert (including the same value), and a deletion must return `forbidden`; the listing must omit the key and storage must remain unchanged. An Administrator with effective object/key permission can use it. A combined create/update containing that key must instead return `invalid_input` with reason `metadata_requires_separate_call`, leaving posts, metadata, terms, and save hooks untouched.
@@ -1720,3 +1830,59 @@ requires explicit disposable-runtime opt-in; examples are not runtime proof.
 ### Database table privacy
 
 For a disposable-site check, call `database-health` as Administrator with omitted input or `{"include_table_names":false}` and verify that table identifiers are logical/opaque, then deliberately opt in with `{"include_table_names":true}` and compare every row's metrics and `is_core_table`. A Subscriber must be refused in both modes. Opaque labels restart per response and are **not stable identifiers** for comparing reports; the opt-in is required only when physical names are genuinely needed. See the [3.0 diagnostic migration](../../docs/reference/3.0-migration.md#database-diagnostic-table-privacy).
+
+### Classic content inspection (#207)
+
+On an owned disposable site, call `list-content-blocks` with `content_id` and
+`content_type:"post"` (repeat for a page). Raw Classic HTML, empty, and whitespace
+bodies return `data.is_classic:true` and a fixed `data.hint` recommending
+`patch-post-content` with `target_type:"exact"`. Heading targets require parsed
+`core/heading` blocks; raw Classic HTML headings are not heading targets. Gutenberg, mixed
+raw HTML plus blocks, and explicit `<!-- wp:freeform -->` bodies return false
+and omit `hint`. The flag uses core `has_blocks()` marker detection, not markup
+validation or proof of which editor saved the post. Compare unchanged raw
+content hashes, normalized block paths/values/hashes and record-local markers.
+Repeat as Subscriber and as Author against an Editor-owned draft: both must
+fail without returning content, `is_classic` or `hint`. Empty content has no
+existing exact/heading target. The existing allowed/denied manifest cases stay
+unchanged; classification assertions run separately in product units and the
+real-core patch probe. Static/unit results alone do not establish real-core QA.
+
+### Compact featured-image confirmations
+
+The normal owned contract run (`scripts/qa-run.sh all`) and package run execute
+`featured-image-runner.php` from `ability-runner.php`. Its current cases are
+separate from the unchanged 601 manifest cases and frozen historical marker
+inventories. The existing manifest still checks legacy full responses and
+permission denials. `e2e-summary.json` adds `featured_image_regressions`, including
+case results, actual returned responses, persisted-image checks, measured counters,
+and cleanup errors. Each case retains observations before assertions so failed
+comparisons and partial observer failures remain reviewable after fixture cleanup.
+No separate stack or runtime gate is required.
+
+On a disposable site, as an Editor, run `set-featured-image` with
+`{"post_id":123,"attachment_id":456,"response_format":"compact"}`. Confirm that
+`data` contains only `post_id`, `featured_image_id`, `featured_image_url`,
+`previous_featured_image_id`, and the URL's record-local `untrusted_fields`.
+Compare IDs and URL with actual WordPress state. An Author setting an existing
+foreign image on their own post retains assignment eligibility, but must receive
+a null URL when attachment `edit_post` is denied; the runtime covers this case. Replace the image and check the
+previous ID, then remove it with
+`{"post_id":123,"response_format":"compact"}` twice: the second remove should
+report previous/current IDs zero and URL null. Repeat on a page.
+
+Omit `response_format`, then try explicit `"full"`: both must retain the existing
+full normalized post, including long stored content. Re-setting the same image
+retains the existing `featured_image_failed` behavior. Missing/non-image
+attachments retain their existing errors and leave the selected image intact.
+A Subscriber must be denied without reading thumbnail metadata. Invalid
+`response_format` values (null, boolean, integer, empty string, `"COMPACT"`,
+`"summary"`) must fail before capability calls, metadata reads, or queries.
+Unit spies additionally prove compact skips full normalization and preserves
+core false-return behavior; those forced failures are not storage-failure tests.
+The runtime case observer checks that compact never requests author display-name
+normalization. Owned posts and uploaded media are removed in `finally`, with row and upload-file
+absence checks.
+
+The previous ID supports a separate authorized reversal while that attachment
+still exists; it cannot restore a deleted attachment.

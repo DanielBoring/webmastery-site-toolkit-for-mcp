@@ -54,6 +54,8 @@ function bounded_source_bindings(): array {
 		'includes/class-list-query.php' => array( 'd6f267226522ddf267ec0497b997dcea1160ee15d0a353013fa51b46eefe9090', '723b2e143f3f06163780bf6bb79e42d46ad62095' ),
 		'includes/class-untrusted.php' => array( '5a0ba6dffdf9c30b0ec7a01c6d7cbaa7c9f15c3707adc04e06255deb41104e20', 'dd504fd3eae59bc945768b2249f122026af8bdef' ),
 		'includes/class-input.php' => \wstm_test_product_binding( 'includes/class-input.php' ),
+		'includes/class-response.php' => \wstm_test_product_binding( 'includes/class-response.php' ),
+		'includes/class-ability.php' => \wstm_test_product_binding( 'includes/class-ability.php' ),
 	);
 }
 
@@ -418,6 +420,12 @@ function build( string $original, string $current, stdClass $production ): stdCl
 function derive( stdClass $ledger ): stdClass {
 	assert_sources( $ledger );
 	$current = normalized( file_get_contents( root() . '/tests/e2e/scheduling-runner.php' ) );
+	// Reverse only #203's exact current diagnostic oracle; never rewrite the sealed ledger.
+	$current = str_replace( "\t\t\t\t\t\t\$expected_details = 'ability_invalid_input' === \$error ? [ 'field' => '$.status', 'reason' => 'enum' ] : [];\n", '', $current, $assignment );
+	$current = str_replace( "\$expected_details === get_object_vars( \$envelope['error']['details'] )", "[] === get_object_vars( \$envelope['error']['details'] )", $current, $comparison );
+	if ( 1 !== $assignment || 1 !== $comparison ) {
+		throw new RuntimeException( 'Current scheduling diagnostic oracle changed.' );
+	}
 	if ( $ledger->current_sha256 !== hash( 'sha256', $ledger->current_source )
 		|| \wstm_test_legacy_artifact_output_source( 'scheduling', $ledger->current_source ) !== $current ) {
 		throw new RuntimeException( 'Current scheduling runner fingerprint mismatch.' );

@@ -163,4 +163,44 @@ final class LegacyArtifactsTest extends TestCase {
 			}
 		}
 	}
+
+	public function testFeaturedImageFailuresRetainCapturedResponsesStateAndCountersThroughTheActualWriter(): void {
+		self::assertSame( 1, preg_match( '/^\t\$record = .*?^\t};$/ms', self::source( 'featured-image-runner' ), $match ) );
+		$summary = array( 'passed' => 0, 'failed' => 0, 'cases' => array() );
+		eval( 'namespace WstmLegacyArtifacts; use \\Throwable; ' . $match[0] );
+		$captured = array();
+		ob_start();
+		try {
+			foreach ( array( 'full', 'compact', 'invalid', 'denied' ) as $kind ) {
+				$observed = array( 'before_image' => 11, 'result' => array( 'unexpected' => $kind ),
+					'persisted_image' => 22, 'capability_calls' => 0, 'metadata_reads' => 0, 'queries' => 0 );
+				$captured[] = $observed;
+				$record( $kind, static function ( array &$evidence ) use ( $observed ): void {
+					$evidence = $observed;
+					// Model the real cases: preserve observations, then a comparison fails.
+					throw new RuntimeException( 'Observed response/state mismatch.' );
+				} );
+				unset( $observed ); // Later fixture cleanup cannot recreate this evidence.
+			}
+			$record( 'observation failure', static function ( array &$evidence ): void {
+				$evidence['result'] = array( 'success' => true, 'data' => array( 'featured_image_id' => 22 ) );
+				throw new RuntimeException( 'Persisted-state observer failed.' );
+			} );
+			$record( 'success control', static function ( array &$evidence ): void { $evidence['persisted_image'] = 0; } );
+		} finally {
+			ob_end_clean();
+		}
+		self::assertSame( 5, $summary['failed'] );
+		self::assertSame( 1, $summary['passed'] );
+		foreach ( $captured as $index => $observed ) {
+			self::assertFalse( $summary['cases'][ $index ]['passed'] );
+			self::assertSame( $observed, $summary['cases'][ $index ]['evidence'] );
+			self::assertSame( 'Observed response/state mismatch.', $summary['cases'][ $index ]['error'] );
+		}
+		self::assertSame( array( 'result' => array( 'success' => true, 'data' => array( 'featured_image_id' => 22 ) ) ), $summary['cases'][4]['evidence'] );
+		self::assertSame( 'Persisted-state observer failed.', $summary['cases'][4]['error'] );
+		$this->destination();
+		e2e_write_summary( $summary );
+		self::assertSame( $summary, json_decode( file_get_contents( $this->root . '/e2e-summary.json' ), true ) );
+	}
 }

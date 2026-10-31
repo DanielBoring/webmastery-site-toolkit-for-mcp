@@ -23,6 +23,7 @@ table shows it.
 - [Category and tag permissions](#category-and-tag-permissions)
 - [Destructive-operation interlocks](#destructive-operation-interlocks)
 - [Targeted content patching](#targeted-content-patching)
+- [Featured-image write responses](#featured-image-write-responses)
 - [Image URL uploads](#image-url-uploads)
 - [Scheduling](#scheduling)
 - [Parent assignments](#parent-assignments)
@@ -61,6 +62,31 @@ cannot enter the operation's capability, query, or write branches. Numeric-strin
 IDs and boolean-like strings/integers therefore report `invalid_input` rather
 than being masked as permission denials; genuine authorization failures still
 follow core permission redaction.
+
+Schema failures keep code `invalid_input`, reason `ability_invalid_input`, and
+the fixed message. Their `error.details` now identifies the first strict
+failure, for example `{"field":"$.post_id","reason":"required"}` for
+`get-post` with `{"id":2447}`. Detail reasons are `required`,
+`unknown_property`, `type`, `enum`, or `bounds` (numeric or array length).
+Required fields are checked before supplied properties; correct the reported
+failure and consult the advertised schema for allowed values.
+
+Paths begin at `$`, use `.name` for declared schema properties, `[]` for any
+array item, and `.*` for unknown or dynamic map keys. Thus an extra property
+beside a valid `post_id` reports `$.*`, and an invalid taxonomy item reports
+`$.taxonomy_terms.*[]`. Supplied property names, values, array indexes and
+provider diagnostics are never copied into these details. Schema names outside
+the ASCII identifier form (letter/underscore, then letters/digits/underscores/
+hyphens, at most 64 characters) also use `.*`. Paths are at most 243 characters;
+`...` indicates that deeper segments were omitted, while validation still
+checks the complete input. No allowed-value lists or stored values are returned.
+
+These additive details survive raw registered callbacks, native execution,
+gateway and individual MCP tools. Public native validation retains the exact
+core `WP_Error` object and its original data; normalize it with
+`Webmastery_MCP_Response::from_wp_error()` to obtain the safe details. If only
+a core keyword such as `format` or a combinator fails, details remain `{}`.
+Diagnostics do not alter schema acceptance, authorization, or defaults.
 
 Use exact enum values (`"DESC"`, not `"desc"` or `"DESC!"`), JSON integers for
 IDs, and JSON booleans for flags. Optional fields retain existing defaults when
@@ -125,6 +151,25 @@ limitations](3.0-migration.md#bounded-list-windows-and-summary-projection).
 
 ## Post metadata and SEO authorization
 
+### SEO and readability score audits
+
+`get-seo-scores` and `get-readability-scores` provide paged site-wide audits of
+published posts and pages by default (`status:"publish"`). This changes the
+previous omitted-status scope. Set `status:"any"` explicitly to retain the
+previous scope across otherwise eligible statuses; WordPress's `any` query does
+not mean every registered status. Explicit `draft`, `pending`, `private`,
+`future`, and `publish` filters remain available. `post_type` optionally selects
+`post` or `page`; `modified_after` retains its GMT modified-time filter.
+
+Both require `edit_posts`; explicitly requesting pages also requires
+`edit_pages`, and mixed requests omit pages without that capability. Each result
+still requires object/status access and effective `edit_post`/`edit_post_meta`
+permission for the exact score key. Items retain `post_id`, `title`, `post_type`,
+`url`, `score`, `modified_gmt`, and record-local `untrusted_fields`.
+Follow `next_page` through empty windows, using identical filters until null.
+No exact site-wide score totals are returned. Inactive Yoast still produces an
+empty success with `yoast_active:false`, a note, and `next_page:null`.
+
 `get-post-meta`, `update-post-meta`, and `delete-post-meta` require `edit_post` for the actual object and preserve the existing protected-key eligibility rules. Ordinary Authors can usually operate on their own posts; pages and other authors' posts generally require an Editor, and individual keys may impose additional requirements.
 
 | Standalone ability | Key-level policy |
@@ -144,6 +189,8 @@ Separate SEO inspection, analysis, and score abilities also require effective `e
 SEO overview samples at most 100 published post/page IDs in ascending ID order. Each missing-field `count` and maximum-20 `ids` list includes only authorized observations; `observed_count` is the authorized sample denominator. `observation_scope.counts_are_sitewide` is false. Zero observations mean no evidence, not a healthy site. Independent native published post/page totals remain available to Administrators.
 
 SEO Analyze Post uses static focus-keyword diagnostics: `Focus keyword found in title.` or `Focus keyword not found in title.` Authorized stored values remain unchanged in `data.metrics.yoast_focus_keyword` and `data.metrics.seopress_focus_keywords`; `seo_provider_focus_source` retains authorized Yoast-first selection with SEOPress fallback. Metadata denials follow the authorization rules above. The data/message separation and additive field markers do not make these values instructions.
+
+SEO Analyze Post's `data.metrics.internal_links` and `external_links` count anchor occurrences in stored content. Web URLs are classified by parsed hostname: comparison ignores case, one leading `www.`, HTTP versus HTTPS, ports, and the home URL's path. Other subdomains and hostname-prefix lookalikes are external. Protocol-relative URLs (`//host/path`) use the same host comparison. Root-relative and path-relative URLs, query-only references, and fragment-only references count as internal. Empty hrefs, URLs that cannot be parsed, hostless absolute web URLs, and non-web schemes such as `mailto:`, `tel:`, `javascript:`, and `ftp:` count toward neither metric. HTML entities in hrefs are decoded and surrounding whitespace is trimmed before classification. This is a local SEO heuristic; it performs no network requests and does not establish that either host variant resolves, redirects, or serves the same site. Input remains the required integer `post_id`, and effective `edit_post` authorization remains required.
 
 ## Backslashes in writes
 
@@ -189,6 +236,24 @@ These interlocks do not grant capabilities, prove human approval, or prevent pro
 
 ## Targeted content patching
 
+`list-content-blocks` accepts required `content_id` (integer) and `content_type`
+(`post` or `page`), and requires `edit_post` for that object in both permission
+and execution callbacks. Successful `data` retains `id`, `type`, `content_hash`
+and `blocks`, and always adds boolean `is_classic`. It is `!has_blocks()` of the
+raw stored body: empty/whitespace-only content is Classic; mixed freeform and
+block content, and an explicit `core/freeform` Classic block, are not. This
+follows [WordPress marker detection](https://developer.wordpress.org/reference/functions/has_blocks/),
+not editor-plugin presence, editing history, or structural validation; even a
+malformed `<!-- wp:` marker makes the flag false.
+
+Only when `is_classic:true`, `data.hint` is the fixed text: "This post has no
+block markup. Use patch-post-content with target_type exact to change part of it."
+Empty content has no partial target until content is added. The heading target requires parsed `core/heading` blocks, so raw Classic HTML
+headings require exact matching. The hint does not grant write access or bypass
+match/hash preconditions. Existing block paths, hashes, empty-freeform filtering and record-local `untrusted_fields`
+are unchanged; the computed flag and plugin-authored hint add no untrusted
+field markers. Denied requests expose neither flag nor hint. `get-post` is unchanged.
+
 | Ability | Target | Required access |
 | --- | --- | --- |
 | `webmastery-site-toolkit-for-mcp/patch-content-block` | One Gutenberg block by path or unique hash in a post or page | `edit_post` for the specific object |
@@ -199,6 +264,51 @@ Both abilities sanitize the **replacement fragment** with `wp_kses_post()`, not 
 WordPress's normal save pipeline still applies. Preserving markup that KSES would strip requires the caller's **effective `unfiltered_html` capability**; a role name alone is not sufficient. Multisite, `DISALLOW_UNFILTERED_HTML`, or capability policies can deny it even to an Administrator. Callers without it remain subject to core's save-time KSES filtering. New replacement markup is filtered regardless of this capability, and full-content update abilities still sanitize all supplied content.
 
 Block-path, block-hash, and heading patches retain the existing WordPress parse/serialize behavior, which can normalize noncanonical block delimiters and omit empty freeform separators. They are not raw byte-splicing operations. Exact patches do not parse or serialize the surrounding content.
+
+## Featured-image write responses
+
+`set-featured-image` and `remove-featured-image` accept optional
+`response_format: "full" | "compact"`. Omission and explicit `"full"` preserve
+exactly the existing normalized post/page in `data`, including stored content.
+Choose `"compact"` for a small confirmation without post normalization or body,
+excerpt, author, taxonomy, or unrelated metadata reads for the response. This
+option applies only to these two abilities; it differs from list `fields`.
+
+```json
+{"post_id":123,"attachment_id":456,"response_format":"compact"}
+```
+
+A successful set returns:
+
+```json
+{"success":true,"data":{"post_id":123,"featured_image_id":456,"featured_image_url":"https://example.test/wp-content/uploads/image.png","previous_featured_image_id":0,"untrusted_fields":["featured_image_url"]}}
+```
+
+A successful remove normally returns the same record with `featured_image_id: 0`,
+`featured_image_url: null`, and the previous attachment ID. The previous ID is
+captured immediately before the operation, after target authorization and (for
+set) attachment validation; the current ID is read after the core operation.
+The URL is the current attachment's original URL from `wp_get_attachment_url`,
+or null when no image/URL is available or the caller lacks `edit_post` for that
+attachment (the existing media response authorization boundary). It remains marked even when null.
+Concurrent edits or site filters can affect these observations; this is not an
+atomic compare-and-swap or an undo transaction.
+
+Permissions stay unchanged: post/page targets only, `edit_posts` or `edit_pages`
+as appropriate plus target `edit_post`; set also requires an existing image
+attachment. Compact adds no post-meta or media-edit write permission; its URL read gate
+does not change whether the assignment succeeds. Invalid
+projection values, including explicit null and `"summary"`, fail the strict
+input boundary before capability checks, queries, or mutations. Existing errors
+and core mutation behavior are retained: setting an already selected image can
+still return `featured_image_failed`; removing an absent image succeeds. Remove
+continues to return success if core deletion returns false, with compact
+reporting the actual remaining image rather than assuming removal succeeded.
+
+To reverse a change, a separately authorized caller can set the recorded
+previous attachment ID, or remove the image when it was zero. The attachment
+must still exist and be eligible; these abilities do not restore deleted media.
+Clients needing the post after a compact write can call `get-post` or `get-page`.
 
 ## Image URL uploads
 
@@ -261,7 +371,35 @@ These optional read-only abilities use Site Kit's registered internal REST route
 
 Site Kit does not publish these routes as a supported third-party API. The adapter checks route availability at runtime and returns `site_kit_unavailable` or `site_kit_unsupported` instead of assuming a specific Site Kit implementation.
 
+PageSpeed accepts an optional `url` (defaults to the site home URL) and an optional
+`strategy` (`mobile` or `desktop`, defaults to `mobile` when omitted). Both `{}`
+and `{"url":"https://your-site.example/page/"}` request mobile analysis. Explicit
+`null`, other types, and unsupported strategies such as `both` are rejected.
+The permission callback and execution use the same resolved URL and strategy;
+same-site URL validation and Site Kit authorization still apply. URL domain
+validation runs in execution before any data request, retaining `invalid_url`
+for an authorized caller instead of masking it as a permission denial. The successful
+result retains `data.requested_url`, `data.strategy`, `data.id`,
+`data.analysis_timestamp`, `data.field_data`, `data.categories`, and `data.audits`.
+
 The three delegated abilities check `read` before plugin discovery, route lookup, or upstream work in both permission and direct execution callbacks. This is a minimum, not an access grant: the exact upstream GET route must expose a callable permission check, and normal WordPress REST dispatch still enforces it. Missing providers, routes, or usable permission callbacks fail closed. Status keeps its separate `manage_options` gate, without an additional `read` requirement.
+
+Upstream route permission denials and dispatched REST 401/403 responses return
+plugin-authored `forbidden` guidance naming **possible** Dashboard sharing or
+Google sign-in/reauthentication requirements. They do not establish a specific
+cause or imply a Google outage. An authorized administrator can review access
+for the caller's role to the relevant service from the sharing icon in the
+Site Kit dashboard header; see Google's [Dashboard sharing guide](https://sitekit.withgoogle.com/documentation/features/dashboard-sharing/).
+Eligible users can sign in to Google in Site Kit as that WordPress user.
+For further diagnosis, request `get-site-kit-status` (`manage_options` required)
+and `get-site-kit-permissions` only where authorized; either can also be denied.
+The denial itself performs no additional diagnostic reads. Local capability
+denials and missing/non-callable upstream checks keep their existing messages
+and categories. Non-authentication upstream failures retain their generic
+request-failure message; raw provider messages, codes and data remain absent
+from canonical public errors. Native execute-time permission rejection still
+uses WordPress's `ability_invalid_permissions` masking; Adapter permission
+preflight and dispatch failures preserve the authored guidance.
 
 This plugin does **not** add an `edit_posts` or `manage_options` floor to the
 delegated abilities, so a Subscriber whom Site Kit legitimately authorizes is
@@ -281,6 +419,7 @@ apply. Markers never restore omitted/redacted fields.
 | Successful record | Fields marked when present |
 | --- | --- |
 | Post, page, or CPT record (including responses reusing these normalizers) | `title`, `content`, `excerpt`, `slug`, `url`, `author_name` |
+| Compact featured-image write `data` record | `featured_image_url`, including null or redacted URL |
 | Revision | `author_name`, `title`, `content`, `excerpt` |
 | Block | `block_name`, `text`, `html`, `attrs` |
 | `patch-content-block` data record | `content` |

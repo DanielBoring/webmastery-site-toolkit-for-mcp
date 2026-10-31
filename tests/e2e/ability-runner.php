@@ -788,6 +788,28 @@ foreach ( wstm108_seo_cases() as $name => $seo_case ) {
 	$fixtures[ "wstm108_{$name}_good" ] = $seo_case['expected']['data.good'];
 	$fixtures[ "wstm108_{$name}_issues" ] = $seo_case['expected']['data.issues'];
 }
+$wstm201_case = wstm201_seo_link_case( home_url() );
+$wstm201_id = e2e_insert_post( 'post', $wstm201_case['title'], $wstm201_case['content'], $editor_id, 'draft', $wstm201_case['slug'] );
+foreach ( $wstm201_case['meta'] as $key => $value ) {
+	update_post_meta( $wstm201_id, $key, wp_slash( $value ) );
+}
+$wstm201_actor = get_current_user_id();
+$wstm201_regression = array( 'passed' => false, 'cleanup' => false );
+try {
+	wp_set_current_user( $editor_id );
+	$wstm201_result = wp_get_ability( 'webmastery-site-toolkit-for-mcp/seo-analyze-post' )->execute( array( 'post_id' => $wstm201_id ) );
+	$wstm201_regression['response'] = $wstm201_result;
+	$wstm201_regression['passed'] = e2e_result_is_success( $wstm201_result );
+	foreach ( $wstm201_case['expected'] as $path => $expected ) {
+		$actual = e2e_get_path_value( $wstm201_result, $path, $exists );
+		$wstm201_regression['passed'] = $wstm201_regression['passed'] && $exists && $expected === $actual;
+	}
+} finally {
+	wp_set_current_user( $wstm201_actor );
+	$wstm201_deleted = wp_delete_post( $wstm201_id, true );
+	$wstm201_regression['cleanup'] = $wstm201_deleted instanceof WP_Post && $wstm201_id === (int) $wstm201_deleted->ID && null === get_post( $wstm201_id );
+	$wstm201_regression['passed'] = $wstm201_regression['passed'] && $wstm201_regression['cleanup'];
+}
 $fixtures['yoast_score_post_id'] = e2e_insert_post( 'post', 'MCP E2E Yoast Score Post', 'Yoast score fixture.', $author_id );
 wp_update_post(
 	array(
@@ -962,6 +984,7 @@ $summary = array(
 	'missing_coverage'      => $missing,
 	'unknown_manifest'      => $extra,
 	'cases'                 => array(),
+	'seo_link_classification' => $wstm201_regression,
 );
 
 echo 'INFO registered webmastery-site-toolkit-for-mcp abilities: ' . count( $registered ) . "\n";
@@ -1215,8 +1238,11 @@ $summary['taxonomy_write_regressions'] = array(
 	'passed' => $taxonomy_summary['passed'],
 	'failed' => $taxonomy_summary['failed'],
 );
+require_once __DIR__ . '/featured-image-runner.php';
+$featured_image_summary = wstm206_run_featured_image_tests();
+$summary['featured_image_regressions'] = $featured_image_summary;
 e2e_write_summary( $summary );
 
 $patch_html_summary = ( new WSTM115_Patch_HTML_Tests( $roles ) )->run();
 
-exit( $summary['failed'] > 0 || $patch_html_summary['failed'] > 0 || $taxonomy_summary['failed'] > 0 ? 1 : 0 );
+exit( $summary['failed'] > 0 || ! $wstm201_regression['passed'] || $patch_html_summary['failed'] > 0 || $taxonomy_summary['failed'] > 0 || $featured_image_summary['failed'] > 0 ? 1 : 0 );

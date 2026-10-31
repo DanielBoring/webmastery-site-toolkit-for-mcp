@@ -192,12 +192,16 @@ load_dependencies() {
 			YOAST_VERSION="$(baseline yoast)"
 			SEOPRESS_VERSION="$(baseline seopress)"
 			;;
+		wp69-seo)
+			YOAST_VERSION="$(baseline wp69_yoast)"
+			SEOPRESS_VERSION="$(baseline wp69_seopress)"
+			;;
 		latest-seo)
 			YOAST_VERSION=latest
 			SEOPRESS_VERSION=latest
 			;;
 		*)
-			echo "DEPENDENCY_POLICY must be pinned or latest-seo." >&2
+			echo "DEPENDENCY_POLICY must be pinned, wp69-seo or latest-seo." >&2
 			return 1
 			;;
 	esac
@@ -250,7 +254,7 @@ configure_application_passwords() {
 install_plugins() {
 	local yoast_version_args=()
 	local seopress_version_args=()
-	if [ "$DEPENDENCY_POLICY" = "pinned" ]; then
+	if [[ "$DEPENDENCY_POLICY" == pinned || "$DEPENDENCY_POLICY" == wp69-seo ]]; then
 		yoast_version_args=( --version="$YOAST_VERSION" )
 		seopress_version_args=( --version="$SEOPRESS_VERSION" )
 	fi
@@ -467,6 +471,7 @@ run_metadata_boundary_qa() (
 				wordpress php -d memory_limit=1G "${CONTAINER_PLUGIN_ROOT}/tests/e2e/${runner}-runner.php"
 		done
 	done
+	compose exec -T -e WSTM202_DISPOSABLE=1 wordpress php "${CONTAINER_PLUGIN_ROOT}/tests/e2e/site-kit-defaults-runner.php"
 )
 
 run_destructive_safety_qa() (

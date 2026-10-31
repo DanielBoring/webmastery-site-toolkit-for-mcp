@@ -221,14 +221,34 @@ class Webmastery_MCP_SEO {
 
 	private static function count_links( $content, $home, $external = false ) {
 		preg_match_all( '/<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>/i', $content, $matches );
-		$count = 0;
+		$home_host = self::normalize_link_host( (string) wp_parse_url( $home, PHP_URL_HOST ) );
+		$count     = 0;
 		foreach ( $matches[1] as $href ) {
-			$is_internal = str_starts_with( $href, $home ) || str_starts_with( $href, '/' );
+			$href   = trim( html_entity_decode( $href, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
+			$parsed = wp_parse_url( $href );
+			if ( '' === $href || false === $parsed ) {
+				continue;
+			}
+			$scheme = strtolower( $parsed['scheme'] ?? '' );
+			if ( '' !== $scheme && ! in_array( $scheme, [ 'http', 'https' ], true ) ) {
+				continue;
+			}
+			$host = self::normalize_link_host( $parsed['host'] ?? '' );
+			if ( '' === $host && ( '' !== $scheme || str_starts_with( $href, '//' ) ) ) {
+				continue;
+			}
+			// SEO site membership compares hosts, not URL prefixes, schemes or ports.
+			$is_internal = '' === $host || ( '' !== $home_host && $host === $home_host );
 			if ( $external ? ! $is_internal : $is_internal ) {
 				++$count;
 			}
 		}
 		return $count;
+	}
+
+	private static function normalize_link_host( string $host ): string {
+		$host = strtolower( $host );
+		return str_starts_with( $host, 'www.' ) ? substr( $host, 4 ) : $host;
 	}
 
 	private static function register_site_overview() {
@@ -517,7 +537,7 @@ class Webmastery_MCP_SEO {
 				'per_page'       => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 10 ],
 				'page'           => [ 'type' => 'integer', 'minimum' => 1, 'default' => 1 ],
 				'post_type'      => [ 'type' => 'string', 'enum' => [ 'post', 'page' ], 'description' => 'Optional post type filter.' ],
-				'status'         => [ 'type' => 'string', 'enum' => [ 'publish', 'draft', 'pending', 'private', 'future', 'any' ], 'description' => 'Optional post status filter.' ],
+				'status'         => [ 'type' => 'string', 'enum' => [ 'publish', 'draft', 'pending', 'private', 'future', 'any' ], 'default' => 'publish', 'description' => 'Post status filter; defaults to published content. Use any for all otherwise eligible statuses.' ],
 				'modified_after' => [ 'type' => 'string', 'description' => 'Optional GMT modified-after filter, parseable by strtotime().' ],
 			],
 		];
@@ -526,7 +546,7 @@ class Webmastery_MCP_SEO {
 	private static function register_score_ability( $slug, $label, $meta_key, $description ) {
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/{$slug}", [
 			'label'               => "SEO: {$label}",
-			'description'         => $description . ' Only authorized score keys in this bounded candidate window are returned. Follow next_page even for empty items; no exact totals.',
+			'description'         => $description . ' For site-wide published-content audits, follow these paged results. Defaults to status publish; explicitly use any to include unpublished content. Only authorized score keys in this bounded candidate window are returned. Follow next_page even for empty items; no exact totals.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => self::score_input_schema(),
 			'execute_callback'    => function ( $input ) use ( $meta_key ) {
@@ -576,7 +596,7 @@ class Webmastery_MCP_SEO {
 			return Webmastery_MCP_Response::legacy_error( 'invalid_content_type', 'post_type must be post or page.' );
 		}
 
-		$status = $input['status'] ?? 'any';
+		$status = $input['status'] ?? 'publish';
 		if ( ! in_array( $status, [ 'publish', 'draft', 'pending', 'private', 'future', 'any' ], true ) ) {
 			return Webmastery_MCP_Response::legacy_error( 'invalid_status', 'status is invalid.' );
 		}
