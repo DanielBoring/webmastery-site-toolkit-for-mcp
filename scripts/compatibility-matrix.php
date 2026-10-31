@@ -17,7 +17,7 @@ function webmastery_mcp_compatibility_matrix( array $baseline, array $latest ): 
 	};
 	return array(
 		'include' => array(
-			$lane( 'wp69-php81-compatibility', '6.9', $baseline['mcp_adapter'], $baseline['mcp_adapter_sha256'], '8.1' ),
+			$lane( 'wp69-php81-compatibility', '6.9', $baseline['mcp_adapter'], $baseline['mcp_adapter_sha256'], '8.1', '8.0.36', 'wp69-seo' ),
 			$lane( 'current-baseline', $baseline['wordpress'], $baseline['mcp_adapter'], $baseline['mcp_adapter_sha256'] ),
 			$lane( 'latest-mcp-adapter', $baseline['wordpress'], $latest['mcp_adapter'], $latest['mcp_adapter_sha256'] ),
 			$lane( 'latest-wordpress', $latest['wordpress'], $baseline['mcp_adapter'], $baseline['mcp_adapter_sha256'] ),

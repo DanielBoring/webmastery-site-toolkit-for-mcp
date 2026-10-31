@@ -1340,6 +1340,15 @@ The runner fails early if either dependency is not active. Coexistence assertion
 
 Routine QA uses reviewed WP-CLI, MCP Adapter, SEO-plugin, and Plugin Check pins from `.github/compatibility-versions.json`. WP-CLI and adapter downloads must pass digest verification before execution/installation. Candidate overrides must supply the matching digest; do not reuse the baseline digest for a different release. The scheduled compatibility workflow explicitly opts into floating dependencies and records the versions it actually tests.
 
+For a WordPress 6.9 runtime, set `DEPENDENCY_POLICY=wp69-seo` to select the
+separately maintained `wp69_yoast` and `wp69_seopress` pins. The compatibility
+matrix and genuine PHP 8.0 launcher select this policy explicitly. Global SEO
+baseline promotion preserves these floor pins; `latest-seo` continues testing
+current providers on latest WordPress. See the [provider policy](../../docs/07-compatibility-qa.md#provider-policy-by-runtime)
+before updating the floor pins. Verify selection without Docker using
+`bash tests/compatibility-dependency-policy-test.sh`; runtime acceptance still
+requires the full suites on both WordPress 6.9 lanes.
+
 Set `MCP_CRUD_ENDPOINT` only when you need the secondary CRUD runner to target a non-default MCP Adapter endpoint. By default it uses `http://localhost/wp-json/mcp/mcp-adapter-default-server` from inside the WordPress container.
 
 PowerShell users can run:
