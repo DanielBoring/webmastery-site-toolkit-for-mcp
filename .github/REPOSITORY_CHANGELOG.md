@@ -18,6 +18,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
   WordPress requirement from invalidating the maintained floor. All eight
   compatibility lanes remain required, current providers remain covered, and
   lane evidence retains the selected policy and observed installed versions.
+- Document host CAPTCHA blocks and MCP Adapter session recovery, including safe retry decisions.
+
 - Admit MCP Adapter 0.7.1 to the current source/package untrusted-content and
   error-contract proofs so compatibility lanes reach the runtime assertions.
   Keep unknown future versions rejected, preserve all validation and cleanup

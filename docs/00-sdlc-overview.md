@@ -228,6 +228,7 @@ are looking for something.
 | [README](../README.md) | What the plugin is, quickstart, requirements, install, connect and verify |
 | [Plugin guide](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/) | Setup, roles, every ability by name, safe workflows (hosted on virtuallyboring.com) |
 | [Ability contracts](reference/ability-contracts.md) | Exact inputs, permissions, paging, errors, safety interlocks and result fields |
+| [Connection troubleshooting](reference/troubleshooting.md) | Host CAPTCHA blocks and expired Adapter sessions |
 | [3.0 migration guide](reference/3.0-migration.md) | Breaking changes from 2.x and how to update MCP clients |
 | [readme.txt](../readme.txt) | The WordPress.org listing: description, FAQ, changelog and upgrade notices |
 | [Changelog](../CHANGELOG.md) | Plugin release notes |

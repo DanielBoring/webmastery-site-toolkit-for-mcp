@@ -156,6 +156,7 @@ Details: [security and privacy behavior](docs/reference/ability-contracts.md#sec
 | --- | --- |
 | [Plugin guide](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/) | Setup, roles, every ability by name, safe workflows |
 | [Ability contracts](docs/reference/ability-contracts.md) | Exact inputs, permissions, paging, errors, and result fields for MCP client developers |
+| [Connection troubleshooting](docs/reference/troubleshooting.md) | Host CAPTCHA blocks and expired Adapter sessions |
 | [3.0 migration guide](docs/reference/3.0-migration.md) | Breaking changes from 2.x and how to update clients |
 | [Security strategy](docs/90-security-strategy.md) | Threat model, permissions, privacy, vulnerability response |
 | [Changelog](CHANGELOG.md) | Plugin release notes |
