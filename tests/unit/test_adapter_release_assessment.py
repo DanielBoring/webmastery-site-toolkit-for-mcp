@@ -209,13 +209,17 @@ class AdapterReleaseAssessmentTest(unittest.TestCase):
             source = (ROOT / "tests" / "e2e" / name).read_text()
             expression = re.search(
                 r"in_array\( (\$plugin_data\['version'\]|\$summary\['adapter'\]\['version'\] \?\? null), "
-                r"array\( '0\.6\.1', '0\.7\.0' \), true \)", source
+                r"array\( '[0-9.]+'(?:, '[0-9.]+')* \), true \)", source
             )
             self.assertIsNotNone(expression)
             probe = re.sub(r"\$plugin_data\['version'\]|\$summary\['adapter'\]\['version'\] \?\? null",
                            "$version", expression.group())
-            for version, allowed in (("0.6.1", True), ("0.7.0", True), ("0.7.1", False),
-                                     ("trunk", False), (None, False)):
+            # The scheduled 0.7.1 lanes used to stop at this guard before
+            # exercising any transport assertions. Admission stays explicit:
+            # neither a future release nor a malformed version is assessed.
+            for version, allowed in (("0.6.1", True), ("0.7.0", True), ("0.7.1", True),
+                                     ("0.7.2", False), ("0.8.0", False),
+                                     ("0.7.1-rc1", False), ("trunk", False), (None, False)):
                 value = "null" if version is None else "'" + version + "'"
                 actual = subprocess.check_output(
                     ["php", "-r", "$version=" + value + ";echo " + probe + ' ? "yes" : "no";'], text=True
