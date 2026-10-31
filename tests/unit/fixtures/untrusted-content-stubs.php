@@ -224,6 +224,7 @@ function wp_get_post_revisions( $id, $args ) {
 	return array( get_post( 43 ) );
 }
 
+function has_blocks( $content ): bool { return false !== strpos( $content, '<!-- wp:' ); }
 function parse_blocks( $content ) {
 	return $GLOBALS['wstm108']['blocks'];
 }

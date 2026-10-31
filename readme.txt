@@ -263,6 +263,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 * Correct SEO Analyze Post internal/external link counts for bare/www hosts, HTTP/HTTPS, protocol-relative URLs and relative references; exclude non-web schemes and compare complete hostnames.
 * Identify failing schema fields and reasons in invalid-input errors across native and MCP calls, without exposing supplied values or unknown property names.
+* Flag Classic content in List Content Blocks and guide partial edits to Patch Post Content while preserving blocks, hashes and permissions.
 
 = 3.0.0 =
 

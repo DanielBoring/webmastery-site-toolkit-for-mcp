@@ -126,7 +126,59 @@ final class WSTM115_Patch_HTML_Tests {
 		echo ( empty( $errors ) ? 'PASS ' : 'FAIL ' ) . $label . ( $errors ? ': ' . implode( ' ', $errors ) : '' ) . "\n";
 	}
 
+	private function inspect_classic_content() {
+		$paragraph = self::paragraph( 'Block' );
+		$fixtures = array(
+			'classic' => array( '<h2>Classic</h2><p>Body</p>', true, array( null ) ),
+			'empty' => array( '', true, array() ),
+			'whitespace' => array( " \n\t", true, array() ),
+			'gutenberg' => array( $paragraph, false, array( 'core/paragraph' ) ),
+			'mixed' => array( '<p>Raw</p>' . $paragraph, false, array( null, 'core/paragraph' ) ),
+			'classic block' => array( '<!-- wp:freeform --><p>Classic block</p><!-- /wp:freeform -->', false, array( 'core/freeform' ) ),
+			'malformed marker' => array( '<!-- wp:broken', false, array( null ) ),
+		);
+		foreach ( array( 'post', 'page' ) as $type ) {
+			foreach ( $fixtures as $label => $fixture ) {
+				wp_set_current_user( $this->roles['editor'] );
+				$id = self::seed( $fixture[0], $this->roles['editor'], $type );
+				$errors = array();
+				try {
+					$input = array( 'content_id' => $id, 'content_type' => $type );
+					$ability = wp_get_ability( 'webmastery-site-toolkit-for-mcp/list-content-blocks' );
+					$result = $ability->execute( $input );
+					$data = is_array( $result ) ? ( $result['data'] ?? array() ) : array();
+					$this->check( is_array( $result ) && true === ( $result['success'] ?? false ), 'Inspection failed.', $errors );
+					$this->check( ( $data['is_classic'] ?? null ) === $fixture[1], 'Incorrect Classic classification.', $errors );
+					$this->check( array_key_exists( 'hint', $data ) === $fixture[1], 'Incorrect hint presence.', $errors );
+					if ( $fixture[1] ) {
+						$this->check( ( $data['hint'] ?? '' ) === 'This post has no block markup. Use patch-post-content with target_type exact to change part of it.', 'Incorrect static hint.', $errors );
+					}
+					$this->check( ( $data['content_hash'] ?? '' ) === hash( 'sha256', $fixture[0] ), 'Raw content hash changed.', $errors );
+					$this->check( array_column( $data['blocks'] ?? array(), 'block_name' ) === $fixture[2], 'Existing parsed blocks changed.', $errors );
+					$parsed = array_values( array_filter( parse_blocks( $fixture[0] ), static function ( $block ) { return null !== $block['blockName'] || '' !== trim( $block['innerHTML'] ); } ) );
+					foreach ( $data['blocks'] ?? array() as $index => $block ) {
+						$this->check( $block['path'] === (string) $index && $block['hash'] === hash( 'sha256', serialize_block( $parsed[$index] ) ), 'Block path/hash changed.', $errors );
+						$this->check( $block['html'] === $parsed[$index]['innerHTML'] && $block['attrs'] === $parsed[$index]['attrs'] && $block['untrusted_fields'] === array( 'block_name', 'text', 'html', 'attrs' ), 'Block values/markers changed.', $errors );
+					}
+					foreach ( array( 'subscriber', 'author' ) as $actor ) {
+						wp_set_current_user( $this->roles[$actor] );
+						$denied = $ability->execute( $input );
+						$this->check( is_wp_error( $denied ) && 'ability_invalid_permissions' === $denied->get_error_code(), 'Denied actor received inspection data.', $errors );
+					}
+					$this->check( get_post( $id )->post_content === $fixture[0], 'Read-only inspection mutated content.', $errors );
+					$this->cases[] = array( 'label' => "{$type} inspect {$label}", 'passed' => empty( $errors ), 'errors' => $errors, 'result' => $result );
+				} finally {
+					wp_set_current_user( $this->roles['editor'] );
+					if ( ! wp_delete_post( $id, true ) ) {
+						throw new RuntimeException( 'Unable to clean up owned Classic inspection fixture.' );
+					}
+				}
+			}
+		}
+	}
+
 	public function run() {
+		$this->inspect_classic_content();
 		$unsafe = self::html_block();
 		$old = self::paragraph( 'Target "old" C:\wstm115\old.' );
 		$replacement = self::paragraph( 'New "quoted" apostrophe\'s C:\wstm115\new.<iframe src="https://example.org/new"></iframe><script>void(0)</script><style>.new{color:red}</style><form><input name="new"></form><svg><path></path></svg><b onclick="void(0)">Safe</b>' );

@@ -546,7 +546,9 @@ final class UntrustedContentTest extends TestCase {
 		$expected['path'] = '0';
 		$expected['inner_block_count'] = 0;
 		$this->assert_marked( $expected, array( 'block_name', 'text', 'html', 'attrs' ), $data['blocks'][0] );
-		unset( $data['blocks'][0]['untrusted_fields'] );
+		$this->assertFalse( $data['is_classic'] );
+		$this->assertArrayNotHasKey( 'hint', $data );
+		unset( $data['is_classic'], $data['blocks'][0]['untrusted_fields'] );
 		$this->assertSame( array( 'id' => 42, 'type' => 'post', 'content_hash' => hash( 'sha256', self::HTML ), 'blocks' => array( $expected ) ), $data );
 		$this->assertSame( array( $block ), $GLOBALS['wstm108']['serialized_blocks'] );
 	}
