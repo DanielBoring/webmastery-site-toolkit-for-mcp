@@ -133,7 +133,7 @@ class Webmastery_MCP_Site_Kit {
 			return $permission;
 		}
 
-		$validated = self::validate_pagespeed_input( $input );
+		$validated = self::normalize_pagespeed_input( $input );
 		if ( is_wp_error( $validated ) ) {
 			return $validated;
 		}
@@ -309,21 +309,28 @@ class Webmastery_MCP_Site_Kit {
 		];
 	}
 
-	private static function validate_pagespeed_input( $input ) {
+	private static function normalize_pagespeed_input( $input ) {
 		$strategy = array_key_exists( 'strategy', $input ) ? $input['strategy'] : 'mobile';
 		if ( ! in_array( $strategy, [ 'mobile', 'desktop' ], true ) ) {
 			return Webmastery_MCP_Response::local_error( 'invalid_strategy', 'Strategy must be mobile or desktop.' );
 		}
 
-		$url = empty( $input['url'] ) ? home_url( '/' ) : esc_url_raw( $input['url'] );
-		if ( '' === $url || ! self::is_same_site_url( $url ) ) {
-			return Webmastery_MCP_Response::local_error( 'invalid_url', 'PageSpeed URL must be an HTTP or HTTPS URL on the current site.' );
-		}
-
 		return [
-			'url'      => $url,
+			'url'      => empty( $input['url'] ) ? home_url( '/' ) : esc_url_raw( $input['url'] ),
 			'strategy' => $strategy,
 		];
+	}
+
+	private static function validate_pagespeed_input( $input ) {
+		$validated = self::normalize_pagespeed_input( $input );
+		if ( is_wp_error( $validated ) ) {
+			return $validated;
+		}
+		// Keep domain validation in execution so core does not mask invalid_url as a permission denial.
+		if ( '' === $validated['url'] || ! self::is_same_site_url( $validated['url'] ) ) {
+			return Webmastery_MCP_Response::local_error( 'invalid_url', 'PageSpeed URL must be an HTTP or HTTPS URL on the current site.' );
+		}
+		return $validated;
 	}
 
 	private static function is_same_site_url( $url ) {

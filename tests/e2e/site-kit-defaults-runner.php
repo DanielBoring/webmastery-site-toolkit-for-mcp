@@ -52,7 +52,7 @@ try {
 						$transport = new Wstm110_Metadata_Transport( 'individual' === $boundary, array( 'login' => $login, 'password' => $credential[0] ) );
 						$transport->initialize();
 					}
-					foreach ( array( array(), array( 'url' => home_url( '/sample-page/' ) ), array( 'strategy' => 'mobile' ), array( 'strategy' => 'desktop' ), array( 'strategy' => null ), array( 'strategy' => false ), array( 'strategy' => array( 'mobile' ) ), array( 'strategy' => 'both' ) ) as $input ) {
+					foreach ( array( array(), array( 'url' => home_url( '/sample-page/' ) ), array( 'strategy' => 'mobile' ), array( 'strategy' => 'desktop' ), array( 'strategy' => null ), array( 'strategy' => false ), array( 'strategy' => array( 'mobile' ) ), array( 'strategy' => 'both' ), array( 'url' => 'https://example.com/' ) ) as $input ) {
 						$invalid = array_key_exists( 'strategy', $input ) && ! in_array( $input['strategy'], array( 'mobile', 'desktop' ), true );
 						if ( $transport ) {
 							$result = $transport->execute( $ability_name, $input );
@@ -65,7 +65,14 @@ try {
 							$result = Webmastery_MCP_Site_Kit::$method( $input );
 						}
 						$label = "{$scenario} {$boundary} " . wp_json_encode( $input );
-						if ( 'shared' === $scenario && ! $invalid ) {
+						$external_url = 'https://example.com/' === ( $input['url'] ?? null );
+						$url_rejected = $external_url && ( ( 'shared' === $scenario && ! in_array( $boundary, array( 'permission', 'native-permission' ), true ) ) || ( 'denied' === $scenario && 'direct' === $boundary ) );
+						if ( $url_rejected ) {
+							if ( is_wp_error( $result ) ) {
+								$result = Webmastery_MCP_Response::from_wp_error( $result );
+							}
+							wstm202_assert( false === ( $result['success'] ?? null ) && 'invalid_input' === ( $result['error']['code'] ?? null ) && 'invalid_url' === ( $result['error']['reason'] ?? null ), $label . ': URL rejection must stay in execution' );
+						} elseif ( 'shared' === $scenario && ! $invalid ) {
 							if ( in_array( $boundary, array( 'permission', 'native-permission' ), true ) ) {
 								wstm202_assert( true === $result, $label );
 							} else {

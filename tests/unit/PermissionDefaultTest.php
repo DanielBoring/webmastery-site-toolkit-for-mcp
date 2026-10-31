@@ -200,6 +200,15 @@ final class PermissionDefaultTest extends TestCase {
 		self::assertTrue( $result['success'] );
 		self::assertSame( 'mobile', $result['data']['strategy'] );
 		self::assertSame( 'http://localhost/', $result['data']['requested_url'] );
+		$external = array( 'url' => 'https://example.com/' );
+		self::assertTrue( $ability->check_permissions( $external ) );
+		$data_calls = $GLOBALS['wstm125']['calls']['data'];
+		// This lifecycle double does not implement URI format; the real-core runtime matrix covers it.
+		unset( $ability->input_schema['properties']['url']['format'] );
+		$rejected = $ability->execute( $external );
+		self::assertSame( 'invalid_input', $rejected['error']['code'] );
+		self::assertSame( 'invalid_url', $rejected['error']['reason'] );
+		self::assertSame( $data_calls, $GLOBALS['wstm125']['calls']['data'] );
 		$calls = $GLOBALS['wstm125']['calls'];
 		$this->assert_error( $ability->check_permissions( array( 'strategy' => null ) ), 'invalid_input', 'ability_invalid_input', array( 'field' => '$.strategy', 'reason' => 'type' ) );
 		self::assertSame( 'invalid_input', $ability->execute( array( 'strategy' => null ) )['error']['code'] );

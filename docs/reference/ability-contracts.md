@@ -311,7 +311,9 @@ PageSpeed accepts an optional `url` (defaults to the site home URL) and an optio
 and `{"url":"https://your-site.example/page/"}` request mobile analysis. Explicit
 `null`, other types, and unsupported strategies such as `both` are rejected.
 The permission callback and execution use the same resolved URL and strategy;
-same-site URL validation and Site Kit authorization still apply. The successful
+same-site URL validation and Site Kit authorization still apply. URL domain
+validation runs in execution before any data request, retaining `invalid_url`
+for an authorized caller instead of masking it as a permission denial. The successful
 result retains `data.requested_url`, `data.strategy`, `data.id`,
 `data.analysis_timestamp`, `data.field_data`, `data.categories`, and `data.audits`.
 
