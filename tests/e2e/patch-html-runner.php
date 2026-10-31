@@ -163,7 +163,8 @@ final class WSTM115_Patch_HTML_Tests {
 					foreach ( array( 'subscriber', 'author' ) as $actor ) {
 						wp_set_current_user( $this->roles[$actor] );
 						$denied = $ability->execute( $input );
-						$this->check( is_wp_error( $denied ) && 'ability_invalid_permissions' === $denied->get_error_code(), 'Denied actor received inspection data.', $errors );
+						$denied_envelope = wstm118_error_envelope( $denied );
+						$this->check( 'forbidden' === $denied_envelope['error']['code'] && 'ability_invalid_permissions' === $denied_envelope['error']['reason'] && array() === (array) $denied_envelope['error']['details'], 'Denied actor received inspection data.', $errors );
 					}
 					$this->check( get_post( $id )->post_content === $fixture[0], 'Read-only inspection mutated content.', $errors );
 					$this->cases[] = array( 'label' => "{$type} inspect {$label}", 'passed' => empty( $errors ), 'errors' => $errors, 'result' => $result );
