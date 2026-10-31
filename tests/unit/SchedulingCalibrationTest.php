@@ -22,6 +22,15 @@ final class SchedulingCalibrationTest extends TestCase {
 		return Wstm113Calibration\json( $value );
 	}
 
+	private function diagnostic_oracle( stdClass $oracle, string $field = '$.status', string $reason = 'enum' ): stdClass {
+		// The historical ledger stays sealed; only current schema details are additive.
+		$expected = json_decode( $this->typed( $oracle ), false, 512, JSON_THROW_ON_ERROR );
+		if ( 'ability_invalid_input' === $expected->error->reason ) {
+			$expected->error->details = (object) array( 'field' => $field, 'reason' => $reason );
+		}
+		return $expected;
+	}
+
 	private function source(): string {
 		return Wstm113Calibration\normalized( file_get_contents( dirname( __DIR__ ) . '/e2e/scheduling-runner.php' ) );
 	}
@@ -142,7 +151,7 @@ final class SchedulingCalibrationTest extends TestCase {
 				$record = Wstm113Calibration\execute( $this->source(), $row );
 				$records[] = $row->label;
 				self::assertTrue( $record['passed'], $row->registered_name . ':' . $row->label );
-				self::assertSame( $this->typed( $pair->$oracle ), $this->typed( $record['result'] ) );
+				self::assertSame( $this->typed( $this->diagnostic_oracle( $pair->$oracle ) ), $this->typed( $record['result'] ) );
 				self::assertSame( $fixture, $record['before'] );
 				self::assertSame( $fixture, $record['after'] );
 				self::assertSame( array(), $record['observed'] );
@@ -181,7 +190,7 @@ final class SchedulingCalibrationTest extends TestCase {
 			$record = Wstm113Calibration\dual_layer( $this->source(), $pair->new );
 			$this->assert_same_input_dual_layer_trace( $pair->new, $record );
 			self::assertTrue( $record['passed'] );
-			self::assertSame( $this->typed( $pair->new_oracle ), $this->typed( $record['layers']['registered_callback']['result'] ) );
+			self::assertSame( $this->typed( $this->diagnostic_oracle( $pair->new_oracle ) ), $this->typed( $record['layers']['registered_callback']['result'] ) );
 			self::assertSame( $this->typed( $pair->minimal_oracle ), $this->typed( $record['layers']['scheduling_helper']['result'] ) );
 			foreach ( $record['layers'] as $layer ) {
 				self::assertTrue( $layer['passed'] );
@@ -261,7 +270,7 @@ final class SchedulingCalibrationTest extends TestCase {
 			Probe::fixture( $pair->old );
 			$record = Wstm113Calibration\execute( $ledger->original_source, $pair->old );
 			self::assertFalse( $record['passed'] );
-			self::assertSame( $this->typed( $pair->new_oracle ), $this->typed( $record['result'] ) );
+			self::assertSame( $this->typed( $this->diagnostic_oracle( $pair->new_oracle ) ), $this->typed( $record['result'] ) );
 			self::assertSame( array(), $record['events'] );
 			self::assertSame( $record['before'], $record['after'] );
 			self::assertSame( array(), $record['observed'] );
@@ -278,7 +287,7 @@ final class SchedulingCalibrationTest extends TestCase {
 			$result = $args['permission_callback']( $pair->new->input );
 			self::assertInstanceOf( WP_Error::class, $result );
 			self::assertSame( 'invalid_input', $result->get_error_code() );
-			self::assertSame( $this->typed( $pair->new_oracle ), $this->typed( wstm118_error_envelope( $result ) ) );
+			self::assertSame( $this->typed( $this->diagnostic_oracle( $pair->new_oracle ) ), $this->typed( wstm118_error_envelope( $result ) ) );
 			self::assertSame( array(), Probe::$events );
 			self::assertSame( $before, Probe::snapshot() );
 			self::assertTrue( $args['permission_callback']( $pair->minimal->input ) );
@@ -327,7 +336,7 @@ final class SchedulingCalibrationTest extends TestCase {
 				$input = clone $pair->minimal->input;
 				$input->{$pair->minimal->id_key} = $value;
 				$result = Probe::$abilities[ $pair->minimal->registered_name ]['execute_callback']( $input );
-				self::assertSame( $this->typed( $pair->new_oracle ), $this->typed( $result ) );
+				self::assertSame( $this->typed( $this->diagnostic_oracle( $pair->new_oracle, '$.' . $pair->minimal->id_key, 'type' ) ), $this->typed( $result ) );
 				self::assertSame( array(), Probe::$events );
 			}
 		}
@@ -374,7 +383,7 @@ final class SchedulingCalibrationTest extends TestCase {
 		foreach ( $this->ledger()->pairs as $pair ) {
 			foreach ( array( 'new' => 'new_oracle', 'minimal' => 'minimal_oracle' ) as $kind => $oracle ) {
 				Probe::fixture( $pair->$kind );
-				$result = (array) $pair->$oracle;
+				$result = (array) $this->diagnostic_oracle( $pair->$oracle );
 				$result['error'] = (array) $result['error'];
 				$result['error'][ $field ] = $value;
 				$state = Probe::snapshot();
@@ -397,6 +406,25 @@ final class SchedulingCalibrationTest extends TestCase {
 			'details array' => array( 'details', array() ),
 			'nonempty details' => array( 'details', (object) array( 'unexpected' => true ) ),
 		);
+	}
+
+	public function test_current_schema_diagnostic_requires_exact_field_and_reason(): void {
+		foreach ( $this->ledger()->pairs as $pair ) {
+			Probe::fixture( $pair->new );
+			$state = Probe::snapshot();
+			$result = (array) $this->diagnostic_oracle( $pair->new_oracle );
+			$result['error'] = (array) $result['error'];
+			self::assertTrue( Wstm113Calibration\predicate( $this->source(), $pair->new, $result, $state, $state, array() ) );
+			foreach ( array(
+				array(),
+				array( 'field' => '$.post_id', 'reason' => 'enum' ),
+				array( 'field' => '$.status', 'reason' => 'type' ),
+				array( 'field' => '$.status', 'reason' => 'enum', 'value' => 'private' ),
+			) as $details ) {
+				$result['error']['details'] = (object) $details;
+				self::assertFalse( Wstm113Calibration\predicate( $this->source(), $pair->new, $result, $state, $state, array() ) );
+			}
+		}
 	}
 
 	/** @dataProvider predicate_mutants */

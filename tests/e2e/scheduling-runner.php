@@ -190,10 +190,11 @@ try {
 						$expected_message = 'ability_invalid_input' === $error
 							? 'Ability input does not match its schema.'
 							: 'The scheduled date must be at least 60 seconds in the future when validated.';
+						$expected_details = 'ability_invalid_input' === $error ? [ 'field' => '$.status', 'reason' => 'enum' ] : [];
 						$passed = $passed && 'invalid_input' === $envelope['error']['code']
 							&& $error === $envelope['error']['reason']
 							&& $expected_message === $envelope['error']['message']
-							&& [] === get_object_vars( $envelope['error']['details'] );
+							&& $expected_details === get_object_vars( $envelope['error']['details'] );
 					}
 					if ( $id ) {
 						$passed = $passed && 'Scheduling metadata sentinel' === get_post_meta( $id, '_yoast_wpseo_metadesc', true );
