@@ -198,4 +198,15 @@ final class SiteKitPermissionsTest extends TestCase {
 		$this->assertSame( 'forbidden', Webmastery_MCP_Site_Kit::execute_pagespeed()->get_error_code() );
 		$this->assertCount( 1, $GLOBALS['wstm125']['data_requests'] );
 	}
+
+	public function test_external_url_permission_delegates_but_execution_rejects_before_data(): void {
+		$input = array( 'url' => 'https://example.com/' );
+		$this->assertTrue( Webmastery_MCP_Site_Kit::permission_pagespeed( $input ) );
+		$this->assertSame( array( '/google-site-kit/v1/modules/pagespeed-insights/data/pagespeed', array( 'url' => 'https://example.com/', 'strategy' => 'mobile' ) ), $GLOBALS['wstm125']['permission_requests'][0] );
+		$this->assertSame( 'invalid_url', Webmastery_MCP_Site_Kit::execute_pagespeed( $input )->get_error_code() );
+		$this->assertSame( 0, $GLOBALS['wstm125']['calls']['data'] );
+		$GLOBALS['wstm125']['mode'] = 'false';
+		$this->assertSame( 'forbidden', Webmastery_MCP_Site_Kit::permission_pagespeed( $input )->get_error_code() );
+		$this->assertSame( 0, $GLOBALS['wstm125']['calls']['data'] );
+	}
 }

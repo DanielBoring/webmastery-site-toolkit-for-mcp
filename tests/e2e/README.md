@@ -1330,6 +1330,10 @@ It covers permission/direct callbacks, native execution, HTTP gateway and
 individual tools using temporary users/passwords that it removes afterward.
 The controlled upstream fixture requires normalized URL/strategy parameters;
 unit request spies separately verify the exact strategy reaching permission and dispatch.
+External URLs retain execution-stage `invalid_input` / `invalid_url` for an
+authorized caller; permission checks still delegate the normalized parameters
+to Site Kit. Native/HTTP callers denied by Site Kit retain permission errors,
+while direct execution validates URLs before any provider data dispatch.
 Local no-read denial is checked separately from upstream denial. These current
 regressions preserve the historical 601-case manifest and 152-case schema
 inventories and their existing allowed/denied assertions.
