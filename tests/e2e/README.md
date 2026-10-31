@@ -1728,7 +1728,9 @@ The normal owned contract run (`scripts/qa-run.sh all`) and package run execute
 separate from the unchanged 601 manifest cases and frozen historical marker
 inventories. The existing manifest still checks legacy full responses and
 permission denials. `e2e-summary.json` adds `featured_image_regressions`, including
-case results, actual compact records, persisted-image checks, and cleanup errors.
+case results, actual returned responses, persisted-image checks, measured counters,
+and cleanup errors. Each case retains observations before assertions so failed
+comparisons and partial observer failures remain reviewable after fixture cleanup.
 No separate stack or runtime gate is required.
 
 On a disposable site, as an Editor, run `set-featured-image` with

@@ -16,9 +16,9 @@ function wstm206_run_featured_image_tests(): array {
 		}
 	};
 	$record = static function ( $label, callable $run ) use ( &$summary ): void {
-		$case = array( 'label' => $label, 'passed' => false );
+		$case = array( 'label' => $label, 'passed' => false, 'evidence' => array() );
 		try {
-			$case['evidence'] = $run();
+			$run( $case['evidence'] );
 			$case['passed'] = true;
 		} catch ( Throwable $error ) {
 			$case['error'] = $error->getMessage();
@@ -55,70 +55,95 @@ function wstm206_run_featured_image_tests(): array {
 		wp_set_current_user( $editor->ID );
 		foreach ( $owned_posts as $type => $id ) {
 			foreach ( array( 'default', 'full' ) as $format ) {
-				$record( "featured image {$type} {$format} preserves full post", static function () use ( $require, $invoke, $stored_id, $id, $owned_media, $body, $format ) {
+				$record( "featured image {$type} {$format} preserves full post", static function ( array &$evidence ) use ( $require, $invoke, $stored_id, $id, $owned_media, $body, $format ) {
+					$evidence = array( 'post_id' => $id, 'content_bytes' => strlen( $body ), 'projection' => $format, 'operations' => array() );
 					delete_post_thumbnail( $id );
 					foreach ( array( 'set', 'remove' ) as $slug ) {
 						$input = array( 'post_id' => $id ) + ( 'set' === $slug ? array( 'attachment_id' => $owned_media['first'] ) : array() );
 						if ( 'full' === $format ) { $input['response_format'] = 'full'; }
+						$evidence['operations'][ $slug ] = array( 'input' => $input );
 						$result = $invoke( $slug, $input );
+						$evidence['operations'][ $slug ]['result'] = $result;
+						$persisted = $stored_id( $id );
+						$evidence['operations'][ $slug ]['persisted_image'] = $persisted;
 						$require( true === ( $result['success'] ?? null ) && $id === $result['data']['id'] && $body === $result['data']['content'], 'Full response lost the unchanged post content.' );
-						$require( $stored_id( $id ) === $result['data']['featured_image_id'], 'Full response differs from persisted image.' );
+						$require( $persisted === $result['data']['featured_image_id'], 'Full response differs from persisted image.' );
 						$require( ! isset( $result['data']['previous_featured_image_id'] ), 'Legacy full response gained compact fields.' );
 					}
-					return array( 'post_id' => $id, 'content_bytes' => strlen( $body ), 'projection' => $format );
 				} );
 			}
 			foreach ( array( array( 'set', 'first', 0 ), array( 'set', 'second', 'first' ), array( 'remove', null, 'second' ), array( 'remove', null, 0 ) ) as $index => $scenario ) {
-				$record( "featured image {$type} compact transition {$index}", static function () use ( $require, $invoke, $stored_id, $id, $owned_media, $scenario ) {
+				$record( "featured image {$type} compact transition {$index}", static function ( array &$evidence ) use ( $require, $invoke, $stored_id, $id, $owned_media, $scenario ) {
 					list( $slug, $image, $previous ) = $scenario;
 					$previous = $previous ? $owned_media[ $previous ] : 0;
-					$require( $previous === $stored_id( $id ), 'Unexpected initial thumbnail state.' );
+					$evidence = array( 'post_id' => $id, 'operation' => $slug, 'expected_previous' => $previous );
+					$before = $stored_id( $id );
+					$evidence['before_image'] = $before;
+					$require( $previous === $before, 'Unexpected initial thumbnail state.' );
 					$current = $image ? $owned_media[ $image ] : 0;
 					$normalizations = 0;
 					$observe = static function ( $name ) use ( &$normalizations ) { ++$normalizations; return $name; };
 					add_filter( 'get_the_author_display_name', $observe );
 					try {
-						$result = $invoke( $slug, array( 'post_id' => $id, 'response_format' => 'compact' ) + ( $image ? array( 'attachment_id' => $current ) : array() ) );
+						$input = array( 'post_id' => $id, 'response_format' => 'compact' ) + ( $image ? array( 'attachment_id' => $current ) : array() );
+						$evidence['input'] = $input;
+						$result = $invoke( $slug, $input );
+						$evidence['result'] = $result;
 					} finally {
+						$evidence['normalizations'] = $normalizations;
 						remove_filter( 'get_the_author_display_name', $observe );
 					}
+					$persisted = $stored_id( $id );
+					$evidence['persisted_image'] = $persisted;
 					$expected = array( 'success' => true, 'data' => array( 'post_id' => $id, 'featured_image_id' => $current,
 						'featured_image_url' => $current ? wp_get_attachment_url( $current ) : null,
 						'previous_featured_image_id' => $previous, 'untrusted_fields' => array( 'featured_image_url' ) ) );
-					$require( $expected === $result && $current === $stored_id( $id ), 'Compact response differs from persisted transition.' );
+					$evidence['expected'] = $expected;
+					$require( $expected === $result && $current === $persisted, 'Compact response differs from persisted transition.' );
 					$require( 0 === $normalizations, 'Compact path entered full post normalization.' );
-					return $result;
 				} );
 			}
-			$record( "featured image {$type} compact same-image set retains failure", static function () use ( $require, $invoke, $stored_id, $id, $owned_media ) {
+			$record( "featured image {$type} compact same-image set retains failure", static function ( array &$evidence ) use ( $require, $invoke, $stored_id, $id, $owned_media ) {
 				set_post_thumbnail( $id, $owned_media['first'] );
-				$result = $invoke( 'set', array( 'post_id' => $id, 'attachment_id' => $owned_media['first'], 'response_format' => 'compact' ) );
-				$require( 'featured_image_failed' === wstm118_error_reason( $result ) && $owned_media['first'] === $stored_id( $id ), 'Repeated set changed legacy error/state.' );
-				return $result;
+				$evidence['before_image'] = $stored_id( $id );
+				$input = array( 'post_id' => $id, 'attachment_id' => $owned_media['first'], 'response_format' => 'compact' );
+				$evidence['input'] = $input;
+				$result = $invoke( 'set', $input );
+				$evidence['result'] = $result;
+				$persisted = $stored_id( $id );
+				$evidence['persisted_image'] = $persisted;
+				$require( 'featured_image_failed' === wstm118_error_reason( $result ) && $owned_media['first'] === $persisted, 'Repeated set changed legacy error/state.' );
 			} );
 			foreach ( array( 'set', 'remove' ) as $slug ) {
-				$record( "featured image {$type} compact {$slug} denied", static function () use ( $require, $invoke, $stored_id, $id, $owned_media, $subscriber, $editor, $slug ) {
+				$record( "featured image {$type} compact {$slug} denied", static function ( array &$evidence ) use ( $require, $invoke, $stored_id, $id, $owned_media, $subscriber, $editor, $slug ) {
 					$before = $stored_id( $id );
+					$evidence['before_image'] = $before;
 					$reads = 0;
 					$observe = static function ( $value ) use ( &$reads ) { ++$reads; return $value; };
 					wp_set_current_user( $subscriber->ID );
 					add_filter( 'get_post_metadata', $observe );
 					try {
-						$result = $invoke( $slug, array( 'post_id' => $id, 'response_format' => 'compact' ) + ( 'set' === $slug ? array( 'attachment_id' => $owned_media['second'] ) : array() ) );
+						$input = array( 'post_id' => $id, 'response_format' => 'compact' ) + ( 'set' === $slug ? array( 'attachment_id' => $owned_media['second'] ) : array() );
+						$evidence['input'] = $input;
+						$result = $invoke( $slug, $input );
+						$evidence['result'] = $result;
 					} finally {
+						$evidence['post_metadata_reads'] = $reads;
 						remove_filter( 'get_post_metadata', $observe );
 						wp_set_current_user( $editor->ID );
 					}
-					$require( 'forbidden' === wstm118_error_envelope( $result )['error']['code'] && 0 === $reads && $before === $stored_id( $id ), 'Denial read image metadata or mutated the target.' );
-					return array( 'result' => wstm118_error_envelope( $result ), 'post_metadata_reads' => $reads, 'persisted_image' => $before );
+					$persisted = $stored_id( $id );
+					$evidence['persisted_image'] = $persisted;
+					$require( 'forbidden' === wstm118_error_envelope( $result )['error']['code'] && 0 === $reads && $before === $persisted, 'Denial read image metadata or mutated the target.' );
 				} );
 			}
 		}
 		$id = $owned_posts['post'];
 		foreach ( array( 'set', 'remove' ) as $slug ) {
 			foreach ( array( null, false, 1, '', 'COMPACT', 'summary' ) as $index => $format ) {
-				$record( "featured image {$slug} invalid response format {$index}", static function () use ( $require, $invoke, $stored_id, $wpdb, $id, $owned_media, $slug, $format ) {
+				$record( "featured image {$slug} invalid response format {$index}", static function ( array &$evidence ) use ( $require, $invoke, $stored_id, $wpdb, $id, $owned_media, $slug, $format ) {
 					$before = $stored_id( $id );
+					$evidence['before_image'] = $before;
 					$caps = $reads = 0;
 					$observe_caps = static function ( $value ) use ( &$caps ) { ++$caps; return $value; };
 					$observe_reads = static function ( $value ) use ( &$reads ) { ++$reads; return $value; };
@@ -126,38 +151,56 @@ function wstm206_run_featured_image_tests(): array {
 					add_filter( 'get_post_metadata', $observe_reads );
 					try {
 						$queries = $wpdb->num_queries;
-						$result = $invoke( $slug, array( 'post_id' => $id, 'response_format' => $format ) + ( 'set' === $slug ? array( 'attachment_id' => $owned_media['second'] ) : array() ) );
-						$queries = $wpdb->num_queries - $queries;
+						$input = array( 'post_id' => $id, 'response_format' => $format ) + ( 'set' === $slug ? array( 'attachment_id' => $owned_media['second'] ) : array() );
+						$evidence['input'] = $input;
+						$result = $invoke( $slug, $input );
+						$evidence['result'] = $result;
 					} finally {
+						$evidence['capability_calls'] = $caps;
+						$evidence['metadata_reads'] = $reads;
+						$evidence['queries'] = $wpdb->num_queries - $queries;
 						remove_filter( 'map_meta_cap', $observe_caps );
 						remove_filter( 'get_post_metadata', $observe_reads );
 					}
-					$require( 'ability_invalid_input' === wstm118_error_reason( $result ) && 0 === $caps && 0 === $reads && 0 === $queries && $before === $stored_id( $id ), 'Invalid projection entered authorization, storage, or write branches.' );
-					return array( 'result' => wstm118_error_envelope( $result ), 'capability_calls' => $caps, 'metadata_reads' => $reads, 'queries' => $queries );
+					$persisted = $stored_id( $id );
+					$evidence['persisted_image'] = $persisted;
+					$require( 'ability_invalid_input' === wstm118_error_reason( $result ) && 0 === $caps && 0 === $reads && 0 === $evidence['queries'] && $before === $persisted, 'Invalid projection entered authorization, storage, or write branches.' );
 				} );
 			}
 		}
-		$record( 'featured image compact preserves foreign-media URL privacy', static function () use ( $require, $invoke, $stored_id, $owned_media, $body, $author, $editor, &$owned_posts ) {
+		$record( 'featured image compact preserves foreign-media URL privacy', static function ( array &$evidence ) use ( $require, $invoke, $stored_id, $owned_media, $body, $author, $editor, &$owned_posts ) {
 			$id = e2e_insert_post( 'post', 'WSTM206 author ' . wp_generate_uuid4(), $body, $author->ID, 'draft' );
 			$owned_posts['author'] = $id;
+			$evidence['post_id'] = $id;
+			$evidence['before_image'] = $stored_id( $id );
 			wp_set_current_user( $author->ID );
 			try {
 				$require( current_user_can( 'edit_post', $id ) && ! current_user_can( 'edit_post', $owned_media['second'] ), 'Foreign-media privacy fixture has the wrong capabilities.' );
-				$result = $invoke( 'set', array( 'post_id' => $id, 'attachment_id' => $owned_media['second'], 'response_format' => 'compact' ) );
+				$input = array( 'post_id' => $id, 'attachment_id' => $owned_media['second'], 'response_format' => 'compact' );
+				$evidence['input'] = $input;
+				$result = $invoke( 'set', $input );
+				$evidence['result'] = $result;
+				$persisted = $stored_id( $id );
+				$evidence['persisted_image'] = $persisted;
 				$expected = array( 'success' => true, 'data' => array( 'post_id' => $id, 'featured_image_id' => $owned_media['second'],
 					'featured_image_url' => null, 'previous_featured_image_id' => 0, 'untrusted_fields' => array( 'featured_image_url' ) ) );
-				$require( $expected === $result && $owned_media['second'] === $stored_id( $id ), 'URL privacy changed assignment eligibility or exposed inaccessible media URL.' );
-				return $result;
+				$evidence['expected'] = $expected;
+				$require( $expected === $result && $owned_media['second'] === $persisted, 'URL privacy changed assignment eligibility or exposed inaccessible media URL.' );
 			} finally {
 				wp_set_current_user( $editor->ID );
 			}
 		} );
 		foreach ( array( $owned_media['text'] => 'unsupported_mime_type', $id => 'not_found', 2147483647 => 'not_found' ) as $attachment => $reason ) {
-			$record( "featured image compact attachment {$reason} {$attachment}", static function () use ( $require, $invoke, $stored_id, $id, $attachment, $reason ) {
+			$record( "featured image compact attachment {$reason} {$attachment}", static function ( array &$evidence ) use ( $require, $invoke, $stored_id, $id, $attachment, $reason ) {
 				$before = $stored_id( $id );
-				$result = $invoke( 'set', array( 'post_id' => $id, 'attachment_id' => $attachment, 'response_format' => 'compact' ) );
-				$require( $reason === wstm118_error_reason( $result ) && $before === $stored_id( $id ), 'Attachment rejection changed error or persisted image.' );
-				return $result;
+				$evidence['before_image'] = $before;
+				$input = array( 'post_id' => $id, 'attachment_id' => $attachment, 'response_format' => 'compact' );
+				$evidence['input'] = $input;
+				$result = $invoke( 'set', $input );
+				$evidence['result'] = $result;
+				$persisted = $stored_id( $id );
+				$evidence['persisted_image'] = $persisted;
+				$require( $reason === wstm118_error_reason( $result ) && $before === $persisted, 'Attachment rejection changed error or persisted image.' );
 			} );
 		}
 	} catch ( Throwable $error ) {
