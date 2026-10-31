@@ -47,8 +47,13 @@ foreach ( array(
 			$allowed = in_array( $scenario, array( 'read', 'subscriber_shared' ), true );
 			webmastery_mcp_e2e_assert( $allowed === ( true === ( $result['success'] ?? false ) ), "{$label}: unexpected MCP result " . webmastery_mcp_e2e_json( $result ) );
 			if ( ! $allowed ) {
-				$message = 'no_read' === $scenario ? 'Requires read capability.' : 'Google Site Kit does not permit';
+				$message = 'no_read' === $scenario ? 'Requires read capability.' : 'Google Site Kit denied this request.';
 				webmastery_mcp_e2e_assert( false !== strpos( webmastery_mcp_e2e_json( $result ), $message ), "{$label}: wrong denial layer " . webmastery_mcp_e2e_json( $result ) );
+				if ( 'subscriber_denied' === $scenario ) {
+					foreach ( array( 'Possible causes', 'Dashboard sharing', 'sign-in/reauthentication', 'sharing icon', 'dashboard header', 'get-site-kit-status', 'get-site-kit-permissions' ) as $text ) {
+						webmastery_mcp_e2e_assert( false !== strpos( $result['error']['message'], $text ), "{$label}: missing actionable guidance" );
+					}
+				}
 			} else {
 				$data = $result['data'];
 				if ( 'list-site-kit-modules' === $slug ) {

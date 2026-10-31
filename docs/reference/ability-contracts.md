@@ -317,6 +317,23 @@ result retains `data.requested_url`, `data.strategy`, `data.id`,
 
 The three delegated abilities check `read` before plugin discovery, route lookup, or upstream work in both permission and direct execution callbacks. This is a minimum, not an access grant: the exact upstream GET route must expose a callable permission check, and normal WordPress REST dispatch still enforces it. Missing providers, routes, or usable permission callbacks fail closed. Status keeps its separate `manage_options` gate, without an additional `read` requirement.
 
+Upstream route permission denials and dispatched REST 401/403 responses return
+plugin-authored `forbidden` guidance naming **possible** Dashboard sharing or
+Google sign-in/reauthentication requirements. They do not establish a specific
+cause or imply a Google outage. An authorized administrator can review access
+for the caller's role to the relevant service from the sharing icon in the
+Site Kit dashboard header; see Google's [Dashboard sharing guide](https://sitekit.withgoogle.com/documentation/features/dashboard-sharing/).
+Eligible users can sign in to Google in Site Kit as that WordPress user.
+For further diagnosis, request `get-site-kit-status` (`manage_options` required)
+and `get-site-kit-permissions` only where authorized; either can also be denied.
+The denial itself performs no additional diagnostic reads. Local capability
+denials and missing/non-callable upstream checks keep their existing messages
+and categories. Non-authentication upstream failures retain their generic
+request-failure message; raw provider messages, codes and data remain absent
+from canonical public errors. Native execute-time permission rejection still
+uses WordPress's `ability_invalid_permissions` masking; Adapter permission
+preflight and dispatch failures preserve the authored guidance.
+
 This plugin does **not** add an `edit_posts` or `manage_options` floor to the
 delegated abilities, so a Subscriber whom Site Kit legitimately authorizes is
 not excluded locally. Route-level permission semantics observed for a specific

@@ -10,6 +10,9 @@ class Webmastery_MCP_Site_Kit {
 
 	private const PERMISSIONS_MINIMUM_VERSION = '1.82.0';
 
+	// Fixed guidance: a denial alone does not establish this user's authentication or sharing state.
+	private const FORBIDDEN_GUIDANCE = 'Google Site Kit denied this request. Possible causes include missing Dashboard sharing access or a Google account sign-in/reauthentication requirement. An authorized administrator can review access for this user\'s role to the relevant service using the sharing icon in the Site Kit dashboard header. Eligible users can sign in to Google in Site Kit as this WordPress user. For diagnosis, use get-site-kit-status (requires manage_options) and get-site-kit-permissions where permitted.';
+
 	public static function register() {
 		self::register_status();
 		self::register_modules();
@@ -365,7 +368,7 @@ class Webmastery_MCP_Site_Kit {
 
 		$allowed = call_user_func( $callback, $request );
 		if ( is_wp_error( $allowed ) || false === $allowed || null === $allowed ) {
-			return Webmastery_MCP_Response::local_error( 'forbidden', 'Google Site Kit does not permit the current user to access this data.' );
+			return Webmastery_MCP_Response::local_error( 'forbidden', self::FORBIDDEN_GUIDANCE );
 		}
 
 		return true;
@@ -396,7 +399,8 @@ class Webmastery_MCP_Site_Kit {
 				$data['upstream_code'] = sanitize_key( $error->get_error_code() );
 			}
 
-			return Webmastery_MCP_Response::local_error( $code, 'Google Site Kit could not complete the request.', $data );
+			$message = 'forbidden' === $code ? self::FORBIDDEN_GUIDANCE : 'Google Site Kit could not complete the request.';
+			return Webmastery_MCP_Response::local_error( $code, $message, $data );
 		}
 
 		$data = $response->get_data();

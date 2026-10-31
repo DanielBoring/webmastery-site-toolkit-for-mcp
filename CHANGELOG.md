@@ -20,6 +20,10 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 - Default PageSpeed analysis to mobile when the strategy is omitted, including
   empty-input calls. Explicit desktop analysis and Site Kit permissions are unchanged.
+- Explain Site Kit access denials with possible Dashboard sharing or Google
+  sign-in/reauthentication causes, the dashboard sharing location, and authorized
+  status/permission diagnostics. Preserve existing authorization and error
+  privacy without extra diagnostic reads after denial.
 
 - Update the documentation links in `readme.txt` for the reorganized `docs/`
   folder (3.0 migration guide, MCP Adapter 0.7 assessment and agent threat

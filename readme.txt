@@ -114,6 +114,8 @@ Only for the optional Site Kit status, module, permission, and PageSpeed abiliti
 
 Module, permission, and PageSpeed abilities require the WordPress read capability before any upstream work, plus the exact Site Kit route's permission check. Missing providers, routes, or callable permission checks deny access. Read alone is not sufficient; a Subscriber is allowed only when Site Kit also authorizes that user. Status retains its separate manage_options requirement.
 
+Site Kit permission denials and REST 401/403 include guidance about possible Dashboard sharing or Google sign-in/reauthentication requirements. An authorized administrator can review role access using the sharing icon in the Site Kit dashboard header. Status (manage_options required) and permissions diagnostics remain subject to their own authorization. The message does not diagnose a specific cause or trigger additional reads after denial.
+
 The official Site Kit 1.187.0 routes were inspected without Google data calls on a disposable installation. Module-list and permission routes require Site Kit splash or dashboard access; this version's PageSpeed route resolves to Site Kit setup or post-insights access. Effective checks also depend on setup, authentication, sharing, and network state. This does not establish compatibility for every historical version or grant ordinary Subscribers dashboard access. Exact upstream capability names and their version-specific sources are in the [Site Kit route table](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/tests/e2e/README.md#site-kit-permission-regressions); the [Google Site Kit contract](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/blob/main/docs/reference/ability-contracts.md#google-site-kit) describes how the plugin applies them.
 
 PageSpeed requests are limited to URLs on the current site and are processed by Google's PageSpeed service through Site Kit. Responses omit OAuth scopes and proxy details, module owner identities, screenshots, third-party entity lists, and full Lighthouse payloads.
@@ -268,6 +270,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Flag Classic content in List Content Blocks and guide partial edits to Patch Post Content while preserving blocks, hashes and permissions.
 
 * Default PageSpeed analysis to mobile when strategy is omitted, including empty-input calls; retain explicit desktop analysis and Site Kit authorization.
+* Explain Site Kit access denials with tentative Dashboard sharing and Google sign-in guidance, without extra diagnostic reads or exposing provider errors.
 
 = 3.0.0 =
 
