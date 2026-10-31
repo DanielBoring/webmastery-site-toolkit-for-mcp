@@ -261,6 +261,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 
+* Identify failing schema fields and reasons in invalid-input errors across native and MCP calls, without exposing supplied values or unknown property names.
+
 = 3.0.0 =
 
 * Retain candidate/cache-priming database failures across later successful native reads, without adding queries, exposing SQL diagnostics or rejecting stale warm-cache errors.

@@ -8,6 +8,9 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Changed
 
+- Add bounded schema field paths and failure reasons to invalid-input errors
+  across native and MCP calls, without echoing input values or unknown keys.
+
 - Update the documentation links in `readme.txt` for the reorganized `docs/`
   folder (3.0 migration guide, MCP Adapter 0.7 assessment and agent threat
   model). The links on the 3.0.0 WordPress.org plugin page point to the old

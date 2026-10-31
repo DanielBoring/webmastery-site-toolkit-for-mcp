@@ -10,6 +10,7 @@
       "DestructiveSafetyTest.php",
       "DiagnosticsTest.php",
       "InputBoundaryTest.php",
+      "InputDiagnosticsTest.php",
       "MediaUrlTest.php",
       "MetadataBoundaryTest.php",
       "NativeInputValidationTest.php",

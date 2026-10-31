@@ -62,6 +62,31 @@ IDs and boolean-like strings/integers therefore report `invalid_input` rather
 than being masked as permission denials; genuine authorization failures still
 follow core permission redaction.
 
+Schema failures keep code `invalid_input`, reason `ability_invalid_input`, and
+the fixed message. Their `error.details` now identifies the first strict
+failure, for example `{"field":"$.post_id","reason":"required"}` for
+`get-post` with `{"id":2447}`. Detail reasons are `required`,
+`unknown_property`, `type`, `enum`, or `bounds` (numeric or array length).
+Required fields are checked before supplied properties; correct the reported
+failure and consult the advertised schema for allowed values.
+
+Paths begin at `$`, use `.name` for declared schema properties, `[]` for any
+array item, and `.*` for unknown or dynamic map keys. Thus an extra property
+beside a valid `post_id` reports `$.*`, and an invalid taxonomy item reports
+`$.taxonomy_terms.*[]`. Supplied property names, values, array indexes and
+provider diagnostics are never copied into these details. Schema names outside
+the ASCII identifier form (letter/underscore, then letters/digits/underscores/
+hyphens, at most 64 characters) also use `.*`. Paths are at most 243 characters;
+`...` indicates that deeper segments were omitted, while validation still
+checks the complete input. No allowed-value lists or stored values are returned.
+
+These additive details survive raw registered callbacks, native execution,
+gateway and individual MCP tools. Public native validation retains the exact
+core `WP_Error` object and its original data; normalize it with
+`Webmastery_MCP_Response::from_wp_error()` to obtain the safe details. If only
+a core keyword such as `format` or a combinator fails, details remain `{}`.
+Diagnostics do not alter schema acceptance, authorization, or defaults.
+
 Use exact enum values (`"DESC"`, not `"desc"` or `"DESC!"`), JSON integers for
 IDs, and JSON booleans for flags. Optional fields retain existing defaults when
 omitted; explicit `null` is invalid unless advertised. Input-free abilities

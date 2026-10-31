@@ -312,8 +312,19 @@ try {
 			if ( 'invalid_input' === $permission ) {
 				wstm116_require( true === $entry['permission_is_wp_error'] && 'invalid_input' === $entry['permission_error_code'], 'Strict permission rejection must be a canonical native WP_Error.' );
 				$raw = wstm118_error_envelope( $entry['permission'] );
+				// These existing cases vary one guard: confirmation, optional flag, or ID count.
+				$details = array( 'field' => '$.confirm', 'reason' => 'required' );
+				if ( array_key_exists( 'confirm', $input ) ) {
+					if ( true !== $input['confirm'] ) {
+						$details['reason'] = is_bool( $input['confirm'] ) ? 'enum' : 'type';
+					} elseif ( isset( $input['ids'] ) && count( $input['ids'] ) > 100 ) {
+						$details = array( 'field' => '$.ids', 'reason' => 'bounds' );
+					} else {
+						$details = array( 'field' => 'delete-media' === $slug ? '$.force' : '$.dry_run', 'reason' => 'type' );
+					}
+				}
 				wstm116_require( 'invalid_input' === $raw['error']['code'] && 'ability_invalid_input' === $raw['error']['reason']
-					&& 'Ability input does not match its schema.' === $raw['error']['message'] && '{}' === wp_json_encode( $raw['error']['details'] ), 'Wrong strict raw permission envelope.' );
+					&& 'Ability input does not match its schema.' === $raw['error']['message'] && $details === (array) $raw['error']['details'], 'Wrong strict raw permission envelope.' );
 				if ( 'ability_invalid_input' === $reason ) {
 					wstm116_require( wp_json_encode( $raw ) === wp_json_encode( $envelope ), 'Native schema rejection must retain the exact raw schema envelope.' );
 				}

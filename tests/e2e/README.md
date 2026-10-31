@@ -764,6 +764,11 @@ capability/query work. The 16 HTTP failures were observed in genuine frozen
 `5b39f6a` CI; the 32 direct changes are source-derived and verified against the
 actual registered production wrappers in isolated tests. The corresponding 32
 native-ability cases already expected schema rejection and are unchanged.
+The later field-diagnostic addition changes only the current schema details to
+exact public paths/reasons; baseline mode and sealed historical ledgers retain
+their original empty details. Current comment, taxonomy and destructive
+assertions retain every original case, error category/message, authorization
+and no-work check while checking the additive details independently.
 Changed cases are not legacy compatibility claims. All typed runner inputs,
 ordering, capability facts and no-write snapshots remain intact; the integrated
 real-runtime rerun is still pending.
@@ -1655,6 +1660,25 @@ These hand checks complement the automated suites above. Run them only on a
 disposable WordPress site you own, never on a production or shared site. The
 behavior they check is described in the
 [ability contracts](../../docs/reference/ability-contracts.md).
+
+### Input validation diagnostics
+
+Call `get-post` with `{"id":2447}` and expect `invalid_input` /
+`ability_invalid_input` with `details:{"field":"$.post_id","reason":"required"}`.
+Use `{"post_id":2447,"private-extra-key":"private-value"}` and expect
+`details:{"field":"$.*","reason":"unknown_property"}` without either private
+string. A numeric-string `post_id` should identify `$.post_id` and `type`.
+Repeat via native execution, the gateway, and individually exposed tools; decode the single MCP
+error text block and compare details. No ID aliases are accepted.
+
+The existing separate error-contract runner adds 42 diagnostic cases across
+direct callbacks, permission checks, native validation/execution and both HTTP
+exposure modes. It checks required/unknown/type/enum/bounds, nested array and
+dynamic-map privacy, immutable input, and local original-callback/action counts.
+This does not change the historical 152-case schema stage, its configuration,
+resource identity/cleanup evidence, or the ability manifest inventory. Unit
+composition tests use a lifecycle double; source and original-ZIP Docker runs
+remain required to establish actual WordPress/MCP behavior.
 
 ### Standalone metadata authorization
 

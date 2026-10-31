@@ -84,7 +84,7 @@ function wstm105_finalize_proof( array $cleanup, array &$summary, string $artifa
 	wstm105_assert( strlen( $json ) === file_put_contents( $artifact, $json ), 'Cannot write complete comment evidence.' );
 }
 
-function wstm105_assert_schema_error( $result, $permission = false ) {
+function wstm105_assert_schema_error( $result, $permission = false, $details = array( 'field' => '$.comment_id', 'reason' => 'required' ) ) {
 	if ( $permission ) {
 		wstm105_assert( is_wp_error( $result ) && 'invalid_input' === $result->get_error_code(), 'Registered permission must return native invalid_input.' );
 		$decoded = json_decode( $result->get_error_message() );
@@ -97,10 +97,10 @@ function wstm105_assert_schema_error( $result, $permission = false ) {
 	wstm105_assert( 'ability_invalid_input' === wstm118_error_reason( $result )
 		&& 'invalid_input' === $result['error']['code']
 		&& 'Ability input does not match its schema.' === $result['error']['message']
-		&& '{}' === wp_json_encode( $result['error']['details'] ), 'Registered schema error contract changed.' );
+		&& $details === (array) $result['error']['details'], 'Registered schema error contract changed.' );
 }
 
-function wstm105_schema_negative( $permission, $execute, $input, $comment_id ) {
+function wstm105_schema_negative( $permission, $execute, $input, $comment_id, $requires_content = false ) {
 	global $wpdb;
 	$before = wstm105_comment_state( $comment_id );
 	$cap_calls = 0;
@@ -115,7 +115,18 @@ function wstm105_schema_negative( $permission, $execute, $input, $comment_id ) {
 			$result = $is_permission ? $permission( $input ) : $execute( $input );
 			// Both original callbacks begin with a capability check; neither may run.
 			wstm105_assert( 0 === $cap_calls && $queries === $wpdb->num_queries, 'Schema rejection reached original capability/query work.' );
-			wstm105_assert_schema_error( $result, $is_permission );
+			// Independent expectations for these fixed malformed fixture shapes.
+			$details = array( 'field' => '$.*', 'reason' => 'unknown_property' );
+			if ( ! is_array( $input ) && ! $input instanceof stdClass ) {
+				$details = array( 'field' => '$', 'reason' => 'type' );
+			} elseif ( ! array_key_exists( 'comment_id', (array) $input ) ) {
+				$details = array( 'field' => '$.comment_id', 'reason' => 'required' );
+			} elseif ( $requires_content && ! array_key_exists( 'content', (array) $input ) ) {
+				$details = array( 'field' => '$.content', 'reason' => 'required' );
+			} elseif ( ! is_int( $input['comment_id'] ) ) {
+				$details = array( 'field' => '$.comment_id', 'reason' => 'type' );
+			}
+			wstm105_assert_schema_error( $result, $is_permission, $details );
 		}
 	} finally {
 		remove_filter( 'map_meta_cap', $record_cap, -10000 );
@@ -216,7 +227,7 @@ function wstm105_check_direct_callbacks( $roles, $fixtures ) {
 				wstm105_assert( 'not_found' === wstm118_error_reason( $result ) && 'Comment not found.' === $result['error']['message']
 					&& '{}' === wp_json_encode( $result['error']['details'] ), 'Negative integer ID response changed.' );
 			} else {
-				wstm105_schema_negative( $permission, $execute, $input, $comment_id );
+				wstm105_schema_negative( $permission, $execute, $input, $comment_id, 'update' === $action );
 			}
 			wstm105_assert( $before === wstm105_comment_state( $comment_id ), 'Malformed input changed persisted state.' );
 			$checks++;
