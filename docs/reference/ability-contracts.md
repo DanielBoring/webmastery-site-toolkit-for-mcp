@@ -150,6 +150,25 @@ limitations](3.0-migration.md#bounded-list-windows-and-summary-projection).
 
 ## Post metadata and SEO authorization
 
+### SEO and readability score audits
+
+`get-seo-scores` and `get-readability-scores` provide paged site-wide audits of
+published posts and pages by default (`status:"publish"`). This changes the
+previous omitted-status scope. Set `status:"any"` explicitly to retain the
+previous scope across otherwise eligible statuses; WordPress's `any` query does
+not mean every registered status. Explicit `draft`, `pending`, `private`,
+`future`, and `publish` filters remain available. `post_type` optionally selects
+`post` or `page`; `modified_after` retains its GMT modified-time filter.
+
+Both require `edit_posts`; explicitly requesting pages also requires
+`edit_pages`, and mixed requests omit pages without that capability. Each result
+still requires object/status access and effective `edit_post`/`edit_post_meta`
+permission for the exact score key. Items retain `post_id`, `title`, `post_type`,
+`url`, `score`, `modified_gmt`, and record-local `untrusted_fields`.
+Follow `next_page` through empty windows, using identical filters until null.
+No exact site-wide score totals are returned. Inactive Yoast still produces an
+empty success with `yoast_active:false`, a note, and `next_page:null`.
+
 `get-post-meta`, `update-post-meta`, and `delete-post-meta` require `edit_post` for the actual object and preserve the existing protected-key eligibility rules. Ordinary Authors can usually operate on their own posts; pages and other authors' posts generally require an Editor, and individual keys may impose additional requirements.
 
 | Standalone ability | Key-level policy |

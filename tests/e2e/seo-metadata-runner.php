@@ -187,6 +187,23 @@ try {
 	foreach ( array( 'get-seo-scores' => '_yoast_wpseo_linkdex', 'get-readability-scores' => '_yoast_wpseo_content_score' ) as $slug => $key ) {
 		$record_case( "{$slug}:denied key excluded within bounded window", static function ( array &$record ) use ( $post_ids, $slug, $key, $execute ): void {
 			$id = $post_ids[0];
+			$schema = wp_get_ability( 'webmastery-site-toolkit-for-mcp/' . $slug )->get_input_schema();
+			wstm110_seo_assert( 'publish' === $schema['properties']['status']['default'], 'Score schema must advertise the published default.' );
+			$record['status_controls'] = array();
+			foreach ( array( 'publish', 'draft', 'private', 'pending' ) as $status ) {
+				wstm110_seo_assert( $id === wp_update_post( array( 'ID' => $id, 'post_status' => $status ), true ), 'Cannot prepare score status control.' );
+				$control = array( 'post_type' => 'post', 'per_page' => 100, 'page' => 1 );
+				$omitted = $execute( $slug, $control );
+				$explicit = $execute( $slug, $control + array( 'status' => $status ) );
+				$any = $execute( $slug, $control + array( 'status' => 'any' ) );
+				foreach ( array( $omitted, $explicit, $any ) as $result ) {
+					wstm110_seo_assert( true === ( $result['success'] ?? null ) && true === $result['data']['yoast_active'], 'Score status control failed.' );
+					wstm110_seo_assert( ! array_key_exists( 'total', $result['data'] ) && ! array_key_exists( 'total_pages', $result['data'] ), 'Score control exposes obsolete totals.' );
+				}
+				wstm110_seo_assert( ( 'publish' === $status ) === in_array( $id, array_column( $omitted['data']['items'], 'post_id' ), true ), 'Omitted score status did not select published content only.' );
+				wstm110_seo_assert( in_array( $id, array_column( $explicit['data']['items'], 'post_id' ), true ) && in_array( $id, array_column( $any['data']['items'], 'post_id' ), true ), 'Explicit score status or any omitted the authorized fixture.' );
+				$record['status_controls'][] = array( 'status' => $status, 'fixture_id' => $id );
+			}
 			wstm110_seo_assert( $id === wp_update_post( array( 'ID' => $id, 'post_status' => 'pending' ), true ), 'Cannot prepare pending score fixture.' );
 			$input = array( 'post_type' => 'post', 'status' => 'pending', 'per_page' => 100, 'page' => 1 );
 			$baseline = $execute( $slug, $input );

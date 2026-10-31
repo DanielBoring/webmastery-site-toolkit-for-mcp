@@ -75,6 +75,8 @@ Permanent media/category/tag deletion and both bulk post operations now require 
 
 Post/page/custom-post-type, media, orphan-media, and score lists now return candidate windows with items, page, per_page, and next_page instead of exact total/total_pages. Continue until next_page is null, including after empty or short windows. Existing roles and object/key permissions still apply; per_page caps candidates at 100, not visible results.
 
+In the Unreleased update after 3.0.0, SEO and readability score audits default to published posts/pages (status:"publish"). Explicit status:"any" retains the previous scope across otherwise eligible statuses; specific draft/pending/private/future filters remain available. Keep the same status on every page. This changes the audit selection, not access permissions or pagination.
+
 Post/page/custom-post-type and revision lists default to fields:"summary", which omits content only. Request fields:"full" for unchanged stored content. Excerpts and other values are unchanged; get/write responses stay full. These are not transactional snapshots or constant-time database queries, and summary payloads have no universal byte limit. Orphan-reference queries are batched over bounded candidates; scan errors still block forced media deletion.
 
 Authorized records include untrusted_fields, an array of field names relative to that record. Summary output never marks omitted content. Markers preserve stored values and nested maps; they do not sanitize data, grant capabilities, prove human approval, or guarantee prompt-injection prevention. Compact trash results and errors remain unmarked.
@@ -276,6 +278,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Default PageSpeed analysis to mobile when strategy is omitted, including empty-input calls; retain explicit desktop analysis and Site Kit authorization.
 * Explain Site Kit access denials with tentative Dashboard sharing and Google sign-in guidance, without extra diagnostic reads or exposing provider errors.
 
+* Breaking: SEO and readability score audits default to published posts/pages. Explicit status:"any" retains the previous scope; specific status filters, permissions and bounded pagination are unchanged.
+
 = 3.0.0 =
 
 * Retain candidate/cache-priming database failures across later successful native reads, without adding queries, exposing SQL diagnostics or rejecting stale warm-cache errors.
@@ -360,6 +364,9 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Add block inspection, single-block replacement, and safer partial post body edits.
 
 == Upgrade Notice ==
+
+= Unreleased =
+SEO/readability score lists now default to status:"publish". Clients needing the prior scope must explicitly send status:"any" on every page. See the migration guide.
 
 = 3.0.0 =
 3.0 breaks client contracts. Review the FAQ before upgrading: bounded lists, summary/full output, strict inputs, separate metadata writes, destructive confirmation, canonical errors, identifier privacy and untrusted-field markers.

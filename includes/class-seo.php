@@ -537,7 +537,7 @@ class Webmastery_MCP_SEO {
 				'per_page'       => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 10 ],
 				'page'           => [ 'type' => 'integer', 'minimum' => 1, 'default' => 1 ],
 				'post_type'      => [ 'type' => 'string', 'enum' => [ 'post', 'page' ], 'description' => 'Optional post type filter.' ],
-				'status'         => [ 'type' => 'string', 'enum' => [ 'publish', 'draft', 'pending', 'private', 'future', 'any' ], 'description' => 'Optional post status filter.' ],
+				'status'         => [ 'type' => 'string', 'enum' => [ 'publish', 'draft', 'pending', 'private', 'future', 'any' ], 'default' => 'publish', 'description' => 'Post status filter; defaults to published content. Use any for all otherwise eligible statuses.' ],
 				'modified_after' => [ 'type' => 'string', 'description' => 'Optional GMT modified-after filter, parseable by strtotime().' ],
 			],
 		];
@@ -546,7 +546,7 @@ class Webmastery_MCP_SEO {
 	private static function register_score_ability( $slug, $label, $meta_key, $description ) {
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/{$slug}", [
 			'label'               => "SEO: {$label}",
-			'description'         => $description . ' Only authorized score keys in this bounded candidate window are returned. Follow next_page even for empty items; no exact totals.',
+			'description'         => $description . ' For site-wide published-content audits, follow these paged results. Defaults to status publish; explicitly use any to include unpublished content. Only authorized score keys in this bounded candidate window are returned. Follow next_page even for empty items; no exact totals.',
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => self::score_input_schema(),
 			'execute_callback'    => function ( $input ) use ( $meta_key ) {
@@ -596,7 +596,7 @@ class Webmastery_MCP_SEO {
 			return Webmastery_MCP_Response::legacy_error( 'invalid_content_type', 'post_type must be post or page.' );
 		}
 
-		$status = $input['status'] ?? 'any';
+		$status = $input['status'] ?? 'publish';
 		if ( ! in_array( $status, [ 'publish', 'draft', 'pending', 'private', 'future', 'any' ], true ) ) {
 			return Webmastery_MCP_Response::legacy_error( 'invalid_status', 'status is invalid.' );
 		}

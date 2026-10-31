@@ -25,6 +25,10 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   status/permission diagnostics. Preserve existing authorization and error
   privacy without extra diagnostic reads after denial.
 
+
+- Breaking: default SEO and readability score audits to published posts/pages.
+  Clients needing the previous scope must explicitly request `status:"any"`;
+  specific status filters, permissions and bounded pagination are unchanged.
 - Update the documentation links in `readme.txt` for the reorganized `docs/`
   folder (3.0 migration guide, MCP Adapter 0.7 assessment and agent threat
   model). The links on the 3.0.0 WordPress.org plugin page point to the old
