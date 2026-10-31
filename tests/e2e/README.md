@@ -1328,8 +1328,8 @@ The automated `site-kit-defaults-runner.php` runs after metadata boundary QA
 in the owned disposable source/package suite, with `WSTM202_DISPOSABLE=1`.
 It covers permission/direct callbacks, native execution, HTTP gateway and
 individual tools using temporary users/passwords that it removes afterward.
-The controlled upstream fixture requires normalized URL/strategy parameters
-and returns distinct mobile/desktop scores, proving the dispatched strategy.
+The controlled upstream fixture requires normalized URL/strategy parameters;
+unit request spies separately verify the exact strategy reaching permission and dispatch.
 Local no-read denial is checked separately from upstream denial. These current
 regressions preserve the historical 601-case manifest and 152-case schema
 inventories and their existing allowed/denied assertions.

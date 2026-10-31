@@ -168,7 +168,7 @@ add_action( 'rest_api_init', function () {
 						'userAgent'   => 'Sensitive fixture agent',
 						'environment' => [ 'hostUserAgent' => 'Sensitive fixture host' ],
 						'categories'  => [
-							'performance'    => [ 'score' => 'desktop' === $strategy ? 0.99 : 0.98, 'title' => 'Performance' ],
+							'performance'    => [ 'score' => 0.98, 'title' => 'Performance' ],
 							'accessibility'  => [ 'score' => 0.91, 'title' => 'Accessibility' ],
 							'best-practices' => [ 'score' => 0.96, 'title' => 'Best Practices' ],
 							'seo'            => [ 'score' => 0.93, 'title' => 'SEO' ],

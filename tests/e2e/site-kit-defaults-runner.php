@@ -71,7 +71,7 @@ try {
 							} else {
 								$strategy = $input['strategy'] ?? 'mobile';
 								wstm202_assert( true === ( $result['success'] ?? null ) && $strategy === $result['data']['strategy'] && ( $input['url'] ?? home_url( '/' ) ) === $result['data']['requested_url'], $label );
-								wstm202_assert( ( 'desktop' === $strategy ? 0.99 : 0.98 ) === $result['data']['categories']['performance']['score'], $label . ': upstream did not receive expected strategy' );
+								wstm202_assert( 0.98 === $result['data']['categories']['performance']['score'], $label . ': unexpected fixture score' );
 							}
 						} else {
 							if ( is_wp_error( $result ) ) {
