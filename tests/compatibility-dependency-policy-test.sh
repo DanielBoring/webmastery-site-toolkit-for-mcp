@@ -2,6 +2,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+policy_test_root="$root"
 matrix="$(php "$root/scripts/compatibility-matrix.php" "$root/.github/compatibility-versions.json" "$root/.github/compatibility-versions.json")"
 grep -F '"label":"wp69-php81-compatibility","wordpress-image":"wordpress:6.9-php8.1-apache"' <<< "$matrix" >/dev/null
 if grep -Eq '"label":"supported-floor"|wordpress:6\.9-php8\.0-apache' <<< "$matrix"; then
@@ -58,7 +59,7 @@ baseline() {
 	case "$1" in
 		yoast) printf '%s\n' '99.1' ;;
 		seopress) printf '%s\n' '99.2' ;;
-		*) host_php "$root/scripts/compatibility-baselines.php" "$1" ;;
+		*) host_php "$policy_test_root/scripts/compatibility-baselines.php" "$1" ;;
 	esac
 }
 DEPENDENCY_POLICY=wp69-seo
@@ -91,7 +92,7 @@ if ( DEPENDENCY_POLICY=unknown; load_dependencies ) >/dev/null 2>&1; then
 	echo 'Unknown dependency policies must fail instead of installing floating SEO.' >&2
 	exit 1
 fi
-grep -Fx 'export DEPENDENCY_POLICY=wp69-seo' "$root/scripts/qa-floor.sh" >/dev/null
+grep -Fx 'export DEPENDENCY_POLICY=wp69-seo' "$policy_test_root/scripts/qa-floor.sh" >/dev/null
 assert_cron_isolated() {
 	if [ "$cron_configured" != 1 ]; then
 		echo 'Request-triggered cron must be disabled before bootstrap and fixtures.' >&2
