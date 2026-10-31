@@ -75,6 +75,43 @@ unsupported upstream combinations need separate triage, not silent skips. An
 unavailable candidate image is an infrastructure failure, not permission to
 promote an untested baseline. Reproduce scheduled failures before acting.
 
+The October 26, 2026 run for [issue #209](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/issues/209)
+installed Adapter 0.7.1 successfully in the three failing latest-Adapter lanes.
+The first product runner still admitted only 0.6.1 and 0.7.0; the later error
+contract runner had the same restriction. Evaluating those exact guards with
+0.7.1 reproduces their rejection before transport assertions. The uploaded lane
+artifacts contain versions and outcomes, not the private original failure, so
+that evidence alone cannot rule out a later runtime failure.
+
+Both guards now admit 0.7.1 explicitly and continue rejecting unreviewed versions.
+The [upstream changes](https://github.com/WordPress/mcp-adapter/compare/54ed266a8c46b71fdb8e5b8a7d35668f90fb8994...5bdb40b49c307e517413f77f9157272d46d52e07)
+from 0.7.0 (`54ed266a8c46b71fdb8e5b8a7d35668f90fb8994`) to
+0.7.1 (`5bdb40b49c307e517413f77f9157272d46d52e07`)
+add session-storage limits, omit stored client icons, improve unavailable-ability
+errors and adjust autoloader selection; admission does not certify those changes.
+The complete existing source/package assertions, permission/result-hook ordering,
+private evidence verification and cleanup guards remain required. No dependency
+baseline is promoted by this admission change.
+
+Reproduce the 0.7.1 lane in a fresh owned local project using the release digest
+recorded in that run (the remaining dependencies use the current checked-in pins):
+
+```bash
+export MCP_ADAPTER_ZIP=https://github.com/WordPress/mcp-adapter/releases/download/v0.7.1/mcp-adapter.zip
+export MCP_ADAPTER_SHA256=c8bc28f83d3c39beffa2add4f6becc0b1ae54097df433697d1dbe6520a80d769
+bash scripts/qa-run.sh all
+```
+
+Use a separate checkout/project with `bash scripts/qa-run.sh package` for original
+ZIP evidence. A failed run retains its owned stack and private captures when
+cleanup is unresolved; inspect those captures locally without uploading them.
+Static guard tests or a blocked Docker startup are not runtime acceptance.
+Run the guard regression with
+`python -B -m unittest discover -s tests/unit -p test_adapter_release_assessment.py -v`;
+it evaluates both real entrypoint expressions with admitted, future, prerelease
+and missing versions. On Windows, put Git for Windows Bash ahead of WSL Bash
+in `PATH` for the shell-based tests in that module.
+
 ## Details
 
 ### Baseline promotion
