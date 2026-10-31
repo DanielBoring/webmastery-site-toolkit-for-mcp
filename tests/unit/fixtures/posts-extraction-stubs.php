@@ -40,3 +40,17 @@ function get_post( $post ) {
 }
 function current_user_can( $cap, ...$args ): bool { return \Wstm119Shared\current_user_can( $cap, ...$args ); }
 function get_current_user_id(): int { return \Wstm119Shared\get_current_user_id(); }
+
+// Controlled parser/serializer seams; real-core coverage lives in the patch probe.
+namespace Wstm127After;
+function has_blocks( $content ): bool {
+	\Wstm127Proof\Registrations::$reads[] = 'has_blocks';
+	return false !== strpos( $content, '<!-- wp:' );
+}
+function parse_blocks( $content ): array {
+	\Wstm127Proof\Registrations::$reads[] = 'parse_blocks';
+	return $GLOBALS['wstm207_blocks'];
+}
+function serialize_block( $block ): string { return $block['innerHTML']; }
+function wp_strip_all_tags( $content ): string { return strip_tags( $content ); }
+function get_bloginfo( $field ): string { return 'UTF-8'; }

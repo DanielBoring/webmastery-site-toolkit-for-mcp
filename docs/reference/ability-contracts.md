@@ -189,6 +189,24 @@ These interlocks do not grant capabilities, prove human approval, or prevent pro
 
 ## Targeted content patching
 
+`list-content-blocks` accepts required `content_id` (integer) and `content_type`
+(`post` or `page`), and requires `edit_post` for that object in both permission
+and execution callbacks. Successful `data` retains `id`, `type`, `content_hash`
+and `blocks`, and always adds boolean `is_classic`. It is `!has_blocks()` of the
+raw stored body: empty/whitespace-only content is Classic; mixed freeform and
+block content, and an explicit `core/freeform` Classic block, are not. This
+follows [WordPress marker detection](https://developer.wordpress.org/reference/functions/has_blocks/),
+not editor-plugin presence, editing history, or structural validation; even a
+malformed `<!-- wp:` marker makes the flag false.
+
+Only when `is_classic:true`, `data.hint` is the fixed text: "This post has no
+block markup. Use patch-post-content with target_type exact to change part of it."
+Empty content has no partial target until content is added. The heading target requires parsed `core/heading` blocks, so raw Classic HTML
+headings require exact matching. The hint does not grant write access or bypass
+match/hash preconditions. Existing block paths, hashes, empty-freeform filtering and record-local `untrusted_fields`
+are unchanged; the computed flag and plugin-authored hint add no untrusted
+field markers. Denied requests expose neither flag nor hint. `get-post` is unchanged.
+
 | Ability | Target | Required access |
 | --- | --- | --- |
 | `webmastery-site-toolkit-for-mcp/patch-content-block` | One Gutenberg block by path or unique hash in a post or page | `edit_post` for the specific object |

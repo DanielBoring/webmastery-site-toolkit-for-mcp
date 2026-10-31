@@ -1714,3 +1714,20 @@ requires explicit disposable-runtime opt-in; examples are not runtime proof.
 ### Database table privacy
 
 For a disposable-site check, call `database-health` as Administrator with omitted input or `{"include_table_names":false}` and verify that table identifiers are logical/opaque, then deliberately opt in with `{"include_table_names":true}` and compare every row's metrics and `is_core_table`. A Subscriber must be refused in both modes. Opaque labels restart per response and are **not stable identifiers** for comparing reports; the opt-in is required only when physical names are genuinely needed. See the [3.0 diagnostic migration](../../docs/reference/3.0-migration.md#database-diagnostic-table-privacy).
+
+### Classic content inspection (#207)
+
+On an owned disposable site, call `list-content-blocks` with `content_id` and
+`content_type:"post"` (repeat for a page). Raw Classic HTML, empty, and whitespace
+bodies return `data.is_classic:true` and a fixed `data.hint` recommending
+`patch-post-content` with `target_type:"exact"`. Heading targets require parsed
+`core/heading` blocks; raw Classic HTML headings are not heading targets. Gutenberg, mixed
+raw HTML plus blocks, and explicit `<!-- wp:freeform -->` bodies return false
+and omit `hint`. The flag uses core `has_blocks()` marker detection, not markup
+validation or proof of which editor saved the post. Compare unchanged raw
+content hashes, normalized block paths/values/hashes and record-local markers.
+Repeat as Subscriber and as Author against an Editor-owned draft: both must
+fail without returning content, `is_classic` or `hint`. Empty content has no
+existing exact/heading target. The existing allowed/denied manifest cases stay
+unchanged; classification assertions run separately in product units and the
+real-core patch probe. Static/unit results alone do not establish real-core QA.

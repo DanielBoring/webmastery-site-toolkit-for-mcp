@@ -261,6 +261,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 
+* Flag Classic content in List Content Blocks and guide partial edits to Patch Post Content while preserving blocks, hashes and permissions.
+
 = 3.0.0 =
 
 * Retain candidate/cache-priming database failures across later successful native reads, without adding queries, exposing SQL diagnostics or rejecting stale warm-cache errors.
