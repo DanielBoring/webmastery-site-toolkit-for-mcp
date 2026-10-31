@@ -6,6 +6,12 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Update PHPStan from 2.2.16 to 2.3.1. Pass the current image-download
+  filename explicitly into the stream-ownership callback so the analyzer does
+  not freeze its initially null captured value and incorrectly flag the
+  required stream exclusion list as unused. Retain request-time filename
+  updates and shared stream ownership; remove four obsolete baseline findings.
+
 - `03-04 - Docker QA` no longer runs its runtime suites for documentation-only
   changes anywhere in the repository: Markdown files in any folder (previously
   only top-level Markdown was skipped, so `tests/e2e/README.md` triggered the

@@ -171,7 +171,7 @@ class Webmastery_MCP_Media {
 		$progress_option  = defined( 'CURLOPT_XFERINFOFUNCTION' ) ? CURLOPT_XFERINFOFUNCTION : ( defined( 'CURLOPT_PROGRESSFUNCTION' ) ? CURLOPT_PROGRESSFUNCTION : null );
 		$existing_streams = get_resources( 'stream' );
 		$owned_stream     = null;
-		$identify_stream  = static function () use ( &$filename, &$existing_streams, &$owned_stream ) {
+		$identify_stream  = static function ( $filename ) use ( &$existing_streams, &$owned_stream ) {
 			if ( null === $filename || null !== $owned_stream ) {
 				return;
 			}
@@ -184,8 +184,8 @@ class Webmastery_MCP_Media {
 				}
 			}
 		};
-		$progress         = static function ( $bytes, $received ) use ( $max_size, &$too_large, &$uses_curl, $identify_stream ) {
-			$identify_stream();
+		$progress         = static function ( $bytes, $received ) use ( $max_size, &$too_large, &$uses_curl, &$filename, $identify_stream ) {
+			$identify_stream( $filename );
 			if ( strlen( $bytes ) > $max_size - $received ) {
 				$too_large = true;
 				if ( ! $uses_curl ) {
@@ -226,9 +226,9 @@ class Webmastery_MCP_Media {
 				} );
 			}
 		};
-		$close_file       = static function () use ( &$owned_stream, $identify_stream ) {
+		$close_file       = static function () use ( &$owned_stream, &$filename, $identify_stream ) {
 			// Exceptions can skip Requests' fclose(), including timeouts before the first body chunk.
-			$identify_stream();
+			$identify_stream( $filename );
 			if ( is_resource( $owned_stream ) ) {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the new HTTP output resource, not pre-existing or read-only handles.
 				fclose( $owned_stream );

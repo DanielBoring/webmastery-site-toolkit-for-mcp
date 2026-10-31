@@ -37,33 +37,15 @@ parameters:
 			path: includes/class-media.php
 
 		-
-			message: '#^Result of \|\| is always true\.$#'
-			identifier: booleanOr.alwaysTrue
-			count: 1
-			path: includes/class-media.php
-
-		-
 			message: '#^Strict comparison using \!\=\= between null and null will always evaluate to false\.$#'
 			identifier: notIdentical.alwaysFalse
-			count: 4
+			count: 3
 			path: includes/class-media.php
 
 		-
 			message: '#^Strict comparison using \=\=\= between mixed and \*NEVER\* will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 3
-			path: includes/class-media.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between null and null will always evaluate to true\.$#'
-			identifier: identical.alwaysTrue
-			count: 1
-			path: includes/class-media.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
 			path: includes/class-media.php
 
 		-
