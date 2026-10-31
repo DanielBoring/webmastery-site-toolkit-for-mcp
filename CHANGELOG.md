@@ -6,6 +6,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+## 3.1.0
+
 ### Added
 
 - Add opt-in compact featured-image confirmations with previous/current IDs and
@@ -31,14 +33,13 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   status/permission diagnostics. Preserve existing authorization and error
   privacy without extra diagnostic reads after denial.
 
-
 - Breaking: default SEO and readability score audits to published posts/pages.
   Clients needing the previous scope must explicitly request `status:"any"`;
   specific status filters, permissions and bounded pagination are unchanged.
 - Update the documentation links in `readme.txt` for the reorganized `docs/`
   folder (3.0 migration guide, MCP Adapter 0.7 assessment and agent threat
   model). The links on the 3.0.0 WordPress.org plugin page point to the old
-  paths and will not resolve until the next release updates the listing.
+  paths; this release updates the listing to the current paths.
 - Point the `readme.txt` FAQ references for response format, untrusted result
   fields and Site Kit capability names to the new ability contracts reference
   and E2E guide, as direct links, instead of the repository README.

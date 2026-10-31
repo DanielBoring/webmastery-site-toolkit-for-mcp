@@ -4,7 +4,7 @@ Tags: mcp, ai, automation, content-management, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 3.0.0
+Stable tag: 3.1.0
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
@@ -75,7 +75,7 @@ Permanent media/category/tag deletion and both bulk post operations now require 
 
 Post/page/custom-post-type, media, orphan-media, and score lists now return candidate windows with items, page, per_page, and next_page instead of exact total/total_pages. Continue until next_page is null, including after empty or short windows. Existing roles and object/key permissions still apply; per_page caps candidates at 100, not visible results.
 
-In the Unreleased update after 3.0.0, SEO and readability score audits default to published posts/pages (status:"publish"). Explicit status:"any" retains the previous scope across otherwise eligible statuses; specific draft/pending/private/future filters remain available. Keep the same status on every page. This changes the audit selection, not access permissions or pagination.
+In 3.1.0, SEO and readability score audits default to published posts/pages (status:"publish"). Explicit status:"any" retains the previous scope across otherwise eligible statuses; specific draft/pending/private/future filters remain available. Keep the same status on every page. This changes the audit selection, not access permissions or pagination.
 
 Post/page/custom-post-type and revision lists default to fields:"summary", which omits content only. Request fields:"full" for unchanged stored content. Excerpts and other values are unchanged; get/write responses stay full. These are not transactional snapshots or constant-time database queries, and summary payloads have no universal byte limit. Orphan-reference queries are batched over bounded candidates; scan errors still block forced media deletion.
 
@@ -273,7 +273,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 == Changelog ==
 
-= Unreleased =
+= 3.1.0 =
 
 * Correct SEO Analyze Post internal/external link counts for bare/www hosts, HTTP/HTTPS, protocol-relative URLs and relative references; exclude non-web schemes and compare complete hostnames.
 * Identify failing schema fields and reasons in invalid-input errors across native and MCP calls, without exposing supplied values or unknown property names.
@@ -284,7 +284,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 * Breaking: SEO and readability score audits default to published posts/pages. Explicit status:"any" retains the previous scope; specific status filters, permissions and bounded pagination are unchanged.
 
-* Featured-image writes accept response_format:compact for a small confirmation with previous/current IDs and URL. Omission or response_format:full retains the existing full post response.
+* Featured-image writes accept response_format:compact for a small confirmation with previous/current IDs and a permission-guarded nullable URL. Omission or response_format:full retains the existing full post response.
+* Correct documentation links for the migration guide, MCP Adapter assessment, agent threat model and ability contracts.
 
 = 3.0.0 =
 
@@ -371,7 +372,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 == Upgrade Notice ==
 
-= Unreleased =
+= 3.1.0 =
 SEO/readability score lists now default to status:"publish". Clients needing the prior scope must explicitly send status:"any" on every page. See the migration guide.
 
 = 3.0.0 =
