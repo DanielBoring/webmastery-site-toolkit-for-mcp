@@ -1320,6 +1320,31 @@ The Site Kit fixture is **not the real Google plugin**. Its dashboard grant mode
 
 Ability Contract QA also runs `site-kit-permissions-runner.php`: 126 permission/direct-execution cases cover all three abilities, local read/no-read and Subscriber users, upstream allow/false/null/WP_Error, and missing/non-callable permission callbacks or routes. Instrumented route lookup, permission, data, and HTTP counters must remain zero for no-read callers. Read users must still pass upstream authorization; a denied or unsupported target must not execute its controller. Unit tests additionally cover provider discovery counts, missing providers, version diagnostics, input validation, and the unchanged status `manage_options` gate (including a custom user without `read`).
 
+The same cases assert actionable, tentative Dashboard sharing/Google sign-in
+guidance on upstream denials, no diagnostic dispatch after denial, generic local
+read failures, and omission of a private upstream message/data sentinel.
+`SiteKitPermissionsTest` additionally models dispatched 401/403 versus 429/500
+and native permission/execute, gateway and individual-tool result boundaries.
+These unit lifecycle/Adapter doubles are not real-core or HTTP evidence. Native
+execute-time permission failures retain WordPress's generic permission masking;
+preflight and dispatched 401/403 preserve the authored guidance.
+
+Manual verification on an owned disposable fixture installation:
+
+1. As an ordinary Subscriber, call each delegated Site Kit ability. Confirm
+   `forbidden` names possible sharing/sign-in causes, the dashboard-header
+   sharing icon, and the status/permissions diagnostics without asserting the
+   user is disconnected or a service is definitely unshared.
+2. Run `site-kit-permissions-runner.php` to verify local no-read users perform
+   zero provider work and missing/non-callable checks stay unsupported.
+3. Run `site-kit-mcp-runner.php` to check the authored denial through real HTTP
+   gateway preflight. The default endpoint's no-read rejection remains separate.
+4. For a connected-provider review, an authorized administrator can consult
+   [Google's sharing instructions](https://sitekit.withgoogle.com/documentation/features/dashboard-sharing/)
+   and inspect the dashboard header sharing icon. Keep this separate from
+   controlled fixtures; the automated checks do not change sharing settings,
+   sign in to Google, or establish a specific real-account failure cause.
+
 Full MCP E2E also runs `site-kit-mcp-runner.php` through real HTTP JSON-RPC and temporary Application Passwords. It verifies allowed read-only custom users, allowed fixture-shared Subscribers, denied ordinary Subscribers, and safe response projections for all three abilities. MCP Adapter 0.5.0 rejects no-read users at its default HTTP endpoint with 403 **before ability execution**; that boundary result is recorded separately and is not evidence of the ability-level floor. The direct WordPress and unit cases establish that floor. Results are written under `e2e-artifacts/issue125-permission-summary.json` and `e2e-artifacts/issue125-mcp-summary.json`.
 
 For a separate real-provider inspection, use a disposable installation with the official Site Kit package active and the Site Kit MU-plugin fixture absent. Verify the package using `wp plugin verify-checksums google-site-kit`, then run `wp --user=<test-user> eval-file wp-content/plugins/webmastery-site-toolkit-for-mcp/tests/e2e/inspect-site-kit-permissions.php`. The inspector calls only registered GET permission callbacks, records their source file/lines and effective capability checks, and blocks/records any attempted external HTTP. It never dispatches a data callback or needs Google credentials. Do not install the real provider into a running manifest fixture: the manifest creates a placeholder plugin file at the same slug.

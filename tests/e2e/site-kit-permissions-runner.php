@@ -50,7 +50,7 @@ $wstm125_routes = static function ( $routes ) use ( &$wstm125_counts, &$wstm125_
 						case 'null':
 							return null;
 						case 'error':
-							return new WP_Error( 'wstm125_denied', 'Fixture denied.', array( 'status' => 403 ) );
+							return new WP_Error( 'wstm125_denied', 'PRIVATE provider message', array( 'status' => 403, 'context' => 'PRIVATE provider data' ) );
 						default:
 							return true;
 					}
@@ -97,6 +97,19 @@ try {
 					if ( ! $allowed && is_wp_error( $result ) ) {
 						$expected = $no_read || in_array( $wstm125_mode, array( 'false', 'null', 'error' ), true ) ? 'forbidden' : 'site_kit_unsupported';
 						$passed = $passed && $expected === $result->get_error_code() && 0 === $wstm125_counts['target_data'];
+						$public = Webmastery_MCP_Response::from_wp_error( $result );
+						$message = $public['error']['message'];
+						$passed = $passed && false === strpos( wp_json_encode( $public ), 'PRIVATE' );
+						if ( ! $no_read && 'forbidden' === $expected ) {
+							foreach ( array( 'Possible causes', 'Dashboard sharing', 'sign-in/reauthentication', 'sharing icon', 'dashboard header', 'get-site-kit-status', 'get-site-kit-permissions' ) as $text ) {
+								$passed = $passed && false !== strpos( $message, $text );
+							}
+							// Guidance must not dispatch status/permission diagnostic reads after denial.
+							$expected_data = 'pagespeed' === $method && 'execute' === $prefix ? 1 : 0;
+							$passed = $passed && 1 === $wstm125_counts['target_permission'] && $expected_data === $wstm125_counts['data'];
+						} else {
+							$passed = $passed && false === strpos( $message, 'Dashboard sharing' );
+						}
 					}
 					if ( $no_read ) {
 						$passed = $passed && 0 === array_sum( $wstm125_counts );
