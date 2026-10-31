@@ -465,7 +465,7 @@ try {
 	$seo_post_id = (int) ( $seo_create['data']['id'] ?? 0 );
 	$summary['seo_post_id'] = $seo_post_id;
 	webmastery_mcp_e2e_assert( $seo_post_id > 0 && $seo_post_id !== $created_post_id, 'wstm108 did not create a separate SEO post.' );
-	foreach ( wstm108_seo_cases() as $name => $seo_case ) {
+	foreach ( array_merge( wstm108_seo_cases(), array( 'link_classification' => wstm201_seo_link_case( $wordpress_url ) ) ) as $name => $seo_case ) {
 		$seed = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/update-post', array(
 			'post_id' => $seo_post_id,
 			'status' => 'draft',
@@ -494,7 +494,7 @@ try {
 		foreach ( array_merge( $analysis['data']['issues'], $analysis['data']['good'] ) as $diagnostic ) {
 			webmastery_mcp_e2e_assert( false === strpos( $diagnostic['message'], 'WSTM108_' ), "wstm108 {$name} stored marker leaked into a diagnostic." );
 		}
-		webmastery_mcp_e2e_pass( $summary, "wstm108 {$name} keyword data separated from diagnostics through MCP HTTP" );
+		webmastery_mcp_e2e_pass( $summary, 'link_classification' === $name ? 'wstm201 exact link counts and diagnostics through MCP HTTP' : "wstm108 {$name} keyword data separated from diagnostics through MCP HTTP" );
 	}
 
 	$before_delete = webmastery_mcp_e2e_execute_ability( $editor_client, 'webmastery-site-toolkit-for-mcp/get-post', array( 'post_id' => $created_post_id ), 'verify scheduled CRUD post before deletion' );
