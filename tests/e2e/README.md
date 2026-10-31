@@ -315,6 +315,11 @@ authorization fixture. With both real SEO providers active, it expects 252 cases
 primitive-grant controls; eight analysis cases; two score-filter cases; bounded
 overview observations; and URL-only head refusal. Individual HTTP requires the
 temporary `wstm118-individual` server after the normal registration audit.
+The two score cases also check the advertised `publish` default, omitted-status
+inclusion/exclusion as an owned fixture moves through publish/draft/private/pending,
+and explicit status/`any` inclusion before the existing denied-key/no-read check.
+They retain each original call within the existing case inventory; no schema
+ledger or manifest count changes are needed for this default change.
 These runners retain raw responses and observer evidence, revoke their own
 application passwords, and remove owned objects/options. Unit transport seams
 prove strict error handling, discovery ambiguity, required observer evidence,
@@ -1661,6 +1666,26 @@ These hand checks complement the automated suites above. Run them only on a
 disposable WordPress site you own, never on a production or shared site. The
 behavior they check is described in the
 [ability contracts](../../docs/reference/ability-contracts.md).
+
+### Published SEO and readability audit defaults
+
+With Yoast active, prepare owned published, draft, pending, and private posts
+and pages. As an Editor with effective score-key access, call both
+`get-seo-scores` and `get-readability-scores` with `{"per_page":100}`. Follow
+every `next_page` with identical filters until null, including empty windows;
+verify only the published fixtures appear. Repeat with `{"status":"any"}`
+to include the otherwise eligible unpublished fixtures, then with each explicit
+`draft`, `pending`, and `private` filter to verify only that status is selected.
+Score records do not expose status: determine expected membership independently
+from the owned fixture IDs and native post status before invoking either tool.
+Check post/page selection and `modified_after` independently when those filters
+are used. No run should expose exact `total` or `total_pages` fields.
+
+Repeat with denied object/score-key access: denied fixtures must be omitted
+without score reads, and empty windows may still continue. A Subscriber must
+remain denied with omitted status and explicit `any`. With Yoast inactive,
+expect empty items, `yoast_active:false`, and `next_page:null`. Retain raw
+responses and restore/remove only your owned fixtures after verification.
 
 ### Standalone metadata authorization
 
