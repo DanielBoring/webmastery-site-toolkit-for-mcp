@@ -1125,8 +1125,9 @@ callback's exact `invalid_input` / `ability_invalid_input` envelope. Each is
 immediately followed by `direct-existing-future-overdue`, using the same fixture
 and fully constructed payload with only `status` removed. These schema-valid
 direct calls retain the exact `invalid_input` / `scheduled_date_too_soon` purpose.
-Both require the canonical message, empty object details, unchanged state,
-zero observed mutation hooks and the unchanged metadata sentinel. The other
+The schema failure requires `details:{"field":"$.status","reason":"enum"}`;
+the scheduling failure retains empty object details. Both require the canonical
+message, unchanged state, zero observed mutation hooks and the unchanged metadata sentinel. The other
 260 cases keep their original inputs, boundaries and expectations.
 
 `SchedulingCalibrationTest` and its sealed typed ledger derive the whole actual
@@ -1158,7 +1159,7 @@ The 3.0 strict-schema calibration expands this separate runner from **156 to
 or tag, missing or wrong-taxonomy ID, wrapped or direct) retain their identical
 integer IDs, `name: "Must not write"` and `confirm: true`. Their unadvertised
 `name` field now has the exact `invalid_input` / `ability_invalid_input` schema
-expectation, empty object details and unchanged-state/write-hook assertions.
+expectation, `details:{"field":"$.*","reason":"unknown_property"}` and unchanged-state/write-hook assertions.
 Each original precedes a new counterpart removing only `name`; that counterpart
 retains the original authorized `not_found` purpose, message, ID and state
 checks. The other 148 original cases are unchanged.
