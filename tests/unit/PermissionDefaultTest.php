@@ -201,7 +201,7 @@ final class PermissionDefaultTest extends TestCase {
 		self::assertSame( 'mobile', $result['data']['strategy'] );
 		self::assertSame( 'http://localhost/', $result['data']['requested_url'] );
 		$calls = $GLOBALS['wstm125']['calls'];
-		$this->assert_error( $ability->check_permissions( array( 'strategy' => null ) ) );
+		$this->assert_error( $ability->check_permissions( array( 'strategy' => null ) ), 'invalid_input', 'ability_invalid_input', array( 'field' => '$.strategy', 'reason' => 'type' ) );
 		self::assertSame( 'invalid_input', $ability->execute( array( 'strategy' => null ) )['error']['code'] );
 		self::assertSame( $calls, $GLOBALS['wstm125']['calls'] );
 		$GLOBALS['wstm_test_user_caps'] = array();
