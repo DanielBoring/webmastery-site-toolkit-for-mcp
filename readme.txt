@@ -261,6 +261,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 
+* Correct SEO Analyze Post internal/external link counts for bare/www hosts, HTTP/HTTPS, protocol-relative URLs and relative references; exclude non-web schemes and compare complete hostnames.
+
 = 3.0.0 =
 
 * Retain candidate/cache-priming database failures across later successful native reads, without adding queries, exposing SQL diagnostics or rejecting stale warm-cache errors.

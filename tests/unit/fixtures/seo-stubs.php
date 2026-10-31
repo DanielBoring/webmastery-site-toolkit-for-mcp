@@ -25,7 +25,7 @@ function get_permalink( $id ) {
 }
 
 function home_url() {
-	return 'https://example.test';
+	return $GLOBALS['wstm_test_seo_home'] ?? 'https://example.test';
 }
 
 function get_option( $name, $default = false ) {

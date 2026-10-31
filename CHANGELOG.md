@@ -6,6 +6,12 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+### Fixed
+
+- Correct SEO Analyze Post link counts across bare/www hosts, HTTP/HTTPS,
+  protocol-relative URLs and relative references. Compare complete hostnames
+  and exclude non-web schemes from internal/external counts.
+
 ### Changed
 
 - Update the documentation links in `readme.txt` for the reorganized `docs/`

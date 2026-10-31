@@ -51,3 +51,30 @@ function wstm108_seo_cases(): array {
 	}
 	return $cases;
 }
+
+// A shared, deterministic mixed-link oracle for unit, registered ability and MCP HTTP QA.
+function wstm201_seo_link_case( string $home ): array {
+	$host = preg_replace( '/^www\./i', '', parse_url( $home, PHP_URL_HOST ) );
+	$hrefs = array(
+		'https://' . $host . '/bare',
+		'http://www.' . $host . '/www',
+		'https://' . strtoupper( 'www.' . $host ) . '/case',
+		'//' . $host . '/protocol-relative',
+		'/root-relative', '../parent-relative', 'path-relative', '?query=1', '#fragment',
+		'//cdn.other.test/file',
+		'https://' . $host . '.other.test/prefix',
+		'https://other.test/path',
+		'https://' . $host . '@other.test/userinfo',
+		'mailto:contact@' . $host, 'tel:+15555550123',
+	);
+	$case = wstm108_seo_cases()['no_keyword'];
+	$case['content'] = str_repeat( 'word ', 300 );
+	foreach ( $hrefs as $href ) {
+		$case['content'] .= '<a href="' . $href . '">link</a> ';
+	}
+	$case['expected']['data.good'][1]['message'] = 'Content length is good (315 words).';
+	$case['expected']['data.good'][3]['message'] = '9 internal link(s) found.';
+	$case['expected']['data.metrics.internal_links'] = 9;
+	$case['expected']['data.metrics.external_links'] = 4;
+	return $case;
+}
