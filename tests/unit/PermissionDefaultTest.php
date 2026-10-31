@@ -187,6 +187,28 @@ final class PermissionDefaultTest extends TestCase {
 		self::assertSame( array( 'parent_validate_input', 'wp_ability_validate_input' ), $ability->events );
 	}
 
+	public function test_pagespeed_empty_adapter_input_uses_registered_default_but_explicit_strategy_null_fails(): void {
+		require_once __DIR__ . '/site-kit-stubs.php';
+		require_once dirname( __DIR__, 2 ) . '/includes/class-site-kit.php';
+		$GLOBALS['wstm_test_user_caps'] = array( 'read' );
+		$GLOBALS['wstm125'] = array( 'active' => true, 'version' => '1.183.0', 'mode' => 'allow', 'calls' => array( 'plugin' => 0, 'routes' => 0, 'permission' => 0, 'data' => 0 ) );
+		Webmastery_MCP_Site_Kit::register();
+		$name = 'webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed';
+		$ability = new Webmastery_MCP_Ability( $name, $this->wrapped( $GLOBALS['wstm_test_abilities'][ $name ], $name ) );
+		self::assertTrue( $ability->check_permissions( null ) );
+		$result = $ability->execute( null );
+		self::assertTrue( $result['success'] );
+		self::assertSame( 'mobile', $result['data']['strategy'] );
+		self::assertSame( 'http://localhost/', $result['data']['requested_url'] );
+		$calls = $GLOBALS['wstm125']['calls'];
+		$this->assert_error( $ability->check_permissions( array( 'strategy' => null ) ) );
+		self::assertSame( 'invalid_input', $ability->execute( array( 'strategy' => null ) )['error']['code'] );
+		self::assertSame( $calls, $GLOBALS['wstm125']['calls'] );
+		$GLOBALS['wstm_test_user_caps'] = array();
+		$this->assert_error( $ability->check_permissions( null ), 'forbidden', 'forbidden' );
+		self::assertSame( $calls, $GLOBALS['wstm125']['calls'] );
+	}
+
 	public function test_lifecycle_double_accepts_description_annotation_but_rejects_unknown_constraints(): void {
 		$schema = $this->schema();
 		$schema['properties']['include_table_names']['description'] = 'Annotation, not a validation rule.';

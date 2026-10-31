@@ -14,8 +14,12 @@ function webmastery_mcp_e2e_site_kit_admin_permission() {
 	return current_user_can( 'manage_options' );
 }
 
-function webmastery_mcp_e2e_site_kit_dashboard_permission() {
+function webmastery_mcp_e2e_site_kit_dashboard_permission( $request = null ) {
 	do_action( 'wstm125_site_kit_permission_called' );
+	if ( $request instanceof WP_REST_Request && '/google-site-kit/v1/modules/pagespeed-insights/data/pagespeed' === $request->get_route()
+		&& ( ! in_array( $request->get_param( 'strategy' ), array( 'mobile', 'desktop' ), true ) || ! $request->get_param( 'url' ) ) ) {
+		return new WP_Error( 'fixture_invalid_pagespeed_params', 'PageSpeed permission received missing or invalid normalized parameters.' );
+	}
 	return apply_filters( 'wstm125_site_kit_permission', current_user_can( 'edit_posts' ) || current_user_can( 'wstm125_site_kit_shared' ) );
 }
 
@@ -144,6 +148,10 @@ add_action( 'rest_api_init', function () {
 			'permission_callback' => 'webmastery_mcp_e2e_site_kit_dashboard_permission',
 			'callback'            => static function ( WP_REST_Request $request ) {
 				$url = esc_url_raw( $request->get_param( 'url' ) );
+				$strategy = $request->get_param( 'strategy' );
+				if ( ! in_array( $strategy, array( 'mobile', 'desktop' ), true ) || '' === $url ) {
+					throw new RuntimeException( 'PageSpeed dispatch received missing or invalid normalized parameters.' );
+				}
 				return (object) [
 					'id'                   => $url,
 					'analysisUTCTimestamp' => '2026-07-11T12:00:00.000Z',
@@ -160,7 +168,7 @@ add_action( 'rest_api_init', function () {
 						'userAgent'   => 'Sensitive fixture agent',
 						'environment' => [ 'hostUserAgent' => 'Sensitive fixture host' ],
 						'categories'  => [
-							'performance'    => [ 'score' => 0.98, 'title' => 'Performance' ],
+							'performance'    => [ 'score' => 'desktop' === $strategy ? 0.99 : 0.98, 'title' => 'Performance' ],
 							'accessibility'  => [ 'score' => 0.91, 'title' => 'Accessibility' ],
 							'best-practices' => [ 'score' => 0.96, 'title' => 'Best Practices' ],
 							'seo'            => [ 'score' => 0.93, 'title' => 'SEO' ],

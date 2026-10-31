@@ -1316,6 +1316,24 @@ The E2E bootstrap installs Yoast SEO from WordPress.org with the `wordpress-seo`
 
 ### Site Kit permission regressions
 
+PageSpeed defaults to `mobile` when `strategy` is omitted. On an authorized test
+site, call `get-site-kit-pagespeed` with `{}`, then with
+`{"url":"https://your-site.example/page/"}`: expect the home URL or supplied
+same-site URL and `data.strategy:"mobile"`. Explicit `{"strategy":"desktop"}`
+must still return desktop analysis. `{"strategy":null}`, boolean/array values,
+and `{"strategy":"both"}` must fail validation. Repeat the omitted-strategy
+calls as an ordinary Subscriber without Site Kit access: expect denial.
+
+The automated `site-kit-defaults-runner.php` runs after metadata boundary QA
+in the owned disposable source/package suite, with `WSTM202_DISPOSABLE=1`.
+It covers permission/direct callbacks, native execution, HTTP gateway and
+individual tools using temporary users/passwords that it removes afterward.
+The controlled upstream fixture requires normalized URL/strategy parameters
+and returns distinct mobile/desktop scores, proving the dispatched strategy.
+Local no-read denial is checked separately from upstream denial. These current
+regressions preserve the historical 601-case manifest and 152-case schema
+inventories and their existing allowed/denied assertions.
+
 The Site Kit fixture is **not the real Google plugin**. Its dashboard grant models an allowed upstream route, including the distinct `wstm125_read` and `wstm125_no_read` custom roles and a shared Subscriber. The manifest retains ordinary Subscriber upstream denial, adds local no-read denial despite an upstream grant, and preserves response projection and same-site URL assertions. `validate:security-qa` requires these cases for all three delegated abilities.
 
 Ability Contract QA also runs `site-kit-permissions-runner.php`: 126 permission/direct-execution cases cover all three abilities, local read/no-read and Subscriber users, upstream allow/false/null/WP_Error, and missing/non-callable permission callbacks or routes. Instrumented route lookup, permission, data, and HTTP counters must remain zero for no-read callers. Read users must still pass upstream authorization; a denied or unsupported target must not execute its controller. Unit tests additionally cover provider discovery counts, missing providers, version diagnostics, input validation, and the unchanged status `manage_options` gate (including a custom user without `read`).

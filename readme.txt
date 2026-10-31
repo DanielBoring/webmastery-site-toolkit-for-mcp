@@ -118,6 +118,8 @@ The official Site Kit 1.187.0 routes were inspected without Google data calls on
 
 PageSpeed requests are limited to URLs on the current site and are processed by Google's PageSpeed service through Site Kit. Responses omit OAuth scopes and proxy details, module owner identities, screenshots, third-party entity lists, and full Lighthouse payloads.
 
+PageSpeed defaults to the site home URL and the mobile strategy when omitted. Set strategy to desktop for desktop analysis. Explicit null strategy values, other types, and unsupported strategies such as both are rejected.
+
 = Can Subscribers check public webmaster verification? =
 
 Yes. The webmaster verification check requires `read` and checks public homepage meta tags, Bing XML, DNS TXT, robots.txt, and sitemap reachability without Google or Bing API credentials. It does not confirm account ownership. WordPress-only Site Kit installation and activation details require `activate_plugins`; other callers receive neither private projection, and their summary counts only public checks.
@@ -261,6 +263,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 = Unreleased =
 
+* Default PageSpeed analysis to mobile when strategy is omitted, including empty-input calls; retain explicit desktop analysis and Site Kit authorization.
 = 3.0.0 =
 
 * Retain candidate/cache-priming database failures across later successful native reads, without adding queries, exposing SQL diagnostics or rejecting stale warm-cache errors.

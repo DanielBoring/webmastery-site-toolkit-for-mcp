@@ -51,6 +51,10 @@ final class Wstm125RestServer {
 
 function wstm125_permission( $request ) {
 	++$GLOBALS['wstm125']['calls']['permission'];
+	$GLOBALS['wstm125']['permission_requests'][] = array( $request->path, $request->params );
+	if ( ( $GLOBALS['wstm125']['denied_path'] ?? null ) === $request->path ) {
+		return false;
+	}
 	switch ( $GLOBALS['wstm125']['mode'] ) {
 		case 'false':
 			return false;
@@ -69,6 +73,7 @@ function rest_do_request( $request ) {
 	$error = is_wp_error( $allowed ) || false === $allowed || null === $allowed;
 	if ( ! $error ) {
 		++$GLOBALS['wstm125']['calls']['data'];
+		$GLOBALS['wstm125']['data_requests'][] = array( $request->path, $request->params );
 	}
 	return new Wstm125RestResponse( $error, $request->path );
 }
