@@ -31,7 +31,7 @@ or dispatch. Dispatch it when needed:
 | Job | Timeout | Does |
 | --- | --- | --- |
 | `06 - Minimum Runtime QA / detect changes` | 5 min | `scripts/qa-changes.sh` (`default` scope). |
-| `06 - Minimum Runtime QA / WordPress 6.9 PHP 8.0` | 60 min | `bash scripts/qa-floor.sh` with `WSTM_QA_LOCATION=cloud`: builds the PHP 8.0.30 / WordPress 6.9 runtime from digest-pinned bases and signed, frozen Debian packages, verifies the actual CLI and HTTP interpreter lanes, and runs source acceptance. Uploads `minimum-runtime-product-summary`. |
+| `06 - Minimum Runtime QA / WordPress 6.9 PHP 8.0` | 60 min | `bash scripts/qa-floor.sh` with `WSTM_QA_LOCATION=cloud`: builds the PHP 8.0.30 / WordPress 6.9 runtime from digest-pinned bases and signed, frozen Debian packages, selects maintained `wp69-seo` provider pins, verifies the actual CLI and HTTP interpreter lanes, and runs source acceptance. Uploads `minimum-runtime-product-summary`. |
 | `06 - Minimum Runtime QA` | 2 min | Summary via `scripts/qa-check-gate.php`. |
 
 Permissions: `contents: read` only.
@@ -55,6 +55,12 @@ minimum. `06-minimum-runtime-qa.yml` separately builds actual PHP 8.0.30 with
 WordPress 6.9 from digest-pinned bases and signed frozen Debian packages.
 This EOL stack is a disposable compatibility fixture, not a production
 recommendation. An image build alone is not runtime acceptance.
+The launcher explicitly selects `DEPENDENCY_POLICY=wp69-seo`, using
+`wp69_yoast` and `wp69_seopress` from the compatibility configuration. These
+maintained floor pins survive global provider baseline promotion; see
+[provider policy by runtime](07-compatibility-qa.md#provider-policy-by-runtime)
+for maintenance and verification requirements. Current provider releases remain
+covered by the latest-WordPress lanes in 07.
 Genuine 8.0/8.4 syntax/unit evidence, actual CLI/HTTP observations and package
 results remain distinct.
 Do not raise a support floor, fabricate an image tag or label PHP 8.1 as 8.0

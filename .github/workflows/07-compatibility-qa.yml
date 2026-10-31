@@ -101,10 +101,12 @@ jobs:
         with:
           name: compatibility-proposal
           path: compatibility-artifacts
-      - name: Exercise proposed auxiliary pins on every required runtime
+      - name: Apply proposed auxiliary pins and retain maintained WordPress 6.9 providers
         run: |
           set -euo pipefail
           php scripts/compatibility-baselines.php wp_cli compatibility-artifacts/proposed-versions.json >/dev/null
+          # The wp69-seo policy reads wp69_yoast/wp69_seopress from the tested
+          # source baseline. Discovery and promotion never overwrite those pins.
           jq -s '.[0] * (.[1] | {wp_cli,wp_cli_sha512,yoast,seopress,plugin_check})' \
             .github/compatibility-versions.json compatibility-artifacts/proposed-versions.json \
             > compatibility-artifacts/lane-versions.json
@@ -150,7 +152,7 @@ jobs:
             echo "## $LANE"
             echo "Source: $SOURCE_SHA; image pull: $IMAGE_RESULT; QA: $QA_RESULT"
             echo "WordPress: $wp_version; PHP: $php_version; MySQL: $mysql_version; policy: $DEPENDENCY_POLICY"
-            echo "WP-CLI: $cli_version. Proposed auxiliary pins exercised on this source; see lane-versions.json."
+            echo "WP-CLI: $cli_version. Policy $DEPENDENCY_POLICY selects SEO pins from lane-versions.json (wp69_* for WordPress 6.9; current providers in latest-seo). Installed versions are recorded below."
             echo '```json'
             cat "compatibility-artifacts/$LANE.json"
             echo '```'

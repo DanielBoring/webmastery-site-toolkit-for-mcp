@@ -26,7 +26,7 @@ versions make upstream drift visible.
 | Job | Timeout | Does |
 | --- | --- | --- |
 | `07 - Compatibility QA / discover versions` | 10 min | Requires the run to be on current `main`, then `scripts/discover-compatibility.sh` queries the WordPress version API and the latest stable MCP Adapter release, verifies digests, rejects version regressions, builds the lane matrix and uploads `compatibility-proposal` (30 days). Also runs the download and dependency-policy rejection tests. |
-| `07 - Compatibility QA / <lane>` | 45 min each | For each lane below: applies the proposed tool and plugin pins, pulls images (three tries, then fails as infrastructure), runs `scripts/qa-run.sh all` (contract, MCP transport, debug log), records versions, uploads `compatibility-lane-<lane>`. |
+| `07 - Compatibility QA / <lane>` | 45 min each | For each lane below: applies proposed auxiliary pins while retaining the maintained WordPress 6.9 SEO pins, pulls images (three tries, then fails as infrastructure), runs `scripts/qa-run.sh all` with the lane's dependency policy (contract, MCP transport, debug log), records policy and installed versions, uploads `compatibility-lane-<lane>`. |
 | `07 - Compatibility QA / current Plugin Check` | 45 min | After every lane passes: generates candidate metadata with `scripts/update-compatibility-baselines.php`, then `scripts/release-qa.sh` with `PLUGIN_CHECK_VERSION=latest`. Uploads `compatibility-current-plugin-check`. |
 | `07 - Compatibility QA / open baseline PR` | 60 min | Only if all lanes and the checker passed, an update is needed, and the run is scheduled or `open_update_pr` is set. Rebuilds the candidate commit, runs `scripts/release-qa.sh` on it, refuses if `main` moved, pushes a new branch (never overwriting one) and opens "Update tested compatibility baselines". |
 | `07 - Compatibility QA` | 10 min | Report: writes the lane table to the job summary and fails if any required job failed or a requested promotion did not happen. After **two consecutive** failed scheduled runs it opens, reopens or updates one tracking issue, "Compatibility QA: persistent scheduled failure". No checkout. |
@@ -36,7 +36,7 @@ unless noted):
 
 | Lane | WordPress | MCP Adapter | Other |
 | --- | --- | --- | --- |
-| `wp69-php81-compatibility` | 6.9 | pinned | PHP 8.1 |
+| `wp69-php81-compatibility` | 6.9 | pinned | PHP 8.1; maintained `wp69-seo` pins |
 | `current-baseline` | pinned | pinned | |
 | `latest-mcp-adapter` | pinned | latest | |
 | `latest-wordpress` | latest | pinned | |
@@ -47,6 +47,36 @@ unless noted):
 
 All eight lanes run every time, even when there is no new upstream release;
 then the `latest` lanes repeat the pinned versions.
+
+### Provider policy by runtime
+
+`.github/compatibility-versions.json` keeps `wp69_yoast` and `wp69_seopress`
+separate from the global `yoast` and `seopress` baselines. The `wp69-seo`
+policy selects those exact maintained versions for WordPress 6.9. It is used
+by this matrix's PHP 8.1 lane and by `scripts/qa-floor.sh` for genuine PHP 8.0.
+Discovery and automatic baseline promotion preserve these fields unchanged;
+promoting a provider that requires newer WordPress cannot change either floor
+lane's selected providers.
+
+All eight lanes remain required. Proposed WP-CLI pins run on every lane.
+Six `pinned` lanes exercise the proposed global SEO versions; `latest-seo`
+installs the current providers on the latest WordPress. The proposal, effective
+lane configuration, selected policy and actual installed plugin versions remain
+separate evidence: `lane-versions.json` includes both provider pin sets, and
+the lane JSON's `dependency_policy` identifies which set was selected while
+`plugins` records the observed versions. Only a successful full matrix can
+proceed to candidate package checks and a reviewed baseline PR.
+
+The maintained WordPress 6.9 pins are Yoast 28.6 and SEOPress 10.3. Their
+published package headers require WordPress 6.9 and 6.5 respectively, and PHP
+7.4: [Yoast package](https://downloads.wordpress.org/plugin/wordpress-seo.28.6.zip),
+[SEOPress package](https://downloads.wordpress.org/plugin/wp-seopress.10.3.zip).
+These are explicit QA fixtures, not a recommendation to keep production
+providers on old versions. Review provider updates and security fixes regularly;
+change `wp69_*` only through a reviewed edit with upstream requirement inspection
+and passing WordPress 6.9/PHP 8.1 and genuine PHP 8.0 runtime evidence. If a safe
+compatible provider is unavailable, report the support decision rather than
+silently raising the plugin's WordPress minimum or skipping either lane.
 
 Permissions: `contents: read` for discovery and lanes; the PR job alone has
 `contents: write` and `pull-requests: write`; the report job has issue access
@@ -74,6 +104,13 @@ Supported-version failures can block a release; transient infrastructure or
 unsupported upstream combinations need separate triage, not silent skips. An
 unavailable candidate image is an infrastructure failure, not permission to
 promote an untested baseline. Reproduce scheduled failures before acting.
+
+The [October 31 run's WordPress 6.9 lane](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/actions/runs/41196359238/job/124523250003)
+failed while installing discovered Yoast 28.8: WordPress rejected the package
+because it requires 7.0. The maintained `wp69-seo` policy addresses this
+dependency mismatch without changing the plugin's WordPress 6.9 support or
+the current-provider lane. Pin selection tests are not passing runtime proof;
+the next complete matrix must still validate installation and plugin behavior.
 
 The October 26, 2026 run for [issue #209](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/issues/209)
 installed Adapter 0.7.1 successfully in the three failing latest-Adapter lanes.

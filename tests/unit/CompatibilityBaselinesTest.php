@@ -205,6 +205,40 @@ final class CompatibilityBaselinesTest extends TestCase {
 		self::assertSame( $before, file_get_contents( $this->root . '/.github/compatibility-versions.json' ) );
 	}
 
+	public function testGlobalSeoPromotionPreservesMaintainedWordPress69Providers(): void {
+		webmastery_mcp_update_baselines( $this->root, array( 'yoast' => '99.1', 'seopress' => '99.2' ) );
+		$updated = webmastery_mcp_read_baselines( $this->root . '/.github/compatibility-versions.json' );
+		self::assertSame( '99.1', $updated['yoast'] );
+		self::assertSame( '99.2', $updated['seopress'] );
+		foreach ( array( 'wp69_yoast', 'wp69_seopress' ) as $key ) {
+			self::assertSame( $this->baseline[ $key ], $updated[ $key ] );
+		}
+		$lanes = webmastery_mcp_compatibility_matrix( $updated, $updated )['include'];
+		self::assertSame( 'wp69-seo', $lanes[0]['dependency-policy'] );
+		self::assertSame( 'latest-seo', $lanes[7]['dependency-policy'] );
+	}
+
+	/** @dataProvider invalidFloorProvider */
+	public function testReaderRejectsMissingOrInvalidFloorPins( string $key, $value ): void {
+		if ( null === $value ) {
+			unset( $this->baseline[ $key ] );
+		} else {
+			$this->baseline[ $key ] = $value;
+		}
+		$this->writeConfig( $this->baseline );
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( $key );
+		webmastery_mcp_read_baselines( $this->root . '/.github/compatibility-versions.json' );
+	}
+
+	public static function invalidFloorProvider(): array {
+		return array(
+			array( 'wp69_yoast', null ), array( 'wp69_seopress', null ),
+			array( 'wp69_yoast', 'latest' ), array( 'wp69_seopress', 'latest' ),
+			array( 'wp69_yoast', 28.6 ), array( 'wp69_seopress', '10.3;echo unsafe' ),
+		);
+	}
+
 	/** @dataProvider invalidReferenceProvider */
 	public function testMissingOrDuplicateReferencesFailBeforeAnyWrite( string $file, string $contents ): void {
 		$before = file_get_contents( $this->root . '/.github/compatibility-versions.json' );
@@ -276,6 +310,7 @@ final class CompatibilityBaselinesTest extends TestCase {
 		self::assertCount( 8, array_unique( array_column( $lanes, 'label' ) ) );
 		self::assertSame( 'wp69-php81-compatibility', $lanes[0]['label'] );
 		self::assertSame( 'wordpress:6.9-php8.1-apache', $lanes[0]['wordpress-image'] );
+		self::assertSame( 'wp69-seo', $lanes[0]['dependency-policy'] );
 		foreach ( $lanes as $lane ) {
 			$expected = str_contains( $lane['mcp-adapter-zip'], '/v99.2.3/' ) ? $latest['mcp_adapter_sha256'] : $this->baseline['mcp_adapter_sha256'];
 			self::assertSame( $expected, $lane['mcp-adapter-sha256'] );

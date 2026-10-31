@@ -18,6 +18,7 @@ qa_engine build --iidfile "$work/image.id" -f tests/fixtures/php80-floor/Dockerf
 image="$(cat "$work/image.id")"
 [[ "$image" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "Floor image identity is malformed." >&2; exit 1; }
 export WORDPRESS_IMAGE="$image" WSTM_QA_EXPECTED_PHP=8.0 WSTM_QA_EXPECTED_WORDPRESS=6.9
+export DEPENDENCY_POLICY=wp69-seo
 export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-wstm-php80-floor-${token}}"
 export E2E_ARTIFACTS_DIR="${E2E_ARTIFACTS_DIR:-e2e-artifacts-${COMPOSE_PROJECT_NAME}}"
 bash scripts/qa-run.sh all

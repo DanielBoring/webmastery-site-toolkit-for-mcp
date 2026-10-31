@@ -12,6 +12,12 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
   required stream exclusion list as unused. Retain request-time filename
   updates and shared stream ownership; remove four obsolete baseline findings.
 
+- Keep explicit WordPress 6.9 SEO provider pins separate from global baseline
+  promotion. Both the PHP 8.1 compatibility lane and genuine PHP 8.0 floor
+  launcher use `wp69-seo`, preventing a newly discovered provider's newer
+  WordPress requirement from invalidating the maintained floor. All eight
+  compatibility lanes remain required, current providers remain covered, and
+  lane evidence retains the selected policy and observed installed versions.
 - Admit MCP Adapter 0.7.1 to the current source/package untrusted-content and
   error-contract proofs so compatibility lanes reach the runtime assertions.
   Keep unknown future versions rejected, preserve all validation and cleanup
