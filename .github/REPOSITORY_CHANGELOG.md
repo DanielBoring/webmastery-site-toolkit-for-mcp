@@ -6,6 +6,22 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Make `composer qa:unit` and `composer qa:tooling` disable Composer's 300
+  second process timeout, like `qa:local` and `e2e`, so slow machines no longer
+  kill the PHPUnit run part-way. `qa` and `test` inherit the change through
+  `@qa:unit`.
+
+- Remove the inert `testVersion` setting from `phpcs.xml.dist`: it only affects
+  the PHPCompatibility standard, which is neither installed nor referenced.
+  PHPCS does not enforce the PHP 8.0 floor; `06 - Minimum Runtime QA` does by
+  running the plugin on genuine PHP 8.0.30 (see `docs/06-minimum-runtime-qa.md`).
+
+- Declare the WordPress constants that `wordpress-stubs.php` omits (`ARRAY_A`,
+  `MINUTE_IN_SECONDS`, `DAY_IN_SECONDS`, `WP_CONTENT_DIR`, `WP_PLUGIN_DIR`) in
+  the analysis-only `tests/phpstan/constants.php` bootstrap, mark the two path
+  constants dynamic, and remove the six matching `constant.notFound` baseline
+  entries. No runtime code changed and the file is not shipped in the plugin ZIP.
+
 - Update PHPStan from 2.2.16 to 2.3.1. Pass the current image-download
   filename explicitly into the stream-ownership callback so the analyzer does
   not freeze its initially null captured value and incorrectly flag the
