@@ -130,7 +130,7 @@ final class PluginInventoryTest extends TestCase {
 			$GLOBALS['wstm119']['network'] = array( 'active_sitewide_plugins' => $active ? array( 'duplicator/duplicator.php' => 1, 'wp-rocket/wp-rocket.php' => 2 ) : array() );
 			$GLOBALS['wstm119']['caps'] = array( 'manage_options' );
 			$GLOBALS['wstm119']['calls'] = array();
-			$backup_plugins = $active ? array( array( 'name' => 'Duplicator', 'basename' => 'duplicator/duplicator.php', 'last_backup' => null, 'schedule' => null ) ) : array();
+			$backup_plugins = $active ? array( array( 'name' => 'Duplicator', 'basename' => 'duplicator/duplicator.php', 'last_backup' => null, 'schedule' => null, 'backup_verified' => true ) ) : array();
 			self::assertSame(
 				array( 'success' => true, 'data' => array(
 					'backup_plugin_detected' => $active,

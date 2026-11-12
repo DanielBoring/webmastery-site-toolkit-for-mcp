@@ -6,6 +6,19 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+### Fixed
+
+- Plugin audit now reads "Tested up to" from WordPress's cached update data for
+  up-to-date plugins and from each plugin's `readme.txt`, so potentially
+  abandoned plugins are flagged even when no update is pending. Invalid version
+  values are ignored.
+- Backup status no longer reports backups as configured when only Jetpack or
+  ManageWP Worker is active. It now warns that backup configuration could not
+  be verified, and each listed plugin includes a new `backup_verified` flag.
+  Jetpack VaultPress Backup and Solid Backups (BackupBuddy) are now recognized.
+- Backup status now reports the BackWPup last backup from each job's last run
+  time only, instead of the largest date-like value anywhere in its settings.
+
 ## 3.1.0
 
 ### Added

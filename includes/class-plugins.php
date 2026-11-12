@@ -418,14 +418,15 @@ class Webmastery_MCP_Plugins {
 
 	private static function normalize_plugin_audit( $plugin, $plugin_data, $updates ) {
 		$update          = $updates->response[ $plugin ] ?? null;
-		$tested_up_to    = self::get_plugin_tested_up_to( $plugin, $update );
-		$requires_wp     = self::get_plugin_requires_wp( $plugin_data, $update );
+		$no_update       = self::get_no_update_record( $updates, $plugin );
+		$tested_up_to    = self::get_plugin_tested_up_to( $plugin, $update, $no_update );
+		$requires_wp     = self::get_plugin_requires_wp( $plugin_data, $update, $no_update );
 		$critical_update = self::is_security_update( $update );
 
 		return [
 			'plugin'            => $plugin,
 			'name'              => $plugin_data['Name'] ?? $plugin,
-			'slug'              => self::get_plugin_slug( $plugin, $update ),
+			'slug'              => self::get_plugin_slug( $plugin, $update, $no_update ),
 			'version'           => $plugin_data['Version'] ?? '',
 			'active'            => is_plugin_active( $plugin ),
 			'update_available'  => null !== $update,
@@ -451,9 +452,24 @@ class Webmastery_MCP_Plugins {
 		return $updates;
 	}
 
-	private static function get_plugin_slug( $plugin, $update = null ) {
-		if ( is_object( $update ) && ! empty( $update->slug ) ) {
-			return sanitize_key( $update->slug );
+	private static function get_no_update_record( $updates, $plugin ) {
+		if ( ! isset( $updates->no_update ) || ! is_array( $updates->no_update ) || ! isset( $updates->no_update[ $plugin ] ) ) {
+			return null;
+		}
+
+		$record = $updates->no_update[ $plugin ];
+		if ( is_array( $record ) ) {
+			$record = (object) $record;
+		}
+
+		return is_object( $record ) ? $record : null;
+	}
+
+	private static function get_plugin_slug( $plugin, $update = null, $no_update = null ) {
+		foreach ( [ $update, $no_update ] as $record ) {
+			if ( is_object( $record ) && ! empty( $record->slug ) && is_scalar( $record->slug ) ) {
+				return sanitize_key( (string) $record->slug );
+			}
 		}
 
 		$parts = explode( '/', $plugin );
@@ -464,20 +480,82 @@ class Webmastery_MCP_Plugins {
 		return sanitize_key( basename( $plugin, '.php' ) );
 	}
 
-	private static function get_plugin_tested_up_to( $plugin, $update = null ) {
-		foreach ( [ 'tested', 'tested_up_to' ] as $property ) {
-			if ( is_object( $update ) && ! empty( $update->{$property} ) ) {
-				return sanitize_text_field( (string) $update->{$property} );
+	private static function get_plugin_tested_up_to( $plugin, $update = null, $no_update = null ) {
+		foreach ( [ $update, $no_update ] as $record ) {
+			if ( ! is_object( $record ) ) {
+				continue;
+			}
+
+			foreach ( [ 'tested', 'tested_up_to' ] as $property ) {
+				$version = isset( $record->{$property} ) ? self::sanitize_version_string( $record->{$property} ) : null;
+				if ( null !== $version ) {
+					return $version;
+				}
 			}
 		}
 
+		$version = self::sanitize_version_string( self::get_readme_tested_up_to( $plugin ) );
+		if ( null !== $version ) {
+			return $version;
+		}
+
 		$headers = self::get_extra_plugin_headers( $plugin );
-		return '' !== $headers['TestedUpTo'] ? $headers['TestedUpTo'] : null;
+		return self::sanitize_version_string( $headers['TestedUpTo'] );
 	}
 
-	private static function get_plugin_requires_wp( $plugin_data, $update = null ) {
-		if ( is_object( $update ) && ! empty( $update->requires ) ) {
-			return sanitize_text_field( (string) $update->requires );
+	private static function sanitize_version_string( $value ) {
+		if ( ! is_string( $value ) && ! is_int( $value ) && ! is_float( $value ) ) {
+			return null;
+		}
+
+		$value = trim( (string) $value );
+		if ( strlen( $value ) > 20 || 1 !== preg_match( '/^\d+(?:\.\d+){0,3}$/D', $value ) ) {
+			return null;
+		}
+
+		return $value;
+	}
+
+	private static function get_readme_tested_up_to( $plugin ) {
+		$directory = dirname( (string) $plugin );
+		if ( '.' === $directory || '' === $directory || '/' === $directory || '\\' === $directory ) {
+			return null;
+		}
+
+		$plugins_root = realpath( WP_PLUGIN_DIR );
+		if ( false === $plugins_root ) {
+			return null;
+		}
+
+		$plugin_root = realpath( $plugins_root . '/' . $directory );
+		if ( false === $plugin_root || ! self::is_path_inside( $plugin_root, $plugins_root ) ) {
+			return null;
+		}
+
+		foreach ( [ 'readme.txt', 'README.txt', 'Readme.txt', 'README.TXT' ] as $filename ) {
+			$readme = realpath( $plugin_root . '/' . $filename );
+			if ( false === $readme || ! is_file( $readme ) || ! self::is_path_inside( $readme, $plugin_root ) ) {
+				continue;
+			}
+
+			// get_file_data() reads only the first 8 KB of the file.
+			$headers = get_file_data( $readme, [ 'TestedUpTo' => 'Tested up to' ] );
+			return isset( $headers['TestedUpTo'] ) && '' !== $headers['TestedUpTo'] ? (string) $headers['TestedUpTo'] : null;
+		}
+
+		return null;
+	}
+
+	private static function is_path_inside( $path, $root ) {
+		$root = rtrim( $root, '/\\' ) . DIRECTORY_SEPARATOR;
+		return 0 === strpos( $path, $root );
+	}
+
+	private static function get_plugin_requires_wp( $plugin_data, $update = null, $no_update = null ) {
+		foreach ( [ $update, $no_update ] as $record ) {
+			if ( is_object( $record ) && ! empty( $record->requires ) && is_scalar( $record->requires ) ) {
+				return sanitize_text_field( (string) $record->requires );
+			}
 		}
 
 		if ( ! empty( $plugin_data['RequiresWP'] ) ) {
@@ -488,7 +566,7 @@ class Webmastery_MCP_Plugins {
 	}
 
 	private static function get_extra_plugin_headers( $plugin ) {
-		$path = WP_PLUGIN_DIR . '/' . $plugin;
+		$path = self::plugin_file_path( $plugin );
 		if ( ! file_exists( $path ) ) {
 			return [
 				'TestedUpTo' => null,
@@ -506,6 +584,10 @@ class Webmastery_MCP_Plugins {
 		return [
 			'TestedUpTo' => isset( $headers['TestedUpTo'] ) ? sanitize_text_field( $headers['TestedUpTo'] ) : null,
 		];
+	}
+
+	private static function plugin_file_path( $plugin ) {
+		return WP_PLUGIN_DIR . '/' . $plugin;
 	}
 
 	private static function is_potentially_abandoned( $tested_up_to ) {
@@ -535,7 +617,7 @@ class Webmastery_MCP_Plugins {
 	}
 
 	private static function get_days_since_update( $plugin ) {
-		$path = WP_PLUGIN_DIR . '/' . $plugin;
+		$path = self::plugin_file_path( $plugin );
 		if ( ! file_exists( $path ) ) {
 			return null;
 		}

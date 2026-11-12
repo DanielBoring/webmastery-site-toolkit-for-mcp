@@ -19,6 +19,7 @@
       "PermissionsCharacterizationTest.php",
       "PermissionsLoadingTest.php",
       "PermissionsTest.php",
+      "PluginAuditAccuracyTest.php",
       "PluginInventoryTest.php",
       "PostParentTest.php",
       "PostsCharacterizationTest.php",

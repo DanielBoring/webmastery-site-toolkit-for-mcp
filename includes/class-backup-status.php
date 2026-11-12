@@ -5,15 +5,21 @@ defined( 'ABSPATH' ) || exit;
 class Webmastery_MCP_Backup_Status {
 
 	private const KNOWN_BACKUP_PLUGINS = [
-		'updraftplus/updraftplus.php'                                => 'UpdraftPlus',
-		'backwpup/backwpup.php'                                      => 'BackWPup',
-		'duplicator/duplicator.php'                                  => 'Duplicator',
+		'updraftplus/updraftplus.php'                         => 'UpdraftPlus',
+		'backwpup/backwpup.php'                               => 'BackWPup',
+		'duplicator/duplicator.php'                           => 'Duplicator',
 		'all-in-one-wp-migration/all-in-one-wp-migration.php' => 'All-in-One WP Migration',
-		'blogvault-real-time-backup/blogvault.php'                   => 'BlogVault',
-		'wpvivid-backuprestore/wpvivid-backuprestore.php'            => 'WPvivid Backup & Migration',
-		'jetpack/jetpack.php'                                        => 'Jetpack',
-		'vaultpress/vaultpress.php'                                  => 'VaultPress',
-		'worker/init.php'                                            => 'ManageWP Worker',
+		'blogvault-real-time-backup/blogvault.php'            => 'BlogVault',
+		'wpvivid-backuprestore/wpvivid-backuprestore.php'     => 'WPvivid Backup & Migration',
+		'vaultpress/vaultpress.php'                           => 'VaultPress',
+		'jetpack-backup/jetpack-backup.php'                   => 'Jetpack VaultPress Backup',
+		'backupbuddy/backupbuddy.php'                         => 'Solid Backups (BackupBuddy)',
+	];
+
+	// Plugins that can run backups but are often active for other features.
+	private const BACKUP_CAPABLE_PLUGINS = [
+		'jetpack/jetpack.php' => 'Jetpack',
+		'worker/init.php'     => 'ManageWP Worker',
 	];
 
 	public static function register() {
@@ -54,6 +60,23 @@ class Webmastery_MCP_Backup_Status {
 
 		$primary = $plugins[0];
 
+		if ( ! $primary['backup_verified'] ) {
+			return [
+				'success' => true,
+				'data'    => [
+					'backup_plugin_detected' => false,
+					'plugin_name'            => null,
+					'last_backup'            => null,
+					'schedule'               => null,
+					'warning'                => sprintf(
+						'A backup-capable plugin is active (%s), but backup configuration could not be verified. Confirm that backups are enabled and running, or configure a dedicated backup solution.',
+						implode( ', ', array_column( $plugins, 'name' ) )
+					),
+					'active_known_plugins'   => $plugins,
+				],
+			];
+		}
+
 		return [
 			'success' => true,
 			'data'    => [
@@ -69,18 +92,26 @@ class Webmastery_MCP_Backup_Status {
 
 	private static function get_active_known_backup_plugins( $active_plugins ) {
 		$plugins = [];
+		$groups  = [
+			[ self::KNOWN_BACKUP_PLUGINS, true ],
+			[ self::BACKUP_CAPABLE_PLUGINS, false ],
+		];
 
-		foreach ( self::KNOWN_BACKUP_PLUGINS as $basename => $name ) {
-			if ( ! in_array( $basename, $active_plugins, true ) ) {
-				continue;
+		// Dedicated backup plugins are listed first so one of them becomes the primary.
+		foreach ( $groups as [ $known_plugins, $verified ] ) {
+			foreach ( $known_plugins as $basename => $name ) {
+				if ( ! in_array( $basename, $active_plugins, true ) ) {
+					continue;
+				}
+
+				$plugins[] = [
+					'name'            => $name,
+					'basename'        => $basename,
+					'last_backup'     => self::get_last_backup_for_plugin( $basename ),
+					'schedule'        => self::get_schedule_for_plugin( $basename ),
+					'backup_verified' => $verified,
+				];
 			}
-
-			$plugins[] = [
-				'name'        => $name,
-				'basename'    => $basename,
-				'last_backup' => self::get_last_backup_for_plugin( $basename ),
-				'schedule'    => self::get_schedule_for_plugin( $basename ),
-			];
 		}
 
 		return $plugins;
@@ -92,10 +123,36 @@ class Webmastery_MCP_Backup_Status {
 		}
 
 		if ( 'backwpup/backwpup.php' === $basename ) {
-			return self::format_latest_timestamp( get_option( 'backwpup_jobs', [] ) );
+			return self::get_backwpup_last_backup();
 		}
 
 		return null;
+	}
+
+	private static function get_backwpup_last_backup() {
+		$jobs = get_option( 'backwpup_jobs', [] );
+		if ( ! is_array( $jobs ) ) {
+			return null;
+		}
+
+		$latest = null;
+		foreach ( $jobs as $job ) {
+			if ( ! is_array( $job ) || ! isset( $job['lastrun'] ) ) {
+				continue;
+			}
+
+			$lastrun = $job['lastrun'];
+			if ( ! is_int( $lastrun ) && ! ( is_string( $lastrun ) && 1 === preg_match( '/^\d{1,12}$/D', $lastrun ) ) ) {
+				continue;
+			}
+
+			$timestamp = self::normalize_timestamp( $lastrun );
+			if ( null !== $timestamp && ( null === $latest || $timestamp > $latest ) ) {
+				$latest = $timestamp;
+			}
+		}
+
+		return null === $latest ? null : gmdate( 'Y-m-d\TH:i:s\Z', $latest );
 	}
 
 	private static function get_updraftplus_last_backup() {
