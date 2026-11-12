@@ -452,11 +452,17 @@ refuse compose exec -T wordpress wp --allow-root core version
             "@validate:security-qa", "@diff-check",
         ], scripts["qa:static"])
         self.assertEqual(
-            "php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist --testsuite product",
+            [
+                "Composer\\Config::disableProcessTimeout",
+                "php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist --testsuite product",
+            ],
             scripts["qa:unit"],
         )
         self.assertEqual(
-            "php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist --testsuite qa-tooling",
+            [
+                "Composer\\Config::disableProcessTimeout",
+                "php vendor/phpunit/phpunit/phpunit --configuration=phpunit.xml.dist --testsuite qa-tooling",
+            ],
             scripts["qa:tooling"],
         )
         self.assertEqual(["@qa:static", "@qa:unit"], scripts["qa"])
