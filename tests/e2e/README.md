@@ -1223,6 +1223,15 @@ The shell runs direct/ability boundaries in contract mode and HTTP in E2E mode, 
 
 This coverage is deliberately limited to the three standalone post-meta tools. It does not validate key authorization in post/page create/update batches or separate SEO reads, does not claim atomic batch behavior, and does not close the creation-policy/release gate.
 
+## Term list paging, audit findings and adapter notice (unreleased)
+
+Unit tests cover these changes; the sealed 601-case manifest is unchanged. Manual verification on a disposable site:
+
+- Create more than 3 categories, then call `list-categories` with `{"per_page":2,"page":1}`, `{"per_page":2,"page":2}` and so on until a page returns fewer than 2 items. Each `data` is a bare term array; no term repeats or is skipped. Repeat with `list-tags`.
+- Run `security-audit` as an Administrator. With fresh core update data (Dashboard > Updates), `wp_version` passes or warns that an update is available; after `wp transient delete update_core --network`, it warns that the update status is unknown. Exactly one `wp_version` finding is returned.
+- Remove or empty one `*_SALT` constant in `wp-config.php`: `auth_keys` warns and names the constant without its value. The default placeholder in any of the eight constants fails.
+- Deactivate the MCP Adapter: an Administrator sees the missing-adapter notice and an Editor does not. With the adapter active, or bundled by another plugin, no notice appears.
+
 ## Rule for new abilities
 
 When a PR adds a new ability, it must also add at least one manifest test case for that ability. If the ability is registered but missing from the manifest, E2E QA fails.

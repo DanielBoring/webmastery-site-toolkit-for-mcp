@@ -22,7 +22,7 @@ function get_user_by( $field, $value ) {
 }
 
 function get_site_transient( $name ) {
-	return false;
+	return $GLOBALS['wstm_test_site_transients'][ $name ] ?? false;
 }
 
 function get_bloginfo( $show ) {
@@ -35,7 +35,7 @@ function apply_filters( $name, $value ) {
 
 final class DiagnosticsTest extends TestCase {
 	protected function tearDown(): void {
-		unset( $GLOBALS['wstm111_home'], $GLOBALS['wpdb'], $GLOBALS['wstm_test_user_caps'] );
+		unset( $GLOBALS['wstm111_home'], $GLOBALS['wpdb'], $GLOBALS['wstm_test_user_caps'], $GLOBALS['wstm_test_site_transients'] );
 		parent::tearDown();
 	}
 
@@ -127,5 +127,135 @@ final class DiagnosticsTest extends TestCase {
 		$this->assertCount( 1, $findings );
 		$this->assertStringNotContainsString( WP_CONTENT_DIR, json_encode( $findings, JSON_UNESCAPED_SLASHES ) );
 		$this->assertStringContainsString( 'Public access has not been tested.', $findings[0]['detail'] );
+	}
+
+	private static function findings( array $result, string $check ): array {
+		$matches = array();
+		foreach ( array( 'pass', 'warn', 'fail' ) as $severity ) {
+			foreach ( $result['data'][ $severity ] as $finding ) {
+				if ( $check === $finding['check'] ) {
+					$matches[] = array( $severity, $finding );
+				}
+			}
+		}
+		return $matches;
+	}
+
+	public static function core_update_cases(): array {
+		$latest  = (object) array( 'response' => 'latest', 'version' => '6.9' );
+		$upgrade = (object) array( 'response' => 'upgrade', 'version' => '7.0' );
+		return array(
+			'missing transient' => array( false, 'warn', 'WordPress core update status unknown' ),
+			'null transient' => array( null, 'warn', 'WordPress core update status unknown' ),
+			'array transient' => array( array( 'updates' => array( $latest ) ), 'warn', 'WordPress core update status unknown' ),
+			'no updates property' => array( (object) array( 'last_checked' => 1 ), 'warn', 'WordPress core update status unknown' ),
+			'empty updates' => array( (object) array( 'updates' => array() ), 'warn', 'WordPress core update status unknown' ),
+			'updates not array' => array( (object) array( 'updates' => 'latest' ), 'warn', 'WordPress core update status unknown' ),
+			'only malformed entries' => array( (object) array( 'updates' => array( 'upgrade', array( 'response' => 'upgrade' ), (object) array( 'version' => '7.0' ), (object) array( 'response' => array( 'upgrade' ) ) ) ), 'warn', 'WordPress core update status unknown' ),
+			'latest entry' => array( (object) array( 'updates' => array( $latest ) ), 'pass', 'WordPress core is up to date' ),
+			'malformed then latest' => array( (object) array( 'updates' => array( null, $latest ) ), 'pass', 'WordPress core is up to date' ),
+			'development entry' => array( (object) array( 'updates' => array( (object) array( 'response' => 'development' ) ) ), 'pass', 'WordPress core is up to date' ),
+			'upgrade entry' => array( (object) array( 'updates' => array( $upgrade ) ), 'warn', 'WordPress core update available', 'Latest: 7.0' ),
+			'latest then upgrade' => array( (object) array( 'updates' => array( $latest, $upgrade ) ), 'warn', 'WordPress core update available', 'Latest: 7.0' ),
+			'upgrade without version' => array( (object) array( 'updates' => array( (object) array( 'response' => 'upgrade' ) ) ), 'warn', 'WordPress core update available', 'Latest: unknown' ),
+		);
+	}
+
+	/** @dataProvider core_update_cases */
+	public function test_core_version_emits_exactly_one_evidence_based_finding( $transient, string $bucket, string $label, string $latest = '' ): void {
+		$GLOBALS['wstm111_home'] = 'https://example.test';
+		$GLOBALS['wstm_test_site_transients'] = array( 'update_core' => $transient );
+		$matches = self::findings( Webmastery_MCP_Security::execute(), 'wp_version' );
+		$this->assertCount( 1, $matches );
+		[ $severity, $finding ] = $matches[0];
+		$this->assertSame( $bucket, $severity );
+		$this->assertSame( $label, $finding['label'] );
+		if ( '' !== $latest ) {
+			$this->assertStringEndsWith( $latest, $finding['detail'] );
+		}
+		if ( 'WordPress core update status unknown' === $label ) {
+			$this->assertStringContainsString( 'Cached update data is unavailable.', $finding['detail'] );
+		}
+	}
+
+	public function test_undefined_salts_warn_with_all_eight_names(): void {
+		$GLOBALS['wstm111_home'] = 'https://example.test';
+		$matches = self::findings( Webmastery_MCP_Security::execute(), 'auth_keys' );
+		$this->assertCount( 1, $matches );
+		$this->assertSame( 'warn', $matches[0][0] );
+		$this->assertSame( 'Auth keys/salts missing or empty in wp-config.php: AUTH_KEY, SECURE_AUTH_KEY, LOGGED_IN_KEY, NONCE_KEY, AUTH_SALT, SECURE_AUTH_SALT, LOGGED_IN_SALT, NONCE_SALT', $matches[0][1]['label'] );
+		$this->assertStringContainsString( 'falls back to values stored in the database', $matches[0][1]['detail'] );
+	}
+
+	private static function define_salts( array $values ): void {
+		foreach ( array( 'AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT' ) as $name ) {
+			if ( array_key_exists( $name, $values ) ) {
+				if ( null !== $values[ $name ] ) {
+					define( $name, $values[ $name ] );
+				}
+				continue;
+			}
+			define( $name, 'SALT_SENTINEL_' . $name . '_x9!Q' );
+		}
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_all_eight_unique_salts_pass(): void {
+		self::define_salts( array() );
+		$GLOBALS['wstm111_home'] = 'https://example.test';
+		$result = Webmastery_MCP_Security::execute();
+		$matches = self::findings( $result, 'auth_keys' );
+		$this->assertCount( 1, $matches );
+		$this->assertSame( array( 'pass', array( 'check' => 'auth_keys', 'label' => 'Auth keys and salts are set' ) ), $matches[0] );
+		$this->assertStringNotContainsString( 'SALT_SENTINEL', json_encode( $result ) );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_placeholder_in_salt_constant_fails(): void {
+		self::define_salts( array( 'NONCE_SALT' => 'put your unique phrase here' ) );
+		$GLOBALS['wstm111_home'] = 'https://example.test';
+		$result = Webmastery_MCP_Security::execute();
+		$matches = self::findings( $result, 'auth_keys' );
+		$this->assertCount( 1, $matches );
+		$this->assertSame( 'fail', $matches[0][0] );
+		$this->assertSame( 'Default auth keys/salts detected: NONCE_SALT', $matches[0][1]['label'] );
+		$this->assertStringNotContainsString( 'SALT_SENTINEL', json_encode( $result ) );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_empty_or_undefined_salts_warn(): void {
+		self::define_salts( array( 'LOGGED_IN_SALT' => '', 'SECURE_AUTH_SALT' => null ) );
+		$GLOBALS['wstm111_home'] = 'https://example.test';
+		$result = Webmastery_MCP_Security::execute();
+		$matches = self::findings( $result, 'auth_keys' );
+		$this->assertCount( 1, $matches );
+		$this->assertSame( 'warn', $matches[0][0] );
+		$this->assertSame( 'Auth keys/salts missing or empty in wp-config.php: SECURE_AUTH_SALT, LOGGED_IN_SALT', $matches[0][1]['label'] );
+		$this->assertStringNotContainsString( 'SALT_SENTINEL', json_encode( $result ) );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_placeholder_takes_precedence_over_missing_salts(): void {
+		self::define_salts( array( 'AUTH_KEY' => 'put your unique phrase here', 'NONCE_SALT' => '' ) );
+		$GLOBALS['wstm111_home'] = 'https://example.test';
+		$result = Webmastery_MCP_Security::execute();
+		$matches = self::findings( $result, 'auth_keys' );
+		$this->assertCount( 1, $matches );
+		$this->assertSame( 'fail', $matches[0][0] );
+		$this->assertSame( 'Default auth keys/salts detected: AUTH_KEY', $matches[0][1]['label'] );
+		$this->assertStringStartsWith( 'Missing or empty in wp-config.php: NONCE_SALT.', $matches[0][1]['detail'] );
+		$this->assertStringNotContainsString( 'SALT_SENTINEL', json_encode( $result ) );
 	}
 }
