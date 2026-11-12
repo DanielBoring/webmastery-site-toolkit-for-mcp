@@ -55,20 +55,29 @@ class Webmastery_MCP_Taxonomy {
 
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/list-{$ability}", [
 			'label'               => "List {$label}",
-			'description'         => "List all WordPress {$label}.",
+			'description'         => "List WordPress {$label}, one page of up to per_page items at a time. To list all {$label}, request the next page until a page returns fewer than per_page items.",
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
 				'properties' => [
 					'search'   => [ 'type' => 'string' ],
 					'per_page' => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 100 ],
+					'page'     => [ 'type' => 'integer', 'minimum' => 1, 'default' => 1 ],
 					'hide_empty' => [ 'type' => 'boolean', 'default' => false ],
 				],
 			],
 			'execute_callback'    => function ( $input ) use ( $taxonomy ) {
+				$number = Webmastery_MCP_Input::per_page( $input, 100, 200, null );
+				$skip   = Webmastery_MCP_Input::page( $input ) - 1;
+				// A page past PHP_INT_MAX items cannot hold terms; avoid an overflowing offset.
+				if ( $number > 0 && $skip > intdiv( PHP_INT_MAX, $number ) ) {
+					return [ 'success' => true, 'data' => [] ];
+				}
+
 				$args = [
 					'taxonomy'   => $taxonomy,
-					'number'     => Webmastery_MCP_Input::per_page( $input, 100, 200, null ),
+					'number'     => $number,
+					'offset'     => max( 0, $skip * $number ),
 					'hide_empty' => ! empty( $input['hide_empty'] ),
 				];
 

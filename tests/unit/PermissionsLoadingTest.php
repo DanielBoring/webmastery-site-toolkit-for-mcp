@@ -19,6 +19,37 @@ final class PermissionsLoadingTest extends TestCase {
 		), json_decode( implode( "\n", $output ), true, 512, JSON_THROW_ON_ERROR ) );
 	}
 
+	public static function adapter_notice_cases(): array {
+		return array(
+			'adapter missing, admin' => array( 'none', 'activate_plugins', true ),
+			'adapter missing, cannot activate plugins' => array( 'none', 'manage_options,edit_posts', false ),
+			'adapter missing, no capabilities' => array( 'none', '', false ),
+			'adapter autoloadable, admin' => array( 'autoload', 'activate_plugins', false ),
+		);
+	}
+
+	/** @dataProvider adapter_notice_cases */
+	public function testMissingAdapterNoticeDetectsAdapterAndRequiresActivatePlugins( string $adapter, string $caps, bool $shown ): void {
+		$output = array();
+		exec( escapeshellarg( PHP_BINARY ) . ' ' . escapeshellarg( __DIR__ . '/fixtures/adapter-notice-bootstrap.php' ) . ' ' . escapeshellarg( $adapter ) . ' ' . escapeshellarg( $caps ) . ' 2>&1', $output, $status );
+		self::assertSame( 0, $status, implode( "\n", $output ) );
+		$result = json_decode( implode( "\n", $output ), true, 512, JSON_THROW_ON_ERROR );
+		if ( $shown ) {
+			self::assertStringContainsString( 'notice-error', $result['notice'] );
+			self::assertStringContainsString( 'requires the <a href="https://wordpress.org/plugins/mcp-adapter/">MCP Adapter</a> plugin', $result['notice'] );
+		} else {
+			self::assertSame( '', $result['notice'] );
+		}
+		self::assertSame( 'autoload' === $adapter ? array() : array( 'activate_plugins' ), $result['calls'] );
+	}
+
+	public function testUntrustedHelperIsRequiredOnceAtTopLevel(): void {
+		$source = file_get_contents( dirname( __DIR__, 2 ) . '/webmastery-site-toolkit-for-mcp.php' );
+		$require = "require_once __DIR__ . '/includes/class-untrusted.php';";
+		self::assertSame( 1, substr_count( $source, $require ) );
+		self::assertLessThan( strpos( $source, "add_action( 'wp_abilities_api_init'" ), strpos( $source, $require ) );
+	}
+
 	public function testReleasePackageMapIncludesExactHelperSource(): void {
 		$root = dirname( __DIR__, 2 );
 		require_once $root . '/scripts/release-lib.php';

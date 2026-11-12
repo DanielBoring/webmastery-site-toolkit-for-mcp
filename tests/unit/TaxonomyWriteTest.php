@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
+function get_terms( $args ) {
+	$GLOBALS['wstm_test_get_terms_calls'][] = $args;
+	return $GLOBALS['wstm_test_get_terms_result'] ?? array();
+}
+
 final class TaxonomyWriteTest extends TestCase {
 	protected function setUp(): void {
 		$GLOBALS['wstm_test_abilities'] = array();
@@ -20,7 +25,7 @@ final class TaxonomyWriteTest extends TestCase {
 	}
 
 	protected function tearDown(): void {
-		foreach ( array( 'abilities', 'taxonomies', 'terms', 'delete_calls', 'cap_calls', 'user_caps', 'delete_result' ) as $key ) {
+		foreach ( array( 'abilities', 'taxonomies', 'terms', 'delete_calls', 'cap_calls', 'user_caps', 'delete_result', 'get_terms_calls', 'get_terms_result' ) as $key ) {
 			unset( $GLOBALS[ 'wstm_test_' . $key ] );
 		}
 	}
@@ -71,5 +76,51 @@ final class TaxonomyWriteTest extends TestCase {
 			'details' => (object) array(),
 		) ), $callbacks['execute_callback']( array( 'tag_id' => 42, 'confirm' => true ) ) );
 		$this->assertSame( array(), $GLOBALS['wstm_test_delete_calls'] );
+	}
+
+	public static function list_paging_cases(): array {
+		$cases = array();
+		foreach ( array( 'categories' => 'category', 'tags' => 'post_tag' ) as $slug => $taxonomy ) {
+			$cases[ "{$slug} defaults" ] = array( $slug, $taxonomy, array(), 100, 0 );
+			$cases[ "{$slug} first page" ] = array( $slug, $taxonomy, array( 'page' => 1, 'per_page' => 25 ), 25, 0 );
+			$cases[ "{$slug} third page" ] = array( $slug, $taxonomy, array( 'page' => 3, 'per_page' => 25 ), 25, 50 );
+			$cases[ "{$slug} default per_page second page" ] = array( $slug, $taxonomy, array( 'page' => 2 ), 100, 100 );
+			$cases[ "{$slug} per_page capped" ] = array( $slug, $taxonomy, array( 'page' => 2, 'per_page' => 500 ), 200, 200 );
+			$cases[ "{$slug} page below one" ] = array( $slug, $taxonomy, array( 'page' => 0, 'per_page' => 10 ), 10, 0 );
+		}
+		return $cases;
+	}
+
+	/** @dataProvider list_paging_cases */
+	public function test_list_pages_with_offset_and_keeps_bare_list( string $slug, string $taxonomy, array $input, int $number, int $offset ): void {
+		$GLOBALS['wstm_test_get_terms_result'] = array( (object) array( 'term_id' => 7, 'name' => 'News', 'slug' => 'news', 'description' => '', 'count' => 3, 'parent' => 0 ) );
+		$ability = $GLOBALS['wstm_test_abilities'][ "webmastery-site-toolkit-for-mcp/list-{$slug}" ];
+		$result = $ability['execute_callback']( $input );
+		$this->assertSame( array( 'success' => true, 'data' => array( array( 'id' => 7, 'name' => 'News', 'slug' => 'news', 'description' => '', 'count' => 3, 'parent' => 0 ) ) ), $result );
+		$this->assertSame( array( array( 'taxonomy' => $taxonomy, 'number' => $number, 'offset' => $offset, 'hide_empty' => false ) ), $GLOBALS['wstm_test_get_terms_calls'] );
+	}
+
+	public function test_list_offset_overflow_returns_empty_page_without_query(): void {
+		foreach ( array( 'categories', 'tags' ) as $slug ) {
+			$ability = $GLOBALS['wstm_test_abilities'][ "webmastery-site-toolkit-for-mcp/list-{$slug}" ];
+			$this->assertSame( array( 'success' => true, 'data' => array() ), $ability['execute_callback']( array( 'page' => PHP_INT_MAX, 'per_page' => 200 ) ) );
+		}
+		$this->assertArrayNotHasKey( 'wstm_test_get_terms_calls', $GLOBALS );
+
+		$ability = $GLOBALS['wstm_test_abilities']['webmastery-site-toolkit-for-mcp/list-tags'];
+		$largest = intdiv( PHP_INT_MAX, 200 ) + 1;
+		$ability['execute_callback']( array( 'page' => $largest, 'per_page' => 200 ) );
+		$this->assertSame( ( $largest - 1 ) * 200, $GLOBALS['wstm_test_get_terms_calls'][0]['offset'] );
+		$this->assertIsInt( $GLOBALS['wstm_test_get_terms_calls'][0]['offset'] );
+	}
+
+	public function test_list_schema_declares_page_and_describes_paging(): void {
+		foreach ( array( 'categories' => 'Categories', 'tags' => 'Tags' ) as $slug => $label ) {
+			$ability = $GLOBALS['wstm_test_abilities'][ "webmastery-site-toolkit-for-mcp/list-{$slug}" ];
+			$this->assertSame( array( 'type' => 'integer', 'minimum' => 1, 'default' => 1 ), $ability['input_schema']['properties']['page'] );
+			$this->assertSame( array( 'type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 100 ), $ability['input_schema']['properties']['per_page'] );
+			$this->assertStringContainsString( 'request the next page until a page returns fewer than per_page items', $ability['description'] );
+			$this->assertStringNotContainsString( "List all WordPress {$label}.", $ability['description'] );
+		}
 	}
 }
