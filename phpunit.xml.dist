@@ -26,6 +26,7 @@
 			<file>tests/unit/PermissionsCharacterizationTest.php</file>
 			<file>tests/unit/PermissionsLoadingTest.php</file>
 			<file>tests/unit/PermissionsTest.php</file>
+			<file>tests/unit/PluginAuditAccuracyTest.php</file>
 			<file>tests/unit/PluginInventoryTest.php</file>
 			<file>tests/unit/PostParentTest.php</file>
 			<file>tests/unit/PostSchedulingTest.php</file>

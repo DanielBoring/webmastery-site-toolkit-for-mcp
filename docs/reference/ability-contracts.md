@@ -28,6 +28,7 @@ table shows it.
 - [Scheduling](#scheduling)
 - [Parent assignments](#parent-assignments)
 - [Google Site Kit](#google-site-kit)
+- [Plugin audit and backup status](#plugin-audit-and-backup-status)
 - [Untrusted result fields](#untrusted-result-fields)
 - [Security and privacy behavior](#security-and-privacy-behavior)
 
@@ -408,6 +409,32 @@ delegated abilities, so a Subscriber whom Site Kit legitimately authorizes is
 not excluded locally. Route-level permission semantics observed for a specific
 Site Kit version are recorded in the
 [E2E guide](../../tests/e2e/README.md#site-kit-permission-regressions).
+
+## Plugin audit and backup status
+
+Both abilities are Administrator-only, read-only, and make no network calls.
+
+`plugin-audit` reports each plugin's `tested_up_to` from the first valid
+source: the cached pending-update record, the cached "no update" record that
+WordPress keeps for up-to-date plugins (when it carries a tested version), the
+`Tested up to:` line in the plugin's own `readme.txt` (first 8 KB only, plugins
+in their own folder only, never a readme outside the plugins directory), then
+the main plugin file header. Values must be plain version strings (digits and
+dots, at most 20 characters); anything else is skipped. `abandoned` is `true`
+when that version is two or more minor releases behind the running WordPress
+version. `requires_wp` and `slug` also use the cached "no update" record when
+there is no pending update. Field names and types are unchanged.
+
+`backup-status` separates dedicated backup plugins from backup-capable plugins
+that are often active for other features (Jetpack and ManageWP Worker). Each
+`active_known_plugins[]` record includes a boolean `backup_verified`: `true`
+for dedicated backup plugins and `false` for backup-capable ones. Dedicated
+plugins are listed first and one of them is reported as the primary plugin.
+When only backup-capable plugins are active, `backup_plugin_detected` is
+`false`, `plugin_name`, `last_backup` and `schedule` are `null`, and `warning`
+names the active plugins and says that backup configuration could not be
+verified. BackWPup `last_backup` is the latest numeric `lastrun` across its
+jobs, or `null` when no job has run.
 
 ## Untrusted result fields
 
