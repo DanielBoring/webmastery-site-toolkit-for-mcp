@@ -9,5 +9,9 @@ parameters:
 		- includes
 	bootstrapFiles:
 		- vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
+		- tests/phpstan/constants.php
+	dynamicConstantNames:
+		- WP_CONTENT_DIR
+		- WP_PLUGIN_DIR
 	treatPhpDocTypesAsCertain: false
 	reportUnmatchedIgnoredErrors: true

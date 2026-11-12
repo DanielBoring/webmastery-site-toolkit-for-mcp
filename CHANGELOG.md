@@ -6,8 +6,24 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+### Added
+
+- Add an optional `page` input to List Categories and List Tags so sites with
+  more than 200 terms can be listed page by page. The response stays a plain
+  list of terms; request the next page until fewer than `per_page` items return.
+
 ### Fixed
 
+- Fix the missing MCP Adapter admin notice, which never appeared on WordPress
+  6.9+. It now detects the MCP Adapter itself (standalone or bundled by another
+  plugin) instead of the Abilities API built into WordPress, and is shown only
+  to users who can activate plugins.
+- Security Audit always reports the WordPress core version check: up to date
+  when cached update data shows no upgrade, and a warning that the status is
+  unknown when cached update data is unavailable, instead of omitting the
+  finding or claiming the site is up to date without evidence.
+- Security Audit now checks all eight authentication keys and salts, and warns
+  when any are missing or empty in `wp-config.php`. Key values are never shown.
 - Plugin audit now reads "Tested up to" from WordPress's cached update data for
   up-to-date plugins and from each plugin's `readme.txt`, so potentially
   abandoned plugins are flagged even when no update is pending. Invalid version

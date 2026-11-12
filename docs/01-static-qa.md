@@ -32,7 +32,7 @@ linters. It does not run WordPress; runtime behavior is 03-04.
 | Step | Command | Checks |
 | --- | --- | --- |
 | Syntax | `composer lint:php` | `php -l` on every PHP file |
-| Coding standards | `composer phpcs` | WPCS via `phpcs.xml.dist` (short `[]` arrays enforced) |
+| Coding standards | `composer phpcs` | WPCS via `phpcs.xml.dist` (short `[]` arrays enforced); it does not check PHP version compatibility, which [06 - Minimum Runtime QA](06-minimum-runtime-qa.md) proves on genuine PHP 8.0 |
 | Static analysis | `composer phpstan` | Level 5, PHP 8.0 target, reviewed baseline |
 | Baseline guard | `composer test:phpstan-baseline` | The ratchet below cannot be loosened |
 | Dependency audit | `composer audit:locked` | Advisories in `composer.lock` |
@@ -73,6 +73,10 @@ level 5 with a PHP 8.0 analysis target. Each reviewed baseline entry has an
 anchored message, identifier, positive count and individual path. There are no
 excluded production paths or global identifier-only ignores.
 `treatPhpDocTypesAsCertain: false` and the WordPress stubs bootstrap remain.
+WordPress constants the stubs omit (`ARRAY_A`, `MINUTE_IN_SECONDS`, `DAY_IN_SECONDS`,
+`WP_CONTENT_DIR`, `WP_PLUGIN_DIR`) are declared in the analysis-only bootstrap
+`tests/phpstan/constants.php`; the two path constants are also listed in
+`dynamicConstantNames`. The file is not part of the release ZIP.
 
 A clean analysis means no diagnostics beyond reviewed debt; it does not prove
 runtime safety or the soundness of every mixed value. Matching is by message,

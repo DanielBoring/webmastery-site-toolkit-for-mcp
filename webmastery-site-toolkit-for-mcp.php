@@ -24,8 +24,10 @@ add_filter( 'wp_register_ability_args', [ Webmastery_MCP_Input::class, 'register
 add_filter( 'wp_register_ability_args', [ Webmastery_MCP_Response::class, 'register_args' ], 10, 2 );
 add_filter( 'mcp_adapter_tool_call_result', [ Webmastery_MCP_Response::class, 'mcp_result' ], 10, 4 );
 
+// The Abilities API is in core since WordPress 6.9, so detect the MCP Adapter itself. Checking its
+// main class (not a plugin basename) also recognizes an adapter bundled by another plugin.
 add_action( 'admin_notices', function () {
-	if ( ! function_exists( 'wp_register_ability' ) ) {
+	if ( ! class_exists( 'WP\MCP\Core\McpAdapter' ) && current_user_can( 'activate_plugins' ) ) {
 		echo '<div class="notice notice-error"><p>' . wp_kses(
 				sprintf(
 					/* translators: %s: URL to MCP Adapter plugin page */
@@ -48,7 +50,6 @@ add_action( 'wp_abilities_api_categories_init', function () {
 // Register abilities — wp_register_ability() only works inside wp_abilities_api_init.
 add_action( 'wp_abilities_api_init', function () {
 	require_once __DIR__ . '/includes/class-ability.php';
-	require_once __DIR__ . '/includes/class-untrusted.php';
 	require_once __DIR__ . '/includes/class-post-parent.php';
 	require_once __DIR__ . '/includes/class-post-scheduling.php';
 	require_once __DIR__ . '/includes/class-post-access.php';

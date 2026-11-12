@@ -1223,6 +1223,25 @@ The shell runs direct/ability boundaries in contract mode and HTTP in E2E mode, 
 
 This coverage is deliberately limited to the three standalone post-meta tools. It does not validate key authorization in post/page create/update batches or separate SEO reads, does not claim atomic batch behavior, and does not close the creation-policy/release gate.
 
+## Term list paging, audit findings and adapter notice (unreleased)
+
+Unit tests cover these changes; the sealed 601-case manifest is unchanged. Manual verification on a disposable site:
+
+- Create more than 3 categories, then call `list-categories` with `{"per_page":2,"page":1}`, `{"per_page":2,"page":2}` and so on until a page returns fewer than 2 items. Each `data` is a bare term array; no term repeats or is skipped. Repeat with `list-tags`.
+- Run `security-audit` as an Administrator. With fresh core update data (Dashboard > Updates), `wp_version` passes or warns that an update is available; after `wp transient delete update_core --network`, it warns that the update status is unknown. Exactly one `wp_version` finding is returned.
+- Remove or empty one `*_SALT` constant in `wp-config.php`: `auth_keys` warns and names the constant without its value. The default placeholder in any of the eight constants fails.
+- Deactivate the MCP Adapter: an Administrator sees the missing-adapter notice and an Editor does not. With the adapter active, or bundled by another plugin, no notice appears.
+
+## Plugin audit and backup status accuracy (unreleased)
+
+Unit tests cover these changes; the sealed 601-case manifest is unchanged. Manual verification on a disposable site, as an Administrator:
+
+- Install a plugin that has no pending update and whose `readme.txt` says `Tested up to:` a WordPress version at least two minor releases behind the site. Run `plugin-audit`: its item reports that `tested_up_to` value and `abandoned: true`, and `potentially_abandoned_count` includes it. Change the readme value to the current WordPress version: `abandoned` becomes `false`.
+- Set the readme value to something that is not a version (for example `latest`): `tested_up_to` falls back to the main-file header, or `null`, and `abandoned` is `false`.
+- Activate only Jetpack (or ManageWP Worker) and no dedicated backup plugin. Run `backup-status`: `backup_plugin_detected` is `false`, `plugin_name`, `last_backup` and `schedule` are `null`, `warning` names the backup-capable plugin and says backup configuration could not be verified, and `active_known_plugins` lists it with `backup_verified: false`.
+- Also activate UpdraftPlus: `backup_plugin_detected` is `true`, `plugin_name` is `UpdraftPlus`, `warning` is `null`, and UpdraftPlus is listed first with `backup_verified: true`.
+- With BackWPup active, set a job's `lastrun` in the `backwpup_jobs` option and name another job `monday`: `last_backup` is the `lastrun` time in UTC, not a date derived from the job name or other settings.
+
 ## Rule for new abilities
 
 When a PR adds a new ability, it must also add at least one manifest test case for that ability. If the ability is registered but missing from the manifest, E2E QA fails.

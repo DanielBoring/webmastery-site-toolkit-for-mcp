@@ -74,21 +74,32 @@ class Webmastery_MCP_Security {
 			$pass[] = [ 'check' => 'admin_username', 'label' => 'No account with the login "admin" found' ];
 		}
 
-		// WordPress version vs latest
+		// WordPress version vs latest, from cached update data only (no remote request).
 		$core_updates = get_site_transient( 'update_core' );
-		if ( $core_updates && ! empty( $core_updates->updates ) ) {
-			foreach ( $core_updates->updates as $update ) {
-				if ( 'upgrade' === $update->response ) {
-					$warn[] = [
-						'check'  => 'wp_version',
-						'label'  => 'WordPress core update available',
-						'detail' => sprintf( 'Current: %s — Latest: %s', get_bloginfo( 'version' ), $update->version ),
-					];
-					break;
-				}
+		$entries      = is_object( $core_updates ) && isset( $core_updates->updates ) && is_array( $core_updates->updates ) ? $core_updates->updates : [];
+		$upgrade      = null;
+		$known        = false;
+		foreach ( $entries as $update ) {
+			if ( ! is_object( $update ) || ! isset( $update->response ) || ! is_string( $update->response ) ) {
+				continue;
 			}
-		} else {
+			$known = true;
+			if ( 'upgrade' === $update->response ) {
+				$upgrade = $update;
+				break;
+			}
+		}
+		if ( null !== $upgrade ) {
+			$latest = isset( $upgrade->version ) && is_scalar( $upgrade->version ) ? (string) $upgrade->version : 'unknown';
+			$warn[] = [
+				'check'  => 'wp_version',
+				'label'  => 'WordPress core update available',
+				'detail' => sprintf( 'Current: %s — Latest: %s', get_bloginfo( 'version' ), $latest ),
+			];
+		} elseif ( $known ) {
 			$pass[] = [ 'check' => 'wp_version', 'label' => 'WordPress core is up to date', 'detail' => 'Version: ' . get_bloginfo( 'version' ) ];
+		} else {
+			$warn[] = [ 'check' => 'wp_version', 'label' => 'WordPress core update status unknown', 'detail' => 'Cached update data is unavailable. Check for updates in Dashboard > Updates, then run the audit again. Version: ' . get_bloginfo( 'version' ) ];
 		}
 
 		// Plugin updates (requires update_plugins cap)
@@ -110,17 +121,24 @@ class Webmastery_MCP_Security {
 			$pass[] = [ 'check' => 'xmlrpc', 'label' => 'XML-RPC is disabled' ];
 		}
 
-		// Auth keys/salts — check for default placeholder
+		// Auth keys/salts — check all eight wp-config.php constants without exposing their values.
 		$default_salt = 'put your unique phrase here';
-		$constants    = [ 'AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY' ];
+		$constants    = [ 'AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT' ];
 		$weak_salts   = [];
+		$unset_salts  = [];
 		foreach ( $constants as $const ) {
-			if ( defined( $const ) && strpos( constant( $const ), $default_salt ) !== false ) {
+			$value = defined( $const ) ? constant( $const ) : null;
+			if ( ! is_string( $value ) || '' === $value ) {
+				$unset_salts[] = $const;
+			} elseif ( strpos( $value, $default_salt ) !== false ) {
 				$weak_salts[] = $const;
 			}
 		}
+		$missing_note = empty( $unset_salts ) ? '' : 'Missing or empty in wp-config.php: ' . implode( ', ', $unset_salts ) . '. WordPress falls back to values stored in the database. ';
 		if ( ! empty( $weak_salts ) ) {
-			$fail[] = [ 'check' => 'auth_keys', 'label' => 'Default auth keys/salts detected: ' . implode( ', ', $weak_salts ), 'detail' => 'Generate new keys at https://api.wordpress.org/secret-key/1.1/salt/' ];
+			$fail[] = [ 'check' => 'auth_keys', 'label' => 'Default auth keys/salts detected: ' . implode( ', ', $weak_salts ), 'detail' => $missing_note . 'Generate new keys at https://api.wordpress.org/secret-key/1.1/salt/' ];
+		} elseif ( ! empty( $unset_salts ) ) {
+			$warn[] = [ 'check' => 'auth_keys', 'label' => 'Auth keys/salts missing or empty in wp-config.php: ' . implode( ', ', $unset_salts ), 'detail' => 'WordPress falls back to values stored in the database. Define unique values in wp-config.php; generate them at https://api.wordpress.org/secret-key/1.1/salt/' ];
 		} else {
 			$pass[] = [ 'check' => 'auth_keys', 'label' => 'Auth keys and salts are set' ];
 		}
