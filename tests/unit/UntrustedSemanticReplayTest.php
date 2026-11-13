@@ -43,7 +43,7 @@ final class UntrustedSemanticReplayTest extends TestCase {
 
 	public function testEveryIndependentlyPlannedLabelReplaysWithoutTrustingCasePassFlags(): void {
 		$model = Wstm_Product_Evidence_Model::untrusted_model(); $count = 0;
-		self::assertCount( 306, $model['models'] );
+		self::assertCount( 307, $model['models'] );
 		self::assertSame( Wstm108_Plan::labels( $model['native'] ), array_column( array_column( $model['models'], 'case' ), 'label' ) );
 		foreach ( $model['models'] as $entry ) {
 			$case = $entry['case']; $case['passed'] = false;
@@ -56,7 +56,7 @@ final class UntrustedSemanticReplayTest extends TestCase {
 			}
 			++$count;
 		}
-		self::assertSame( 306, $count );
+		self::assertSame( 307, $count );
 		$cases = array_column(array_column($model['models'], 'case'), null, 'label');
 		foreach (array('gateway', 'individual') as $boundary) {
 			foreach (array('_yoast_wpseo_linkdex', '_yoast_wpseo_content_score', '_seopress_news_disabled', '_seopress_video_disabled') as $key) {
@@ -70,17 +70,17 @@ final class UntrustedSemanticReplayTest extends TestCase {
 	public function testCompleteOriginalFramed298LabelExportVerifiesThroughSupportedHostApi(): void {
 		$export = $this->export();
 		self::assertSame( array( 'stage' => 'untrusted', 'status' => 'records-verified-live-absence-unresolved',
-			'count' => 306, 'lane' => '8.2', 'uid' => 33 ), Wstm_Product_Evidence_Verifier::verify( 'untrusted', $this->root, $export['context'] ) );
+			'count' => 307, 'lane' => '8.2', 'uid' => 33 ), Wstm_Product_Evidence_Verifier::verify( 'untrusted', $this->root, $export['context'] ) );
 		$public = json_decode( file_get_contents( $this->root . '/runner.json' ), true );
-		self::assertCount( 306, $public['cases'] );
+		self::assertCount( 307, $public['cases'] );
 		$index = json_decode(file_get_contents($this->root . '/wire/private-wire.json'), true);
-		self::assertCount(306, array_filter($index['events'], static fn($record) => 'case-result' === $record['parser']));
+		self::assertCount(307, array_filter($index['events'], static fn($record) => 'case-result' === $record['parser']));
 		$finals = array_values(array_filter($index['events'], static fn($record) => 'local-summary' === $record['parser']));
 		self::assertCount(1, $finals);
 		self::assertSame(count($index['events']), $finals[0]['id']);
 		$final_event = Wstm_Product_Evidence_Verifier::frame($finals[0], file_get_contents($this->root . '/wire/' . $finals[0]['file']));
 		self::assertNull($final_event['summary']['cases']);
-		self::assertCount(306, $final_event['case_refs']);
+		self::assertCount(307, $final_event['case_refs']);
 		foreach ( $public['cases'] as $case ) {
 			self::assertArrayNotHasKey( 'semantic', $case ); self::assertArrayNotHasKey( 'expected', $case );
 			self::assertArrayNotHasKey( 'response', $case ); self::assertArrayNotHasKey( 'readable', $case );
@@ -88,7 +88,7 @@ final class UntrustedSemanticReplayTest extends TestCase {
 
 		$path = $this->root . '/product-verdict.private.json';
 		$verdict_bytes = file_get_contents( $path ); $verdict = json_decode( $verdict_bytes, true );
-		$verdict['passed'] = 305; file_put_contents( $path, json_encode( $verdict ) );
+		$verdict['passed'] = 306; file_put_contents( $path, json_encode( $verdict ) );
 		try {
 			Wstm_Product_Evidence_Verifier::verify( 'untrusted', $this->root, $export['context'] );
 			self::fail( 'Changed complete count was accepted.' );
@@ -170,7 +170,7 @@ final class UntrustedSemanticReplayTest extends TestCase {
 		$producer = $export['summary'];
 		$catalog = $producer['catalogs']['individual:administrator'];
 		$annotations = array_values(array_filter($producer['cases'], static fn($case) => 0 === strpos($case['label'], 'annotations:')));
-		self::assertCount(98, $catalog); self::assertCount(98, $annotations);
+		self::assertCount(99, $catalog); self::assertCount(99, $annotations);
 		foreach ($annotations as $index => $case) { self::assertSame($catalog[$index], $case['descriptor']); }
 		$wire = json_decode(file_get_contents($this->root . '/wire/private-wire.json'), true);
 		$cases = array(); $final = null;
@@ -179,7 +179,7 @@ final class UntrustedSemanticReplayTest extends TestCase {
 			$event = Wstm_Product_Evidence_Verifier::frame($record, file_get_contents($this->root . '/wire/' . $record['file']));
 			if ('case-result' === $record['parser']) { $cases[] = $event['case']; } else { $final = $event; }
 		}
-		self::assertCount(306, $cases); self::assertCount(306, $final['case_refs']);
+		self::assertCount(307, $cases); self::assertCount(307, $final['case_refs']);
 		foreach ($cases as $index => $case) {
 			self::assertSame(array('label' => $case['label'], 'passed' => $case['passed'],
 				'sha256' => hash('sha256', serialize($case))), $final['case_refs'][$index]);
@@ -195,7 +195,7 @@ final class UntrustedSemanticReplayTest extends TestCase {
 			json_encode($reconstructed_public, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION));
 		self::assertSame($wire['scopes']['runner']['semantic_sha256'],
 			hash('sha256', json_encode(Wstm108_Evidence::public_summary($reconstructed), JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION)));
-		self::assertSame(306, Wstm_Product_Evidence_Verifier::verify('untrusted', $this->root, $export['context'])['count']);
+		self::assertSame(307, Wstm_Product_Evidence_Verifier::verify('untrusted', $this->root, $export['context'])['count']);
 	}
 
 	public static function summaryMutations(): array {
@@ -401,7 +401,7 @@ final class UntrustedSemanticReplayTest extends TestCase {
 		$restored = unserialize(serialize($cases), array('allowed_classes' => array('stdClass')));
 		self::assertSame(Wstm108_Evidence::summary_commitment($cases), Wstm108_Evidence::summary_commitment($restored));
 		$export = $this->export();
-		self::assertSame(306, Wstm_Product_Evidence_Verifier::verify('untrusted', $this->root, $export['context'])['count']);
+		self::assertSame(307, Wstm_Product_Evidence_Verifier::verify('untrusted', $this->root, $export['context'])['count']);
 	}
 
 	public static function protectedSnapshotMutations(): array {

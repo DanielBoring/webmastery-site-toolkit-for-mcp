@@ -165,6 +165,26 @@ The bound applies per response, not to aggregate redirect traffic, headers, or s
 
 The download captures its temporary-file identity before ordinary HTTP argument filters and removes its scoped hooks afterward, so nested requests are not limited accidentally. Installed plugins still control WordPress HTTP hooks and can override or preempt requests; this is not an isolation boundary against arbitrary trusted plugin code.
 
+## Outbound link checks
+
+The plugin requests arbitrary URLs taken from caller input or stored content
+in two places only, both on an explicit request: image URL uploads (`upload_files`) and `scan-broken-links`
+with `check_external: true` (`edit_post` on the post plus `manage_options`).
+Both use the same URL guard and address pinning (`includes/class-safe-http.php`):
+the private/reserved/local address checks, A/AAAA/CNAME validation and
+`CURLOPT_RESOLVE` pinning described above. The link scan sends a `HEAD`
+(ranged 1 KB `GET` only after `405`/`501`) to each external URL in the selected
+post, follows at most 3 redirects itself (validating and pinning every hop),
+sends no cookies, credentials or referer and a fixed plugin User-Agent without
+the site URL, never reads or returns bodies, headers, redirect targets or
+resolved addresses, caches nothing, and is bounded per call to 50 links, 10
+requests, 2 requests per host, a 5-second timeout per request and about 20
+seconds overall. Hostnames are only requested when the cURL transport can pin
+them; the proxy and IPv6 limits above apply. Internal links are resolved
+offline (`url_to_postid()`, `attachment_url_to_postid()`) and never requested.
+No data is sent to the plugin author. See the
+[contract](reference/ability-contracts.md#broken-link-scan).
+
 ## Diagnostic privacy
 
 Administrator access does not justify sending database identifiers to a model.

@@ -15,9 +15,9 @@ Donate link: https://paypal.me/VirtuallyBoring
 
 Webmastery Site Toolkit for MCP adds **70+ permission-aware abilities across 16 areas** that AI agents and MCP clients can call through the official [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin. It works with popular MCP clients including Claude, ChatGPT, GitHub Copilot, and Gemini.
 
-The MCP Adapter provides the transport layer. This plugin provides the site-management vocabulary: posts, pages, media, comments, taxonomy, custom post types, post meta, content hygiene, SEO checks, public webmaster verification, Google Site Kit diagnostics, site info, health, security, users, plugins, themes, classic navigation menus, available updates, WP-Cron status, database, performance, and backup status.
+The MCP Adapter provides the transport layer. This plugin provides the site-management vocabulary: posts, pages, media, comments, taxonomy, custom post types, post meta, content hygiene, SEO checks, broken link scans, public webmaster verification, Google Site Kit diagnostics, site info, health, security, users, plugins, themes, classic navigation menus, available updates, WP-Cron status, database, performance, and backup status.
 
-Core editorial workflows work well with a dedicated Editor service account. Sensitive workflows such as plugin management, theme inventory, navigation menus, update overview, WP-Cron status, user auditing, site health, database health, backup status, performance status, and security audits require a separate Administrator service account.
+Core editorial workflows work well with a dedicated Editor service account. Sensitive workflows such as plugin management, theme inventory, navigation menus, update overview, WP-Cron status, external link checks, user auditing, site health, database health, backup status, performance status, and security audits require a separate Administrator service account.
 
 Highlights:
 
@@ -32,6 +32,7 @@ Highlights:
 * List and inspect classic navigation menus and update a single menu item's label, link, target, classes, position or parent (custom-link URLs limited to http, https, mailto, tel and relative links; block-theme Navigation blocks are not covered).
 * Audit plugins, installed themes (active, parent and cached update status), available core, plugin and theme updates from cached data, WP-Cron schedule health (overdue events and cron configuration, never event arguments), administrator accounts, backups, performance settings, database bloat, site health, and security posture.
 * Analyze SEO metadata and public Google/Bing webmaster verification proof.
+* Scan one post or page for broken links: internal links are resolved offline (published, not published, trashed or deleted, or unresolved), and an Administrator can also check external links with bounded, SSRF-protected HEAD requests from the server.
 * Inspect Google Site Kit setup, modules, current-user permissions, and same-site PageSpeed summaries without exposing OAuth credentials or changing Site Kit settings.
 
 All abilities enforce WordPress capability checks. If the connected account cannot perform the equivalent WordPress action, the ability fails instead of bypassing WordPress permissions. List abilities for posts, pages, custom post types, media, and SEO scores also filter each returned object before exposing full details, so private, trashed, draft, pending, and scheduled content follows WordPress object/status permissions.
@@ -40,6 +41,17 @@ All abilities enforce WordPress capability checks. If the connected account cann
 
 For full setup instructions, ability tables, and the deeper security model, visit:
 https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/
+
+== External services ==
+
+This plugin does not send any data to the plugin author or to a service run by the plugin author.
+
+It contacts third-party sites only when an MCP client explicitly asks for it:
+
+* Image URL uploads (Upload Image from URL, requires upload_files) download the image URL the caller supplies.
+* Broken link scans with check_external set to true (requires permission to edit the post plus manage_options, normally Administrator) send an HTTP HEAD request, or a GET limited to the first 1 KB when a server refuses HEAD, from your server to each external URL found in the selected post or page, and to at most 3 redirect targets per link. The request carries only the URL and a fixed User-Agent naming this plugin (WebmasterySiteToolkitForMCP-LinkCheck/1.0); it carries no cookies, credentials, referer or site URL. The remote site sees your server's IP address and can log the request under its own privacy policy and terms. At most 10 requests are sent per call, never to private, reserved or local network addresses, and results are not stored. Without check_external, or for links to your own site, no request is made.
+
+Google Site Kit diagnostics use Site Kit's own connection to Google; see "Do I need Google Site Kit?" below.
 
 == Installation ==
 

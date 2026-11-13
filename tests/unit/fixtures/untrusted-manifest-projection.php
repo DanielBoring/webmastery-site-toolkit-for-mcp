@@ -191,6 +191,13 @@ final class Wstm108_Manifest_Projection {
 					'data.untrusted_fields'          => array( 'title', 'url', 'attr_title', 'description', 'classes', 'xfn' ),
 					'data.previous.untrusted_fields' => array_values( array_intersect( array( 'title', 'url', 'attr_title', 'description', 'classes', 'xfn' ), array_keys( $case['input'] ) ) ),
 				);
+			case 'scan-broken-links':
+				// The fixture post has two web links; a max_links 1 window returns only the first.
+				$markers = array( 'data.links.0.untrusted_fields' => array( 'url', 'anchor_text' ) );
+				if ( 1 !== ( $case['input']['max_links'] ?? null ) ) {
+					$markers['data.links.1.untrusted_fields'] = array( 'url', 'anchor_text' );
+				}
+				return $markers;
 			case 'seo-analyze-post':
 				return array( 'data.metrics.untrusted_fields' => array( 'title', 'url', 'slug', 'yoast_meta_description', 'seopress_meta_description', 'yoast_focus_keyword', 'seopress_focus_keywords' ) );
 		}

@@ -61,7 +61,7 @@ changed, in the same PR.
 ### Suite classification and measurement
 
 PHPUnit has two suites, mirrored from `tests/qa-suites.json`: `product`
-(37 files that test plugin code; seconds to run) and `qa-tooling` (80 files
+(38 files that test plugin code; seconds to run) and `qa-tooling` (80 files
 that test QA, release and evidence tooling; about 98% of unit runtime).
 `python3 -B scripts/qa-profile.py inventory` fails if a test file is
 unclassified or `phpunit.xml.dist` drifts from the catalog. Mixed files keep

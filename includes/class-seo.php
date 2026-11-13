@@ -222,35 +222,16 @@ class Webmastery_MCP_SEO {
 	}
 
 	private static function count_links( $content, $home, $external = false ) {
-		preg_match_all( '/<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>/i', $content, $matches );
-		$home_host = self::normalize_link_host( (string) wp_parse_url( $home, PHP_URL_HOST ) );
+		$home_host = Webmastery_MCP_Links::normalize_host( (string) wp_parse_url( $home, PHP_URL_HOST ) );
 		$count     = 0;
-		foreach ( $matches[1] as $href ) {
-			$href   = trim( html_entity_decode( $href, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
-			$parsed = wp_parse_url( $href );
-			if ( '' === $href || false === $parsed ) {
-				continue;
-			}
-			$scheme = strtolower( $parsed['scheme'] ?? '' );
-			if ( '' !== $scheme && ! in_array( $scheme, [ 'http', 'https' ], true ) ) {
-				continue;
-			}
-			$host = self::normalize_link_host( $parsed['host'] ?? '' );
-			if ( '' === $host && ( '' !== $scheme || str_starts_with( $href, '//' ) ) ) {
-				continue;
-			}
+		foreach ( Webmastery_MCP_Links::anchors( $content ) as $anchor ) {
 			// SEO site membership compares hosts, not URL prefixes, schemes or ports.
-			$is_internal = '' === $host || ( '' !== $home_host && $host === $home_host );
-			if ( $external ? ! $is_internal : $is_internal ) {
+			$link = Webmastery_MCP_Links::classify( $anchor['href'], $home_host );
+			if ( null !== $link && ( $external ? ! $link['internal'] : $link['internal'] ) ) {
 				++$count;
 			}
 		}
 		return $count;
-	}
-
-	private static function normalize_link_host( string $host ): string {
-		$host = strtolower( $host );
-		return str_starts_with( $host, 'www.' ) ? substr( $host, 4 ) : $host;
 	}
 
 	private static function register_site_overview() {
