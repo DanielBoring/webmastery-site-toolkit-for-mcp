@@ -32,7 +32,25 @@ function webmastery_mcp_qa_bucket_counts( array $result, string $ability ): bool
 	$data    = $result['data'] ?? array();
 	$summary = $data['summary'] ?? null;
 	$buckets = $health ? ( $data['results'] ?? null ) : $data;
-	if ( ! is_array( $summary ) || array_keys( $summary ) !== $keys || ! is_array( $buckets ) ) {
+	if ( ! is_array( $summary ) || ! is_array( $buckets ) ) {
+		return false;
+	}
+	if ( $health && array_key_exists( 'errors', $summary ) ) {
+		// Site health also reports tests that could not run and tests left out by its cap.
+		$errors = $data['errors'] ?? null;
+		if ( array_keys( $summary ) !== array_merge( $keys, array( 'errors', 'skipped' ) ) || ! is_int( $summary['skipped'] )
+			|| $summary['skipped'] < 0 || ! is_int( $summary['errors'] ) || ! is_array( $errors )
+			|| array_values( $errors ) !== $errors || count( $errors ) !== $summary['errors'] ) {
+			return false;
+		}
+		foreach ( $errors as $error ) {
+			if ( ! is_array( $error ) || array( 'test' ) !== array_keys( $error ) || ! is_string( $error['test'] ) ) {
+				return false;
+			}
+		}
+		$summary = array_intersect_key( $summary, array_flip( $keys ) );
+	}
+	if ( array_keys( $summary ) !== $keys ) {
 		return false;
 	}
 	$total = 0;

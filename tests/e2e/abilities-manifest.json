@@ -6101,8 +6101,15 @@
             "data.application_passwords.0.untrusted_fields": [
                 "user_login",
                 "app_name"
-            ]
-        }
+            ],
+            "data.super_admins": [],
+            "data.super_admin_count": 0
+        },
+        "assert_contains": [
+            {"path": "data.warnings.0", "value": "Username 'admin' exists"},
+            {"path": "data.warnings.1", "value": "application password(s)"}
+        ],
+        "assert_missing_paths": ["data.warnings.2"]
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/user-access-audit",
@@ -8266,7 +8273,11 @@
         "role": "admin",
         "input": null,
         "expect": "success",
-        "assert_bucket_counts": true
+        "assert_bucket_counts": true,
+        "assert_paths": ["data.summary.errors", "data.summary.skipped", "data.errors"],
+        "assert_values": {
+            "data.results.good.0.untrusted_fields": ["label", "description", "actions"]
+        }
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/site-health-check",

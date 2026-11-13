@@ -162,6 +162,8 @@ final class Wstm108_Manifest_Projection {
 			case 'list-users':
 			case 'get-user':
 				return array( ( 'list-users' === $slug ? 'data.items.0' : 'data' ) . '.untrusted_fields' => 'user_lister' === $case['role'] ? array( 'display_name', 'nicename', 'url' ) : array( 'display_name', 'nicename', 'url', 'login', 'email' ) );
+			case 'site-health-check':
+				return $historical ? array() : array( 'data.results.good.0.untrusted_fields' => array( 'label', 'description', 'actions' ) );
 			case 'user-access-audit':
 				return array( 'data.admin_accounts.0.untrusted_fields' => array( 'login', 'email', 'last_login' ), 'data.application_passwords.0.untrusted_fields' => array( 'user_login', 'app_name' ) );
 			case 'get-yoast-metadata':

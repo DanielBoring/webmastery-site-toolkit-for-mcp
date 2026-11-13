@@ -244,6 +244,134 @@
                     }
                 }
             ]
+        },
+        {
+            "issue": 232,
+            "summary": "Assert site health errors/skipped/untrusted markers and user audit super admins and warnings",
+            "before_count": 607,
+            "before_sha256": "20557d8f438fa3fe838f64836466202066edb00492fa9749ee41270483c5c2ff",
+            "after_count": 607,
+            "after_sha256": "b4d549fc0464cd9ae8b7a3a9653623bb5da40d9d57246a3e9179b5ad96a18494",
+            "added": [],
+            "changed": [
+                {
+                    "label": "user-access-audit as admin",
+                    "before": {
+                        "ability": "webmastery-site-toolkit-for-mcp/user-access-audit",
+                        "label": "user-access-audit as admin",
+                        "role": "admin",
+                        "input": null,
+                        "expect": "success",
+                        "assert_paths": [
+                            "data.admin_accounts.0.registered",
+                            "data.admin_accounts.0.last_login",
+                            "data.application_passwords.0.last_used",
+                            "data.warnings.0",
+                            "data.metadata.application_passwords_skip_reason"
+                        ],
+                        "assert_values": {
+                            "data.admin_accounts.0.id": "__admin_id__",
+                            "data.admin_accounts.0.login": "admin",
+                            "data.admin_count": 1,
+                            "data.default_admin_username_exists": true,
+                            "data.application_passwords.0.user_id": "__admin_id__",
+                            "data.application_passwords.0.user_login": "admin",
+                            "data.application_passwords.0.app_name": "MCP E2E App Password",
+                            "data.metadata.application_passwords_skipped": false,
+                            "data.metadata.required_capability": "edit_users",
+                            "data.admin_accounts.0.untrusted_fields": [
+                                "login",
+                                "email",
+                                "last_login"
+                            ],
+                            "data.application_passwords.0.untrusted_fields": [
+                                "user_login",
+                                "app_name"
+                            ]
+                        }
+                    },
+                    "after": {
+                        "ability": "webmastery-site-toolkit-for-mcp/user-access-audit",
+                        "label": "user-access-audit as admin",
+                        "role": "admin",
+                        "input": null,
+                        "expect": "success",
+                        "assert_paths": [
+                            "data.admin_accounts.0.registered",
+                            "data.admin_accounts.0.last_login",
+                            "data.application_passwords.0.last_used",
+                            "data.warnings.0",
+                            "data.metadata.application_passwords_skip_reason"
+                        ],
+                        "assert_values": {
+                            "data.admin_accounts.0.id": "__admin_id__",
+                            "data.admin_accounts.0.login": "admin",
+                            "data.admin_count": 1,
+                            "data.default_admin_username_exists": true,
+                            "data.application_passwords.0.user_id": "__admin_id__",
+                            "data.application_passwords.0.user_login": "admin",
+                            "data.application_passwords.0.app_name": "MCP E2E App Password",
+                            "data.metadata.application_passwords_skipped": false,
+                            "data.metadata.required_capability": "edit_users",
+                            "data.admin_accounts.0.untrusted_fields": [
+                                "login",
+                                "email",
+                                "last_login"
+                            ],
+                            "data.application_passwords.0.untrusted_fields": [
+                                "user_login",
+                                "app_name"
+                            ],
+                            "data.super_admins": [],
+                            "data.super_admin_count": 0
+                        },
+                        "assert_contains": [
+                            {
+                                "path": "data.warnings.0",
+                                "value": "Username 'admin' exists"
+                            },
+                            {
+                                "path": "data.warnings.1",
+                                "value": "application password(s)"
+                            }
+                        ],
+                        "assert_missing_paths": [
+                            "data.warnings.2"
+                        ]
+                    }
+                },
+                {
+                    "label": "site-health-check",
+                    "before": {
+                        "ability": "webmastery-site-toolkit-for-mcp/site-health-check",
+                        "label": "site-health-check",
+                        "role": "admin",
+                        "input": null,
+                        "expect": "success",
+                        "assert_bucket_counts": true
+                    },
+                    "after": {
+                        "ability": "webmastery-site-toolkit-for-mcp/site-health-check",
+                        "label": "site-health-check",
+                        "role": "admin",
+                        "input": null,
+                        "expect": "success",
+                        "assert_bucket_counts": true,
+                        "assert_paths": [
+                            "data.summary.errors",
+                            "data.summary.skipped",
+                            "data.errors"
+                        ],
+                        "assert_values": {
+                            "data.results.good.0.untrusted_fields": [
+                                "label",
+                                "description",
+                                "actions"
+                            ]
+                        }
+                    }
+                }
+            ]
         }
     ]
 }
