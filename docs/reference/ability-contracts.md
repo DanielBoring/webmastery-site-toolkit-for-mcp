@@ -929,12 +929,12 @@ URL in the window is checked as follows:
 | Status | Meaning |
 | --- | --- |
 | `ok` | Final response `2xx` (after any followed redirects). |
-| `redirect` | Final response `3xx` without a usable `Location`, or more than 3 redirects. `http_status` is that last `3xx`. |
+| `redirect` | Final response `3xx` without a usable `Location`, more than 3 redirects, or a redirect chain a per-call bound (per-host, total request or time) stopped before it finished. `http_status` is that last `3xx`. |
 | `broken` | `404` or `410`. |
-| `client_error` / `server_error` | Any other `4xx` / `5xx`. |
+| `client_error` / `server_error` | Any other `4xx` / `5xx`, including a `405` / `501` `HEAD` response whose `GET` fallback a per-call bound prevented. |
 | `blocked` | Failed URL safety validation (or carried credentials); never requested. |
 | `unreachable` | DNS, connection, TLS or timeout failure, or no HTTP status. |
-| `not_checked` | Not requested: `check_external` was false, a per-call bound was reached, or the HTTP transport cannot pin addresses (see below). |
+| `not_checked` | Not requested (no request was sent for this link in this call): `check_external` was false, a per-call bound was reached, or the HTTP transport cannot pin addresses (see below). |
 
 **Bounds per call.** At most `max_links` unique links are considered (internal
 and external together). At most 10 external HTTP requests are sent (every
@@ -943,8 +943,13 @@ hostname), and no new request starts once about 20 seconds have passed since
 the call began; validation DNS lookups count toward that time even for links
 that end up `blocked` (only the first external check of a call is exempt, so
 every call makes progress).
-Links a bound stopped are `not_checked`, and `next_offset` is the index of the
-first of them so the next call checks them; otherwise `next_offset` is the
+Links a bound stopped before any request for them was sent are `not_checked`,
+and `next_offset` is the index of the first of them so the next call checks
+them. A link for which at least one request was sent always ends the call with
+a terminal status: a redirect chain or `HEAD`-to-`GET` fallback that cannot
+complete within the bounds is reported as `redirect` (last `3xx`) or the
+`405` / `501` class, never deferred, so `next_offset` always advances past
+every link a call started. Otherwise `next_offset` is the
 index after the window, or `null` at the end. Call again with the same
 `post_id`, `check_external` and `max_links` and `offset: next_offset`.
 Results are not cached: there are no transients or options, so every call
@@ -955,7 +960,9 @@ external links of that call are `not_checked` without a `next_offset` for them.
 
 **What the external check does and does not guarantee.** It reports what this
 server received for a `HEAD` (or 1 KB ranged `GET`) request at the moment of
-the call. It does not prove a page works for visitors: servers can answer
+the call; a chain or fallback cut short by the per-call bounds is reported as
+`redirect` (or the `405` / `501` class) rather than followed on a later call,
+so such a status can mean "not followed to its end". It does not prove a page works for visitors: servers can answer
 bots, `HEAD` requests, data-center IP ranges or the plugin's User-Agent
 differently from browsers; rate limits, geo-blocking, login walls and
 JavaScript-only pages can give `client_error` or `ok` for pages that behave

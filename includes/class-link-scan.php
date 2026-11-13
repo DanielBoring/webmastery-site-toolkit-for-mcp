@@ -161,7 +161,10 @@ class Webmastery_MCP_Link_Scan {
 				$status = 'blocked';
 			} else {
 				[ $status, $http_status, $bounded ] = self::external_status( $link['url'], $state );
-				if ( $bounded && null === $resume ) {
+				// The first link of a call is never bounded (fresh counters), so a resume point is
+				// always past the input offset. Guard anyway: if it were bounded, skip it rather
+				// than return the same next_offset again.
+				if ( $bounded && null === $resume && $index > 0 ) {
 					$resume = $offset + $index;
 				}
 			}
@@ -318,6 +321,12 @@ class Webmastery_MCP_Link_Scan {
 	 * @param string               $url   Absolute external URL without userinfo.
 	 * @param array<string, mixed> $state Per-call request counters (by reference).
 	 * @return array{0: string, 1: int|null, 2: bool} Status, HTTP status, and whether a per-call bound stopped the check.
+	 *
+	 * Progress invariant: only a link for which no request has been sent in this call may
+	 * come back not_checked with the bound flag (so the caller may resume at it). Once a
+	 * request was sent, a cut chain ends terminally: `redirect` with the last 3xx status, or
+	 * the 405/501 class when the GET fallback cannot be sent. Resuming therefore never
+	 * restarts a chain, and next_offset always moves forward.
 	 */
 	private static function external_status( string $url, array &$state ): array {
 		$current   = $url;
@@ -329,7 +338,8 @@ class Webmastery_MCP_Link_Scan {
 			}
 			// Bounds first, so links past a bound cost no DNS lookups either.
 			if ( ! self::may_request( $current, $state ) ) {
-				return [ 'not_checked', null, true ];
+				// A redirect was already received: terminal, never deferred.
+				return null === $last ? [ 'not_checked', null, true ] : [ 'redirect', $last, false ];
 			}
 			$ips   = null;
 			$valid = Webmastery_MCP_Safe_Http::validate_public_url( $current, $ips, 'Link' );
@@ -338,19 +348,25 @@ class Webmastery_MCP_Link_Scan {
 			if ( is_wp_error( $valid ) || ! wp_http_validate_url( $valid ) ) {
 				return [ 'blocked', $last, false ];
 			}
+			unset( $head_code );
 			$response = self::request( $valid, $ips, 'HEAD', $state );
 			$code     = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
 			if ( in_array( $code, [ 405, 501 ], true ) ) {
 				if ( ! self::may_request( $valid, $state ) ) {
-					return [ 'not_checked', null, true ];
+					// The HEAD was sent; report its 405/501 instead of deferring.
+					return [ self::classify_http( $code ), $code, false ];
 				}
-				$response = self::request( $valid, $ips, 'GET', $state );
-				$code     = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
+				$head_code = $code;
+				$response  = self::request( $valid, $ips, 'GET', $state );
+				$code      = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
 			}
 			if ( is_wp_error( $response ) ) {
 				if ( 'webmastery_unpinned' === $response->get_error_code() ) {
 					$state['disabled'] = true;
-					return [ 'not_checked', null, false ];
+					if ( isset( $head_code ) ) {
+						return [ self::classify_http( $head_code ), $head_code, false ];
+					}
+					return null === $last ? [ 'not_checked', null, false ] : [ 'redirect', $last, false ];
 				}
 				return [ 'unreachable', null, false ];
 			}
