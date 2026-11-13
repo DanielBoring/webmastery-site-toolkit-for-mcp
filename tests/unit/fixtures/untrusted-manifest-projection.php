@@ -177,6 +177,9 @@ final class Wstm108_Manifest_Projection {
 				return array( 'data.items.0.untrusted_fields' => array( 'title', 'url' ) );
 			case 'list-stuck-scheduled':
 				return array( 'data.items.0.untrusted_fields' => array( 'title', 'url', 'author_name' ) );
+			case 'get-cron-status':
+				// overdue_only lists may be empty on the QA site, so no record marker is required there.
+				return ! empty( $case['input']['overdue_only'] ) ? array() : array( 'data.items.0.untrusted_fields' => array( 'hook', 'schedule' ) );
 			case 'list-themes':
 				return array( 'data.items.0.untrusted_fields' => array( 'name', 'version', 'author' ) );
 			case 'seo-analyze-post':

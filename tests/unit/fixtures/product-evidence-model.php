@@ -286,7 +286,7 @@ final class Wstm_Product_Evidence_Model {
 		$summary = array( 'binding' => $binding, 'stage_context_sha256' => hash( 'sha256', $bytes ), 'providers' => $model['providers'],
 			'registered' => $model['registered'], 'catalogs' => array( 'individual:administrator' => array_values( $model['descriptors'] ) ),
 			'cases' => $cases, 'actors' => array( 'administrator' => array( 'id' => 7, 'roles' => array( 'administrator' ), 'caps' => (object) array( 'list_users' => true ) ) ), 'completed' => true, 'cleanup_complete' => true,
-			'status' => 'passed', 'passed' => 300, 'failed' => 0,
+			'status' => 'passed', 'passed' => 301, 'failed' => 0,
 			'expected_labels' => Wstm108_Plan::labels( $model['native'] ), 'resource_proof' => $proof );
 		$evidence->save( $summary ); $evidence->seal( true, $summary );
 		unset( $evidence, $wire );
@@ -296,7 +296,7 @@ final class Wstm_Product_Evidence_Model {
 			'posts' => array( 42 => array( 'author' => 7, 'type' => 'post' ), 43 => array( 'author' => 7, 'type' => 'post' ) ) ) ) );
 		file_put_contents( $root . '/product-verdict.private.json', json_encode( array( 'schema' => 'wstm-product-verdict-v1', 'context_sha256' => hash( 'sha256', $bytes ),
 			'binding' => $binding, 'status' => 'passed', 'cleanup_complete' => true, 'php' => '8.2.31', 'uid' => 33, 'exit' => 0,
-			'expected_labels' => $summary['expected_labels'], 'observed_labels' => $summary['expected_labels'], 'passed' => 300, 'failed' => 0 ) ) );
+			'expected_labels' => $summary['expected_labels'], 'observed_labels' => $summary['expected_labels'], 'passed' => 301, 'failed' => 0 ) ) );
 		return array( 'context' => $bytes, 'model' => $model, 'summary' => $summary );
 	}
 

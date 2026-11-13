@@ -6,6 +6,15 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add six `get-cron-status` E2E manifest cases (#226; manifest now 88
+  abilities, 623 cases, ledger step 226; admin and paging cases assert the
+  `hook`/`schedule` record markers, the `overdue_only` case asserts presence
+  only because overdue events on the QA site are not controlled, plus an
+  invalid-input case and editor and subscriber denials). The new-ability count
+  pins move to 88 native abilities, 93 annotation observations/individual tools
+  and 301 untrusted labels; `InputBoundaryTest` counts 20 registering classes;
+  `CronTest` joins the `product` suite (36 files); `UntrustedManifestTest` now
+  expects 197 marked cases and 207 marker assertions.
 - Add three `get-updates-overview` E2E manifest cases (#225; manifest now 87
   abilities, 617 cases, ledger step 225; admin presence/shape only because the
   QA site's update transients are not controlled, editor and subscriber

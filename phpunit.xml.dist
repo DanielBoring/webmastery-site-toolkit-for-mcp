@@ -12,6 +12,7 @@
 			<file>tests/unit/AbilityCallbackTest.php</file>
 			<file>tests/unit/BoundedListTest.php</file>
 			<file>tests/unit/CommentsHelpersTest.php</file>
+			<file>tests/unit/CronTest.php</file>
 			<file>tests/unit/CustomPostTypesHelpersTest.php</file>
 			<file>tests/unit/DatabaseTablePrivacyTest.php</file>
 			<file>tests/unit/DestructiveSafetyTest.php</file>
