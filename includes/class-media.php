@@ -60,25 +60,8 @@ class Webmastery_MCP_Media {
 	}
 
 
-	private static function is_private_ip( $ip ) {
-		if ( false === filter_var( $ip, FILTER_VALIDATE_IP ) ) {
-			return true;
-		}
-		$packed = inet_pton( $ip );
-		if ( false !== $packed && 16 === strlen( $packed ) ) {
-			if ( "\xff" === $packed[0] || "\x20\x01\x0d\xb8" === substr( $packed, 0, 4 ) ) {
-				return true;
-			}
-			if ( str_repeat( "\0", 10 ) . "\xff\xff" === substr( $packed, 0, 12 ) ) {
-				return self::is_private_ip( inet_ntop( substr( $packed, 12 ) ) );
-			}
-		}
-
-		return false === filter_var(
-			$ip,
-			FILTER_VALIDATE_IP,
-			FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
-		);
+	protected static function is_private_ip( $ip ) {
+		return Webmastery_MCP_Safe_Http::is_private_ip( $ip );
 	}
 
 	protected static function resolve_image_ipv4( $host ) {
@@ -94,86 +77,23 @@ class Webmastery_MCP_Media {
 		return @dns_get_record( $host, DNS_AAAA | DNS_CNAME );
 	}
 
-	private static function validate_image_dns( $host, $visited = [] ) {
-		if ( isset( $visited[ $host ] ) || count( $visited ) >= 16 ) {
-			return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image hostname has a cyclic or excessive DNS alias chain.' );
-		}
-		$visited[ $host ] = true;
-		$records          = static::resolve_image_dns( $host );
-		if ( false === $records ) {
-			return Webmastery_MCP_Response::local_error( 'invalid_url', 'Could not resolve image hostname IPv6 records.' );
-		}
-
-		foreach ( $records as $record ) {
-			if ( 'AAAA' === $record['type'] && self::is_private_ip( $record['ipv6'] ) ) {
-				return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must not resolve to a private or reserved address.' );
-			}
-			if ( 'CNAME' === $record['type'] ) {
-				$result = static::validate_image_dns( strtolower( rtrim( $record['target'], '.' ) ), $visited );
-				if ( is_wp_error( $result ) ) {
-					return $result;
-				}
-			}
-		}
-
-		return true;
-	}
-
 	/**
 	 * Validate an image URL and the addresses its host resolves to.
+	 *
+	 * The checks live in Webmastery_MCP_Safe_Http (shared with the link scan); the
+	 * resolvers stay overridable here.
 	 *
 	 * @param string             $url           Untrusted image URL.
 	 * @param array<int, string> $validated_ips Set on success: the IPv4 addresses that passed validation, empty for an IP literal.
 	 */
 	protected static function validate_public_image_url( $url, &$validated_ips = null ) {
-		$validated_ips = null;
-
-		$url = esc_url_raw( trim( (string) $url ), [ 'http', 'https' ] );
-
-		if ( '' === $url ) {
-			return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must be a valid http or https URL.' );
-		}
-
-		$parts  = wp_parse_url( $url );
-		$scheme = strtolower( (string) ( $parts['scheme'] ?? '' ) );
-		$host   = strtolower( trim( (string) ( $parts['host'] ?? '' ), " \t\n\r\0\x0B." ) );
-
-		if ( ! in_array( $scheme, [ 'http', 'https' ], true ) || '' === $host ) {
-			return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must include an http or https scheme and host.' );
-		}
-
-		if ( 'localhost' === $host || str_ends_with( $host, '.localhost' ) || str_ends_with( $host, '.local' ) ) {
-			return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must not target a local host.' );
-		}
-
-		if ( false !== strpbrk( $host, ':[]' ) ) {
-			return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must use a hostname or public IPv4 address supported by the safe HTTP API.' );
-		}
-
-		if ( filter_var( $host, FILTER_VALIDATE_IP ) ) {
-			if ( self::is_private_ip( $host ) ) {
-				return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must not target a private or reserved address.' );
-			}
-			$validated_ips = [];
-			return $url;
-		}
-
-		$resolved_ips = static::resolve_image_ipv4( $host );
-		if ( ! is_array( $resolved_ips ) || [] === $resolved_ips ) {
-			return Webmastery_MCP_Response::local_error( 'invalid_url', 'Could not resolve image hostname IPv4 records.' );
-		}
-		foreach ( $resolved_ips as $resolved_ip ) {
-			if ( self::is_private_ip( $resolved_ip ) ) {
-				return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must not resolve to a private or reserved address.' );
-			}
-		}
-
-		$result = static::validate_image_dns( $host );
-		if ( is_wp_error( $result ) ) {
-			return $result;
-		}
-		$validated_ips = array_values( array_unique( array_map( 'strval', $resolved_ips ) ) );
-		return $url;
+		return Webmastery_MCP_Safe_Http::validate_public_url(
+			$url,
+			$validated_ips,
+			'Image',
+			static fn( $host ) => static::resolve_image_ipv4( $host ),
+			static fn( $host ) => static::resolve_image_dns( $host )
+		);
 	}
 
 	/**
@@ -184,33 +104,11 @@ class Webmastery_MCP_Media {
 	 * @return array<string, string> host:port => host:port:address[,address]; empty when nothing needs pinning.
 	 */
 	private static function image_pin_entries( $url, $ips ) {
-		$ips  = array_values( array_filter( (array) $ips, static fn( $ip ) => false !== filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) );
-		$raw  = (string) wp_parse_url( $url, PHP_URL_HOST );
-		$host = strtolower( trim( $raw, " \t\n\r\0\x0B." ) );
-		if ( [] === $ips || '' === $host || filter_var( $host, FILTER_VALIDATE_IP ) ) {
-			return [];
-		}
-		$port = self::image_port( $url );
-		// Older libcurl (before 7.59.0) accepts only one address per entry.
-		$curl = function_exists( 'curl_version' ) ? curl_version() : false;
-		if ( ! is_array( $curl ) || ( $curl['version_number'] ?? 0 ) < 0x073B00 ) {
-			$ips = array_slice( $ips, 0, 1 );
-		}
-		$entries = [];
-		// Cover every spelling cURL may use as its DNS cache key: case and a trailing dot.
-		foreach ( array_unique( [ $host, $host . '.', $raw, strtolower( $raw ) ] ) as $name ) {
-			$entries[ $name . ':' . $port ] = $name . ':' . $port . ':' . implode( ',', $ips );
-		}
-		return $entries;
-	}
-
-	private static function image_port( $url ) {
-		$port = wp_parse_url( $url, PHP_URL_PORT );
-		return $port ? (int) $port : ( 'https' === strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) ) ? 443 : 80 );
+		return Webmastery_MCP_Safe_Http::pin_entries( $url, $ips );
 	}
 
 	private static function image_target( $url ) {
-		return strtolower( trim( (string) wp_parse_url( $url, PHP_URL_HOST ), " \t\n\r\0\x0B." ) ) . ':' . self::image_port( $url );
+		return Webmastery_MCP_Safe_Http::target( $url );
 	}
 
 	private static function download_bounded_image( $url, $max_size, $validated_ips = null ) {

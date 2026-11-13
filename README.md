@@ -43,7 +43,7 @@ WordPress user and enforces that user's roles and capabilities.
 | --- | --- | --- |
 | Posts and pages | Create, list, read, update, schedule, publish, restore, and trash; bulk publish and bulk trash up to 100 posts | Author or Editor |
 | Blocks and revisions | Inspect Gutenberg blocks, patch one block or section, list and restore revisions | Author or Editor |
-| Post meta and SEO | Read and write individual meta keys, including Yoast SEO and SEOPress fields; inspect Rank Math and All in One SEO metadata; analyze SEO and read Yoast scores | Author to Administrator |
+| Post meta and SEO | Read and write individual meta keys, including Yoast SEO and SEOPress fields; inspect Rank Math and All in One SEO metadata; analyze SEO and read Yoast scores; scan a post for broken links (external checks: Administrator) | Author to Administrator |
 | Custom post types | Discover public custom post types and use generated list/get/create/update/delete abilities | The type's capabilities |
 | Taxonomy | List, create, update, and delete categories and tags | Subscriber to read; Editor to write |
 | Comments | List, reply, edit, approve, hold, trash, and mark spam | Editor (replies: Contributor or Author) |

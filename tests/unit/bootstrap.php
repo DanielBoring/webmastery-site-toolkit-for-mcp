@@ -71,6 +71,8 @@ require_once dirname(__DIR__, 2) . '/includes/class-bulk-posts.php';
 require_once dirname(__DIR__, 2) . '/includes/class-post-revisions.php';
 require_once dirname(__DIR__, 2) . '/includes/class-featured-image.php';
 require_once dirname(__DIR__, 2) . '/includes/class-content-patch.php';
+require_once dirname(__DIR__, 2) . '/includes/class-links.php';
+require_once dirname(__DIR__, 2) . '/includes/class-safe-http.php';
 
 function sanitize_key( $key ): string {
 	$key = strtolower( (string) $key );

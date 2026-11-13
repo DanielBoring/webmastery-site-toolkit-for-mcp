@@ -189,6 +189,7 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/list-users',
 	'webmastery-site-toolkit-for-mcp/patch-content-block',
 	'webmastery-site-toolkit-for-mcp/patch-post-content',
+	'webmastery-site-toolkit-for-mcp/scan-broken-links',
 	'webmastery-site-toolkit-for-mcp/security-audit',
 	'webmastery-site-toolkit-for-mcp/seo-analyze-post',
 	'webmastery-site-toolkit-for-mcp/spam-comment',
@@ -218,6 +219,7 @@ $required_permission_cases = array(
 	'delete-post-meta', 'get-post', 'get-page', 'get-media', 'seo-analyze-post',
 	'get-rankmath-metadata', 'get-aioseo-metadata',
 	'list-menus', 'get-menu', 'update-menu-item',
+	'scan-broken-links',
 	'list-posts', 'list-pages', 'list-categories', 'list-tags',
 );
 foreach ( $required_permission_cases as $slug ) {

@@ -6,6 +6,22 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add six `scan-broken-links` E2E manifest cases (#229; manifest now 94
+  abilities, 649 cases, ledger step 229): internal-only scans as administrator
+  and editor of a new runner fixture (a published target post and a post
+  linking to it, to an unresolvable same-host path and to a `mailto:` address,
+  placeholders `__link_scan_post_id__` / `__link_scan_target_id__`), an editor
+  `check_external` denial, a subscriber denial, a missing post and a
+  `max_links` bound. No case makes an external request. The ability joins the
+  security-QA validator's required negative and exact permission-denial lists,
+  `required_markers()` / `UntrustedManifestTest` cover its record markers (202
+  marked cases / 215 marker assertions), and the count pins move to 94 native
+  abilities, 99 annotation observations/individual tools, 307 untrusted labels
+  and 22 registering classes; `LinkScanTest` joins the product suite (38
+  files). The shared helper loader and unit bootstrap load the new
+  `class-links.php` / `class-safe-http.php` helpers, the media pinning stub
+  evaluates `class-safe-http.php` into its namespace, and the resolved
+  `validate_image_dns` PHPStan baseline entry is removed.
 - Add sixteen `list-menus` / `get-menu` / `update-menu-item` E2E manifest cases
   (#227; manifest now 93 abilities, 643 cases, ledger step 227). The ability
   runner gains a minimal fixture (one classic menu `MCP E2E Menu` with one

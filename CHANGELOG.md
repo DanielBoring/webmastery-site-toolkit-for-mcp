@@ -8,6 +8,23 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Added
 
+- Broken link scan: checks the links in one post or page per call (requires
+  permission to edit that post). Links to your own site are resolved without
+  any HTTP request and reported as published, not published, trashed or
+  deleted, or unresolved (archives and custom routes cannot be resolved
+  offline); the title or ID of a linked post is never shown to a caller who
+  cannot read it. Administrators can also check external links: the server
+  sends a HEAD request (or a GET limited to 1 KB when HEAD is refused) with a
+  plugin User-Agent and no cookies, credentials or referer, follows at most 3
+  redirects, and reports ok, redirect, broken, client or server error,
+  blocked or unreachable. External checks reuse the image upload's protection
+  against requests to private, reserved or local addresses, including
+  validated and pinned DNS answers for every redirect, and are bounded to 10
+  requests, 2 per host and about 20 seconds per call, with an offset to
+  continue. Nothing is cached and response bodies, redirect targets and IP
+  addresses are never returned. Link URLs and anchor text are marked as
+  untrusted. The readme gains an External services section describing these
+  requests.
 - Navigation menus: three abilities for classic navigation menus (Appearance >
   Menus), all requiring `edit_theme_options` (Administrator by default). List
   menus returns each menu's name, item count and assigned theme locations, the

@@ -59,6 +59,9 @@ namespace WstmMediaPinning {
 		}
 	}
 
+	// The shared URL guard and pinning helpers resolve DNS and cURL calls in this namespace too.
+	$safe_http = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-safe-http.php' );
+	eval( 'namespace WstmMediaPinning; use \WP_Error; use \Webmastery_MCP_Response; ' . substr( $safe_http, 5 ) );
 	$source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/class-media.php' );
 	eval( 'namespace WstmMediaPinning; use \WP_Error; use \Webmastery_MCP_Response; use \Webmastery_MCP_Untrusted; use \Webmastery_MCP_Permissions; use \Webmastery_MCP_Input; use \Webmastery_MCP_Post_Access; use \Webmastery_MCP_Post_Writes; ' . substr( $source, 5 ) );
 

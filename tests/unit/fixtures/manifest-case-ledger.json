@@ -1317,6 +1317,168 @@
                 }
             ],
             "changed": []
+        },
+        {
+            "issue": 229,
+            "summary": "Add scan-broken-links cases (internal-only admin/editor scans, editor check_external and subscriber denials, missing post, max_links bound)",
+            "before_count": 643,
+            "before_sha256": "e84bd217bb047b326926ba3ed31efbdb0893ca8a3a31a385ad6782d47588250d",
+            "after_count": 649,
+            "after_sha256": "49cd5d6276ddd21f73076fa5dd6d888dd20e77728e988f078edcdd9e0d0b35d4",
+            "added": [
+                {
+                    "index": 403,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/scan-broken-links",
+                        "label": "scan-broken-links as admin resolves internal links offline",
+                        "role": "admin",
+                        "input": {
+                            "post_id": "__link_scan_post_id__"
+                        },
+                        "expect": "success",
+                        "assert_permission": true,
+                        "assert_values": {
+                            "data.post_id": "__link_scan_post_id__",
+                            "data.checked_external": false,
+                            "data.links.0.kind": "internal",
+                            "data.links.0.status": "ok",
+                            "data.links.0.http_status": null,
+                            "data.links.0.target_id": "__link_scan_target_id__",
+                            "data.links.0.anchor_text": "Link scan target",
+                            "data.links.0.occurrences": 1,
+                            "data.links.0.untrusted_fields": [
+                                "url",
+                                "anchor_text"
+                            ],
+                            "data.links.1.kind": "internal",
+                            "data.links.1.status": "unresolved",
+                            "data.links.1.http_status": null,
+                            "data.links.1.target_id": null,
+                            "data.links.1.anchor_text": "Missing page",
+                            "data.links.1.untrusted_fields": [
+                                "url",
+                                "anchor_text"
+                            ],
+                            "data.summary.total_links": 2,
+                            "data.summary.internal": 2,
+                            "data.summary.external": 0,
+                            "data.summary.skipped": 1,
+                            "data.summary.by_status.ok": 1,
+                            "data.summary.by_status.unresolved": 1,
+                            "data.summary.by_status.not_checked": 0,
+                            "data.next_offset": null
+                        },
+                        "assert_contains": [
+                            {
+                                "path": "data.links.1.url",
+                                "value": "/mcp-e2e-link-scan-missing/"
+                            }
+                        ],
+                        "assert_missing_paths": [
+                            "data.links.2"
+                        ],
+                        "assert_unchanged": true
+                    }
+                },
+                {
+                    "index": 404,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/scan-broken-links",
+                        "label": "scan-broken-links as editor without external checks",
+                        "role": "editor",
+                        "input": {
+                            "post_id": "__link_scan_post_id__",
+                            "max_links": 1
+                        },
+                        "expect": "success",
+                        "assert_permission": true,
+                        "assert_values": {
+                            "data.checked_external": false,
+                            "data.links.0.status": "ok",
+                            "data.links.0.untrusted_fields": [
+                                "url",
+                                "anchor_text"
+                            ],
+                            "data.summary.total_links": 2,
+                            "data.next_offset": 1
+                        },
+                        "assert_missing_paths": [
+                            "data.links.1"
+                        ]
+                    }
+                },
+                {
+                    "index": 405,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/scan-broken-links",
+                        "label": "scan-broken-links check_external as editor is forbidden",
+                        "role": "editor",
+                        "input": {
+                            "post_id": "__link_scan_post_id__",
+                            "check_external": true
+                        },
+                        "expect": "failure",
+                        "expect_error_code": "forbidden",
+                        "expect_error_reason": "ability_invalid_permissions",
+                        "expect_error_shape": "canonical",
+                        "assert_permission": "forbidden",
+                        "assert_missing_paths": [
+                            "data"
+                        ]
+                    }
+                },
+                {
+                    "index": 406,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/scan-broken-links",
+                        "label": "scan-broken-links as subscriber is forbidden",
+                        "role": "subscriber",
+                        "input": {
+                            "post_id": "__link_scan_post_id__"
+                        },
+                        "expect": "failure",
+                        "expect_error_code": "forbidden",
+                        "expect_error_reason": "ability_invalid_permissions",
+                        "expect_error_shape": "canonical",
+                        "assert_permission": "forbidden",
+                        "assert_missing_paths": [
+                            "data"
+                        ]
+                    }
+                },
+                {
+                    "index": 407,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/scan-broken-links",
+                        "label": "scan-broken-links missing post is not found",
+                        "role": "admin",
+                        "input": {
+                            "post_id": 987654321
+                        },
+                        "expect": "failure",
+                        "expect_error_code": "not_found",
+                        "expect_error_reason": "not_found",
+                        "expect_error_shape": "canonical"
+                    }
+                },
+                {
+                    "index": 408,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/scan-broken-links",
+                        "label": "scan-broken-links rejects max_links above 50",
+                        "role": "admin",
+                        "input": {
+                            "post_id": "__link_scan_post_id__",
+                            "max_links": 51
+                        },
+                        "expect": "failure",
+                        "expect_error_code": "invalid_input",
+                        "expect_error_reason": "ability_invalid_input",
+                        "expect_error_shape": "canonical"
+                    }
+                }
+            ],
+            "changed": []
         }
     ]
 }

@@ -13,6 +13,7 @@
       "FeaturedImageTest.php",
       "InputBoundaryTest.php",
       "InputDiagnosticsTest.php",
+      "LinkScanTest.php",
       "MediaUrlTest.php",
       "MenusTest.php",
       "MetadataBoundaryTest.php",

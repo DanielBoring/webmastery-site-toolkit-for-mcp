@@ -49,8 +49,8 @@ final class InputBoundaryTest extends TestCase {
 		$manifest = json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), true, 512, JSON_THROW_ON_ERROR );
 		$names = array_column( $manifest, 'ability' );
 		self::assertGreaterThan( 60, count( Probe::$abilities ) );
-		self::assertCount( 21, Probe::$classes );
-		self::assertCount( 93, Probe::$abilities );
+		self::assertCount( 22, Probe::$classes );
+		self::assertCount( 94, Probe::$abilities );
 		foreach ( Probe::$abilities as $name => $args ) {
 			self::assertContains( $name, $names );
 			$cases = array_filter( $manifest, static fn( $case ) => $name === $case['ability'] );

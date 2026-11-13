@@ -640,6 +640,15 @@ $fixtures['menu_item_id'] = wp_update_nav_menu_item( $fixtures['menu_id'], 0, ar
 if ( is_wp_error( $fixtures['menu_item_id'] ) ) {
 	throw new RuntimeException( $fixtures['menu_item_id']->get_error_message() );
 }
+// Broken link scan (#229): a published target and a post linking to it, to a same-host path that maps to
+// no post, and to a mailto address. Internal links only: the QA site never calls the internet.
+$fixtures['link_scan_target_id'] = e2e_insert_post( 'post', 'MCP E2E Link Scan Target', 'Link scan target.', $author_id );
+$fixtures['link_scan_post_id']   = e2e_insert_post(
+	'post',
+	'MCP E2E Link Scan',
+	'<p><a href="' . esc_url( get_permalink( $fixtures['link_scan_target_id'] ) ) . '">Link scan target</a> <a href="' . esc_url( home_url( '/mcp-e2e-link-scan-missing/' ) ) . '">Missing page</a> <a href="mailto:qa@example.com">Mail</a></p>',
+	$author_id
+);
 global $wpdb;
 $fixtures['wstm111_posts_table'] = $wpdb->posts;
 $fixtures['wstm111_plugin_table'] = $wpdb->prefix . 'wstm111_plugin_fingerprint';

@@ -41,9 +41,3 @@ parameters:
 			identifier: identical.alwaysFalse
 			count: 3
 			path: includes/class-media.php
-
-		-
-			message: '#^Unsafe call to private method Webmastery_MCP_Media\:\:validate_image_dns\(\) through static\:\:\.$#'
-			identifier: staticClassAccess.privateMethod
-			count: 2
-			path: includes/class-media.php

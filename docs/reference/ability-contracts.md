@@ -33,6 +33,7 @@ table shows it.
 - [Updates overview](#updates-overview)
 - [Cron status](#cron-status)
 - [Navigation menus](#navigation-menus)
+- [Broken link scan](#broken-link-scan)
 - [Site health and user access audits](#site-health-and-user-access-audits)
 - [Untrusted result fields](#untrusted-result-fields)
 - [Security and privacy behavior](#security-and-privacy-behavior)
@@ -820,6 +821,174 @@ shape, so you can send them back to revert; a restricted item's previous
 `title`/`url` is `null`). The response is compact: the rest of the menu is not
 returned.
 
+## Broken link scan
+
+`scan-broken-links` checks the `<a href>` links stored in **one** post or page
+per call. Images, scripts, embeds and links in other fields (menus, widgets,
+metadata) are not scanned in this version.
+
+**Permission.** The caller needs `edit_post` on that post or page (posts and
+pages only). Callers without `edit_posts` or `edit_pages` get `forbidden`
+whether or not the ID exists; an authorized caller asking for a missing ID, or
+an ID that is not a post or page, gets `not_found` from execution (the same
+"authorized missing objects defer to execution" rule as comment moderation).
+`check_external: true` additionally requires `manage_options` (Administrator by
+default), because it makes the server send requests to third-party sites;
+without it the call fails with `forbidden` / `ability_invalid_permissions`
+before anything is read. Editors can still scan internal links.
+
+**Input** (closed object): `post_id` (required integer, 1 or more),
+`check_external` (boolean, default `false`), `max_links` (1-50, default 25:
+unique links considered in this call) and `offset` (0 or more, default 0:
+index of the first unique link).
+
+**Extraction.** Every `<a ... href="...">` with a quoted href is read with the
+same parser SEO Analyze Post uses for its link counts (entity-decoded,
+trimmed). Fragment-only references (`#top`), `mailto:`, `tel:`,
+`javascript:`, `data:` and any other non-http(s) scheme, empty hrefs and
+host-less `//` references are counted in `summary.skipped` and not listed.
+Relative references are resolved against the post's permalink (RFC 3986:
+`../`, `./`, `?query`). Links are de-duplicated by normalized URL (lowercase
+scheme and host, default port and `#fragment` removed, dot segments resolved;
+`http` and `https` stay different) in first-seen order; `occurrences` counts
+the hrefs that normalize to it and `anchor_text` is the plain text of its
+first non-empty occurrence (tags stripped, whitespace collapsed, at most 100
+characters). Credentials written into a URL (`https://user:pass@host/`) are
+never returned or sent: the listed `url` omits them and an external check
+reports such a link as `blocked`.
+
+**Internal links** are links whose host equals the site's home host (complete
+hostnames, `www.` and bare names treated as the same site, any scheme or port).
+They are resolved without any HTTP request or DNS lookup:
+
+| Status | Meaning |
+| --- | --- |
+| `ok` | Resolves to a publicly viewable post, page or other viewable post type (`is_post_publicly_viewable()`), to an existing attachment file under the uploads URL, or is the home page (`/`, without a query). |
+| `not_published` | Resolves to an object that exists but is not publicly viewable (draft, pending, private, scheduled, or a non-viewable type) and that the caller can `read_post`. Nothing else is reported about it. |
+| `not_found` | Resolves to an object that is trashed, to an ID that no longer exists (for example `?p=123` of a deleted post), or to a non-public object the caller cannot `read_post` (reported exactly like a missing ID, as WordPress itself answers such a URL with a 404 for that user). |
+| `unresolved` | Maps to no post or attachment. This is **not** proof the URL is broken: archives, category/tag/author/date pages, feeds, search, custom rewrite routes, resized image copies (`-300x200.jpg`) and pages from other plugins cannot be resolved offline. |
+
+Resolution uses WordPress's own `url_to_postid()` (one rewrite-rule match and
+at most one `WP_Query`, or a direct `?p=`/`?page_id=`/`?attachment_id=` ID) and,
+for URLs under the uploads base URL, `attachment_url_to_postid()` (one
+`postmeta` query for the original file path; resized copies are not
+recognized). `target_id` is the resolved object's ID only when the caller can
+`read_post` it, otherwise `null`; titles are never returned, so a private or
+draft target the caller cannot read is never distinguished from a missing one:
+`url_to_postid()` already returns no match for a pretty permalink the caller
+cannot view (`unresolved`), and a direct `?p=`/`?page_id=`/`?attachment_id=` ID,
+which `url_to_postid()` returns without a visibility check, reports
+`not_found` with `target_id: null`. An uploads file is
+`ok` whatever its parent post's status, because the web server serves the
+file directly.
+
+**External links** (any other host) are listed with status `not_checked` and
+`http_status: null` unless `check_external` is `true`. With it, each external
+URL in the window is checked as follows:
+
+1. The URL is validated with the same guard as image URL uploads
+   (`Webmastery_MCP_Safe_Http`): http(s) only; no `localhost`, `*.localhost`
+   or `*.local` names; no IPv6 literals; an IPv4 literal must be public; a
+   hostname must resolve, and every IPv4 and IPv6 (AAAA) answer and every CNAME
+   target (at most 16 names, no cycles) must be public: PHP's private and
+   reserved ranges (loopback, link-local, RFC 1918, unique-local and similar)
+   are refused, as are IPv6 multicast, the IPv6 documentation prefix and
+   IPv4-mapped IPv6 forms of refused addresses. WordPress's own `wp_http_validate_url()` must also accept it
+   (ports 80, 443 and 8080 by default). A URL that fails is `blocked` and is
+   never requested.
+2. One `HEAD` request is sent through `wp_safe_remote_request()`, connected only
+   to the IPv4 addresses that passed validation (`CURLOPT_RESOLVE`), with a
+   5-second timeout, no redirects followed by the HTTP API, no cookies, no
+   authentication, referer or extra headers, the fixed User-Agent
+   `WebmasterySiteToolkitForMCP-LinkCheck/1.0 (WordPress plugin)` (never the
+   site URL), and nothing written to disk. The request always uses core's cURL
+   transport (forced before anything is sent, so the pin cannot be skipped by
+   Requests choosing another transport); a hostname that WordPress would send
+   through an HTTP proxy (`WP_PROXY_HOST`) is not requested at all, because the
+   proxy would resolve it itself. A last-priority filter re-applies
+   these arguments, so other plugins' `http_request_args` filters cannot add
+   cookies or credentials to these requests. If the response is `405` or
+   `501`, one `GET` with `Range: bytes=0-1023` and a 1 KB response limit is
+   sent instead; the transfer is aborted as soon as more than 1 KB of body has
+   arrived (core's own limit only truncates what it keeps while the download
+   continues), the status already received is used and the body is discarded.
+3. A `3xx` with a `Location` is followed by the plugin itself: the target is
+   resolved, validated and pinned again exactly as in step 1 before it is
+   requested, for at most 3 redirects. A redirect to an unsafe target is
+   `blocked` (with the redirect's status).
+
+| Status | Meaning |
+| --- | --- |
+| `ok` | Final response `2xx` (after any followed redirects). |
+| `redirect` | Final response `3xx` without a usable `Location`, more than 3 redirects, or a redirect chain a per-call bound (per-host, total request or time) stopped before it finished. `http_status` is that last `3xx`. |
+| `broken` | `404` or `410`. |
+| `client_error` / `server_error` | Any other `4xx` / `5xx`, including a `405` / `501` `HEAD` response whose `GET` fallback a per-call bound prevented. |
+| `blocked` | Failed URL safety validation (or carried credentials); never requested. |
+| `unreachable` | DNS, connection, TLS or timeout failure, or no HTTP status. |
+| `not_checked` | Not requested (no request was sent for this link in this call): `check_external` was false, a per-call bound was reached, or the HTTP transport cannot pin addresses (see below). |
+
+**Bounds per call.** At most `max_links` unique links are considered (internal
+and external together). At most 10 external HTTP requests are sent (every
+redirect hop and `GET` fallback counts), at most 2 to the same host (exact
+hostname), and no new request starts once about 20 seconds have passed since
+the call began; validation DNS lookups count toward that time even for links
+that end up `blocked` (only the first external check of a call is exempt, so
+every call makes progress).
+Links a bound stopped before any request for them was sent are `not_checked`,
+and `next_offset` is the index of the first of them so the next call checks
+them. A link for which at least one request was sent always ends the call with
+a terminal status: a redirect chain or `HEAD`-to-`GET` fallback that cannot
+complete within the bounds is reported as `redirect` (last `3xx`) or the
+`405` / `501` class, never deferred, so `next_offset` always advances past
+every link a call started. Otherwise `next_offset` is the
+index after the window, or `null` at the end. Call again with the same
+`post_id`, `check_external` and `max_links` and `offset: next_offset`.
+Results are not cached: there are no transients or options, so every call
+repeats its requests. If the site cannot pin and bound a request (no cURL,
+an HTTP proxy for a hostname, or a plugin replaced the transport after the
+plugin forced cURL), no request is made or its response is discarded, and the remaining
+external links of that call are `not_checked` without a `next_offset` for them.
+
+**What the external check does and does not guarantee.** It reports what this
+server received for a `HEAD` (or 1 KB ranged `GET`) request at the moment of
+the call; a chain or fallback cut short by the per-call bounds is reported as
+`redirect` (or the `405` / `501` class) rather than followed on a later call,
+so such a status can mean "not followed to its end". It does not prove a page works for visitors: servers can answer
+bots, `HEAD` requests, data-center IP ranges or the plugin's User-Agent
+differently from browsers; rate limits, geo-blocking, login walls and
+JavaScript-only pages can give `client_error` or `ok` for pages that behave
+otherwise in a browser; a `200` "soft 404" page is reported `ok`. TLS
+certificate failures are `unreachable`. The SSRF guard ensures no request is
+sent to an address that failed validation, but it is not a guarantee against
+every network path: a plugin that rewrites the URL or replaces the transport in
+a later Requests hook can still bypass the pin (the response is then
+discarded, but the request has been sent); IPv6-only hosts are
+not supported (connections use the validated IPv4 addresses); and a slow DNS
+lookup or request already started can run past the time budget (the budget
+only stops new lookups and requests from starting). Results can differ
+between calls (the ability is annotated `idempotent: false`).
+
+**Annotations.** `readonly: true`, `destructive: false`, `idempotent: false`.
+Here `readonly` means the call changes nothing on this site (no writes, no
+cached results). WordPress 6.9 ability annotations have no open-world flag
+(MCP's `openWorldHint`) and Adapter 0.6.1 does not emit one, so note in
+prose: with `check_external: true` the call contacts third-party servers,
+which can log the request (the server's IP address, the User-Agent above and
+the requested URL). No data is sent to the plugin author.
+
+**Output** (`data`):
+
+| Field | Meaning |
+| --- | --- |
+| `post_id` | The scanned post or page. |
+| `checked_external` | Whether `check_external` was true. |
+| `links[]` | `url` (normalized), `kind` (`internal` or `external`), `status`, `http_status` (int or `null`; only external checks set it), `anchor_text`, `occurrences`, `target_id` (internal, readable targets only; otherwise `null`) and `untrusted_fields: ["url", "anchor_text"]`. |
+| `summary` | `total_links`, `internal`, `external` (unique links in the whole post), `skipped` (non-web hrefs in the whole post) and `by_status` (every status above, counted over the returned `links` only). |
+| `next_offset` | Index to continue from, or `null`. |
+
+Never returned: response bodies or headers, redirect target URLs, resolved IP
+addresses, titles of linked posts, or credentials embedded in stored URLs.
+
 ## Site health and user access audits
 
 Both abilities are Administrator-only and read-only.
@@ -879,6 +1048,7 @@ apply. Markers never restore omitted/redacted fields.
 | Navigation menu (`list-menus` `data.items` records, `get-menu` `data`) | `name`, `slug` |
 | Navigation menu item (`get-menu` `data.items` records, `update-menu-item` `data`) | `title`, `url`, `attr_title`, `description`, `classes`, `xfn` (also when `title`/`url` are `null` on a restricted item) |
 | `update-menu-item` `data.previous` | Those of `title`, `url`, `attr_title`, `description`, `classes` that were sent |
+| Broken link scan (`scan-broken-links`) | `url`, `anchor_text` on each `data.links` record |
 | Theme (`list-themes`) | `name`, `version`, `author` on each non-broken `data.items` record |
 | User lookup | `display_name`, `nicename`, `url`, authorized `login` and `email` |
 | Administrator account audit | `login`, `email`, `last_login` |
@@ -951,7 +1121,7 @@ confirmation is not independent human approval.
 - Subscriber-safe site info deliberately avoids secrets, filesystem paths, salts, auth keys, raw server internals, WordPress version, and theme version. `get-environment-info` requires `manage_options`.
 - Site Kit module, permission, and PageSpeed abilities require WordPress `read` **and** Site Kit's own REST permission callbacks, failing closed when a required route or callable permission check is absent. Status separately requires `manage_options`. Responses omit OAuth scopes/proxy details, module owner identities, raw settings, screenshots, third-party entities, and full Lighthouse payloads. PageSpeed only accepts URLs on the current site, although Google processes those requests through Site Kit's PageSpeed service.
 - Webmaster verification checks require `read`, including direct execution. Callers without `activate_plugins` receive neither `data.google.site_kit` nor `data.checks.google_site_kit`; plugin inspection is skipped and the summary counts only authorized checks. Public results, including failures and unknowns, share a 60-second cache scoped to the site, home URL, and result schema. Warm calls do not repeat HTTP/DNS work; private plugin state is inspected separately on each authorized call and is never cached with public results. Concurrent cold misses or early transient eviction can repeat work, so this is not a strict rate limit.
-- `get-environment-info`, `plugin-audit`, `user-access-audit`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `site-health-check` are Administrator-only. `list-themes` requires `switch_themes` (Administrator by default) and adds cached update fields only for callers with `update_themes`. `get-cron-status` requires `manage_options` and never returns event arguments. `list-menus`, `get-menu` and `update-menu-item` require `edit_theme_options` (Administrator by default), and menu items that link to a post the caller cannot read never expose that post's title or URL. `get-updates-overview` requires at least one of `update_core`, `update_plugins` or `update_themes` (Administrator by default) and returns only the sections the caller has the matching capability for.
+- `get-environment-info`, `plugin-audit`, `user-access-audit`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `site-health-check` are Administrator-only. `list-themes` requires `switch_themes` (Administrator by default) and adds cached update fields only for callers with `update_themes`. `get-cron-status` requires `manage_options` and never returns event arguments. `list-menus`, `get-menu` and `update-menu-item` require `edit_theme_options` (Administrator by default), and menu items that link to a post the caller cannot read never expose that post's title or URL. `scan-broken-links` requires `edit_post` on the scanned post or page and, for `check_external: true`, also `manage_options`; it never returns titles of linked posts the caller cannot read, response bodies, redirect targets or resolved addresses, and never requests private, reserved or local addresses (see [Broken link scan](#broken-link-scan)). `get-updates-overview` requires at least one of `update_core`, `update_plugins` or `update_themes` (Administrator by default) and returns only the sections the caller has the matching capability for.
 - `security-audit`'s `ssl` finding reports only the configured public `home` option (including normal option filters and `WP_HOME`): recognized HTTPS passes and HTTP fails. Missing/unsupported schemes or hosts, whitespace/control characters, malformed percent escapes, and invalid authority syntax warn as unknown. The local syntax guard accepts local names, Unicode/IDN forms, properly escaped components, and bracketed IPv6 (including escaped zone IDs) or IPvFuture literals; it is not a complete URL, DNS-name, or internationalized-name validator and imposes no address-routability policy. It is independent of the MCP request scheme and admin-only TLS policy. It does not test certificates, reachability, redirects, or the final filtered front-end URL.
 - `security-audit` always returns exactly one `wp_version` finding, using only WordPress's cached core update data (no remote request). An `upgrade` entry warns that an update is available; cached entries without an upgrade pass as up to date; missing, empty, or malformed cached data warns that the update status is unknown rather than passing. The `auth_keys` finding covers all eight keys and salts (`AUTH_KEY`, `SECURE_AUTH_KEY`, `LOGGED_IN_KEY`, `NONCE_KEY`, `AUTH_SALT`, `SECURE_AUTH_SALT`, `LOGGED_IN_SALT`, `NONCE_SALT`): the default placeholder fails, undefined or empty constants warn because WordPress falls back to database-stored values, and it passes only when all eight are set. Findings name constants, never their values.
 - `security-audit` also returns these baseline hardening findings, each exactly once per audit and appended after the existing findings; all are local reads (no HTTP request, no filesystem scan) and report counts or configuration state only: `php_version` fails when the running PHP major.minor branch is past its security-support end date (or older than 8.0), warns within 90 days of that date, and passes otherwise; a branch newer than the plugin's hardcoded table passes with "support window not known to this plugin version" (update `PHP_SECURITY_SUPPORT_END` in `includes/class-security.php` from php.net/supported-versions when branches change; only major.minor is reported). `force_ssl_admin` passes when `force_ssl_admin()` is true and warns otherwise (with different detail depending on whether the configured home URL is HTTPS). `db_prefix` warns for the default `wp_` prefix (low-value hardening that only hinders generic automated SQL injection payloads; uses the network base prefix on multisite) and otherwise passes; the prefix value is never returned. `inactive_plugins` (requires `activate_plugins`; network-active plugins count as active) and `inactive_themes` (requires `switch_themes`; ignores the active theme and its parent and warns when more than one other theme is installed, since one default fallback theme is reasonable) report counts only, never names. `theme_updates` (requires `update_themes`) counts entries in the cached `update_themes` data and warns that status is unknown when that data is missing or malformed. The capability-gated findings are omitted for callers without the capability. `two_factor` is best-effort: with the official Two-Factor plugin active it calls `Two_Factor_Core::is_user_using_two_factor()` for each administrator (first 100), which counts only providers that are both enabled and available (recovery codes with no codes left do not count), and warns with a count of administrators without a usable second factor (a Throwable from that code counts the administrator as not verified) and never returns usernames or IDs; if that class or method is unavailable it falls back to the raw `_two_factor_enabled_providers` user meta and says in the detail that provider usability was not verified; with another known two-factor-capable plugin active it passes while stating that per-administrator enrollment was not verified; with none it warns that no known plugin was detected (detection is limited to a known list).
