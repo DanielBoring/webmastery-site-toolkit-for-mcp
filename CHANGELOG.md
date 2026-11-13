@@ -8,6 +8,21 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Added
 
+- Navigation menus: three abilities for classic navigation menus (Appearance >
+  Menus), all requiring `edit_theme_options` (Administrator by default). List
+  menus returns each menu's name, item count and assigned theme locations, the
+  theme's registered locations, and whether the theme supports classic menus
+  or is a block theme. Get menu returns a menu's items in order (title, URL,
+  type and linked object, parent, position, target, title attribute, classes,
+  description). Items linking to a post the caller cannot read are listed with
+  their title and URL withheld. Update menu item changes one existing item's
+  label, custom-link URL, target, title attribute, description, classes,
+  position or parent within the same menu, keeps every field you do not send,
+  and returns the previous values so the change can be reverted. URLs are
+  limited to http, https, mailto, tel and relative links (no `javascript:` or
+  `data:`), parents are checked for cycles, and stored menu text is marked as
+  untrusted. Block-theme Navigation blocks, creating or deleting menus and
+  items, and assigning menus to locations are not covered.
 - Rank Math and All in One SEO metadata: two read-only abilities that inspect
   a post's or page's SEO metadata from Rank Math or All in One SEO, next to the
   existing Yoast SEO and SEOPress inspections. They require permission to edit

@@ -169,6 +169,7 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/delete-tag',
 	'webmastery-site-toolkit-for-mcp/get-environment-info',
 	'webmastery-site-toolkit-for-mcp/get-media',
+	'webmastery-site-toolkit-for-mcp/get-menu',
 	'webmastery-site-toolkit-for-mcp/get-aioseo-metadata',
 	'webmastery-site-toolkit-for-mcp/get-page',
 	'webmastery-site-toolkit-for-mcp/get-post',
@@ -180,6 +181,7 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/list-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/list-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/list-media',
+	'webmastery-site-toolkit-for-mcp/list-menus',
 	'webmastery-site-toolkit-for-mcp/list-posts',
 	'webmastery-site-toolkit-for-mcp/list-pages',
 	'webmastery-site-toolkit-for-mcp/list-categories',
@@ -192,6 +194,7 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/spam-comment',
 	'webmastery-site-toolkit-for-mcp/trash-comment',
 	'webmastery-site-toolkit-for-mcp/update-comment',
+	'webmastery-site-toolkit-for-mcp/update-menu-item',
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-book',
 	'webmastery-site-toolkit-for-mcp/update-cpt-mcp-case-study',
 	'webmastery-site-toolkit-for-mcp/update-page',
@@ -214,6 +217,7 @@ $required_permission_cases = array(
 	'delete-post', 'delete-page', 'delete-cpt-mcp-book', 'delete-cpt-mcp-case-study',
 	'delete-post-meta', 'get-post', 'get-page', 'get-media', 'seo-analyze-post',
 	'get-rankmath-metadata', 'get-aioseo-metadata',
+	'list-menus', 'get-menu', 'update-menu-item',
 	'list-posts', 'list-pages', 'list-categories', 'list-tags',
 );
 foreach ( $required_permission_cases as $slug ) {

@@ -14,9 +14,9 @@ final class UntrustedPlanTest extends TestCase {
 
 	public function test_complete_inventory_requires_90_annotations_and_104_cases_at_each_actual_boundary(): void {
 		$labels = Wstm108_Plan::labels( self::native() );
-		self::assertCount( 303, $labels );
-		self::assertCount( 303, array_unique( $labels ) );
-		foreach ( array( 'annotations' => 95, 'gateway' => 104, 'individual' => 104 ) as $prefix => $count ) {
+		self::assertCount( 306, $labels );
+		self::assertCount( 306, array_unique( $labels ) );
+		foreach ( array( 'annotations' => 98, 'gateway' => 104, 'individual' => 104 ) as $prefix => $count ) {
 			self::assertCount( $count, array_filter( $labels, static fn( $label ) => 0 === strpos( $label, $prefix . ':' ) ) );
 		}
 		self::assertContains( 'annotations:webmastery-site-toolkit-for-mcp/bulk-publish-posts', $labels );

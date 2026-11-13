@@ -122,13 +122,13 @@ final class Wstm108_Transport {
 				wstm108_assert( $descriptor instanceof \stdClass, 'Catalog descriptor must be an object.' );
 				Wstm108_Evidence::tool( $descriptor );
 			}
-			wstm108_assert( count( $this->tools ) <= ( $this->individual ? 95 : 3 ), 'Catalog exceeds the independently planned inventory.' );
+			wstm108_assert( count( $this->tools ) <= ( $this->individual ? 98 : 3 ), 'Catalog exceeds the independently planned inventory.' );
 			$this->evidence->validate( $this->last_event, 'catalog', array(
 				'tools' => array_map( static fn( $descriptor ) => Wstm108_Evidence::tool( $descriptor ), $page['result']->tools ),
 				'next_cursor_sha256' => hash( 'sha256', wstm108_wire_canonical( $cursor ) ),
 			) );
 		} while ( null !== $cursor );
-		wstm108_assert( ( $this->individual ? 95 : 3 ) === count( $this->tools )
+		wstm108_assert( ( $this->individual ? 98 : 3 ) === count( $this->tools )
 			&& count( $this->tools ) === count( array_unique( array_map( static fn( $tool ) => $tool->name, $this->tools ), SORT_STRING ) ), 'Incomplete or duplicate tool catalog.' );
 	}
 

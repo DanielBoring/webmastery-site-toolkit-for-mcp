@@ -29,7 +29,7 @@ run_product_qa() (
 			echo json_encode([
 				"schema" => "wstm-product-qa-summary-v1", "status" => "passed",
 				"lane" => PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION, "uid" => 33,
-				"untrusted_cases" => 303, "bounded_observations" => 1461,
+				"untrusted_cases" => 306, "bounded_observations" => 1461,
 			], JSON_THROW_ON_ERROR), "\n";
 		' > "$WORK/mock-product-summary.json" || exit $?
 		( set -o noclobber; cat "$WORK/mock-product-summary.json" > "$E2E_ARTIFACTS_DIR/product-qa.summary.json" ) || exit 66

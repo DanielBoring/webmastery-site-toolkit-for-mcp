@@ -21,6 +21,7 @@
 			<file>tests/unit/InputBoundaryTest.php</file>
 			<file>tests/unit/InputDiagnosticsTest.php</file>
 			<file>tests/unit/MediaUrlTest.php</file>
+			<file>tests/unit/MenusTest.php</file>
 			<file>tests/unit/MetadataBoundaryTest.php</file>
 			<file>tests/unit/NativeInputValidationTest.php</file>
 			<file>tests/unit/PermissionDefaultTest.php</file>

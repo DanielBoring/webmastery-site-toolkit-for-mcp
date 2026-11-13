@@ -182,6 +182,15 @@ final class Wstm108_Manifest_Projection {
 				return ! empty( $case['input']['overdue_only'] ) ? array() : array( 'data.items.0.untrusted_fields' => array( 'hook', 'schedule' ) );
 			case 'list-themes':
 				return array( 'data.items.0.untrusted_fields' => array( 'name', 'version', 'author' ) );
+			case 'list-menus':
+				return array( 'data.items.0.untrusted_fields' => array( 'name', 'slug' ) );
+			case 'get-menu':
+				return array( 'data.untrusted_fields' => array( 'name', 'slug' ), 'data.items.0.untrusted_fields' => array( 'title', 'url', 'attr_title', 'description', 'classes', 'xfn' ) );
+			case 'update-menu-item':
+				return array(
+					'data.untrusted_fields'          => array( 'title', 'url', 'attr_title', 'description', 'classes', 'xfn' ),
+					'data.previous.untrusted_fields' => array_values( array_intersect( array( 'title', 'url', 'attr_title', 'description', 'classes', 'xfn' ), array_keys( $case['input'] ) ) ),
+				);
 			case 'seo-analyze-post':
 				return array( 'data.metrics.untrusted_fields' => array( 'title', 'url', 'slug', 'yoast_meta_description', 'seopress_meta_description', 'yoast_focus_keyword', 'seopress_focus_keywords' ) );
 		}

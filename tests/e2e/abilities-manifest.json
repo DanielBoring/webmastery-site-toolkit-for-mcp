@@ -6445,6 +6445,308 @@
         ]
     },
     {
+        "ability": "webmastery-site-toolkit-for-mcp/list-menus",
+        "label": "list-menus as admin",
+        "role": "admin",
+        "input": null,
+        "expect": "success",
+        "assert_permission": true,
+        "assert_paths": [
+            "data.truncated",
+            "data.registered_locations",
+            "data.classic_menus_supported",
+            "data.block_theme",
+            "data.items.0.id",
+            "data.items.0.name",
+            "data.items.0.slug",
+            "data.items.0.item_count",
+            "data.items.0.locations"
+        ],
+        "assert_values": {
+            "data.truncated": false,
+            "data.items.0.untrusted_fields": [
+                "name",
+                "slug"
+            ]
+        },
+        "assert_list_item": {
+            "path": "data.items",
+            "match": {
+                "id": "__menu_id__",
+                "name": "MCP E2E Menu",
+                "slug": "mcp-e2e-menu",
+                "item_count": 1
+            }
+        }
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/list-menus",
+        "label": "list-menus as editor",
+        "role": "editor",
+        "input": null,
+        "expect": "failure",
+        "expect_error_code": "forbidden",
+        "expect_error_reason": "ability_invalid_permissions",
+        "expect_error_shape": "canonical",
+        "assert_permission": "forbidden",
+        "assert_missing_paths": [
+            "data"
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-menu",
+        "label": "get-menu fixture menu as admin",
+        "role": "admin",
+        "input": {
+            "menu_id": "__menu_id__"
+        },
+        "expect": "success",
+        "assert_permission": true,
+        "assert_paths": [
+            "data.locations",
+            "data.items.0.position",
+            "data.items.0.status"
+        ],
+        "assert_values": {
+            "data.id": "__menu_id__",
+            "data.name": "MCP E2E Menu",
+            "data.slug": "mcp-e2e-menu",
+            "data.untrusted_fields": [
+                "name",
+                "slug"
+            ],
+            "data.items.0.id": "__menu_item_id__",
+            "data.items.0.title": "MCP E2E Link",
+            "data.items.0.url": "https://example.com/mcp-e2e",
+            "data.items.0.type": "custom",
+            "data.items.0.object": "custom",
+            "data.items.0.object_id": "__menu_item_id__",
+            "data.items.0.parent_item_id": 0,
+            "data.items.0.target": "",
+            "data.items.0.classes": [],
+            "data.items.0.restricted": false,
+            "data.items.0.untrusted_fields": [
+                "title",
+                "url",
+                "attr_title",
+                "description",
+                "classes",
+                "xfn"
+            ],
+            "data.page": 1,
+            "data.per_page": 100,
+            "data.next_page": null
+        },
+        "assert_missing_paths": [
+            "data.items.1"
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-menu",
+        "label": "get-menu missing menu is not found",
+        "role": "admin",
+        "input": {
+            "menu_id": 987654321
+        },
+        "expect": "failure",
+        "expect_error_code": "not_found",
+        "expect_error_reason": "not_found",
+        "expect_error_shape": "canonical"
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-menu",
+        "label": "get-menu category term id is not a menu",
+        "role": "admin",
+        "input": {
+            "menu_id": "__category_id__"
+        },
+        "expect": "failure",
+        "expect_error_code": "not_found",
+        "expect_error_reason": "not_found",
+        "expect_error_shape": "canonical"
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-menu",
+        "label": "get-menu rejects per_page above 200",
+        "role": "admin",
+        "input": {
+            "menu_id": "__menu_id__",
+            "per_page": 201
+        },
+        "expect": "failure",
+        "expect_error_code": "invalid_input",
+        "expect_error_reason": "ability_invalid_input",
+        "expect_error_shape": "canonical"
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-menu",
+        "label": "get-menu as editor",
+        "role": "editor",
+        "input": {
+            "menu_id": "__menu_id__"
+        },
+        "expect": "failure",
+        "expect_error_code": "forbidden",
+        "expect_error_reason": "ability_invalid_permissions",
+        "expect_error_shape": "canonical",
+        "assert_permission": "forbidden",
+        "assert_missing_paths": [
+            "data"
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/update-menu-item",
+        "label": "update-menu-item rejects a javascript url",
+        "role": "admin",
+        "input": {
+            "menu_item_id": "__menu_item_id__",
+            "url": "javascript:alert(1)"
+        },
+        "expect": "failure",
+        "expect_error_code": "invalid_input",
+        "expect_error_reason": "invalid_url",
+        "expect_error_shape": "canonical",
+        "assert_unchanged": true
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/update-menu-item",
+        "label": "update-menu-item rejects a protocol-relative url",
+        "role": "admin",
+        "input": {
+            "menu_item_id": "__menu_item_id__",
+            "url": "//evil.example/"
+        },
+        "expect": "failure",
+        "expect_error_code": "invalid_input",
+        "expect_error_reason": "invalid_url",
+        "expect_error_shape": "canonical",
+        "assert_unchanged": true
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/update-menu-item",
+        "label": "update-menu-item rejects changing the linked object",
+        "role": "admin",
+        "input": {
+            "menu_item_id": "__menu_item_id__",
+            "object_id": "__post_id__"
+        },
+        "expect": "failure",
+        "expect_error_code": "invalid_input",
+        "expect_error_reason": "ability_invalid_input",
+        "expect_error_shape": "canonical",
+        "assert_unchanged": true
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/update-menu-item",
+        "label": "update-menu-item requires a field to update",
+        "role": "admin",
+        "input": {
+            "menu_item_id": "__menu_item_id__"
+        },
+        "expect": "failure",
+        "expect_error_code": "invalid_input",
+        "expect_error_reason": "invalid_input",
+        "expect_error_shape": "canonical",
+        "assert_unchanged": true
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/update-menu-item",
+        "label": "update-menu-item rejects itself as parent",
+        "role": "admin",
+        "input": {
+            "menu_item_id": "__menu_item_id__",
+            "parent_item_id": "__menu_item_id__"
+        },
+        "expect": "failure",
+        "expect_error_code": "invalid_input",
+        "expect_error_reason": "invalid_parent",
+        "expect_error_shape": "canonical",
+        "assert_unchanged": true
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/update-menu-item",
+        "label": "update-menu-item missing item is not found",
+        "role": "admin",
+        "input": {
+            "menu_item_id": 987654321,
+            "title": "Missing"
+        },
+        "expect": "failure",
+        "expect_error_code": "not_found",
+        "expect_error_reason": "not_found",
+        "expect_error_shape": "canonical",
+        "assert_unchanged": true
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/update-menu-item",
+        "label": "update-menu-item post id is not a menu item",
+        "role": "admin",
+        "input": {
+            "menu_item_id": "__post_id__",
+            "title": "Not a menu item"
+        },
+        "expect": "failure",
+        "expect_error_code": "not_found",
+        "expect_error_reason": "not_found",
+        "expect_error_shape": "canonical",
+        "assert_unchanged": true
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/update-menu-item",
+        "label": "update-menu-item as editor",
+        "role": "editor",
+        "input": {
+            "menu_item_id": "__menu_item_id__",
+            "title": "Editor should not rename this."
+        },
+        "expect": "failure",
+        "expect_error_code": "forbidden",
+        "expect_error_reason": "ability_invalid_permissions",
+        "expect_error_shape": "canonical",
+        "assert_permission": "forbidden",
+        "assert_missing_paths": [
+            "data"
+        ],
+        "assert_unchanged": true
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/update-menu-item",
+        "label": "update-menu-item title as admin",
+        "role": "admin",
+        "input": {
+            "menu_item_id": "__menu_item_id__",
+            "title": "MCP E2E Updated Link"
+        },
+        "expect": "success",
+        "assert_permission": true,
+        "assert_changed": true,
+        "assert_values": {
+            "data.id": "__menu_item_id__",
+            "data.menu_id": "__menu_id__",
+            "data.title": "MCP E2E Updated Link",
+            "data.url": "https://example.com/mcp-e2e",
+            "data.type": "custom",
+            "data.target": "",
+            "data.parent_item_id": 0,
+            "data.restricted": false,
+            "data.untrusted_fields": [
+                "title",
+                "url",
+                "attr_title",
+                "description",
+                "classes",
+                "xfn"
+            ],
+            "data.previous.title": "MCP E2E Link",
+            "data.previous.untrusted_fields": [
+                "title"
+            ]
+        },
+        "assert_missing_paths": [
+            "data.previous.url"
+        ]
+    },
+    {
         "ability": "webmastery-site-toolkit-for-mcp/plugin-audit",
         "label": "plugin-audit as admin",
         "role": "admin",
