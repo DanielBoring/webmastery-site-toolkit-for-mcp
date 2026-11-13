@@ -2,7 +2,7 @@
 
 function wstm_test_product_binding( string $path ): array {
 	$json = file_get_contents( __DIR__ . '/product-source-bindings.json' );
-	if ( ! is_string( $json ) || '8e6ec15d514327a12dd47c6e8010a78478ce52423c4a5f5edf4f23079bd1fbfe' !== hash( 'sha256', $json ) ) {
+	if ( ! is_string( $json ) || '813c580c6f7b7bd91317d3a006ea6f74a7c6ec954c0bf00d07f1b1cef9d2ea36' !== hash( 'sha256', $json ) ) {
 		throw new RuntimeException( 'Finite product calibration identities changed.' );
 	}
 	$bindings = json_decode( $json, true, 512, JSON_THROW_ON_ERROR );

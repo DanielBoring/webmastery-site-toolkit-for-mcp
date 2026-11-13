@@ -14,6 +14,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- List Categories and List Tags now always return a plain list on later pages
+  (the unreleased `page` input could return an object keyed by position).
 - Fix the missing MCP Adapter admin notice, which never appeared on WordPress
   6.9+. It now detects the MCP Adapter itself (standalone or bundled by another
   plugin) instead of the Abilities API built into WordPress, and is shown only
