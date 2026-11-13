@@ -100,6 +100,19 @@ final class TaxonomyWriteTest extends TestCase {
 		$this->assertSame( array( array( 'taxonomy' => $taxonomy, 'number' => $number, 'offset' => $offset, 'hide_empty' => false ) ), $GLOBALS['wstm_test_get_terms_calls'] );
 	}
 
+	public function test_list_returns_zero_based_list_when_terms_keep_their_keys(): void {
+		$term_b = (object) array( 'term_id' => 10, 'name' => 'B', 'slug' => 'b', 'description' => '', 'count' => 1, 'parent' => 0 );
+		$term_c = (object) array( 'term_id' => 12, 'name' => 'C', 'slug' => 'c', 'description' => '', 'count' => 2, 'parent' => 0 );
+		foreach ( array( 'categories', 'tags' ) as $slug ) {
+			$GLOBALS['wstm_test_get_terms_result'] = array( 1 => $term_b, 5 => $term_c );
+			$ability = $GLOBALS['wstm_test_abilities'][ "webmastery-site-toolkit-for-mcp/list-{$slug}" ];
+			$result  = $ability['execute_callback']( array( 'page' => 2, 'per_page' => 2 ) );
+			$this->assertTrue( $result['success'] );
+			$this->assertSame( array( 0, 1 ), array_keys( $result['data'] ) );
+			$this->assertSame( array( 10, 12 ), array_column( $result['data'], 'id' ) );
+		}
+	}
+
 	public function test_list_offset_overflow_returns_empty_page_without_query(): void {
 		foreach ( array( 'categories', 'tags' ) as $slug ) {
 			$ability = $GLOBALS['wstm_test_abilities'][ "webmastery-site-toolkit-for-mcp/list-{$slug}" ];

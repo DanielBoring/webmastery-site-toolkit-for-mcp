@@ -26,6 +26,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 - Image uploads from a URL now connect only to the addresses that passed the
   private-address check when WordPress uses cURL, including after redirects,
   closing a DNS rebinding window between validation and download.
+- List Categories and List Tags now always return a plain list on later pages
+  (the unreleased `page` input could return an object keyed by position).
 - Fix the missing MCP Adapter admin notice, which never appeared on WordPress
   6.9+. It now detects the MCP Adapter itself (standalone or bundled by another
   plugin) instead of the Abilities API built into WordPress, and is shown only
