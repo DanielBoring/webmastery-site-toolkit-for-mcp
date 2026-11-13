@@ -379,20 +379,22 @@ final class SeoMetadataBoundaryTest extends TestCase {
 	 * @param array|null $row   Row returned by get_row (null: no record).
 	 * @param string     $error Error to report after the read.
 	 */
-	private function aioseo_database( ?array $row, string $error = '' ): object {
-		$wpdb = new class( $row, $error ) {
+	private function aioseo_database( ?array $row, string $error = '', bool $throw = false ): object {
+		$wpdb = new class( $row, $error, $throw ) {
 			public string $prefix = 'wp_';
-			public string $last_error = '';
+			public string $last_error = 'WSTM_PREVIOUS_ERROR';
 			public int $num_queries = 0;
 			public array $queries = array();
 			public array $suppress_calls = array();
 			private bool $suppressed = false;
 			private ?array $row;
 			private string $error;
+			private bool $throw;
 
-			public function __construct( ?array $row, string $error ) {
+			public function __construct( ?array $row, string $error, bool $throw ) {
 				$this->row = $row;
 				$this->error = $error;
+				$this->throw = $throw;
 			}
 
 			public function prepare( $query, ...$args ): string {
@@ -402,6 +404,9 @@ final class SeoMetadataBoundaryTest extends TestCase {
 			public function get_row( $query, $output ) {
 				$this->queries[] = array( $query, $output, $this->suppressed );
 				$this->last_error = $this->error;
+				if ( $this->throw ) {
+					throw new RuntimeException( 'WSTM_DB_DROPIN_FAILURE' );
+				}
 				return '' === $this->error ? $this->row : null;
 			}
 
@@ -553,6 +558,10 @@ final class SeoMetadataBoundaryTest extends TestCase {
 			'robots_nosnippet' => '0',
 			'schema' => '{"graphs":["WSTM_AIOSEO_SCHEMA_BODY"]}',
 			'options' => 'WSTM_AIOSEO_OPTIONS',
+			'ai' => 'WSTM_AIOSEO_AI',
+			'local_seo' => 'WSTM_AIOSEO_LOCAL',
+			'og_image_custom_fields' => 'WSTM_AIOSEO_CUSTOM_FIELD',
+			'images' => 'WSTM_AIOSEO_IMAGES',
 		) );
 		$result = $this->execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) );
 		self::assertTrue( $result['success'] );
@@ -561,12 +570,8 @@ final class SeoMetadataBoundaryTest extends TestCase {
 		self::assertSame( 'ARRAY_A', $output );
 		self::assertTrue( $suppressed );
 		self::assertFalse( $wpdb->is_suppressed() );
-		self::assertStringContainsString( 'FROM `wp_aioseo_posts` WHERE post_id = 42 LIMIT 1|', $query );
-		self::assertStringContainsString( 'WHERE post_id = %d LIMIT 1', $query );
-		self::assertStringNotContainsString( '*', $query );
-		foreach ( array( 'schema', 'options', 'page_analysis', 'images', 'videos', 'local_seo', 'ai' ) as $column ) {
-			self::assertDoesNotMatchRegularExpression( '/[ ,`]' . $column . '[ ,]/', explode( 'FROM', $query )[0] );
-		}
+		self::assertSame( 'SELECT * FROM `wp_aioseo_posts` WHERE post_id = 42 LIMIT 1|SELECT * FROM `wp_aioseo_posts` WHERE post_id = %d LIMIT 1', $query );
+		self::assertSame( 'WSTM_PREVIOUS_ERROR', $wpdb->last_error );
 		self::assertSame( array(), Probe::$reads );
 		$data = $result['data'];
 		self::assertTrue( $data['aioseo_active'] );
@@ -595,18 +600,19 @@ final class SeoMetadataBoundaryTest extends TestCase {
 			'robots_nosnippet' => false,
 		), $data['metadata'] );
 		$json = json_encode( $result );
-		foreach ( array( 'WSTM_AIOSEO_LEGACY', 'WSTM_AIOSEO_NESTED', 'WSTM_AIOSEO_SCHEMA_BODY', 'WSTM_AIOSEO_OPTIONS', 'product_cat' ) as $leak ) {
+		foreach ( array( 'WSTM_AIOSEO_LEGACY', 'WSTM_AIOSEO_NESTED', 'WSTM_AIOSEO_SCHEMA_BODY', 'WSTM_AIOSEO_OPTIONS', 'WSTM_AIOSEO_AI', 'WSTM_AIOSEO_LOCAL', 'WSTM_AIOSEO_CUSTOM_FIELD', 'WSTM_AIOSEO_IMAGES', 'product_cat' ) as $leak ) {
 			self::assertStringNotContainsString( $leak, $json );
 		}
 	}
 
 	public function test_aioseo_legacy_focus_keyphrase_fallback_and_missing_record(): void {
 		Probe::reset();
-		$this->aioseo_database( array( 'focus_keyword' => '', 'keyphrases' => '{"focus":{"keyphrase":"legacy phrase","analysis":{"x":1}},"additional":[{"keyphrase":"WSTM_AIOSEO_ADDITIONAL"}]}' ) );
+		$this->aioseo_database( array_merge( self::aioseo_row(), array( 'focus_keyword' => '', 'keyphrases' => '{"focus":{"keyphrase":"legacy phrase","analysis":{"x":1}},"additional":[{"keyphrase":"WSTM_AIOSEO_ADDITIONAL"}]}', 'robots_noindex' => null ) ) );
 		$result = $this->execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) );
 		self::assertSame( 'legacy phrase', $result['data']['metadata']['focus_keyword'] );
 		self::assertStringNotContainsString( 'WSTM_AIOSEO_ADDITIONAL', json_encode( $result ) );
 		self::assertNull( $result['data']['metadata']['robots_noindex'] );
+		self::assertSame( array(), $result['data']['unavailable_fields'] );
 
 		Probe::reset();
 		$this->aioseo_database( null );
@@ -616,13 +622,73 @@ final class SeoMetadataBoundaryTest extends TestCase {
 		self::assertSame( array(), array_filter( $result['data']['metadata'], static fn( $value ) => null !== $value ) );
 	}
 
+	private static function aioseo_row(): array {
+		return array(
+			'id' => '7', 'post_id' => '42', 'title' => 'T', 'description' => 'D', 'keywords' => null,
+			'keyphrases' => null, 'focus_keyword' => 'kw', 'primary_term' => '{"category":3}', 'canonical_url' => null,
+			'og_title' => null, 'og_description' => null, 'og_image_custom_url' => null, 'twitter_title' => null,
+			'twitter_description' => null, 'twitter_image_custom_url' => null, 'seo_score' => '10', 'pillar_content' => null,
+			'robots_default' => '1', 'robots_noindex' => '0', 'robots_nofollow' => '0', 'robots_noarchive' => '0',
+			'robots_noimageindex' => '0', 'robots_nosnippet' => '0',
+		);
+	}
+
+	public function test_aioseo_4x_schema_without_newer_columns_reads_in_one_query_and_reports_gaps(): void {
+		Probe::reset();
+		// AIOSEO 4.0-4.3.5: no focus_keyword (5.0) and no primary_term (4.3.6) columns.
+		$row = self::aioseo_row();
+		unset( $row['focus_keyword'], $row['primary_term'] );
+		$row['keyphrases'] = '{"focus":{"keyphrase":"four x phrase"}}';
+		$wpdb = $this->aioseo_database( $row );
+		$result = $this->execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) );
+		self::assertTrue( $result['success'] );
+		self::assertCount( 1, $wpdb->queries );
+		self::assertTrue( $result['data']['record_found'] );
+		self::assertSame( 'four x phrase', $result['data']['metadata']['focus_keyword'] );
+		self::assertNull( $result['data']['metadata']['primary_category'] );
+		self::assertSame( 'T', $result['data']['metadata']['title'] );
+		self::assertSame( array( 'primary_category' ), array_keys( $result['data']['unavailable_fields'] ) );
+		self::assertSame( 'unsupported', $result['data']['unavailable_fields']['primary_category']['code'] );
+
+		// Neither keyword column: the field is null and reported, never guessed.
+		Probe::reset();
+		unset( $row['keyphrases'] );
+		$this->aioseo_database( $row );
+		$result = $this->execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) );
+		self::assertNull( $result['data']['metadata']['focus_keyword'] );
+		self::assertSame( array( 'focus_keyword', 'primary_category' ), array_keys( $result['data']['unavailable_fields'] ) );
+		self::assertSame( array_keys( self::aioseo_full_metadata_keys() ), array_keys( $result['data']['metadata'] ) );
+	}
+
+	private static function aioseo_full_metadata_keys(): array {
+		return array_flip( array(
+			'title', 'meta_description', 'canonical_url', 'opengraph_title', 'opengraph_description', 'opengraph_image_custom_url',
+			'twitter_title', 'twitter_description', 'twitter_image_custom_url', 'focus_keyword', 'seo_score', 'pillar_content',
+			'primary_category', 'robots_default', 'robots_noindex', 'robots_nofollow', 'robots_noarchive', 'robots_noimageindex', 'robots_nosnippet',
+		) );
+	}
+
+	public function test_aioseo_database_exception_restores_wpdb_state(): void {
+		Probe::reset();
+		$wpdb = $this->aioseo_database( self::aioseo_row(), 'WSTM_SQL_ERROR', true );
+		try {
+			Probe::execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) );
+			self::fail( 'Expected the database exception to propagate.' );
+		} catch ( RuntimeException $error ) {
+			self::assertSame( 'WSTM_DB_DROPIN_FAILURE', $error->getMessage() );
+		}
+		self::assertFalse( $wpdb->is_suppressed() );
+		self::assertSame( 'WSTM_PREVIOUS_ERROR', $wpdb->last_error );
+	}
+
 	public function test_aioseo_database_failure_is_an_error_without_query_details(): void {
 		Probe::reset();
-		$wpdb = $this->aioseo_database( array( 'title' => 'unused' ), "Unknown column 'focus_keyword' in 'field list'" );
+		$wpdb = $this->aioseo_database( array( 'title' => 'unused' ), "Table 'wordpress.wp_aioseo_posts' doesn't exist" );
 		$result = $this->execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) );
 		self::assertFalse( $result['success'] );
 		self::assertSame( 'upstream_failed', $result['error']['code'] );
 		self::assertFalse( $wpdb->is_suppressed() );
+		self::assertSame( 'WSTM_PREVIOUS_ERROR', $wpdb->last_error );
 		self::assertStringNotContainsString( 'focus_keyword', json_encode( $result ) );
 		self::assertStringNotContainsString( 'aioseo_posts', json_encode( $result ) );
 	}

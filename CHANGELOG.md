@@ -17,7 +17,9 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   descriptions and image URLs. Rank Math fields also need key-level metadata
   permission; denied fields are left out and listed in `unavailable_fields`.
   All in One SEO data is read with one read-only query of that plugin's own
-  per-post table (5.x schema), because its own loader can write. Schema data,
+  per-post table, because its own loader can write; it works with 4.x and 5.x
+  schemas and lists fields an older version does not store in
+  `unavailable_fields`. Schema data,
   redirects, raw stored values and plugin settings are never returned, and
   stored text is marked as untrusted. When the plugin is not active the ability
   says so instead of reading anything.

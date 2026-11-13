@@ -251,19 +251,27 @@ plugin basename in `active_plugins`) stores per-post SEO data in its own
 and can be stale, because AIOSEO's own quick-edit path updates only the table.
 AIOSEO's `Models\Post::getPost()` is not side-effect free: on load it can save
 the row (schema and keyword migrations) and runs the `aioseo_get_post` filter. So
-this ability reads one row directly: a prepared single-row `SELECT` of an explicit
-column allowlist by `post_id`, never `SELECT *`, never a write. Because the data is
-not post meta, WordPress's per-key meta capabilities do not apply: access is gated
-on `edit_post` for the post only, and `unavailable_fields` is always `[]`.
-`record_found` is false when AIOSEO has no row for the post (every field is then
-`null`; AIOSEO would show its defaults). A database error, including a missing
-table or an AIOSEO schema older than 5.0 (no `focus_keyword` column), returns
-`upstream_failed` without query details.
+this ability reads one row directly with one prepared single-row `SELECT` by
+`post_id`, never a write. The row is selected whole so that older AIOSEO schemas
+read in the same single query; every column outside the allowlist below (schema,
+options, AI, local SEO, image and video data, custom-field names, and the rest) is
+dropped before normalization and never returned. Because the data is not post
+meta, WordPress's per-key meta capabilities do not apply: access is gated on
+`edit_post` for the post only. `unavailable_fields` lists only fields whose source
+columns the installed AIOSEO schema does not have (code `unsupported`); such a
+field is `null` in `metadata`. On AIOSEO 4.x the `focus_keyword` column does not
+exist yet (added in 5.0), so the focus keyphrase is read from the legacy
+`keyphrases` JSON; `primary_category` is unavailable before 4.3.6 (no
+`primary_term` column). `record_found` is false when AIOSEO has no row for the
+post (every field is then `null`, `unavailable_fields` is `[]`; AIOSEO would show
+its defaults). A database error, such as a missing table before AIOSEO has created
+it, returns `upstream_failed` without query details; WordPress database error
+state (`suppress_errors`, `last_error`) is restored after the read.
 
 | Field | Column | Type |
 | --- | --- | --- |
 | `title`, `meta_description`, `canonical_url` | `title`, `description`, `canonical_url` | string |
-| `focus_keyword` | `focus_keyword`, falling back to the focus keyphrase in the legacy `keyphrases` JSON for rows not yet migrated | string |
+| `focus_keyword` | `focus_keyword`, falling back to the focus keyphrase in the legacy `keyphrases` JSON (4.x schemas and rows not yet migrated) | string |
 | `opengraph_title`, `opengraph_description`, `opengraph_image_custom_url` | `og_title`, `og_description`, `og_image_custom_url` | string |
 | `twitter_title`, `twitter_description`, `twitter_image_custom_url` | `twitter_title`, `twitter_description`, `twitter_image_custom_url` | string |
 | `seo_score` | `seo_score` | integer |
