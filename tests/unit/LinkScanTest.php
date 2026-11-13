@@ -613,6 +613,118 @@ final class LinkScanTest extends TestCase {
 		self::assertSame( 5, $data['next_offset'] );
 	}
 
+	public function test_two_same_host_redirects_end_terminal_and_the_continuation_advances(): void {
+		self::public_host( 'a.test' );
+		State::$responses = array(
+			'HEAD https://a.test/x' => array( 'code' => 301, 'headers' => array( 'location' => '/y' ) ),
+			'HEAD https://a.test/y' => array( 'code' => 302, 'headers' => array( 'location' => '/z' ) ),
+		);
+		$content = '<a href="https://a.test/x">x</a><a href="https://a.test/other">o</a>';
+		$data    = self::external( $content );
+		// The third a.test request would exceed the per-host cap: terminal redirect, not a deferral.
+		self::assertSame( array( 'redirect', 302 ), array( $data['links'][0]['status'], $data['links'][0]['http_status'] ) );
+		self::assertSame( array( 'HEAD https://a.test/x', 'HEAD https://a.test/y' ), State::sent() );
+		self::assertSame( 'not_checked', $data['links'][1]['status'], 'No request was sent for the second link.' );
+		self::assertSame( 1, $data['next_offset'] );
+
+		State::$sent = array();
+		$next        = self::external( $content, array( 'offset' => 1 ) );
+		self::assertSame( array( 'HEAD https://a.test/other' ), State::sent(), 'The redirect chain is not requested again.' );
+		self::assertSame( 'ok', $next['links'][0]['status'] );
+		self::assertNull( $next['next_offset'] );
+
+		// A lone link needs no continuation at all.
+		State::$sent = array();
+		$only        = self::external( '<a href="https://a.test/x">x</a>' );
+		self::assertSame( 'redirect', $only['links'][0]['status'] );
+		self::assertNull( $only['next_offset'] );
+	}
+
+	public function test_redirect_then_405_on_the_same_host_reports_the_405_class(): void {
+		self::public_host( 'a.test' );
+		State::$responses = array(
+			'HEAD https://a.test/x' => array( 'code' => 301, 'headers' => array( 'location' => '/y' ) ),
+			'HEAD https://a.test/y' => array( 'code' => 405 ),
+		);
+		$data = self::external( '<a href="https://a.test/x">x</a>' );
+		self::assertSame( array( 'client_error', 405 ), array( $data['links'][0]['status'], $data['links'][0]['http_status'] ) );
+		self::assertSame( array( 'HEAD https://a.test/x', 'HEAD https://a.test/y' ), State::sent(), 'The GET fallback would exceed the per-host cap.' );
+		self::assertNull( $data['next_offset'] );
+
+		State::reset();
+		self::post( self::POST, '' );
+		self::public_host( 'a.test' );
+		State::$responses = array(
+			'HEAD https://a.test/x' => array( 'code' => 301, 'headers' => array( 'location' => '/y' ) ),
+			'HEAD https://a.test/y' => array( 'code' => 501 ),
+		);
+		$data = self::external( '<a href="https://a.test/x">x</a>' );
+		self::assertSame( array( 'server_error', 501 ), array( $data['links'][0]['status'], $data['links'][0]['http_status'] ) );
+		self::assertNull( $data['next_offset'] );
+	}
+
+	public function test_request_cap_cuts_a_redirect_chain_to_a_terminal_redirect(): void {
+		$content   = '';
+		$responses = array();
+		for ( $i = 1; $i <= 5; ++$i ) {
+			self::public_host( "h{$i}.test" );
+			$content .= '<a href="https://h' . $i . '.test/">' . $i . '</a>';
+		}
+		self::public_host( 'z.test' );
+		// Links 1-4 use 8 requests; link 5 takes the 9th and its redirect hop the 10th, so the next hop is cut by the request cap.
+		for ( $i = 1; $i <= 4; ++$i ) {
+			$responses[ 'HEAD https://h' . $i . '.test/' ] = array( 'code' => 405 );
+		}
+		$responses['HEAD https://h5.test/'] = array( 'code' => 301, 'headers' => array( 'location' => 'https://z.test/' ) );
+		$responses['HEAD https://z.test/']  = array( 'code' => 307, 'headers' => array( 'location' => 'https://z.test/next' ) );
+		State::$responses                   = $responses;
+		$data                               = self::external( $content );
+		self::assertCount( 10, State::$sent );
+		self::assertSame( array( 'redirect', 307 ), array( $data['links'][4]['status'], $data['links'][4]['http_status'] ) );
+		self::assertNull( $data['next_offset'] );
+	}
+
+	public function test_following_next_offset_always_terminates_with_strict_progress(): void {
+		foreach ( array( 'a', 'b', 'c' ) as $host ) {
+			self::public_host( "{$host}.test" );
+		}
+		$content   = '';
+		$responses = array();
+		foreach ( array( 'a', 'b', 'c' ) as $host ) {
+			for ( $i = 1; $i <= 4; ++$i ) {
+				$content .= '<a href="https://' . $host . '.test/' . $i . '">l</a>';
+			}
+			// Same-host redirect chains and 405 fallbacks mixed with plain links.
+			$responses[ "HEAD https://{$host}.test/1" ] = array( 'code' => 301, 'headers' => array( 'location' => '/r1' ) );
+			$responses[ "HEAD https://{$host}.test/r1" ] = array( 'code' => 302, 'headers' => array( 'location' => '/r2' ) );
+			$responses[ "HEAD https://{$host}.test/2" ] = array( 'code' => 301, 'headers' => array( 'location' => '/r3' ) );
+			$responses[ "HEAD https://{$host}.test/r3" ] = array( 'code' => 405 );
+			$responses[ "HEAD https://{$host}.test/3" ] = array( 'code' => 405 );
+		}
+		State::$responses = $responses;
+		$offset           = 0;
+		$statuses         = array();
+		$calls            = 0;
+		while ( null !== $offset ) {
+			self::assertLessThan( 30, ++$calls, 'The continuation must terminate.' );
+			State::$sent = array();
+			$data        = self::external( $content, array( 'offset' => $offset, 'max_links' => 50 ) );
+			self::assertNotEmpty( State::$sent, 'Every call makes at least one request.' );
+			if ( null !== $data['next_offset'] ) {
+				self::assertGreaterThan( $offset, $data['next_offset'], 'next_offset must strictly advance.' );
+			}
+			foreach ( $data['links'] as $record ) {
+				if ( 'not_checked' !== $record['status'] ) {
+					$statuses[ $record['url'] ] = $record['status'];
+				}
+			}
+			$offset = $data['next_offset'];
+		}
+		self::assertCount( 12, $statuses, 'Every link ends with a terminal status.' );
+		self::assertSame( 'redirect', $statuses['https://a.test/1'] );
+		self::assertSame( 'client_error', $statuses['https://a.test/2'] );
+	}
+
 	public function test_per_host_cap(): void {
 		self::public_host( 'a.test' );
 		self::public_host( 'b.test' );
