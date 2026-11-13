@@ -859,6 +859,103 @@
                 }
             ],
             "changed": []
+        },
+        {
+            "issue": 224,
+            "summary": "Rank Math and All in One SEO metadata: inactive-provider and subscriber-denial cases",
+            "before_count": 623,
+            "before_sha256": "1e9e4927f87590848d427116ea0181868c640ed12c6f823b208ea874dc9a0ea8",
+            "after_count": 627,
+            "after_sha256": "51a87c5a95c99a4cb7718b73b74cf84a9e05261847df77340d1e6823ec8d3bce",
+            "added": [
+                {
+                    "index": 395,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/get-rankmath-metadata",
+                        "label": "get-rankmath-metadata without Rank Math reports inactive",
+                        "role": "admin",
+                        "input": {
+                            "post_id": "__post_id__"
+                        },
+                        "expect": "success",
+                        "assert_permission": true,
+                        "assert_values": {
+                            "data.rankmath_active": false
+                        },
+                        "assert_paths": [
+                            "data.note"
+                        ],
+                        "assert_missing_paths": [
+                            "data.metadata",
+                            "data.untrusted_fields",
+                            "data.post_id"
+                        ]
+                    }
+                },
+                {
+                    "index": 396,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/get-rankmath-metadata",
+                        "label": "get-rankmath-metadata as subscriber",
+                        "role": "subscriber",
+                        "input": {
+                            "post_id": "__post_id__"
+                        },
+                        "expect": "failure",
+                        "expect_error_code": "forbidden",
+                        "expect_error_reason": "ability_invalid_permissions",
+                        "expect_error_shape": "canonical",
+                        "assert_permission": "forbidden",
+                        "assert_missing_paths": [
+                            "data"
+                        ]
+                    }
+                },
+                {
+                    "index": 397,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/get-aioseo-metadata",
+                        "label": "get-aioseo-metadata without All in One SEO reports inactive",
+                        "role": "admin",
+                        "input": {
+                            "post_id": "__post_id__"
+                        },
+                        "expect": "success",
+                        "assert_permission": true,
+                        "assert_values": {
+                            "data.aioseo_active": false
+                        },
+                        "assert_paths": [
+                            "data.note"
+                        ],
+                        "assert_missing_paths": [
+                            "data.metadata",
+                            "data.untrusted_fields",
+                            "data.post_id"
+                        ]
+                    }
+                },
+                {
+                    "index": 398,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/get-aioseo-metadata",
+                        "label": "get-aioseo-metadata as subscriber",
+                        "role": "subscriber",
+                        "input": {
+                            "post_id": "__post_id__"
+                        },
+                        "expect": "failure",
+                        "expect_error_code": "forbidden",
+                        "expect_error_reason": "ability_invalid_permissions",
+                        "expect_error_shape": "canonical",
+                        "assert_permission": "forbidden",
+                        "assert_missing_paths": [
+                            "data"
+                        ]
+                    }
+                }
+            ],
+            "changed": []
         }
     ]
 }

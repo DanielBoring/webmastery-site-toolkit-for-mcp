@@ -169,8 +169,10 @@ $required_failure_cases = array(
 	'webmastery-site-toolkit-for-mcp/delete-tag',
 	'webmastery-site-toolkit-for-mcp/get-environment-info',
 	'webmastery-site-toolkit-for-mcp/get-media',
+	'webmastery-site-toolkit-for-mcp/get-aioseo-metadata',
 	'webmastery-site-toolkit-for-mcp/get-page',
 	'webmastery-site-toolkit-for-mcp/get-post',
+	'webmastery-site-toolkit-for-mcp/get-rankmath-metadata',
 	'webmastery-site-toolkit-for-mcp/get-user',
 	'webmastery-site-toolkit-for-mcp/list-site-kit-modules',
 	'webmastery-site-toolkit-for-mcp/get-site-kit-permissions',
@@ -211,6 +213,7 @@ $required_permission_cases = array(
 	'bulk-trash-posts', 'bulk-publish-posts', 'delete-category', 'delete-tag', 'delete-media',
 	'delete-post', 'delete-page', 'delete-cpt-mcp-book', 'delete-cpt-mcp-case-study',
 	'delete-post-meta', 'get-post', 'get-page', 'get-media', 'seo-analyze-post',
+	'get-rankmath-metadata', 'get-aioseo-metadata',
 	'list-posts', 'list-pages', 'list-categories', 'list-tags',
 );
 foreach ( $required_permission_cases as $slug ) {

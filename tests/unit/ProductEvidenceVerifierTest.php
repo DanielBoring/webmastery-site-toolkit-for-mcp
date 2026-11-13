@@ -88,7 +88,7 @@ final class ProductEvidenceVerifierTest extends TestCase {
 			'binding' => array( 'owner' => $context['run'], 'project' => $context['project'], 'identity_kind' => 'package', 'identity_sha256' => $context['identity_sha256'] ),
 			'status' => 'passed', 'cleanup_complete' => true, 'php' => '8.2.31', 'uid' => 33, 'exit' => 0 );
 		if ( 'bounded' === $stage ) { $verdict['catalogs'] = array(); }
-		else { $verdict += array( 'expected_labels' => array(), 'observed_labels' => array(), 'passed' => 301, 'failed' => 0 ); }
+		else { $verdict += array( 'expected_labels' => array(), 'observed_labels' => array(), 'passed' => 303, 'failed' => 0 ); }
 		return $verdict;
 	}
 
@@ -328,7 +328,7 @@ final class ProductEvidenceVerifierTest extends TestCase {
 		self::assertNull( Wstm_Product_Evidence_Verifier::replay_case( $case, $response ) );
 		$response['data']->items[] = clone $record;
 		$this->refuses( static fn() => Wstm_Product_Evidence_Verifier::replay_case( $case, $response ) );
-		self::assertCount( 301, Wstm108_Plan::labels( Wstm108_Plan::native_from_manifest( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ) ) );
+		self::assertCount( 303, Wstm108_Plan::labels( Wstm108_Plan::native_from_manifest( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ) ) );
 		$case['label'] = 'gateway:post:revisions';
 		$this->expectException( Wstm_Product_Evidence_Gap::class );
 		Wstm_Product_Evidence_Verifier::replay_case( $case, array( 'success' => true, 'data' => new stdClass() ) );

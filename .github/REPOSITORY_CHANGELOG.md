@@ -6,6 +6,15 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add four `get-rankmath-metadata` / `get-aioseo-metadata` E2E manifest
+  cases (#224; manifest now 90 abilities, 627 cases, ledger step 224): an
+  administrator case per ability asserting the provider-inactive success (no
+  Rank Math or All in One SEO on the QA site) and a subscriber denial with
+  exact permission proof. Both abilities join the security-QA validator's
+  required negative and permission-denial lists. The new-ability count pins move
+  by two to 90 native abilities, 95 annotation observations/individual tools and
+  303 untrusted labels. The metadata boundary unit stubs gain a namespaced
+  `has_filter()` and report the two providers active.
 - Add six `get-cron-status` E2E manifest cases (#226; manifest now 88
   abilities, 623 cases, ledger step 226; admin and paging cases assert the
   `hook`/`schedule` record markers, the `overdue_only` case asserts presence

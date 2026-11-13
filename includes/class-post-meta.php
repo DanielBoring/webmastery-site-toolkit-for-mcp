@@ -50,6 +50,30 @@ final class Webmastery_MCP_Post_Meta {
 		'video_sitemap_disabled' => [ '_seopress_video_disabled', null ],
 	];
 
+	// Rank Math post meta (not underscore-prefixed; Rank Math marks rank_math_* protected while active).
+	// Inspect-only: never writable and never a generic get-post-meta grant.
+	private const RANKMATH = [
+		'title'                 => 'rank_math_title',
+		'meta_description'      => 'rank_math_description',
+		'focus_keywords'        => 'rank_math_focus_keyword',
+		'canonical_url'         => 'rank_math_canonical_url',
+		'robots'                => 'rank_math_robots',
+		'seo_score'             => 'rank_math_seo_score',
+		'pillar_content'        => 'rank_math_pillar_content',
+		'primary_category'      => 'rank_math_primary_category',
+		'breadcrumb_title'      => 'rank_math_breadcrumb_title',
+		'opengraph_title'       => 'rank_math_facebook_title',
+		'opengraph_description' => 'rank_math_facebook_description',
+		'opengraph_image'       => 'rank_math_facebook_image',
+		'twitter_title'         => 'rank_math_twitter_title',
+		'twitter_description'   => 'rank_math_twitter_description',
+		'twitter_image'         => 'rank_math_twitter_image',
+	];
+
+	public static function rankmath_keys(): array {
+		return self::RANKMATH;
+	}
+
 	public static function yoast_keys(): array {
 		return array_map( static fn( $definition ) => $definition[0], self::YOAST );
 	}
@@ -126,11 +150,11 @@ final class Webmastery_MCP_Post_Meta {
 	}
 
 	public static function can_read_post_meta_key( int $post_id, string $key ): bool {
-		return self::can_edit_post_meta_key( $post_id, $key );
+		return self::can_edit_post_meta_key( $post_id, $key, 'edit_post_meta', in_array( $key, self::RANKMATH, true ) );
 	}
 
-	private static function uses_post_meta_compatibility_auth( $key, $type ) {
-		return isset( self::allowed_protected_post_meta_keys()[ $key ] )
+	private static function uses_post_meta_compatibility_auth( $key, $type, $inspect_only = false ) {
+		return ( $inspect_only || isset( self::allowed_protected_post_meta_keys()[ $key ] ) )
 			&& ! isset( get_registered_meta_keys( 'post' )[ $key ] )
 			&& ! isset( get_registered_meta_keys( 'post', $type )[ $key ] )
 			&& ! has_filter( "auth_post_meta_{$key}" )
@@ -138,13 +162,13 @@ final class Webmastery_MCP_Post_Meta {
 			&& ! has_filter( "auth_post_{$type}_meta_{$key}" );
 	}
 
-	private static function can_edit_post_meta_key( $post_id, $key, $cap = 'edit_post_meta' ) {
+	private static function can_edit_post_meta_key( $post_id, $key, $cap = 'edit_post_meta', $inspect_only = false ) {
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return false;
 		}
 
 		$type = get_post_type( $post_id );
-		if ( ! self::uses_post_meta_compatibility_auth( $key, $type ) ) {
+		if ( ! self::uses_post_meta_compatibility_auth( $key, $type, $inspect_only ) ) {
 			return current_user_can( $cap, $post_id, $key );
 		}
 

@@ -8270,6 +8270,64 @@
         "expect_error_shape": "canonical"
     },
     {
+        "ability": "webmastery-site-toolkit-for-mcp/get-rankmath-metadata",
+        "label": "get-rankmath-metadata without Rank Math reports inactive",
+        "role": "admin",
+        "input": {
+            "post_id": "__post_id__"
+        },
+        "expect": "success",
+        "assert_permission": true,
+        "assert_values": {
+            "data.rankmath_active": false
+        },
+        "assert_paths": ["data.note"],
+        "assert_missing_paths": ["data.metadata", "data.untrusted_fields", "data.post_id"]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-rankmath-metadata",
+        "label": "get-rankmath-metadata as subscriber",
+        "role": "subscriber",
+        "input": {
+            "post_id": "__post_id__"
+        },
+        "expect": "failure",
+        "expect_error_code": "forbidden",
+        "expect_error_reason": "ability_invalid_permissions",
+        "expect_error_shape": "canonical",
+        "assert_permission": "forbidden",
+        "assert_missing_paths": ["data"]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-aioseo-metadata",
+        "label": "get-aioseo-metadata without All in One SEO reports inactive",
+        "role": "admin",
+        "input": {
+            "post_id": "__post_id__"
+        },
+        "expect": "success",
+        "assert_permission": true,
+        "assert_values": {
+            "data.aioseo_active": false
+        },
+        "assert_paths": ["data.note"],
+        "assert_missing_paths": ["data.metadata", "data.untrusted_fields", "data.post_id"]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-aioseo-metadata",
+        "label": "get-aioseo-metadata as subscriber",
+        "role": "subscriber",
+        "input": {
+            "post_id": "__post_id__"
+        },
+        "expect": "failure",
+        "expect_error_code": "forbidden",
+        "expect_error_reason": "ability_invalid_permissions",
+        "expect_error_shape": "canonical",
+        "assert_permission": "forbidden",
+        "assert_missing_paths": ["data"]
+    },
+    {
         "ability": "webmastery-site-toolkit-for-mcp/webmaster-verification-status",
         "label": "wstm114 subscriber public verification cold cache",
         "role": "subscriber",

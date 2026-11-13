@@ -348,7 +348,7 @@ run_php_lint() {
 }
 
 run_parent_assignment_qa() (
-	# Dedicated CPTs must not affect the normal 88-ability registration audit.
+	# Dedicated CPTs must not affect the normal 90-ability registration audit.
 	local fixture="/var/www/html/wp-content/mu-plugins/wstm-issue106-parent.php"
 	local boundaries=()
 	local boundary
@@ -746,7 +746,7 @@ run_product_qa() (
 					foreach (wp_get_abilities() as $ability) {
 						if (strpos($ability->get_name(), "webmastery-site-toolkit-for-mcp/") === 0) { ++$count; }
 					}
-					if ($count !== 88) { throw new RuntimeException("Native toolkit inventory was not restored."); }
+					if ($count !== 90) { throw new RuntimeException("Native toolkit inventory was not restored."); }
 					' > "$directory/native-inventory.private.log" 2>&1 || cleanup=$?
 			fi
 			if [[ "$cleanup" == 0 ]]; then

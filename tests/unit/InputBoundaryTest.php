@@ -50,7 +50,7 @@ final class InputBoundaryTest extends TestCase {
 		$names = array_column( $manifest, 'ability' );
 		self::assertGreaterThan( 60, count( Probe::$abilities ) );
 		self::assertCount( 20, Probe::$classes );
-		self::assertCount( 88, Probe::$abilities );
+		self::assertCount( 90, Probe::$abilities );
 		foreach ( Probe::$abilities as $name => $args ) {
 			self::assertContains( $name, $names );
 			$cases = array_filter( $manifest, static fn( $case ) => $name === $case['ability'] );
