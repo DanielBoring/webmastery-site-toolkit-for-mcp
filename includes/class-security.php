@@ -244,14 +244,27 @@ class Webmastery_MCP_Security {
 		$active_plugins = Webmastery_MCP_Plugins::active_basenames();
 		if ( in_array( 'two-factor/two-factor.php', $active_plugins, true ) ) {
 			$enrollment = self::two_factor_enrollment();
+			if ( $enrollment['verified'] ) {
+				$noun     = 'has a usable second factor';
+				$missing  = 'have no usable two-factor method (no enabled provider that is currently available) or could not be verified.';
+				$fallback = '';
+			} else {
+				$noun     = 'has a provider enabled';
+				$missing  = 'have no two-factor provider enabled.';
+				$fallback = ' Provider usability was not verified because the Two-Factor plugin API was unavailable; an account whose only provider is exhausted recovery codes would still count as enrolled.';
+			}
 			if ( $enrollment['missing'] > 0 ) {
-				$detail = "{$enrollment['missing']} of {$enrollment['checked']} administrator account(s) checked have no two-factor provider enabled.";
+				$detail = "{$enrollment['missing']} of {$enrollment['checked']} administrator account(s) checked {$missing}";
 				if ( $enrollment['checked'] >= 100 ) {
 					$detail .= ' Only the first 100 administrators are checked.';
 				}
-				$warn[] = [ 'check' => 'two_factor', 'label' => 'Some administrators have not enabled two-factor authentication', 'detail' => $detail ];
+				$warn[] = [ 'check' => 'two_factor', 'label' => 'Some administrators have not enabled two-factor authentication', 'detail' => $detail . $fallback ];
 			} else {
-				$pass[] = [ 'check' => 'two_factor', 'label' => 'The Two-Factor plugin is active and every administrator checked has a provider enabled' ];
+				$finding = [ 'check' => 'two_factor', 'label' => "The Two-Factor plugin is active and every administrator checked {$noun}" ];
+				if ( '' !== $fallback ) {
+					$finding['detail'] = trim( $fallback );
+				}
+				$pass[] = $finding;
 			}
 		} elseif ( array_intersect( self::TWO_FACTOR_PLUGINS, $active_plugins ) ) {
 			$pass[] = [ 'check' => 'two_factor', 'label' => 'A two-factor capable plugin is active', 'detail' => 'Per-administrator enrollment was not verified; confirm in the plugin that every administrator has a second factor.' ];
@@ -303,21 +316,38 @@ class Webmastery_MCP_Security {
 	}
 
 	/**
-	 * Count administrators (first 100) without an enabled provider in the Two-Factor plugin's user meta.
+	 * Count administrators (first 100) without a usable second factor.
 	 *
-	 * @return array{missing: int, checked: int}
+	 * Uses the Two-Factor plugin's Two_Factor_Core::is_user_using_two_factor() (since 0.2.0), which
+	 * counts only providers that are both enabled and available (for example, recovery codes with no
+	 * codes left do not count). A Throwable from that code counts the administrator as not verified.
+	 * Without the class or method, falls back to the raw enabled-providers user meta, which does not
+	 * prove a provider is usable.
+	 *
+	 * @return array{missing: int, checked: int, verified: bool} verified is true when the plugin API was used.
 	 */
 	private static function two_factor_enrollment() {
 		$ids     = get_users( [ 'role' => 'administrator', 'number' => 100, 'orderby' => 'ID', 'fields' => 'ID' ] );
 		$ids     = is_array( $ids ) ? $ids : [];
+		$core    = 'Two_Factor_Core';
+		$api     = class_exists( $core ) && is_callable( [ $core, 'is_user_using_two_factor' ] );
 		$missing = 0;
 		foreach ( $ids as $id ) {
-			if ( empty( get_user_meta( (int) $id, '_two_factor_enabled_providers', true ) ) ) {
+			if ( $api ) {
+				try {
+					$enrolled = (bool) $core::is_user_using_two_factor( (int) $id );
+				} catch ( \Throwable $e ) {
+					$enrolled = false;
+				}
+			} else {
+				$enrolled = ! empty( get_user_meta( (int) $id, '_two_factor_enabled_providers', true ) );
+			}
+			if ( ! $enrolled ) {
 				++$missing;
 			}
 		}
 
-		return [ 'missing' => $missing, 'checked' => count( $ids ) ];
+		return [ 'missing' => $missing, 'checked' => count( $ids ), 'verified' => $api ];
 	}
 
 	private static function configured_home_scheme( $home_url ) {
