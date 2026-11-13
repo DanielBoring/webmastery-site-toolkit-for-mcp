@@ -84,6 +84,7 @@
 			<file>tests/unit/InputSchemaLifecycleTest.php</file>
 			<file>tests/unit/InputSchemaProofTest.php</file>
 			<file>tests/unit/LegacyArtifactsTest.php</file>
+			<file>tests/unit/ManifestCaseLedgerTest.php</file>
 			<file>tests/unit/MediaManifestTest.php</file>
 			<file>tests/unit/MetadataBatchFixtureTest.php</file>
 			<file>tests/unit/MetadataMigrationTest.php</file>

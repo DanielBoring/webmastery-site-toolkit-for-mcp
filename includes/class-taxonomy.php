@@ -93,7 +93,7 @@ class Webmastery_MCP_Taxonomy {
 
 				return [
 					'success' => true,
-					'data'    => array_map( [ self::class, 'normalize_term' ], $terms ),
+					'data'    => array_values( array_map( [ self::class, 'normalize_term' ], $terms ) ),
 				];
 			},
 			'permission_callback' => Webmastery_MCP_Permissions::cap( 'read' ),

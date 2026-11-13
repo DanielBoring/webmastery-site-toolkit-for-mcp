@@ -6,10 +6,11 @@ use PHPUnit\Framework\AssertionFailedError;
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/fixtures/bounded-manifest-projection.php';
+require_once __DIR__ . '/fixtures/manifest-case-ledger.php';
 
 final class BoundedManifestProjectionTest extends TestCase {
 	private static function manifest(): array {
-		return json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		return ManifestCaseLedger::sealed();
 	}
 
 	public function test_both_historical_views_retain_their_exact_cardinality(): void {

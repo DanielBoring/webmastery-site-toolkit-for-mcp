@@ -77,6 +77,7 @@
       "InputSchemaLifecycleTest.php",
       "InputSchemaProofTest.php",
       "LegacyArtifactsTest.php",
+      "ManifestCaseLedgerTest.php",
       "MediaManifestTest.php",
       "MetadataBatchFixtureTest.php",
       "MetadataMigrationTest.php",

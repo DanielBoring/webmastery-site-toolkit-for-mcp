@@ -6,6 +6,17 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add six E2E manifest cases and strengthen two (#238): term list paging for
+  `list-categories` and `list-tags` (a second page and a page past the end),
+  `backup_verified: true` for UpdraftPlus and BackWPup, a Jetpack-only
+  `backup-status` case, and a single `auth_keys` finding in `security-audit`.
+  The manifest has 607 cases. Historical tooling tests now reduce the live
+  manifest to the sealed 601 cases through a new recorded ledger
+  (`tests/unit/fixtures/manifest-case-ledger.json`, written by
+  `php tests/unit/fixtures/manifest-case-ledger.php record`) instead of
+  requiring an unchanged manifest; `ManifestCaseLedgerTest` refuses unrecorded
+  manifest drift.
+
 - Make `composer qa:unit` and `composer qa:tooling` disable Composer's 300
   second process timeout, like `qa:local` and `e2e`, so slow machines no longer
   kill the PHPUnit run part-way. `qa` and `test` inherit the change through

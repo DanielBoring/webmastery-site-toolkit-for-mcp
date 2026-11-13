@@ -5,10 +5,11 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/fixtures/bounded-manifest-projection.php';
+require_once __DIR__ . '/fixtures/manifest-case-ledger.php';
 
 final class SchemaIntegrationLedgerTest extends TestCase {
 	private function manifest(): array {
-		$manifest = json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		$manifest = ManifestCaseLedger::sealed();
 		return BoundedManifestProjection::schema_source( $manifest );
 	}
 
