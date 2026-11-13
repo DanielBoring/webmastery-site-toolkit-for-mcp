@@ -484,7 +484,8 @@ Administrator only); Editors, Authors and Subscribers get `forbidden` /
 `ability_invalid_permissions`.
 
 Input is a closed object: optional `per_page` (1-100, default 50) and `page`
-(1 or more, default 1). Themes are sorted by stylesheet (directory slug) so
+(1 or more, default 1); the whole input may be omitted or `null`, which means
+the defaults for both the permission check and the call. Themes are sorted by stylesheet (directory slug) so
 pages are stable; continue until `next_page` is `null`. A page past the end
 returns `items: []` and `next_page: null`. On multisite only themes allowed for
 the current site are listed (`wp_get_themes( [ 'allowed' => true ] )`); themes
