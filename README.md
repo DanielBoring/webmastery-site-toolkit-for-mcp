@@ -26,7 +26,7 @@ permission-aware abilities** for AI agents that speak the
 [Model Context Protocol (MCP)](https://modelcontextprotocol.io), including
 Claude, ChatGPT, GitHub Copilot, Gemini, Windsurf, and Codex. Agents can write
 and edit posts and pages, manage media, comments, categories and tags, review
-Yoast SEO and SEOPress metadata, check Google Site Kit, and audit plugins,
+Yoast SEO, SEOPress, Rank Math and All in One SEO metadata, check Google Site Kit, and audit plugins,
 users, security, and site health, all without logging in to wp-admin.
 
 It builds on the official [MCP Adapter](https://github.com/WordPress/mcp-adapter)
@@ -43,7 +43,7 @@ WordPress user and enforces that user's roles and capabilities.
 | --- | --- | --- |
 | Posts and pages | Create, list, read, update, schedule, publish, restore, and trash; bulk publish and bulk trash up to 100 posts | Author or Editor |
 | Blocks and revisions | Inspect Gutenberg blocks, patch one block or section, list and restore revisions | Author or Editor |
-| Post meta and SEO | Read and write individual meta keys, including Yoast SEO and SEOPress fields; analyze SEO and read Yoast scores | Author to Administrator |
+| Post meta and SEO | Read and write individual meta keys, including Yoast SEO and SEOPress fields; inspect Rank Math and All in One SEO metadata; analyze SEO and read Yoast scores | Author to Administrator |
 | Custom post types | Discover public custom post types and use generated list/get/create/update/delete abilities | The type's capabilities |
 | Taxonomy | List, create, update, and delete categories and tags | Subscriber to read; Editor to write |
 | Comments | List, reply, edit, approve, hold, trash, and mark spam | Editor (replies: Contributor or Author) |
@@ -75,6 +75,8 @@ cover exact inputs, permissions, paging, errors, and result fields.
 | [MCP Adapter](https://github.com/WordPress/mcp-adapter) | Latest; tested with 0.6.1 and 0.7.0 ([assessment](docs/reference/mcp-adapter-0.7-assessment.md)) |
 | [Yoast SEO](https://wordpress.org/plugins/wordpress-seo/) | Optional; enables Yoast metadata, score, and sitemap diagnostics |
 | [SEOPress](https://wordpress.org/plugins/wp-seopress/) | Optional; enables SEOPress metadata and site overview diagnostics |
+| [Rank Math SEO](https://wordpress.org/plugins/seo-by-rank-math/) | Optional; enables read-only Rank Math metadata inspection |
+| [All in One SEO](https://wordpress.org/plugins/all-in-one-seo-pack/) | Optional; enables read-only All in One SEO metadata inspection (5.x data model) |
 | [Google Site Kit](https://wordpress.org/plugins/google-site-kit/) | Optional; enables the Site Kit status, module, permission, and PageSpeed abilities |
 
 Self-hosted WordPress is required. This works on WordPress installs where custom plugins can be added, including most managed hosts. It does not work on WordPress.com Free, Personal, or Premium plans.

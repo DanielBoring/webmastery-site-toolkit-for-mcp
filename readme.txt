@@ -26,6 +26,7 @@ Highlights:
 * Manage categories, tags, comments, media metadata, featured images, and public image URL uploads.
 * Discover eligible public custom post types and use generated CRUD abilities for each one.
 * Read, update, and delete safe post meta, including supported Yoast SEO and SEOPress metadata fields.
+* Inspect Rank Math and All in One SEO metadata for a post or page (read-only, allowlisted fields).
 * Run content hygiene checks for orphaned media, missing featured images, and stuck scheduled posts.
 * Inspect safe site and current-user context, with runtime environment details reserved for Administrator accounts.
 * Audit plugins, installed themes (active, parent and cached update status), available core, plugin and theme updates from cached data, WP-Cron schedule health (overdue events and cron configuration, never event arguments), administrator accounts, backups, performance settings, database bloat, site health, and security posture.
@@ -112,7 +113,7 @@ A dedicated account limits the agent to the role you choose, makes activity easi
 
 = Do I need Yoast SEO or SEOPress? =
 
-No. Structural SEO checks still work without either plugin. Yoast-specific metadata and score abilities require Yoast SEO. SEOPress-specific metadata inspection and writes require SEOPress.
+No. Structural SEO checks still work without either plugin. Yoast-specific metadata and score abilities require Yoast SEO. SEOPress-specific metadata inspection and writes require SEOPress. Rank Math and All in One SEO metadata inspection (read-only) require those plugins; All in One SEO inspection reads its 5.x per-post data.
 
 = Do I need Google Site Kit? =
 

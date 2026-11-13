@@ -33,7 +33,7 @@ final class Wstm_Product_Summary {
 		}
 		$context = self::runtime($context_bytes, $records['runtime']);
 		$expected = [
-			'untrusted' => ['untrusted', 'records-verified-live-absence-unresolved', 301],
+			'untrusted' => ['untrusted', 'records-verified-live-absence-unresolved', 303],
 			'untrusted-live' => ['untrusted', 'live-absence-verified', 1],
 			'bounded' => ['bounded', 'records-verified-live-absence-unresolved', 1461],
 			'bounded-live' => ['bounded', 'live-absence-verified', 2],
@@ -52,7 +52,7 @@ final class Wstm_Product_Summary {
 			'status' => 'passed',
 			'lane' => $context['php_floor'],
 			'uid' => 33,
-			'untrusted_cases' => 301,
+			'untrusted_cases' => 303,
 			'bounded_observations' => 1461,
 		];
 	}

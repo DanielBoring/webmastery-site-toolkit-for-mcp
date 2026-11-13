@@ -234,6 +234,8 @@ final class SeoMetadataBoundaryTest extends TestCase {
 			array( 'get-yoast-metadata', array( 'post_id' => 42 ) ),
 			array( 'get-yoast-metadata', array( 'url' => 'https://example.test/' ) ),
 			array( 'get-seopress-metadata', array( 'post_id' => 42 ) ),
+			array( 'get-rankmath-metadata', array( 'post_id' => 42 ) ),
+			array( 'get-aioseo-metadata', array( 'post_id' => 42 ) ),
 			array( 'get-seo-scores', array() ),
 			array( 'get-readability-scores', array() ),
 			array( 'seo-site-overview', array() ),
@@ -245,9 +247,11 @@ final class SeoMetadataBoundaryTest extends TestCase {
 	 */
 	public function test_direct_reads_enforce_base_permissions_before_metadata_work( string $slug, array $input ): void {
 		Probe::reset();
+		$wpdb = $this->aioseo_database( array( 'title' => 'WSTM_AIOSEO_FORBIDDEN' ) );
 		Probe::$deny_base = true;
 		$result = $this->execute( $slug, $input );
 		self::assertFalse( $result['success'] );
+		self::assertSame( array(), $wpdb->queries );
 		self::assertSame( array(), Probe::$queries );
 		self::assertSame( array(), Probe::$reads );
 		self::assertSame( array(), Probe::$head_requests );
@@ -327,11 +331,13 @@ final class SeoMetadataBoundaryTest extends TestCase {
 	}
 
 	public function test_inactive_provider_inspection_and_scores_do_not_read_metadata(): void {
-		foreach ( array( 'get-yoast-metadata', 'get-seopress-metadata', 'get-seo-scores', 'get-readability-scores' ) as $slug ) {
+		foreach ( array( 'get-yoast-metadata', 'get-seopress-metadata', 'get-rankmath-metadata', 'get-aioseo-metadata', 'get-seo-scores', 'get-readability-scores' ) as $slug ) {
 			Probe::reset();
+			$wpdb = $this->aioseo_database( array( 'title' => 'WSTM_AIOSEO_INACTIVE' ) );
 			Probe::$providers_active = false;
 			$result = $this->execute( $slug, array( 'post_id' => 42 ) );
 			self::assertTrue( $result['success'] );
+			self::assertSame( array(), $wpdb->queries );
 			self::assertSame( array(), Probe::$reads );
 			self::assertSame( array(), Probe::$queries );
 			self::assertArrayNotHasKey( 'untrusted_fields', $result['data'] );
@@ -364,6 +370,351 @@ final class SeoMetadataBoundaryTest extends TestCase {
 			self::assertSame( array( 'title', 'url', 'metadata', 'raw_meta' ), $result['data']['untrusted_fields'] );
 			self::assertSame( array(), Probe::$head_requests );
 			self::assertArrayNotHasKey( 'untrusted_fields', $result );
+		}
+	}
+
+	/**
+	 * Fake wpdb for the All in One SEO per-post table read.
+	 *
+	 * @param array|null $row   Row returned by get_row (null: no record).
+	 * @param string     $error Error to report after the read.
+	 */
+	private function aioseo_database( ?array $row, string $error = '', bool $throw = false ): object {
+		$wpdb = new class( $row, $error, $throw ) {
+			public string $prefix = 'wp_';
+			public string $last_error = 'WSTM_PREVIOUS_ERROR';
+			public int $num_queries = 0;
+			public array $queries = array();
+			public array $suppress_calls = array();
+			private bool $suppressed = false;
+			private ?array $row;
+			private string $error;
+			private bool $throw;
+
+			public function __construct( ?array $row, string $error, bool $throw ) {
+				$this->row = $row;
+				$this->error = $error;
+				$this->throw = $throw;
+			}
+
+			public function prepare( $query, ...$args ): string {
+				return vsprintf( $query, $args ) . '|' . $query;
+			}
+
+			public function get_row( $query, $output ) {
+				$this->queries[] = array( $query, $output, $this->suppressed );
+				$this->last_error = $this->error;
+				if ( $this->throw ) {
+					throw new RuntimeException( 'WSTM_DB_DROPIN_FAILURE' );
+				}
+				return '' === $this->error ? $this->row : null;
+			}
+
+			public function suppress_errors( $suppress = true ) {
+				$this->suppress_calls[] = $suppress;
+				$previous = $this->suppressed;
+				$this->suppressed = (bool) $suppress;
+				return $previous;
+			}
+
+			public function is_suppressed(): bool {
+				return $this->suppressed;
+			}
+		};
+		$GLOBALS['wpdb'] = $wpdb;
+		return $wpdb;
+	}
+
+	public static function rankmath_keys(): array {
+		$cases = array();
+		foreach ( \Webmastery_MCP_Post_Meta::rankmath_keys() as $field => $key ) {
+			$cases[ $key ] = array( $field, $key );
+		}
+		return $cases;
+	}
+
+	/**
+	 * @dataProvider rankmath_keys
+	 */
+	public function test_rankmath_inspection_omits_denied_key_before_reading( string $field, string $key ): void {
+		Probe::reset();
+		Probe::$denied_keys = array( $key );
+		Probe::$metadata[42][ $key ] = 'WSTM_RANKMATH_FORBIDDEN_MARKER';
+		$result = $this->execute( 'get-rankmath-metadata', array( 'post_id' => 42 ) );
+		self::assertTrue( $result['success'] );
+		self::assertTrue( $result['data']['rankmath_active'] );
+		self::assertNotContains( array( 42, $key ), Probe::$reads );
+		self::assertContains( array( 'edit_post_meta', array( 42, $key ) ), Probe::$capabilities );
+		self::assertSame( array( $field ), array_keys( $result['data']['unavailable_fields'] ) );
+		self::assertSame( 'forbidden', $result['data']['unavailable_fields'][ $field ]['code'] );
+		self::assertSame( 'metadata_not_readable', $result['data']['unavailable_fields'][ $field ]['reason'] );
+		self::assertArrayNotHasKey( $field, $result['data']['metadata'] );
+		if ( 'robots' === $field ) {
+			self::assertArrayNotHasKey( 'robots_noindex', $result['data']['metadata'] );
+		}
+		self::assertSame( array( 'title', 'url', 'metadata' ), $result['data']['untrusted_fields'] );
+		self::assertArrayNotHasKey( 'raw_meta', $result['data'] );
+		self::assertStringNotContainsString( 'WSTM_RANKMATH_FORBIDDEN_MARKER', json_encode( $result ) );
+	}
+
+	public function test_rankmath_denied_post_and_missing_post_never_read_metadata(): void {
+		Probe::reset();
+		Probe::$denied_objects = array( 42 );
+		$ability = Probe::$abilities['webmastery-site-toolkit-for-mcp/get-rankmath-metadata'];
+		self::assertInstanceOf( WP_Error::class, ( $ability['permission_callback'] )( array( 'post_id' => 42 ) ) );
+		$result = $this->execute( 'get-rankmath-metadata', array( 'post_id' => 42 ) );
+		self::assertFalse( $result['success'] );
+		self::assertSame( 'forbidden', $result['error']['code'] );
+		Probe::$denied_objects = array();
+		$result = $this->execute( 'get-rankmath-metadata', array( 'post_id' => 999 ) );
+		self::assertFalse( $result['success'] );
+		self::assertSame( 'not_found', $result['error']['code'] );
+		Probe::reset( 'mcp_book' );
+		$result = $this->execute( 'get-rankmath-metadata', array( 'post_id' => 42 ) );
+		self::assertSame( 'not_found', $result['error']['code'] );
+		self::assertSame( array(), Probe::$reads );
+	}
+
+	public function test_rankmath_normalizes_allowlisted_fields_and_never_reads_other_keys(): void {
+		Probe::reset();
+		$keys = \Webmastery_MCP_Post_Meta::rankmath_keys();
+		Probe::$metadata[42] = array(
+			$keys['title'] => str_repeat( 'T', 1500 ),
+			$keys['meta_description'] => array( 'serialized' => 'WSTM_RANKMATH_BLOB' ),
+			$keys['focus_keywords'] => 'alpha,beta',
+			$keys['canonical_url'] => 'https://example.test/canonical/',
+			$keys['robots'] => array( 'noindex', 'nofollow', 'WSTM_RANKMATH_BAD_DIRECTIVE', array( 'nested' ), 'noindex' ),
+			$keys['seo_score'] => '87',
+			$keys['pillar_content'] => 'on',
+			$keys['primary_category'] => '12',
+			$keys['opengraph_image'] => 'https://example.test/og.jpg',
+			'rank_math_schema_Article' => 'WSTM_RANKMATH_SCHEMA_BODY',
+			'rank_math_advanced_robots' => 'WSTM_RANKMATH_ADVANCED',
+		);
+		$result = $this->execute( 'get-rankmath-metadata', array( 'post_id' => 42 ) );
+		$meta = $result['data']['metadata'];
+		self::assertSame( 1000, mb_strlen( $meta['title'] ) );
+		self::assertNull( $meta['meta_description'] );
+		self::assertSame( 'alpha,beta', $meta['focus_keywords'] );
+		self::assertSame( 'https://example.test/canonical/', $meta['canonical_url'] );
+		self::assertSame( array( 'noindex', 'nofollow' ), $meta['robots'] );
+		self::assertTrue( $meta['robots_noindex'] );
+		self::assertTrue( $meta['robots_nofollow'] );
+		self::assertFalse( $meta['robots_noarchive'] );
+		self::assertSame( 87, $meta['seo_score'] );
+		self::assertTrue( $meta['pillar_content'] );
+		self::assertSame( 12, $meta['primary_category'] );
+		self::assertSame( 'https://example.test/og.jpg', $meta['opengraph_image'] );
+		self::assertNull( $meta['twitter_title'] );
+		self::assertSame( array(), $result['data']['unavailable_fields'] );
+		self::assertSame( array_values( $keys ), array_column( Probe::$reads, 1 ) );
+		$json = json_encode( $result );
+		foreach ( array( 'WSTM_RANKMATH_BLOB', 'WSTM_RANKMATH_BAD_DIRECTIVE', 'WSTM_RANKMATH_SCHEMA_BODY', 'WSTM_RANKMATH_ADVANCED', 'rank_math_' ) as $leak ) {
+			self::assertStringNotContainsString( $leak, $json );
+		}
+		Probe::reset();
+		Probe::$metadata[42] = array( $keys['robots'] => '', $keys['pillar_content'] => 'off', $keys['seo_score'] => 'n/a' );
+		$meta = $this->execute( 'get-rankmath-metadata', array( 'post_id' => 42 ) )['data']['metadata'];
+		self::assertNull( $meta['robots'] );
+		self::assertNull( $meta['robots_noindex'] );
+		self::assertFalse( $meta['pillar_content'] );
+		self::assertNull( $meta['seo_score'] );
+	}
+
+	public function test_rankmath_keys_get_inspect_only_compatibility_default_and_stay_unwritable(): void {
+		Probe::reset();
+		$this->execute( 'get-rankmath-metadata', array( 'post_id' => 42 ) );
+		$keys = \Webmastery_MCP_Post_Meta::rankmath_keys();
+		self::assertSame( array_values( $keys ), array_map( static fn( $call ) => $call[1][1], Probe::$compat_reads ) );
+		self::assertSame( array(), array_intersect( array_values( $keys ), array_keys( \Webmastery_MCP_Post_Meta::writable_keys() ) ) );
+		self::assertSame( array(), $GLOBALS['wstm_test_filters']['auth_post_meta_rank_math_title_for_post'][10] ?? array() );
+		Probe::reset();
+		$this->execute( 'get-seopress-metadata', array( 'post_id' => 42 ) );
+		self::assertSame( array(), Probe::$compat_reads );
+	}
+
+	public function test_aioseo_reads_one_allowlisted_row_without_post_meta_and_normalizes_it(): void {
+		Probe::reset();
+		$wpdb = $this->aioseo_database( array(
+			'title' => '#post_title #separator_sa #site_title',
+			'description' => str_repeat( 'D', 1200 ),
+			'focus_keyword' => 'aioseo keyword',
+			'keyphrases' => '{"focus":{"keyphrase":"WSTM_AIOSEO_LEGACY"}}',
+			'canonical_url' => 'https://example.test/aioseo-canonical/',
+			'og_title' => 'OG',
+			'og_description' => '',
+			'og_image_custom_url' => 'https://example.test/aioseo-og.jpg',
+			'twitter_title' => null,
+			'twitter_description' => array( 'WSTM_AIOSEO_NESTED' ),
+			'twitter_image_custom_url' => 'https://example.test/aioseo-tw.jpg',
+			'seo_score' => '64',
+			'pillar_content' => '1',
+			'primary_term' => '{"category":9,"product_cat":3}',
+			'robots_default' => '0',
+			'robots_noindex' => '1',
+			'robots_nofollow' => '0',
+			'robots_noarchive' => '1',
+			'robots_noimageindex' => '0',
+			'robots_nosnippet' => '0',
+			'schema' => '{"graphs":["WSTM_AIOSEO_SCHEMA_BODY"]}',
+			'options' => 'WSTM_AIOSEO_OPTIONS',
+			'ai' => 'WSTM_AIOSEO_AI',
+			'local_seo' => 'WSTM_AIOSEO_LOCAL',
+			'og_image_custom_fields' => 'WSTM_AIOSEO_CUSTOM_FIELD',
+			'images' => 'WSTM_AIOSEO_IMAGES',
+		) );
+		$result = $this->execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) );
+		self::assertTrue( $result['success'] );
+		self::assertCount( 1, $wpdb->queries );
+		[ $query, $output, $suppressed ] = $wpdb->queries[0];
+		self::assertSame( 'ARRAY_A', $output );
+		self::assertTrue( $suppressed );
+		self::assertFalse( $wpdb->is_suppressed() );
+		self::assertSame( 'SELECT * FROM `wp_aioseo_posts` WHERE post_id = 42 LIMIT 1|SELECT * FROM `wp_aioseo_posts` WHERE post_id = %d LIMIT 1', $query );
+		self::assertSame( 'WSTM_PREVIOUS_ERROR', $wpdb->last_error );
+		self::assertSame( array(), Probe::$reads );
+		$data = $result['data'];
+		self::assertTrue( $data['aioseo_active'] );
+		self::assertTrue( $data['record_found'] );
+		self::assertSame( array(), $data['unavailable_fields'] );
+		self::assertSame( array( 'title', 'url', 'metadata' ), $data['untrusted_fields'] );
+		self::assertSame( array(
+			'title' => '#post_title #separator_sa #site_title',
+			'meta_description' => str_repeat( 'D', 1000 ),
+			'canonical_url' => 'https://example.test/aioseo-canonical/',
+			'opengraph_title' => 'OG',
+			'opengraph_description' => null,
+			'opengraph_image_custom_url' => 'https://example.test/aioseo-og.jpg',
+			'twitter_title' => null,
+			'twitter_description' => null,
+			'twitter_image_custom_url' => 'https://example.test/aioseo-tw.jpg',
+			'focus_keyword' => 'aioseo keyword',
+			'seo_score' => 64,
+			'pillar_content' => true,
+			'primary_category' => 9,
+			'robots_default' => false,
+			'robots_noindex' => true,
+			'robots_nofollow' => false,
+			'robots_noarchive' => true,
+			'robots_noimageindex' => false,
+			'robots_nosnippet' => false,
+		), $data['metadata'] );
+		$json = json_encode( $result );
+		foreach ( array( 'WSTM_AIOSEO_LEGACY', 'WSTM_AIOSEO_NESTED', 'WSTM_AIOSEO_SCHEMA_BODY', 'WSTM_AIOSEO_OPTIONS', 'WSTM_AIOSEO_AI', 'WSTM_AIOSEO_LOCAL', 'WSTM_AIOSEO_CUSTOM_FIELD', 'WSTM_AIOSEO_IMAGES', 'product_cat' ) as $leak ) {
+			self::assertStringNotContainsString( $leak, $json );
+		}
+	}
+
+	public function test_aioseo_legacy_focus_keyphrase_fallback_and_missing_record(): void {
+		Probe::reset();
+		$this->aioseo_database( array_merge( self::aioseo_row(), array( 'focus_keyword' => '', 'keyphrases' => '{"focus":{"keyphrase":"legacy phrase","analysis":{"x":1}},"additional":[{"keyphrase":"WSTM_AIOSEO_ADDITIONAL"}]}', 'robots_noindex' => null ) ) );
+		$result = $this->execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) );
+		self::assertSame( 'legacy phrase', $result['data']['metadata']['focus_keyword'] );
+		self::assertStringNotContainsString( 'WSTM_AIOSEO_ADDITIONAL', json_encode( $result ) );
+		self::assertNull( $result['data']['metadata']['robots_noindex'] );
+		self::assertSame( array(), $result['data']['unavailable_fields'] );
+
+		Probe::reset();
+		$this->aioseo_database( null );
+		$result = $this->execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) );
+		self::assertTrue( $result['success'] );
+		self::assertFalse( $result['data']['record_found'] );
+		self::assertSame( array(), array_filter( $result['data']['metadata'], static fn( $value ) => null !== $value ) );
+	}
+
+	private static function aioseo_row(): array {
+		return array(
+			'id' => '7', 'post_id' => '42', 'title' => 'T', 'description' => 'D', 'keywords' => null,
+			'keyphrases' => null, 'focus_keyword' => 'kw', 'primary_term' => '{"category":3}', 'canonical_url' => null,
+			'og_title' => null, 'og_description' => null, 'og_image_custom_url' => null, 'twitter_title' => null,
+			'twitter_description' => null, 'twitter_image_custom_url' => null, 'seo_score' => '10', 'pillar_content' => null,
+			'robots_default' => '1', 'robots_noindex' => '0', 'robots_nofollow' => '0', 'robots_noarchive' => '0',
+			'robots_noimageindex' => '0', 'robots_nosnippet' => '0',
+		);
+	}
+
+	public function test_aioseo_4x_schema_without_newer_columns_reads_in_one_query_and_reports_gaps(): void {
+		Probe::reset();
+		// AIOSEO 4.0-4.3.5: no focus_keyword (5.0) and no primary_term (4.3.6) columns.
+		$row = self::aioseo_row();
+		unset( $row['focus_keyword'], $row['primary_term'] );
+		$row['keyphrases'] = '{"focus":{"keyphrase":"four x phrase"}}';
+		$wpdb = $this->aioseo_database( $row );
+		$result = $this->execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) );
+		self::assertTrue( $result['success'] );
+		self::assertCount( 1, $wpdb->queries );
+		self::assertTrue( $result['data']['record_found'] );
+		self::assertSame( 'four x phrase', $result['data']['metadata']['focus_keyword'] );
+		self::assertNull( $result['data']['metadata']['primary_category'] );
+		self::assertSame( 'T', $result['data']['metadata']['title'] );
+		self::assertSame( array( 'primary_category' ), array_keys( $result['data']['unavailable_fields'] ) );
+		self::assertSame( 'unsupported', $result['data']['unavailable_fields']['primary_category']['code'] );
+
+		// Neither keyword column: the field is null and reported, never guessed.
+		Probe::reset();
+		unset( $row['keyphrases'] );
+		$this->aioseo_database( $row );
+		$result = $this->execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) );
+		self::assertNull( $result['data']['metadata']['focus_keyword'] );
+		self::assertSame( array( 'focus_keyword', 'primary_category' ), array_keys( $result['data']['unavailable_fields'] ) );
+		self::assertSame( array_keys( self::aioseo_full_metadata_keys() ), array_keys( $result['data']['metadata'] ) );
+	}
+
+	private static function aioseo_full_metadata_keys(): array {
+		return array_flip( array(
+			'title', 'meta_description', 'canonical_url', 'opengraph_title', 'opengraph_description', 'opengraph_image_custom_url',
+			'twitter_title', 'twitter_description', 'twitter_image_custom_url', 'focus_keyword', 'seo_score', 'pillar_content',
+			'primary_category', 'robots_default', 'robots_noindex', 'robots_nofollow', 'robots_noarchive', 'robots_noimageindex', 'robots_nosnippet',
+		) );
+	}
+
+	public function test_aioseo_database_exception_restores_wpdb_state(): void {
+		Probe::reset();
+		$wpdb = $this->aioseo_database( self::aioseo_row(), 'WSTM_SQL_ERROR', true );
+		try {
+			Probe::execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) );
+			self::fail( 'Expected the database exception to propagate.' );
+		} catch ( RuntimeException $error ) {
+			self::assertSame( 'WSTM_DB_DROPIN_FAILURE', $error->getMessage() );
+		}
+		self::assertFalse( $wpdb->is_suppressed() );
+		self::assertSame( 'WSTM_PREVIOUS_ERROR', $wpdb->last_error );
+	}
+
+	public function test_aioseo_database_failure_is_an_error_without_query_details(): void {
+		Probe::reset();
+		$wpdb = $this->aioseo_database( array( 'title' => 'unused' ), "Table 'wordpress.wp_aioseo_posts' doesn't exist" );
+		$result = $this->execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) );
+		self::assertFalse( $result['success'] );
+		self::assertSame( 'upstream_failed', $result['error']['code'] );
+		self::assertFalse( $wpdb->is_suppressed() );
+		self::assertSame( 'WSTM_PREVIOUS_ERROR', $wpdb->last_error );
+		self::assertStringNotContainsString( 'focus_keyword', json_encode( $result ) );
+		self::assertStringNotContainsString( 'aioseo_posts', json_encode( $result ) );
+	}
+
+	public function test_aioseo_denied_or_unsupported_post_never_queries_the_table(): void {
+		Probe::reset();
+		$wpdb = $this->aioseo_database( array( 'title' => 'WSTM_AIOSEO_FORBIDDEN' ) );
+		Probe::$denied_objects = array( 42 );
+		$result = $this->execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) );
+		self::assertSame( 'forbidden', $result['error']['code'] );
+		Probe::$denied_objects = array();
+		self::assertSame( 'not_found', $this->execute( 'get-aioseo-metadata', array( 'post_id' => 999 ) )['error']['code'] );
+		Probe::reset( 'attachment' );
+		$GLOBALS['wpdb'] = $wpdb;
+		self::assertSame( 'not_found', $this->execute( 'get-aioseo-metadata', array( 'post_id' => 42 ) )['error']['code'] );
+		self::assertSame( array(), $wpdb->queries );
+		self::assertStringNotContainsString( 'WSTM_AIOSEO_FORBIDDEN', json_encode( $result ) );
+	}
+
+	public function test_new_provider_abilities_share_the_closed_post_id_contract(): void {
+		Probe::reset();
+		$seopress = Probe::$abilities['webmastery-site-toolkit-for-mcp/get-seopress-metadata'];
+		foreach ( array( 'get-rankmath-metadata', 'get-aioseo-metadata' ) as $slug ) {
+			$ability = Probe::$abilities[ 'webmastery-site-toolkit-for-mcp/' . $slug ];
+			self::assertSame( $seopress['input_schema'], $ability['input_schema'] );
+			self::assertSame( $seopress['meta'], $ability['meta'] );
 		}
 	}
 }

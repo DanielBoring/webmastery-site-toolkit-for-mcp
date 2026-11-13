@@ -197,6 +197,97 @@ SEO Analyze Post uses static focus-keyword diagnostics: `Focus keyword found in 
 
 SEO Analyze Post's `data.metrics.internal_links` and `external_links` count anchor occurrences in stored content. Web URLs are classified by parsed hostname: comparison ignores case, one leading `www.`, HTTP versus HTTPS, ports, and the home URL's path. Other subdomains and hostname-prefix lookalikes are external. Protocol-relative URLs (`//host/path`) use the same host comparison. Root-relative and path-relative URLs, query-only references, and fragment-only references count as internal. Empty hrefs, URLs that cannot be parsed, hostless absolute web URLs, and non-web schemes such as `mailto:`, `tel:`, `javascript:`, and `ftp:` count toward neither metric. HTML entities in hrefs are decoded and surrounding whitespace is trimmed before classification. This is a local SEO heuristic; it performs no network requests and does not establish that either host variant resolves, redirects, or serves the same site. Input remains the required integer `post_id`, and effective `edit_post` authorization remains required.
 
+### Rank Math and All in One SEO metadata
+
+`get-rankmath-metadata` and `get-aioseo-metadata` are read-only inspections next
+to `get-yoast-metadata` and `get-seopress-metadata`. Input is the required integer
+`post_id` (posts and pages only, closed schema). Both require `edit_post` on that
+post; a missing or unsupported post returns `not_found`, a denied post `forbidden`.
+When the provider is not active they return success with
+`rankmath_active:false` / `aioseo_active:false` and a `note`, and read nothing.
+
+Successful records contain `<provider>_active:true`, `post_id`, `post_type`,
+`title`, `url`, `metadata`, `unavailable_fields`, and
+`untrusted_fields:["title","url","metadata"]`. Unlike the Yoast and SEOPress
+records there is no `raw_meta`: only the normalized allowlist below is returned.
+Stored text values (titles, descriptions, keywords, URLs) are returned as stored,
+including unexpanded template variables or smart tags, and truncated to 1000
+characters. Non-scalar values where text is expected are returned as `null`.
+Empty values are `null`.
+
+**Rank Math** (detected by `RANK_MATH_VERSION`, the `RankMath` class, `rank_math()`,
+or `seo-by-rank-math/rank-math.php` in `active_plugins`) reads these post meta
+keys, each with the same effective `edit_post_meta` check as the SEOPress
+inspection. A denied key is not read, its field is omitted from `metadata`, and it
+is listed in `unavailable_fields` (`metadata_not_readable`).
+
+| Field | Meta key | Type |
+| --- | --- | --- |
+| `title`, `meta_description` | `rank_math_title`, `rank_math_description` | string |
+| `focus_keywords` | `rank_math_focus_keyword` | comma-separated string as stored |
+| `canonical_url`, `breadcrumb_title` | `rank_math_canonical_url`, `rank_math_breadcrumb_title` | string |
+| `robots` | `rank_math_robots` | list of `index`, `noindex`, `nofollow`, `noarchive`, `noimageindex`, `nosnippet` (other values dropped); `null` when unset (Rank Math then applies its defaults) |
+| `robots_noindex`, `robots_nofollow`, `robots_noarchive`, `robots_noimageindex`, `robots_nosnippet` | derived from `robots` | boolean, `null` when `robots` is unset; omitted when `robots` is unavailable |
+| `seo_score` | `rank_math_seo_score` | integer (0-100) |
+| `pillar_content` | `rank_math_pillar_content` | boolean (`"on"` is true) |
+| `primary_category` | `rank_math_primary_category` | integer term ID |
+| `opengraph_title`, `opengraph_description`, `opengraph_image` | `rank_math_facebook_title`, `rank_math_facebook_description`, `rank_math_facebook_image` | string |
+| `twitter_title`, `twitter_description`, `twitter_image` | `rank_math_twitter_title`, `rank_math_twitter_description`, `rank_math_twitter_image` | string |
+
+Rank Math marks every `rank_math_*` key as protected meta while it is active. As
+for supported Yoast and SEOPress keys, an unregistered Rank Math key with no key
+authorization hooks receives only a temporary protected-key default for this
+inspection; registered policies and capability filters stay authoritative. This
+default applies to these read-only inspections only: `get-post-meta`,
+`update-post-meta`, and `delete-post-meta` still refuse `rank_math_*` keys while
+Rank Math protects them. Not returned: advanced robots, schema data
+(`rank_math_schema_*`), redirections, Twitter card/app fields, image IDs, and
+any other key.
+
+**All in One SEO** (detected by `AIOSEO_VERSION`, `aioseo()`, or the Lite or Pro
+plugin basename in `active_plugins`) stores per-post SEO data in its own
+`{prefix}aioseo_posts` table. Its post-meta copies (`_aioseo_title`,
+`_aioseo_description`, and a few social fields) exist for translation plugins
+and can be stale, because AIOSEO's own quick-edit path updates only the table.
+AIOSEO's `Models\Post::getPost()` is not side-effect free: on load it can save
+the row (schema and keyword migrations) and runs the `aioseo_get_post` filter. So
+this ability reads one row directly with one prepared single-row `SELECT` by
+`post_id`, never a write. The row is selected whole so that older AIOSEO schemas
+read in the same single query; every column outside the allowlist below (schema,
+options, AI, local SEO, image and video data, custom-field names, and the rest) is
+dropped before normalization and never returned. Because the data is not post
+meta, WordPress's per-key meta capabilities do not apply: access is gated on
+`edit_post` for the post only. `unavailable_fields` lists only fields whose source
+columns the installed AIOSEO schema does not have (code `unsupported`); such a
+field is `null` in `metadata`. On AIOSEO 4.x the `focus_keyword` column does not
+exist yet (added in 5.0), so the focus keyphrase is read from the legacy
+`keyphrases` JSON; `primary_category` is unavailable before 4.3.6 (no
+`primary_term` column). `record_found` is false when AIOSEO has no row for the
+post (every field is then `null`, `unavailable_fields` is `[]`; AIOSEO would show
+its defaults). A database error, such as a missing table before AIOSEO has created
+it, returns `upstream_failed` without query details; WordPress database error
+state (`suppress_errors`, `last_error`) is restored after the read.
+
+| Field | Column | Type |
+| --- | --- | --- |
+| `title`, `meta_description`, `canonical_url` | `title`, `description`, `canonical_url` | string |
+| `focus_keyword` | `focus_keyword`, falling back to the focus keyphrase in the legacy `keyphrases` JSON (4.x schemas and rows not yet migrated) | string |
+| `opengraph_title`, `opengraph_description`, `opengraph_image_custom_url` | `og_title`, `og_description`, `og_image_custom_url` | string |
+| `twitter_title`, `twitter_description`, `twitter_image_custom_url` | `twitter_title`, `twitter_description`, `twitter_image_custom_url` | string |
+| `seo_score` | `seo_score` | integer |
+| `pillar_content` | `pillar_content` | boolean |
+| `primary_category` | `category` entry of the `primary_term` JSON | integer term ID |
+| `robots_default`, `robots_noindex`, `robots_nofollow`, `robots_noarchive`, `robots_noimageindex`, `robots_nosnippet` | same-named columns | boolean; per-post flags apply only when `robots_default` is false |
+
+The image fields are the custom URLs only; which image AIOSEO actually uses
+depends on its image-source settings, which are not returned. Not returned:
+schema graphs and schema type, additional keywords, TruSEO and page analysis
+data, image/video sitemap data, AI and local SEO data, breadcrumb and other
+options, and plugin settings.
+
+`seo-site-overview`, `seo-analyze-post`, `get-seo-scores`, and
+`get-readability-scores` do not read Rank Math or All in One SEO data yet.
+
 ## Backslashes in writes
 
 Post/page metadata and media titles, captions, and alt text preserve backslashes through WordPress storage, including repeated or trailing backslashes and escaped quotes. Send decoded values normally; do not add an extra WordPress slashing layer in your MCP client. JSON still requires its usual escaping: `"C:\\path\\"` represents `C:\path\`.
@@ -674,7 +765,8 @@ apply. Markers never restore omitted/redacted fields.
 | Super admin audit record | `login` |
 | Site health result | `label`, `description`, `actions` |
 | SEO analysis `metrics` | `title`, `url`, `slug`, authorized `yoast_meta_description`, `seopress_meta_description`, `yoast_focus_keyword`, `seopress_focus_keywords` |
-| SEO provider containing record | `title`, `url`, `metadata`, `raw_meta` |
+| SEO provider containing record (Yoast, SEOPress) | `title`, `url`, `metadata`, `raw_meta` |
+| Rank Math / All in One SEO metadata record | `title`, `url`, `metadata` |
 | SEO/readability score record | `title`, `url`, `score` |
 | Sitemap containing record / robots record | Sitemap: `url`, `entries`; robots: `url` |
 
@@ -712,7 +804,7 @@ Existing capability/privacy requirements are unchanged:
 | Standalone post metadata | Existing `edit_post`, effective `edit_post_meta` for reads/updates, `delete_post_meta` for deletes, and protected-key eligibility remain unchanged; markers grant no key access. |
 | Media | Existing upload/object capabilities and list filtering; a marker does not grant attachment access. |
 | User lookup and audits | Lookup requires `list_users`; login/email additionally require `edit_user` on that user or `edit_users`. User access audit requires `edit_users`; role labels are guidance, not a replacement for capabilities. |
-| SEO | Existing object and exact-key authorization remains authoritative. Denied fields stay absent, with `unavailable_fields` / `unevaluable_checks` preserved. Overview requires `manage_options`. |
+| SEO | Existing object and exact-key authorization remains authoritative. Denied fields stay absent, with `unavailable_fields` / `unevaluable_checks` preserved. All in One SEO data comes from its own table and is gated on `edit_post` only. Overview requires `manage_options`. |
 
 Generated Yoast head data remains unavailable (`generated_head.available:false`);
 URL-only inspection remains `unsupported`, and no provider head calls are made.
@@ -726,6 +818,7 @@ capability check, content filter, or prompt-injection guarantee. Model-supplied
 confirmation is not independent human approval.
 
 - Updating or moderating comments requires both `moderate_comments` and WordPress's object-specific `edit_comment` capability. Custom roles cannot moderate another author's post or a custom post type without its mapped edit capabilities. This does not change comment listing or reply permissions.
+- Rank Math and All in One SEO metadata inspection require `edit_post` on the post and return only an allowlist of normalized fields (no raw serialized values, schema bodies, redirects, or plugin settings). Rank Math fields also need effective `edit_post_meta` per key; All in One SEO fields are read with one prepared, read-only query of its per-post table and have no per-key check.
 - List abilities for posts, pages, custom post types, media, and SEO scores filter every returned object before exposing full details; private, trashed, draft, pending, and scheduled content is only returned when WordPress grants the matching object/status capability.
 - Creating or updating content as `publish`, `private`, or `future` requires the relevant publish capability, and bulk publishing requires `publish_posts`.
 - Author display names remain in content responses, but login names are omitted from post, page, CPT, revision, and content-hygiene responses. User login and email fields are only returned from user lookup abilities when the caller can edit that user.

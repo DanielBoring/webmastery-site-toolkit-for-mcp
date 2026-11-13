@@ -34,6 +34,7 @@ final class Probe {
 	public static bool $deny_base = false;
 	public static ?\Closure $metadata_writer = null;
 	public static bool $providers_active = true;
+	public static array $compat_reads = array();
 
 	public static function reset( string $type = 'post' ): void {
 		$GLOBALS['wpdb'] = (object) array( 'num_queries' => 0, 'last_error' => '' );
@@ -43,6 +44,7 @@ final class Probe {
 		self::$deny_base = false;
 		self::$metadata_writer = null;
 		self::$providers_active = true;
+		self::$compat_reads = array();
 		Webmastery_MCP_Posts::register();
 		$register = new \ReflectionMethod( Webmastery_MCP_Custom_Post_Types::class, 'register_custom_post_type' );
 		$register->setAccessible( true );
@@ -79,6 +81,12 @@ function current_user_can( $cap, ...$args ) {
 	if ( in_array( $cap, array( 'edit_post_meta', 'delete_post_meta', 'add_post_meta' ), true ) ) {
 		if ( empty( $args[0] ) ) {
 			throw new LogicException( 'Metadata authorization attempted without a real object.' );
+		}
+		$hook = 'auth_post_meta_' . $args[1] . '_for_' . get_post_type( $args[0] );
+		foreach ( $GLOBALS['wstm_test_filters'][ $hook ] ?? array() as $callbacks ) {
+			if ( array() !== $callbacks ) {
+				Probe::$compat_reads[] = array( $cap, $args );
+			}
 		}
 		return ! in_array( $args[1], Probe::$denied_keys, true )
 			&& ! in_array( $args[1], Probe::$denied_by_id[ $args[0] ] ?? array(), true );
@@ -120,6 +128,10 @@ function get_registered_meta_keys( $object_type, $subtype = '' ) {
 		array_column( \wstm110_batch_aliases(), 0 ),
 		array( 'wstm110_open', 'wstm110_restricted', '_yoast_wpseo_linkdex', '_yoast_wpseo_content_score', '_seopress_news_disabled', '_seopress_video_disabled', '_yoast_wpseo_inclusive_language_score', '_yoast_wpseo_is_cornerstone' )
 	), array( 'show_in_rest' => true, 'single' => true, 'type' => 'string' ) );
+}
+
+function has_filter( $name ) {
+	return false;
 }
 
 function is_protected_meta( $key, $type ) {
@@ -189,11 +201,11 @@ function get_option( $key, $default = false ) {
 	if ( 'active_plugins' !== $key ) {
 		throw new LogicException( "Unexpected option read: {$key}" );
 	}
-	return Probe::$providers_active ? array( 'wp-seopress/seopress.php' ) : array();
+	return Probe::$providers_active ? array( 'wp-seopress/seopress.php', 'seo-by-rank-math/rank-math.php', 'all-in-one-seo-pack/all_in_one_seo_pack.php' ) : array();
 }
 
 function defined( $name ) {
-	return in_array( $name, array( 'WPSEO_VERSION', 'SEOPRESS_VERSION' ), true ) ? Probe::$providers_active : \defined( $name );
+	return in_array( $name, array( 'WPSEO_VERSION', 'SEOPRESS_VERSION', 'RANK_MATH_VERSION', 'AIOSEO_VERSION' ), true ) ? Probe::$providers_active : \defined( $name );
 }
 
 class WP_Query {

@@ -9,6 +9,8 @@ class Webmastery_MCP_SEO {
 		self::register_site_overview();
 		self::register_yoast_metadata();
 		self::register_seopress_metadata();
+		self::register_rankmath_metadata();
+		self::register_aioseo_metadata();
 		self::register_score_ability( 'get-seo-scores', 'SEO Scores', '_yoast_wpseo_linkdex', 'Yoast SEO analysis scores.' );
 		self::register_score_ability( 'get-readability-scores', 'Readability Scores', '_yoast_wpseo_content_score', 'Yoast readability analysis scores.' );
 	}
@@ -309,6 +311,48 @@ class Webmastery_MCP_SEO {
 		] );
 	}
 
+	private static function register_rankmath_metadata() {
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-rankmath-metadata', [
+			'label'               => 'SEO: Rank Math Metadata',
+			'description'         => 'Inspect Rank Math metadata for a post or page, omitting fields without effective key permission and reporting unavailable_fields.',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => [
+				'type'       => 'object',
+				'properties' => [
+					'post_id' => [ 'type' => 'integer', 'description' => 'Post or page ID to inspect.' ],
+				],
+				'required'   => [ 'post_id' ],
+			],
+			'execute_callback'    => [ self::class, 'execute_rankmath_metadata' ],
+			'permission_callback' => [ self::class, 'permission_rankmath_metadata' ],
+			'meta'                => [
+				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+	}
+
+	private static function register_aioseo_metadata() {
+		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-aioseo-metadata', [
+			'label'               => 'SEO: All in One SEO Metadata',
+			'description'         => 'Inspect All in One SEO metadata for a post or page from its own per-post record. Requires edit_post on the post; allowlisted fields only.',
+			'category'            => 'webmastery-site-toolkit-for-mcp',
+			'input_schema'        => [
+				'type'       => 'object',
+				'properties' => [
+					'post_id' => [ 'type' => 'integer', 'description' => 'Post or page ID to inspect.' ],
+				],
+				'required'   => [ 'post_id' ],
+			],
+			'execute_callback'    => [ self::class, 'execute_aioseo_metadata' ],
+			'permission_callback' => [ self::class, 'permission_aioseo_metadata' ],
+			'meta'                => [
+				'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
+				'mcp'         => [ 'public' => true, 'type' => 'tool' ],
+			],
+		] );
+	}
+
 	public static function permission_yoast_metadata( $input = [] ) {
 		$id = absint( $input['post_id'] ?? 0 );
 		if ( $id ) {
@@ -511,6 +555,274 @@ class Webmastery_MCP_SEO {
 				'unavailable_fields' => $read['unavailable_fields'],
 			], [ 'title', 'url', 'metadata', 'raw_meta' ] ),
 		];
+	}
+
+	public static function permission_rankmath_metadata( $input = [] ) {
+		return self::permission_seopress_metadata( $input );
+	}
+
+	public static function permission_aioseo_metadata( $input = [] ) {
+		return self::permission_seopress_metadata( $input );
+	}
+
+	public static function execute_rankmath_metadata( $input = [] ) {
+		$permission = self::permission_rankmath_metadata( $input );
+		if ( is_wp_error( $permission ) ) {
+			return Webmastery_MCP_Response::from_wp_error( $permission );
+		}
+		$id = absint( $input['post_id'] ?? 0 );
+
+		if ( ! self::is_rankmath_active() ) {
+			return [
+				'success' => true,
+				'data'    => [
+					'rankmath_active' => false,
+					'note'            => 'Rank Math is not active, so Rank Math metadata is not available.',
+				],
+			];
+		}
+
+		$post = get_post( $id );
+		if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
+			return Webmastery_MCP_Response::legacy_error( 'not_found', 'Post or page not found.' );
+		}
+		if ( ! current_user_can( 'edit_post', $id ) ) {
+			return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to inspect Rank Math metadata for this post or page.' );
+		}
+
+		$keys = Webmastery_MCP_Post_Meta::rankmath_keys();
+		$read = self::read_metadata_fields( $id, $keys );
+		$meta = [];
+		foreach ( array_keys( $keys ) as $field ) {
+			if ( array_key_exists( $field, $read['values'] ) ) {
+				$meta[ $field ] = self::normalize_rankmath_meta_value( $field, $read['values'][ $field ] );
+			}
+		}
+		// Robots flags are derived from the one robots key, so they share its availability.
+		if ( array_key_exists( 'robots', $meta ) ) {
+			foreach ( [ 'noindex', 'nofollow', 'noarchive', 'noimageindex', 'nosnippet' ] as $directive ) {
+				$meta[ 'robots_' . $directive ] = null === $meta['robots'] ? null : in_array( $directive, $meta['robots'], true );
+			}
+		}
+
+		return [
+			'success' => true,
+			'data'    => Webmastery_MCP_Untrusted::mark( [
+				'rankmath_active'    => true,
+				'post_id'            => $id,
+				'post_type'          => $post->post_type,
+				'title'              => $post->post_title,
+				'url'                => get_permalink( $id ),
+				'metadata'           => $meta,
+				'unavailable_fields' => $read['unavailable_fields'],
+			], [ 'title', 'url', 'metadata' ] ),
+		];
+	}
+
+	private static function normalize_rankmath_meta_value( $field, $value ) {
+		if ( 'robots' === $field ) {
+			if ( ! is_array( $value ) || [] === $value ) {
+				return null;
+			}
+			// Rank Math stores a list of directive names; keep only its documented robots choices.
+			$allowed = [ 'index', 'noindex', 'nofollow', 'noarchive', 'noimageindex', 'nosnippet' ];
+			return array_values( array_intersect( $allowed, array_filter( $value, 'is_string' ) ) );
+		}
+		if ( ! is_scalar( $value ) || '' === $value ) {
+			return null;
+		}
+		if ( in_array( $field, [ 'seo_score', 'primary_category' ], true ) ) {
+			return is_numeric( $value ) ? (int) $value : null;
+		}
+		if ( 'pillar_content' === $field ) {
+			return 'on' === $value;
+		}
+
+		return self::bounded_text( $value );
+	}
+
+	public static function execute_aioseo_metadata( $input = [] ) {
+		$permission = self::permission_aioseo_metadata( $input );
+		if ( is_wp_error( $permission ) ) {
+			return Webmastery_MCP_Response::from_wp_error( $permission );
+		}
+		$id = absint( $input['post_id'] ?? 0 );
+
+		if ( ! self::is_aioseo_active() ) {
+			return [
+				'success' => true,
+				'data'    => [
+					'aioseo_active' => false,
+					'note'          => 'All in One SEO is not active, so All in One SEO metadata is not available.',
+				],
+			];
+		}
+
+		$post = get_post( $id );
+		if ( ! $post || ! in_array( $post->post_type, [ 'post', 'page' ], true ) ) {
+			return Webmastery_MCP_Response::legacy_error( 'not_found', 'Post or page not found.' );
+		}
+		if ( ! current_user_can( 'edit_post', $id ) ) {
+			return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You do not have permission to inspect All in One SEO metadata for this post or page.' );
+		}
+
+		$row = self::read_aioseo_row( $id );
+		if ( null === $row ) {
+			return Webmastery_MCP_Response::legacy_error( 'upstream_failed', 'All in One SEO post data could not be read.' );
+		}
+
+		$unavailable = [];
+		if ( [] !== $row ) {
+			// Older AIOSEO schemas lack some columns (focus_keyword before 5.0, primary_term before 4.3.6).
+			foreach ( self::AIOSEO_FIELD_COLUMNS as $field => $columns ) {
+				if ( [] === array_intersect_key( $row, array_flip( $columns ) ) ) {
+					$unavailable[ $field ] = Webmastery_MCP_Response::error(
+						'unsupported',
+						'The installed All in One SEO version does not store this field.'
+					)['error'];
+				}
+			}
+		}
+
+		return [
+			'success' => true,
+			'data'    => Webmastery_MCP_Untrusted::mark( [
+				'aioseo_active'      => true,
+				'post_id'            => $id,
+				'post_type'          => $post->post_type,
+				'title'              => $post->post_title,
+				'url'                => get_permalink( $id ),
+				'record_found'       => [] !== $row,
+				'metadata'           => self::normalize_aioseo_row( $row ),
+				// Only schema gaps: AIOSEO's own table is outside WordPress's per-key meta capability model.
+				'unavailable_fields' => $unavailable,
+			], [ 'title', 'url', 'metadata' ] ),
+		];
+	}
+
+	// Response field => AIOSEO columns it is derived from (any one present makes it available).
+	private const AIOSEO_FIELD_COLUMNS = [
+		'title'                      => [ 'title' ],
+		'meta_description'           => [ 'description' ],
+		'canonical_url'              => [ 'canonical_url' ],
+		'opengraph_title'            => [ 'og_title' ],
+		'opengraph_description'      => [ 'og_description' ],
+		'opengraph_image_custom_url' => [ 'og_image_custom_url' ],
+		'twitter_title'              => [ 'twitter_title' ],
+		'twitter_description'        => [ 'twitter_description' ],
+		'twitter_image_custom_url'   => [ 'twitter_image_custom_url' ],
+		'focus_keyword'              => [ 'focus_keyword', 'keyphrases' ],
+		'seo_score'                  => [ 'seo_score' ],
+		'pillar_content'             => [ 'pillar_content' ],
+		'primary_category'           => [ 'primary_term' ],
+		'robots_default'             => [ 'robots_default' ],
+		'robots_noindex'             => [ 'robots_noindex' ],
+		'robots_nofollow'            => [ 'robots_nofollow' ],
+		'robots_noarchive'           => [ 'robots_noarchive' ],
+		'robots_noimageindex'        => [ 'robots_noimageindex' ],
+		'robots_nosnippet'           => [ 'robots_nosnippet' ],
+	];
+
+	/**
+	 * Reads one AIOSEO row and keeps only allowlisted columns. AIOSEO's Models\Post::getPost()
+	 * can write (dynamic migrations save the row), so the per-post table is read directly and
+	 * never written. The row is selected whole so that schemas lacking newer columns still
+	 * read in one query; every non-allowlisted column is dropped before anything else sees it.
+	 *
+	 * @param int $post_id Post or page ID.
+	 * @return array|null Allowlisted columns present in the row (empty when no record exists), or null when the read failed.
+	 */
+	private static function read_aioseo_row( int $post_id ) {
+		global $wpdb;
+
+		$table      = $wpdb->prefix . 'aioseo_posts';
+		$last_error = $wpdb->last_error;
+		$suppress   = $wpdb->suppress_errors( true );
+		try {
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Single-row read of All in One SEO's own per-post table, filtered to an explicit column allowlist below; the table name is the site prefix plus a fixed suffix.
+			$row = $wpdb->get_row(
+				$wpdb->prepare( "SELECT * FROM `{$table}` WHERE post_id = %d LIMIT 1", $post_id ),
+				'ARRAY_A'
+			);
+			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$failed = '' !== $wpdb->last_error;
+		} finally {
+			$wpdb->suppress_errors( $suppress );
+			$wpdb->last_error = $last_error;
+		}
+		if ( $failed ) {
+			return null;
+		}
+		if ( ! is_array( $row ) ) {
+			return [];
+		}
+
+		$allowed = array_fill_keys( array_merge( ...array_values( self::AIOSEO_FIELD_COLUMNS ) ), true );
+		return array_intersect_key( $row, $allowed );
+	}
+
+	private static function normalize_aioseo_row( array $row ): array {
+		$meta = [];
+		foreach ( [
+			'title'                      => 'title',
+			'meta_description'           => 'description',
+			'canonical_url'              => 'canonical_url',
+			'opengraph_title'            => 'og_title',
+			'opengraph_description'      => 'og_description',
+			'opengraph_image_custom_url' => 'og_image_custom_url',
+			'twitter_title'              => 'twitter_title',
+			'twitter_description'        => 'twitter_description',
+			'twitter_image_custom_url'   => 'twitter_image_custom_url',
+		] as $field => $column ) {
+			$value          = $row[ $column ] ?? null;
+			$meta[ $field ] = is_scalar( $value ) && '' !== $value ? self::bounded_text( $value ) : null;
+		}
+
+		$meta['focus_keyword']  = self::aioseo_focus_keyword( $row['focus_keyword'] ?? null, $row['keyphrases'] ?? null );
+		$meta['seo_score']      = isset( $row['seo_score'] ) && is_numeric( $row['seo_score'] ) ? (int) $row['seo_score'] : null;
+		$meta['pillar_content'] = isset( $row['pillar_content'] ) && is_numeric( $row['pillar_content'] ) ? (bool) (int) $row['pillar_content'] : null;
+
+		$primary                  = isset( $row['primary_term'] ) && is_string( $row['primary_term'] ) ? json_decode( $row['primary_term'], true ) : null;
+		$meta['primary_category'] = is_array( $primary ) && isset( $primary['category'] ) && is_numeric( $primary['category'] ) ? (int) $primary['category'] : null;
+
+		foreach ( [ 'robots_default', 'robots_noindex', 'robots_nofollow', 'robots_noarchive', 'robots_noimageindex', 'robots_nosnippet' ] as $column ) {
+			$meta[ $column ] = isset( $row[ $column ] ) && is_numeric( $row[ $column ] ) ? (bool) (int) $row[ $column ] : null;
+		}
+
+		return $meta;
+	}
+
+	private static function aioseo_focus_keyword( $column, $keyphrases ) {
+		if ( is_scalar( $column ) && '' !== trim( (string) $column ) ) {
+			return self::bounded_text( $column );
+		}
+		// Rows saved before AIOSEO 5.0 keep the focus keyphrase only in the legacy keyphrases JSON.
+		$legacy = is_string( $keyphrases ) ? json_decode( $keyphrases, true ) : null;
+		$value  = is_array( $legacy ) && isset( $legacy['focus'] ) && is_array( $legacy['focus'] ) ? ( $legacy['focus']['keyphrase'] ?? null ) : null;
+
+		return is_scalar( $value ) && '' !== trim( (string) $value ) ? self::bounded_text( $value ) : null;
+	}
+
+	private static function bounded_text( $value ): string {
+		return mb_substr( (string) $value, 0, 1000 );
+	}
+
+	private static function is_rankmath_active() {
+		$active_plugins = (array) get_option( 'active_plugins', [] );
+
+		return defined( 'RANK_MATH_VERSION' )
+			|| class_exists( 'RankMath', false )
+			|| function_exists( 'rank_math' )
+			|| in_array( 'seo-by-rank-math/rank-math.php', $active_plugins, true );
+	}
+
+	private static function is_aioseo_active() {
+		$active_plugins = (array) get_option( 'active_plugins', [] );
+
+		return defined( 'AIOSEO_VERSION' )
+			|| function_exists( 'aioseo' )
+			|| in_array( 'all-in-one-seo-pack/all_in_one_seo_pack.php', $active_plugins, true )
+			|| in_array( 'all-in-one-seo-pack-pro/all_in_one_seo_pack.php', $active_plugins, true );
 	}
 
 	private static function is_yoast_active() {

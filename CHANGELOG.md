@@ -8,6 +8,21 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Added
 
+- Rank Math and All in One SEO metadata: two read-only abilities that inspect
+  a post's or page's SEO metadata from Rank Math or All in One SEO, next to the
+  existing Yoast SEO and SEOPress inspections. They require permission to edit
+  that post and return only normalized, allowlisted fields: SEO title,
+  description, focus keyword(s), canonical URL, robots directives (as
+  booleans), SEO score, pillar content, primary category and social titles,
+  descriptions and image URLs. Rank Math fields also need key-level metadata
+  permission; denied fields are left out and listed in `unavailable_fields`.
+  All in One SEO data is read with one read-only query of that plugin's own
+  per-post table, because its own loader can write; it works with 4.x and 5.x
+  schemas and lists fields an older version does not store in
+  `unavailable_fields`. Schema data,
+  redirects, raw stored values and plugin settings are never returned, and
+  stored text is marked as untrusted. When the plugin is not active the ability
+  says so instead of reading anything.
 - Get Cron Status: a read-only ability for Administrators (accounts with
   `manage_options`) that reports WP-Cron configuration (`DISABLE_WP_CRON`,
   `ALTERNATE_WP_CRON`, lock timeout), a summary of scheduled events (total,
