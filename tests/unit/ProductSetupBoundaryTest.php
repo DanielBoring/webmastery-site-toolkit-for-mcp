@@ -185,7 +185,7 @@ namespace {
 			self::assertSame(array('wstm118-individual', 'wstm118', 'tools'), array_slice($adapter->arguments, 0, 3));
 			self::assertSame(array(\WP\MCP\Transport\HttpTransport::class), $adapter->arguments[6]);
 			self::assertNull($adapter->arguments[7]); self::assertNull($adapter->arguments[8]);
-			self::assertSame(State::$names, $adapter->arguments[9]); self::assertCount(92, $adapter->arguments[9]);
+			self::assertSame(State::$names, $adapter->arguments[9]); self::assertCount(93, $adapter->arguments[9]);
 			self::assertSame(1, State::$assertions);
 			$source = file_get_contents(dirname(__DIR__) . '/e2e/product-http-fixture.php');
 			self::assertStringContainsString("add_action('mcp_adapter_init', [Wstm_Product_Http_Fixture::class, 'register_individual'])", $source);
@@ -276,7 +276,7 @@ namespace {
 			}
 
 			self::assertSame(1, $resolved); self::assertTrue($states['individual:administrator']['complete']);
-			self::assertCount(92, $states['individual:administrator']['tools']);
+			self::assertCount(93, $states['individual:administrator']['tools']);
 		}
 
 		public static function scoreCalls(): array {
@@ -338,7 +338,7 @@ namespace {
 						});
 					$client->initialize();
 					self::assertSame(array(), State::$response_queue);
-					self::assertCount('individual' === $boundary ? 92 : 3, $client->tools);
+					self::assertCount('individual' === $boundary ? 93 : 3, $client->tools);
 				}
 			}
 			self::assertCount(6, $resolved);
@@ -375,7 +375,7 @@ namespace {
 			self::assertCount(6, $states);
 			foreach ($states as $boundary => $state) {
 				self::assertTrue($state['complete']);
-				self::assertCount(0 === strpos($boundary, 'individual:') ? 92 : 3, $state['tools']);
+				self::assertCount(0 === strpos($boundary, 'individual:') ? 93 : 3, $state['tools']);
 			}
 		}
 

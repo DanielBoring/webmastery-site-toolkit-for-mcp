@@ -8,6 +8,16 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Added
 
+- Get Cron Status: a read-only ability for Administrators (accounts with
+  `manage_options`) that reports WP-Cron configuration (`DISABLE_WP_CRON`,
+  `ALTERNATE_WP_CRON`, lock timeout), a summary of scheduled events (total,
+  overdue, oldest overdue, seconds to the next event) and a paged list of
+  scheduled events with hook, next run, schedule, interval and argument count,
+  optionally only overdue events. An event counts as overdue when it is more
+  than 60 seconds past due. It explains why scheduled posts, backups or update
+  checks may be stuck. Nothing is run or rescheduled, event argument values are
+  never returned (only how many), and hook and schedule names are marked as
+  untrusted text.
 - Get Updates Overview: a read-only ability for accounts that can update
   WordPress core, plugins or themes (Administrator by default) that reports
   available core, plugin and theme updates from WordPress's cached update data

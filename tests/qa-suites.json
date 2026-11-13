@@ -5,6 +5,7 @@
       "AbilityCallbackTest.php",
       "BoundedListTest.php",
       "CommentsHelpersTest.php",
+      "CronTest.php",
       "CustomPostTypesHelpersTest.php",
       "DatabaseTablePrivacyTest.php",
       "DestructiveSafetyTest.php",

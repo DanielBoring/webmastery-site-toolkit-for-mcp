@@ -6327,6 +6327,124 @@
         ]
     },
     {
+        "ability": "webmastery-site-toolkit-for-mcp/get-cron-status",
+        "label": "get-cron-status as admin",
+        "role": "admin",
+        "input": {
+            "per_page": 100
+        },
+        "expect": "success",
+        "assert_permission": true,
+        "assert_paths": [
+            "data.config.wp_cron_disabled",
+            "data.config.alternate_cron",
+            "data.config.lock_timeout_seconds",
+            "data.summary.total_events",
+            "data.summary.overdue_events",
+            "data.summary.oldest_overdue_seconds",
+            "data.summary.next_event_in_seconds",
+            "data.summary.truncated",
+            "data.items.0.hook",
+            "data.items.0.next_run",
+            "data.items.0.seconds_until",
+            "data.items.0.overdue",
+            "data.items.0.schedule",
+            "data.items.0.interval_seconds",
+            "data.items.0.has_args",
+            "data.items.0.arg_count"
+        ],
+        "assert_values": {
+            "data.page": 1,
+            "data.per_page": 100,
+            "data.items.0.untrusted_fields": ["hook", "schedule"]
+        },
+        "assert_missing_paths": [
+            "data.items.0.args"
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-cron-status",
+        "label": "get-cron-status paging with per_page 1",
+        "role": "admin",
+        "input": {
+            "per_page": 1,
+            "page": 1
+        },
+        "expect": "success",
+        "assert_paths": [
+            "data.items.0.hook",
+            "data.summary.total_events"
+        ],
+        "assert_values": {
+            "data.page": 1,
+            "data.per_page": 1,
+            "data.next_page": 2,
+            "data.items.0.untrusted_fields": ["hook", "schedule"]
+        },
+        "assert_missing_paths": [
+            "data.items.1"
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-cron-status",
+        "label": "get-cron-status overdue_only keeps the full summary",
+        "role": "admin",
+        "input": {
+            "overdue_only": true
+        },
+        "expect": "success",
+        "assert_paths": [
+            "data.items",
+            "data.summary.total_events",
+            "data.summary.overdue_events",
+            "data.config.wp_cron_disabled"
+        ],
+        "assert_values": {
+            "data.page": 1,
+            "data.per_page": 50
+        }
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-cron-status",
+        "label": "get-cron-status rejects per_page above 100",
+        "role": "admin",
+        "input": {
+            "per_page": 101
+        },
+        "expect": "failure",
+        "expect_error_code": "invalid_input",
+        "expect_error_reason": "ability_invalid_input",
+        "expect_error_shape": "canonical"
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-cron-status",
+        "label": "get-cron-status as editor",
+        "role": "editor",
+        "input": null,
+        "expect": "failure",
+        "expect_error_code": "forbidden",
+        "expect_error_reason": "ability_invalid_permissions",
+        "expect_error_shape": "canonical",
+        "assert_permission": "forbidden",
+        "assert_missing_paths": [
+            "data"
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-cron-status",
+        "label": "get-cron-status as subscriber",
+        "role": "subscriber",
+        "input": null,
+        "expect": "failure",
+        "expect_error_code": "forbidden",
+        "expect_error_reason": "ability_invalid_permissions",
+        "expect_error_shape": "canonical",
+        "assert_permission": "forbidden",
+        "assert_missing_paths": [
+            "data"
+        ]
+    },
+    {
         "ability": "webmastery-site-toolkit-for-mcp/plugin-audit",
         "label": "plugin-audit as admin",
         "role": "admin",

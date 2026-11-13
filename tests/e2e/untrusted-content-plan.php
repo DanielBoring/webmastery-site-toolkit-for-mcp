@@ -5,7 +5,7 @@ declare(strict_types=1);
 final class Wstm108_Plan {
 	public const BOUNDARIES = array( 'gateway', 'individual' );
 	public const ACTORS = array( 'administrator', 'subscriber', 'reader' );
-	public const ANNOTATION_COUNT = 92;
+	public const ANNOTATION_COUNT = 93;
 	public const CASES_PER_BOUNDARY = 104;
 
 	public static function native_from_manifest( string $path ): array {
@@ -27,8 +27,8 @@ final class Wstm108_Plan {
 	}
 
 	public static function abilities( array $native ): array {
-		if ( 87 !== count( $native ) || count( array_unique( $native, SORT_STRING ) ) !== count( $native ) ) {
-			throw new RuntimeException( 'WSTM108 Native audit must contain exactly 87 unique abilities.' );
+		if ( 88 !== count( $native ) || count( array_unique( $native, SORT_STRING ) ) !== count( $native ) ) {
+			throw new RuntimeException( 'WSTM108 Native audit must contain exactly 88 unique abilities.' );
 		}
 		foreach ( $native as $name ) {
 			if ( ! is_string( $name ) || 0 !== strpos( $name, 'webmastery-site-toolkit-for-mcp/' )
