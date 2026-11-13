@@ -3,10 +3,11 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
+use WstmSecurityAudit\Webmastery_MCP_Security;
 
-require_once dirname( __DIR__, 2 ) . '/includes/class-security.php';
 require_once dirname( __DIR__, 2 ) . '/includes/class-database-health.php';
 require_once __DIR__ . '/fixtures/site-health-stubs.php';
+require_once __DIR__ . '/fixtures/security-audit-stubs.php';
 
 function get_option( $name ) {
 	return $GLOBALS['wstm111_home'];
@@ -37,6 +38,9 @@ function apply_filters( $name, $value ) {
 final class DiagnosticsTest extends TestCase {
 	protected function tearDown(): void {
 		unset( $GLOBALS['wstm111_home'], $GLOBALS['wpdb'], $GLOBALS['wstm_test_user_caps'], $GLOBALS['wstm_test_site_transients'] );
+		foreach ( array( 'active_plugins', 'multisite', 'site_options', 'force_ssl_admin', 'installed_plugins', 'installed_themes', 'stylesheet', 'template', 'get_users_args', 'admin_ids', 'user_meta' ) as $key ) {
+			unset( $GLOBALS[ 'wstm_test_' . $key ] );
+		}
 		parent::tearDown();
 	}
 
@@ -186,6 +190,321 @@ final class DiagnosticsTest extends TestCase {
 		$this->assertSame( 'warn', $matches[0][0] );
 		$this->assertSame( 'Auth keys/salts missing or empty in wp-config.php: AUTH_KEY, SECURE_AUTH_KEY, LOGGED_IN_KEY, NONCE_KEY, AUTH_SALT, SECURE_AUTH_SALT, LOGGED_IN_SALT, NONCE_SALT', $matches[0][1]['label'] );
 		$this->assertStringContainsString( 'falls back to values stored in the database', $matches[0][1]['detail'] );
+	}
+
+	private static function one_finding( string $check ): array {
+		$GLOBALS['wstm111_home'] = $GLOBALS['wstm111_home'] ?? 'https://example.test';
+		$result  = Webmastery_MCP_Security::execute();
+		$matches = self::findings( $result, $check );
+		self::assertCount( 1, $matches, $check );
+		foreach ( array( 'pass', 'warn', 'fail' ) as $severity ) {
+			self::assertSame( count( $result['data'][ $severity ] ), $result['data']['summary'][ $severity ] );
+		}
+		return $matches[0];
+	}
+
+	private static function php_status( string $branch, string $now ): array {
+		$method = new ReflectionMethod( Webmastery_MCP_Security::class, 'php_support_status' );
+		$method->setAccessible( true );
+		return $method->invoke( null, $branch, strtotime( $now . ' UTC' ) );
+	}
+
+	public static function php_support_cases(): array {
+		return array(
+			'old 5.6' => array( '5.6', '2026-01-01', 'fail' ),
+			'old 7.4' => array( '7.4', '2026-01-01', 'fail' ),
+			'8.0 ended' => array( '8.0', '2026-01-01', 'fail' ),
+			'8.1 last day is still supported (warn window)' => array( '8.1', '2025-12-31 23:59:00', 'warn' ),
+			'8.1 day after end' => array( '8.1', '2026-01-01 00:00:00', 'fail' ),
+			'8.2 exactly 90 days before' => array( '8.2', '2026-10-02 23:59:59', 'warn' ),
+			'8.2 just outside 90 days' => array( '8.2', '2026-10-01 23:59:58', 'pass' ),
+			'8.2 today' => array( '8.2', '2026-11-12', 'warn' ),
+			'8.3 far away' => array( '8.3', '2026-11-12', 'pass' ),
+			'8.5 far away' => array( '8.5', '2026-11-12', 'pass' ),
+			'8.6 newer' => array( '8.6', '2026-11-12', 'unknown' ),
+			'9.0 newer' => array( '9.0', '2026-11-12', 'unknown' ),
+			'8.10 newer' => array( '8.10', '2026-11-12', 'unknown' ),
+		);
+	}
+
+	/** @dataProvider php_support_cases */
+	public function test_php_support_status_by_branch_and_date( string $branch, string $now, string $state ): void {
+		$this->assertSame( $state, self::php_status( $branch, $now )['state'] );
+	}
+
+	public function test_php_version_finding_reports_only_major_minor(): void {
+		[ $severity, $finding ] = self::one_finding( 'php_version' );
+		$branch = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+		$this->assertContains( $severity, array( 'pass', 'warn', 'fail' ) );
+		$this->assertStringContainsString( "PHP {$branch}", $finding['label'] );
+		if ( PHP_VERSION !== $branch ) {
+			$this->assertStringNotContainsString( PHP_VERSION, json_encode( $finding ) );
+		}
+	}
+
+	public function test_force_ssl_admin_passes_when_enabled(): void {
+		$GLOBALS['wstm_test_force_ssl_admin'] = true;
+		$GLOBALS['wstm111_home']              = 'http://example.test';
+		[ $severity, $finding ] = self::one_finding( 'force_ssl_admin' );
+		$this->assertSame( 'pass', $severity );
+		$this->assertSame( 'Admin and login screens are forced to use SSL (FORCE_SSL_ADMIN)', $finding['label'] );
+	}
+
+	public function test_force_ssl_admin_warns_with_https_home(): void {
+		$GLOBALS['wstm111_home'] = 'https://example.test';
+		[ $severity, $finding ] = self::one_finding( 'force_ssl_admin' );
+		$this->assertSame( 'warn', $severity );
+		$this->assertStringContainsString( 'public home URL uses HTTPS', $finding['detail'] );
+	}
+
+	public function test_force_ssl_admin_warns_with_other_home_scheme(): void {
+		foreach ( array( 'http://example.test', 'ftp://example.test', '' ) as $home ) {
+			$GLOBALS['wstm111_home'] = $home;
+			[ $severity, $finding ] = self::one_finding( 'force_ssl_admin' );
+			$this->assertSame( 'warn', $severity );
+			$this->assertStringContainsString( 'Serve the site over HTTPS first', $finding['detail'] );
+		}
+	}
+
+	public static function db_prefix_cases(): array {
+		return array(
+			'default' => array( 'wp_', false, 'warn' ),
+			'custom' => array( 'x9k2_', false, 'pass' ),
+			'wp without underscore' => array( 'wp', false, 'pass' ),
+			'uppercase default' => array( 'WP_', false, 'pass' ),
+			'multisite default base' => array( 'wp_', true, 'warn' ),
+			'multisite custom base' => array( 'x9k2_', true, 'pass' ),
+		);
+	}
+
+	/** @dataProvider db_prefix_cases */
+	public function test_db_prefix_never_outputs_the_prefix( string $prefix, bool $multisite, string $bucket ): void {
+		$GLOBALS['wstm_test_multisite'] = $multisite;
+		// On multisite the per-site prefix differs and must be ignored.
+		$GLOBALS['wpdb'] = (object) array( 'prefix' => $multisite ? 'wp_2_' : $prefix, 'base_prefix' => $prefix );
+		[ $severity, $finding ] = self::one_finding( 'db_prefix' );
+		$this->assertSame( $bucket, $severity );
+		$json = json_encode( $finding );
+		$this->assertStringNotContainsString( $prefix, $json );
+		$this->assertStringNotContainsString( 'wp_2_', $json );
+		if ( 'warn' === $bucket ) {
+			$this->assertStringContainsString( 'low-value hardening', $finding['detail'] );
+			$this->assertStringContainsString( 'generic automated SQL injection', $finding['detail'] );
+		}
+	}
+
+	public function test_db_prefix_unreadable_warns_as_unknown(): void {
+		foreach ( array( null, (object) array( 'prefix' => '' ), (object) array( 'prefix' => array( 'wp_' ) ) ) as $wpdb ) {
+			unset( $GLOBALS['wpdb'] );
+			if ( null !== $wpdb ) {
+				$GLOBALS['wpdb'] = $wpdb;
+			}
+			[ $severity, $finding ] = self::one_finding( 'db_prefix' );
+			$this->assertSame( 'warn', $severity );
+			$this->assertSame( 'Database table prefix status unknown', $finding['label'] );
+		}
+	}
+
+	public static function inactive_plugin_cases(): array {
+		$installed = array( 'a/a.php' => array(), 'b/b.php' => array(), 'c/c.php' => array(), 'd/d.php' => array() );
+		return array(
+			'none installed' => array( array(), array(), false, array(), 'pass' ),
+			'all active' => array( $installed, array_keys( $installed ), false, array(), 'pass' ),
+			'two inactive' => array( $installed, array( 'a/a.php', 'b/b.php' ), false, array(), 'warn', '2 inactive plugin(s) are installed' ),
+			'active entry not installed' => array( $installed, array( 'a/a.php', 'gone/gone.php' ), false, array(), 'warn', '3 inactive plugin(s) are installed' ),
+			'multisite network active counts as active' => array( $installed, array( 'a/a.php' ), true, array( 'b/b.php' => 1, 'c/c.php' => 1, 'd/d.php' => 1 ), 'pass' ),
+			'multisite partly network active' => array( $installed, array( 'a/a.php' ), true, array( 'b/b.php' => 1 ), 'warn', '2 inactive plugin(s) are installed' ),
+			'network active ignored on single site' => array( $installed, array( 'a/a.php' ), false, array( 'b/b.php' => 1, 'c/c.php' => 1, 'd/d.php' => 1 ), 'warn', '3 inactive plugin(s) are installed' ),
+		);
+	}
+
+	/** @dataProvider inactive_plugin_cases */
+	public function test_inactive_plugins_report_counts_only( array $installed, array $active, bool $multisite, array $network, string $bucket, string $label = 'No inactive plugins are installed' ): void {
+		$GLOBALS['wstm_test_user_caps']        = array( 'activate_plugins' );
+		$GLOBALS['wstm_test_installed_plugins'] = $installed;
+		$GLOBALS['wstm_test_active_plugins']    = $active;
+		$GLOBALS['wstm_test_multisite']         = $multisite;
+		$GLOBALS['wstm_test_site_options']      = array( 'active_sitewide_plugins' => $network );
+		[ $severity, $finding ] = self::one_finding( 'inactive_plugins' );
+		$this->assertSame( $bucket, $severity );
+		$this->assertSame( $label, $finding['label'] );
+		$this->assertDoesNotMatchRegularExpression( '#[a-d]/[a-d]\.php#', json_encode( $finding ) );
+	}
+
+	public function test_inactive_plugins_omitted_without_activate_plugins(): void {
+		$GLOBALS['wstm_test_user_caps']        = array( 'update_plugins', 'switch_themes', 'update_themes' );
+		$GLOBALS['wstm_test_installed_plugins'] = array( 'a/a.php' => array() );
+		$GLOBALS['wstm111_home']                = 'https://example.test';
+		$this->assertSame( array(), self::findings( Webmastery_MCP_Security::execute(), 'inactive_plugins' ) );
+	}
+
+	public static function inactive_theme_cases(): array {
+		$all = array( 'child' => 1, 'parent' => 1, 'twentytwentyfour' => 1, 'twentytwentyfive' => 1, 'other' => 1 );
+		return array(
+			'only active and parent' => array( array( 'child' => 1, 'parent' => 1 ), 'pass', 'No unnecessary inactive themes are installed' ),
+			'one fallback theme' => array( array( 'child' => 1, 'parent' => 1, 'twentytwentyfive' => 1 ), 'pass', 'No unnecessary inactive themes are installed' ),
+			'two extra' => array( array( 'child' => 1, 'parent' => 1, 'a' => 1, 'b' => 1 ), 'warn', '2 inactive theme(s) are installed' ),
+			'three extra' => array( $all, 'warn', '3 inactive theme(s) are installed' ),
+			'no parent theme' => array( array( 'child' => 1, 'a' => 1, 'b' => 1 ), 'warn', '2 inactive theme(s) are installed', 'child', 'child' ),
+			'single theme' => array( array( 'child' => 1 ), 'pass', 'No unnecessary inactive themes are installed', 'child', 'child' ),
+		);
+	}
+
+	/** @dataProvider inactive_theme_cases */
+	public function test_inactive_themes_count_other_than_active_and_parent( array $themes, string $bucket, string $label, string $stylesheet = 'child', string $template = 'parent' ): void {
+		$GLOBALS['wstm_test_user_caps']        = array( 'switch_themes' );
+		$GLOBALS['wstm_test_installed_themes'] = $themes;
+		$GLOBALS['wstm_test_stylesheet']       = $stylesheet;
+		$GLOBALS['wstm_test_template']         = $template;
+		[ $severity, $finding ] = self::one_finding( 'inactive_themes' );
+		$this->assertSame( $bucket, $severity );
+		$this->assertSame( $label, $finding['label'] );
+		if ( 'warn' === $bucket ) {
+			$this->assertStringContainsString( 'one default theme as a fallback', $finding['detail'] );
+		}
+	}
+
+	public function test_inactive_themes_omitted_without_switch_themes(): void {
+		$GLOBALS['wstm_test_user_caps']        = array( 'activate_plugins', 'update_themes' );
+		$GLOBALS['wstm_test_installed_themes'] = array( 'a' => 1, 'b' => 1, 'c' => 1, 'd' => 1 );
+		$GLOBALS['wstm111_home']               = 'https://example.test';
+		$this->assertSame( array(), self::findings( Webmastery_MCP_Security::execute(), 'inactive_themes' ) );
+	}
+
+	public static function theme_update_cases(): array {
+		return array(
+			'missing transient' => array( false, 'warn', 'Theme update status unknown' ),
+			'null transient' => array( null, 'warn', 'Theme update status unknown' ),
+			'array transient' => array( array( 'response' => array( 'a' => array() ) ), 'warn', 'Theme update status unknown' ),
+			'no response property' => array( (object) array( 'last_checked' => 1 ), 'warn', 'Theme update status unknown' ),
+			'response not array' => array( (object) array( 'response' => 'a' ), 'warn', 'Theme update status unknown' ),
+			'empty response' => array( (object) array( 'response' => array() ), 'pass', 'All themes are up to date' ),
+			'one update' => array( (object) array( 'response' => array( 'a' => array( 'new_version' => '2' ) ) ), 'warn', '1 theme(s) have available updates' ),
+			'two updates' => array( (object) array( 'response' => array( 'a' => array(), 'b' => array() ) ), 'warn', '2 theme(s) have available updates' ),
+		);
+	}
+
+	/** @dataProvider theme_update_cases */
+	public function test_theme_updates_use_only_the_cached_transient( $transient, string $bucket, string $label ): void {
+		$GLOBALS['wstm_test_user_caps']       = array( 'update_themes' );
+		$GLOBALS['wstm_test_site_transients'] = array( 'update_themes' => $transient );
+		[ $severity, $finding ] = self::one_finding( 'theme_updates' );
+		$this->assertSame( $bucket, $severity );
+		$this->assertSame( $label, $finding['label'] );
+		$this->assertStringNotContainsString( '"a"', json_encode( $finding ) );
+	}
+
+	public function test_theme_updates_omitted_without_update_themes(): void {
+		$GLOBALS['wstm_test_user_caps']       = array( 'update_plugins', 'switch_themes' );
+		$GLOBALS['wstm_test_site_transients'] = array( 'update_themes' => (object) array( 'response' => array( 'a' => array() ) ) );
+		$GLOBALS['wstm111_home']              = 'https://example.test';
+		$this->assertSame( array(), self::findings( Webmastery_MCP_Security::execute(), 'theme_updates' ) );
+	}
+
+	public function test_two_factor_warns_when_no_known_plugin_is_active(): void {
+		$GLOBALS['wstm_test_active_plugins'] = array( 'akismet/akismet.php', 'two-factor-fake/two-factor.php' );
+		[ $severity, $finding ] = self::one_finding( 'two_factor' );
+		$this->assertSame( 'warn', $severity );
+		$this->assertSame( 'No known two-factor plugin detected', $finding['label'] );
+		$this->assertStringContainsString( 'limited to a list of known plugins', $finding['detail'] );
+		$this->assertArrayNotHasKey( 'wstm_test_get_users_args', $GLOBALS );
+	}
+
+	public static function two_factor_plugin_cases(): array {
+		return array(
+			'wp-2fa' => array( 'wp-2fa/wp-2fa.php' ),
+			'wordfence' => array( 'wordfence/wordfence.php' ),
+			'wordfence login security' => array( 'wordfence-login-security/wordfence-login-security.php' ),
+			'solid security' => array( 'better-wp-security/better-wp-security.php' ),
+			'google authenticator' => array( 'google-authenticator/google-authenticator.php' ),
+			'miniorange' => array( 'miniorange-2-factor-authentication/miniorange_2_factor_settings.php' ),
+		);
+	}
+
+	/** @dataProvider two_factor_plugin_cases */
+	public function test_two_factor_capable_plugin_passes_without_claiming_enrollment( string $basename ): void {
+		$GLOBALS['wstm_test_active_plugins'] = array( $basename );
+		[ $severity, $finding ] = self::one_finding( 'two_factor' );
+		$this->assertSame( 'pass', $severity );
+		$this->assertSame( 'A two-factor capable plugin is active', $finding['label'] );
+		$this->assertStringContainsString( 'enrollment was not verified', $finding['detail'] );
+		$this->assertArrayNotHasKey( 'wstm_test_get_users_args', $GLOBALS );
+	}
+
+	public function test_two_factor_plugin_network_active_is_detected(): void {
+		$GLOBALS['wstm_test_multisite']    = true;
+		$GLOBALS['wstm_test_site_options'] = array( 'active_sitewide_plugins' => array( 'wp-2fa/wp-2fa.php' => 1 ) );
+		[ $severity ] = self::one_finding( 'two_factor' );
+		$this->assertSame( 'pass', $severity );
+	}
+
+	public function test_official_two_factor_plugin_warns_with_count_only(): void {
+		$GLOBALS['wstm_test_active_plugins'] = array( 'two-factor/two-factor.php' );
+		$GLOBALS['wstm_test_admin_ids']      = array( 11, 12, 13, 14 );
+		$GLOBALS['wstm_test_user_meta']      = array(
+			11 => array( '_two_factor_enabled_providers' => array( 'Two_Factor_Totp' ) ),
+			12 => array( '_two_factor_enabled_providers' => array() ),
+			13 => array(),
+			// 14 has a legacy empty-string value.
+			14 => array( '_two_factor_enabled_providers' => '' ),
+		);
+		[ $severity, $finding ] = self::one_finding( 'two_factor' );
+		$this->assertSame( 'warn', $severity );
+		$this->assertSame( 'Some administrators have not enabled two-factor authentication', $finding['label'] );
+		$this->assertSame( '3 of 4 administrator account(s) checked have no two-factor provider enabled.', $finding['detail'] );
+		$json = json_encode( $finding );
+		foreach ( array( '11', '12', '13', '14', 'Two_Factor_Totp' ) as $leak ) {
+			$this->assertStringNotContainsString( $leak, str_replace( array( '3 of 4', '100' ), '', $json ) );
+		}
+		$this->assertSame( 'administrator', $GLOBALS['wstm_test_get_users_args']['role'] );
+		$this->assertSame( 100, $GLOBALS['wstm_test_get_users_args']['number'] );
+		$this->assertSame( 'ID', $GLOBALS['wstm_test_get_users_args']['fields'] );
+	}
+
+	public function test_official_two_factor_plugin_passes_when_all_administrators_enrolled(): void {
+		$GLOBALS['wstm_test_active_plugins'] = array( 'two-factor/two-factor.php', 'wp-2fa/wp-2fa.php' );
+		$GLOBALS['wstm_test_admin_ids']      = array( 11, 12 );
+		$GLOBALS['wstm_test_user_meta']      = array(
+			11 => array( '_two_factor_enabled_providers' => array( 'Two_Factor_Totp' ) ),
+			12 => array( '_two_factor_enabled_providers' => array( 'Two_Factor_Email', 'Two_Factor_Backup_Codes' ) ),
+		);
+		[ $severity, $finding ] = self::one_finding( 'two_factor' );
+		$this->assertSame( 'pass', $severity );
+		$this->assertSame( 'The Two-Factor plugin is active and every administrator checked has a provider enabled', $finding['label'] );
+	}
+
+	public function test_official_two_factor_plugin_with_no_administrators_found_passes(): void {
+		$GLOBALS['wstm_test_active_plugins'] = array( 'two-factor/two-factor.php' );
+		[ $severity ] = self::one_finding( 'two_factor' );
+		$this->assertSame( 'pass', $severity );
+	}
+
+	public function test_official_two_factor_enrollment_check_is_capped_at_100_administrators(): void {
+		$GLOBALS['wstm_test_active_plugins'] = array( 'two-factor/two-factor.php' );
+		$GLOBALS['wstm_test_admin_ids']      = range( 1, 100 );
+		[ $severity, $finding ] = self::one_finding( 'two_factor' );
+		$this->assertSame( 'warn', $severity );
+		$this->assertStringStartsWith( '100 of 100 administrator account(s)', $finding['detail'] );
+		$this->assertStringEndsWith( 'Only the first 100 administrators are checked.', $finding['detail'] );
+	}
+
+	public function test_new_checks_are_appended_after_existing_ones_in_a_stable_order(): void {
+		$GLOBALS['wstm_test_user_caps']       = array( 'activate_plugins', 'switch_themes', 'update_themes', 'update_plugins' );
+		$GLOBALS['wstm111_home']              = 'https://example.test';
+		$GLOBALS['wstm_test_site_transients'] = array( 'update_themes' => (object) array( 'response' => array() ) );
+		$result = Webmastery_MCP_Security::execute();
+		$order  = array();
+		foreach ( array( 'fail', 'warn', 'pass' ) as $bucket ) {
+			foreach ( $result['data'][ $bucket ] as $finding ) {
+				$order[ $finding['check'] ] = true;
+			}
+		}
+		$checks = array_keys( $order );
+		sort( $checks );
+		$this->assertSame(
+			array( 'admin_username', 'auth_keys', 'db_prefix', 'debug_log', 'debug_mode', 'file_editor', 'force_ssl_admin', 'inactive_plugins', 'inactive_themes', 'php_version', 'plugin_updates', 'ssl', 'theme_updates', 'two_factor', 'wp_version', 'xmlrpc' ),
+			$checks
+		);
 	}
 
 	private static function define_salts( array $values ): void {
