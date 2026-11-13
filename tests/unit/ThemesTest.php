@@ -187,4 +187,43 @@ final class ThemesTest extends TestCase {
 		sort( $headers );
 		self::assertSame( array( 'Author', 'Name', 'RequiresPHP', 'RequiresWP', 'Version' ), $headers );
 	}
+
+	/**
+	 * Null/omitted root input means the declared object default for both the permission check and the call.
+	 * Uses the real Webmastery_MCP_Input/Ability wrappers over the lifecycle double.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_null_input_uses_the_root_default_for_permission_and_execution(): void {
+		require_once dirname( __DIR__, 2 ) . '/includes/class-input.php';
+		require_once __DIR__ . '/fixtures/native-input-ability.php';
+		require_once dirname( __DIR__, 2 ) . '/includes/class-ability.php';
+		Themes::register();
+		$registered = $GLOBALS['wstm_themes']['registered'][ self::NAME ];
+		self::assertSame( array(), $registered['input_schema']['default'] );
+
+		$args = Webmastery_MCP_Input::register_args( Webmastery_MCP_Response::register_args( $registered, self::NAME ), self::NAME );
+		$ability = new Webmastery_MCP_Ability( self::NAME, $args );
+
+		foreach ( array( 'omitted' => array(), 'null' => array( null ) ) as $label => $call ) {
+			$GLOBALS['wstm_themes']['caps'] = array( 'switch_themes' );
+			self::assertTrue( $ability->check_permissions( ...$call ), $label );
+			$result = $ability->execute( ...$call );
+			self::assertTrue( $result['success'], $label );
+			self::assertSame( array( 1, 50 ), array( $result['data']['page'], $result['data']['per_page'] ), $label );
+
+			$GLOBALS['wstm_themes']['caps'] = array( 'edit_posts', 'read' );
+			$denied = $ability->check_permissions( ...$call );
+			self::assertInstanceOf( WP_Error::class, $denied, $label );
+			self::assertSame( 'forbidden', $denied->get_error_code(), $label );
+			self::assertSame( 'forbidden', Webmastery_MCP_Response::from_wp_error( $denied )['error']['code'], $label );
+		}
+
+		// Explicit malformed root input is still rejected, not replaced by the default.
+		$GLOBALS['wstm_themes']['caps'] = array( 'switch_themes' );
+		$bad = $ability->check_permissions( 'x' );
+		self::assertInstanceOf( WP_Error::class, $bad );
+		self::assertSame( 'invalid_input', $bad->get_error_code() );
+	}
 }
