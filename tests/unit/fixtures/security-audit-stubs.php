@@ -51,7 +51,26 @@ function get_user_meta( $id, $key, $single ) {
 	return $GLOBALS['wstm_test_user_meta'][ $id ][ $key ] ?? '';
 }
 
+/**
+ * Stand-in for the Two-Factor plugin's Two_Factor_Core. It lives in this namespace, never the global one,
+ * so it cannot leak into other tests; the eval below points the plugin's class-name literal at it only
+ * when a test sets $GLOBALS['wstm_test_two_factor_class'] (otherwise at a class that does not exist).
+ */
+class Two_Factor_Core {
+	public static function is_user_using_two_factor( $user = null ) {
+		if ( ( $GLOBALS['wstm_test_two_factor_throw'] ?? null ) === $user ) {
+			throw new \RuntimeException( 'third-party failure for user ' . $user );
+		}
+		return in_array( $user, $GLOBALS['wstm_test_two_factor_using'] ?? array(), true );
+	}
+}
+
+/** A Two_Factor_Core look-alike without the verified method, for the "method unavailable" fallback. */
+class Two_Factor_Core_Without_Method {
+}
+
 foreach ( array( 'class-plugins.php', 'class-security.php' ) as $file ) {
 	$source = file_get_contents( dirname( __DIR__, 3 ) . '/includes/' . $file );
+	$source = str_replace( "'Two_Factor_Core'", "( \$GLOBALS['wstm_test_two_factor_class'] ?? 'WstmSecurityAudit\\Missing_Two_Factor_Core' )", $source );
 	eval( 'namespace WstmSecurityAudit; use \Webmastery_MCP_Permissions; ' . substr( $source, 5 ) );
 }

@@ -38,7 +38,7 @@ function apply_filters( $name, $value ) {
 final class DiagnosticsTest extends TestCase {
 	protected function tearDown(): void {
 		unset( $GLOBALS['wstm111_home'], $GLOBALS['wpdb'], $GLOBALS['wstm_test_user_caps'], $GLOBALS['wstm_test_site_transients'] );
-		foreach ( array( 'active_plugins', 'multisite', 'site_options', 'force_ssl_admin', 'installed_plugins', 'installed_themes', 'stylesheet', 'template', 'get_users_args', 'admin_ids', 'user_meta' ) as $key ) {
+		foreach ( array( 'active_plugins', 'multisite', 'site_options', 'force_ssl_admin', 'installed_plugins', 'installed_themes', 'stylesheet', 'template', 'get_users_args', 'admin_ids', 'user_meta', 'two_factor_class', 'two_factor_using', 'two_factor_throw' ) as $key ) {
 			unset( $GLOBALS[ 'wstm_test_' . $key ] );
 		}
 		parent::tearDown();
@@ -438,7 +438,7 @@ final class DiagnosticsTest extends TestCase {
 		$this->assertSame( 'pass', $severity );
 	}
 
-	public function test_official_two_factor_plugin_warns_with_count_only(): void {
+	public function test_official_two_factor_plugin_fallback_warns_with_count_only(): void {
 		$GLOBALS['wstm_test_active_plugins'] = array( 'two-factor/two-factor.php' );
 		$GLOBALS['wstm_test_admin_ids']      = array( 11, 12, 13, 14 );
 		$GLOBALS['wstm_test_user_meta']      = array(
@@ -451,7 +451,7 @@ final class DiagnosticsTest extends TestCase {
 		[ $severity, $finding ] = self::one_finding( 'two_factor' );
 		$this->assertSame( 'warn', $severity );
 		$this->assertSame( 'Some administrators have not enabled two-factor authentication', $finding['label'] );
-		$this->assertSame( '3 of 4 administrator account(s) checked have no two-factor provider enabled.', $finding['detail'] );
+		$this->assertSame( '3 of 4 administrator account(s) checked have no two-factor provider enabled. Provider usability was not verified because the Two-Factor plugin API was unavailable; an account whose only provider is exhausted recovery codes would still count as enrolled.', $finding['detail'] );
 		$json = json_encode( $finding );
 		foreach ( array( '11', '12', '13', '14', 'Two_Factor_Totp' ) as $leak ) {
 			$this->assertStringNotContainsString( $leak, str_replace( array( '3 of 4', '100' ), '', $json ) );
@@ -461,7 +461,7 @@ final class DiagnosticsTest extends TestCase {
 		$this->assertSame( 'ID', $GLOBALS['wstm_test_get_users_args']['fields'] );
 	}
 
-	public function test_official_two_factor_plugin_passes_when_all_administrators_enrolled(): void {
+	public function test_official_two_factor_plugin_fallback_passes_and_says_usability_not_verified(): void {
 		$GLOBALS['wstm_test_active_plugins'] = array( 'two-factor/two-factor.php', 'wp-2fa/wp-2fa.php' );
 		$GLOBALS['wstm_test_admin_ids']      = array( 11, 12 );
 		$GLOBALS['wstm_test_user_meta']      = array(
@@ -471,6 +471,62 @@ final class DiagnosticsTest extends TestCase {
 		[ $severity, $finding ] = self::one_finding( 'two_factor' );
 		$this->assertSame( 'pass', $severity );
 		$this->assertSame( 'The Two-Factor plugin is active and every administrator checked has a provider enabled', $finding['label'] );
+		$this->assertStringContainsString( 'Provider usability was not verified', $finding['detail'] );
+	}
+
+	public function test_official_two_factor_plugin_without_the_method_uses_the_fallback(): void {
+		$GLOBALS['wstm_test_active_plugins'] = array( 'two-factor/two-factor.php' );
+		$GLOBALS['wstm_test_two_factor_class'] = 'WstmSecurityAudit\\Two_Factor_Core_Without_Method';
+		$GLOBALS['wstm_test_admin_ids']      = array( 11 );
+		$GLOBALS['wstm_test_user_meta']      = array( 11 => array( '_two_factor_enabled_providers' => array( 'Two_Factor_Backup_Codes' ) ) );
+		[ $severity, $finding ] = self::one_finding( 'two_factor' );
+		$this->assertSame( 'pass', $severity );
+		$this->assertStringContainsString( 'Provider usability was not verified', $finding['detail'] );
+	}
+
+	public function test_two_factor_api_passes_when_every_administrator_is_using_two_factor(): void {
+		$GLOBALS['wstm_test_active_plugins']  = array( 'two-factor/two-factor.php' );
+		$GLOBALS['wstm_test_two_factor_class'] = 'WstmSecurityAudit\\Two_Factor_Core';
+		$GLOBALS['wstm_test_admin_ids']       = array( 11, 12 );
+		$GLOBALS['wstm_test_two_factor_using'] = array( 11, 12 );
+		[ $severity, $finding ] = self::one_finding( 'two_factor' );
+		$this->assertSame( 'pass', $severity );
+		$this->assertSame( 'The Two-Factor plugin is active and every administrator checked has a usable second factor', $finding['label'] );
+		$this->assertArrayNotHasKey( 'detail', $finding );
+	}
+
+	public function test_two_factor_api_warns_for_enabled_but_unavailable_providers(): void {
+		// Administrator 12 still has recovery codes enabled in user meta but has used the last code, so the
+		// plugin reports no usable second factor even though the raw meta is non-empty.
+		$GLOBALS['wstm_test_active_plugins']  = array( 'two-factor/two-factor.php' );
+		$GLOBALS['wstm_test_two_factor_class'] = 'WstmSecurityAudit\\Two_Factor_Core';
+		$GLOBALS['wstm_test_admin_ids']       = array( 11, 12, 13 );
+		$GLOBALS['wstm_test_user_meta']       = array(
+			11 => array( '_two_factor_enabled_providers' => array( 'Two_Factor_Totp' ) ),
+			12 => array( '_two_factor_enabled_providers' => array( 'Two_Factor_Backup_Codes' ) ),
+		);
+		$GLOBALS['wstm_test_two_factor_using'] = array( 11, 13 );
+		[ $severity, $finding ] = self::one_finding( 'two_factor' );
+		$this->assertSame( 'warn', $severity );
+		$this->assertStringStartsWith( '1 of 3 administrator account(s) checked have no usable two-factor method', $finding['detail'] );
+		$this->assertStringNotContainsString( 'not verified because', $finding['detail'] );
+		$json = json_encode( $finding );
+		foreach ( array( '12', 'Backup_Codes' ) as $leak ) {
+			$this->assertStringNotContainsString( $leak, str_replace( array( '1 of 3', '100' ), '', $json ) );
+		}
+	}
+
+	public function test_two_factor_api_throwable_counts_the_administrator_as_not_verified(): void {
+		$GLOBALS['wstm_test_active_plugins']   = array( 'two-factor/two-factor.php' );
+		$GLOBALS['wstm_test_two_factor_class'] = 'WstmSecurityAudit\\Two_Factor_Core';
+		$GLOBALS['wstm_test_admin_ids']        = array( 11, 12 );
+		$GLOBALS['wstm_test_two_factor_using'] = array( 11, 12 );
+		$GLOBALS['wstm_test_two_factor_throw'] = 12;
+		[ $severity, $finding ] = self::one_finding( 'two_factor' );
+		$this->assertSame( 'warn', $severity );
+		$this->assertStringStartsWith( '1 of 2 administrator account(s) checked', $finding['detail'] );
+		$this->assertStringContainsString( 'could not be verified', $finding['detail'] );
+		$this->assertStringNotContainsString( 'third-party failure', json_encode( $finding ) );
 	}
 
 	public function test_official_two_factor_plugin_with_no_administrators_found_passes(): void {
@@ -485,7 +541,7 @@ final class DiagnosticsTest extends TestCase {
 		[ $severity, $finding ] = self::one_finding( 'two_factor' );
 		$this->assertSame( 'warn', $severity );
 		$this->assertStringStartsWith( '100 of 100 administrator account(s)', $finding['detail'] );
-		$this->assertStringEndsWith( 'Only the first 100 administrators are checked.', $finding['detail'] );
+		$this->assertStringContainsString( 'Only the first 100 administrators are checked.', $finding['detail'] );
 	}
 
 	public function test_new_checks_are_appended_after_existing_ones_in_a_stable_order(): void {

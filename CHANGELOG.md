@@ -20,8 +20,9 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   from local data only: PHP branch security support (from a hardcoded table),
   `FORCE_SSL_ADMIN`, default `wp_` database prefix (never shows the prefix),
   inactive plugin and theme counts, theme updates from cached data, and a
-  best-effort two-factor check (counts administrators without a provider only
-  for the official Two-Factor plugin, never names them). Existing checks are
+  best-effort two-factor check (for the official Two-Factor plugin, counts
+  administrators without a usable second factor using the plugin's own
+  enrolled-and-available check, never names them). Existing checks are
   unchanged.
 - Add an optional `page` input to List Categories and List Tags so sites with
   more than 200 terms can be listed page by page. The response stays a plain
