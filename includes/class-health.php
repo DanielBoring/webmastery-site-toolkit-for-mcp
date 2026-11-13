@@ -24,6 +24,11 @@ class Webmastery_MCP_Health {
 	private const MAX_TESTS = 60;
 
 	/**
+	 * Most characters kept per label, description or actions text.
+	 */
+	private const MAX_TEXT_LENGTH = 4000;
+
+	/**
 	 * Result keys kept from the former fixed list where core's key differs.
 	 */
 	private const LEGACY_KEYS = [ 'plugin_theme_auto_updates' => 'plugin_theme_auto_update' ];
@@ -51,6 +56,9 @@ class Webmastery_MCP_Health {
 			$key = substr( sanitize_key( (string) $name ), 0, 100 );
 			$key = self::LEGACY_KEYS[ $key ] ?? ( '' === $key ? 'unnamed_test' : $key );
 
+			// Core runs these tests while rendering an HTML screen; discard anything a test prints so it cannot corrupt the JSON response.
+			$buffer_level = ob_get_level();
+			ob_start();
 			try {
 				$callable = self::test_callable( $health, $test );
 				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core's own result filter, applied as WP_Site_Health does.
@@ -58,6 +66,10 @@ class Webmastery_MCP_Health {
 			} catch ( Throwable $e ) {
 				// Never return exception text: it can contain paths or SQL.
 				$result = null;
+			} finally {
+				while ( ob_get_level() > $buffer_level ) {
+					ob_end_clean();
+				}
 			}
 
 			$status = is_array( $result ) && is_string( $result['status'] ?? null ) ? $result['status'] : '';
@@ -71,9 +83,9 @@ class Webmastery_MCP_Health {
 			$results[ $bucket ][] = Webmastery_MCP_Untrusted::mark(
 				[
 					'test'        => $key,
-					'label'       => wp_strip_all_tags( self::text( $result['label'] ?? $key ) ),
-					'description' => wp_strip_all_tags( self::text( $result['description'] ?? '' ) ),
-					'actions'     => wp_strip_all_tags( self::text( $result['actions'] ?? '' ) ),
+					'label'       => self::text( $result['label'] ?? $key ),
+					'description' => self::text( $result['description'] ?? '' ),
+					'actions'     => self::text( $result['actions'] ?? '' ),
 				],
 				[ 'label', 'description', 'actions' ]
 			);
@@ -114,7 +126,14 @@ class Webmastery_MCP_Health {
 		return is_callable( $test ) ? $test : null;
 	}
 
+	/**
+	 * Tag-stripped result text, bounded because plugin tests can return text of any length.
+	 *
+	 * @param mixed $value Result field.
+	 * @return string
+	 */
 	private static function text( $value ) {
-		return is_scalar( $value ) ? (string) $value : '';
+		$text = is_scalar( $value ) ? wp_strip_all_tags( (string) $value ) : '';
+		return mb_strlen( $text, 'UTF-8' ) > self::MAX_TEXT_LENGTH ? mb_substr( $text, 0, self::MAX_TEXT_LENGTH, 'UTF-8' ) : $text;
 	}
 }

@@ -78,6 +78,9 @@ function get_super_admins() {
 }
 
 function current_user_can( $cap, ...$args ) {
+	if ( isset( $args[0] ) && in_array( $args[0], $GLOBALS['wstm108']['denied_objects'][ $cap ] ?? array(), true ) ) {
+		return false;
+	}
 	return ! in_array( $cap, $GLOBALS['wstm108']['denied'] ?? array(), true );
 }
 

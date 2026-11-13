@@ -623,4 +623,20 @@ final class UntrustedContentTest extends TestCase {
 		self::assertSame( array( 'user_login', 'app_name' ), $data['application_passwords'][1]['untrusted_fields'] );
 		self::assertSame( 'network\\owner', $data['application_passwords'][1]['user_login'] );
 	}
+
+	public function test_access_audit_lists_application_passwords_only_for_users_the_caller_may_edit(): void {
+		Users::register();
+		self::user();
+		self::extra_user( 20, 'network\\owner', false );
+		$GLOBALS['wstm108']['super_admins'] = array( 'network\\owner' );
+		$GLOBALS['wstm108']['application_passwords'] = array( array( 'name' => self::TEXT, 'last_used' => null ) );
+		// A network user manager who is not a super admin cannot list a super admin's passwords in core.
+		$GLOBALS['wstm108']['denied_objects'] = array( 'list_app_passwords' => array( 20 ) );
+		$data = $this->execute( 'user-access-audit', array() );
+		unset( $GLOBALS['wstm108']['denied_objects'] );
+		self::assertSame( array( 9 ), array_column( $data['application_passwords'], 'user_id' ) );
+		self::assertSame( 1, $data['super_admin_count'] );
+		self::assertContains( 'Application passwords of 1 account(s) were not listed — requires permission to edit those users', $data['warnings'] );
+		self::assertStringNotContainsString( self::TEXT, json_encode( array_slice( $data['application_passwords'], 1 ) ) );
+	}
 }

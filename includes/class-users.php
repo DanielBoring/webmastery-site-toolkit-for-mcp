@@ -228,6 +228,7 @@ class Webmastery_MCP_Users {
 		$application_passwords = [];
 		$passwords_skipped     = false;
 		$passwords_skip_reason = null;
+		$passwords_hidden      = 0;
 
 		if ( ! class_exists( 'WP_Application_Passwords' ) ) {
 			$passwords_skipped     = true;
@@ -237,6 +238,11 @@ class Webmastery_MCP_Users {
 			$passwords_skip_reason = 'Application passwords require edit_users capability.';
 		} else {
 			foreach ( $scan_users as $scan_user ) {
+				// Same per-user check as core's application-passwords endpoint: on multisite only super admins may list a super admin's passwords.
+				if ( ! current_user_can( 'list_app_passwords', (int) $scan_user->ID ) ) {
+					++$passwords_hidden;
+					continue;
+				}
 				$passwords = WP_Application_Passwords::get_user_application_passwords( (int) $scan_user->ID );
 				foreach ( $passwords as $password ) {
 					$application_passwords[] = self::normalize_application_password( $scan_user, $password );
@@ -253,6 +259,9 @@ class Webmastery_MCP_Users {
 		}
 		if ( $application_passwords ) {
 			$warnings[] = sprintf( '%d application password(s) issued to administrator account(s) — review and revoke unused credentials', count( $application_passwords ) );
+		}
+		if ( $passwords_hidden ) {
+			$warnings[] = sprintf( 'Application passwords of %d account(s) were not listed — requires permission to edit those users', $passwords_hidden );
 		}
 		if ( $passwords_skipped ) {
 			$warnings[] = $passwords_skip_reason;

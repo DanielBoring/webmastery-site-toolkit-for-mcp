@@ -310,4 +310,29 @@ final class DiagnosticsTest extends TestCase {
 		WstmSiteHealth\State::$tests = array( 'direct' => 'not a list' );
 		self::assertSame( 0, WstmSiteHealth\Webmastery_MCP_Health::execute()['data']['summary']['good'] );
 	}
+
+	public function testSiteHealthDiscardsTestOutputAndBoundsResultText(): void {
+		$level = ob_get_level();
+		$data  = self::site_health(
+			array(
+				'noisy' => array( 'test' => static function () {
+					echo 'printed by a plugin test';
+					ob_start();
+					echo 'left in an unclosed buffer';
+					return array( 'status' => 'good', 'label' => str_repeat( 'é', 5000 ), 'description' => '<p>' . str_repeat( 'd', 9000 ) . '</p>', 'actions' => 'ok' );
+				} ),
+				'throws' => array( 'test' => static function () {
+					echo 'printed before throwing';
+					throw new RuntimeException( 'boom' );
+				} ),
+			)
+		);
+		self::assertSame( $level, ob_get_level(), 'Buffers opened by a test are closed.' );
+		self::assertSame( array( array( 'test' => 'throws' ) ), $data['errors'] );
+		$result = $data['results']['good'][0];
+		self::assertSame( str_repeat( 'é', 4000 ), $result['label'] );
+		self::assertSame( str_repeat( 'd', 4000 ), $result['description'] );
+		self::assertSame( 'ok', $result['actions'] );
+		self::assertStringNotContainsString( 'printed', json_encode( $data ) );
+	}
 }

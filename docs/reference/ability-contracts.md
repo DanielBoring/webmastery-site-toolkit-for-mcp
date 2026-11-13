@@ -458,7 +458,8 @@ included. Asynchronous tests (loopback, REST, HTTPS and page cache checks) need
 HTTP round trips and are not run. At most 60 tests run per call, in registration
 order; `summary.skipped` counts tests left out by that cap. Each result keeps
 `test`, `label`, `description` and `actions` (tags stripped) in the `critical`,
-`recommended` and `good` buckets, and keeps the earlier `test` keys for core
+`recommended` and `good` buckets (each text truncated to 4000 characters; anything a
+test prints is discarded), and keeps the earlier `test` keys for core
 tests (`plugin_theme_auto_update` for core's `plugin_theme_auto_updates`). A test
 that throws, is not callable or returns no status is listed in `data.errors` as
 `{ "test": "<key>" }` and counted in `summary.errors`; exception messages are
@@ -470,7 +471,10 @@ only when there are more than 3. On multisite, `super_admins` lists the network
 super admin logins (`{ "login": "..." }`, marked untrusted) with
 `super_admin_count`, and application passwords issued to super admins are
 included in `application_passwords` even when they have no role on the current
-site. On a single site `super_admins` is `[]` and `super_admin_count` is `0`.
+site. Passwords are listed only for users whose application passwords the caller
+could list in core (`list_app_passwords`, which maps to `edit_user`): on multisite a
+network user manager who is not a super admin does not see super admins' passwords,
+and a warning gives the number of accounts left out. On a single site `super_admins` is `[]` and `super_admin_count` is `0`.
 Administrator accounts remain those of the current site.
 
 ## Untrusted result fields
