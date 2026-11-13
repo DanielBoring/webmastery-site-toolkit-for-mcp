@@ -103,6 +103,16 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   more than 200 terms can be listed page by page. The response stays a plain
   list of terms; request the next page until fewer than `per_page` items return.
 
+### Deprecated
+
+- Plugin audit: `critical_updates` and `items[].critical_update` are
+  deprecated and will be removed in 4.0.0. WordPress.org update data does not
+  identify security releases, so these are empty or `false` unless a
+  third-party update source sets a security flag; they do not mean that no
+  security updates are pending. Use `updates_available_count` and
+  `items[].update_available`. The response now lists both fields in a
+  `deprecations` array.
+
 ### Fixed
 
 - Site Health Check now runs every registered direct Site Health test,

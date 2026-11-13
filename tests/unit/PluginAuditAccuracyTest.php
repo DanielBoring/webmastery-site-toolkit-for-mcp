@@ -201,6 +201,38 @@ final class PluginAuditAccuracyTest extends TestCase {
 		self::assertIsInt( $record['days_since_update'] );
 	}
 
+	public function test_plugin_audit_lists_critical_update_fields_as_deprecated(): void {
+		$GLOBALS['wstm_audit_accuracy']['plugins'] = array( 'lambda/lambda.php' => array( 'Name' => 'Lambda', 'Version' => '1.0' ) );
+
+		$data = Plugins::plugin_audit()['data'];
+
+		self::assertSame( array(), $data['critical_updates'] );
+		self::assertSame(
+			array( 'critical_updates', 'items[].critical_update' ),
+			array_column( $data['deprecations'], 'field' )
+		);
+		foreach ( $data['deprecations'] as $entry ) {
+			self::assertSame( array( 'field', 'replacement', 'removal', 'reason' ), array_keys( $entry ) );
+			self::assertSame( '4.0.0', $entry['removal'] );
+			self::assertStringContainsString( 'security', $entry['reason'] );
+		}
+		self::assertSame( 'updates_available_count and items[].update_available', $data['deprecations'][0]['replacement'] );
+	}
+
+	public function test_third_party_security_flag_still_produces_critical_update(): void {
+		$GLOBALS['wstm_audit_accuracy']['plugins']    = array( 'mu/mu.php' => array( 'Name' => 'Mu', 'Version' => '1.0' ) );
+		$GLOBALS['wstm_audit_accuracy']['transients'] = array(
+			'update_plugins' => self::updates( array( 'mu/mu.php' => (object) array( 'slug' => 'mu', 'new_version' => '1.1', 'security' => true ) ) ),
+		);
+
+		$data = Plugins::plugin_audit()['data'];
+
+		self::assertTrue( $data['items'][0]['critical_update'] );
+		self::assertSame( 'mu/mu.php', $data['critical_updates'][0]['plugin'] );
+		self::assertSame( '1.1', $data['critical_updates'][0]['new_version'] );
+		self::assertCount( 2, $data['deprecations'] );
+	}
+
 	private static function backup( array $active, array $options = array() ): array {
 		$GLOBALS['wstm_audit_accuracy']['options'] = array_merge( array( 'active_plugins' => $active ), $options );
 		return Backup::execute()['data'];

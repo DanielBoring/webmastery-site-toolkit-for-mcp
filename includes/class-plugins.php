@@ -136,7 +136,32 @@ class Webmastery_MCP_Plugins {
 					)
 				),
 				'critical_updates'              => $critical_items,
+				'deprecations'                  => self::plugin_audit_deprecations(),
 				'items'                         => $items,
+			],
+		];
+	}
+
+	/**
+	 * Fields of the plugin audit response that are deprecated, for the response's `deprecations` list.
+	 *
+	 * @return array[]
+	 */
+	private static function plugin_audit_deprecations() {
+		$reason = 'WordPress.org update data does not identify security releases, so this is false or empty unless a third-party update source sets a security flag. Do not read it as "no security updates pending".';
+
+		return [
+			[
+				'field'       => 'critical_updates',
+				'replacement' => 'updates_available_count and items[].update_available',
+				'removal'     => '4.0.0',
+				'reason'      => $reason,
+			],
+			[
+				'field'       => 'items[].critical_update',
+				'replacement' => 'items[].update_available',
+				'removal'     => '4.0.0',
+				'reason'      => $reason,
 			],
 		];
 	}
@@ -631,6 +656,14 @@ class Webmastery_MCP_Plugins {
 		return max( 0, (int) floor( ( time() - $modified ) / DAY_IN_SECONDS ) );
 	}
 
+	/**
+	 * Whether a cached plugin update record carries a security flag.
+	 *
+	 * @deprecated 3.2.0 Scheduled for removal in 4.0.0 together with the `critical_update` and `critical_updates` audit fields. WordPress.org update data does not provide these properties.
+	 *
+	 * @param mixed $update Cached update record.
+	 * @return bool
+	 */
 	private static function is_security_update( $update ) {
 		if ( ! is_object( $update ) ) {
 			return false;

@@ -19,6 +19,18 @@ function is_plugin_active( $plugin ) {
 	return false;
 }
 
+function current_user_can( $capability ) {
+	return true;
+}
+
+function get_plugins() {
+	return $GLOBALS['wstm_audit_accuracy']['plugins'] ?? array();
+}
+
+function get_site_transient( $name ) {
+	return $GLOBALS['wstm_audit_accuracy']['transients'][ $name ] ?? false;
+}
+
 function get_bloginfo( $show ) {
 	return 'version' === $show ? $GLOBALS['wstm_audit_accuracy']['wp_version'] : '';
 }
