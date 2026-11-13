@@ -15,9 +15,9 @@ Donate link: https://paypal.me/VirtuallyBoring
 
 Webmastery Site Toolkit for MCP adds **70+ permission-aware abilities across 16 areas** that AI agents and MCP clients can call through the official [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin. It works with popular MCP clients including Claude, ChatGPT, GitHub Copilot, and Gemini.
 
-The MCP Adapter provides the transport layer. This plugin provides the site-management vocabulary: posts, pages, media, comments, taxonomy, custom post types, post meta, content hygiene, SEO checks, public webmaster verification, Google Site Kit diagnostics, site info, health, security, users, plugins, database, performance, and backup status.
+The MCP Adapter provides the transport layer. This plugin provides the site-management vocabulary: posts, pages, media, comments, taxonomy, custom post types, post meta, content hygiene, SEO checks, public webmaster verification, Google Site Kit diagnostics, site info, health, security, users, plugins, themes, database, performance, and backup status.
 
-Core editorial workflows work well with a dedicated Editor service account. Sensitive workflows such as plugin management, user auditing, site health, database health, backup status, performance status, and security audits require a separate Administrator service account.
+Core editorial workflows work well with a dedicated Editor service account. Sensitive workflows such as plugin management, theme inventory, user auditing, site health, database health, backup status, performance status, and security audits require a separate Administrator service account.
 
 Highlights:
 
@@ -28,7 +28,7 @@ Highlights:
 * Read, update, and delete safe post meta, including supported Yoast SEO and SEOPress metadata fields.
 * Run content hygiene checks for orphaned media, missing featured images, and stuck scheduled posts.
 * Inspect safe site and current-user context, with runtime environment details reserved for Administrator accounts.
-* Audit plugins, administrator accounts, backups, performance settings, database bloat, site health, and security posture.
+* Audit plugins, installed themes (active, parent and cached update status), administrator accounts, backups, performance settings, database bloat, site health, and security posture.
 * Analyze SEO metadata and public Google/Bing webmaster verification proof.
 * Inspect Google Site Kit setup, modules, current-user permissions, and same-site PageSpeed summaries without exposing OAuth credentials or changing Site Kit settings.
 

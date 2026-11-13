@@ -104,7 +104,7 @@ Do not weaken current assertions to make a historical baseline pass.
 `error-contract-runner.php` requires `WSTM118_DISPOSABLE=1` before loading
 WordPress or creating credentials/fixtures. The managed harness grants it only
 inside the disposable stack. A test-only MU fixture, installed after the normal
-85-ability audit, exposes individual tools at `/wp-json/wstm118/tools`.
+86-ability audit, exposes individual tools at `/wp-json/wstm118/tools`.
 The proof discovers tools by unique advertised descriptions, retains the full
 catalog and schemas, and uses the returned names (including deliberately renamed
 owned/foreign probes), not guessed namespace spelling.
@@ -184,7 +184,7 @@ The local-only `SKIP_PLUGIN_CHECK=1` offline package check still needs no projec
 name and performs no runtime work; CI cannot use that bypass.
 
 Before test-only MU capabilities are installed, `destructive-safety-preflight.php`
-audits actual `wp_get_abilities()` against all 85 manifest abilities and records
+audits actual `wp_get_abilities()` against all 86 manifest abilities and records
 missing-opt-in CLI failure plus HTTP 403/`CLI only.` refusal. Whole core-table
 snapshots (including users, credentials, options and cron) and upload hashes
 must remain unchanged across those bootstrap denials.
@@ -852,7 +852,7 @@ WordPress `home`/`siteurl`, WP-CLI and runtime fixtures all use the fixed intern
 the disposable transport binding only. It does not replace the internal origin
 or broaden sitemap/PageSpeed same-site validation.
 
-Current coverage is 75 base registered abilities plus 5 generated abilities per eligible custom post type. The E2E runner registers two fixture custom post types, so the manifest covers 85 abilities (see the manifest validation script's runtime summary for the current test case count), including custom post type discovery and CRUD permission coverage for two capability maps, object/status-aware post, page, CPT, media, and SEO score list filtering, private-status and bulk-publish denial cases, sensitive identity-field absence checks, taxonomy get/update permission coverage, post and page listing response-shape assertions, expanded Yoast and SEOPress metadata write coverage, controlled Google Site Kit status/module/permission/PageSpeed route fixtures with shared-dashboard, denial, privacy, and same-site URL coverage, the bulk post abilities `webmastery-site-toolkit-for-mcp/bulk-trash-posts` and `webmastery-site-toolkit-for-mcp/bulk-publish-posts`, the revision abilities `webmastery-site-toolkit-for-mcp/list-revisions` and `webmastery-site-toolkit-for-mcp/restore-revision`, the post meta abilities `webmastery-site-toolkit-for-mcp/get-post-meta`, `webmastery-site-toolkit-for-mcp/update-post-meta`, and `webmastery-site-toolkit-for-mcp/delete-post-meta`, the block editing abilities `webmastery-site-toolkit-for-mcp/list-content-blocks`, `webmastery-site-toolkit-for-mcp/patch-content-block`, and `webmastery-site-toolkit-for-mcp/patch-post-content` with targeted post, page, CPT, permission-denial, and unsupported-type coverage, the comment interaction abilities `webmastery-site-toolkit-for-mcp/reply-comment` and `webmastery-site-toolkit-for-mcp/update-comment`, the media sideload ability `webmastery-site-toolkit-for-mcp/upload-image`, the content hygiene abilities `webmastery-site-toolkit-for-mcp/list-orphaned-media`, `webmastery-site-toolkit-for-mcp/list-posts-no-featured-image`, and `webmastery-site-toolkit-for-mcp/list-stuck-scheduled`, the site introspection abilities `webmastery-site-toolkit-for-mcp/get-site-info`, `webmastery-site-toolkit-for-mcp/get-user-info`, and `webmastery-site-toolkit-for-mcp/get-environment-info`, the user access audit ability `webmastery-site-toolkit-for-mcp/user-access-audit`, the Yoast score and metadata abilities `webmastery-site-toolkit-for-mcp/get-seo-scores`, `webmastery-site-toolkit-for-mcp/get-readability-scores`, and `webmastery-site-toolkit-for-mcp/get-yoast-metadata`, the SEOPress metadata ability `webmastery-site-toolkit-for-mcp/get-seopress-metadata`, the webmaster verification ability `webmastery-site-toolkit-for-mcp/webmaster-verification-status`, the database health ability `webmastery-site-toolkit-for-mcp/database-health`, the performance status ability `webmastery-site-toolkit-for-mcp/performance-status`, the backup status ability `webmastery-site-toolkit-for-mcp/backup-status`, plus the plugin abilities `webmastery-site-toolkit-for-mcp/list-plugins`, `webmastery-site-toolkit-for-mcp/plugin-audit`, `webmastery-site-toolkit-for-mcp/activate-plugin`, and `webmastery-site-toolkit-for-mcp/deactivate-plugin`.
+Current coverage is 76 base registered abilities plus 5 generated abilities per eligible custom post type. The E2E runner registers two fixture custom post types, so the manifest covers 86 abilities (see the manifest validation script's runtime summary for the current test case count), including custom post type discovery and CRUD permission coverage for two capability maps, object/status-aware post, page, CPT, media, and SEO score list filtering, private-status and bulk-publish denial cases, sensitive identity-field absence checks, taxonomy get/update permission coverage, post and page listing response-shape assertions, expanded Yoast and SEOPress metadata write coverage, controlled Google Site Kit status/module/permission/PageSpeed route fixtures with shared-dashboard, denial, privacy, and same-site URL coverage, the bulk post abilities `webmastery-site-toolkit-for-mcp/bulk-trash-posts` and `webmastery-site-toolkit-for-mcp/bulk-publish-posts`, the revision abilities `webmastery-site-toolkit-for-mcp/list-revisions` and `webmastery-site-toolkit-for-mcp/restore-revision`, the post meta abilities `webmastery-site-toolkit-for-mcp/get-post-meta`, `webmastery-site-toolkit-for-mcp/update-post-meta`, and `webmastery-site-toolkit-for-mcp/delete-post-meta`, the block editing abilities `webmastery-site-toolkit-for-mcp/list-content-blocks`, `webmastery-site-toolkit-for-mcp/patch-content-block`, and `webmastery-site-toolkit-for-mcp/patch-post-content` with targeted post, page, CPT, permission-denial, and unsupported-type coverage, the comment interaction abilities `webmastery-site-toolkit-for-mcp/reply-comment` and `webmastery-site-toolkit-for-mcp/update-comment`, the media sideload ability `webmastery-site-toolkit-for-mcp/upload-image`, the content hygiene abilities `webmastery-site-toolkit-for-mcp/list-orphaned-media`, `webmastery-site-toolkit-for-mcp/list-posts-no-featured-image`, and `webmastery-site-toolkit-for-mcp/list-stuck-scheduled`, the site introspection abilities `webmastery-site-toolkit-for-mcp/get-site-info`, `webmastery-site-toolkit-for-mcp/get-user-info`, and `webmastery-site-toolkit-for-mcp/get-environment-info`, the user access audit ability `webmastery-site-toolkit-for-mcp/user-access-audit`, the Yoast score and metadata abilities `webmastery-site-toolkit-for-mcp/get-seo-scores`, `webmastery-site-toolkit-for-mcp/get-readability-scores`, and `webmastery-site-toolkit-for-mcp/get-yoast-metadata`, the SEOPress metadata ability `webmastery-site-toolkit-for-mcp/get-seopress-metadata`, the webmaster verification ability `webmastery-site-toolkit-for-mcp/webmaster-verification-status`, the database health ability `webmastery-site-toolkit-for-mcp/database-health`, the performance status ability `webmastery-site-toolkit-for-mcp/performance-status`, the backup status ability `webmastery-site-toolkit-for-mcp/backup-status`, the plugin abilities `webmastery-site-toolkit-for-mcp/list-plugins`, `webmastery-site-toolkit-for-mcp/plugin-audit`, `webmastery-site-toolkit-for-mcp/activate-plugin`, and `webmastery-site-toolkit-for-mcp/deactivate-plugin`, plus the theme inventory ability `webmastery-site-toolkit-for-mcp/list-themes`.
 
 `update-cpt-mcp-book` regression coverage (issue #107) proves taxonomy assignment is pre-validated before `wp_update_post()` writes anything: each denial case (a nonexistent taxonomy, a registered taxonomy the actor lacks `assign_terms` capability for, and a mixed payload combining one allowed and one forbidden *registered* taxonomy alongside the existing allowed-plus-nonexistent case) submits a full `title`/`content`/`status`/`slug`/`taxonomy_terms` payload, and the paired read confirms the fixture's title, content, status, slug, and taxonomy terms are all unchanged. A second fixture taxonomy, `wstm107_restricted_shelf`, is registered only for `mcp_book` and granted to no role, so it is always forbidden and exercises the mixed allowed/forbidden registered-taxonomy path independently of the nonexistent-taxonomy case. The fixture post used for these cases (`wstm107_book_id`) is created with an explicit, deterministic slug so the unchanged-slug assertions are stable.
 
@@ -1260,6 +1260,16 @@ Manifest changes (no new cases): `site-health-check` now also asserts `data.summ
 - Run `user-access-audit` with 1 to 3 administrators: no administrator-count warning, `admin_count` is still reported. Add a fourth: the warning appears. On a single site `super_admins` is `[]`. On a multisite network, grant super admin to a user with no role on the current site and give them an application password: they appear in `super_admins` and their password in `application_passwords`, while `admin_count` counts site administrators only.
 - With the cURL transport, upload an image from a host you control with a short DNS TTL; change its A record to `127.0.0.1` after the request starts (or use a resolver that alternates answers): the download still connects to the address that passed validation. A redirect to a host resolving to a private address is rejected with `download_failed`. Through an HTTP proxy or with the streams transport, pinning is not applied.
 
+## List themes (unreleased, #228)
+
+Manifest cases: `list-themes as admin` (`per_page` 100) asserts every item field on the first item, `untrusted_fields: ["name","version","author"]`, `next_page: null`, the absence of `total`, description, tags, screenshot, theme root, path and error fields, and, through the new `assert_list_item` assertion, that exactly one item has `is_active: true` and its `stylesheet` equals `data.active_stylesheet`. `list-themes paging with per_page 1` expects one item and `next_page: 2` (every supported WordPress image ships more than one default theme); a page past the end returns `items: []`; `per_page: 101` is rejected as `invalid_input` / `ability_invalid_input`; an Editor (no `switch_themes`) is refused with `forbidden` / `ability_invalid_permissions` by the permission callback. The QA site never switches themes, so the active theme's position is not fixed; `assert_list_item` (`{"path", "match", "equal_paths"}`, success cases only) passes only when exactly one record in the list at `path` has every `match` value (strict) and each `equal_paths` field equals the value at that result path. Broken themes, multisite filtering and update fields are covered by `ThemesTest`. Manual verification on a disposable site:
+
+- As an Administrator, call `list-themes`: themes are sorted by stylesheet, the active theme has `is_active: true` and equals `active_stylesheet`, and `parent_stylesheet` is `null`. Install and activate a child theme of an installed theme: `parent_stylesheet` is the parent's slug, the parent item has `is_parent_of_active: true`, and the child item's `parent` is that slug.
+- Call it with `{"per_page":1,"page":1}`, then follow `next_page` until it is `null`: every installed theme appears exactly once.
+- Delete the parent theme's directory (or rename it) while a child theme of it is installed: the child appears with only `stylesheet`, `is_active`, `is_parent_of_active` and `broken: true`, and the response contains no error text or path.
+- Run `wp transient delete update_themes --network`: `update_data_cached` is `false` and every `update_available` is `false`. After Dashboard > Updates finds a theme update, that item has `update_available: true` and `new_version`. Add `define( 'DISALLOW_FILE_MODS', true );` (which removes `update_themes`): `update_data_cached`, `update_available` and `new_version` disappear.
+- On multisite, as a site administrator with `switch_themes`, network-disable a theme that is not enabled for the site: it is no longer listed. An Editor and a Subscriber are refused.
+
 ## Rule for new abilities
 
 When a PR adds a new ability, it must also add at least one manifest test case for that ability. If the ability is registered but missing from the manifest, E2E QA fails.
@@ -1528,13 +1538,13 @@ The protected `/wp-json/wstm167-qa/v1/runtime` observation requires the private
 token header, returns ten closed fields without the raw token, and refuses
 missing/incorrect tokens with 403. Parent lifecycle owns the exact context
 marker and exclusively installed MU fixture. Remove the product-only fixture
-before later checks that expect 85 native registrations. Never precreate or
+before later checks that expect 86 native registrations. Never precreate or
 reuse `/qa-artifacts/<run>/untrusted` or `/qa-artifacts/<run>/bounded`.
 
 ### Untrusted-content coverage (3.0, #108)
 
-`untrusted-content-runner.php` executes 298 independently planned ordered labels:
-104 gateway, 104 individual-tool and 90 annotation observations (85 native
+`untrusted-content-runner.php` executes 299 independently planned ordered labels:
+104 gateway, 104 individual-tool and 91 annotation observations (86 native
 abilities plus five owned fixture abilities). Keep authorized values/types/
 HTML/block delimiters unchanged, add only record-local present-field markers,
 and retain canonical errors, role/privacy/no-write controls and stored-content/
@@ -1563,7 +1573,7 @@ Current client/operator protections are documented in the
 
 Capture original responses and per-case records once, with one complete final
 summary. Repeated cumulative summary snapshots are not required proof.
-Independent replay still requires all 298 ordered cases and their exact
+Independent replay still requires all 299 ordered cases and their exact
 request/response/oracle associations. Keep journal/index overhead and terminal
 failure reservations inside the existing wire budget. A partial run or a
 successful cleanup cannot substitute for complete semantic replay.
@@ -1748,7 +1758,7 @@ and update allocation controls retain the same 128 MiB limit.
 `product-qa.summary.json` has exactly
 `schema`, `status`, `lane`, `uid`, `untrusted_cases` and `bounded_observations`.
 It is published only after full record replay, current live resource absence,
-owned MU/marker retirement and restoration of the 85 native registrations.
+owned MU/marker retirement and restoration of the 86 native registrations.
 
 Keep original nonzero exits and partial private evidence. Flags alone cannot
 clear outer retention: independently verify restoration and actual absence of

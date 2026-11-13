@@ -34,6 +34,7 @@
       "SiteKitPermissionsTest.php",
       "SiteKitUrlTest.php",
       "TaxonomyWriteTest.php",
+      "ThemesTest.php",
       "UntrustedContentTest.php"
     ],
     "qa-tooling-unit": [

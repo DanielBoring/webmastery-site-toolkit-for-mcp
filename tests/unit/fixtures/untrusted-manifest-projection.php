@@ -177,6 +177,8 @@ final class Wstm108_Manifest_Projection {
 				return array( 'data.items.0.untrusted_fields' => array( 'title', 'url' ) );
 			case 'list-stuck-scheduled':
 				return array( 'data.items.0.untrusted_fields' => array( 'title', 'url', 'author_name' ) );
+			case 'list-themes':
+				return array( 'data.items.0.untrusted_fields' => array( 'name', 'version', 'author' ) );
 			case 'seo-analyze-post':
 				return array( 'data.metrics.untrusted_fields' => array( 'title', 'url', 'slug', 'yoast_meta_description', 'seopress_meta_description', 'yoast_focus_keyword', 'seopress_focus_keywords' ) );
 		}

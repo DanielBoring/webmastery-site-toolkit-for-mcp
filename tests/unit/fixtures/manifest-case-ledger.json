@@ -475,6 +475,154 @@
                 }
             ],
             "changed": []
+        },
+        {
+            "issue": 228,
+            "summary": "Add list-themes allowed, paging, past-end, schema and editor-denial cases",
+            "before_count": 609,
+            "before_sha256": "9be2fd08cc46c085e57553751111d98946cd4e76e0e3385408a8d700fbb16e2b",
+            "after_count": 614,
+            "after_sha256": "c28d8d8f756944eef98e4e43ff68b55fc33e20764e50453e06aa9d5a081b46b1",
+            "added": [
+                {
+                    "index": 280,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/list-themes",
+                        "label": "list-themes as admin",
+                        "role": "admin",
+                        "input": {
+                            "per_page": 100
+                        },
+                        "expect": "success",
+                        "assert_paths": [
+                            "data.active_stylesheet",
+                            "data.parent_stylesheet",
+                            "data.update_data_cached",
+                            "data.items.0.stylesheet",
+                            "data.items.0.name",
+                            "data.items.0.version",
+                            "data.items.0.author",
+                            "data.items.0.parent",
+                            "data.items.0.is_active",
+                            "data.items.0.is_parent_of_active",
+                            "data.items.0.is_block_theme",
+                            "data.items.0.requires_wp",
+                            "data.items.0.requires_php",
+                            "data.items.0.update_available",
+                            "data.items.0.new_version"
+                        ],
+                        "assert_values": {
+                            "data.page": 1,
+                            "data.per_page": 100,
+                            "data.next_page": null,
+                            "data.items.0.broken": false,
+                            "data.items.0.untrusted_fields": [
+                                "name",
+                                "version",
+                                "author"
+                            ]
+                        },
+                        "assert_list_item": {
+                            "path": "data.items",
+                            "match": {
+                                "is_active": true
+                            },
+                            "equal_paths": {
+                                "stylesheet": "data.active_stylesheet"
+                            }
+                        },
+                        "assert_missing_paths": [
+                            "data.total",
+                            "data.items.0.description",
+                            "data.items.0.tags",
+                            "data.items.0.screenshot",
+                            "data.items.0.theme_root",
+                            "data.items.0.path",
+                            "data.items.0.errors"
+                        ]
+                    }
+                },
+                {
+                    "index": 281,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/list-themes",
+                        "label": "list-themes paging with per_page 1",
+                        "role": "admin",
+                        "input": {
+                            "per_page": 1,
+                            "page": 1
+                        },
+                        "expect": "success",
+                        "assert_paths": [
+                            "data.items.0.stylesheet"
+                        ],
+                        "assert_values": {
+                            "data.page": 1,
+                            "data.per_page": 1,
+                            "data.next_page": 2,
+                            "data.items.0.untrusted_fields": [
+                                "name",
+                                "version",
+                                "author"
+                            ]
+                        },
+                        "assert_missing_paths": [
+                            "data.items.1"
+                        ]
+                    }
+                },
+                {
+                    "index": 282,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/list-themes",
+                        "label": "list-themes page past the end returns an empty list",
+                        "role": "admin",
+                        "input": {
+                            "per_page": 100,
+                            "page": 2
+                        },
+                        "expect": "success",
+                        "assert_values": {
+                            "data.items": [],
+                            "data.page": 2,
+                            "data.next_page": null
+                        }
+                    }
+                },
+                {
+                    "index": 283,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/list-themes",
+                        "label": "list-themes rejects per_page above 100",
+                        "role": "admin",
+                        "input": {
+                            "per_page": 101
+                        },
+                        "expect": "failure",
+                        "expect_error_code": "invalid_input",
+                        "expect_error_reason": "ability_invalid_input",
+                        "expect_error_shape": "canonical"
+                    }
+                },
+                {
+                    "index": 284,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/list-themes",
+                        "label": "list-themes as editor",
+                        "role": "editor",
+                        "input": null,
+                        "expect": "failure",
+                        "expect_error_code": "forbidden",
+                        "expect_error_reason": "ability_invalid_permissions",
+                        "expect_error_shape": "canonical",
+                        "assert_permission": "forbidden",
+                        "assert_missing_paths": [
+                            "data"
+                        ]
+                    }
+                }
+            ],
+            "changed": []
         }
     ]
 }

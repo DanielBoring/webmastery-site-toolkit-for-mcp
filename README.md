@@ -51,7 +51,7 @@ WordPress user and enforces that user's roles and capabilities.
 | Content hygiene | Find orphaned media, posts missing featured images, and stuck scheduled posts | Author or Editor |
 | Site info and webmaster checks | Safe site and user context; public Google and Bing verification signals | Subscriber |
 | Google Site Kit | Setup status, modules, permissions, and PageSpeed summaries | Site Kit dashboard users |
-| Site administration | Plugins, users, environment, site health, security, performance, backups, database health | Administrator |
+| Site administration | Plugins, themes, users, environment, site health, security, performance, backups, database health | Administrator |
 
 The [plugin guide](https://www.virtuallyboring.com/webmastery-site-toolkit-for-mcp/#available-abilities)
 lists every ability by name. The [ability contracts](docs/reference/ability-contracts.md)
