@@ -19,6 +19,7 @@ class Webmastery_MCP_Cron {
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
+				'default'    => [],
 				'properties' => [
 					'per_page'     => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 50 ],
 					'page'         => [ 'type' => 'integer', 'minimum' => 1, 'default' => 1 ],

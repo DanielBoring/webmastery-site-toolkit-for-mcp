@@ -670,7 +670,9 @@ the usual cause.
 
 Input is a closed object: optional `per_page` (1-100, default 50), `page` (1
 or more, default 1) and `overdue_only` (boolean, default `false`; lists only
-overdue events, the `summary` still covers all events). Items are sorted by
+overdue events, the `summary` still covers all events). The whole input may be
+omitted or `null`, which means the defaults for both the permission check and
+the call. Items are sorted by
 next run time, then hook name; continue until `next_page` is `null`. A page past
 the end returns `items: []` and `next_page: null`.
 
