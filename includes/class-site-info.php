@@ -4,20 +4,40 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Site_Info {
 
+	/**
+	 * Register the abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_site_info();
 		self::register_user_info();
 		self::register_environment_info();
 	}
 
+	/**
+	 * Permission check for the ability.
+	 *
+	 * @return true|WP_Error
+	 */
 	public static function permission() {
 		return Webmastery_MCP_Permissions::check( 'read' );
 	}
 
+	/**
+	 * Permission check for administrator-only abilities.
+	 *
+	 * @return true|WP_Error
+	 */
 	public static function admin_permission() {
 		return Webmastery_MCP_Permissions::check( 'manage_options' );
 	}
 
+	/**
+	 * Site details.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function get_site_info() {
 		$theme = wp_get_theme();
 
@@ -39,6 +59,11 @@ class Webmastery_MCP_Site_Info {
 		];
 	}
 
+	/**
+	 * Current user details.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function get_user_info() {
 		$user = wp_get_current_user();
 
@@ -55,6 +80,11 @@ class Webmastery_MCP_Site_Info {
 		];
 	}
 
+	/**
+	 * Environment details.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function get_environment_info() {
 		global $wpdb;
 
@@ -76,6 +106,11 @@ class Webmastery_MCP_Site_Info {
 		];
 	}
 
+	/**
+	 * Register the get-site-info ability.
+	 *
+	 * @return void
+	 */
 	private static function register_site_info() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-site-info', [
 			'label'               => 'Get Site Info',
@@ -90,6 +125,11 @@ class Webmastery_MCP_Site_Info {
 		] );
 	}
 
+	/**
+	 * Register the get-user-info ability.
+	 *
+	 * @return void
+	 */
 	private static function register_user_info() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-user-info', [
 			'label'               => 'Get Current User Info',
@@ -104,6 +144,11 @@ class Webmastery_MCP_Site_Info {
 		] );
 	}
 
+	/**
+	 * Register the get-environment-info ability.
+	 *
+	 * @return void
+	 */
 	private static function register_environment_info() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-environment-info', [
 			'label'               => 'Get Environment Info',
@@ -118,6 +163,11 @@ class Webmastery_MCP_Site_Info {
 		] );
 	}
 
+	/**
+	 * Timezone name or UTC offset string.
+	 *
+	 * @return string
+	 */
 	private static function get_timezone() {
 		$timezone_string = get_option( 'timezone_string' );
 		if ( is_string( $timezone_string ) && '' !== $timezone_string ) {
@@ -133,6 +183,11 @@ class Webmastery_MCP_Site_Info {
 		return sprintf( 'UTC%s%02d:%02d', $sign, $hours, $minutes );
 	}
 
+	/**
+	 * Capabilities of the current user.
+	 *
+	 * @return array<string, bool>
+	 */
 	private static function get_capability_summary() {
 		$capabilities = [
 			'read',

@@ -4,11 +4,21 @@ defined( 'ABSPATH' ) || exit;
 
 final class Webmastery_MCP_Featured_Image {
 
+	/**
+	 * Register the abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_set_featured_image();
 		self::register_remove_featured_image();
 	}
 
+	/**
+	 * Register the set-featured-image ability.
+	 *
+	 * @return void
+	 */
 	private static function register_set_featured_image() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/set-featured-image', [
 			'label'               => 'Set Featured Image',
@@ -58,6 +68,11 @@ final class Webmastery_MCP_Featured_Image {
 		] );
 	}
 
+	/**
+	 * Register the remove-featured-image ability.
+	 *
+	 * @return void
+	 */
 	private static function register_remove_featured_image() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/remove-featured-image', [
 			'label'               => 'Remove Featured Image',
@@ -92,6 +107,11 @@ final class Webmastery_MCP_Featured_Image {
 		] );
 	}
 
+	/**
+	 * Schema for the response_format input.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function response_format_schema(): array {
 		return [
 			'type'        => 'string',
@@ -101,6 +121,14 @@ final class Webmastery_MCP_Featured_Image {
 		];
 	}
 
+	/**
+	 * Build the response in the requested format.
+	 *
+	 * @param int    $post_id     Post ID.
+	 * @param string $format      Response format, full or compact.
+	 * @param int    $previous_id Previous featured image ID.
+	 * @return array<string, mixed>
+	 */
 	private static function response( int $post_id, string $format, int $previous_id ): array {
 		if ( 'compact' !== $format ) {
 			return [ 'success' => true, 'data' => Webmastery_MCP_Posts::normalize( $post_id ) ];

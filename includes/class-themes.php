@@ -4,6 +4,11 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Themes {
 
+	/**
+	 * Register the abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-themes', [
 			'label'               => 'List Themes',
@@ -26,6 +31,12 @@ class Webmastery_MCP_Themes {
 		] );
 	}
 
+	/**
+	 * List installed themes with update state.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array<string, mixed>
+	 */
 	public static function execute_list_themes( $input = [] ) {
 		$per_page = Webmastery_MCP_Input::per_page( $input, 50 );
 		$page     = Webmastery_MCP_Input::page( $input );
@@ -70,6 +81,16 @@ class Webmastery_MCP_Themes {
 		return Webmastery_MCP_Response::ok( $data );
 	}
 
+	/**
+	 * Normalize one installed theme.
+	 *
+	 * @param string                    $stylesheet    Theme directory name.
+	 * @param mixed                     $theme         WP_Theme, or a broken-theme value.
+	 * @param string                    $active        Active stylesheet.
+	 * @param string|null               $active_parent Parent of the active theme.
+	 * @param array<string, mixed>|null $updates       Cached update data keyed by stylesheet.
+	 * @return array<string, mixed>
+	 */
 	private static function normalize_theme( string $stylesheet, $theme, string $active, ?string $active_parent, ?array $updates ): array {
 		$state = [
 			'stylesheet'          => $stylesheet,

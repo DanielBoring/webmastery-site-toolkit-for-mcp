@@ -6,6 +6,17 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add PHPDoc-only type information to 13 unbound `includes/` classes toward
+  PHPStan level 6 (#236; `class-cron`, `-featured-image`, `-health`,
+  `-link-scan`, `-performance-status`, `-post-content`, `-post-parent`,
+  `-post-revisions`, `-post-writes`, `-safe-http`, `-security`, `-site-info`,
+  `-themes`). Level 6 reports 748 diagnostics (350 missing return types, 314
+  missing parameter types, 80 missing iterable value types, 4 template
+  types), too many to fix or baseline safely in one change, so the configured
+  level stays at 5; this change leaves 678. No native type declarations were
+  added and the stripped PHP token streams are unchanged, so runtime behavior
+  is identical.
+
 - Add six `scan-broken-links` E2E manifest cases (#229; manifest now 94
   abilities, 649 cases, ledger step 229): internal-only scans as administrator
   and editor of a new runner fixture (a published target post and a post
