@@ -8831,7 +8831,13 @@
         "role": "admin",
         "input": null,
         "expect": "success",
-        "assert_bucket_counts": true
+        "assert_bucket_counts": true,
+        "assert_diagnostic_findings": {
+            "db_prefix": {
+                "bucket": "warn",
+                "label": "The default database table prefix is in use"
+            }
+        }
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/security-audit",

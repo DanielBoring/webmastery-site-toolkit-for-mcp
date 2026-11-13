@@ -372,6 +372,42 @@
                     }
                 }
             ]
+        },
+        {
+            "issue": 230,
+            "summary": "security-audit: assert the default db_prefix finding on the QA site",
+            "before_count": 607,
+            "before_sha256": "b4d549fc0464cd9ae8b7a3a9653623bb5da40d9d57246a3e9179b5ad96a18494",
+            "after_count": 607,
+            "after_sha256": "3450c3a49b0389db3724d4b0c84c0599c5bd9f4ada7cea1318ef29f1c568598a",
+            "added": [],
+            "changed": [
+                {
+                    "label": "security-audit",
+                    "before": {
+                        "ability": "webmastery-site-toolkit-for-mcp/security-audit",
+                        "label": "security-audit",
+                        "role": "admin",
+                        "input": null,
+                        "expect": "success",
+                        "assert_bucket_counts": true
+                    },
+                    "after": {
+                        "ability": "webmastery-site-toolkit-for-mcp/security-audit",
+                        "label": "security-audit",
+                        "role": "admin",
+                        "input": null,
+                        "expect": "success",
+                        "assert_bucket_counts": true,
+                        "assert_diagnostic_findings": {
+                            "db_prefix": {
+                                "bucket": "warn",
+                                "label": "The default database table prefix is in use"
+                            }
+                        }
+                    }
+                }
+            ]
         }
     ]
 }
