@@ -509,11 +509,11 @@ final class Wstm_Product_Evidence_Verifier {
 				self::check( ! isset( $state['tools'][ $tool->name ] ), 'duplicate catalog descriptor identity' );
 				$state['tools'][ $tool->name ] = $tool;
 			}
-			self::check( count( $state['tools'] ) <= ( 'individual' === $parts[1] ? 91 : 3 ), 'finite setup catalog' );
+			self::check( count( $state['tools'] ) <= ( 'individual' === $parts[1] ? 92 : 3 ), 'finite setup catalog' );
 			if ( null !== $cursor ) { $state['seen'][ $cursor ] = true; }
 			$state['id'] = $request['id']; $state['cursor'] = $cursor; $state['complete'] = null === $cursor;
 			if ( $state['complete'] ) {
-				self::check( ( 'individual' === $parts[1] ? 91 : 3 ) === count( $state['tools'] ), 'exact setup catalog count' );
+				self::check( ( 'individual' === $parts[1] ? 92 : 3 ) === count( $state['tools'] ), 'exact setup catalog count' );
 			}
 		}
 		$states[ $boundary ] = $state;
@@ -804,14 +804,14 @@ final class Wstm_Product_Evidence_Verifier {
 		self::check( $verdict['binding'] === ( $resources['binding'] ?? null ) && 'cleaned' === ( $resources['phase'] ?? null ), 'resource ledger cleanup binding' );
 		$summary = $reader->json( 'runner.json' );
 		$manifest = Wstm_Product_Evidence_Reader::decode_json( $reader->manifest() );
-		self::check( 614 === count( $manifest ) && array_values( $manifest ) === $manifest, 'maintained manifest case inventory' );
+		self::check( 617 === count( $manifest ) && array_values( $manifest ) === $manifest, 'maintained manifest case inventory' );
 		$native = array();
 		foreach ( $manifest as $case ) {
 			self::check( is_array( $case ) && is_string( $case['ability'] ?? null ), 'trusted manifest ability identity' ); $native[] = $case['ability'];
 		}
 		$native = array_values( array_unique( $native, SORT_STRING ) ); sort( $native, SORT_STRING );
 		$labels = Wstm108_Plan::labels( $native );
-		self::check( 299 === count( $labels ) && $labels === $verdict['expected_labels'] && $labels === $verdict['observed_labels']
+		self::check( 300 === count( $labels ) && $labels === $verdict['expected_labels'] && $labels === $verdict['observed_labels']
 			&& $labels === ( $summary['expected_labels'] ?? null ) && $verdict['binding'] === ( $summary['binding'] ?? null )
 			&& $verdict['context_sha256'] === ( $summary['stage_context_sha256'] ?? null ), 'untrusted inventory/context' );
 		$journal = $reader->read( 'runner.json.http.jsonl' );
@@ -926,9 +926,9 @@ final class Wstm_Product_Evidence_Verifier {
 			&& $labels === array_keys( $scope['cases'] ), 'complete runner case scope' );
 		self::check( hash( 'sha256', json_encode( $projection, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION ) ) === $scope['semantic_sha256']
 			&& true === ( $original_summary['completed'] ?? null ) && true === ( $original_summary['cleanup_complete'] ?? null )
-			&& 'passed' === ( $original_summary['status'] ?? null ) && 299 === ( $original_summary['passed'] ?? null )
-			&& 0 === ( $original_summary['failed'] ?? null ) && 299 === $verdict['passed'] && 0 === $verdict['failed']
-			&& 299 === ( $summary['passed'] ?? null ) && 0 === ( $summary['failed'] ?? null ), 'final private summary seal/count association' );
+			&& 'passed' === ( $original_summary['status'] ?? null ) && 300 === ( $original_summary['passed'] ?? null )
+			&& 0 === ( $original_summary['failed'] ?? null ) && 300 === $verdict['passed'] && 0 === $verdict['failed']
+			&& 300 === ( $summary['passed'] ?? null ) && 0 === ( $summary['failed'] ?? null ), 'final private summary seal/count association' );
 		$gaps = array(); $descriptors = array();
 		self::check( array( 'yoast' => true, 'seopress' => true ) === ( $original_summary['providers'] ?? null ), 'actual active provider prerequisites' );
 		foreach ( $cases as $index => $case ) {

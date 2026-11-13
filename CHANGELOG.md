@@ -8,6 +8,15 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Added
 
+- Get Updates Overview: a read-only ability for accounts that can update
+  WordPress core, plugins or themes (Administrator by default) that reports
+  available core, plugin and theme updates from WordPress's cached update data
+  in one call, with the time each cache was last refreshed. Sections the
+  account lacks `update_core`, `update_plugins` or `update_themes` for are left
+  out and named in `omitted_sections`. No update check or remote request is
+  made, plugin and theme lists are capped at 100 items, plugin and theme names
+  are marked as untrusted text, and no package URLs, download links or
+  changelog text are returned.
 - List Themes: a read-only ability for accounts that can switch themes
   (Administrator by default) that lists installed themes in stable, paged
   order with the active theme and its parent marked, child-theme parents,

@@ -35,7 +35,8 @@
       "SiteKitUrlTest.php",
       "TaxonomyWriteTest.php",
       "ThemesTest.php",
-      "UntrustedContentTest.php"
+      "UntrustedContentTest.php",
+      "UpdatesTest.php"
     ],
     "qa-tooling-unit": [
       "ArraySyntaxTest.php",

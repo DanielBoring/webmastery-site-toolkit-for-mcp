@@ -6,6 +6,13 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add three `get-updates-overview` E2E manifest cases (#225; manifest now 87
+  abilities, 617 cases, ledger step 225; admin presence/shape only because the
+  QA site's update transients are not controlled, editor and subscriber
+  denied). The new-ability count pins move to 87 native abilities, 92
+  annotation observations/individual tools and 300 untrusted labels;
+  `InputBoundaryTest` counts 19 registering classes; `UpdatesTest` joins the
+  `product` suite (35 files).
 - Add five `list-themes` E2E manifest cases (#228; manifest now 86 abilities,
   614 cases, ledger step 228) and a new manifest assertion `assert_list_item`
   (`{"path", "match", "equal_paths"}`, success cases only): exactly one record

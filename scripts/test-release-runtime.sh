@@ -190,7 +190,7 @@ host_php -r '
 	$expected = [
 		"schema" => "wstm-product-qa-summary-v1", "status" => "passed",
 		"lane" => PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION, "uid" => 33,
-		"untrusted_cases" => 299, "bounded_observations" => 1461,
+		"untrusted_cases" => 300, "bounded_observations" => 1461,
 	];
 	if ($summary !== $expected) { throw new RuntimeException("Mock product summary is not the closed six-key contract."); }
 '

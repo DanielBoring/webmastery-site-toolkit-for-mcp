@@ -22,7 +22,7 @@ final class ProductSummaryTest extends TestCase {
 			'php_floor' => $lane, 'plugin_root' => $context['plugin_root'], 'loaded_posts_sha256' => str_repeat('d', 64),
 		]];
 		foreach ([
-			'untrusted' => ['untrusted', 'records-verified-live-absence-unresolved', 299],
+			'untrusted' => ['untrusted', 'records-verified-live-absence-unresolved', 300],
 			'untrusted-live' => ['untrusted', 'live-absence-verified', 1],
 			'bounded' => ['bounded', 'records-verified-live-absence-unresolved', 1461],
 			'bounded-live' => ['bounded', 'live-absence-verified', 2],
@@ -37,7 +37,7 @@ final class ProductSummaryTest extends TestCase {
 			[$bytes, $records] = $this->observations($lane);
 			$this->assertSame([
 				'schema' => 'wstm-product-qa-summary-v1', 'status' => 'passed', 'lane' => $lane,
-				'uid' => 33, 'untrusted_cases' => 299, 'bounded_observations' => 1461,
+				'uid' => 33, 'untrusted_cases' => 300, 'bounded_observations' => 1461,
 			], Wstm_Product_Summary::verify($bytes, $records));
 		}
 	}
@@ -58,7 +58,7 @@ final class ProductSummaryTest extends TestCase {
 			$this->refuses($bytes, $extra);
 		}
 		$string_count = $original;
-		$string_count['untrusted']['count'] = '299';
+		$string_count['untrusted']['count'] = '300';
 		$this->refuses($bytes, $string_count);
 	}
 
