@@ -8,6 +8,15 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Added
 
+- List Themes: a read-only ability for accounts that can switch themes
+  (Administrator by default) that lists installed themes in stable, paged
+  order with the active theme and its parent marked, child-theme parents,
+  block-theme support, header version requirements and, only for accounts
+  that can update themes, update availability from WordPress's cached update
+  data (no remote request). On multisite only themes allowed for the current
+  site are listed. Broken themes appear with their slug only. Theme names,
+  versions and authors are marked as untrusted text; no paths, screenshots or
+  descriptions are returned.
 - Backup Status reports more detail for two more backup plugins: the last
   completed backup time for Solid Backups (BackupBuddy) and the saved backup
   schedule for WPvivid Backup & Migration. Each is read from one setting the

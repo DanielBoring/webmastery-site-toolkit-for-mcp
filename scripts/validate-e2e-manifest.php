@@ -206,6 +206,18 @@ foreach ( $manifest as $index => $case ) {
 		}
 	}
 
+	if ( array_key_exists( 'assert_list_item', $case ) ) {
+		$assertion   = $case['assert_list_item'];
+		$equal_paths = is_array( $assertion ) ? ( $assertion['equal_paths'] ?? array() ) : null;
+		if ( 'success' !== $expect || ! is_array( $assertion ) || ! is_string( $assertion['path'] ?? null ) || '' === $assertion['path']
+			|| ! is_array( $assertion['match'] ?? null ) || ! $assertion['match'] || array_filter( array_keys( $assertion['match'] ), 'is_int' )
+			|| ! is_array( $equal_paths ) || array_filter( array_keys( $equal_paths ), 'is_int' )
+			|| array_filter( $equal_paths, static fn( $path ) => ! is_string( $path ) || '' === $path )
+			|| array_diff( array_keys( $assertion ), array( 'path', 'match', 'equal_paths' ) ) ) {
+			$errors[] = webmastery_mcp_manifest_path( $case_number, 'assert_list_item' ) . ' requires a successful case, a list path, a nonempty match object and optional equal_paths of field => result path.';
+		}
+	}
+
 	foreach ( array( 'assert_paths', 'assert_missing_paths', 'assert_contains', 'assert_not_contains' ) as $field ) {
 		if ( array_key_exists( $field, $case ) && ! is_array( $case[ $field ] ) ) {
 			$errors[] = webmastery_mcp_manifest_path( $case_number, $field ) . ' must be an array.';

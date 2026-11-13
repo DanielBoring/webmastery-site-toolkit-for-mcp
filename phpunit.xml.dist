@@ -41,6 +41,7 @@
 			<file>tests/unit/SiteKitPermissionsTest.php</file>
 			<file>tests/unit/SiteKitUrlTest.php</file>
 			<file>tests/unit/TaxonomyWriteTest.php</file>
+			<file>tests/unit/ThemesTest.php</file>
 			<file>tests/unit/UntrustedContentTest.php</file>
 		</testsuite>
 		<testsuite name="qa-tooling">

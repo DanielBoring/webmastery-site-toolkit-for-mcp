@@ -1186,6 +1186,28 @@ foreach ( $manifest as $case ) {
 		}
 	}
 
+	if ( $passed && isset( $case['assert_list_item'] ) ) {
+		// Exactly one list item has every match value; its equal_paths fields equal other result paths.
+		$assertion = $case['assert_list_item'];
+		$list      = e2e_get_path_value( $result, $assertion['path'], $exists );
+		$matches   = array();
+		if ( $exists && is_array( $list ) ) {
+			foreach ( $list as $item ) {
+				if ( is_array( $item ) && array_intersect_key( $item, $assertion['match'] ) === $assertion['match'] ) {
+					$matches[] = $item;
+				}
+			}
+		}
+		$passed = 1 === count( $matches );
+		foreach ( $passed ? ( $assertion['equal_paths'] ?? array() ) : array() as $field => $path ) {
+			$expected_value = e2e_get_path_value( $result, $path, $exists );
+			if ( ! $exists || ! array_key_exists( $field, $matches[0] ) || $expected_value !== $matches[0][ $field ] ) {
+				$passed = false;
+				break;
+			}
+		}
+	}
+
 	if ( $passed && ! empty( $case['assert_post_thumbnail'] ) && is_array( $case['assert_post_thumbnail'] ) ) {
 		$post_id_path     = $case['assert_post_thumbnail']['post_id'] ?? '';
 		$attachment_path  = $case['assert_post_thumbnail']['attachment_id_path'] ?? '';

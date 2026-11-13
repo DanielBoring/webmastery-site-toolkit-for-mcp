@@ -316,7 +316,7 @@ before retiring the marker.
 
 Both source and installed-package runs retain the existing main-branch
 security, destructive, schema, metadata, comment, database-privacy and Site Kit
-checks. The native manifest has 85 abilities and 609 cases: the sealed 601 cases (all
+checks. The native manifest has 86 abilities and 614 cases: the sealed 601 cases (all
 589 inherited cases and 12 additions) plus the later steps recorded in
 `tests/unit/fixtures/manifest-case-ledger.json`; permission-sensitive cases
 include allowed and denied roles.
@@ -336,7 +336,7 @@ SEO-score items require record-local markers for present `title`, `url` and
 
 | Area | Acceptance |
 | --- | --- |
-| Untrusted content | All 298 ordered labels: 104 gateway calls, 104 individual-tool calls and 90 actual annotation observations. Check record-local present-only markers, unchanged authorized values/types/HTML, canonical errors, privacy and role denials, stored-content/message separation and actual MCP hints. |
+| Untrusted content | All 299 ordered labels: 104 gateway calls, 104 individual-tool calls and 91 actual annotation observations. Check record-local present-only markers, unchanged authorized values/types/HTML, canonical errors, privacy and role denials, stored-content/message separation and actual MCP hints. |
 | Shared helpers | All 12 helper rows retain permission and lookup/type order, errors/response shape, normalization/defaults, scheduling/slashing, plugin inventory, SEO tables and pagination. |
 | Bounded lists | Recompute all 336 large and 1125 small observations, exact order, empty-window continuation, authorized summaries/full/revisions, reference parity and injected failure controls from the retained raw records. |
 | Post extraction | Six owners retain callbacks, schemas, permission checks and dispatcher/bootstrap wiring without changing ability names. |
@@ -407,7 +407,7 @@ client-name and actor checks across enrollment, recovery and absence checks.
 
 The owned product fixture registers the individual server through the normal
 Adapter initialization hook, using native transport permissions and exactly
-85 native plus five owned CPT abilities. Capture setup responses before
+86 native plus five owned CPT abilities. Capture setup responses before
 validation, but enroll sessions only after HTTP, fixture and typed JSON-RPC
 request/response checks pass. Host replay independently checks all six client
 setups and their catalogs. Failed evidence binds the complete final journal
@@ -428,7 +428,7 @@ the primary post's allowed score-key observation.
 The protected runtime endpoint returns a closed observation without the raw
 token; missing or incorrect tokens receive 403. The product-only MU fixture
 is active only during its owned stage and removed before checks that expect
-exactly 85 native registrations. Do not precreate or reuse the two exclusive
+exactly 86 native registrations. Do not precreate or reuse the two exclusive
 per-run stage directories.
 
 #### Evidence bounds and replay

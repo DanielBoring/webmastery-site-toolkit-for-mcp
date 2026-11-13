@@ -29,6 +29,7 @@ table shows it.
 - [Parent assignments](#parent-assignments)
 - [Google Site Kit](#google-site-kit)
 - [Plugin audit and backup status](#plugin-audit-and-backup-status)
+- [Themes](#themes)
 - [Site health and user access audits](#site-health-and-user-access-audits)
 - [Untrusted result fields](#untrusted-result-fields)
 - [Security and privacy behavior](#security-and-privacy-behavior)
@@ -474,6 +475,45 @@ itself treats its `wpvivid_main_schedule_event` cron event as the live state.
 Solid Backups is read from the current site's options table (on multisite this
 matches only the main site).
 
+## Themes
+
+`list-themes` is read-only and makes no network or filesystem-path calls. It
+requires `switch_themes` (the capability of **Appearance > Themes**, normally
+Administrator only); Editors, Authors and Subscribers get `forbidden` /
+`ability_invalid_permissions`.
+
+Input is a closed object: optional `per_page` (1-100, default 50) and `page`
+(1 or more, default 1); the whole input may be omitted or `null`, which means
+the defaults for both the permission check and the call. Themes are sorted by stylesheet (directory slug) so
+pages are stable; continue until `next_page` is `null`. A page past the end
+returns `items: []` and `next_page: null`. On multisite only themes allowed for
+the current site are listed (`wp_get_themes( [ 'allowed' => true ] )`); themes
+with errors are included.
+
+`data` has `items`, `page`, `per_page`, `next_page`, `active_stylesheet` and
+`parent_stylesheet` (the active theme's template, or `null` when the active
+theme is not a child theme). Callers who also have `update_themes` get
+`update_data_cached`: `false` when WordPress has no cached `update_themes`
+data yet, so `update_available: false` means "not known", not "up to date".
+
+Each item has `stylesheet`, `is_active`, `is_parent_of_active` and `broken`.
+A theme that WordPress reports as broken (for example, a child theme whose
+parent is missing) has only those four fields: no header data and never the
+error text. Other items add:
+
+| Field | Value |
+| --- | --- |
+| `name`, `version` | Theme header values, unchanged (untrusted) |
+| `author` | Theme header author as plain text, tags stripped (untrusted) |
+| `parent` | Template slug for a child theme, otherwise `null` |
+| `is_block_theme` | Boolean from `WP_Theme::is_block_theme()` |
+| `requires_wp`, `requires_php` | `Requires at least` / `Requires PHP` header when it is a version-shaped token (starts with a digit; letters, digits, `.`, `+`, `-`; at most 32 characters), otherwise `null` |
+| `update_available`, `new_version` | Only for callers with `update_themes`: whether the cached `update_themes` site transient lists the theme, and its `new_version` (version-shaped token or `null`). Omitted entirely without `update_themes`. |
+
+Never returned: theme roots, directories or other filesystem paths, screenshot
+URLs, descriptions, tags, theme or author URIs, update package URLs, and error
+messages. The ability does not refresh update data or switch themes.
+
 ## Site health and user access audits
 
 Both abilities are Administrator-only and read-only.
@@ -528,6 +568,7 @@ apply. Markers never restore omitted/redacted fields.
 | Media | `title`, `caption`, `alt_text`, `url`, `filename` |
 | Orphaned media / posts without a featured image | `title`, `url` on each `data.items` record |
 | Stuck scheduled posts | `title`, `url`, `author_name` on each `data.items` record |
+| Theme (`list-themes`) | `name`, `version`, `author` on each non-broken `data.items` record |
 | User lookup | `display_name`, `nicename`, `url`, authorized `login` and `email` |
 | Administrator account audit | `login`, `email`, `last_login` |
 | Application-password audit | `user_login`, `app_name` |
@@ -597,7 +638,7 @@ confirmation is not independent human approval.
 - Subscriber-safe site info deliberately avoids secrets, filesystem paths, salts, auth keys, raw server internals, WordPress version, and theme version. `get-environment-info` requires `manage_options`.
 - Site Kit module, permission, and PageSpeed abilities require WordPress `read` **and** Site Kit's own REST permission callbacks, failing closed when a required route or callable permission check is absent. Status separately requires `manage_options`. Responses omit OAuth scopes/proxy details, module owner identities, raw settings, screenshots, third-party entities, and full Lighthouse payloads. PageSpeed only accepts URLs on the current site, although Google processes those requests through Site Kit's PageSpeed service.
 - Webmaster verification checks require `read`, including direct execution. Callers without `activate_plugins` receive neither `data.google.site_kit` nor `data.checks.google_site_kit`; plugin inspection is skipped and the summary counts only authorized checks. Public results, including failures and unknowns, share a 60-second cache scoped to the site, home URL, and result schema. Warm calls do not repeat HTTP/DNS work; private plugin state is inspected separately on each authorized call and is never cached with public results. Concurrent cold misses or early transient eviction can repeat work, so this is not a strict rate limit.
-- `get-environment-info`, `plugin-audit`, `user-access-audit`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `site-health-check` are Administrator-only.
+- `get-environment-info`, `plugin-audit`, `user-access-audit`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `site-health-check` are Administrator-only. `list-themes` requires `switch_themes` (Administrator by default) and adds cached update fields only for callers with `update_themes`.
 - `security-audit`'s `ssl` finding reports only the configured public `home` option (including normal option filters and `WP_HOME`): recognized HTTPS passes and HTTP fails. Missing/unsupported schemes or hosts, whitespace/control characters, malformed percent escapes, and invalid authority syntax warn as unknown. The local syntax guard accepts local names, Unicode/IDN forms, properly escaped components, and bracketed IPv6 (including escaped zone IDs) or IPvFuture literals; it is not a complete URL, DNS-name, or internationalized-name validator and imposes no address-routability policy. It is independent of the MCP request scheme and admin-only TLS policy. It does not test certificates, reachability, redirects, or the final filtered front-end URL.
 - `security-audit` always returns exactly one `wp_version` finding, using only WordPress's cached core update data (no remote request). An `upgrade` entry warns that an update is available; cached entries without an upgrade pass as up to date; missing, empty, or malformed cached data warns that the update status is unknown rather than passing. The `auth_keys` finding covers all eight keys and salts (`AUTH_KEY`, `SECURE_AUTH_KEY`, `LOGGED_IN_KEY`, `NONCE_KEY`, `AUTH_SALT`, `SECURE_AUTH_SALT`, `LOGGED_IN_SALT`, `NONCE_SALT`): the default placeholder fails, undefined or empty constants warn because WordPress falls back to database-stored values, and it passes only when all eight are set. Findings name constants, never their values.
 - `security-audit` also returns these baseline hardening findings, each exactly once per audit and appended after the existing findings; all are local reads (no HTTP request, no filesystem scan) and report counts or configuration state only: `php_version` fails when the running PHP major.minor branch is past its security-support end date (or older than 8.0), warns within 90 days of that date, and passes otherwise; a branch newer than the plugin's hardcoded table passes with "support window not known to this plugin version" (update `PHP_SECURITY_SUPPORT_END` in `includes/class-security.php` from php.net/supported-versions when branches change; only major.minor is reported). `force_ssl_admin` passes when `force_ssl_admin()` is true and warns otherwise (with different detail depending on whether the configured home URL is HTTPS). `db_prefix` warns for the default `wp_` prefix (low-value hardening that only hinders generic automated SQL injection payloads; uses the network base prefix on multisite) and otherwise passes; the prefix value is never returned. `inactive_plugins` (requires `activate_plugins`; network-active plugins count as active) and `inactive_themes` (requires `switch_themes`; ignores the active theme and its parent and warns when more than one other theme is installed, since one default fallback theme is reasonable) report counts only, never names. `theme_updates` (requires `update_themes`) counts entries in the cached `update_themes` data and warns that status is unknown when that data is missing or malformed. The capability-gated findings are omitted for callers without the capability. `two_factor` is best-effort: with the official Two-Factor plugin active it calls `Two_Factor_Core::is_user_using_two_factor()` for each administrator (first 100), which counts only providers that are both enabled and available (recovery codes with no codes left do not count), and warns with a count of administrators without a usable second factor (a Throwable from that code counts the administrator as not verified) and never returns usernames or IDs; if that class or method is unavailable it falls back to the raw `_two_factor_enabled_providers` user meta and says in the detail that provider usability was not verified; with another known two-factor-capable plugin active it passes while stating that per-administrator enrollment was not verified; with none it warns that no known plugin was detected (detection is limited to a known list).

@@ -6,6 +6,17 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add five `list-themes` E2E manifest cases (#228; manifest now 86 abilities,
+  614 cases, ledger step 228) and a new manifest assertion `assert_list_item`
+  (`{"path", "match", "equal_paths"}`, success cases only): exactly one record
+  in a result list matches `match` strictly and its `equal_paths` fields equal
+  other result paths. It proves the active theme is listed although its
+  position varies with the WordPress image; it is implemented in
+  `tests/e2e/ability-runner.php` and shape-checked by
+  `scripts/validate-e2e-manifest.php`. The new-ability count pins move to 86
+  native abilities, 91 annotation observations/individual tools and 299
+  untrusted labels; `ThemesTest` joins the `product` suite (34 files).
+
 - Add six E2E manifest cases and strengthen two (#238): term list paging for
   `list-categories` and `list-tags` (a second page and a page past the end),
   `backup_verified: true` for UpdraftPlus and BackWPup, a Jetpack-only

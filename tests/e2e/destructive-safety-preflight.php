@@ -34,7 +34,7 @@ try {
 	sort( $manifest );
 	$report['registered'] = $registered;
 	$report['manifest'] = $manifest;
-	wstm116_require( 85 === count( $registered ) && $registered === $manifest, 'Native registration audit failed before test-only MU installation.' );
+	wstm116_require( 86 === count( $registered ) && $registered === $manifest, 'Native registration audit failed before test-only MU installation.' );
 	wstm116_require( ! defined( 'WSTM116_DISPOSABLE_RUNTIME' ) && ! function_exists( 'wstm118_probe' ), 'Test-only runtime fixture already installed.' );
 	$snapshot = static function (): array {
 		global $wpdb;
