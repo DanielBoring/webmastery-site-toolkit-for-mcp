@@ -6,6 +6,17 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add sixteen `list-menus` / `get-menu` / `update-menu-item` E2E manifest cases
+  (#227; manifest now 93 abilities, 643 cases, ledger step 227). The ability
+  runner gains a minimal fixture (one classic menu `MCP E2E Menu` with one
+  custom link, recreated each run) exposed as the `__menu_id__` and
+  `__menu_item_id__` placeholders. All three abilities join the security-QA
+  validator's required negative and exact permission-denial lists, and
+  `required_markers()` / `UntrustedManifestTest` cover their record markers
+  (200 marked cases / 212 marker assertions). The new-ability count pins move by
+  three to 93 native abilities, 98 annotation observations/individual tools,
+  306 untrusted labels and 21 registering classes; `MenusTest` joins the product
+  suite (37 files).
 - Add four `get-rankmath-metadata` / `get-aioseo-metadata` E2E manifest
   cases (#224; manifest now 90 abilities, 627 cases, ledger step 224): an
   administrator case per ability asserting the provider-inactive success (no

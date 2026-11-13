@@ -627,6 +627,19 @@ $fixtures = array(
 	'delete_tag_id'      => e2e_ensure_term_id( 'mcp-e2e-delete-tag', 'post_tag' ),
 );
 $fixtures['category_id_string'] = (string) $fixtures['category_id'];
+// Navigation menu abilities (#227): one classic menu with one custom-link item, recreated each run.
+$e2e_menu = get_term_by( 'name', 'MCP E2E Menu', 'nav_menu' );
+if ( $e2e_menu ) {
+	wp_delete_nav_menu( (int) $e2e_menu->term_id );
+}
+$fixtures['menu_id'] = wp_create_nav_menu( 'MCP E2E Menu' );
+if ( is_wp_error( $fixtures['menu_id'] ) ) {
+	throw new RuntimeException( $fixtures['menu_id']->get_error_message() );
+}
+$fixtures['menu_item_id'] = wp_update_nav_menu_item( $fixtures['menu_id'], 0, array( 'menu-item-type' => 'custom', 'menu-item-title' => 'MCP E2E Link', 'menu-item-url' => 'https://example.com/mcp-e2e', 'menu-item-position' => 1, 'menu-item-status' => 'publish' ) );
+if ( is_wp_error( $fixtures['menu_item_id'] ) ) {
+	throw new RuntimeException( $fixtures['menu_item_id']->get_error_message() );
+}
 global $wpdb;
 $fixtures['wstm111_posts_table'] = $wpdb->posts;
 $fixtures['wstm111_plugin_table'] = $wpdb->prefix . 'wstm111_plugin_fingerprint';

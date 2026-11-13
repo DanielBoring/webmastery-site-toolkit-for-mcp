@@ -32,6 +32,7 @@ table shows it.
 - [Themes](#themes)
 - [Updates overview](#updates-overview)
 - [Cron status](#cron-status)
+- [Navigation menus](#navigation-menus)
 - [Site health and user access audits](#site-health-and-user-access-audits)
 - [Untrusted result fields](#untrusted-result-fields)
 - [Security and privacy behavior](#security-and-privacy-behavior)
@@ -702,6 +703,123 @@ stripped, they are cut to 200 characters and listed as untrusted text.
 Never returned: event argument values (they can hold tokens, email addresses or
 URLs); only whether arguments exist and how many.
 
+## Navigation menus
+
+`list-menus`, `get-menu` and `update-menu-item` cover **classic** navigation
+menus: the `nav_menu` taxonomy and its `nav_menu_item` posts (Appearance >
+Menus, the Customizer's Menus panel and the Navigation Menu widget). All three
+require `edit_theme_options`, the capability WordPress itself requires for the
+Menus screen (Administrator by default); other roles, including Editor, get
+`forbidden` / `ability_invalid_permissions`. The permission check is the
+capability alone, so a denied caller cannot probe which IDs exist.
+
+**Out of scope.** Block-theme navigation (the Navigation block and its
+`wp_navigation` posts) is a different data model and is not read or written.
+On a block theme the classic menu list can be empty, or hold menus the site
+header does not use, while the header still shows navigation: check
+`block_theme` and `classic_menus_supported` in the `list-menus` response.
+Creating or deleting menus or items, moving an item to another menu, changing
+the page, post or term an item links to, and assigning menus to theme
+locations are also out of scope.
+
+### `list-menus`
+
+Read-only, no input. `data` has:
+
+| Field | Value |
+| --- | --- |
+| `items` | Up to 100 menus ordered by name: `id`, `name`, `slug`, `item_count` (published items, WordPress's term count) and `locations` (slugs of the registered theme locations this menu is assigned to) |
+| `truncated` | `true` when the site has more than 100 menus |
+| `registered_locations` | The active theme's registered locations: `location`, `description`, `menu_id` (assigned menu or `null`) |
+| `classic_menus_supported` | `current_theme_supports( 'menus' )` |
+| `block_theme` | `wp_is_block_theme()` |
+
+Location assignments to locations the active theme no longer registers are
+ignored.
+
+### `get-menu`
+
+Read-only. Input is a closed object: `menu_id` (required integer, a `nav_menu`
+term ID from `list-menus`; IDs of other taxonomies' terms, names and slugs never
+resolve), `per_page` (1-200, default 100) and `page`. A missing menu is
+`not_found` / `not_found`.
+
+`data` is the menu record (`id`, `name`, `slug`, `item_count`, `locations`)
+plus `items`, `page`, `per_page` and `next_page`. Items come from
+`wp_get_nav_menu_items()` in menu order (published items whose linked object
+still exists, as WordPress shows them). Each item has:
+
+| Field | Value |
+| --- | --- |
+| `id` | Menu item ID (use it with `update-menu-item`) |
+| `title` | Navigation label as WordPress shows it (a page or term item with no custom label shows its linked object's title) |
+| `url` | Link target (a page or term item's URL is its permalink) |
+| `type` | `custom`, `post_type`, `taxonomy` or `post_type_archive` |
+| `object`, `object_id` | Linked object, e.g. `page` and the page ID; `custom` and the item's own ID for custom links |
+| `parent_item_id` | Parent menu item ID, `0` at top level |
+| `position` | Stored menu order |
+| `target` | `""` or `_blank` |
+| `attr_title`, `description`, `xfn` | Title attribute, description and XFN relationship text |
+| `classes` | CSS classes (array of strings) |
+| `status` | Item post status |
+| `restricted` | `true` when the item links to a post the caller cannot read |
+
+An item that links to a post the caller cannot read (for example another
+author's draft or a private post the caller may not read) is still listed so
+the menu structure stays complete, but its `title` and `url` are `null` and
+`restricted` is `true`: a menu never reveals a private post's title or URL.
+
+### `update-menu-item`
+
+Write (`readonly:false`, `destructive:false`, `idempotent:true`). Input is a
+closed object with `menu_item_id` (required) and at least one of:
+
+| Field | Rule |
+| --- | --- |
+| `title` | Plain text (`sanitize_text_field`), at most 200 characters. Must not be empty for a custom link; on a page or term item an empty value makes it follow its linked object's title again |
+| `url` | Custom link items only (`invalid_input` for page, term and archive items). `http`/`https` with a host, `mailto:`, `tel:`, or a relative reference starting with a single `/`, `?` or `#`; at most 2,048 characters, then `esc_url_raw()` restricted to those protocols |
+| `target` | `""` or `"_blank"` |
+| `attr_title` | Plain text, at most 200 characters |
+| `description` | Plain text (tags stripped, line breaks kept), at most 1,000 characters |
+| `classes` | Array of at most 20 strings of at most 100 characters; each passes `sanitize_html_class()`, empty results and duplicates are dropped |
+| `position` | Integer of at least 1, stored as the item's menu order. Other items are not renumbered |
+| `parent_item_id` | `0` (top level) or another item of the **same** menu; the item itself, an item of another menu, a non-item post and any descendant of the item (a cycle) are rejected with `invalid_input` / `invalid_parent` |
+
+Rejected URLs (`invalid_input` / `invalid_url`) include every other scheme
+(`javascript:`, `data:`, `vbscript:`, `file:`, `ftp:` and so on, in any letter
+case), protocol-relative `//host` references, any whitespace or control
+character anywhere (so a leading space or tab cannot hide a scheme),
+backslashes, `https://user@host` userinfo, `http`/`https` without a host, empty
+`mailto:`/`tel:`, scheme-less hosts such as `example.com/page` (send
+`https://example.com/page`), and any value `esc_url_raw()` empties. The
+sanitized value is checked against the same rules again, so a value that
+`esc_url_raw()` turns into a protocol-relative URL (it strips `%0d`/`%0a` and
+characters such as `<`, so `/%0d/evil.example` would become `//evil.example`)
+is rejected too.
+
+The target must be a `nav_menu_item` that belongs to exactly one menu
+(`not_found` for any other ID, `precondition_failed` when the item belongs to
+no menu or to several); the caller also needs `edit_post` on the item. Only
+`publish` and `draft` items can be updated (`precondition_failed` otherwise:
+WordPress saves every other status as `publish`, which would revive a trashed
+item). Unknown
+fields, such as `object_id`, `type` or `menu_id`, fail the closed schema with
+`ability_invalid_input`.
+
+`wp_update_nav_menu_item()` resets every argument it is not given to its
+default, so the ability passes every stored value of the item back and only
+replaces the fields you sent; the item's post date is passed back too, so it
+is not reset to the current time. WordPress treats a menu order of `0` as
+"append to the end of the menu", so an item whose stored menu order is `0`
+(possible only for items created outside the admin screens) is refused with
+`precondition_failed` unless the request also sends `position`.
+
+`data` is the updated item in the `get-menu` item shape, plus `menu_id` and
+`previous`: the values the fields you sent had before the update (in the same
+shape, so you can send them back to revert; a restricted item's previous
+`title`/`url` is `null`). The response is compact: the rest of the menu is not
+returned.
+
 ## Site health and user access audits
 
 Both abilities are Administrator-only and read-only.
@@ -758,6 +876,9 @@ apply. Markers never restore omitted/redacted fields.
 | Stuck scheduled posts | `title`, `url`, `author_name` on each `data.items` record |
 | Updates overview (`get-updates-overview`) | `name` on each `data.plugins.items` and `data.themes.items` record (the same markers for every caller) |
 | Cron status (`get-cron-status`) | `hook`, `schedule` on each `data.items` record |
+| Navigation menu (`list-menus` `data.items` records, `get-menu` `data`) | `name`, `slug` |
+| Navigation menu item (`get-menu` `data.items` records, `update-menu-item` `data`) | `title`, `url`, `attr_title`, `description`, `classes`, `xfn` (also when `title`/`url` are `null` on a restricted item) |
+| `update-menu-item` `data.previous` | Those of `title`, `url`, `attr_title`, `description`, `classes` that were sent |
 | Theme (`list-themes`) | `name`, `version`, `author` on each non-broken `data.items` record |
 | User lookup | `display_name`, `nicename`, `url`, authorized `login` and `email` |
 | Administrator account audit | `login`, `email`, `last_login` |
@@ -830,7 +951,7 @@ confirmation is not independent human approval.
 - Subscriber-safe site info deliberately avoids secrets, filesystem paths, salts, auth keys, raw server internals, WordPress version, and theme version. `get-environment-info` requires `manage_options`.
 - Site Kit module, permission, and PageSpeed abilities require WordPress `read` **and** Site Kit's own REST permission callbacks, failing closed when a required route or callable permission check is absent. Status separately requires `manage_options`. Responses omit OAuth scopes/proxy details, module owner identities, raw settings, screenshots, third-party entities, and full Lighthouse payloads. PageSpeed only accepts URLs on the current site, although Google processes those requests through Site Kit's PageSpeed service.
 - Webmaster verification checks require `read`, including direct execution. Callers without `activate_plugins` receive neither `data.google.site_kit` nor `data.checks.google_site_kit`; plugin inspection is skipped and the summary counts only authorized checks. Public results, including failures and unknowns, share a 60-second cache scoped to the site, home URL, and result schema. Warm calls do not repeat HTTP/DNS work; private plugin state is inspected separately on each authorized call and is never cached with public results. Concurrent cold misses or early transient eviction can repeat work, so this is not a strict rate limit.
-- `get-environment-info`, `plugin-audit`, `user-access-audit`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `site-health-check` are Administrator-only. `list-themes` requires `switch_themes` (Administrator by default) and adds cached update fields only for callers with `update_themes`. `get-cron-status` requires `manage_options` and never returns event arguments. `get-updates-overview` requires at least one of `update_core`, `update_plugins` or `update_themes` (Administrator by default) and returns only the sections the caller has the matching capability for.
+- `get-environment-info`, `plugin-audit`, `user-access-audit`, `database-health`, `performance-status`, `backup-status`, `security-audit`, and `site-health-check` are Administrator-only. `list-themes` requires `switch_themes` (Administrator by default) and adds cached update fields only for callers with `update_themes`. `get-cron-status` requires `manage_options` and never returns event arguments. `list-menus`, `get-menu` and `update-menu-item` require `edit_theme_options` (Administrator by default), and menu items that link to a post the caller cannot read never expose that post's title or URL. `get-updates-overview` requires at least one of `update_core`, `update_plugins` or `update_themes` (Administrator by default) and returns only the sections the caller has the matching capability for.
 - `security-audit`'s `ssl` finding reports only the configured public `home` option (including normal option filters and `WP_HOME`): recognized HTTPS passes and HTTP fails. Missing/unsupported schemes or hosts, whitespace/control characters, malformed percent escapes, and invalid authority syntax warn as unknown. The local syntax guard accepts local names, Unicode/IDN forms, properly escaped components, and bracketed IPv6 (including escaped zone IDs) or IPvFuture literals; it is not a complete URL, DNS-name, or internationalized-name validator and imposes no address-routability policy. It is independent of the MCP request scheme and admin-only TLS policy. It does not test certificates, reachability, redirects, or the final filtered front-end URL.
 - `security-audit` always returns exactly one `wp_version` finding, using only WordPress's cached core update data (no remote request). An `upgrade` entry warns that an update is available; cached entries without an upgrade pass as up to date; missing, empty, or malformed cached data warns that the update status is unknown rather than passing. The `auth_keys` finding covers all eight keys and salts (`AUTH_KEY`, `SECURE_AUTH_KEY`, `LOGGED_IN_KEY`, `NONCE_KEY`, `AUTH_SALT`, `SECURE_AUTH_SALT`, `LOGGED_IN_SALT`, `NONCE_SALT`): the default placeholder fails, undefined or empty constants warn because WordPress falls back to database-stored values, and it passes only when all eight are set. Findings name constants, never their values.
 - `security-audit` also returns these baseline hardening findings, each exactly once per audit and appended after the existing findings; all are local reads (no HTTP request, no filesystem scan) and report counts or configuration state only: `php_version` fails when the running PHP major.minor branch is past its security-support end date (or older than 8.0), warns within 90 days of that date, and passes otherwise; a branch newer than the plugin's hardcoded table passes with "support window not known to this plugin version" (update `PHP_SECURITY_SUPPORT_END` in `includes/class-security.php` from php.net/supported-versions when branches change; only major.minor is reported). `force_ssl_admin` passes when `force_ssl_admin()` is true and warns otherwise (with different detail depending on whether the configured home URL is HTTPS). `db_prefix` warns for the default `wp_` prefix (low-value hardening that only hinders generic automated SQL injection payloads; uses the network base prefix on multisite) and otherwise passes; the prefix value is never returned. `inactive_plugins` (requires `activate_plugins`; network-active plugins count as active) and `inactive_themes` (requires `switch_themes`; ignores the active theme and its parent and warns when more than one other theme is installed, since one default fallback theme is reasonable) report counts only, never names. `theme_updates` (requires `update_themes`) counts entries in the cached `update_themes` data and warns that status is unknown when that data is missing or malformed. The capability-gated findings are omitted for callers without the capability. `two_factor` is best-effort: with the official Two-Factor plugin active it calls `Two_Factor_Core::is_user_using_two_factor()` for each administrator (first 100), which counts only providers that are both enabled and available (recovery codes with no codes left do not count), and warns with a count of administrators without a usable second factor (a Throwable from that code counts the administrator as not verified) and never returns usernames or IDs; if that class or method is unavailable it falls back to the raw `_two_factor_enabled_providers` user meta and says in the detail that provider usability was not verified; with another known two-factor-capable plugin active it passes while stating that per-administrator enrollment was not verified; with none it warns that no known plugin was detected (detection is limited to a known list).
