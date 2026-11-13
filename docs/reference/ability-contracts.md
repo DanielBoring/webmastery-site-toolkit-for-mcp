@@ -532,6 +532,15 @@ when that version is two or more minor releases behind the running WordPress
 version. `requires_wp` and `slug` also use the cached "no update" record when
 there is no pending update. Field names and types are unchanged.
 
+`critical_updates` and each `items[].critical_update` are deprecated since 3.2.0
+and will be removed in 4.0.0. WordPress.org update data does not identify
+security releases, so they are empty or `false` unless a third-party update
+source sets a `security`, `security_update` or `is_security_update` property on
+its cached update record; do not read them as "no security updates pending".
+Use `updates_available_count` and `items[].update_available` instead. The
+response lists both fields in a top-level `deprecations` array of
+`{ field, replacement, removal, reason }` records.
+
 `backup-status` separates dedicated backup plugins from backup-capable plugins
 that are often active for other features (Jetpack and ManageWP Worker). Each
 `active_known_plugins[]` record includes a boolean `backup_verified`: `true`

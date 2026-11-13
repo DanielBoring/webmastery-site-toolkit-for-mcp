@@ -6757,6 +6757,7 @@
             "data.updates_available_count",
             "data.potentially_abandoned_count",
             "data.critical_updates",
+            "data.deprecations.0.field",
             "data.items.0.name",
             "data.items.0.slug",
             "data.items.0.version",

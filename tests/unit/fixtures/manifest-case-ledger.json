@@ -1479,6 +1479,85 @@
                 }
             ],
             "changed": []
+        },
+        {
+            "issue": 231,
+            "summary": "plugin-audit as admin asserts data.deprecations.0.field",
+            "before_count": 649,
+            "before_sha256": "49cd5d6276ddd21f73076fa5dd6d888dd20e77728e988f078edcdd9e0d0b35d4",
+            "after_count": 649,
+            "after_sha256": "cfb6b74e584590f8c107fb7902af085fdba1c188babcaa353efdae09ac2a8bb1",
+            "added": [],
+            "changed": [
+                {
+                    "label": "plugin-audit as admin",
+                    "before": {
+                        "ability": "webmastery-site-toolkit-for-mcp/plugin-audit",
+                        "label": "plugin-audit as admin",
+                        "role": "admin",
+                        "input": null,
+                        "expect": "success",
+                        "assert_paths": [
+                            "data.inactive_count",
+                            "data.updates_available_count",
+                            "data.potentially_abandoned_count",
+                            "data.critical_updates",
+                            "data.items.0.name",
+                            "data.items.0.slug",
+                            "data.items.0.version",
+                            "data.items.0.active",
+                            "data.items.0.update_available",
+                            "data.items.0.new_version",
+                            "data.items.0.tested_up_to",
+                            "data.items.0.requires_wp",
+                            "data.items.0.abandoned",
+                            "data.items.0.days_since_update"
+                        ],
+                        "assert_values": {
+                            "data.updates_available_count": 1,
+                            "data.potentially_abandoned_count": 1,
+                            "data.critical_updates.0.plugin": "__fixture_plugin__",
+                            "data.critical_updates.0.name": "MCP E2E Plugin",
+                            "data.critical_updates.0.slug": "mcp-e2e-plugin",
+                            "data.critical_updates.0.version": "1.0.0",
+                            "data.critical_updates.0.new_version": "1.2.0"
+                        }
+                    },
+                    "after": {
+                        "ability": "webmastery-site-toolkit-for-mcp/plugin-audit",
+                        "label": "plugin-audit as admin",
+                        "role": "admin",
+                        "input": null,
+                        "expect": "success",
+                        "assert_paths": [
+                            "data.inactive_count",
+                            "data.updates_available_count",
+                            "data.potentially_abandoned_count",
+                            "data.critical_updates",
+                            "data.deprecations.0.field",
+                            "data.items.0.name",
+                            "data.items.0.slug",
+                            "data.items.0.version",
+                            "data.items.0.active",
+                            "data.items.0.update_available",
+                            "data.items.0.new_version",
+                            "data.items.0.tested_up_to",
+                            "data.items.0.requires_wp",
+                            "data.items.0.abandoned",
+                            "data.items.0.days_since_update"
+                        ],
+                        "assert_values": {
+                            "data.updates_available_count": 1,
+                            "data.potentially_abandoned_count": 1,
+                            "data.critical_updates.0.plugin": "__fixture_plugin__",
+                            "data.critical_updates.0.name": "MCP E2E Plugin",
+                            "data.critical_updates.0.slug": "mcp-e2e-plugin",
+                            "data.critical_updates.0.version": "1.0.0",
+                            "data.critical_updates.0.new_version": "1.2.0"
+                        }
+                    }
+                }
+            ]
         }
     ]
 }
