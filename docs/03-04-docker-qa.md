@@ -316,9 +316,10 @@ before retiring the marker.
 
 Both source and installed-package runs retain the existing main-branch
 security, destructive, schema, metadata, comment, database-privacy and Site Kit
-checks. The native manifest has 85 abilities and 601 cases, including all 589
-inherited cases and 12 additions; permission-sensitive cases include allowed
-and denied roles.
+checks. The native manifest has 85 abilities and 607 cases: the sealed 601 cases (all
+589 inherited cases and 12 additions) plus the later steps recorded in
+`tests/unit/fixtures/manifest-case-ledger.json`; permission-sensitive cases
+include allowed and denied roles.
 Run product acceptance once after installation, dependencies, authentication
 and plugin setup, before legacy suites can populate the content tables.
 Untrusted checks run before bounded catalogs. Keep the bounded seed's empty

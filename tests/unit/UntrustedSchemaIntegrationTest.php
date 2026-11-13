@@ -6,10 +6,11 @@ use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/fixtures/untrusted-manifest-projection.php';
 require_once __DIR__ . '/fixtures/schema-integration-ledger.php';
+require_once __DIR__ . '/fixtures/manifest-case-ledger.php';
 
 final class UntrustedSchemaIntegrationTest extends TestCase {
 	private static function manifest(): array {
-		return json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		return ManifestCaseLedger::sealed();
 	}
 
 	public function test_exact_main_and_pr_projections_preserve_both_immutable_oracles(): void {

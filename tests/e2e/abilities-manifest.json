@@ -8688,7 +8688,8 @@
             "data.schedule": "weekly",
             "data.warning": null,
             "data.active_known_plugins.0.name": "UpdraftPlus",
-            "data.active_known_plugins.0.basename": "updraftplus/updraftplus.php"
+            "data.active_known_plugins.0.basename": "updraftplus/updraftplus.php",
+            "data.active_known_plugins.0.backup_verified": true
         }
     },
     {
@@ -8707,7 +8708,8 @@
             "data.plugin_name": "BackWPup",
             "data.last_backup": "2025-05-14T03:00:00Z",
             "data.schedule": null,
-            "data.active_known_plugins.0.basename": "backwpup/backwpup.php"
+            "data.active_known_plugins.0.basename": "backwpup/backwpup.php",
+            "data.active_known_plugins.0.backup_verified": true
         }
     },
     {
@@ -8769,6 +8771,36 @@
             {
                 "path": "data.warning",
                 "value": "No known active WordPress backup plugin"
+            }
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/backup-status",
+        "label": "backup-status Jetpack only is not a verified backup",
+        "role": "admin",
+        "input": null,
+        "expect": "success",
+        "setup": {
+            "active_plugins": [
+                "jetpack/jetpack.php"
+            ]
+        },
+        "assert_values": {
+            "data.backup_plugin_detected": false,
+            "data.plugin_name": null,
+            "data.last_backup": null,
+            "data.schedule": null,
+            "data.active_known_plugins.0.name": "Jetpack",
+            "data.active_known_plugins.0.basename": "jetpack/jetpack.php",
+            "data.active_known_plugins.0.backup_verified": false
+        },
+        "assert_missing_paths": [
+            "data.active_known_plugins.1"
+        ],
+        "assert_contains": [
+            {
+                "path": "data.warning",
+                "value": "A backup-capable plugin is active (Jetpack), but backup configuration could not be verified."
             }
         ]
     },
@@ -8984,6 +9016,19 @@
             "ssl": {
                 "bucket": "pass",
                 "label": "Public home URL is configured to use HTTPS"
+            }
+        }
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/security-audit",
+        "label": "security-audit reports one auth keys finding",
+        "role": "admin",
+        "input": null,
+        "expect": "success",
+        "assert_diagnostic_findings": {
+            "auth_keys": {
+                "bucket": "pass",
+                "label": "Auth keys and salts are set"
             }
         }
     },
@@ -12389,6 +12434,74 @@
             "data.0.id",
             "data.0.name",
             "data.0.slug"
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/list-categories",
+        "label": "list-categories second page returns the next term",
+        "role": "subscriber",
+        "input": {
+            "per_page": 1,
+            "page": 2
+        },
+        "expect": "success",
+        "assert_paths": [
+            "data.0.id",
+            "data.0.name",
+            "data.0.slug"
+        ],
+        "assert_missing_paths": [
+            "data.1"
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/list-categories",
+        "label": "list-categories page past the end returns an empty list",
+        "role": "subscriber",
+        "input": {
+            "per_page": 200,
+            "page": 1000
+        },
+        "expect": "success",
+        "assert_paths": [
+            "data"
+        ],
+        "assert_missing_paths": [
+            "data.0"
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/list-tags",
+        "label": "list-tags second page returns the next term",
+        "role": "subscriber",
+        "input": {
+            "per_page": 1,
+            "page": 2
+        },
+        "expect": "success",
+        "assert_paths": [
+            "data.0.id",
+            "data.0.name",
+            "data.0.slug"
+        ],
+        "assert_missing_paths": [
+            "data.1"
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/list-tags",
+        "label": "list-tags page past the end returns an empty list",
+        "role": "subscriber",
+        "input": {
+            "per_page": 200,
+            "page": 1000
+        },
+        "expect": "success",
+        "assert_paths": [
+            "data"
+        ],
+        "assert_missing_paths": [
+            "data.0"
         ]
     },
     {

@@ -6,13 +6,14 @@ use PHPUnit\Framework\AssertionFailedError;
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/fixtures/bounded-manifest-projection.php';
+require_once __DIR__ . '/fixtures/manifest-case-ledger.php';
 
 final class BoundedMarkerManifestTest extends TestCase {
 	private const LABELS = array( 'list-orphaned-media', 'list-posts-no-featured-image posts', 'list-posts-no-featured-image pages', 'list-stuck-scheduled' );
 	private const PATH = 'data.items.0.untrusted_fields';
 
 	private static function manifest(): array {
-		return json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		return ManifestCaseLedger::sealed();
 	}
 
 	private static function typed( $value ): string {

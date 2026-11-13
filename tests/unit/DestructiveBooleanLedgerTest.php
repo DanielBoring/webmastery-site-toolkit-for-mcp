@@ -8,6 +8,7 @@ require_once __DIR__ . '/fixtures/bounded-manifest-projection.php';
 require_once __DIR__ . '/fixtures/runtime-calibration.php';
 
 require_once __DIR__ . '/fixtures/untrusted-manifest-projection.php';
+require_once __DIR__ . '/fixtures/manifest-case-ledger.php';
 
 final class DestructiveBooleanLedgerTest extends TestCase {
 	private static function fingerprint( array $cases, bool $without_oracles = false ): string {
@@ -41,7 +42,7 @@ final class DestructiveBooleanLedgerTest extends TestCase {
 	public function test_approved_oracle_delta_preserves_all_typed_inputs_and_other_cases(): void {
 		$directory = dirname( __DIR__ ) . '/e2e/';
 		$ledger = json_decode( file_get_contents( $directory . 'destructive-safety-boolean-ledger.json' ), true, 512, JSON_THROW_ON_ERROR );
-		$manifest = json_decode( file_get_contents( $directory . 'abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		$manifest = ManifestCaseLedger::sealed();
 		$manifest = self::baseline_projection( $manifest, $ledger['integration'] );
 		self::assertCount( 563, $manifest );
 		self::assertCount( 16, $ledger['cases'] );
@@ -72,7 +73,7 @@ final class DestructiveBooleanLedgerTest extends TestCase {
 	public function test_only_exact_accepted_privacy_rows_can_be_projected_out( string $mutation ): void {
 		$directory = dirname( __DIR__ ) . '/e2e/';
 		$ledger = json_decode( file_get_contents( $directory . 'destructive-safety-boolean-ledger.json' ), true, 512, JSON_THROW_ON_ERROR );
-		$manifest = json_decode( file_get_contents( $directory . 'abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		$manifest = ManifestCaseLedger::sealed();
 		$labels = array_flip( array_column( $manifest, 'label' ) );
 		$privacy = $labels[ $ledger['integration']['cases'][0]['label'] ];
 		$numeric = $labels[ $ledger['integration']['cases'][5]['label'] ];
@@ -92,7 +93,7 @@ final class DestructiveBooleanLedgerTest extends TestCase {
 	}
 
 	public function test_fingerprints_distinguish_objects_arrays_and_integer_float_inputs(): void {
-		$manifest = json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR );
+		$manifest = ManifestCaseLedger::sealed();
 		$before = self::fingerprint( $manifest, true );
 		$case = json_decode( '{"input":{"ids":[42],"value":{}}}', false, 512, JSON_THROW_ON_ERROR );
 		$manifest[0] = $case;

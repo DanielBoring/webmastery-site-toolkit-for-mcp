@@ -6,10 +6,11 @@ use PHPUnit\Framework\AssertionFailedError;
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/fixtures/untrusted-manifest-projection.php';
+require_once __DIR__ . '/fixtures/manifest-case-ledger.php';
 
 final class UntrustedManifestProjectionTest extends TestCase {
 	private static function manifest(): array {
-		return Wstm108_Schema_Integration::pr_input( json_decode( file_get_contents( dirname( __DIR__ ) . '/e2e/abilities-manifest.json' ), false, 512, JSON_THROW_ON_ERROR ) );
+		return Wstm108_Schema_Integration::pr_input( ManifestCaseLedger::sealed() );
 	}
 
 	private static function find_case( array $manifest, callable $predicate ): object {
