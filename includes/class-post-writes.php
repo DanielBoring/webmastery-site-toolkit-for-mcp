@@ -26,6 +26,14 @@ final class Webmastery_MCP_Post_Writes {
 		return wp_update_post( wp_slash( $args ), true );
 	}
 
+	/**
+	 * Update unslashed post meta at the WordPress persistence boundary.
+	 *
+	 * @param int    $id    Post ID.
+	 * @param string $key   Meta key.
+	 * @param mixed  $value Unslashed meta value.
+	 * @return int|bool
+	 */
 	public static function meta( int $id, string $key, $value ) {
 		return update_post_meta( $id, $key, wp_slash( $value ) );
 	}

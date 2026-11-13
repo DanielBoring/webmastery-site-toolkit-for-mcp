@@ -20,6 +20,8 @@ final class Webmastery_MCP_Safe_Http {
 	 * Whether an address is private, reserved, loopback, link-local, documentation or not an IP.
 	 *
 	 * @param string $ip Address.
+	 *
+	 * @return bool
 	 */
 	public static function is_private_ip( $ip ) {
 		if ( false === filter_var( $ip, FILTER_VALIDATE_IP ) ) {
@@ -74,6 +76,8 @@ final class Webmastery_MCP_Safe_Http {
 	 * @param string              $label       Capitalized noun for messages.
 	 * @param callable            $resolve_dns AAAA/CNAME resolver.
 	 * @param array<string, bool> $visited     Names already checked.
+	 *
+	 * @return true|WP_Error
 	 */
 	private static function validate_dns( $host, $label, callable $resolve_dns, $visited = [] ) {
 		if ( isset( $visited[ $host ] ) || count( $visited ) >= 16 ) {
@@ -195,6 +199,8 @@ final class Webmastery_MCP_Safe_Http {
 	 * Explicit or default port of an http(s) URL.
 	 *
 	 * @param string $url URL.
+	 *
+	 * @return int
 	 */
 	public static function port( $url ) {
 		$port = wp_parse_url( $url, PHP_URL_PORT );
@@ -205,6 +211,8 @@ final class Webmastery_MCP_Safe_Http {
 	 * Lowercased host:port a URL connects to.
 	 *
 	 * @param string $url URL.
+	 *
+	 * @return string
 	 */
 	public static function target( $url ) {
 		return strtolower( trim( (string) wp_parse_url( $url, PHP_URL_HOST ), " \t\n\r\0\x0B." ) ) . ':' . self::port( $url );
@@ -212,6 +220,8 @@ final class Webmastery_MCP_Safe_Http {
 
 	/**
 	 * Whether connections can be pinned (core's cURL transport with CURLOPT_RESOLVE).
+	 *
+	 * @return bool
 	 */
 	public static function can_pin() {
 		return function_exists( 'curl_init' ) && function_exists( 'curl_setopt' ) && defined( 'CURLOPT_RESOLVE' );

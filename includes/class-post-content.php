@@ -3,6 +3,13 @@
 defined( 'ABSPATH' ) || exit;
 
 final class Webmastery_MCP_Post_Content {
+	/**
+	 * Normalize a post for responses.
+	 *
+	 * @param int|WP_Post|null $post   Post ID or object.
+	 * @param string           $fields Field projection.
+	 * @return array<string, mixed>|null
+	 */
 	public static function normalize( $post, string $fields = 'full' ): ?array {
 		$post = get_post( $post );
 		if ( ! $post ) {

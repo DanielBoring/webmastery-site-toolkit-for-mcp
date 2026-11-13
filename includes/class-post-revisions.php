@@ -4,11 +4,22 @@ defined( 'ABSPATH' ) || exit;
 
 final class Webmastery_MCP_Post_Revisions {
 
+	/**
+	 * Register the abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_list_revisions();
 		self::register_restore_revision();
 	}
 
+	/**
+	 * Normalize a revision for responses.
+	 *
+	 * @param int|WP_Post $revision Revision ID or object.
+	 * @return array<string, mixed>|null
+	 */
 	private static function normalize_revision( $revision ) {
 		$revision = get_post( $revision );
 		if ( ! $revision || 'revision' !== $revision->post_type ) {
@@ -28,6 +39,11 @@ final class Webmastery_MCP_Post_Revisions {
 		], [ 'author_name', 'title', 'content', 'excerpt' ] );
 	}
 
+	/**
+	 * Register the list-revisions ability.
+	 *
+	 * @return void
+	 */
 	private static function register_list_revisions() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-revisions', [
 			'label'               => 'List Revisions',
@@ -86,6 +102,11 @@ final class Webmastery_MCP_Post_Revisions {
 		] );
 	}
 
+	/**
+	 * Register the restore-revision ability.
+	 *
+	 * @return void
+	 */
 	private static function register_restore_revision() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/restore-revision', [
 			'label'               => 'Restore Revision',

@@ -31,6 +31,11 @@ class Webmastery_MCP_Security {
 		'miniorange-2-factor-authentication/miniorange_2_factor_settings.php',
 	];
 
+	/**
+	 * Register the abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/security-audit', [
 			'label'               => 'Security Audit',
@@ -45,6 +50,12 @@ class Webmastery_MCP_Security {
 		] );
 	}
 
+	/**
+	 * Run the read-only security audit.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array<string, mixed>
+	 */
 	public static function execute( $input = [] ) {
 		$pass = [];
 		$warn = [];
@@ -350,6 +361,12 @@ class Webmastery_MCP_Security {
 		return [ 'missing' => $missing, 'checked' => count( $ids ), 'verified' => $api ];
 	}
 
+	/**
+	 * Scheme of a configured home URL, or an empty string when it is not a valid http(s) URL.
+	 *
+	 * @param mixed $home_url Raw configured home URL.
+	 * @return string
+	 */
 	private static function configured_home_scheme( $home_url ) {
 		if ( ! is_string( $home_url ) || preg_match( '/[\x00-\x20\x7f]|%(?![0-9a-f]{2})/i', $home_url ) ) {
 			return '';

@@ -4,6 +4,15 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Post_Parent {
 
+	/**
+	 * Validate a proposed parent for a hierarchical post type.
+	 *
+	 * @param string $post_type Post type.
+	 * @param int    $parent_id Proposed parent ID.
+	 * @param int    $post_id   ID of the post being changed, or 0.
+	 * @param string $edit_cap  Capability required on the parent.
+	 * @return true|WP_Error
+	 */
 	public static function validate( $post_type, $parent_id, $post_id = 0, $edit_cap = 'edit_post' ) {
 		if ( 0 === $parent_id ) {
 			return true;

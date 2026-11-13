@@ -43,6 +43,11 @@ class Webmastery_MCP_Link_Scan {
 
 	public const STATUSES = [ 'ok', 'redirect', 'broken', 'client_error', 'server_error', 'blocked', 'unreachable', 'not_published', 'not_found', 'unresolved', 'not_checked' ];
 
+	/**
+	 * Register the abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		wp_register_ability( self::NAME, [
 			'label'               => 'Scan Broken Links',
@@ -106,6 +111,12 @@ class Webmastery_MCP_Link_Scan {
 		return true;
 	}
 
+	/**
+	 * Scan the links of one post or page.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array<string, mixed>
+	 */
 	public static function execute( $input = [] ) {
 		$permission = self::check( $input );
 		if ( is_wp_error( $permission ) ) {

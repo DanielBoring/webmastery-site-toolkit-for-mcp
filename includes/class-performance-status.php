@@ -21,6 +21,11 @@ class Webmastery_MCP_Performance_Status {
 		'wp-cloudflare-page-cache/wp-cloudflare-super-page-cache.php' => 'Super Page Cache for Cloudflare',
 	];
 
+	/**
+	 * Register the abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/performance-status', [
 			'label'               => 'Performance Status',
@@ -35,10 +40,21 @@ class Webmastery_MCP_Performance_Status {
 		] );
 	}
 
+	/**
+	 * Permission check for the ability.
+	 *
+	 * @return true|WP_Error
+	 */
 	public static function permission() {
 		return Webmastery_MCP_Permissions::check( 'manage_options' );
 	}
 
+	/**
+	 * Inspect caching and performance configuration.
+	 *
+	 * @param array<string, mixed> $input Ability input (unused).
+	 * @return array<string, mixed>
+	 */
 	public static function execute( $input = [] ) {
 		return [
 			'success' => true,
@@ -53,6 +69,11 @@ class Webmastery_MCP_Performance_Status {
 		];
 	}
 
+	/**
+	 * Object cache status.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function get_object_cache_status() {
 		$dropin_path = WP_CONTENT_DIR . '/object-cache.php';
 
@@ -62,6 +83,11 @@ class Webmastery_MCP_Performance_Status {
 		];
 	}
 
+	/**
+	 * Page cache plugin and drop-in status.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function get_page_cache_status() {
 		$active_plugins = self::get_active_plugin_basenames();
 		$plugins        = [];
@@ -82,6 +108,11 @@ class Webmastery_MCP_Performance_Status {
 		];
 	}
 
+	/**
+	 * Memory limit status.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function get_memory_status() {
 		$server_memory_limit = ini_get( 'memory_limit' );
 
@@ -91,6 +122,11 @@ class Webmastery_MCP_Performance_Status {
 		];
 	}
 
+	/**
+	 * Post revisions constant status.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function get_post_revisions_status() {
 		$value = self::get_constant_value( 'WP_POST_REVISIONS' );
 
@@ -100,6 +136,11 @@ class Webmastery_MCP_Performance_Status {
 		];
 	}
 
+	/**
+	 * Autosave interval status.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function get_autosave_status() {
 		return [
 			'defined'          => defined( 'AUTOSAVE_INTERVAL' ),
@@ -107,6 +148,11 @@ class Webmastery_MCP_Performance_Status {
 		];
 	}
 
+	/**
+	 * Script concatenation constant status.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function get_concatenate_scripts_status() {
 		$value = self::get_constant_value( 'CONCATENATE_SCRIPTS' );
 
@@ -117,10 +163,21 @@ class Webmastery_MCP_Performance_Status {
 		];
 	}
 
+	/**
+	 * Active plugin basenames.
+	 *
+	 * @return array<int, string>
+	 */
 	private static function get_active_plugin_basenames() {
 		return Webmastery_MCP_Plugins::active_basenames();
 	}
 
+	/**
+	 * Scalar value of a constant, or null when undefined.
+	 *
+	 * @param string $constant Constant name.
+	 * @return bool|int|float|string|null
+	 */
 	private static function get_constant_value( $constant ) {
 		if ( ! defined( $constant ) ) {
 			return null;

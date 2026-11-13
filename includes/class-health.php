@@ -4,6 +4,11 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Health {
 
+	/**
+	 * Register the abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/site-health-check', [
 			'label'               => 'Site Health Check',
@@ -33,6 +38,12 @@ class Webmastery_MCP_Health {
 	 */
 	private const LEGACY_KEYS = [ 'plugin_theme_auto_updates' => 'plugin_theme_auto_update' ];
 
+	/**
+	 * Run the direct Site Health tests and group results by severity.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array<string, mixed>
+	 */
 	public static function execute( $input = [] ) {
 		if ( ! class_exists( 'WP_Site_Health' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/class-wp-site-health.php';

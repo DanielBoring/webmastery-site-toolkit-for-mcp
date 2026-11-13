@@ -12,6 +12,11 @@ class Webmastery_MCP_Cron {
 
 	private const TEXT_LIMIT = 200;
 
+	/**
+	 * Register the abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-cron-status', [
 			'label'               => 'Get Cron Status',
@@ -35,6 +40,12 @@ class Webmastery_MCP_Cron {
 		] );
 	}
 
+	/**
+	 * Report scheduled event and cron configuration status.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array<string, mixed>
+	 */
 	public static function execute( $input = [] ) {
 		return self::build( is_array( $input ) ? $input : [], time() );
 	}
@@ -44,6 +55,8 @@ class Webmastery_MCP_Cron {
 	 *
 	 * @param array<string, mixed> $input Validated ability input.
 	 * @param int                  $now   Current Unix timestamp.
+	 *
+	 * @return array<string, mixed>
 	 */
 	private static function build( array $input, int $now ): array {
 		$per_page     = Webmastery_MCP_Input::per_page( $input, 50 );
@@ -99,6 +112,8 @@ class Webmastery_MCP_Cron {
 	 * @param mixed $disabled  DISABLE_WP_CRON value.
 	 * @param mixed $alternate ALTERNATE_WP_CRON value.
 	 * @param mixed $lock      WP_CRON_LOCK_TIMEOUT value.
+	 *
+	 * @return array<string, mixed>
 	 */
 	private static function config_values( $disabled, $alternate, $lock ): array {
 		return [
