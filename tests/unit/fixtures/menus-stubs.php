@@ -23,6 +23,8 @@ class WP_Post {
 	public $post_excerpt = '';
 	public $post_status  = 'publish';
 	public $menu_order   = 0;
+	public $post_date     = '2026-01-02 03:04:05';
+	public $post_date_gmt = '2026-01-02 08:04:05';
 
 	public function __construct( array $fields = array() ) {
 		foreach ( $fields as $key => $value ) {
@@ -249,6 +251,14 @@ function esc_url_raw( $url, $protocols = null ) {
 		return '';
 	}
 	$url = preg_replace( '|[^a-z0-9-~+_.?#=!&;,/:%@$\|*\'()\[\]\x80-\xff]|i', '', (string) $url );
+	if ( 0 !== stripos( $url, 'mailto:' ) ) {
+		// Core's _deep_replace() of %0d/%0a.
+		do {
+			$before = $url;
+			$url    = str_ireplace( array( '%0d', '%0a' ), '', $url );
+		} while ( $before !== $url );
+	}
+	$url = str_replace( ';//', '://', $url );
 	if ( preg_match( '/^([a-z][a-z0-9+.-]*):/i', $url, $matches ) && ! in_array( strtolower( $matches[1] ), (array) $protocols, true ) ) {
 		return '';
 	}

@@ -788,19 +788,28 @@ case), protocol-relative `//host` references, any whitespace or control
 character anywhere (so a leading space or tab cannot hide a scheme),
 backslashes, `https://user@host` userinfo, `http`/`https` without a host, empty
 `mailto:`/`tel:`, scheme-less hosts such as `example.com/page` (send
-`https://example.com/page`), and any value `esc_url_raw()` empties.
+`https://example.com/page`), and any value `esc_url_raw()` empties. The
+sanitized value is checked against the same rules again, so a value that
+`esc_url_raw()` turns into a protocol-relative URL (it strips `%0d`/`%0a` and
+characters such as `<`, so `/%0d/evil.example` would become `//evil.example`)
+is rejected too.
 
 The target must be a `nav_menu_item` that belongs to exactly one menu
 (`not_found` for any other ID, `precondition_failed` when the item belongs to
-no menu or to several); the caller also needs `edit_post` on the item. Unknown
+no menu or to several); the caller also needs `edit_post` on the item. Only
+`publish` and `draft` items can be updated (`precondition_failed` otherwise:
+WordPress saves every other status as `publish`, which would revive a trashed
+item). Unknown
 fields, such as `object_id`, `type` or `menu_id`, fail the closed schema with
 `ability_invalid_input`.
 
 `wp_update_nav_menu_item()` resets every argument it is not given to its
 default, so the ability passes every stored value of the item back and only
-replaces the fields you sent. One core behavior remains: an item whose stored
-menu order is `0` (possible only for items created outside the admin screens)
-is moved to the end of its menu by WordPress on any update.
+replaces the fields you sent; the item's post date is passed back too, so it
+is not reset to the current time. WordPress treats a menu order of `0` as
+"append to the end of the menu", so an item whose stored menu order is `0`
+(possible only for items created outside the admin screens) is refused with
+`precondition_failed` unless the request also sends `position`.
 
 `data` is the updated item in the `get-menu` item shape, plus `menu_id` and
 `previous`: the values the fields you sent had before the update (in the same

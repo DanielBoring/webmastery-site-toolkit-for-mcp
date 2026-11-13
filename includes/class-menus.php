@@ -178,6 +178,14 @@ class Webmastery_MCP_Menus {
 		if ( ! current_user_can( 'edit_post', $item_id ) ) {
 			return Webmastery_MCP_Response::legacy_error( 'forbidden', 'You cannot edit this menu item.' );
 		}
+		// Core saves every status other than draft as publish, so a trashed or pending item would be revived.
+		if ( ! in_array( $post->post_status, [ 'publish', 'draft' ], true ) ) {
+			return Webmastery_MCP_Response::legacy_error( 'precondition_failed', 'Only published or draft menu items can be updated.' );
+		}
+		// Core treats position 0 as "append to the end of the menu", which would silently move the item.
+		if ( (int) $post->menu_order < 1 && ! in_array( 'position', $changes, true ) ) {
+			return Webmastery_MCP_Response::legacy_error( 'precondition_failed', 'This menu item has no stored position; include position to update it.' );
+		}
 
 		$args      = self::stored_args( $post );
 		$is_custom = 'custom' === $args['menu-item-type'];
@@ -342,7 +350,7 @@ class Webmastery_MCP_Menus {
 		return Webmastery_MCP_Untrusted::mark( [
 			'id'             => $id,
 			'title'          => $restricted ? null : (string) ( $item->title ?? '' ),
-			'url'            => $restricted ? null : (string) ( $item->url ?? '' ),
+			'url'            => $restricted ? null : ( is_string( $item->url ?? null ) ? $item->url : '' ),
 			'type'           => $type,
 			'object'         => (string) ( $item->object ?? '' ),
 			'object_id'      => $object_id,
@@ -399,6 +407,9 @@ class Webmastery_MCP_Menus {
 			'menu-item-classes'     => implode( ' ', $classes ),
 			'menu-item-xfn'         => (string) get_post_meta( $id, '_menu_item_xfn', true ),
 			'menu-item-status'      => (string) $post->post_status,
+			// Without these core resets the item's post date to now.
+			'menu-item-post-date'     => (string) $post->post_date,
+			'menu-item-post-date-gmt' => (string) $post->post_date_gmt,
 		];
 	}
 
@@ -442,34 +453,47 @@ class Webmastery_MCP_Menus {
 	/**
 	 * A safe custom-link URL, or null. Only http, https, mailto and tel schemes, or a relative
 	 * reference starting with a single "/", "?" or "#"; protocol-relative URLs are rejected.
+	 * The sanitized result is checked again: esc_url_raw() strips characters and "%0d"/"%0a",
+	 * which can turn "/%0d/evil.example" or "/</evil.example" into "//evil.example".
 	 *
 	 * @param string $url Raw URL.
 	 */
 	private static function safe_url( string $url ): ?string {
-		if ( '' === $url || strlen( $url ) > self::URL_LIMIT || 1 === preg_match( '/[\x00-\x20\x7F\\\\]/', $url ) ) {
+		if ( ! self::url_shape_ok( $url ) ) {
 			return null;
+		}
+		$clean = esc_url_raw( $url, self::URL_PROTOCOLS );
+		return is_string( $clean ) && self::url_shape_ok( $clean ) ? $clean : null;
+	}
+
+	/**
+	 * Whether a URL has an accepted scheme or relative form.
+	 *
+	 * @param string $url URL.
+	 */
+	private static function url_shape_ok( string $url ): bool {
+		if ( '' === $url || strlen( $url ) > self::URL_LIMIT || 1 === preg_match( '/[\x00-\x20\x7F\\\\]/', $url ) ) {
+			return false;
 		}
 		if ( 1 === preg_match( '/^([A-Za-z][A-Za-z0-9+.\-]*):(.*)$/s', $url, $matches ) ) {
 			$scheme = strtolower( $matches[1] );
 			if ( ! in_array( $scheme, self::URL_PROTOCOLS, true ) || '' === $matches[2] ) {
-				return null;
+				return false;
 			}
 			if ( in_array( $scheme, [ 'http', 'https' ], true ) ) {
 				// Require "//host" with a non-empty host and no userinfo ("https://trusted@evil.example").
 				if ( 0 !== strpos( $matches[2], '//' ) ) {
-					return null;
+					return false;
 				}
 				$authority = (string) preg_replace( '/[\/?#].*$/s', '', substr( $matches[2], 2 ) );
 				$host      = (string) preg_replace( '/:\d*$/', '', $authority );
 				if ( '' === $host || false !== strpos( $authority, '@' ) ) {
-					return null;
+					return false;
 				}
 			}
-		} elseif ( ! in_array( $url[0], [ '/', '?', '#' ], true ) || 0 === strpos( $url, '//' ) ) {
-			return null;
+			return true;
 		}
-		$clean = esc_url_raw( $url, self::URL_PROTOCOLS );
-		return is_string( $clean ) && '' !== $clean ? $clean : null;
+		return in_array( $url[0], [ '/', '?', '#' ], true ) && 0 !== strpos( $url, '//' );
 	}
 
 	/**

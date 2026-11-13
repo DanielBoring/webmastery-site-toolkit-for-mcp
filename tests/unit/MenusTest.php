@@ -214,7 +214,8 @@ final class MenusTest extends TestCase {
 		[ $menu_id, $item_id, $args ] = $GLOBALS['wstm_menus']['updates'][0];
 		self::assertSame( array( 10, 101 ), array( $menu_id, $item_id ) );
 		// Every argument core would otherwise reset is passed back explicitly.
-		self::assertSame( array( 'menu-item-db-id', 'menu-item-object-id', 'menu-item-object', 'menu-item-parent-id', 'menu-item-position', 'menu-item-type', 'menu-item-title', 'menu-item-url', 'menu-item-description', 'menu-item-attr-title', 'menu-item-target', 'menu-item-classes', 'menu-item-xfn', 'menu-item-status' ), array_keys( $args ) );
+		self::assertSame( array( 'menu-item-db-id', 'menu-item-object-id', 'menu-item-object', 'menu-item-parent-id', 'menu-item-position', 'menu-item-type', 'menu-item-title', 'menu-item-url', 'menu-item-description', 'menu-item-attr-title', 'menu-item-target', 'menu-item-classes', 'menu-item-xfn', 'menu-item-status', 'menu-item-post-date', 'menu-item-post-date-gmt' ), array_keys( $args ) );
+		self::assertSame( array( '2026-01-02 03:04:05', '2026-01-02 08:04:05' ), array( $args['menu-item-post-date'], $args['menu-item-post-date-gmt'] ), 'Core resets an omitted post date to now.' );
 		$data = $result['data'];
 		self::assertSame( 'New Docs label', $data['title'] );
 		self::assertSame( array( 'https://example.test/docs', '_blank', 'Read the docs', 'Stored description', array( 'nav-docs', 'highlight' ), 'nofollow', 1, 0, 'publish', 'custom' ), array( $data['url'], $data['target'], $data['attr_title'], $data['description'], $data['classes'], $data['xfn'], $data['position'], $data['parent_item_id'], $data['status'], $data['type'] ) );
@@ -302,6 +303,38 @@ final class MenusTest extends TestCase {
 			self::assertSame( array( $url, array( 'http', 'https', 'mailto', 'tel' ) ), end( $GLOBALS['wstm_menus']['esc_url_raw'] ) );
 			$previous = $url;
 		}
+	}
+
+	public function test_urls_that_sanitize_into_an_off_site_or_unsafe_form_are_rejected(): void {
+		// esc_url_raw() strips %0d/%0a and disallowed characters, which can create "//host".
+		foreach ( array( '/%0d/evil.example', '/%0a/evil.example', '/%0D%0A/evil.example', '/%0%0dd/evil.example', '/</evil.example', '/"/evil.example', '/^/evil.example', '/{}/evil.example' ) as $url ) {
+			self::assert_error( self::update( array( 'menu_item_id' => 101, 'url' => $url ) ), 'invalid_input', 'invalid_url' );
+		}
+	}
+
+	public function test_legitimate_url_forms_are_accepted(): void {
+		foreach ( array( 'http://[::1]:8080/x', "https://b\xc3\xbccher.example/", 'https://example.test/?mail=a@b.test', 'https://example.test#a@b', '/a/%0d-literal-ok/b', '/.//still-same-site' ) as $url ) {
+			$result = self::update( array( 'menu_item_id' => 101, 'url' => $url ) );
+			self::assertTrue( $result['success'], $url . ' ' . json_encode( $result ) );
+		}
+	}
+
+	public function test_items_that_core_would_revive_or_move_are_refused(): void {
+		foreach ( array( 'trash', 'pending', 'private', 'future' ) as $status ) {
+			$GLOBALS['wstm_menus']['posts'][101]->post_status = $status;
+			self::assert_error( self::update( array( 'menu_item_id' => 101, 'title' => 'X' ) ), 'precondition_failed', 'precondition_failed' );
+		}
+		$GLOBALS['wstm_menus']['posts'][101]->post_status = 'draft';
+		$result = self::update( array( 'menu_item_id' => 101, 'title' => 'Draft kept' ) );
+		self::assertSame( 'draft', $result['data']['status'] );
+		$GLOBALS['wstm_menus']['updates'] = array();
+
+		// Position 0 means "append" to core: refuse unless the caller sets a position.
+		$GLOBALS['wstm_menus']['posts'][201]->menu_order = 0;
+		self::assert_error( self::update( array( 'menu_item_id' => 201, 'title' => 'X' ) ), 'precondition_failed', 'precondition_failed' );
+		$result = self::update( array( 'menu_item_id' => 201, 'title' => 'Y', 'position' => 4 ) );
+		self::assertTrue( $result['success'], json_encode( $result ) );
+		self::assertSame( 4, $result['data']['position'] );
 	}
 
 	public function test_url_emptied_by_esc_url_raw_is_rejected(): void {
