@@ -6264,6 +6264,69 @@
         ]
     },
     {
+        "ability": "webmastery-site-toolkit-for-mcp/get-updates-overview",
+        "label": "get-updates-overview as admin",
+        "role": "admin",
+        "input": null,
+        "expect": "success",
+        "assert_permission": true,
+        "assert_paths": [
+            "data.core.current_version",
+            "data.core.update_available",
+            "data.core.latest_version",
+            "data.core.data_cached",
+            "data.core.last_checked",
+            "data.plugins.data_cached",
+            "data.plugins.last_checked",
+            "data.plugins.count",
+            "data.plugins.truncated",
+            "data.plugins.items",
+            "data.themes.data_cached",
+            "data.themes.last_checked",
+            "data.themes.count",
+            "data.themes.truncated",
+            "data.themes.items",
+            "data.total_updates"
+        ],
+        "assert_values": {
+            "data.omitted_sections": []
+        },
+        "assert_missing_paths": [
+            "data.core.download",
+            "data.core.packages",
+            "data.plugins.package",
+            "data.themes.package"
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-updates-overview",
+        "label": "get-updates-overview as editor",
+        "role": "editor",
+        "input": null,
+        "expect": "failure",
+        "expect_error_code": "forbidden",
+        "expect_error_reason": "ability_invalid_permissions",
+        "expect_error_shape": "canonical",
+        "assert_permission": "forbidden",
+        "assert_missing_paths": [
+            "data"
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/get-updates-overview",
+        "label": "get-updates-overview as subscriber",
+        "role": "subscriber",
+        "input": null,
+        "expect": "failure",
+        "expect_error_code": "forbidden",
+        "expect_error_reason": "ability_invalid_permissions",
+        "expect_error_shape": "canonical",
+        "assert_permission": "forbidden",
+        "assert_missing_paths": [
+            "data"
+        ]
+    },
+    {
         "ability": "webmastery-site-toolkit-for-mcp/plugin-audit",
         "label": "plugin-audit as admin",
         "role": "admin",

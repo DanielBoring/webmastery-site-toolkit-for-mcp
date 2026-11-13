@@ -623,6 +623,89 @@
                 }
             ],
             "changed": []
+        },
+        {
+            "issue": 225,
+            "summary": "Add get-updates-overview cases (admin, editor and subscriber denied)",
+            "before_count": 614,
+            "before_sha256": "c28d8d8f756944eef98e4e43ff68b55fc33e20764e50453e06aa9d5a081b46b1",
+            "after_count": 617,
+            "after_sha256": "7a4c77d9582b4361331b5fabe4c135fa5b15c1baabb06be51e55009291904093",
+            "added": [
+                {
+                    "index": 285,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/get-updates-overview",
+                        "label": "get-updates-overview as admin",
+                        "role": "admin",
+                        "input": null,
+                        "expect": "success",
+                        "assert_permission": true,
+                        "assert_paths": [
+                            "data.core.current_version",
+                            "data.core.update_available",
+                            "data.core.latest_version",
+                            "data.core.data_cached",
+                            "data.core.last_checked",
+                            "data.plugins.data_cached",
+                            "data.plugins.last_checked",
+                            "data.plugins.count",
+                            "data.plugins.truncated",
+                            "data.plugins.items",
+                            "data.themes.data_cached",
+                            "data.themes.last_checked",
+                            "data.themes.count",
+                            "data.themes.truncated",
+                            "data.themes.items",
+                            "data.total_updates"
+                        ],
+                        "assert_values": {
+                            "data.omitted_sections": []
+                        },
+                        "assert_missing_paths": [
+                            "data.core.download",
+                            "data.core.packages",
+                            "data.plugins.package",
+                            "data.themes.package"
+                        ]
+                    }
+                },
+                {
+                    "index": 286,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/get-updates-overview",
+                        "label": "get-updates-overview as editor",
+                        "role": "editor",
+                        "input": null,
+                        "expect": "failure",
+                        "expect_error_code": "forbidden",
+                        "expect_error_reason": "ability_invalid_permissions",
+                        "expect_error_shape": "canonical",
+                        "assert_permission": "forbidden",
+                        "assert_missing_paths": [
+                            "data"
+                        ]
+                    }
+                },
+                {
+                    "index": 287,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/get-updates-overview",
+                        "label": "get-updates-overview as subscriber",
+                        "role": "subscriber",
+                        "input": null,
+                        "expect": "failure",
+                        "expect_error_code": "forbidden",
+                        "expect_error_reason": "ability_invalid_permissions",
+                        "expect_error_shape": "canonical",
+                        "assert_permission": "forbidden",
+                        "assert_missing_paths": [
+                            "data"
+                        ]
+                    }
+                }
+            ],
+            "changed": []
         }
     ]
 }
