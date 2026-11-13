@@ -179,8 +179,11 @@ sends no cookies, credentials or referer and a fixed plugin User-Agent without
 the site URL, never reads or returns bodies, headers, redirect targets or
 resolved addresses, caches nothing, and is bounded per call to 50 links, 10
 requests, 2 requests per host, a 5-second timeout per request and about 20
-seconds overall. Hostnames are only requested when the cURL transport can pin
-them; the proxy and IPv6 limits above apply. Internal links are resolved
+seconds overall (validation DNS time included). Every scan request is forced
+onto core's cURL transport before it is sent; hostnames are never requested
+through an HTTP proxy (the proxy would resolve them), and the ranged `GET`
+transfer is aborted after 1 KB of body. The IPv6 limit above applies, and a
+non-public post the caller cannot read reports like a missing ID. Internal links are resolved
 offline (`url_to_postid()`, `attachment_url_to_postid()`) and never requested.
 No data is sent to the plugin author. See the
 [contract](reference/ability-contracts.md#broken-link-scan).

@@ -233,7 +233,7 @@ final class LinkScanTest extends TestCase {
 		$expect = array(
 			'https://example.test/published/'                                => array( 'ok', 20 ),
 			'https://www.example.test/draft/'                                => array( 'not_published', 21 ),
-			'https://example.test/private/'                                  => array( 'not_published', null ),
+			'https://example.test/private/'                                  => array( 'not_found', null ),
 			'https://example.test/?p=23'                                     => array( 'not_found', 23 ),
 			'https://example.test/?p=999'                                    => array( 'not_found', null ),
 			'https://example.test/category/news/'                            => array( 'unresolved', null ),
@@ -260,8 +260,8 @@ final class LinkScanTest extends TestCase {
 		self::assertContains( 'attachment:https://example.test/wp-content/uploads/2026/01/b.png', State::$lookups );
 		self::assertNotContains( 'url:https://example.test/wp-content/uploads/2026/01/a.png', State::$lookups );
 		self::assertSame( 3, $data['summary']['by_status']['ok'] );
-		self::assertSame( 2, $data['summary']['by_status']['not_published'] );
-		self::assertSame( 3, $data['summary']['by_status']['not_found'] );
+		self::assertSame( 1, $data['summary']['by_status']['not_published'] );
+		self::assertSame( 4, $data['summary']['by_status']['not_found'] );
 		self::assertSame( 2, $data['summary']['by_status']['unresolved'] );
 		self::assertNull( $data['next_offset'] );
 	}
@@ -354,7 +354,11 @@ final class LinkScanTest extends TestCase {
 			self::assertSame( 0 === $index ? null : 1024, $args['limit_response_size'] );
 		}
 		self::assertSame( array( 'HEAD', 'GET' ), array_column( array_column( State::$sent, 'args' ), 'method' ) );
-		self::assertSame( array( 'http_request_args' => array( State::$hooks['http_request_args'][0] ), 'http_api_curl' => array() ), State::$hooks, 'Request hooks are removed afterwards.' );
+		self::assertSame( array( 'http_request_args' => array( State::$hooks['http_request_args'][0] ), 'requests-requests.before_request' => array(), 'http_api_curl' => array() ), State::$hooks, 'Request hooks are removed afterwards.' );
+		foreach ( State::$sent as $request ) {
+			self::assertFalse( $request['options']['follow_redirects'] );
+			self::assertSame( 'WpOrg\\Requests\\Transport\\Curl', $request['options']['transport'] );
+		}
 	}
 
 	/** @dataProvider unsafeUrls */
@@ -445,20 +449,110 @@ final class LinkScanTest extends TestCase {
 		self::assertSame( array(), State::$sent );
 		self::assertNull( $data['next_offset'], 'A transport that cannot pin is not a bound to resume from.' );
 
-		// cURL claimed but a different transport handled the request: the response is discarded.
+		// Requests would pick another transport (e.g. cURL without TLS): cURL is forced before sending.
 		State::reset();
 		self::post( self::POST, '' );
 		self::public_host( 'a.test' );
 		State::$curl_transport = false;
 		$data                  = self::external( '<a href="https://a.test/">a</a>' );
+		self::assertSame( 'ok', $data['links'][0]['status'] );
+		self::assertSame( array( 'WpOrg\\Requests\\Transport\\Curl' ), State::$transports );
+		self::assertSame( array( 'a.test:443:93.184.215.14', 'a.test.:443:93.184.215.14' ), State::resolves()[0] );
+
+		// A transport that never ran http_api_curl (a plugin replaced it later): the response is discarded.
+		State::reset();
+		self::post( self::POST, '' );
+		self::public_host( 'a.test' );
+		$replace = static function ( &$url, &$headers, &$data, &$type, &$options ) {
+			$options['transport'] = 'WpOrg\\Requests\\Transport\\Fsockopen';
+		};
+		// Registered while the request runs, so it runs after the scan's own before_request hook.
+		State::$hooks['http_request_args'][] = static function ( $args ) use ( $replace ) {
+			State::$hooks['requests-requests.before_request'][] = $replace;
+			return $args;
+		};
+		$data = self::external( '<a href="https://a.test/">a</a>' );
 		self::assertSame( 'not_checked', $data['links'][0]['status'] );
 		self::assertNull( $data['links'][0]['http_status'] );
 
-		// An IP literal needs no pin and is still checked.
+		// Without cURL nothing is sent, not even to an IP literal (no response size abort elsewhere).
 		State::reset();
 		self::post( self::POST, '' );
 		State::$curl_available = false;
+		self::assertSame( 'not_checked', self::external( '<a href="http://93.184.215.14/">ip</a>' )['links'][0]['status'] );
+		self::assertSame( array(), State::$sent );
+	}
+
+	public function test_proxy_sends_nothing_for_hostnames(): void {
+		// A proxy resolves the host itself, so the pin would not apply.
+		self::public_host( 'a.test' );
+		State::$proxy = true;
+		$data         = self::external( '<a href="https://a.test/">a</a> <a href="http://93.184.215.14/">ip</a>' );
+		self::assertSame( array( 'not_checked', 'not_checked' ), array_column( $data['links'], 'status' ), 'The first refusal stops external checks for the call.' );
+		self::assertSame( array(), State::$sent );
+		self::assertNull( $data['next_offset'] );
+
+		// An IP literal needs no DNS, so the proxy may carry it.
+		State::reset();
+		self::post( self::POST, '' );
+		State::$proxy = true;
 		self::assertSame( 'ok', self::external( '<a href="http://93.184.215.14/">ip</a>' )['links'][0]['status'] );
+	}
+
+	public function test_get_fallback_transfer_is_aborted_after_the_byte_limit(): void {
+		self::public_host( 'a.test' );
+		self::public_host( 'b.test' );
+		State::$responses  = array(
+			'HEAD https://a.test/big' => array( 'code' => 405 ),
+			'GET https://a.test/big'  => array( 'code' => 200 ),
+			'HEAD https://b.test/big' => array( 'code' => 501 ),
+			'GET https://b.test/big'  => array( 'code' => 404 ),
+		);
+		State::$body_bytes = array(
+			'HEAD https://a.test/big' => 50000000,
+			'GET https://a.test/big'  => 50000000,
+			'GET https://b.test/big'  => 50000000,
+		);
+		$data = self::external( '<a href="https://a.test/big">a</a><a href="https://b.test/big">b</a>' );
+		self::assertSame( array( array( 'ok', 200 ), array( 'broken', 404 ) ), array_map( null, array_column( $data['links'], 'status' ), array_column( $data['links'], 'http_status' ) ) );
+		// HEAD has no size abort (it carries no body in practice); each GET stops at the first chunk past 1 KB.
+		self::assertSame( array( 50000000, 16384, 0, 16384 ), State::$transferred );
+		self::assertStringNotContainsString( 'Callback aborted', json_encode( $data ) );
+	}
+
+	public function test_slow_dns_for_blocked_links_counts_toward_the_time_budget(): void {
+		$content = '';
+		for ( $i = 1; $i <= 5; ++$i ) {
+			State::$a[ "h{$i}.test" ] = array( array( '10.0.0.' . $i ) );
+			$content                 .= '<a href="https://h' . $i . '.test/">' . $i . '</a>';
+		}
+		State::$dns_latency = 8.0;
+		$data               = self::external( $content );
+		// Lookups at 0s, 8s and 16s; at 24s no further lookup starts although no request was sent.
+		self::assertSame( array( 'blocked', 'blocked', 'blocked', 'not_checked', 'not_checked' ), array_column( $data['links'], 'status' ) );
+		self::assertSame( 3, $data['next_offset'] );
+		self::assertSame( array( 'A:h1.test', 'A:h2.test', 'A:h3.test' ), State::$dns_calls );
+		self::assertSame( array(), State::$sent );
+	}
+
+	public function test_unreadable_non_public_targets_report_like_missing_ids(): void {
+		self::post( 40, '', array( 'post_status' => 'private' ) );
+		self::post( 41, '', array( 'post_status' => 'draft' ) );
+		self::post( 42, '', array( 'post_status' => 'draft' ) );
+		State::$unreadable = array( 40, 41 );
+		State::$routes     = array(
+			'https://example.test/?p=40'       => 40,
+			'https://example.test/?page_id=41' => 41,
+			'https://example.test/?p=42'       => 42,
+			'https://example.test/?p=43'       => 43,
+		);
+		self::post( self::POST, '<a href="/?p=40">a</a><a href="/?page_id=41">b</a><a href="/?p=42">c</a><a href="/?p=43">d</a>' );
+		$data = self::scan();
+		self::assertSame(
+			array( array( 'not_found', null ), array( 'not_found', null ), array( 'not_published', 42 ), array( 'not_found', null ) ),
+			array_map( null, array_column( $data['links'], 'status' ), array_column( $data['links'], 'target_id' ) ),
+			'An ID the caller cannot read is indistinguishable from an ID that does not exist.'
+		);
 	}
 
 	public function test_max_links_and_offset_window(): void {

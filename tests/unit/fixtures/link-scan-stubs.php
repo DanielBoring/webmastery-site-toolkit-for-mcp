@@ -10,6 +10,10 @@
 
 namespace WstmLinkScan;
 
+if ( ! class_exists( '\\WpOrg\\Requests\\Exception', false ) ) {
+	eval( 'namespace WpOrg\\Requests; class Exception extends \\Exception { public function __construct( $message, $type ) { parent::__construct( $message ); } }' );
+}
+
 require_once __DIR__ . '/shared-helper-loader.php';
 \wstm_test_load_shared_helpers( __NAMESPACE__ );
 
@@ -67,6 +71,16 @@ final class State {
 	public static float $now = 1000.0;
 	/** Seconds each request takes on the fake clock. */
 	public static float $latency = 0.1;
+	/** Seconds each IPv4 lookup takes on the fake clock. */
+	public static float $dns_latency = 0.0;
+	/** Whether WordPress would send requests through an HTTP proxy. */
+	public static bool $proxy = false;
+	/** @var array<string, int> Body bytes the server sends per "METHOD url" (default 0). */
+	public static array $body_bytes = array();
+	/** @var array<int, string> Transport class each request used. */
+	public static array $transports = array();
+	/** @var array<int, int> Body bytes actually transferred per request. */
+	public static array $transferred = array();
 	/** @var array<string, array<string, mixed>> */
 	public static array $registered = array();
 
@@ -79,6 +93,9 @@ final class State {
 		self::$curl_transport = true;
 		self::$now            = 1000.0;
 		self::$latency        = 0.1;
+		self::$dns_latency    = 0.0;
+		self::$proxy          = false;
+		self::$body_bytes     = self::$transports = self::$transferred = array();
 	}
 
 	/** @return array<int, mixed> CURLOPT_RESOLVE values in the order they were set. */
@@ -148,6 +165,7 @@ function wp_strip_all_tags( $text ) {
 
 function gethostbynamel( $host ) {
 	State::$dns_calls[] = 'A:' . $host;
+	State::$now        += State::$dns_latency;
 	$queue = State::$a[ $host ] ?? array();
 	if ( array() === $queue ) {
 		return false;
@@ -173,7 +191,12 @@ function curl_version() {
 
 function curl_setopt( $handle, $option, $value ) {
 	State::$curl[] = array( 'option' => $option, 'value' => $value );
+	$handle->options[ $option ] = $value;
 	return true;
+}
+
+function curl_getinfo( $handle, $option ) {
+	return CURLINFO_RESPONSE_CODE === $option ? ( $handle->code ?? 0 ) : null;
 }
 
 function add_filter( $name, $callback, $priority = 10, $args = 1 ) {
@@ -198,8 +221,11 @@ function wp_http_validate_url( $url ) {
 }
 
 /**
- * Mirrors core's order: http_request_args filters, http_api_curl (cURL transport only),
- * then the scripted transfer. No redirects are followed here; the ability must do that.
+ * Mirrors core's order: http_request_args filters, Requests' before_request (options by
+ * reference; a forced transport wins, a thrown Requests exception becomes a WP_Error),
+ * http_api_curl (cURL transport only), then the scripted transfer. A cURL progress
+ * callback set on the handle sees the body bytes and can abort the transfer. No
+ * redirects are followed here; the ability must do that.
  */
 function wp_safe_remote_request( $url, $args = array() ) {
 	$args['reject_unsafe_urls'] = true;
@@ -207,18 +233,45 @@ function wp_safe_remote_request( $url, $args = array() ) {
 	foreach ( State::$hooks['http_request_args'] ?? array() as $filter ) {
 		$args = $filter( $args, $url );
 	}
-	if ( State::$curl_transport ) {
-		$handle = (object) array( 'id' => 1 );
+	$request_url = $url;
+	$headers     = $args['headers'];
+	$data        = null;
+	$type        = $args['method'];
+	$options     = array( 'follow_redirects' => true, 'transport' => null ) + ( State::$proxy ? array( 'proxy' => 'proxy.test:3128' ) : array() );
+	try {
+		foreach ( State::$hooks['requests-requests.before_request'] ?? array() as $action ) {
+			$action( $request_url, $headers, $data, $type, $options );
+		}
+	} catch ( \WpOrg\Requests\Exception $error ) {
+		return new \WP_Error( 'http_request_failed', $error->getMessage() );
+	}
+	$transport            = $options['transport'] ?? ( State::$curl_transport ? 'WpOrg\\Requests\\Transport\\Curl' : 'WpOrg\\Requests\\Transport\\Fsockopen' );
+	State::$transports[]  = $transport;
+	$key                  = $args['method'] . ' ' . $url;
+	$response             = State::$responses[ $key ] ?? array( 'code' => 200 );
+	$handle               = (object) array( 'id' => 1, 'options' => array() );
+	if ( 'WpOrg\\Requests\\Transport\\Curl' === $transport ) {
 		foreach ( State::$hooks['http_api_curl'] ?? array() as $action ) {
 			$action( $handle, $args, $url );
 		}
 	}
-	State::$sent[] = array( 'url' => $url, 'args' => $args );
+	State::$sent[] = array( 'url' => $url, 'args' => $args, 'options' => $options );
 	State::$now   += State::$latency;
-	$response      = State::$responses[ $args['method'] . ' ' . $url ] ?? array( 'code' => 200 );
 	if ( $response instanceof \WP_Error ) {
 		return $response;
 	}
+	$handle->code = $response['code'];
+	$bytes        = State::$body_bytes[ $key ] ?? 0;
+	$progress     = $handle->options[ \defined( 'CURLOPT_XFERINFOFUNCTION' ) ? CURLOPT_XFERINFOFUNCTION : CURLOPT_PROGRESSFUNCTION ] ?? null;
+	$sent         = 0;
+	while ( $sent < $bytes ) {
+		$sent = min( $bytes, $sent + 16384 );
+		if ( null !== $progress && false === ( $handle->options[ CURLOPT_NOPROGRESS ] ?? true ) && 0 !== $progress( $handle, $bytes, $sent, 0, 0 ) ) {
+			State::$transferred[] = $sent;
+			return new \WP_Error( 'http_request_failed', 'cURL error 42: Callback aborted' );
+		}
+	}
+	State::$transferred[] = $sent;
 	return array(
 		'response' => array( 'code' => $response['code'] ),
 		'headers'  => $response['headers'] ?? array(),

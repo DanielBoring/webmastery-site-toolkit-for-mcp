@@ -141,6 +141,7 @@ class Webmastery_MCP_Link_Scan {
 			'clock'    => $clock,
 			'started'  => $started,
 			'requests' => 0,
+			'checks'   => 0,
 			'hosts'    => [],
 			'disabled' => false,
 		];
@@ -294,7 +295,12 @@ class Webmastery_MCP_Link_Scan {
 		if ( 'trash' === $post->post_status ) {
 			return [ 'not_found', self::readable_id( $id ) ];
 		}
-		return [ is_post_publicly_viewable( $post ) ? 'ok' : 'not_published', self::readable_id( $id ) ];
+		if ( is_post_publicly_viewable( $post ) ) {
+			return [ 'ok', self::readable_id( $id ) ];
+		}
+		// url_to_postid() returns ?p=, ?page_id= and ?attachment_id= IDs without a visibility check:
+		// a non-public object the caller cannot read reports like a missing ID, as WordPress shows it (404).
+		return current_user_can( 'read_post', $id ) ? [ 'not_published', $id ] : [ 'not_found', null ];
 	}
 
 	/**
@@ -327,6 +333,8 @@ class Webmastery_MCP_Link_Scan {
 			}
 			$ips   = null;
 			$valid = Webmastery_MCP_Safe_Http::validate_public_url( $current, $ips, 'Link' );
+			// DNS work counts toward the time budget too, even when nothing is requested.
+			++$state['checks'];
 			if ( is_wp_error( $valid ) || ! wp_http_validate_url( $valid ) ) {
 				return [ 'blocked', $last, false ];
 			}
@@ -384,8 +392,9 @@ class Webmastery_MCP_Link_Scan {
 	/**
 	 * Whether another request fits the per-call, per-host and time bounds.
 	 *
-	 * The first request of a call is always allowed by the time budget, so every
-	 * call makes progress.
+	 * Only the first check of a call (its first validation and request) is exempt
+	 * from the time budget, so every call makes progress; later validations and
+	 * requests, including after blocked links whose DNS lookups were slow, are not.
 	 *
 	 * @param string               $url   Validated URL.
 	 * @param array<string, mixed> $state Per-call counters.
@@ -397,7 +406,7 @@ class Webmastery_MCP_Link_Scan {
 		if ( ( $state['hosts'][ self::host_key( $url ) ] ?? 0 ) >= self::MAX_PER_HOST ) {
 			return false;
 		}
-		return 0 === $state['requests'] || ( (float) ( $state['clock'] )() - $state['started'] ) < self::BUDGET;
+		return 0 === $state['checks'] || ( (float) ( $state['clock'] )() - $state['started'] ) < self::BUDGET;
 	}
 
 	private static function host_key( string $url ): string {

@@ -864,8 +864,8 @@ They are resolved without any HTTP request or DNS lookup:
 | Status | Meaning |
 | --- | --- |
 | `ok` | Resolves to a publicly viewable post, page or other viewable post type (`is_post_publicly_viewable()`), to an existing attachment file under the uploads URL, or is the home page (`/`, without a query). |
-| `not_published` | Resolves to an object that exists but is not publicly viewable (draft, pending, private, scheduled, or a non-viewable type). Nothing else is reported about it. |
-| `not_found` | Resolves to an object that is trashed, or to an ID that no longer exists (for example `?p=123` of a deleted post). |
+| `not_published` | Resolves to an object that exists but is not publicly viewable (draft, pending, private, scheduled, or a non-viewable type) and that the caller can `read_post`. Nothing else is reported about it. |
+| `not_found` | Resolves to an object that is trashed, to an ID that no longer exists (for example `?p=123` of a deleted post), or to a non-public object the caller cannot `read_post` (reported exactly like a missing ID, as WordPress itself answers such a URL with a 404 for that user). |
 | `unresolved` | Maps to no post or attachment. This is **not** proof the URL is broken: archives, category/tag/author/date pages, feeds, search, custom rewrite routes, resized image copies (`-300x200.jpg`) and pages from other plugins cannot be resolved offline. |
 
 Resolution uses WordPress's own `url_to_postid()` (one rewrite-rule match and
@@ -874,7 +874,11 @@ for URLs under the uploads base URL, `attachment_url_to_postid()` (one
 `postmeta` query for the original file path; resized copies are not
 recognized). `target_id` is the resolved object's ID only when the caller can
 `read_post` it, otherwise `null`; titles are never returned, so a private or
-draft target the caller cannot read shows only its status. An uploads file is
+draft target the caller cannot read is never distinguished from a missing one:
+`url_to_postid()` already returns no match for a pretty permalink the caller
+cannot view (`unresolved`), and a direct `?p=`/`?page_id=`/`?attachment_id=` ID,
+which `url_to_postid()` returns without a visibility check, reports
+`not_found` with `target_id: null`. An uploads file is
 `ok` whatever its parent post's status, because the web server serves the
 file directly.
 
@@ -897,11 +901,17 @@ URL in the window is checked as follows:
    5-second timeout, no redirects followed by the HTTP API, no cookies, no
    authentication, referer or extra headers, the fixed User-Agent
    `WebmasterySiteToolkitForMCP-LinkCheck/1.0 (WordPress plugin)` (never the
-   site URL), and nothing written to disk. A last-priority filter re-applies
+   site URL), and nothing written to disk. The request always uses core's cURL
+   transport (forced before anything is sent, so the pin cannot be skipped by
+   Requests choosing another transport); a hostname that WordPress would send
+   through an HTTP proxy (`WP_PROXY_HOST`) is not requested at all, because the
+   proxy would resolve it itself. A last-priority filter re-applies
    these arguments, so other plugins' `http_request_args` filters cannot add
    cookies or credentials to these requests. If the response is `405` or
    `501`, one `GET` with `Range: bytes=0-1023` and a 1 KB response limit is
-   sent instead; the body is discarded.
+   sent instead; the transfer is aborted as soon as more than 1 KB of body has
+   arrived (core's own limit only truncates what it keeps while the download
+   continues), the status already received is used and the body is discarded.
 3. A `3xx` with a `Location` is followed by the plugin itself: the target is
    resolved, validated and pinned again exactly as in step 1 before it is
    requested, for at most 3 redirects. A redirect to an unsafe target is
@@ -921,15 +931,17 @@ URL in the window is checked as follows:
 and external together). At most 10 external HTTP requests are sent (every
 redirect hop and `GET` fallback counts), at most 2 to the same host (exact
 hostname), and no new request starts once about 20 seconds have passed since
-the call began (the first request always runs, so every call makes progress).
+the call began; validation DNS lookups count toward that time even for links
+that end up `blocked` (only the first external check of a call is exempt, so
+every call makes progress).
 Links a bound stopped are `not_checked`, and `next_offset` is the index of the
 first of them so the next call checks them; otherwise `next_offset` is the
 index after the window, or `null` at the end. Call again with the same
 `post_id`, `check_external` and `max_links` and `offset: next_offset`.
 Results are not cached: there are no transients or options, so every call
-repeats its requests. If the site's HTTP transport cannot pin a hostname's
-validated addresses (no cURL, or a plugin replaced the transport), no
-hostname request is made or its response is discarded, and the remaining
+repeats its requests. If the site cannot pin and bound a request (no cURL,
+an HTTP proxy for a hostname, or a plugin replaced the transport after the
+plugin forced cURL), no request is made or its response is discarded, and the remaining
 external links of that call are `not_checked` without a `next_offset` for them.
 
 **What the external check does and does not guarantee.** It reports what this
@@ -941,11 +953,12 @@ JavaScript-only pages can give `client_error` or `ok` for pages that behave
 otherwise in a browser; a `200` "soft 404" page is reported `ok`. TLS
 certificate failures are `unreachable`. The SSRF guard ensures no request is
 sent to an address that failed validation, but it is not a guarantee against
-every network path: when WordPress is configured to use an HTTP proxy, the
-proxy resolves hosts itself and pinning does not apply; IPv6-only hosts are
+every network path: a plugin that rewrites the URL or replaces the transport in
+a later Requests hook can still bypass the pin (the response is then
+discarded, but the request has been sent); IPv6-only hosts are
 not supported (connections use the validated IPv4 addresses); and a slow DNS
-lookup during validation can run past the time budget (the budget only stops
-new requests from starting). Results can differ
+lookup or request already started can run past the time budget (the budget
+only stops new lookups and requests from starting). Results can differ
 between calls (the ability is annotated `idempotent: false`).
 
 **Annotations.** `readonly: true`, `destructive: false`, `idempotent: false`.

@@ -225,9 +225,14 @@ final class Webmastery_MCP_Safe_Http {
 	 * http_request_args filter forces the caller's method, headers and user agent,
 	 * no cookies, no streaming to a file, the response size limit and a timeout of
 	 * at most MAX_TIMEOUT seconds, so other filters cannot add credentials or
-	 * cookies. A hostname that needs pinning is only requested when the cURL
-	 * transport is available; if the pin was still not applied, the response is
-	 * discarded and a webmastery_unpinned error is returned.
+	 * cookies. The request always uses core's cURL transport (forced in
+	 * requests.before_request, before anything is sent); a hostname is refused
+	 * before sending when WordPress would route it through an HTTP proxy, because
+	 * the proxy resolves the host itself. With limit_response_size the transfer is
+	 * aborted once more body bytes arrive (core only truncates what it keeps), and
+	 * the status line already received is returned without headers or body. If
+	 * the request was not pinned, its response is discarded and a
+	 * webmastery_unpinned error is returned.
 	 *
 	 * @param string               $url  URL returned by validate_public_url().
 	 * @param array<int, string>   $ips  Addresses validate_public_url() accepted.
@@ -236,9 +241,10 @@ final class Webmastery_MCP_Safe_Http {
 	 */
 	public static function pinned_request( $url, $ips, array $args ) {
 		$pins = self::pin_entries( $url, $ips );
-		if ( [] !== $pins && ! self::can_pin() ) {
+		if ( ! self::can_pin() ) {
 			return new WP_Error( 'webmastery_unpinned', 'The HTTP transport cannot pin validated addresses.' );
 		}
+		$limit   = isset( $args['limit_response_size'] ) ? max( 0, (int) $args['limit_response_size'] ) : null;
 		$forced  = [
 			'method'              => (string) ( $args['method'] ?? 'HEAD' ),
 			'headers'             => (array) ( $args['headers'] ?? [] ),
@@ -249,9 +255,11 @@ final class Webmastery_MCP_Safe_Http {
 			'stream'              => false,
 			'blocking'            => true,
 			'reject_unsafe_urls'  => true,
-			'limit_response_size' => $args['limit_response_size'] ?? null,
+			'limit_response_size' => $limit,
 		];
-		$applied = [] === $pins;
+		$applied = false;
+		$refused = false;
+		$over    = false;
 		$handles = [];
 		$enforce = static function ( $parsed, $request_url ) use ( $url, $forced ) {
 			if ( $request_url !== $url || ! is_array( $parsed ) ) {
@@ -260,23 +268,50 @@ final class Webmastery_MCP_Safe_Http {
 			$forced['timeout'] = min( $forced['timeout'], max( 1, (float) ( $parsed['timeout'] ?? $forced['timeout'] ) ) );
 			return array_merge( $parsed, $forced );
 		};
-		$pin     = static function ( $handle, $request, $request_url ) use ( $url, $pins, &$applied, &$handles ) {
+		$prepare = static function ( &$request_url, &$headers, &$data, &$type, &$options ) use ( $url, $pins, &$refused ) {
+			if ( $request_url !== $url || ! is_array( $options ) ) {
+				return;
+			}
+			if ( [] !== $pins && ! empty( $options['proxy'] ) ) {
+				// A proxy resolves the host itself, so the pin would not apply: send nothing.
+				$refused = true;
+				throw new \WpOrg\Requests\Exception( 'Pinned requests cannot use an HTTP proxy.', 'webmastery_unpinned' );
+			}
+			// Only the cURL transport honours CURLOPT_RESOLVE and the transfer abort below.
+			$options['transport']        = 'WpOrg\\Requests\\Transport\\Curl';
+			$options['follow_redirects'] = false;
+		};
+		$pin     = static function ( $handle, $request, $request_url ) use ( $url, $pins, $limit, &$applied, &$handles, &$over ) {
 			if ( $request_url !== $url ) {
 				return;
 			}
 			$handles[] = $handle;
-			if ( [] !== $pins ) {
-				// Connect only to the validated addresses, closing the DNS rebinding window.
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Pin core's existing transport, not a separate request.
-				$applied = curl_setopt( $handle, CURLOPT_RESOLVE, array_values( $pins ) );
+			// Connect only to the validated addresses, closing the DNS rebinding window.
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Pin core's existing transport, not a separate request.
+			$applied = [] === $pins || curl_setopt( $handle, CURLOPT_RESOLVE, array_values( $pins ) );
+			if ( null !== $limit ) {
+				$option = defined( 'CURLOPT_XFERINFOFUNCTION' ) ? CURLOPT_XFERINFOFUNCTION : CURLOPT_PROGRESSFUNCTION;
+				// Requests only truncates what it keeps; stop the transfer itself after the limit.
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Bound core's existing transport, not a separate request.
+				$applied = $applied && curl_setopt( $handle, CURLOPT_NOPROGRESS, false )
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Bound core's existing transport, not a separate request.
+					&& curl_setopt( $handle, $option, static function ( $curl, $download_total, $downloaded ) use ( $limit, &$over ) {
+						if ( $downloaded > $limit ) {
+							$over = true;
+							return 1;
+						}
+						return 0;
+					} );
 			}
 		};
 		add_filter( 'http_request_args', $enforce, PHP_INT_MAX, 2 );
+		add_action( 'requests-requests.before_request', $prepare, PHP_INT_MAX, 5 );
 		add_action( 'http_api_curl', $pin, PHP_INT_MAX, 3 );
 		try {
 			$response = wp_safe_remote_request( $url, $forced );
 		} finally {
 			remove_filter( 'http_request_args', $enforce, PHP_INT_MAX );
+			remove_action( 'requests-requests.before_request', $prepare, PHP_INT_MAX );
 			remove_action( 'http_api_curl', $pin, PHP_INT_MAX );
 			if ( [] !== $pins ) {
 				$unpin = array_map( static fn( $key ) => '-' . $key, array_keys( $pins ) );
@@ -287,8 +322,25 @@ final class Webmastery_MCP_Safe_Http {
 				}
 			}
 		}
-		if ( ! $applied ) {
+		if ( $refused || ! $applied ) {
 			return new WP_Error( 'webmastery_unpinned', 'The request could not be pinned to the validated addresses.' );
+		}
+		if ( $over && is_wp_error( $response ) && [] !== $handles ) {
+			// The size abort surfaces as a transport error; keep only the status line already received.
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_getinfo -- Read the status of core's own aborted transfer.
+			$code = (int) curl_getinfo( end( $handles ), CURLINFO_RESPONSE_CODE );
+			if ( $code > 0 ) {
+				return [
+					'headers'  => [],
+					'body'     => '',
+					'response' => [
+						'code'    => $code,
+						'message' => '',
+					],
+					'cookies'  => [],
+					'filename' => null,
+				];
+			}
 		}
 		return $response;
 	}
