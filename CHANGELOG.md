@@ -8,6 +8,14 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Added
 
+- Backup Status reports more detail for two more backup plugins: the last
+  completed backup time for Solid Backups (BackupBuddy) and the saved backup
+  schedule for WPvivid Backup & Migration. Each is read from one setting the
+  plugin itself stores, checked for type and plausibility; nothing else from
+  those settings is returned. Duplicator, All-in-One WP Migration, BlogVault,
+  VaultPress and Jetpack VaultPress Backup keep `null` details because they do
+  not store this information in a WordPress option, and Jetpack and ManageWP
+  Worker stay unverified. The response shape is unchanged.
 - Security Audit adds baseline hardening checks, each reported once per audit
   from local data only: PHP branch security support (from a hardcoded table),
   `FORCE_SSL_ADMIN`, default `wp_` database prefix (never shows the prefix),

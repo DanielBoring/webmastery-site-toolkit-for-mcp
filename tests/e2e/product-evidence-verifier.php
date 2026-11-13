@@ -804,7 +804,7 @@ final class Wstm_Product_Evidence_Verifier {
 		self::check( $verdict['binding'] === ( $resources['binding'] ?? null ) && 'cleaned' === ( $resources['phase'] ?? null ), 'resource ledger cleanup binding' );
 		$summary = $reader->json( 'runner.json' );
 		$manifest = Wstm_Product_Evidence_Reader::decode_json( $reader->manifest() );
-		self::check( 607 === count( $manifest ) && array_values( $manifest ) === $manifest, 'maintained manifest case inventory' );
+		self::check( 609 === count( $manifest ) && array_values( $manifest ) === $manifest, 'maintained manifest case inventory' );
 		$native = array();
 		foreach ( $manifest as $case ) {
 			self::check( is_array( $case ) && is_string( $case['ability'] ?? null ), 'trusted manifest ability identity' ); $native[] = $case['ability'];

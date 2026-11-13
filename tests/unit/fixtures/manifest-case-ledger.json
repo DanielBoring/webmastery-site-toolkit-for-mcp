@@ -408,6 +408,73 @@
                     }
                 }
             ]
+        },
+        {
+            "issue": 237,
+            "summary": "Add backup-status cases for Solid Backups last backup and WPvivid schedule",
+            "before_count": 607,
+            "before_sha256": "3450c3a49b0389db3724d4b0c84c0599c5bd9f4ada7cea1318ef29f1c568598a",
+            "after_count": 609,
+            "after_sha256": "9be2fd08cc46c085e57553751111d98946cd4e76e0e3385408a8d700fbb16e2b",
+            "added": [
+                {
+                    "index": 423,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/backup-status",
+                        "label": "backup-status Solid Backups last backup finish",
+                        "role": "admin",
+                        "input": null,
+                        "expect": "success",
+                        "setup": {
+                            "active_plugins": [
+                                "backupbuddy/backupbuddy.php"
+                            ]
+                        },
+                        "assert_values": {
+                            "data.backup_plugin_detected": true,
+                            "data.plugin_name": "Solid Backups (BackupBuddy)",
+                            "data.last_backup": "2025-05-13T03:00:00Z",
+                            "data.schedule": null,
+                            "data.warning": null,
+                            "data.active_known_plugins.0.basename": "backupbuddy/backupbuddy.php",
+                            "data.active_known_plugins.0.last_backup": "2025-05-13T03:00:00Z",
+                            "data.active_known_plugins.0.backup_verified": true
+                        },
+                        "assert_missing_paths": [
+                            "data.active_known_plugins.1"
+                        ]
+                    }
+                },
+                {
+                    "index": 424,
+                    "case": {
+                        "ability": "webmastery-site-toolkit-for-mcp/backup-status",
+                        "label": "backup-status WPvivid schedule",
+                        "role": "admin",
+                        "input": null,
+                        "expect": "success",
+                        "setup": {
+                            "active_plugins": [
+                                "wpvivid-backuprestore/wpvivid-backuprestore.php"
+                            ]
+                        },
+                        "assert_values": {
+                            "data.backup_plugin_detected": true,
+                            "data.plugin_name": "WPvivid Backup & Migration",
+                            "data.last_backup": null,
+                            "data.schedule": "daily",
+                            "data.warning": null,
+                            "data.active_known_plugins.0.basename": "wpvivid-backuprestore/wpvivid-backuprestore.php",
+                            "data.active_known_plugins.0.schedule": "daily",
+                            "data.active_known_plugins.0.backup_verified": true
+                        },
+                        "assert_missing_paths": [
+                            "data.active_known_plugins.1"
+                        ]
+                    }
+                }
+            ],
+            "changed": []
         }
     ]
 }

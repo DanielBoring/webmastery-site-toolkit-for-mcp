@@ -316,7 +316,7 @@ before retiring the marker.
 
 Both source and installed-package runs retain the existing main-branch
 security, destructive, schema, metadata, comment, database-privacy and Site Kit
-checks. The native manifest has 85 abilities and 607 cases: the sealed 601 cases (all
+checks. The native manifest has 85 abilities and 609 cases: the sealed 601 cases (all
 589 inherited cases and 12 additions) plus the later steps recorded in
 `tests/unit/fixtures/manifest-case-ledger.json`; permission-sensitive cases
 include allowed and denied roles.

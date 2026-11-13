@@ -8817,6 +8817,56 @@
     },
     {
         "ability": "webmastery-site-toolkit-for-mcp/backup-status",
+        "label": "backup-status Solid Backups last backup finish",
+        "role": "admin",
+        "input": null,
+        "expect": "success",
+        "setup": {
+            "active_plugins": [
+                "backupbuddy/backupbuddy.php"
+            ]
+        },
+        "assert_values": {
+            "data.backup_plugin_detected": true,
+            "data.plugin_name": "Solid Backups (BackupBuddy)",
+            "data.last_backup": "2025-05-13T03:00:00Z",
+            "data.schedule": null,
+            "data.warning": null,
+            "data.active_known_plugins.0.basename": "backupbuddy/backupbuddy.php",
+            "data.active_known_plugins.0.last_backup": "2025-05-13T03:00:00Z",
+            "data.active_known_plugins.0.backup_verified": true
+        },
+        "assert_missing_paths": [
+            "data.active_known_plugins.1"
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/backup-status",
+        "label": "backup-status WPvivid schedule",
+        "role": "admin",
+        "input": null,
+        "expect": "success",
+        "setup": {
+            "active_plugins": [
+                "wpvivid-backuprestore/wpvivid-backuprestore.php"
+            ]
+        },
+        "assert_values": {
+            "data.backup_plugin_detected": true,
+            "data.plugin_name": "WPvivid Backup & Migration",
+            "data.last_backup": null,
+            "data.schedule": "daily",
+            "data.warning": null,
+            "data.active_known_plugins.0.basename": "wpvivid-backuprestore/wpvivid-backuprestore.php",
+            "data.active_known_plugins.0.schedule": "daily",
+            "data.active_known_plugins.0.backup_verified": true
+        },
+        "assert_missing_paths": [
+            "data.active_known_plugins.1"
+        ]
+    },
+    {
+        "ability": "webmastery-site-toolkit-for-mcp/backup-status",
         "label": "backup-status as editor",
         "role": "editor",
         "input": null,

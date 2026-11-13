@@ -288,4 +288,173 @@ final class PluginAuditAccuracyTest extends TestCase {
 		self::assertSame( '2025-05-15T03:00:00Z', $data['last_backup'] );
 		self::assertSame( 'weekly', $data['schedule'] );
 	}
+
+	public function test_solid_backups_reports_last_backup_finish_only(): void {
+		$options = array(
+			'data_version'       => '18',
+			'last_backup_start'  => 1893456000.25,
+			'last_backup_finish' => 1747278000.6543,
+			'last_backup_serial' => 'abc123',
+			'last_backup_stats'  => array( 'finish' => 1893456000, 'archiveFile' => 'backup-example.zip' ),
+			'schedules'          => array( array( 'title' => 'nightly', 'first_run' => 1893456000 ) ),
+		);
+
+		$data = self::backup( array( 'backupbuddy/backupbuddy.php' ), array( 'pb_backupbuddy' => $options ) );
+
+		self::assertTrue( $data['backup_plugin_detected'] );
+		self::assertSame( '2025-05-15T03:00:00Z', $data['last_backup'] );
+		self::assertNull( $data['schedule'] );
+		self::assertSame(
+			array( array( 'name' => 'Solid Backups (BackupBuddy)', 'basename' => 'backupbuddy/backupbuddy.php', 'last_backup' => '2025-05-15T03:00:00Z', 'schedule' => null, 'backup_verified' => true ) ),
+			$data['active_known_plugins']
+		);
+	}
+
+	public function test_solid_backups_accepts_integer_and_numeric_string_finish_times(): void {
+		foreach ( array( 1747278000, '1747278000', '1747278000.5' ) as $finish ) {
+			$data = self::backup( array( 'backupbuddy/backupbuddy.php' ), array( 'pb_backupbuddy' => array( 'last_backup_finish' => $finish ) ) );
+			self::assertSame( '2025-05-15T03:00:00Z', $data['last_backup'] );
+		}
+	}
+
+	public function test_solid_backups_without_usable_finish_time_reports_null(): void {
+		$malformed = array(
+			array( 'last_backup_finish' => 0 ),
+			array( 'last_backup_finish' => 0.0 ),
+			array( 'last_backup_finish' => 86400 ),
+			array( 'last_backup_finish' => -1747278000 ),
+			array( 'last_backup_finish' => 'yesterday' ),
+			array( 'last_backup_finish' => '2025-05-15 03:00:00' ),
+			array( 'last_backup_finish' => ' 1747278000' ),
+			array( 'last_backup_finish' => NAN ),
+			array( 'last_backup_finish' => INF ),
+			array( 'last_backup_finish' => 1e20 ),
+			array( 'last_backup_finish' => true ),
+			array( 'last_backup_finish' => null ),
+			array( 'last_backup_finish' => array( 1747278000 ) ),
+			array( 'last_backup' => 1747278000, 'last_backup_start' => 1747278000, 'last_backup_stats' => array( 'finish' => 1747278000 ) ),
+			array(),
+			'1747278000',
+			1747278000,
+			false,
+		);
+
+		foreach ( $malformed as $options ) {
+			$data = self::backup( array( 'backupbuddy/backupbuddy.php' ), array( 'pb_backupbuddy' => $options ) );
+			self::assertTrue( $data['backup_plugin_detected'] );
+			self::assertNull( $data['last_backup'], var_export( $options, true ) );
+			self::assertNull( $data['schedule'] );
+		}
+
+		$data = self::backup( array( 'backupbuddy/backupbuddy.php' ) );
+		self::assertNull( $data['last_backup'] );
+	}
+
+	public function test_wpvivid_reports_enabled_schedule_from_fixed_vocabulary(): void {
+		$expected = array(
+			'wpvivid_12hours'     => 'every12hours',
+			'twicedaily'          => 'every12hours',
+			'wpvivid_daily'       => 'daily',
+			'onceday'             => 'daily',
+			'wpvivid_weekly'      => 'weekly',
+			'wpvivid_fortnightly' => 'fortnightly',
+			'wpvivid_monthly'     => 'monthly',
+			'montly'              => 'monthly',
+		);
+
+		foreach ( $expected as $type => $schedule ) {
+			foreach ( array( '1', 1, true ) as $enable ) {
+				$setting = array(
+					'enable'     => $enable,
+					'type'       => $type,
+					'event'      => 'wpvivid_main_schedule_event',
+					'start_time' => 1893456000,
+					'backup'     => array( 'backup_files' => 'files+db', 'local' => 0, 'remote' => 1 ),
+				);
+
+				$data = self::backup( array( 'wpvivid-backuprestore/wpvivid-backuprestore.php' ), array( 'wpvivid_schedule_setting' => $setting ) );
+
+				self::assertTrue( $data['backup_plugin_detected'] );
+				self::assertSame( 'WPvivid Backup & Migration', $data['plugin_name'] );
+				self::assertSame( $schedule, $data['schedule'] );
+				self::assertNull( $data['last_backup'] );
+				self::assertSame( $schedule, $data['active_known_plugins'][0]['schedule'] );
+			}
+		}
+	}
+
+	public function test_wpvivid_disabled_schedule_is_manual(): void {
+		foreach ( array( false, 0, '0', '' ) as $enable ) {
+			$data = self::backup(
+				array( 'wpvivid-backuprestore/wpvivid-backuprestore.php' ),
+				array( 'wpvivid_schedule_setting' => array( 'enable' => $enable, 'type' => 'wpvivid_daily' ) )
+			);
+			self::assertSame( 'manual', $data['schedule'] );
+		}
+	}
+
+	public function test_wpvivid_without_usable_schedule_reports_null(): void {
+		$malformed = array(
+			array( 'enable' => '1' ),
+			array( 'enable' => '1', 'type' => 'hourly' ),
+			array( 'enable' => '1', 'type' => 'Daily' ),
+			array( 'enable' => '1', 'type' => '<b>daily</b>' ),
+			array( 'enable' => '1', 'type' => array( 'wpvivid_daily' ) ),
+			array( 'enable' => '1', 'type' => 86400 ),
+			array( 'enable' => 'yes', 'type' => 'wpvivid_daily' ),
+			array( 'enable' => 2, 'type' => 'wpvivid_daily' ),
+			array( 'enable' => null, 'type' => 'wpvivid_daily' ),
+			array( 'type' => 'wpvivid_daily', 'recurrence' => 'wpvivid_daily' ),
+			array(),
+			'wpvivid_daily',
+			true,
+		);
+
+		foreach ( $malformed as $setting ) {
+			$data = self::backup( array( 'wpvivid-backuprestore/wpvivid-backuprestore.php' ), array( 'wpvivid_schedule_setting' => $setting ) );
+			self::assertTrue( $data['backup_plugin_detected'] );
+			self::assertNull( $data['schedule'], var_export( $setting, true ) );
+			self::assertNull( $data['last_backup'] );
+		}
+
+		$data = self::backup( array( 'wpvivid-backuprestore/wpvivid-backuprestore.php' ) );
+		self::assertNull( $data['schedule'] );
+	}
+
+	public function test_wpvivid_last_backup_message_is_not_read(): void {
+		$data = self::backup(
+			array( 'wpvivid-backuprestore/wpvivid-backuprestore.php' ),
+			array( 'wpvivid_last_msg' => array( 'id' => 'wpvivid-1', 'status' => array( 'str' => 'completed', 'start_time' => 1747278000, 'run_time' => 1747278000 ) ) )
+		);
+
+		self::assertNull( $data['last_backup'] );
+	}
+
+	public function test_unsupported_plugins_report_null_details_even_with_lookalike_options(): void {
+		$options = array(
+			'pb_backupbuddy'           => array( 'last_backup_finish' => 1747278000 ),
+			'wpvivid_schedule_setting' => array( 'enable' => '1', 'type' => 'wpvivid_daily' ),
+			'bvAccountsList'           => array( 'key' => array( 'lastbackuptime' => 1747278000, 'email' => 'owner@example.com' ) ),
+			'vaultpress'               => array( 'key' => 'secret', 'connection' => 1747278000 ),
+			'duplicator_settings'      => array( 'last_backup' => 1747278000 ),
+		);
+		$plugins = array(
+			'duplicator/duplicator.php',
+			'all-in-one-wp-migration/all-in-one-wp-migration.php',
+			'blogvault-real-time-backup/blogvault.php',
+			'vaultpress/vaultpress.php',
+			'jetpack-backup/jetpack-backup.php',
+		);
+
+		foreach ( $plugins as $plugin ) {
+			$data = self::backup( array( $plugin ), $options );
+			self::assertTrue( $data['backup_plugin_detected'], $plugin );
+			self::assertNull( $data['last_backup'], $plugin );
+			self::assertNull( $data['schedule'], $plugin );
+		}
+
+		$data = self::backup( array( 'jetpack/jetpack.php' ), $options + array( 'jetpack_active_modules' => array( 'vaultpress' ) ) );
+		self::assertFalse( $data['backup_plugin_detected'] );
+		self::assertFalse( $data['active_known_plugins'][0]['backup_verified'] );
+	}
 }

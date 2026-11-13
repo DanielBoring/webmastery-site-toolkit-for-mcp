@@ -897,6 +897,8 @@ update_option( 'updraft_last_backup', array( 'backup_time' => 1747278000, 'backu
 update_option( 'updraft_interval', 'weekly' );
 update_option( 'updraft_interval_database', 'weekly' );
 update_option( 'backwpup_jobs', array( array( 'lastrun' => 1747191600 ) ) );
+update_option( 'pb_backupbuddy', array( 'last_backup_finish' => 1747105200.25 ) );
+update_option( 'wpvivid_schedule_setting', array( 'enable' => '1', 'type' => 'wpvivid_daily' ) );
 
 $fixtures['fixture_plugin']        = 'mcp-e2e-plugin/mcp-e2e-plugin.php';
 $fixtures['ambiguous_plugin_slug'] = 'mcp-e2e-duplicate';
