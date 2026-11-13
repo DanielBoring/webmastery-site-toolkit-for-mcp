@@ -176,6 +176,15 @@ if (webmastery_mcp_qa_bucket_counts(['data' => $data], $ability)) { exit(9); }
 $health = ['summary' => ['critical' => 0, 'recommended' => 0, 'good' => 1],
     'results' => ['critical' => [], 'recommended' => [], 'good' => [['test' => 'php_version', 'label' => 'Observed PHP']]]];
 if (!webmastery_mcp_qa_bucket_counts(['data' => $health], 'webmastery-site-toolkit-for-mcp/site-health-check')) { exit(10); }
+$health['summary'] += ['errors' => 1, 'skipped' => 0];
+$health['errors'] = [['test' => 'sql_server']];
+if (!webmastery_mcp_qa_bucket_counts(['data' => $health], 'webmastery-site-toolkit-for-mcp/site-health-check')) { exit(11); }
+foreach ([['summary', 'errors', 2], ['summary', 'skipped', -1], ['summary', 'skipped', '0'], ['errors', 0, ['test' => 'sql_server', 'message' => '/var/www']]] as [$part, $key, $value]) {
+    $bad = $health; $bad[$part][$key] = $value;
+    if (webmastery_mcp_qa_bucket_counts(['data' => $bad], 'webmastery-site-toolkit-for-mcp/site-health-check')) { exit(12); }
+}
+$bad = $health; unset($bad['summary']['skipped']);
+if (webmastery_mcp_qa_bucket_counts(['data' => $bad], 'webmastery-site-toolkit-for-mcp/site-health-check')) { exit(13); }
 echo "Term persistence and diagnostic mutation controls passed.\n";
 """
         result = subprocess.run(

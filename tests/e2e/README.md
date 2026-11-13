@@ -1242,6 +1242,15 @@ Manifest cases (added in #238) assert `backup_verified: true` for UpdraftPlus an
 - Also activate UpdraftPlus: `backup_plugin_detected` is `true`, `plugin_name` is `UpdraftPlus`, `warning` is `null`, and UpdraftPlus is listed first with `backup_verified: true`.
 - With BackWPup active, set a job's `lastrun` in the `backwpup_jobs` option and name another job `monday`: `last_backup` is the `lastrun` time in UTC, not a date derived from the job name or other settings.
 
+## Diagnostics hardening (unreleased, #232)
+
+Manifest changes (no new cases): `site-health-check` now also asserts `data.summary.errors`, `data.summary.skipped`, `data.errors` and the `untrusted_fields` marker on the first `good` result (core's `php_default_timezone` test always passes because WordPress runs PHP in UTC). `assert_bucket_counts` accepts the extra `errors` and `skipped` summary counts only for site health and checks that `errors` is a list of `{ "test" }` records matching its count. `user-access-audit as admin` asserts `super_admins: []`, `super_admin_count: 0` and exactly two warnings (default `admin` username and the application password); the administrator-count warning no longer appears for one administrator. DNS pinning is covered by `MediaUrlTest` with a scripted resolver that changes its answer between validation and download and across redirect hops; `media-download-runner.php` routes an IP literal, which needs no pinning, so its evidence is unchanged. Manual verification on a disposable site, as an Administrator:
+
+- Run `site-health-check`: results include core tests the former fixed list skipped (for example `php_extensions`, `php_default_timezone`, `persistent_object_cache`), `summary` has `critical`, `recommended`, `good`, `errors` and `skipped`, and every result has `untrusted_fields: ["label","description","actions"]`. A plugin test added with `add_filter( 'site_status_tests', ... )` appears under its key; one whose callback throws appears only as `{ "test": "<key>" }` in `errors`, with no exception text anywhere in the response. Async tests (loopback, REST, HTTPS, page cache) do not appear.
+- Register more than 60 direct tests through the filter: 60 run and `summary.skipped` is the remainder.
+- Run `user-access-audit` with 1 to 3 administrators: no administrator-count warning, `admin_count` is still reported. Add a fourth: the warning appears. On a single site `super_admins` is `[]`. On a multisite network, grant super admin to a user with no role on the current site and give them an application password: they appear in `super_admins` and their password in `application_passwords`, while `admin_count` counts site administrators only.
+- With the cURL transport, upload an image from a host you control with a short DNS TTL; change its A record to `127.0.0.1` after the request starts (or use a resolver that alternates answers): the download still connects to the address that passed validation. A redirect to a host resolving to a private address is rejected with `download_failed`. Through an HTTP proxy or with the streams transport, pinning is not applied.
+
 ## Rule for new abilities
 
 When a PR adds a new ability, it must also add at least one manifest test case for that ability. If the ability is registered but missing from the manifest, E2E QA fails.
@@ -1821,7 +1830,7 @@ To verify patch preservation on a disposable site, use an account with effective
 
 ### Image URL uploads
 
-For example, on a disposable site, upload an image you control with `{"image_url":"https://your-public-host.example/image.png","post_id":123,"set_featured":true,"title":"Example","alt_text":"Example image","caption":"Example caption"}`. Verify the returned attachment metadata and the target's featured image.
+For example, on a disposable site, upload an image you control with `{"image_url":"https://your-public-host.example/image.png","post_id":123,"set_featured":true,"title":"Example","alt_text":"Example image","caption":"Example caption"}`. Verify the returned attachment metadata and the target's featured image. For DNS pinning checks, see [Diagnostics hardening](#diagnostics-hardening-unreleased-232).
 
 ### Scheduling
 

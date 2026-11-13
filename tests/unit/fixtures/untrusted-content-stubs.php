@@ -58,7 +58,23 @@ function get_userdata( $id ) {
 }
 
 function get_user_by( $field, $id ) {
+	if ( 'login' === $field ) {
+		foreach ( $GLOBALS['wstm108']['users'] as $user ) {
+			if ( $id === $user->user_login ) {
+				return $user;
+			}
+		}
+		return false;
+	}
 	return get_userdata( $id );
+}
+
+function is_multisite() {
+	return ! empty( $GLOBALS['wstm108']['super_admins'] );
+}
+
+function get_super_admins() {
+	return $GLOBALS['wstm108']['super_admins'] ?? array();
 }
 
 function current_user_can( $cap, ...$args ) {
@@ -181,7 +197,9 @@ class WP_User_Query {
 	public function __construct( $args ) {}
 
 	public function get_results() {
-		return array_values( $GLOBALS['wstm108']['users'] );
+		$users = array_values( $GLOBALS['wstm108']['users'] );
+		// Users flagged as non-administrators exist only for super admin lookups.
+		return array_values( array_filter( $users, static fn( $user ) => empty( $user->wstm108_not_admin ) ) );
 	}
 
 	public function get_total() {

@@ -568,13 +568,59 @@ final class UntrustedContentTest extends TestCase {
 		$this->assert_marked( $password, array( 'user_login', 'app_name' ), $data['application_passwords'][0] );
 		unset( $data['admin_accounts'][0]['untrusted_fields'], $data['application_passwords'][0]['untrusted_fields'] );
 		$this->assertSame( array(
-			'admin_accounts' => array( $admin ), 'admin_count' => 1, 'default_admin_username_exists' => false,
+			'admin_accounts' => array( $admin ), 'admin_count' => 1, 'super_admins' => array(), 'super_admin_count' => 0,
+			'default_admin_username_exists' => false,
 			'application_passwords' => array( $password ),
 			'warnings' => array(
-				'1 administrator account(s) detected — review whether all require full admin access',
 				'1 application password(s) issued to administrator account(s) — review and revoke unused credentials',
 			),
 			'metadata' => array( 'application_passwords_skipped' => false, 'application_passwords_skip_reason' => null, 'required_capability' => 'edit_users' ),
 		), $data );
+	}
+
+	private static function extra_user( int $id, string $login, bool $admin = true ): void {
+		$user = new Wstm108Content\WP_User();
+		foreach ( array( 'ID' => (string) $id, 'user_login' => $login, 'user_email' => $login . '@example.test', 'user_registered' => '2026-01-02 03:04:05' ) as $key => $value ) {
+			$user->$key = $value;
+		}
+		if ( ! $admin ) {
+			$user->wstm108_not_admin = true;
+		}
+		$GLOBALS['wstm108']['users'][ $id ] = $user;
+	}
+
+	public function test_access_audit_warns_about_administrators_only_above_the_threshold(): void {
+		Users::register();
+		$GLOBALS['wstm108']['application_passwords'] = array();
+		for ( $id = 1; $id <= 3; ++$id ) {
+			self::extra_user( $id, 'owner' . $id );
+		}
+		$data = $this->execute( 'user-access-audit', array() );
+		self::assertSame( 3, $data['admin_count'] );
+		self::assertSame( array(), $data['warnings'] );
+		self::extra_user( 4, 'owner4' );
+		$data = $this->execute( 'user-access-audit', array() );
+		self::assertSame( 4, $data['admin_count'] );
+		self::assertSame( array( '4 administrator accounts detected (more than 3) — review whether all require full admin access' ), $data['warnings'] );
+	}
+
+	public function test_access_audit_reports_network_super_admins_and_scans_their_application_passwords(): void {
+		Users::register();
+		self::user();
+		self::extra_user( 20, 'network\\owner', false );
+		$GLOBALS['wstm108']['super_admins'] = array( 'network\\owner', 'stored\\login', 'deleted-login' );
+		$GLOBALS['wstm108']['application_passwords'] = array( array( 'name' => self::TEXT, 'last_used' => null ) );
+		$data = $this->execute( 'user-access-audit', array() );
+		self::assertSame( 3, $data['super_admin_count'] );
+		self::assertSame( array(
+			array( 'login' => 'network\\owner', 'untrusted_fields' => array( 'login' ) ),
+			array( 'login' => 'stored\\login', 'untrusted_fields' => array( 'login' ) ),
+			array( 'login' => 'deleted-login', 'untrusted_fields' => array( 'login' ) ),
+		), $data['super_admins'] );
+		self::assertSame( 1, $data['admin_count'], 'Super admins without a site role are not counted as site administrators.' );
+		// The site administrator is scanned once, plus the super admin who has no site role.
+		self::assertSame( array( 9, 20 ), array_column( $data['application_passwords'], 'user_id' ) );
+		self::assertSame( array( 'user_login', 'app_name' ), $data['application_passwords'][1]['untrusted_fields'] );
+		self::assertSame( 'network\\owner', $data['application_passwords'][1]['user_login'] );
 	}
 }

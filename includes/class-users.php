@@ -191,6 +191,11 @@ class Webmastery_MCP_Users {
 		] );
 	}
 
+	/**
+	 * Administrator accounts above this count produce a review warning.
+	 */
+	private const ADMIN_WARNING_THRESHOLD = 3;
+
 	public static function execute_user_access_audit( $input = [] ) {
 		$query        = new WP_User_Query(
 			[
@@ -203,6 +208,23 @@ class Webmastery_MCP_Users {
 		$admin_count  = count( $admin_users );
 		$admin_exists = (bool) get_user_by( 'login', 'admin' );
 
+		// Network-wide super admins hold every capability on every site, including ones without a site role.
+		$super_logins = is_multisite() ? array_values( array_filter( array_map( 'strval', (array) get_super_admins() ), static fn( $login ) => '' !== $login ) ) : [];
+		$super_admins = array_map(
+			static fn( $login ) => Webmastery_MCP_Untrusted::mark( [ 'login' => $login ], [ 'login' ] ),
+			$super_logins
+		);
+		$scan_users   = [];
+		foreach ( $admin_users as $admin_user ) {
+			$scan_users[ (int) $admin_user->ID ] = $admin_user;
+		}
+		foreach ( $super_logins as $login ) {
+			$super_user = get_user_by( 'login', $login );
+			if ( $super_user && ! isset( $scan_users[ (int) $super_user->ID ] ) ) {
+				$scan_users[ (int) $super_user->ID ] = $super_user;
+			}
+		}
+
 		$application_passwords = [];
 		$passwords_skipped     = false;
 		$passwords_skip_reason = null;
@@ -214,10 +236,10 @@ class Webmastery_MCP_Users {
 			$passwords_skipped     = true;
 			$passwords_skip_reason = 'Application passwords require edit_users capability.';
 		} else {
-			foreach ( $admin_users as $admin_user ) {
-				$passwords = WP_Application_Passwords::get_user_application_passwords( (int) $admin_user->ID );
+			foreach ( $scan_users as $scan_user ) {
+				$passwords = WP_Application_Passwords::get_user_application_passwords( (int) $scan_user->ID );
 				foreach ( $passwords as $password ) {
-					$application_passwords[] = self::normalize_application_password( $admin_user, $password );
+					$application_passwords[] = self::normalize_application_password( $scan_user, $password );
 				}
 			}
 		}
@@ -226,8 +248,8 @@ class Webmastery_MCP_Users {
 		if ( $admin_exists ) {
 			$warnings[] = "Username 'admin' exists — common brute-force target";
 		}
-		if ( $admin_count > 0 ) {
-			$warnings[] = sprintf( '%d administrator account(s) detected — review whether all require full admin access', $admin_count );
+		if ( $admin_count > self::ADMIN_WARNING_THRESHOLD ) {
+			$warnings[] = sprintf( '%d administrator accounts detected (more than %d) — review whether all require full admin access', $admin_count, self::ADMIN_WARNING_THRESHOLD );
 		}
 		if ( $application_passwords ) {
 			$warnings[] = sprintf( '%d application password(s) issued to administrator account(s) — review and revoke unused credentials', count( $application_passwords ) );
@@ -241,6 +263,8 @@ class Webmastery_MCP_Users {
 			'data'    => [
 				'admin_accounts'                => array_values( array_filter( array_map( [ self::class, 'normalize_admin_account' ], $admin_users ) ) ),
 				'admin_count'                   => $admin_count,
+				'super_admins'                  => $super_admins,
+				'super_admin_count'             => count( $super_admins ),
 				'default_admin_username_exists' => $admin_exists,
 				'application_passwords'         => $application_passwords,
 				'warnings'                      => $warnings,

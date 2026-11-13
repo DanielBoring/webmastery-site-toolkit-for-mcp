@@ -14,6 +14,18 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ### Fixed
 
+- Site Health Check now runs every registered direct Site Health test,
+  including newer core tests and tests added by plugins (up to 60 per call),
+  and lists tests that failed to run in a new `errors` list instead of
+  dropping them. The summary adds `errors` and `skipped` counts. Result text
+  from plugins is marked untrusted. Exception details are never returned.
+- User Access Audit no longer warns about every administrator account; it
+  warns only when a site has more than 3. On multisite it now reports network
+  super admins (`super_admins`, `super_admin_count`) and includes their
+  application passwords.
+- Image uploads from a URL now connect only to the addresses that passed the
+  private-address check when WordPress uses cURL, including after redirects,
+  closing a DNS rebinding window between validation and download.
 - Fix the missing MCP Adapter admin notice, which never appeared on WordPress
   6.9+. It now detects the MCP Adapter itself (standalone or bundled by another
   plugin) instead of the Abilities API built into WordPress, and is shown only

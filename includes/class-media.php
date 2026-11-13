@@ -119,7 +119,15 @@ class Webmastery_MCP_Media {
 		return true;
 	}
 
-	protected static function validate_public_image_url( $url ) {
+	/**
+	 * Validate an image URL and the addresses its host resolves to.
+	 *
+	 * @param string             $url           Untrusted image URL.
+	 * @param array<int, string> $validated_ips Set on success: the IPv4 addresses that passed validation, empty for an IP literal.
+	 */
+	protected static function validate_public_image_url( $url, &$validated_ips = null ) {
+		$validated_ips = null;
+
 		$url = esc_url_raw( trim( (string) $url ), [ 'http', 'https' ] );
 
 		if ( '' === $url ) {
@@ -143,9 +151,11 @@ class Webmastery_MCP_Media {
 		}
 
 		if ( filter_var( $host, FILTER_VALIDATE_IP ) ) {
-			return self::is_private_ip( $host )
-				? Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must not target a private or reserved address.' )
-				: $url;
+			if ( self::is_private_ip( $host ) ) {
+				return Webmastery_MCP_Response::local_error( 'invalid_url', 'Image URL must not target a private or reserved address.' );
+			}
+			$validated_ips = [];
+			return $url;
 		}
 
 		$resolved_ips = static::resolve_image_ipv4( $host );
@@ -159,11 +169,54 @@ class Webmastery_MCP_Media {
 		}
 
 		$result = static::validate_image_dns( $host );
-		return is_wp_error( $result ) ? $result : $url;
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		$validated_ips = array_values( array_unique( array_map( 'strval', $resolved_ips ) ) );
+		return $url;
 	}
 
-	private static function download_bounded_image( $url, $max_size ) {
+	/**
+	 * CURLOPT_RESOLVE entries that pin a validated URL's host to its validated IPv4 addresses.
+	 *
+	 * @param string                  $url Validated URL.
+	 * @param array<int, string>|null $ips Addresses from validate_public_image_url().
+	 * @return array<string, string> host:port => host:port:address[,address]; empty when nothing needs pinning.
+	 */
+	private static function image_pin_entries( $url, $ips ) {
+		$ips  = array_values( array_filter( (array) $ips, static fn( $ip ) => false !== filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) );
+		$raw  = (string) wp_parse_url( $url, PHP_URL_HOST );
+		$host = strtolower( trim( $raw, " \t\n\r\0\x0B." ) );
+		if ( [] === $ips || '' === $host || filter_var( $host, FILTER_VALIDATE_IP ) ) {
+			return [];
+		}
+		$port = self::image_port( $url );
+		// Older libcurl (before 7.59.0) accepts only one address per entry.
+		$curl = function_exists( 'curl_version' ) ? curl_version() : false;
+		if ( ! is_array( $curl ) || ( $curl['version_number'] ?? 0 ) < 0x073B00 ) {
+			$ips = array_slice( $ips, 0, 1 );
+		}
+		$entries = [];
+		// Cover every spelling cURL may use as its DNS cache key: case and a trailing dot.
+		foreach ( array_unique( [ $host, $host . '.', $raw, strtolower( $raw ) ] ) as $name ) {
+			$entries[ $name . ':' . $port ] = $name . ':' . $port . ':' . implode( ',', $ips );
+		}
+		return $entries;
+	}
+
+	private static function image_port( $url ) {
+		$port = wp_parse_url( $url, PHP_URL_PORT );
+		return $port ? (int) $port : ( 'https' === strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) ) ? 443 : 80 );
+	}
+
+	private static function image_target( $url ) {
+		return strtolower( trim( (string) wp_parse_url( $url, PHP_URL_HOST ), " \t\n\r\0\x0B." ) ) . ':' . self::image_port( $url );
+	}
+
+	private static function download_bounded_image( $url, $max_size, $validated_ips = null ) {
 		$filename         = null;
+		$pins             = null === $validated_ips ? [] : [ self::image_target( $url ) => self::image_pin_entries( $url, $validated_ips ) ];
+		$target           = self::image_target( $url );
 		$too_large        = false;
 		$uses_curl        = false;
 		$hooks            = null;
@@ -193,7 +246,7 @@ class Webmastery_MCP_Media {
 				}
 			}
 		};
-		$curl_progress    = static function ( $handle ) use ( &$too_large, &$uses_curl, &$curl_handles, $progress_option ) {
+		$curl_progress    = static function ( $handle ) use ( &$too_large, &$uses_curl, &$curl_handles, $progress_option, &$pins, &$target ) {
 			$curl_handles[] = $handle;
 			$uses_curl      = true;
 			// Throwing from a PHP write callback alone does not stop all cURL versions.
@@ -206,23 +259,41 @@ class Webmastery_MCP_Media {
 			if ( ! $enabled || ! $configured ) {
 				throw new \WpOrg\Requests\Exception( 'Could not configure bounded image transfer.', 'webmastery_image_transport' );
 			}
+			$pin = $pins[ $target ] ?? [];
+			// Connect only to the addresses validated for this hop, closing the DNS rebinding window.
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Pin core's existing transport, not a separate request.
+			if ( [] !== $pin && ! curl_setopt( $handle, CURLOPT_RESOLVE, array_values( $pin ) ) ) {
+				throw new \WpOrg\Requests\Exception( 'Could not pin the validated image address.', 'webmastery_image_transport' );
+			}
 		};
-		$install_progress = static function ( &$request_url, &$headers, &$data, &$type, &$options ) use ( &$filename, &$hooks, &$uses_curl, &$existing_streams, &$owned_stream, $progress, $curl_progress ) {
+		$install_progress = static function ( &$request_url, &$headers, &$data, &$type, &$options ) use ( &$filename, &$hooks, &$uses_curl, &$existing_streams, &$owned_stream, &$pins, &$target, $progress, $curl_progress ) {
 			if ( null !== $filename && ( $options['filename'] ?? null ) === $filename ) {
 				$uses_curl        = false;
 				$existing_streams = get_resources( 'stream' );
 				$owned_stream     = null;
+				// Pin the URL actually requested; validate it here if a later hook changed it after validation.
+				$target = self::image_target( $request_url );
+				if ( ! array_key_exists( $target, $pins ) ) {
+					$checked = self::validate_public_image_url( $request_url, $ips );
+					if ( is_wp_error( $checked ) ) {
+						// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- HTTP errors are returned to the caller, not rendered as HTML.
+						throw new \WpOrg\Requests\Exception( $checked->get_error_message(), 'webmastery_image_url' );
+					}
+					$pins[ $target ] = self::image_pin_entries( $request_url, $ips );
+				}
 			}
 			if ( null !== $filename && ( $options['filename'] ?? null ) === $filename && $hooks !== $options['hooks'] ) {
 				$hooks = $options['hooks'];
 				$hooks->register( 'request.progress', $progress );
 				$hooks->register( 'curl.before_send', $curl_progress );
-				$hooks->register( 'requests.before_redirect', static function ( $location ) {
-					$result = self::validate_public_image_url( $location );
+				$hooks->register( 'requests.before_redirect', static function ( $location ) use ( &$pins ) {
+					$result = self::validate_public_image_url( $location, $ips );
 					if ( is_wp_error( $result ) ) {
 						// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- HTTP errors are returned to the caller, not rendered as HTML.
 						throw new \WpOrg\Requests\Exception( $result->get_error_message(), 'webmastery_image_url' );
 					}
+					// Re-pin every hop to the addresses this validation accepted.
+					$pins[ self::image_target( $location ) ] = self::image_pin_entries( $location, $ips );
 				} );
 			}
 		};
@@ -292,11 +363,22 @@ class Webmastery_MCP_Media {
 			if ( ( null === $result || is_wp_error( $result ) ) && null !== $filename && file_exists( $filename ) ) {
 				wp_delete_file( $filename );
 			}
+			$unpin = [];
+			foreach ( $pins as $entries ) {
+				foreach ( array_keys( $entries ) as $key ) {
+					$unpin[] = '-' . $key;
+				}
+			}
 			foreach ( $curl_handles as $handle ) {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Do not leave cancellation state on a reused core handle.
 				curl_setopt( $handle, CURLOPT_NOPROGRESS, true );
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Release the request-local callback after success or failure.
 				curl_setopt( $handle, $progress_option, null );
+				if ( [] !== $unpin ) {
+					// A reused handle keeps resolve entries in its DNS cache; remove them on its next transfer.
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Do not leave pinned addresses on a reused core handle.
+					curl_setopt( $handle, CURLOPT_RESOLVE, $unpin );
+				}
 			}
 			remove_filter( 'http_request_args', $identify_request, PHP_INT_MIN );
 			remove_filter( 'http_request_args', $bound, PHP_INT_MAX );
@@ -445,7 +527,7 @@ class Webmastery_MCP_Media {
 					return Webmastery_MCP_Response::legacy_error( 'missing_post_id', 'post_id is required when set_featured is true.' );
 				}
 
-				$image_url = self::validate_public_image_url( $input['image_url'] ?? '' );
+				$image_url = self::validate_public_image_url( $input['image_url'] ?? '', $validated_ips );
 				if ( is_wp_error( $image_url ) ) {
 					return Webmastery_MCP_Response::from_wp_error( $image_url );
 				}
@@ -464,7 +546,7 @@ class Webmastery_MCP_Media {
 				require_once ABSPATH . 'wp-admin/includes/image.php';
 				require_once ABSPATH . 'wp-admin/includes/media.php';
 
-				$tmp = self::download_bounded_image( $image_url, $max_size );
+				$tmp = self::download_bounded_image( $image_url, $max_size, $validated_ips );
 				if ( is_wp_error( $tmp ) ) {
 					if ( 'file_too_large' === $tmp->get_error_code() ) {
 						return Webmastery_MCP_Response::legacy_error( 'file_too_large', 'Image exceeds maximum upload size.', [ 'max_bytes' => $max_size ] );

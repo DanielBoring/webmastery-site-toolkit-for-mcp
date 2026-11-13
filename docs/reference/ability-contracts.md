@@ -29,6 +29,7 @@ table shows it.
 - [Parent assignments](#parent-assignments)
 - [Google Site Kit](#google-site-kit)
 - [Plugin audit and backup status](#plugin-audit-and-backup-status)
+- [Site health and user access audits](#site-health-and-user-access-audits)
 - [Untrusted result fields](#untrusted-result-fields)
 - [Security and privacy behavior](#security-and-privacy-behavior)
 
@@ -325,7 +326,17 @@ rather than disabling the bound.
 
 Hosts that resolve to private or reserved addresses, local names, failed DNS
 resolution, cyclic aliases, and alias chains exceeding 16 lookups are rejected.
-IPv6 literals and AAAA-only hosts are unsupported. The download safeguards and
+IPv6 literals and AAAA-only hosts are unsupported.
+
+When WordPress downloads with cURL, the connection is pinned to the IPv4
+addresses that passed validation (`CURLOPT_RESOLVE`), so a host cannot answer
+validation with a public address and the download with a private one. Every
+redirect target is validated again and pinned to its own validated addresses
+before it is requested. Hosts that also publish public AAAA records are
+connected over the validated IPv4 addresses only. Pinning does not apply to IP
+literals (nothing to resolve), to the streams (fsockopen) transport, or when
+WordPress sends the request through an HTTP proxy, which resolves the host
+itself; those cases keep the earlier validation-only behavior. The download safeguards and
 their limits are described in the
 [security strategy](../90-security-strategy.md#image-url-download-safeguards).
 
@@ -436,6 +447,32 @@ names the active plugins and says that backup configuration could not be
 verified. BackWPup `last_backup` is the latest numeric `lastrun` across its
 jobs, or `null` when no job has run.
 
+## Site health and user access audits
+
+Both abilities are Administrator-only and read-only.
+
+`site-health-check` runs WordPress's registered direct Site Health tests from
+`WP_Site_Health::get_tests()`, so core tests added in newer WordPress versions
+and tests that plugins register through the `site_status_tests` filter are
+included. Asynchronous tests (loopback, REST, HTTPS and page cache checks) need
+HTTP round trips and are not run. At most 60 tests run per call, in registration
+order; `summary.skipped` counts tests left out by that cap. Each result keeps
+`test`, `label`, `description` and `actions` (tags stripped) in the `critical`,
+`recommended` and `good` buckets, and keeps the earlier `test` keys for core
+tests (`plugin_theme_auto_update` for core's `plugin_theme_auto_updates`). A test
+that throws, is not callable or returns no status is listed in `data.errors` as
+`{ "test": "<key>" }` and counted in `summary.errors`; exception messages are
+never returned. Plugin tests can supply any text, so `label`, `description` and
+`actions` are marked untrusted.
+
+`user-access-audit` keeps `admin_count` and warns about administrator accounts
+only when there are more than 3. On multisite, `super_admins` lists the network
+super admin logins (`{ "login": "..." }`, marked untrusted) with
+`super_admin_count`, and application passwords issued to super admins are
+included in `application_passwords` even when they have no role on the current
+site. On a single site `super_admins` is `[]` and `super_admin_count` is `0`.
+Administrator accounts remain those of the current site.
+
 ## Untrusted result fields
 
 Affected successful records add `untrusted_fields`: a unique array of the names
@@ -463,6 +500,8 @@ apply. Markers never restore omitted/redacted fields.
 | User lookup | `display_name`, `nicename`, `url`, authorized `login` and `email` |
 | Administrator account audit | `login`, `email`, `last_login` |
 | Application-password audit | `user_login`, `app_name` |
+| Super admin audit record | `login` |
+| Site health result | `label`, `description`, `actions` |
 | SEO analysis `metrics` | `title`, `url`, `slug`, authorized `yoast_meta_description`, `seopress_meta_description`, `yoast_focus_keyword`, `seopress_focus_keywords` |
 | SEO provider containing record | `title`, `url`, `metadata`, `raw_meta` |
 | SEO/readability score record | `title`, `url`, `score` |
