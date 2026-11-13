@@ -447,6 +447,33 @@ names the active plugins and says that backup configuration could not be
 verified. BackWPup `last_backup` is the latest numeric `lastrun` across its
 jobs, or `null` when no job has run.
 
+`last_backup` and `schedule` are reported only where the plugin's source shows
+which WordPress option holds them. Each plugin reads one fixed key with
+`get_option` (no other database queries, files or HTTP), checks its type, and
+returns `null` for anything missing or malformed. Numeric timestamps before
+2000-01-01 are ignored; times are returned as UTC (`Y-m-d\TH:i:s\Z`). Destinations, file
+names, paths, credentials and email addresses are never returned.
+
+| Plugin | `last_backup` | `schedule` |
+| --- | --- | --- |
+| UpdraftPlus | `updraft_last_backup` (`backup_time`) | `updraft_interval` and `updraft_interval_database` |
+| BackWPup | latest `lastrun` in `backwpup_jobs` | `null` |
+| Solid Backups (BackupBuddy) | `last_backup_finish` in the `pb_backupbuddy` option (set only after a backup finishes without failing; `0` means never) | `null` |
+| WPvivid Backup & Migration | `null` (newer versions keep the last-backup message in their own database table) | `wpvivid_schedule_setting`: `manual` when `enable` is off, otherwise `type` mapped to `every12hours`, `daily`, `weekly`, `fortnightly` or `monthly`; any other value is `null` |
+| Duplicator, All-in-One WP Migration, BlogVault, VaultPress, Jetpack VaultPress Backup | `null` | `null` |
+
+Not reported, and why: Duplicator keeps backups in its own database table;
+All-in-One WP Migration lists backup files on disk and schedules belong to paid
+extensions; BlogVault, VaultPress and Jetpack VaultPress Backup keep backup
+state on their remote service (BlogVault's local `lastbackuptime` is updated by
+an account-info callback, not by a finished backup). Jetpack and ManageWP Worker
+stay `backup_verified: false`: Jetpack only caches its remote backup state in a
+10-minute transient that is usually absent, and ManageWP Worker runs backups
+from the ManageWP service. The WPvivid schedule is the saved setting; WPvivid
+itself treats its `wpvivid_main_schedule_event` cron event as the live state.
+Solid Backups is read from the current site's options table (on multisite this
+matches only the main site).
+
 ## Site health and user access audits
 
 Both abilities are Administrator-only and read-only.

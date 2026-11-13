@@ -22,6 +22,22 @@ class Webmastery_MCP_Backup_Status {
 		'worker/init.php'     => 'ManageWP Worker',
 	];
 
+	// WPvivid's own recurrence list (WPvivid_Schedule::$schedule_type), mapped to UpdraftPlus-style names.
+	private const WPVIVID_SCHEDULES = [
+		'wpvivid_12hours'     => 'every12hours',
+		'twicedaily'          => 'every12hours',
+		'wpvivid_daily'       => 'daily',
+		'daily'               => 'daily',
+		'onceday'             => 'daily',
+		'wpvivid_weekly'      => 'weekly',
+		'weekly'              => 'weekly',
+		'wpvivid_fortnightly' => 'fortnightly',
+		'fortnightly'         => 'fortnightly',
+		'wpvivid_monthly'     => 'monthly',
+		'monthly'             => 'monthly',
+		'montly'              => 'monthly',
+	];
+
 	public static function register() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/backup-status', [
 			'label'               => 'Backup Status',
@@ -126,7 +142,36 @@ class Webmastery_MCP_Backup_Status {
 			return self::get_backwpup_last_backup();
 		}
 
+		if ( 'backupbuddy/backupbuddy.php' === $basename ) {
+			return self::get_solid_backups_last_backup();
+		}
+
 		return null;
+	}
+
+	/**
+	 * Solid Backups (BackupBuddy) keeps its settings in the `pb_backupbuddy` option and sets
+	 * `last_backup_finish` (microtime float, 0 = never) only after a backup completes without failing.
+	 */
+	private static function get_solid_backups_last_backup() {
+		$options = get_option( 'pb_backupbuddy', null );
+		if ( ! is_array( $options ) || ! array_key_exists( 'last_backup_finish', $options ) ) {
+			return null;
+		}
+
+		$finish = $options['last_backup_finish'];
+		if ( is_float( $finish ) ) {
+			$finish = is_finite( $finish ) && $finish >= 0 && $finish < 1e12 ? (int) floor( $finish ) : null;
+		} elseif ( is_string( $finish ) ) {
+			$finish = 1 === preg_match( '/^\d{1,12}(?:\.\d{1,6})?$/D', $finish ) ? (int) $finish : null;
+		}
+
+		if ( ! is_int( $finish ) ) {
+			return null;
+		}
+
+		$timestamp = self::normalize_timestamp( $finish );
+		return null === $timestamp ? null : gmdate( 'Y-m-d\TH:i:s\Z', $timestamp );
 	}
 
 	private static function get_backwpup_last_backup() {
@@ -168,10 +213,40 @@ class Webmastery_MCP_Backup_Status {
 	}
 
 	private static function get_schedule_for_plugin( $basename ) {
-		if ( 'updraftplus/updraftplus.php' !== $basename ) {
+		if ( 'updraftplus/updraftplus.php' === $basename ) {
+			return self::get_updraftplus_schedule();
+		}
+
+		if ( 'wpvivid-backuprestore/wpvivid-backuprestore.php' === $basename ) {
+			return self::get_wpvivid_schedule();
+		}
+
+		return null;
+	}
+
+	/**
+	 * WPvivid saves its schedule form as `wpvivid_schedule_setting`: `enable` ('1' when on) and
+	 * `type` (a recurrence name). A disabled schedule means backups run only manually.
+	 */
+	private static function get_wpvivid_schedule() {
+		$setting = get_option( 'wpvivid_schedule_setting', null );
+		if ( ! is_array( $setting ) || ! array_key_exists( 'enable', $setting ) ) {
 			return null;
 		}
 
+		$enable = $setting['enable'];
+		if ( in_array( $enable, [ false, 0, '0', '' ], true ) ) {
+			return 'manual';
+		}
+
+		if ( ! in_array( $enable, [ true, 1, '1' ], true ) || ! isset( $setting['type'] ) || ! is_string( $setting['type'] ) ) {
+			return null;
+		}
+
+		return self::WPVIVID_SCHEDULES[ $setting['type'] ] ?? null;
+	}
+
+	private static function get_updraftplus_schedule() {
 		$file_schedule     = self::normalize_schedule_value( get_option( 'updraft_interval', null ) );
 		$database_schedule = self::normalize_schedule_value( get_option( 'updraft_interval_database', null ) );
 
