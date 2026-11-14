@@ -6,6 +6,17 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add a step-by-step guide for adding an ability: an ordered checklist in
+  `CONTRIBUTING.md` (merged with the existing registration steps) and a
+  detailed reference, `docs/reference/adding-an-ability.md`, covering design
+  rules, unit tests, E2E manifest cases and assertion types, the manifest case
+  ledger, the pinned-count cascade, source bindings, untrusted-marker records,
+  docs and changelog files and verification commands. Add
+  `scripts/regen-product-bindings.php` to regenerate
+  `tests/unit/fixtures/product-source-bindings.{json,php}` and sync the literals
+  in `scheduling-calibration.php`; it is idempotent and is not packaged in the
+  release ZIP.
+
 - Add PHPDoc-only type information to 13 unbound `includes/` classes toward
   PHPStan level 6 (#236; `class-cron`, `-featured-image`, `-health`,
   `-link-scan`, `-performance-status`, `-post-content`, `-post-parent`,
