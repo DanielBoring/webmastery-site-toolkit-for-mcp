@@ -140,7 +140,7 @@ shares its number with the GitHub Actions workflow it describes:
 - [`docs/08-release.md`](docs/08-release.md): versioning, release readiness, publication, recovery, hotfixes and rollback.
 - [`docs/90-security-strategy.md`](docs/90-security-strategy.md): ability permissions, sensitive data, dependency and secret handling, vulnerability response.
 - [`docs/91-ci-cd-platform.md`](docs/91-ci-cd-platform.md): rulesets (desired state in `.github/rulesets/`), workflow permissions, environments, artifacts and the PR process.
-- [`docs/reference/`](docs/reference/): release history, the area-specific review checklist, shared helpers, the 3.0 migration guide and the Adapter 0.7 assessment.
+- [`docs/reference/`](docs/reference/): release history, the area-specific review checklist, shared helpers, the 3.0 migration guide, the Adapter 0.7 assessment and the [reference for adding an ability](docs/reference/adding-an-ability.md).
 
 ---
 
@@ -156,16 +156,46 @@ This is the identical diagnostic-inventory portion of #119. Do not use inventory
 
 ### Ability registration
 
-Each group of abilities lives in its own file under `includes/`. Follow the existing pattern:
+Each group of abilities lives in its own file under `includes/`. Work through this checklist in order; each step links to the detailed section of the [adding-an-ability reference](docs/reference/adding-an-ability.md). Run commands from the repository root.
 
-1. **Create or open** the relevant class file (e.g., `includes/class-media.php`)
-2. **Register** the ability inside the class's `register()` method using `wp_register_ability()`
-3. **Use the `webmastery-site-toolkit-for-mcp/` prefix** for the ability name (e.g., `webmastery-site-toolkit-for-mcp/list-media`)
-4. **Require the narrowest relevant capability** in `permission_callback` — use object-specific checks when an input ID is available and never skip the check
-5. **Return a consistent shape** — preserve successful values/types, allowing only documented contract changes such as additive record-local markers; use `Webmastery_MCP_Response::error()` for canonical failures and `local_error()` for safe native permission/helper diagnostics. Never trust provider messages/data based on a familiar code. Cover direct execution, native permission, gateway, individual-tool, and foreign-namespace isolation; see `docs/reference/3.0-migration.md`.
-6. **Require the class file** in `webmastery-site-toolkit-for-mcp.php` inside the `wp_abilities_api_init` action and call `ClassName::register()`
-7. **Add E2E manifest coverage** in `tests/e2e/abilities-manifest.json`; include both allowed and denied roles when permissions differ by role or capability, plus missing-path assertions when sensitive fields should be absent
-8. **Update docs and changelogs** when behavior is user-facing: describe ability behavior, permissions, inputs and result fields in `docs/reference/ability-contracts.md` (plus the migration guide when clients must change), add any manual check to `tests/e2e/README.md#manual-verification-on-a-disposable-site`, and update `readme.txt` and `CHANGELOG.md` under `## Unreleased`. Keep `README.md` short: change it only when the quickstart, requirements, install/connect steps or ability areas change, and link to the detailed docs instead of copying them. Changelog entries should use plugin-facing release-note wording rather than raw internal ability namespace strings unless the exact MCP tool name is necessary. Repository, CI, contributor, GitHub platform, template, or agent workflow changes belong in `.github/REPOSITORY_CHANGELOG.md`.
+**Design**
+
+1. **Choose the narrowest capability** and check it first in the `permission_callback` (`Webmastery_MCP_Permissions::cap()`), using object-specific checks when an input ID is available. Existence must not be revealed: WordPress turns any permission-callback error into `forbidden`, so `not_found` has to come from execution. See [design rules](docs/reference/adding-an-ability.md#design-rules).
+2. **Declare a closed input schema** with exact types, enums and bounds. An ability whose inputs are all optional must declare `'default' => []` on the schema root; a no-input ability omits `input_schema` and uses `"input": null` in the manifest.
+3. **Bound the output**: lists use `per_page`/`page` and return `next_page`, never exact totals. Mark stored or user-controlled text with `Webmastery_MCP_Untrusted::mark` and keep `untrusted_fields` identical whatever the caller's capabilities. Re-index lists with `array_values`.
+4. **Verify third-party plugin storage and WordPress core behaviour from source**, not memory.
+
+**Plugin code**
+
+5. **Create or open** the class file under `includes/` and register the ability in `register()` with `wp_register_ability()`. `register()` must stay side-effect free. Use the `webmastery-site-toolkit-for-mcp/` name prefix and accurate `readonly`/`destructive`/`idempotent` annotations. See [plugin code and wiring](docs/reference/adding-an-ability.md#plugin-code-and-wiring).
+6. **Return a consistent shape**: preserve successful values and types, allowing only documented contract changes such as additive record-local markers; use `Webmastery_MCP_Response::error()` for canonical failures and `local_error()` for safe native permission/helper diagnostics. Never trust provider messages or data based on a familiar code. Cover direct execution, native permission, gateway, individual-tool and foreign-namespace isolation; see `docs/reference/3.0-migration.md`.
+7. **Require the class file** in `webmastery-site-toolkit-for-mcp.php` inside the `wp_abilities_api_init` action and call `ClassName::register()`. Add a shared helper class to `tests/unit/fixtures/shared-helper-loader.php` too.
+
+**Unit tests**
+
+8. **Write unit tests** with a namespaced stub fixture, and a `@runInSeparateProcess` test over the real input/ability wrappers when permissions depend on input. See [unit tests](docs/reference/adding-an-ability.md#unit-tests).
+9. **Register the test file** in `phpunit.xml.dist` and `tests/qa-suites.json`, run `python3 -B scripts/qa-profile.py inventory`, and update the file counts in `docs/02-unit-tests.md`.
+
+**E2E manifest and records**
+
+10. **Add E2E manifest cases** in `tests/e2e/abilities-manifest.json`: a success case, a denied-role `forbidden` case with valid input, a schema rejection, and paging and past-the-end cases for lists. Edit the file as text. See [E2E manifest](docs/reference/adding-an-ability.md#e2e-manifest).
+11. **Add the ability to the security QA lists** in `scripts/validate-security-qa.php` if it is security-sensitive ([security QA lists](docs/reference/adding-an-ability.md#security-qa-lists)), then run `php scripts/validate-e2e-manifest.php && php scripts/validate-security-qa.php`.
+12. **Record the manifest change** with `php tests/unit/fixtures/manifest-case-ledger.php record <issue> "<summary>"` and confirm with `... check`. See [manifest case ledger](docs/reference/adding-an-ability.md#manifest-case-ledger).
+13. **Update the pinned counts**: native abilities, annotation observations, untrusted labels, `InputBoundaryTest` classes and the case count in `tests/e2e/product-evidence-verifier.php`. See [count cascade](docs/reference/adding-an-ability.md#count-cascade).
+14. **Record untrusted markers** in `required_markers()`, `UntrustedManifestTest` counts and `mutations()` when responses carry `untrusted_fields`. See [untrusted-marker records](docs/reference/adding-an-ability.md#untrusted-marker-records).
+15. **Regenerate source bindings** with `php scripts/regen-product-bindings.php` if you edited a bound `includes/` file. See [source bindings](docs/reference/adding-an-ability.md#source-bindings).
+
+**Docs and changelog**
+
+16. **Document the ability** in `docs/reference/ability-contracts.md` (permission, inputs, result fields, security notes; plus the migration guide when clients must change) and add manual checks to `tests/e2e/README.md#manual-verification-on-a-disposable-site`.
+17. **Update counts and mentions** in `tests/e2e/README.md`, `docs/03-04-docker-qa.md`, `readme.txt` and the plugin header `Description:`. Change `README.md` only when the quickstart, requirements, install/connect steps or ability areas change, and link to the detailed docs instead of copying them. See [docs and changelog](docs/reference/adding-an-ability.md#docs-and-changelog).
+18. **Add changelog entries**: plugin-facing wording under `## Unreleased` in `CHANGELOG.md` (no raw internal ability namespace strings unless the exact MCP tool name is necessary for compatibility notes), and tooling, count and manifest-case changes in `.github/REPOSITORY_CHANGELOG.md`.
+
+**Verify**
+
+19. **Run the static and unit checks**: `composer phpcs`, `composer phpstan` (no new baseline entries), the manifest validators, `php scripts/php-lint.php`, `git diff --check` and `composer qa:unit`. See [verification commands](docs/reference/adding-an-ability.md#verification-commands).
+20. **Run each affected tooling test class individually** (`--testsuite qa-tooling --filter '/^ClassName::/'`) instead of the whole suite, plus the Python safeguards that pin repository files.
+21. **Run Docker E2E** (`composer qa:contract`, or `composer qa:e2e`) when you can; it is the only check that executes the manifest against WordPress. Note that `UntrustedSemanticReplayTest` takes about 30 minutes locally and runs in CI, and that two tooling tests depend on the local PHP version and user ([known environment-dependent failures](docs/reference/adding-an-ability.md#known-environment-dependent-failures)).
 
 A minimal ability skeleton:
 
@@ -276,7 +306,7 @@ See [the requirement matrix and completed extraction map](docs/reference/shared-
 2. Make your changes following the conventions above
 3. Run local QA with `composer qa` or one of the helper scripts below
 4. Test manually against a real WordPress install — verify the ability appears in the MCP Adapter discovery tool, `mcp-adapter-discover-abilities`, and returns correct output
-5. If the PR adds or changes abilities, update `tests/e2e/abilities-manifest.json` with matching coverage
+5. If the PR adds or changes abilities, follow the [new-ability checklist](#ability-registration), including matching coverage in `tests/e2e/abilities-manifest.json`
 6. Update user-facing docs and add a `CHANGELOG.md` entry under `## Unreleased`; use `.github/REPOSITORY_CHANGELOG.md` for repo/platform-only changes
 7. Review the WordPress.org Detailed Plugin Guidelines when the change affects naming, readme text, privacy/external calls, licensing/assets, or release packaging
 8. Open a PR with a clear description of what changed and why

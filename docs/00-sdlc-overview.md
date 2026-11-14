@@ -243,6 +243,7 @@ are looking for something.
 | [Agent instructions](../AGENTS.md) | Rules for AI coding agents; points to [`.github/copilot-instructions.md`](../.github/copilot-instructions.md) |
 | [Code of conduct](../.github/CODE_OF_CONDUCT.md) | Community standards for contributors |
 | [Shared helpers](reference/shared-helpers.md) | Which shared classes own permissions, lists, metadata and writes, and deliberate differences |
+| [Adding an ability](reference/adding-an-ability.md) | Step-by-step reference: design rules, unit tests, E2E manifest, ledger, pinned counts, source bindings, docs and checks |
 | [01 - Static QA](01-static-qa.md) | Syntax, coding standards, PHPStan ratchet, dependency audit, manifest and security policy, workflow lint |
 | [02 - Unit Tests](02-unit-tests.md) | Product and QA-tooling PHPUnit suites, CI safeguards |
 | [03-04 - Docker QA](03-04-docker-qa.md) | Ability contract and full MCP E2E against real WordPress; the disposable QA harness |
