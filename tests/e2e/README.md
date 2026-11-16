@@ -1223,7 +1223,7 @@ The shell runs direct/ability boundaries in contract mode and HTTP in E2E mode, 
 
 This coverage is deliberately limited to the three standalone post-meta tools. It does not validate key authorization in post/page create/update batches or separate SEO reads, does not claim atomic batch behavior, and does not close the creation-policy/release gate.
 
-## Term list paging, audit findings and adapter notice (unreleased)
+## Term list paging, audit findings and adapter notice (3.2.0)
 
 Manifest cases (added in #238) cover term paging and the `auth_keys` finding: `list-categories` and `list-tags` with `{"per_page":1,"page":2}` return exactly one term, a page past the end (`{"per_page":200,"page":1000}`) returns an empty `data` list, and `security-audit` returns exactly one `auth_keys` finding (`pass`, `Auth keys and salts are set`, because the Docker image generates unique salts). The `wp_version` finding depends on cached core update data that the QA site does not control, so its exactly-one rule stays covered by unit tests and the manual check below. Manual verification on a disposable site:
 
@@ -1233,7 +1233,7 @@ Manifest cases (added in #238) cover term paging and the `auth_keys` finding: `l
 - `security-audit` baseline checks (#230): the manifest asserts only `db_prefix` (a default `wp_` prefix warns; the QA image does not change the prefix). Verify the rest manually on a disposable site: `php_version` fails/warns/passes by the running PHP branch (a branch newer than the plugin's table passes as "not known"); `force_ssl_admin` warns until `define( 'FORCE_SSL_ADMIN', true );` is set; install a second theme and a deactivated plugin to see `inactive_themes` (warns above one extra theme) and `inactive_plugins` counts, with no names in the output; `wp transient delete update_themes --network` makes `theme_updates` warn that status is unknown; with no 2FA plugin `two_factor` warns, with Two-Factor active it warns with a count until every administrator has a usable provider (an administrator whose only provider is recovery codes with none left still counts as missing), and other known 2FA plugins pass with an "enrollment not verified" detail. Subscribers/Editors are refused as before; no output contains the table prefix, plugin or theme names, or usernames.
 - Deactivate the MCP Adapter: an Administrator sees the missing-adapter notice and an Editor does not. With the adapter active, or bundled by another plugin, no notice appears.
 
-## Plugin audit and backup status accuracy (unreleased)
+## Plugin audit and backup status accuracy (3.2.0)
 
 Manifest cases (added in #238) assert `backup_verified: true` for UpdraftPlus and BackWPup, and that Jetpack alone gives `backup_plugin_detected: false`, `backup_verified: false` and the backup-capable warning (the case sets `active_plugins` the same way as the other backup cases). Plugin audit `tested_up_to` lookup is covered by unit tests. Manual verification on a disposable site, as an Administrator:
 
@@ -1243,7 +1243,7 @@ Manifest cases (added in #238) assert `backup_verified: true` for UpdraftPlus an
 - Also activate UpdraftPlus: `backup_plugin_detected` is `true`, `plugin_name` is `UpdraftPlus`, `warning` is `null`, and UpdraftPlus is listed first with `backup_verified: true`.
 - With BackWPup active, set a job's `lastrun` in the `backwpup_jobs` option and name another job `monday`: `last_backup` is the `lastrun` time in UTC, not a date derived from the job name or other settings.
 
-## Backup plugin details (unreleased, #237)
+## Backup plugin details (3.2.0, #237)
 
 The runner seeds `pb_backupbuddy` (`last_backup_finish` = `1747105200.25`) and `wpvivid_schedule_setting` (`enable` `'1'`, `type` `wpvivid_daily`) next to the UpdraftPlus and BackWPup options. Two cases set `active_plugins` the same way as the other backup cases: `backup-status Solid Backups last backup finish` expects `last_backup` `2025-05-13T03:00:00Z` and `schedule` `null`; `backup-status WPvivid schedule` expects `schedule` `daily` and `last_backup` `null`. Malformed and missing values are covered by `PluginAuditAccuracyTest`. Manual verification on a disposable site, as an Administrator:
 
@@ -1251,7 +1251,7 @@ The runner seeds `pb_backupbuddy` (`last_backup_finish` = `1747105200.25`) and `
 - Install WPvivid Backup & Migration. Enable a daily schedule on its Schedule tab and save: `schedule` is `daily` (12 hours, weekly, fortnightly and monthly give `every12hours`, `weekly`, `fortnightly`, `monthly`). Disable the schedule and save: `schedule` is `manual`. `last_backup` stays `null` even after a backup, and no storage or remote setting appears.
 - With Duplicator, All-in-One WP Migration, BlogVault, VaultPress or Jetpack VaultPress Backup as the only backup plugin, `last_backup` and `schedule` stay `null` and `backup_verified` is `true`. Jetpack alone still gives `backup_verified: false` and the backup-capable warning.
 
-## Diagnostics hardening (unreleased, #232)
+## Diagnostics hardening (3.2.0, #232)
 
 Manifest changes (no new cases): `site-health-check` now also asserts `data.summary.errors`, `data.summary.skipped`, `data.errors` and the `untrusted_fields` marker on the first `good` result (core's `php_default_timezone` test always passes because WordPress runs PHP in UTC). `assert_bucket_counts` accepts the extra `errors` and `skipped` summary counts only for site health and checks that `errors` is a list of `{ "test" }` records matching its count. `user-access-audit as admin` asserts `super_admins: []`, `super_admin_count: 0` and exactly two warnings (default `admin` username and the application password); the administrator-count warning no longer appears for one administrator. DNS pinning is covered by `MediaUrlTest` with a scripted resolver that changes its answer between validation and download and across redirect hops; `media-download-runner.php` routes an IP literal, which needs no pinning, so its evidence is unchanged. Manual verification on a disposable site, as an Administrator:
 
@@ -1260,7 +1260,7 @@ Manifest changes (no new cases): `site-health-check` now also asserts `data.summ
 - Run `user-access-audit` with 1 to 3 administrators: no administrator-count warning, `admin_count` is still reported. Add a fourth: the warning appears. On a single site `super_admins` is `[]`. On a multisite network, grant super admin to a user with no role on the current site and give them an application password: they appear in `super_admins` and their password in `application_passwords`, while `admin_count` counts site administrators only.
 - With the cURL extension available, upload an image from a host you control with a short DNS TTL; change its A record to `127.0.0.1` after the request starts (or use a resolver that alternates answers): the download still connects to the address that passed validation, even if WordPress would otherwise pick another transport (the download forces cURL unless another component has explicitly selected a transport). A redirect to a host resolving to a private address is rejected with `download_failed`. Through an HTTP proxy (`WP_PROXY_HOST`), without cURL, or with another explicitly selected transport (as `media-download-runner.php` does for its fsockopen lane), the upload still succeeds but pinning is not applied.
 
-## List themes (unreleased, #228)
+## List themes (3.2.0, #228)
 
 Manifest cases: `list-themes as admin` (`per_page` 100) asserts every item field on the first item, `untrusted_fields: ["name","version","author"]`, `next_page: null`, the absence of `total`, description, tags, screenshot, theme root, path and error fields, and, through the new `assert_list_item` assertion, that exactly one item has `is_active: true` and its `stylesheet` equals `data.active_stylesheet`. `list-themes paging with per_page 1` expects one item and `next_page: 2` (every supported WordPress image ships more than one default theme); a page past the end returns `items: []`; `per_page: 101` is rejected as `invalid_input` / `ability_invalid_input`; an Editor (no `switch_themes`) is refused with `forbidden` / `ability_invalid_permissions` by the permission callback. The QA site never switches themes, so the active theme's position is not fixed; `assert_list_item` (`{"path", "match", "equal_paths"}`, success cases only) passes only when exactly one record in the list at `path` has every `match` value (strict) and each `equal_paths` field equals the value at that result path. Broken themes, multisite filtering and update fields are covered by `ThemesTest`. Manual verification on a disposable site:
 
@@ -1270,7 +1270,7 @@ Manifest cases: `list-themes as admin` (`per_page` 100) asserts every item field
 - Run `wp transient delete update_themes --network`: `update_data_cached` is `false` and every `update_available` is `false`. After Dashboard > Updates finds a theme update, that item has `update_available: true` and `new_version`. Add `define( 'DISALLOW_FILE_MODS', true );` (which removes `update_themes`): `update_data_cached`, `update_available` and `new_version` disappear.
 - On multisite, as a site administrator with `switch_themes`, network-disable a theme that is not enabled for the site: it is no longer listed. An Editor and a Subscriber are refused.
 
-## Updates overview (unreleased, #225)
+## Updates overview (3.2.0, #225)
 
 Manifest cases: `get-updates-overview as admin` (no input) asserts that `data.core`, `data.plugins` and `data.themes` have all their documented keys (`assert_paths`, where a `null` value still counts as present), that `data.omitted_sections` is `[]`, that `data.total_updates` exists, and that package and download fields are absent. The QA site's update transients are not controlled, so no counts, versions or item records are asserted and item `untrusted_fields` markers are not asserted (the list may be empty). `get-updates-overview as editor` and `get-updates-overview as subscriber` expect `forbidden` / `ability_invalid_permissions`. No QA role has only some of `update_core`, `update_plugins` and `update_themes`, so per-section omission is covered by `UpdatesTest` only.
 
@@ -1280,7 +1280,7 @@ Manifest cases: `get-updates-overview as admin` (no input) asserts that `data.co
 - Add `define( 'DISALLOW_FILE_MODS', true );` (which removes the update capabilities from everyone, including Administrators): the call is refused. With a custom role that has only `update_plugins`, only `plugins` is returned and `omitted_sections` is `["core","themes"]`.
 - An Editor and a Subscriber are refused.
 
-## Cron status (unreleased, #226)
+## Cron status (3.2.0, #226)
 
 Manifest cases: `get-cron-status as admin` (`per_page` 100) asserts `data.config`, `data.summary` and `items.0` have all their documented keys and that `items.0.untrusted_fields` is exactly `["hook","schedule"]` (core always schedules events such as `wp_version_check` on a normal site, so the list is not empty), and that no `args` field exists. `get-cron-status paging with per_page 1` expects `next_page` 2 and no `items.1`. `get-cron-status overdue_only keeps the full summary` asserts presence only (the QA site runs with `DISABLE_WP_CRON`, so how many events are overdue is not controlled and no marker is required on that case). `get-cron-status rejects per_page above 100` expects `invalid_input`; the `editor` and `subscriber` cases expect `forbidden` / `ability_invalid_permissions`. Overdue boundary, the 5,000-event cap, config constants, corrupt cron data and the no-argument-leak check are covered by `CronTest`.
 
@@ -1289,7 +1289,7 @@ Manifest cases: `get-cron-status as admin` (`per_page` 100) asserts `data.config
 - With `DISABLE_WP_CRON` true and an event more than a minute past due (`wp cron event schedule my_test_hook '-2 hours'`), call with `overdue_only: true`: the event is listed, `summary.overdue_events` is at least 1 and `summary.oldest_overdue_seconds` is positive. An event due within the last 60 seconds is not flagged. Calling the ability never runs the event (`wp cron event list` is unchanged afterwards).
 - An Editor and a Subscriber are refused.
 
-## Rank Math and All in One SEO metadata (unreleased, #224)
+## Rank Math and All in One SEO metadata (3.2.0, #224)
 
 Manifest cases: `get-rankmath-metadata without Rank Math reports inactive` and `get-aioseo-metadata without All in One SEO reports inactive` (admin, `__post_id__`) assert `assert_permission: true`, `data.rankmath_active` / `data.aioseo_active` false, a `data.note`, and no `metadata`, `post_id` or `untrusted_fields` (neither plugin is installed on the QA site). `get-rankmath-metadata as subscriber` and `get-aioseo-metadata as subscriber` expect `forbidden` / `ability_invalid_permissions` with `assert_permission: "forbidden"`; both abilities are in the security-QA validator's required negative and exact permission-denial lists. There are no positive E2E cases: the compatibility lanes install only real Yoast and SEOPress, and no fixture seeds Rank Math meta or creates the All in One SEO table. Active-provider behavior (allowlist, normalization, per-key omission into `unavailable_fields`, compatibility read default for Rank Math keys, the single prepared AIOSEO row read, legacy keyphrase fallback, missing record, database failure, denied/unsupported posts never queried) is covered by `SeoMetadataBoundaryTest`.
 
@@ -1300,7 +1300,7 @@ Manual checks on a disposable site:
 - Install All in One SEO (Lite, 5.x). Set a post's SEO title, description, focus keyphrase, canonical URL, "No Index" (with "Use Default Settings" off) and social titles. Call `get-aioseo-metadata`: `record_found` is true, the values match, `robots_default` is false, `robots_noindex` is true and `unavailable_fields` is `[]`. The `wp_aioseo_posts` row's `updated` timestamp is unchanged afterwards. For a post never edited in AIOSEO, `record_found` is false and all fields are `null`.
 - Deactivate either plugin: the matching ability returns `<provider>_active: false` with a note.
 
-## Navigation menus (unreleased, #227)
+## Navigation menus (3.2.0, #227)
 
 Fixture: `ability-runner.php` deletes any menu named `MCP E2E Menu`, recreates it with `wp_create_nav_menu()` and adds one published custom link (`MCP E2E Link`, `https://example.com/mcp-e2e`, menu order 1) with `wp_update_nav_menu_item()`; the IDs are the `__menu_id__` and `__menu_item_id__` placeholders. The menu is not assigned to a location, and whether the QA theme supports classic menus is not controlled, so `classic_menus_supported`, `block_theme` and `registered_locations` are asserted present only.
 
@@ -1314,7 +1314,7 @@ Manual checks on a disposable site:
 - Switch to a block theme (Twenty Twenty-Five): `block_theme` is true, `classic_menus_supported` false, and the Navigation block's menus (`wp_navigation` posts) are not listed.
 - An Editor is refused by all three abilities.
 
-## Broken link scan (unreleased, #229)
+## Broken link scan (3.2.0, #229)
 
 Fixture: `ability-runner.php` inserts a published post `MCP E2E Link Scan Target` (`__link_scan_target_id__`) and a published post `MCP E2E Link Scan` (`__link_scan_post_id__`, author `author_test`) whose content links to the target's permalink (`Link scan target`), to `home_url( '/mcp-e2e-link-scan-missing/' )` (`Missing page`, a same-host path no post maps to) and to `mailto:qa@example.com`. There are no external links: the QA site must not call the internet, so no manifest case sets `check_external: true` with a role allowed to use it, and external classification, the SSRF table, pinning, the HEAD-to-GET fallback and every per-call bound are covered by `LinkScanTest` with a scripted HTTP and DNS layer.
 
@@ -1905,7 +1905,7 @@ To verify patch preservation on a disposable site, use an account with effective
 
 ### Image URL uploads
 
-For example, on a disposable site, upload an image you control with `{"image_url":"https://your-public-host.example/image.png","post_id":123,"set_featured":true,"title":"Example","alt_text":"Example image","caption":"Example caption"}`. Verify the returned attachment metadata and the target's featured image. For DNS pinning checks, see [Diagnostics hardening](#diagnostics-hardening-unreleased-232).
+For example, on a disposable site, upload an image you control with `{"image_url":"https://your-public-host.example/image.png","post_id":123,"set_featured":true,"title":"Example","alt_text":"Example image","caption":"Example caption"}`. Verify the returned attachment metadata and the target's featured image. For DNS pinning checks, see [Diagnostics hardening](#diagnostics-hardening-320-232).
 
 ### Scheduling
 

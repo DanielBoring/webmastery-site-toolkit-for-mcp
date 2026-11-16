@@ -4,7 +4,7 @@ Tags: mcp, ai, automation, content-management, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 3.1.0
+Stable tag: 3.2.0
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
@@ -118,7 +118,7 @@ Comment updates, approval, trash, and spam actions require both moderate_comment
 
 Missing-comment failures uniformly use not_found code and reason. Invalid or nonpositive IDs cannot fall back to a global comment or silently select another ID. Listing and reply permissions are unchanged.
 
-Use a separate dedicated Administrator account only when you need Administrator-only workflows such as runtime environment details, plugin management, user access audits, site health, database health, performance status, backup status, security audits, or site-wide SEO overview.
+Use a separate dedicated Administrator account only when you need Administrator-only workflows such as runtime environment details, plugin management, theme inventory, navigation menus, update overview, WP-Cron status, external link checks, user access audits, site health, database health, performance status, backup status, security audits, or site-wide SEO overview.
 
 = Why use a dedicated account? =
 
@@ -289,6 +289,21 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 == Changelog ==
 
+= 3.2.0 =
+
+* Add read-only abilities to list installed themes, report available core, plugin and theme updates from cached data, and inspect WP-Cron configuration and scheduled events (never event arguments).
+* Add classic navigation menu abilities to list menus, read a menu's items and update one item's label, link, target, classes, position or parent; custom-link URLs are limited to http, https, mailto, tel and relative links.
+* Add read-only Rank Math and All in One SEO metadata inspection for a post or page, limited to allowlisted fields.
+* Add a broken link scan for one post or page. Internal links are resolved without any request; external link checks run only when an Administrator requests them, with bounded requests that never reach private or local addresses (see External services).
+* Security audit adds baseline checks for PHP security support, FORCE_SSL_ADMIN, the default table prefix, inactive plugins and themes, theme updates and two-factor authentication, which also changes the summary counts.
+* Backup status now reports no backup plugin detected, with a warning, when only Jetpack or ManageWP Worker is active, and adds a backup_verified flag per plugin. It also reads the last backup of Solid Backups and the schedule of WPvivid.
+* List Categories and List Tags accept an optional page input for sites with more than 200 terms.
+* Deprecate plugin-audit critical_updates and items[].critical_update, which WordPress.org update data cannot populate. They will be removed in 4.0.0; use updates_available_count and items[].update_available.
+* Site health runs every registered direct test, reports tests that failed to run and truncates plugin-supplied text. User access audit warns only above 3 administrators and reports multisite super admins.
+* Image URL uploads connect only to validated addresses when cURL can carry the download, including after redirects.
+* List and score abilities run with their defaults when called without input, instead of failing as invalid input.
+* Correct the missing MCP Adapter admin notice, security audit core version and authentication key checks, plugin audit Tested up to detection and the BackWPup last backup time.
+
 = 3.1.0 =
 
 * Correct SEO Analyze Post internal/external link counts for bare/www hosts, HTTP/HTTPS, protocol-relative URLs and relative references; exclude non-web schemes and compare complete hostnames.
@@ -387,6 +402,9 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Add block inspection, single-block replacement, and safer partial post body edits.
 
 == Upgrade Notice ==
+
+= 3.2.0 =
+Adds abilities for themes, updates, cron, menus, broken links, Rank Math and All in One SEO. External link checks run only when an administrator asks. Jetpack/ManageWP alone no longer counts as a backup. Plugin-audit critical_update fields are deprecated.
 
 = 3.1.0 =
 SEO/readability score lists now default to status:"publish". Clients needing the prior scope must explicitly send status:"any" on every page. See the migration guide.
