@@ -133,6 +133,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   hosts where WordPress would otherwise pick another transport. Without a
   usable cURL, or when WordPress sends the download through an HTTP proxy,
   uploads keep working as before but the connection is not pinned.
+- The readme FAQ on image URL uploads no longer says the checks do not pin
+  DNS; it now states when the connection is pinned and when it is not.
 - List Categories and List Tags now always return a plain list on later pages
   (the unreleased `page` input could return an object keyed by position).
 - Fix the missing MCP Adapter admin notice, which never appeared on WordPress
