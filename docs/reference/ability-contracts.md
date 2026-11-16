@@ -429,7 +429,8 @@ IPv6 literals and AAAA-only hosts are unsupported.
 
 When the cURL extension is usable (and, for an https hop, built with TLS), the
 download and each redirect hop are sent through core's cURL transport, forced
-before anything is sent so Requests cannot pick another transport, and the
+before anything is sent so Requests cannot pick another transport (unless
+another component has explicitly selected a transport, which is respected), and the
 connection is pinned to the IPv4 addresses that passed validation
 (`CURLOPT_RESOLVE`): a host cannot answer validation with a public address and
 the download with a private one. Every redirect target is validated again and
@@ -440,8 +441,10 @@ hook is removed afterwards. Uploads are never refused for lack of pinning: the
 connection is not pinned for IP literals (nothing to resolve), when cURL is
 unavailable (WordPress's fallback transport, such as fsockopen, is used), when
 WordPress sends the request through an HTTP proxy (`WP_PROXY_HOST`; the proxy
-resolves the host itself and the transport WordPress chose is kept), or when a
-plugin replaces the transport in a later Requests hook. Those cases keep the
+resolves the host itself and the transport WordPress chose is kept), when
+another component has explicitly selected a transport (it is kept; a non-cURL
+choice is not pinned), or when a plugin replaces the transport in a later
+Requests hook. Those cases keep the
 validation-only behavior, with its DNS rebinding window. The download
 safeguards and their limits are described in the
 [security strategy](../90-security-strategy.md#image-url-download-safeguards).

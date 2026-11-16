@@ -281,6 +281,37 @@ final class MediaUrlTest extends TestCase {
 		], array_slice( PinState::resolves(), 0, 2 ), 'Each forced hop is pinned to its own validated addresses.' );
 	}
 
+	public function test_an_explicitly_selected_transport_is_respected_on_every_hop(): void {
+		// An instance selected by another component (as the real-transport E2E runner does) on the first hop.
+		$instance = new stdClass();
+		self::pinned_download( 'https://image.test/x.png', [ [ 'select' => $instance, 'location' => 'http://cdn.test/y.png' ], [] ] );
+		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14' ] ], 'cdn.test' => [ [ '93.184.215.20' ] ] ];
+		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
+		self::assertSame( [ $instance, $instance ], PinState::$selected, 'The instance is kept, including on the redirect hop.' );
+		self::assertSame( [ 'instance', 'instance' ], PinState::$transports );
+
+		// A class name selected on every hop.
+		$fsockopen = 'WpOrg\\Requests\\Transport\\Fsockopen';
+		self::pinned_download( 'https://image.test/x.png', [ [ 'select' => $fsockopen, 'location' => 'http://cdn.test/y.png' ], [ 'select' => $fsockopen ] ] );
+		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14' ] ], 'cdn.test' => [ [ '93.184.215.20' ] ] ];
+		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
+		self::assertSame( [ $fsockopen, $fsockopen ], PinState::$selected );
+		self::assertSame( [], PinState::resolves(), 'A non-cURL transport is not pinned.' );
+
+		// Even when cURL cannot carry the hop, another component's selection is never reset.
+		self::pinned_download( 'https://image.test/x.png', [ [ 'select' => $instance ] ] );
+		PinState::$curl_ssl = false;
+		PinState::$answers  = [ 'image.test' => [ [ '93.184.215.14' ] ] ];
+		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
+		self::assertSame( [ $instance ], PinState::$selected );
+
+		// No selection: cURL is forced (see the forcing test) and recorded as the class name.
+		self::pinned_download( 'https://image.test/x.png', [ [ 'transport' => 'fsockopen' ] ] );
+		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14' ] ] ];
+		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
+		self::assertSame( [ 'WpOrg\\Requests\\Transport\\Curl' ], PinState::$selected );
+	}
+
 	public function test_download_keeps_the_chosen_transport_without_failing_when_curl_is_unusable(): void {
 		self::pinned_download( 'https://image.test/x.png', [ [ 'transport' => 'fsockopen' ] ] );
 		PinState::$curl_usable = false;

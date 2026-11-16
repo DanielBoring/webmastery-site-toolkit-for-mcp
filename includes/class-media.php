@@ -179,14 +179,18 @@ class Webmastery_MCP_Media {
 					}
 					$pins[ $target ] = self::image_pin_entries( $request_url, $ips );
 				}
-				// Only core's cURL transport applies the pin: use it for every hop it can carry.
-				// Without a usable cURL, or through an HTTP proxy (which resolves the host
-				// itself), the transport WordPress chose is kept and the hop is not pinned.
-				if ( empty( $options['proxy'] ) && Webmastery_MCP_Safe_Http::can_force_curl( $request_url ) ) {
-					Webmastery_MCP_Safe_Http::use_curl_transport( $options );
-				} elseif ( Webmastery_MCP_Safe_Http::CURL_TRANSPORT === ( $options['transport'] ?? null ) ) {
-					// Redirects reuse the options: let Requests choose again for a hop cURL cannot carry.
-					$options['transport'] = null;
+				// Only core's cURL transport applies the pin: use it for every hop it can carry,
+				// unless another component explicitly selected a transport (respected, unpinned
+				// on a non-cURL transport). Without a usable cURL, or through an HTTP proxy
+				// (which resolves the host itself), the transport WordPress chose is kept.
+				$selected = $options['transport'] ?? null;
+				if ( empty( $selected ) || Webmastery_MCP_Safe_Http::CURL_TRANSPORT === $selected ) {
+					if ( empty( $options['proxy'] ) && Webmastery_MCP_Safe_Http::can_force_curl( $request_url ) ) {
+						Webmastery_MCP_Safe_Http::use_curl_transport( $options );
+					} elseif ( Webmastery_MCP_Safe_Http::CURL_TRANSPORT === $selected ) {
+						// Redirects reuse the options: let Requests choose again for a hop cURL cannot carry.
+						$options['transport'] = null;
+					}
 				}
 			}
 			if ( null !== $filename && ( $options['filename'] ?? null ) === $filename && $hooks !== $options['hooks'] ) {

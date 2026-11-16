@@ -130,9 +130,11 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   private-address check, including after redirects, closing a DNS rebinding
   window between validation and download. The download uses WordPress's cURL
   transport whenever the cURL extension can carry it, so this also holds on
-  hosts where WordPress would otherwise pick another transport. Without a
-  usable cURL, or when WordPress sends the download through an HTTP proxy,
-  uploads keep working as before but the connection is not pinned.
+  hosts where WordPress would otherwise pick another transport, unless another
+  component has explicitly selected a transport. Without a usable cURL, with
+  another explicitly selected transport, or when WordPress sends the download
+  through an HTTP proxy, uploads keep working as before but the connection is
+  not pinned.
 - Calling a list or score ability without any input now runs it with its
   defaults instead of failing as invalid input before the permission check
   (List Posts, Pages, Media, Comments, Users, Categories, Tags, the custom
