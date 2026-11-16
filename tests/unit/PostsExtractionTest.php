@@ -43,6 +43,11 @@ final class PostsExtractionTest extends TestCase {
 				unset( $current['input_schema']['properties']['fields'] );
 				$current['description'] = $definition['description'];
 			}
+			if ( in_array( $name, array( 'webmastery-site-toolkit-for-mcp/list-posts', 'webmastery-site-toolkit-for-mcp/list-pages' ), true ) ) {
+				// All-optional list input: a root default lets null input run with defaults.
+				self::assertSame( array(), $current['input_schema']['default'] );
+				unset( $current['input_schema']['default'] );
+			}
 			if ( in_array( $name, array( 'webmastery-site-toolkit-for-mcp/set-featured-image', 'webmastery-site-toolkit-for-mcp/remove-featured-image' ), true ) ) {
 				self::assertSame( array( 'full', 'compact' ), $current['input_schema']['properties']['response_format']['enum'] );
 				self::assertSame( 'full', $current['input_schema']['properties']['response_format']['default'] );

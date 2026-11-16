@@ -96,6 +96,7 @@ class Webmastery_MCP_Users {
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
+				'default'    => [],
 				'properties' => [
 					'role'     => [ 'type' => 'string', 'description' => 'Filter by role slug (for example: administrator, editor, author)' ],
 					'search'   => [ 'type' => 'string', 'description' => 'Searches login, email, URL, and display name' ],

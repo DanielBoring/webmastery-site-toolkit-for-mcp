@@ -826,6 +826,7 @@ class Webmastery_MCP_SEO {
 	private static function score_input_schema() {
 		return [
 			'type'       => 'object',
+			'default'    => [],
 			'properties' => [
 				'per_page'       => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 10 ],
 				'page'           => [ 'type' => 'integer', 'minimum' => 1, 'default' => 1 ],

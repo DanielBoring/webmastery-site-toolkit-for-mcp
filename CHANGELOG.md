@@ -127,8 +127,27 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   application passwords, listing passwords only for accounts whose
   application passwords the caller may list (core's `list_app_passwords`).
 - Image uploads from a URL now connect only to the addresses that passed the
-  private-address check when WordPress uses cURL, including after redirects,
-  closing a DNS rebinding window between validation and download.
+  private-address check, including after redirects, closing a DNS rebinding
+  window between validation and download. The download uses WordPress's cURL
+  transport whenever the cURL extension can carry it, so this also holds on
+  hosts where WordPress would otherwise pick another transport, unless another
+  component has explicitly selected a transport. Without a usable cURL, with
+  another explicitly selected transport, or when WordPress sends the download
+  through an HTTP proxy, uploads keep working as before but the connection is
+  not pinned.
+- Calling a list or score ability without any input now runs it with its
+  defaults instead of failing as invalid input before the permission check
+  (List Posts, Pages, Media, Comments, Users, Categories, Tags, the custom
+  post type lists, List Orphaned Media, List Posts Without Featured Image,
+  List Stuck Scheduled Posts, SEO Scores and Readability Scores). Calls that send
+  input behave as before.
+- Security Audit's two-factor check now recognizes All-In-One Security (AIOS),
+  whose free plugin includes two-factor authentication. Every plugin it
+  recognizes was checked against the plugin's WordPress.org release; the
+  iThemes Security Pro entry, which could not be verified that way, was
+  removed (Solid Security, now Kadence Security, is still recognized).
+- The readme FAQ on image URL uploads no longer says the checks do not pin
+  DNS; it now states when the connection is pinned and when it is not.
 - List Categories and List Tags now always return a plain list on later pages
   (the unreleased `page` input could return an object keyed by position).
 - Fix the missing MCP Adapter admin notice, which never appeared on WordPress

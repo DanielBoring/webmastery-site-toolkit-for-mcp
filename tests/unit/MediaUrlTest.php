@@ -258,14 +258,127 @@ final class MediaUrlTest extends TestCase {
 		self::assertSame( [], PinState::$lookups );
 
 		self::pinned_download( 'https://image.test/x.png', [ [ 'transport' => 'streams' ] ] );
-		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14' ] ] ];
+		PinState::$curl_usable = false;
+		PinState::$answers     = [ 'image.test' => [ [ '93.184.215.14' ] ] ];
 		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
-		self::assertSame( [], PinState::$curl, 'Streams cannot be pinned and are left unchanged.' );
+		self::assertSame( [], PinState::$curl, 'Without cURL, streams cannot be pinned and are left unchanged.' );
 
 		self::pinned_download( 'https://image.test/x.png', [ [] ] );
 		PinState::$curl_version = 0x073A00;
 		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14', '93.184.215.15' ] ] ];
 		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
 		self::assertSame( [ 'image.test:443:93.184.215.14', 'image.test.:443:93.184.215.14' ], PinState::resolves()[0] );
+	}
+	public function test_download_forces_the_curl_transport_on_every_hop_when_curl_is_usable(): void {
+		// WordPress would pick another transport (for example Fsockopen) for both hops.
+		self::pinned_download( 'https://image.test/x.png', [ [ 'transport' => 'fsockopen', 'location' => 'http://cdn.test/y.png' ], [ 'transport' => 'fsockopen' ] ] );
+		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14' ] ], 'cdn.test' => [ [ '93.184.215.20' ] ] ];
+		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
+		self::assertSame( [ 'curl', 'curl' ], PinState::$transports );
+		self::assertSame( [
+			[ 'image.test:443:93.184.215.14', 'image.test.:443:93.184.215.14' ],
+			[ 'cdn.test:80:93.184.215.20', 'cdn.test.:80:93.184.215.20' ],
+		], array_slice( PinState::resolves(), 0, 2 ), 'Each forced hop is pinned to its own validated addresses.' );
+	}
+
+	public function test_an_explicitly_selected_transport_is_respected_on_every_hop(): void {
+		// An instance selected by another component (as the real-transport E2E runner does) on the first hop.
+		$instance = new stdClass();
+		self::pinned_download( 'https://image.test/x.png', [ [ 'select' => $instance, 'location' => 'http://cdn.test/y.png' ], [] ] );
+		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14' ] ], 'cdn.test' => [ [ '93.184.215.20' ] ] ];
+		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
+		self::assertSame( [ $instance, $instance ], PinState::$selected, 'The instance is kept, including on the redirect hop.' );
+		self::assertSame( [ 'instance', 'instance' ], PinState::$transports );
+
+		// A class name selected on every hop.
+		$fsockopen = 'WpOrg\\Requests\\Transport\\Fsockopen';
+		self::pinned_download( 'https://image.test/x.png', [ [ 'select' => $fsockopen, 'location' => 'http://cdn.test/y.png' ], [ 'select' => $fsockopen ] ] );
+		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14' ] ], 'cdn.test' => [ [ '93.184.215.20' ] ] ];
+		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
+		self::assertSame( [ $fsockopen, $fsockopen ], PinState::$selected );
+		self::assertSame( [], PinState::resolves(), 'A non-cURL transport is not pinned.' );
+
+		// Even when cURL cannot carry the hop, another component's selection is never reset.
+		self::pinned_download( 'https://image.test/x.png', [ [ 'select' => $instance ] ] );
+		PinState::$curl_ssl = false;
+		PinState::$answers  = [ 'image.test' => [ [ '93.184.215.14' ] ] ];
+		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
+		self::assertSame( [ $instance ], PinState::$selected );
+
+		// No selection: cURL is forced (see the forcing test) and recorded as the class name.
+		self::pinned_download( 'https://image.test/x.png', [ [ 'transport' => 'fsockopen' ] ] );
+		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14' ] ] ];
+		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
+		self::assertSame( [ 'WpOrg\\Requests\\Transport\\Curl' ], PinState::$selected );
+	}
+
+	public function test_download_keeps_the_chosen_transport_without_failing_when_curl_is_unusable(): void {
+		self::pinned_download( 'https://image.test/x.png', [ [ 'transport' => 'fsockopen' ] ] );
+		PinState::$curl_usable = false;
+		PinState::$answers     = [ 'image.test' => [ [ '93.184.215.14' ] ] ];
+		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
+		self::assertSame( [ 'fsockopen' ], PinState::$transports );
+		self::assertSame( [ 'https://image.test/x.png' ], PinState::$sent );
+
+		// cURL without TLS cannot carry an https hop: keep WordPress's choice there, force cURL for http.
+		self::pinned_download( 'http://image.test/x.png', [ [ 'transport' => 'fsockopen', 'location' => 'https://cdn.test/y.png' ], [ 'transport' => 'fsockopen' ] ] );
+		PinState::$curl_ssl = false;
+		PinState::$answers  = [ 'image.test' => [ [ '93.184.215.14' ] ], 'cdn.test' => [ [ '93.184.215.20' ] ] ];
+		self::assertIsString( self::run_pinned( 'http://image.test/x.png' ) );
+		self::assertSame( [ 'curl', 'fsockopen' ], PinState::$transports );
+	}
+
+	public function test_size_bound_holds_on_the_forced_and_the_fallback_transport(): void {
+		// Fallback transport: the request.progress hook stops the transfer itself.
+		self::pinned_download( 'https://image.test/x.png', [ [ 'transport' => 'fsockopen', 'body' => 1025 ] ] );
+		PinState::$curl_usable = false;
+		PinState::$answers     = [ 'image.test' => [ [ '93.184.215.14' ] ] ];
+		self::assertInstanceOf( WP_Error::class, self::run_pinned( 'https://image.test/x.png' ) );
+		self::assertSame( [ 'fsockopen' ], PinState::$transports );
+
+		// Forced cURL: progress marks the download too large and the result is refused.
+		self::pinned_download( 'https://image.test/x.png', [ [ 'transport' => 'fsockopen', 'body' => 1025 ] ] );
+		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14' ] ] ];
+		$result = self::run_pinned( 'https://image.test/x.png' );
+		self::assertInstanceOf( WP_Error::class, $result );
+		self::assertSame( 'file_too_large', $result->get_error_code() );
+		self::assertSame( [ 'curl' ], PinState::$transports );
+
+		// Within the bound both succeed.
+		self::pinned_download( 'https://image.test/x.png', [ [ 'transport' => 'fsockopen', 'body' => 1024 ] ] );
+		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14' ] ] ];
+		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
+	}
+
+	public function test_download_through_a_proxy_proceeds_on_the_chosen_transport(): void {
+		self::pinned_download( 'https://image.test/x.png', [ [ 'transport' => 'fsockopen' ] ] );
+		PinState::$proxy   = 'proxy.test:3128';
+		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14' ] ] ];
+		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
+		self::assertSame( [ 'fsockopen' ], PinState::$transports, 'A proxy resolves the host itself; the transport is not forced.' );
+		self::assertSame( [ 'https://image.test/x.png' ], PinState::$sent );
+
+		self::pinned_download( 'https://image.test/x.png', [ [] ] );
+		PinState::$proxy   = 'proxy.test:3128';
+		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14' ] ] ];
+		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ), 'cURL through a proxy still downloads, as before.' );
+		self::assertSame( [ 'curl' ], PinState::$transports );
+	}
+
+	public function test_transport_hook_is_scoped_to_the_download_and_removed_afterwards(): void {
+		self::pinned_download( 'https://image.test/x.png', [ [ 'transport' => 'fsockopen', 'unrelated' => true ] ] );
+		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14' ] ] ];
+		self::assertIsString( self::run_pinned( 'https://image.test/x.png' ) );
+		self::assertSame( [ null ], PinState::$unrelated, 'Another request during the download keeps its transport.' );
+		self::assertSame( [ 'curl' ], PinState::$transports );
+		foreach ( [ 'requests-requests.before_request', 'http_request_args', 'http_response', 'http_api_debug' ] as $hook ) {
+			self::assertSame( [], PinState::$actions[ $hook ] ?? [], "{$hook} is removed afterwards." );
+		}
+
+		// A failed download removes the hook too.
+		self::pinned_download( 'https://image.test/x.png', [ [ 'location' => 'https://internal.test/y.png' ], [] ] );
+		PinState::$answers = [ 'image.test' => [ [ '93.184.215.14' ] ], 'internal.test' => [ [ '10.0.0.1' ] ] ];
+		self::assertInstanceOf( WP_Error::class, self::run_pinned( 'https://image.test/x.png' ) );
+		self::assertSame( [], PinState::$actions['requests-requests.before_request'] ?? [] );
 	}
 }

@@ -30,12 +30,27 @@ namespace WstmMediaPinning {
 		public static array $hops = array();
 		/** @var array<int, string> URLs that reached the transport. */
 		public static array $sent = array();
+		/** @var array<int, string> Transport each hop used ('curl' or the scripted fallback). */
+		public static array $transports = array();
+		/** @var array<int, mixed> Transport option each download hop was sent with. */
+		public static array $selected = array();
+		/** @var array<int, mixed> Transport option seen by requests that are not the download. */
+		public static array $unrelated = array();
 		public static int $curl_version = 0x080000;
+		/** Whether the cURL functions exist (Requests' cURL transport is usable). */
+		public static bool $curl_usable = true;
+		/** Whether cURL was built with TLS support. */
+		public static bool $curl_ssl = true;
+		/** Requests proxy option (WordPress sets it when WP_PROXY_HOST applies to the URL). */
+		public static $proxy = false;
 		public static string $dir = '';
 
 		public static function reset(): void {
-			self::$answers = self::$actions = self::$curl = self::$hops = self::$sent = self::$lookups = array();
+			self::$answers = self::$actions = self::$curl = self::$hops = self::$sent = self::$lookups = self::$transports = self::$unrelated = self::$selected = array();
 			self::$curl_version = 0x080000;
+			self::$curl_usable  = true;
+			self::$curl_ssl     = true;
+			self::$proxy        = false;
 		}
 
 		/** @return array<int, mixed> CURLOPT_RESOLVE values in the order they were set. */
@@ -84,7 +99,14 @@ namespace WstmMediaPinning {
 	}
 
 	function curl_version() {
-		return array( 'version_number' => State::$curl_version );
+		return array( 'version_number' => State::$curl_version, 'features' => State::$curl_ssl ? CURL_VERSION_SSL : 0 );
+	}
+
+	function function_exists( $name ) {
+		if ( in_array( $name, array( 'curl_init', 'curl_setopt', 'curl_exec' ), true ) ) {
+			return State::$curl_usable;
+		}
+		return \function_exists( $name );
 	}
 
 	function curl_setopt( $handle, $option, $value ) {
@@ -117,6 +139,12 @@ namespace WstmMediaPinning {
 	/**
 	 * Mirrors the order core uses: request args, then per hop before_request,
 	 * curl.before_send (cURL only), transfer, and before_redirect for a Location.
+	 * A hop's scripted transport is what WordPress would pick; a transport set in
+	 * before_request takes precedence, as in Requests::request(). A hop with
+	 * 'unrelated' first runs before_request for another request in the same process;
+	 * 'body' reports that many received bytes through request.progress; 'select' sets
+	 * options['transport'] before the hooks run, like a component selecting a transport
+	 * in an earlier before_request hook (Requests then carries it to later hops).
 	 */
 	function download_url( $url ) {
 		$filename = tempnam( State::$dir, 'pin' );
@@ -124,7 +152,7 @@ namespace WstmMediaPinning {
 		foreach ( State::$actions['http_request_args'] ?? array() as $filter ) {
 			$args = $filter( $args, $url );
 		}
-		$options = array( 'filename' => $filename, 'hooks' => new Hooks() );
+		$options = array( 'filename' => $filename, 'hooks' => new Hooks(), 'proxy' => State::$proxy, 'transport' => null );
 		$handle  = (object) array( 'id' => 1 );
 		$current = $url;
 		try {
@@ -136,11 +164,35 @@ namespace WstmMediaPinning {
 				$headers = array();
 				$data    = array();
 				$type    = 'GET';
+				if ( ! empty( $hop['unrelated'] ) ) {
+					$other_url     = 'https://unrelated.test/';
+					$other_options = array( 'hooks' => new Hooks(), 'proxy' => false, 'transport' => null );
+					foreach ( State::$actions['requests-requests.before_request'] ?? array() as $action ) {
+						$action( $other_url, $headers, $data, $type, $other_options );
+					}
+					State::$unrelated[] = $other_options['transport'];
+				}
+				if ( array_key_exists( 'select', $hop ) ) {
+					$options['transport'] = $hop['select'];
+				}
 				foreach ( State::$actions['requests-requests.before_request'] ?? array() as $action ) {
 					$action( $current, $headers, $data, $type, $options );
 				}
-				if ( 'curl' === ( $hop['transport'] ?? 'curl' ) ) {
+				State::$selected[] = $options['transport'];
+				if ( null === $options['transport'] ) {
+					$transport = $hop['transport'] ?? 'curl';
+				} elseif ( 'WpOrg\\Requests\\Transport\\Curl' === $options['transport'] ) {
+					$transport = 'curl';
+				} else {
+					$transport = is_object( $options['transport'] ) ? 'instance' : (string) $options['transport'];
+				}
+				State::$transports[] = $transport;
+				if ( 'curl' === $transport ) {
 					$options['hooks']->dispatch( 'curl.before_send', array( $handle ) );
+				}
+				if ( isset( $hop['body'] ) ) {
+					// Both transports report each received body chunk through request.progress.
+					$options['hooks']->dispatch( 'request.progress', array( str_repeat( 'x', $hop['body'] ), 0 ) );
 				}
 				State::$sent[] = $current;
 				if ( isset( $hop['location'] ) ) {

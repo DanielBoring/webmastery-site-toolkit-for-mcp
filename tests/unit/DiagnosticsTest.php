@@ -402,7 +402,8 @@ final class DiagnosticsTest extends TestCase {
 	}
 
 	public function test_two_factor_warns_when_no_known_plugin_is_active(): void {
-		$GLOBALS['wstm_test_active_plugins'] = array( 'akismet/akismet.php', 'two-factor-fake/two-factor.php' );
+		// Unverified or wrong basenames (a premium plugin absent from WordPress.org, a guessed main file) are not detected.
+		$GLOBALS['wstm_test_active_plugins'] = array( 'akismet/akismet.php', 'two-factor-fake/two-factor.php', 'ithemes-security-pro/ithemes-security-pro.php', 'all-in-one-wp-security-and-firewall/all-in-one-wp-security-and-firewall.php' );
 		[ $severity, $finding ] = self::one_finding( 'two_factor' );
 		$this->assertSame( 'warn', $severity );
 		$this->assertSame( 'No known two-factor plugin detected', $finding['label'] );
@@ -416,9 +417,19 @@ final class DiagnosticsTest extends TestCase {
 			'wordfence' => array( 'wordfence/wordfence.php' ),
 			'wordfence login security' => array( 'wordfence-login-security/wordfence-login-security.php' ),
 			'solid security' => array( 'better-wp-security/better-wp-security.php' ),
+			'all-in-one security' => array( 'all-in-one-wp-security-and-firewall/wp-security.php' ),
 			'google authenticator' => array( 'google-authenticator/google-authenticator.php' ),
+			'two factor authentication' => array( 'two-factor-authentication/two-factor-login.php' ),
 			'miniorange' => array( 'miniorange-2-factor-authentication/miniorange_2_factor_settings.php' ),
 		);
+	}
+
+	public function test_two_factor_plugin_list_is_exactly_the_verified_basenames(): void {
+		$list = ( new ReflectionClassConstant( Webmastery_MCP_Security::class, 'TWO_FACTOR_PLUGINS' ) )->getValue();
+		$expected = array_merge( array( 'two-factor/two-factor.php' ), array_column( self::two_factor_plugin_cases(), 0 ) );
+		sort( $list );
+		sort( $expected );
+		$this->assertSame( $expected, $list );
 	}
 
 	/** @dataProvider two_factor_plugin_cases */

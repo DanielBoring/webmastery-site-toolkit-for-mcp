@@ -18,14 +18,19 @@ class Webmastery_MCP_Security {
 		'8.5' => '2029-12-31',
 	];
 
-	/** Basenames of active plugins that can provide two-factor authentication (best-effort list). */
+	/**
+	 * Basenames of active plugins that can provide two-factor authentication (best-effort list).
+	 *
+	 * Each is the file with the Plugin Name header in the plugin's WordPress.org release;
+	 * add only basenames verified the same way.
+	 */
 	private const TWO_FACTOR_PLUGINS = [
 		'two-factor/two-factor.php',
 		'wp-2fa/wp-2fa.php',
 		'wordfence/wordfence.php',
 		'wordfence-login-security/wordfence-login-security.php',
 		'better-wp-security/better-wp-security.php',
-		'ithemes-security-pro/ithemes-security-pro.php',
+		'all-in-one-wp-security-and-firewall/wp-security.php',
 		'google-authenticator/google-authenticator.php',
 		'two-factor-authentication/two-factor-login.php',
 		'miniorange-2-factor-authentication/miniorange_2_factor_settings.php',

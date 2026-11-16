@@ -57,6 +57,7 @@ class Webmastery_MCP_Posts {
 		// --- list ---
 		$list_input = [
 			'type'       => 'object',
+			'default'    => [],
 			'properties' => [
 				'status'   => [ 'type' => 'string', 'enum' => [ 'publish', 'draft', 'pending', 'private', 'trash', 'any' ], 'default' => 'any' ],
 				'search'   => [ 'type' => 'string' ],

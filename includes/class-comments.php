@@ -114,6 +114,7 @@ class Webmastery_MCP_Comments {
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
+				'default'    => [],
 				'properties' => [
 					'post_id'  => [ 'type' => 'integer', 'description' => 'Filter by post ID' ],
 					'status'   => [ 'type' => 'string', 'enum' => [ 'approve', 'hold', 'spam', 'trash', 'all' ], 'default' => 'all' ],

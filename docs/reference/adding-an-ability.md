@@ -56,6 +56,10 @@ on an earlier ability.
   with omitted or `null` input has no declared root value for the permission and
   execute wrappers to materialize. `ThemesTest` asserts both omitted and `null`
   input produce the same permission and execution result.
+  `OptionalInputDefaultTest` now guards this rule for every registered ability:
+  an object input schema with neither a non-empty `required` list nor a root
+  `default` fails it, naming the ability (its few deliberate exemptions are
+  listed in the test; do not add new ones).
 - **Required inputs need valid input in denied-role manifest cases.** The
   permission check runs after schema validation, so a denied-role case for an
   ability with required inputs must still send valid input, or it fails with
