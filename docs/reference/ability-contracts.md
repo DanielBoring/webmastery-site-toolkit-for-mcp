@@ -424,16 +424,23 @@ Hosts that resolve to private or reserved addresses, local names, failed DNS
 resolution, cyclic aliases, and alias chains exceeding 16 lookups are rejected.
 IPv6 literals and AAAA-only hosts are unsupported.
 
-When WordPress downloads with cURL, the connection is pinned to the IPv4
-addresses that passed validation (`CURLOPT_RESOLVE`), so a host cannot answer
-validation with a public address and the download with a private one. Every
-redirect target is validated again and pinned to its own validated addresses
-before it is requested. Hosts that also publish public AAAA records are
-connected over the validated IPv4 addresses only. Pinning does not apply to IP
-literals (nothing to resolve), to the streams (fsockopen) transport, or when
-WordPress sends the request through an HTTP proxy, which resolves the host
-itself; those cases keep the earlier validation-only behavior. The download safeguards and
-their limits are described in the
+When the cURL extension is usable (and, for an https hop, built with TLS), the
+download and each redirect hop are sent through core's cURL transport, forced
+before anything is sent so Requests cannot pick another transport, and the
+connection is pinned to the IPv4 addresses that passed validation
+(`CURLOPT_RESOLVE`): a host cannot answer validation with a public address and
+the download with a private one. Every redirect target is validated again and
+pinned to its own validated addresses before it is requested. Hosts that also
+publish public AAAA records are connected over the validated IPv4 addresses
+only. The transport is forced only for this download's own requests and the
+hook is removed afterwards. Uploads are never refused for lack of pinning: the
+connection is not pinned for IP literals (nothing to resolve), when cURL is
+unavailable (WordPress's fallback transport, such as fsockopen, is used), when
+WordPress sends the request through an HTTP proxy (`WP_PROXY_HOST`; the proxy
+resolves the host itself and the transport WordPress chose is kept), or when a
+plugin replaces the transport in a later Requests hook. Those cases keep the
+validation-only behavior, with its DNS rebinding window. The download
+safeguards and their limits are described in the
 [security strategy](../90-security-strategy.md#image-url-download-safeguards).
 
 ## Scheduling

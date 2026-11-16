@@ -127,8 +127,12 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   application passwords, listing passwords only for accounts whose
   application passwords the caller may list (core's `list_app_passwords`).
 - Image uploads from a URL now connect only to the addresses that passed the
-  private-address check when WordPress uses cURL, including after redirects,
-  closing a DNS rebinding window between validation and download.
+  private-address check, including after redirects, closing a DNS rebinding
+  window between validation and download. The download uses WordPress's cURL
+  transport whenever the cURL extension can carry it, so this also holds on
+  hosts where WordPress would otherwise pick another transport. Without a
+  usable cURL, or when WordPress sends the download through an HTTP proxy,
+  uploads keep working as before but the connection is not pinned.
 - List Categories and List Tags now always return a plain list on later pages
   (the unreleased `page` input could return an object keyed by position).
 - Fix the missing MCP Adapter admin notice, which never appeared on WordPress

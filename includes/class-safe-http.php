@@ -16,6 +16,9 @@ final class Webmastery_MCP_Safe_Http {
 	/** Seconds a single pinned request may take at most. */
 	public const MAX_TIMEOUT = 5;
 
+	/** Requests transport class that honours CURLOPT_RESOLVE. */
+	public const CURL_TRANSPORT = 'WpOrg\\Requests\\Transport\\Curl';
+
 	/**
 	 * Whether an address is private, reserved, loopback, link-local, documentation or not an IP.
 	 *
@@ -228,6 +231,41 @@ final class Webmastery_MCP_Safe_Http {
 	}
 
 	/**
+	 * Whether core's cURL transport can pin a request to this URL and carry it.
+	 *
+	 * Mirrors Requests' own cURL test (curl_exec, and TLS support for https), so
+	 * forcing cURL never picks a transport that cannot complete the request.
+	 *
+	 * @param string $url Request URL.
+	 *
+	 * @return bool
+	 */
+	public static function can_force_curl( $url ) {
+		if ( ! self::can_pin() || ! function_exists( 'curl_exec' ) ) {
+			return false;
+		}
+		if ( 0 !== stripos( (string) $url, 'https://' ) ) {
+			return true;
+		}
+		$curl = function_exists( 'curl_version' ) ? curl_version() : false;
+		return is_array( $curl ) && defined( 'CURL_VERSION_SSL' ) && 0 !== ( CURL_VERSION_SSL & (int) ( $curl['features'] ?? 0 ) );
+	}
+
+	/**
+	 * Route a Requests request through core's cURL transport, the only one that honours CURLOPT_RESOLVE.
+	 *
+	 * Call from requests-requests.before_request with its options (by reference),
+	 * before anything is sent; WordPress could otherwise pick another transport.
+	 *
+	 * @param array<string, mixed> $options Requests options.
+	 *
+	 * @return void
+	 */
+	public static function use_curl_transport( array &$options ) {
+		$options['transport'] = self::CURL_TRANSPORT;
+	}
+
+	/**
 	 * One request to a URL that validate_public_url() accepted, pinned to the validated addresses.
 	 *
 	 * Uses wp_safe_remote_request() (reject_unsafe_urls) and never follows redirects:
@@ -288,7 +326,7 @@ final class Webmastery_MCP_Safe_Http {
 				throw new \WpOrg\Requests\Exception( 'Pinned requests cannot use an HTTP proxy.', 'webmastery_unpinned' );
 			}
 			// Only the cURL transport honours CURLOPT_RESOLVE and the transfer abort below.
-			$options['transport']        = 'WpOrg\\Requests\\Transport\\Curl';
+			self::use_curl_transport( $options );
 			$options['follow_redirects'] = false;
 		};
 		$pin     = static function ( $handle, $request, $request_url ) use ( $url, $pins, $limit, &$applied, &$handles, &$over ) {
