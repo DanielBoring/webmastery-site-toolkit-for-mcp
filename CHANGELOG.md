@@ -139,6 +139,11 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   post type lists, List Orphaned Media, List Posts Without Featured Image,
   List Stuck Scheduled Posts, SEO Scores and Readability Scores). Calls that send
   input behave as before.
+- Security Audit's two-factor check now recognizes All-In-One Security (AIOS),
+  whose free plugin includes two-factor authentication. Every plugin it
+  recognizes was checked against the plugin's WordPress.org release; the
+  iThemes Security Pro entry, which could not be verified that way, was
+  removed (Solid Security, now Kadence Security, is still recognized).
 - The readme FAQ on image URL uploads no longer says the checks do not pin
   DNS; it now states when the connection is pinned and when it is not.
 - List Categories and List Tags now always return a plain list on later pages
