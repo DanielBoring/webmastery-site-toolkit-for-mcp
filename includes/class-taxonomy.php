@@ -59,6 +59,7 @@ class Webmastery_MCP_Taxonomy {
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
+				'default'    => [],
 				'properties' => [
 					'search'   => [ 'type' => 'string' ],
 					'per_page' => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 200, 'default' => 100 ],

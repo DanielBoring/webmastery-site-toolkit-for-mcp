@@ -357,6 +357,7 @@ class Webmastery_MCP_Custom_Post_Types {
 				'category'            => self::NAMESPACE,
 				'input_schema'        => [
 					'type'       => 'object',
+					'default'    => [],
 					'properties' => [
 						'status'   => [ 'type' => 'string', 'enum' => [ 'publish', 'draft', 'pending', 'private', 'trash', 'any' ], 'default' => 'any' ],
 						'search'   => [ 'type' => 'string' ],

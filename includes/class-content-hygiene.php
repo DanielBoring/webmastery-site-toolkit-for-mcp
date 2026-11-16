@@ -48,6 +48,7 @@ class Webmastery_MCP_Content_Hygiene {
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
+				'default'    => [],
 				'properties' => self::pagination_schema(),
 			],
 			'execute_callback'    => [ self::class, 'execute_list_orphaned_media' ],
@@ -212,6 +213,7 @@ class Webmastery_MCP_Content_Hygiene {
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
+				'default'    => [],
 				'properties' => $properties,
 			],
 			'execute_callback'    => [ self::class, 'execute_list_posts_no_featured_image' ],
@@ -291,6 +293,7 @@ class Webmastery_MCP_Content_Hygiene {
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
+				'default'    => [],
 				'properties' => self::pagination_schema(),
 			],
 			'execute_callback'    => [ self::class, 'execute_list_stuck_scheduled' ],

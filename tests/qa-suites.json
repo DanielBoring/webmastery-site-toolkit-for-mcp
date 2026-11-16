@@ -18,6 +18,7 @@
       "MenusTest.php",
       "MetadataBoundaryTest.php",
       "NativeInputValidationTest.php",
+      "OptionalInputDefaultTest.php",
       "PermissionDefaultTest.php",
       "PermissionsCharacterizationTest.php",
       "PermissionsLoadingTest.php",

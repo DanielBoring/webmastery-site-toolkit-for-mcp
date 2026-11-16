@@ -25,6 +25,7 @@
 			<file>tests/unit/MenusTest.php</file>
 			<file>tests/unit/MetadataBoundaryTest.php</file>
 			<file>tests/unit/NativeInputValidationTest.php</file>
+			<file>tests/unit/OptionalInputDefaultTest.php</file>
 			<file>tests/unit/PermissionDefaultTest.php</file>
 			<file>tests/unit/PermissionsCharacterizationTest.php</file>
 			<file>tests/unit/PermissionsLoadingTest.php</file>

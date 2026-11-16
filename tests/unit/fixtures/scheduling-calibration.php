@@ -49,8 +49,8 @@ function load_ledger( ?string $source = null ): stdClass {
 
 function bounded_source_bindings(): array {
 	return array(
-		'includes/class-posts.php' => array( '6f916cde9d6f5d29d150ee0b3010abc38372c3b915b898af7280acde782246b4', '26cf092695b0901fbed90ef012bc8fae1360a3ec' ),
-		'includes/class-custom-post-types.php' => array( 'bae6b4f5842955a947a05cc89018352b7e4a955971ed24bd96eda0bd2b29e403', 'bafa69be4376e0dec55c8568892d68ae3568f318' ),
+		'includes/class-posts.php' => array( 'ab08b239d861608011c0b7fc550ea4e24da12666d431fcaf95dfca4d790af2bb', 'b39b64a89494cf96589f880c0675a85ae52ab567' ),
+		'includes/class-custom-post-types.php' => array( '88a90d2a981e6dacdb444e69fde5adadb8f8f5664307b1d9064cf6812aff46d3', 'f06b57ccbcb1f81b49468eae2abc056f7a7528f7' ),
 		'includes/class-list-query.php' => array( 'd6f267226522ddf267ec0497b997dcea1160ee15d0a353013fa51b46eefe9090', '723b2e143f3f06163780bf6bb79e42d46ad62095' ),
 		'includes/class-untrusted.php' => array( '5a0ba6dffdf9c30b0ec7a01c6d7cbaa7c9f15c3707adc04e06255deb41104e20', 'dd504fd3eae59bc945768b2249f122026af8bdef' ),
 		'includes/class-input.php' => \wstm_test_product_binding( 'includes/class-input.php' ),

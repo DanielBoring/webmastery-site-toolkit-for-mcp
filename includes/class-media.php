@@ -328,6 +328,7 @@ class Webmastery_MCP_Media {
 			'category'            => 'webmastery-site-toolkit-for-mcp',
 			'input_schema'        => [
 				'type'       => 'object',
+				'default'    => [],
 				'properties' => [
 					'mime_type' => [ 'type' => 'string', 'description' => 'Filter by MIME type, such as image/jpeg or application/pdf' ],
 					'search'    => [ 'type' => 'string' ],

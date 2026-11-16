@@ -99,7 +99,10 @@ Use exact enum values (`"DESC"`, not `"desc"` or `"DESC!"`), JSON integers for
 IDs, and JSON booleans for flags. Optional fields retain existing defaults when
 omitted; explicit `null` is invalid unless advertised. Input-free abilities
 accept an empty object or omitted input (native null normalizes to the empty
-default), not arbitrary properties. No text sanitization can turn an invalid
+default), not arbitrary properties. So do abilities whose inputs are all
+optional, except Activate Plugin, Deactivate Plugin, SEO: Yoast Metadata (each
+needs one of two inputs) and List Post Types, where an omitted or `null` input
+is rejected as invalid input. No text sanitization can turn an invalid
 enum into a valid one.
 
 Standalone `meta_value` remains a polymorphic JSON value, and CPT

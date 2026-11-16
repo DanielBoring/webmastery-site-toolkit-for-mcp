@@ -6,6 +6,21 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Add `OptionalInputDefaultTest` (product suite): it enumerates every ability
+  the plugin registers (through the `InputBoundaryTest` registry fixture),
+  applies the plugin's own `wp_register_ability_args` filters, and fails when
+  an object input schema has neither a non-empty `required` list nor a root
+  `default`, naming the ability and the `'default' => []` fix. This is the
+  "omitted input rejected before the permission check" bug that unit tests
+  calling callbacks directly could not see and only Docker E2E caught. It
+  found 18 existing cases: 14 list/score abilities now declare the root
+  default (bindings regenerated for `class-comments.php`, `class-posts.php`,
+  `class-custom-post-types.php` and `class-taxonomy.php`;
+  `PostsExtractionTest` records the new list-posts/list-pages root default);
+  `list-post-types` (its null-input manifest case is pinned),
+  `activate-plugin`, `deactivate-plugin` and `get-yoast-metadata` are
+  explicit exemptions in the test.
+
 - Add a step-by-step guide for adding an ability: an ordered checklist in
   `CONTRIBUTING.md` (merged with the existing registration steps) and a
   detailed reference, `docs/reference/adding-an-ability.md`, covering design

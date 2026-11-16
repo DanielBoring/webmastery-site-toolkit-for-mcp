@@ -12,20 +12,20 @@
         "34ac4fa8b42f28dbe057da3b87b3606f53ea2fdc"
     ],
     "includes/class-taxonomy.php": [
-        "a389de50d1a22a50ba6048e3a67fe822cf4ee8176694c3261cc79f49e8892742",
-        "6f01cb7ca298e3b3777af298f1cdbbe559cea60d"
+        "d0413f882ecbe5cfb6ae12b2a4f01c13a457ad413a757e4434aea836da8be2fc",
+        "7face958748703b74da483fe37750c298c993d7a"
     ],
     "includes/class-comments.php": [
-        "508c1d5f0de4096e7e692b07e04620bd1dddcd37f95b7214c29fc2b5c4ce7977",
-        "34559ac117afeec6503473a1f660a180076d1ee9"
+        "109aa68e753cf38b895b99000deddd8f28f97d651f08e36f3d03cda311260416",
+        "38e750a03c85e6087c3c9c495c944a35e42609a0"
     ],
     "includes/class-posts.php": [
-        "6f916cde9d6f5d29d150ee0b3010abc38372c3b915b898af7280acde782246b4",
-        "26cf092695b0901fbed90ef012bc8fae1360a3ec"
+        "ab08b239d861608011c0b7fc550ea4e24da12666d431fcaf95dfca4d790af2bb",
+        "b39b64a89494cf96589f880c0675a85ae52ab567"
     ],
     "includes/class-custom-post-types.php": [
-        "bae6b4f5842955a947a05cc89018352b7e4a955971ed24bd96eda0bd2b29e403",
-        "bafa69be4376e0dec55c8568892d68ae3568f318"
+        "88a90d2a981e6dacdb444e69fde5adadb8f8f5664307b1d9064cf6812aff46d3",
+        "f06b57ccbcb1f81b49468eae2abc056f7a7528f7"
     ],
     "includes/class-list-query.php": [
         "d6f267226522ddf267ec0497b997dcea1160ee15d0a353013fa51b46eefe9090",

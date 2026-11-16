@@ -133,6 +133,12 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   hosts where WordPress would otherwise pick another transport. Without a
   usable cURL, or when WordPress sends the download through an HTTP proxy,
   uploads keep working as before but the connection is not pinned.
+- Calling a list or score ability without any input now runs it with its
+  defaults instead of failing as invalid input before the permission check
+  (List Posts, Pages, Media, Comments, Users, Categories, Tags, the custom
+  post type lists, List Orphaned Media, List Posts Without Featured Image,
+  List Stuck Scheduled Posts, SEO Scores and Readability Scores). Calls that send
+  input behave as before.
 - The readme FAQ on image URL uploads no longer says the checks do not pin
   DNS; it now states when the connection is pinned and when it is not.
 - List Categories and List Tags now always return a plain list on later pages
