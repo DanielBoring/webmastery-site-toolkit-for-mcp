@@ -97,8 +97,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   two-factor plugins (including All-In-One Security) it reports that one is
   active without verifying enrollment. Existing checks are unchanged, but the
   additional findings change the fail, warn and pass counts in `summary`.
-- Backup Status no longer reports backups as configured when only Jetpack or
-  ManageWP Worker is active. For those sites `backup_plugin_detected` is now
+- Breaking: Backup Status no longer reports backups as configured when only
+  Jetpack or ManageWP Worker is active. For those sites `backup_plugin_detected` is now
   `false` and the response warns that backup configuration could not be
   verified; each listed plugin includes a new `backup_verified` flag. Jetpack
   VaultPress Backup and Solid Backups (BackupBuddy) are now recognized.

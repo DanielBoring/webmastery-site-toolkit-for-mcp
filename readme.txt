@@ -296,7 +296,8 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Add read-only Rank Math and All in One SEO metadata inspection for a post or page, limited to allowlisted fields.
 * Add a broken link scan for one post or page. Internal links are resolved without any request; external link checks run only when an Administrator requests them, with bounded requests that never reach private or local addresses (see External services).
 * Security audit adds baseline checks for PHP security support, FORCE_SSL_ADMIN, the default table prefix, inactive plugins and themes, theme updates and two-factor authentication, which also changes the summary counts.
-* Backup status now reports no backup plugin detected, with a warning, when only Jetpack or ManageWP Worker is active, and adds a backup_verified flag per plugin. It also reads the last backup of Solid Backups and the schedule of WPvivid.
+* Breaking: Backup status now reports no backup plugin detected, with a warning, when only Jetpack or ManageWP Worker is active, and adds a backup_verified flag per plugin.
+* Backup status reads the last backup of Solid Backups and the schedule of WPvivid.
 * List Categories and List Tags accept an optional page input for sites with more than 200 terms.
 * Deprecate plugin-audit critical_updates and items[].critical_update, which WordPress.org update data cannot populate. They will be removed in 4.0.0; use updates_available_count and items[].update_available.
 * Site health runs every registered direct test, reports tests that failed to run and truncates plugin-supplied text. User access audit warns only above 3 administrators and reports multisite super admins.
