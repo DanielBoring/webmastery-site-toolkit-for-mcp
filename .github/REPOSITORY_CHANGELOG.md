@@ -6,6 +6,10 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Make `scripts/test-release-runtime.sh` read the pinned Plugin Check version from
+  `.github/compatibility-versions.json` instead of hardcoding it, so baseline
+  bumps no longer break the release-safeguards CI job.
+
 - Add `OptionalInputDefaultTest` (product suite): it enumerates every ability
   the plugin registers (through the `InputBoundaryTest` registry fixture),
   applies the plugin's own `wp_register_ability_args` filters, and fails when

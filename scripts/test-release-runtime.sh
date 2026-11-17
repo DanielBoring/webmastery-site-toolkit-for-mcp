@@ -166,9 +166,11 @@ done
 grep -F 'rm -f /var/www/html/wp-content/mu-plugins/wstm-issue110-meta.php /var/www/html/wp-content/mu-plugins/wstm-issue110-http.php /var/www/html/wp-content/mu-plugins/wstm-issue110-seo.php /var/www/html/wp-content/mu-plugins/wstm-issue118-errors.php' "$TRACE" >/dev/null
 for boundary in direct ability http; do grep -F "WSTM110_BOUNDARY=${boundary}" "$TRACE" >/dev/null; done
 grep -F 'rm -f /var/www/html/wp-content/mu-plugins/wstm-issue110-meta.php' "$TRACE" >/dev/null
-grep -F 'plugin install plugin-check --version=2.1.0' "$TRACE"
+pinned_checker="$(host_php scripts/compatibility-baselines.php plugin_check)"
+[[ "$pinned_checker" =~ ^[0-9]+(\.[0-9]+)+$ ]]
+grep -F "plugin install plugin-check --version=${pinned_checker}" "$TRACE"
 grep -F 'plugin install plugin-check --activate --force' "$TRACE"
-for checker in 2.1.0 latest; do
+for checker in "$pinned_checker" latest; do
 	destination="/var/www/html/wp-content/plugins/webmastery-site-toolkit-for-mcp-package-${checker//./-}"
 	grep -F " wordpress mkdir $destination" "$TRACE" >/dev/null
 	grep -F " wordpress cp -R /qa-package-pristine/. $destination" "$TRACE" >/dev/null
