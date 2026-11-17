@@ -6,25 +6,38 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+## 3.2.0
+
 ### Added
 
-- Broken link scan: checks the links in one post or page per call (requires
-  permission to edit that post). Links to your own site are resolved without
-  any HTTP request and reported as published, not published, trashed or
-  deleted, or unresolved (archives and custom routes cannot be resolved
-  offline); the title or ID of a linked post is never shown to a caller who
-  cannot read it. Administrators can also check external links: the server
-  sends a HEAD request (or a GET limited to 1 KB when HEAD is refused) with a
-  plugin User-Agent and no cookies, credentials or referer, follows at most 3
-  redirects, and reports ok, redirect, broken, client or server error,
-  blocked or unreachable. External checks reuse the image upload's protection
-  against requests to private, reserved or local addresses, including
-  validated and pinned DNS answers for every redirect, and are bounded to 10
-  requests, 2 per host and about 20 seconds per call, with an offset to
-  continue. Nothing is cached and response bodies, redirect targets and IP
-  addresses are never returned. Link URLs and anchor text are marked as
-  untrusted. The readme gains an External services section describing these
-  requests.
+- List Themes: a read-only ability for accounts that can switch themes
+  (Administrator by default) that lists installed themes in stable, paged
+  order with the active theme and its parent marked, child-theme parents,
+  block-theme support, header version requirements and, only for accounts
+  that can update themes, update availability from WordPress's cached update
+  data (no remote request). On multisite only themes allowed for the current
+  site are listed. Broken themes appear with their slug only. Theme names,
+  versions and authors are marked as untrusted text; no paths, screenshots or
+  descriptions are returned.
+- Get Updates Overview: a read-only ability for accounts that can update
+  WordPress core, plugins or themes (Administrator by default) that reports
+  available core, plugin and theme updates from WordPress's cached update data
+  in one call, with the time each cache was last refreshed. Sections the
+  account lacks `update_core`, `update_plugins` or `update_themes` for are left
+  out and named in `omitted_sections`. No update check or remote request is
+  made, plugin and theme lists are capped at 100 items, plugin and theme names
+  are marked as untrusted text, and no package URLs, download links or
+  changelog text are returned.
+- Get Cron Status: a read-only ability for Administrators (accounts with
+  `manage_options`) that reports WP-Cron configuration (`DISABLE_WP_CRON`,
+  `ALTERNATE_WP_CRON`, lock timeout), a summary of scheduled events (total,
+  overdue, oldest overdue, seconds to the next event) and a paged list of
+  scheduled events with hook, next run, schedule, interval and argument count,
+  optionally only overdue events. An event counts as overdue when it is more
+  than 60 seconds past due. It explains why scheduled posts, backups or update
+  checks may be stuck. Nothing is run or rescheduled, event argument values are
+  never returned (only how many), and hook and schedule names are marked as
+  untrusted text.
 - Navigation menus: three abilities for classic navigation menus (Appearance >
   Menus), all requiring `edit_theme_options` (Administrator by default). List
   menus returns each menu's name, item count and assigned theme locations, the
@@ -51,55 +64,53 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   All in One SEO data is read with one read-only query of that plugin's own
   per-post table, because its own loader can write; it works with 4.x and 5.x
   schemas and lists fields an older version does not store in
-  `unavailable_fields`. Schema data,
-  redirects, raw stored values and plugin settings are never returned, and
-  stored text is marked as untrusted. When the plugin is not active the ability
-  says so instead of reading anything.
-- Get Cron Status: a read-only ability for Administrators (accounts with
-  `manage_options`) that reports WP-Cron configuration (`DISABLE_WP_CRON`,
-  `ALTERNATE_WP_CRON`, lock timeout), a summary of scheduled events (total,
-  overdue, oldest overdue, seconds to the next event) and a paged list of
-  scheduled events with hook, next run, schedule, interval and argument count,
-  optionally only overdue events. An event counts as overdue when it is more
-  than 60 seconds past due. It explains why scheduled posts, backups or update
-  checks may be stuck. Nothing is run or rescheduled, event argument values are
-  never returned (only how many), and hook and schedule names are marked as
-  untrusted text.
-- Get Updates Overview: a read-only ability for accounts that can update
-  WordPress core, plugins or themes (Administrator by default) that reports
-  available core, plugin and theme updates from WordPress's cached update data
-  in one call, with the time each cache was last refreshed. Sections the
-  account lacks `update_core`, `update_plugins` or `update_themes` for are left
-  out and named in `omitted_sections`. No update check or remote request is
-  made, plugin and theme lists are capped at 100 items, plugin and theme names
-  are marked as untrusted text, and no package URLs, download links or
-  changelog text are returned.
-- List Themes: a read-only ability for accounts that can switch themes
-  (Administrator by default) that lists installed themes in stable, paged
-  order with the active theme and its parent marked, child-theme parents,
-  block-theme support, header version requirements and, only for accounts
-  that can update themes, update availability from WordPress's cached update
-  data (no remote request). On multisite only themes allowed for the current
-  site are listed. Broken themes appear with their slug only. Theme names,
-  versions and authors are marked as untrusted text; no paths, screenshots or
-  descriptions are returned.
-- Backup Status reports more detail for two more backup plugins: the last
+  `unavailable_fields`. Schema data, redirects, raw stored values and plugin
+  settings are never returned, and stored text is marked as untrusted. When the
+  plugin is not active the ability says so instead of reading anything.
+- Broken link scan: checks the links in one post or page per call (requires
+  permission to edit that post). Links to your own site are resolved without
+  any HTTP request and reported as published, not published, trashed or
+  deleted, or unresolved (archives and custom routes cannot be resolved
+  offline); the title or ID of a linked post is never shown to a caller who
+  cannot read it. Administrators can also check external links: the server
+  sends a HEAD request (or a GET limited to 1 KB when HEAD is refused) with a
+  plugin User-Agent and no cookies, credentials or referer, follows at most 3
+  redirects, and reports ok, redirect, broken, client or server error,
+  blocked or unreachable. External checks reuse the image upload's protection
+  against requests to private, reserved or local addresses, including
+  validated and pinned DNS answers for every redirect, and are bounded to 10
+  requests, 2 per host and about 20 seconds per call, with an offset to
+  continue. Nothing is cached and response bodies, redirect targets and IP
+  addresses are never returned. Link URLs and anchor text are marked as
+  untrusted. The readme gains an External services section describing these
+  requests.
+
+### Changed
+
+- Security Audit adds baseline hardening checks, each reported once per audit
+  from local data only: PHP branch security support (from a hardcoded table),
+  `FORCE_SSL_ADMIN`, default `wp_` database prefix (never shows the prefix),
+  inactive plugin and theme counts, theme updates from cached data, and a
+  best-effort two-factor check. For the official Two-Factor plugin it counts
+  administrators without a usable second factor using the plugin's own
+  enrolled-and-available check and never names them; for other known
+  two-factor plugins (including All-In-One Security) it reports that one is
+  active without verifying enrollment. Existing checks are unchanged, but the
+  additional findings change the fail, warn and pass counts in `summary`.
+- Backup Status no longer reports backups as configured when only Jetpack or
+  ManageWP Worker is active. For those sites `backup_plugin_detected` is now
+  `false` and the response warns that backup configuration could not be
+  verified; each listed plugin includes a new `backup_verified` flag. Jetpack
+  VaultPress Backup and Solid Backups (BackupBuddy) are now recognized.
+- Backup Status reports more detail for two backup plugins: the last
   completed backup time for Solid Backups (BackupBuddy) and the saved backup
   schedule for WPvivid Backup & Migration. Each is read from one setting the
   plugin itself stores, checked for type and plausibility; nothing else from
   those settings is returned. Duplicator, All-in-One WP Migration, BlogVault,
   VaultPress and Jetpack VaultPress Backup keep `null` details because they do
   not store this information in a WordPress option, and Jetpack and ManageWP
-  Worker stay unverified. The response shape is unchanged.
-- Security Audit adds baseline hardening checks, each reported once per audit
-  from local data only: PHP branch security support (from a hardcoded table),
-  `FORCE_SSL_ADMIN`, default `wp_` database prefix (never shows the prefix),
-  inactive plugin and theme counts, theme updates from cached data, and a
-  best-effort two-factor check (for the official Two-Factor plugin, counts
-  administrators without a usable second factor using the plugin's own
-  enrolled-and-available check, never names them). Existing checks are
-  unchanged.
-- Add an optional `page` input to List Categories and List Tags so sites with
+  Worker stay unverified.
+- List Categories and List Tags accept an optional `page` input so sites with
   more than 200 terms can be listed page by page. The response stays a plain
   list of terms; request the next page until fewer than `per_page` items return.
 
@@ -134,22 +145,14 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   component has explicitly selected a transport. Without a usable cURL, with
   another explicitly selected transport, or when WordPress sends the download
   through an HTTP proxy, uploads keep working as before but the connection is
-  not pinned.
+  not pinned. The readme FAQ now states when the connection is pinned and when
+  it is not, instead of saying the checks do not pin DNS.
 - Calling a list or score ability without any input now runs it with its
   defaults instead of failing as invalid input before the permission check
   (List Posts, Pages, Media, Comments, Users, Categories, Tags, the custom
   post type lists, List Orphaned Media, List Posts Without Featured Image,
   List Stuck Scheduled Posts, SEO Scores and Readability Scores). Calls that send
   input behave as before.
-- Security Audit's two-factor check now recognizes All-In-One Security (AIOS),
-  whose free plugin includes two-factor authentication. Every plugin it
-  recognizes was checked against the plugin's WordPress.org release; the
-  iThemes Security Pro entry, which could not be verified that way, was
-  removed (Solid Security, now Kadence Security, is still recognized).
-- The readme FAQ on image URL uploads no longer says the checks do not pin
-  DNS; it now states when the connection is pinned and when it is not.
-- List Categories and List Tags now always return a plain list on later pages
-  (the unreleased `page` input could return an object keyed by position).
 - Fix the missing MCP Adapter admin notice, which never appeared on WordPress
   6.9+. It now detects the MCP Adapter itself (standalone or bundled by another
   plugin) instead of the Abilities API built into WordPress, and is shown only
@@ -164,10 +167,6 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
   up-to-date plugins and from each plugin's `readme.txt`, so potentially
   abandoned plugins are flagged even when no update is pending. Invalid version
   values are ignored.
-- Backup status no longer reports backups as configured when only Jetpack or
-  ManageWP Worker is active. It now warns that backup configuration could not
-  be verified, and each listed plugin includes a new `backup_verified` flag.
-  Jetpack VaultPress Backup and Solid Backups (BackupBuddy) are now recognized.
 - Backup status now reports the BackWPup last backup from each job's last run
   time only, instead of the largest date-like value anywhere in its settings.
 
