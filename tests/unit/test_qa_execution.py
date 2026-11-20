@@ -215,7 +215,7 @@ echo "Term persistence and diagnostic mutation controls passed.\n";
         self.assertIsNotNone(paths)
         self.assertEqual(
             ["'.github/workflows/06-minimum-runtime-qa.yml'", "'scripts/qa-floor.sh'",
-             "'tests/fixtures/php80-floor/**'"],
+             "'scripts/qa-build-legacy-image.sh'", "'tests/fixtures/php80-floor/**'"],
             [line.strip()[2:] for line in paths[1].splitlines()],
         )
         for file, count in (("03-04-docker-qa.yml", 2), ("07-compatibility-qa.yml", 1)):

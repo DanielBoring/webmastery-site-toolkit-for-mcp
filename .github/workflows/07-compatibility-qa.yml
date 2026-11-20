@@ -111,12 +111,21 @@ jobs:
             .github/compatibility-versions.json compatibility-artifacts/proposed-versions.json \
             > compatibility-artifacts/lane-versions.json
           cp compatibility-artifacts/lane-versions.json .github/compatibility-versions.json
-      - name: Pull images with bounded retries
+      - name: Prepare runtime images
         id: images
+        env:
+          BUILD_PHP: ${{ matrix.build-php }}
         run: |
           set -euo pipefail
+          services=(mysql wordpress)
+          if [[ -n "$BUILD_PHP" ]]; then
+            WORDPRESS_IMAGE="$(bash scripts/qa-build-legacy-image.sh "$BUILD_PHP")"
+            export WORDPRESS_IMAGE
+            echo "WORDPRESS_IMAGE=$WORDPRESS_IMAGE" >> "$GITHUB_ENV"
+            services=(mysql)
+          fi
           for attempt in 1 2 3; do
-            if bash scripts/qa-compose.sh pull; then exit 0; fi
+            if bash scripts/qa-compose.sh pull "${services[@]}"; then exit 0; fi
             if [ "$attempt" -lt 3 ]; then sleep 30; fi
           done
           echo "::error::Infrastructure unavailable: image pull failed after three attempts. Lane untested; promotion blocked."
@@ -150,7 +159,7 @@ jobs:
             > "compatibility-artifacts/$LANE.json"
           {
             echo "## $LANE"
-            echo "Source: $SOURCE_SHA; image pull: $IMAGE_RESULT; QA: $QA_RESULT"
+            echo "Source: $SOURCE_SHA; image preparation: $IMAGE_RESULT; QA: $QA_RESULT"
             echo "WordPress: $wp_version; PHP: $php_version; MySQL: $mysql_version; policy: $DEPENDENCY_POLICY"
             echo "WP-CLI: $cli_version. Policy $DEPENDENCY_POLICY selects SEO pins from lane-versions.json (wp69_* for WordPress 6.9; current providers in latest-seo). Installed versions are recorded below."
             echo '```json'

@@ -4,7 +4,7 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 policy_test_root="$root"
 matrix="$(php "$root/scripts/compatibility-matrix.php" "$root/.github/compatibility-versions.json" "$root/.github/compatibility-versions.json")"
-grep -F '"label":"wp69-php81-compatibility","wordpress-image":"wordpress:6.9-php8.1-apache"' <<< "$matrix" >/dev/null
+grep -F '"label":"wp69-php81-compatibility","build-php":"8.1"' <<< "$matrix" >/dev/null
 if grep -Eq '"label":"supported-floor"|wordpress:6\.9-php8\.0-apache' <<< "$matrix"; then
 	echo 'PHP 8.1 compatibility must not masquerade as PHP 8.0 floor proof or invent an image tag.' >&2
 	exit 1

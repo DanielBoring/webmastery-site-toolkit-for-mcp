@@ -130,7 +130,8 @@ manual runs always run every scope. Git-quoted (unusual) paths always count.
 | `package` | 05 | ZIP inputs: main plugin file, `readme.txt`, `LICENSE`, `.gitattributes`, `assets/`, `.wordpress-org/`, the build, archive and package scripts, and the workflow itself. |
 
 06 also has a workflow path filter, so on PRs it runs only when its workflow,
-`scripts/qa-floor.sh` or `tests/fixtures/php80-floor/` change.
+`scripts/qa-floor.sh`, the shared `scripts/qa-build-legacy-image.sh` helper,
+or `tests/fixtures/php80-floor/` change.
 
 | Schedule (UTC) | Workflow |
 | --- | --- |

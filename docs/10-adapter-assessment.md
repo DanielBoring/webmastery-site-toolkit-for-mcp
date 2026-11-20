@@ -17,7 +17,9 @@ not the current source. The findings and limits are in the
 - Manual dispatch.
 - PRs that change the assessment itself: this workflow,
   `scripts/adapter-release-assessment.*`,
-  `scripts/adapter-candidate-assessment.py`, `tests/e2e/adapter-release-*` or
+  `scripts/adapter-candidate-assessment.py`, the shared legacy image builder
+  (`scripts/qa-build-legacy-image.sh` and `tests/fixtures/php80-floor/**`),
+  `tests/e2e/adapter-release-*` or
   `tests/unit/test_adapter_release_assessment.py`.
 - Not scheduled and not a merge or release gate.
 
@@ -25,12 +27,12 @@ not the current source. The findings and limits are in the
 
 One job, `10 - Adapter Assessment`, as a two-lane matrix (`fail-fast: false`,
 20 minutes each). GitHub shows each lane as
-`10 - Adapter Assessment (<label>, <image>)`.
+`10 - Adapter Assessment (<label>)`.
 
 | Lane | WordPress image |
 | --- | --- |
-| `pinned` | `wordpress:7.1.2-php8.2-apache` |
-| `wordpress-floor` | `wordpress:6.9-php8.1-apache` |
+| `pinned` | The current WordPress/PHP 8.2 baseline in `docker-compose.yml` |
+| `wordpress-floor` | WordPress 6.9 with the backported PHP 8.1 CLI and Apache module, built with `scripts/qa-build-legacy-image.sh 8.1` |
 
 Each lane:
 
@@ -45,14 +47,14 @@ Each lane:
 
 Permissions: `contents: read` only. No artifacts.
 
-The `pinned` lane's image (7.1.2) was pinned when the assessment was recorded
-and is older than the current development baseline (7.1.3).
-
 ## Run locally
 
 ```bash
 python -B -m unittest discover -s tests/unit -p test_adapter_release_assessment.py -v
 COMPOSE_PROJECT_NAME=mcp-release-local-1 bash scripts/adapter-release-assessment.sh
+
+image="$(bash scripts/qa-build-legacy-image.sh 8.1)" &&
+  WORDPRESS_IMAGE="$image" COMPOSE_PROJECT_NAME=mcp-release-local-floor-1 bash scripts/adapter-release-assessment.sh
 ```
 
 The script refuses a project that already has resources; use a new name each

@@ -95,8 +95,8 @@ and a trusted local Docker engine:
 COMPOSE_PROJECT_NAME=mcp-release-assessment-unique \
   bash scripts/adapter-release-assessment.sh
 
-COMPOSE_PROJECT_NAME=mcp-release-assessment-floor-unique \
-  WORDPRESS_IMAGE=wordpress:6.9-php8.1-apache \
+image="$(bash scripts/qa-build-legacy-image.sh 8.1)" &&
+  COMPOSE_PROJECT_NAME=mcp-release-assessment-floor-unique WORDPRESS_IMAGE="$image" \
   bash scripts/adapter-release-assessment.sh
 
 python -B -m unittest discover -s tests/unit \
@@ -204,8 +204,8 @@ pinned commit and a production ZIP built there:
 COMPOSE_PROJECT_NAME=mcp-candidate-assessment-unique \
   bash scripts/adapter-release-assessment.sh /path/to/clean-candidate /path/to/candidate.zip
 
-COMPOSE_PROJECT_NAME=mcp-candidate-assessment-floor-unique \
-  WORDPRESS_IMAGE=<digest-pinned-WordPress-6.9-PHP-8.0.30-image> \
+image="$(bash scripts/qa-build-legacy-image.sh 8.0)" &&
+  COMPOSE_PROJECT_NAME=mcp-candidate-assessment-floor-unique WORDPRESS_IMAGE="$image" \
   bash scripts/adapter-release-assessment.sh /path/to/clean-candidate /path/to/candidate.zip
 
 python -B -m unittest discover -s tests/unit \
@@ -219,8 +219,8 @@ assessment. Both modes refuse remote endpoints.
 The floor image was built locally from the candidate's digest-pinned
 `tests/fixtures/php80-floor/Dockerfile`; its resulting image ID was
 `sha256:f07559b0f901a5516df0f6f8b9b569dc7983f17a3ba2c094b84f445916395e4d`.
-Use `docker build -f tests/fixtures/php80-floor/Dockerfile --iidfile <owned-image-id-file> .`
-from that candidate to rebuild it, then use the recorded ID as `WORDPRESS_IMAGE`.
+For a new assessment, use the current checkout's backported PHP 8.0 image
+as shown above.
 
 ### Existing QA-client compatibility corrections
 

@@ -6,9 +6,10 @@ require_once __DIR__ . '/compatibility-baselines.php';
 
 function webmastery_mcp_compatibility_matrix( array $baseline, array $latest ): array {
 	$lane = static function ( string $label, string $wp, string $adapter, string $digest, string $php = '8.2', string $mysql = '8.0.36', string $policy = 'pinned' ): array {
-		return array(
-			'label'              => $label,
-			'wordpress-image'    => "wordpress:{$wp}-php{$php}-apache",
+		$runtime = '8.1' === $php
+			? array( 'build-php' => $php )
+			: array( 'wordpress-image' => "wordpress:{$wp}-php{$php}-apache" );
+		return array( 'label' => $label ) + $runtime + array(
 			'mysql-image'        => "mysql:{$mysql}",
 			'mcp-adapter-zip'    => "https://github.com/WordPress/mcp-adapter/releases/download/v{$adapter}/mcp-adapter.zip",
 			'mcp-adapter-sha256' => $digest,
