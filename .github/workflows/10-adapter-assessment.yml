@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/10-adapter-assessment.yml'
       - 'scripts/adapter-release-assessment.*'
+      - 'scripts/qa-build-legacy-image.sh'
+      - 'tests/fixtures/php80-floor/**'
       - 'scripts/adapter-candidate-assessment.py'
       - 'tests/e2e/adapter-release-*'
       - 'tests/unit/test_adapter_release_assessment.py'
@@ -21,14 +23,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - label: pinned
-            image: wordpress:7.1.2-php8.2-apache
-          - label: wordpress-floor
-            image: wordpress:6.9-php8.1-apache
+        label: [pinned, wordpress-floor]
     env:
       COMPOSE_PROJECT_NAME: mcp-release-${{ matrix.label }}-${{ github.run_id }}-${{ github.run_attempt }}
-      WORDPRESS_IMAGE: ${{ matrix.image }}
       WORDPRESS_PORT: 0
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -41,5 +38,10 @@ jobs:
           coverage: none
       - name: Verify assessment guards and parsers
         run: python -B -m unittest discover -s tests/unit -p test_adapter_release_assessment.py -v
+      - name: Build patched WordPress 6.9 / PHP 8.1 image
+        if: matrix.label == 'wordpress-floor'
+        run: |
+          image="$(bash scripts/qa-build-legacy-image.sh 8.1)"
+          echo "WORDPRESS_IMAGE=$image" >> "$GITHUB_ENV"
       - name: Test unchanged 2.6.0 ZIP against Adapter 0.6.1 and 0.7.0
         run: bash scripts/adapter-release-assessment.sh

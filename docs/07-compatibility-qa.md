@@ -26,7 +26,7 @@ versions make upstream drift visible.
 | Job | Timeout | Does |
 | --- | --- | --- |
 | `07 - Compatibility QA / discover versions` | 10 min | Requires the run to be on current `main`, then `scripts/discover-compatibility.sh` queries the WordPress version API and the latest stable MCP Adapter release, verifies digests, rejects version regressions, builds the lane matrix and uploads `compatibility-proposal` (30 days). Also runs the download and dependency-policy rejection tests. |
-| `07 - Compatibility QA / <lane>` | 45 min each | For each lane below: applies proposed auxiliary pins while retaining the maintained WordPress 6.9 SEO pins, pulls images (three tries, then fails as infrastructure), runs `scripts/qa-run.sh all` with the lane's dependency policy (contract, MCP transport, debug log), records policy and installed versions, uploads `compatibility-lane-<lane>`. |
+| `07 - Compatibility QA / <lane>` | 45 min each | For each lane below: applies proposed auxiliary pins while retaining the maintained WordPress 6.9 SEO pins, builds the backported PHP 8.1 image for the WordPress 6.9 lane, pulls registry images with up to three attempts, runs `scripts/qa-run.sh all` with the lane's dependency policy (contract, MCP transport, debug log), records policy and installed versions, uploads `compatibility-lane-<lane>`. |
 | `07 - Compatibility QA / current Plugin Check` | 45 min | After every lane passes: generates candidate metadata with `scripts/update-compatibility-baselines.php`, then `scripts/release-qa.sh` with `PLUGIN_CHECK_VERSION=latest`. Uploads `compatibility-current-plugin-check`. |
 | `07 - Compatibility QA / open baseline PR` | 60 min | Only if all lanes and the checker passed, an update is needed, and the run is scheduled or `open_update_pr` is set. Rebuilds the candidate commit, runs `scripts/release-qa.sh` on it, refuses if `main` moved, pushes a new branch (never overwriting one) and opens "Update tested compatibility baselines". |
 | `07 - Compatibility QA` | 10 min | Report: writes the lane table to the job summary and fails if any required job failed or a requested promotion did not happen. After **two consecutive** failed scheduled runs it opens, reopens or updates one tracking issue, "Compatibility QA: persistent scheduled failure". No checkout. |
@@ -36,7 +36,7 @@ unless noted):
 
 | Lane | WordPress | MCP Adapter | Other |
 | --- | --- | --- | --- |
-| `wp69-php81-compatibility` | 6.9 | pinned | PHP 8.1; maintained `wp69-seo` pins |
+| `wp69-php81-compatibility` | 6.9 | pinned | Backported PHP 8.1 CLI and Apache module, built locally; maintained `wp69-seo` pins |
 | `current-baseline` | pinned | pinned | |
 | `latest-mcp-adapter` | pinned | latest | |
 | `latest-wordpress` | latest | pinned | |
@@ -94,7 +94,15 @@ gh workflow run 07-compatibility-qa.yml --ref main
 Each lane is `scripts/qa-run.sh all` with these variables set from the matrix:
 `WORDPRESS_IMAGE`, `MYSQL_IMAGE`, `MCP_ADAPTER_ZIP`, `MCP_ADAPTER_SHA256` and
 `DEPENDENCY_POLICY`, plus a unique `COMPOSE_PROJECT_NAME`. Setting the same
-variables locally reproduces one lane in a fresh project.
+variables locally reproduces one lane in a fresh project. For
+`wp69-php81-compatibility`, build the WordPress image first and pass the
+returned image ID to Compose:
+
+```bash
+image="$(bash scripts/qa-build-legacy-image.sh 8.1)" &&
+  WORDPRESS_IMAGE="$image" DEPENDENCY_POLICY=wp69-seo \
+  COMPOSE_PROJECT_NAME=mcp-compat-local-81 bash scripts/qa-run.sh all
+```
 
 ## Reading failures
 

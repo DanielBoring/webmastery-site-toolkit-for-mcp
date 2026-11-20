@@ -74,12 +74,13 @@ pristine package with Plugin Check, while `release` retains both scopes.
 `setup` is an internal publishing prerequisite and is never product acceptance.
 
 `bash scripts/qa-floor.sh` builds a genuine PHP 8.0.30 / WordPress 6.9 image
-from digest-pinned bases and a signed frozen Debian package snapshot. The old
-PHP/Debian stack is a disposable compatibility fixture, not a recommended
-production image. CLI version expectations and the existing protected HTTP
-runtime observations must agree. The PHP 8.1 compatibility lane remains
-separate. Docker is the default; the Podman local-API adapter has modeled
-controls but no verified source/package runtime result yet.
+using PHP packages with verified security backports. Both the CLI and Apache
+packages must meet the patched package revision for their PHP branch. The
+protected HTTP observations confirm which PHP branch actually serves requests.
+The PHP 8.1 compatibility job builds its own image using the same fixture.
+See the [minimum-runtime QA guide](../../docs/06-minimum-runtime-qa.md) for
+the package checks. Docker is the default. The Podman local-API adapter has
+modeled controls but no verified source/package runtime result yet.
 
 Every success case has an explicit assertion. The formerly smoke-only taxonomy
 cases check response fields and native create/delete state; comment actions

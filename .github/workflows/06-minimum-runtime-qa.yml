@@ -11,6 +11,7 @@ on:
     paths:
       - '.github/workflows/06-minimum-runtime-qa.yml'
       - 'scripts/qa-floor.sh'
+      - 'scripts/qa-build-legacy-image.sh'
       - 'tests/fixtures/php80-floor/**'
 
 permissions: {}

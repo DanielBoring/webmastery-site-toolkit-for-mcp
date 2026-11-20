@@ -6,6 +6,11 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Patch the PHP runtimes used by minimum-runtime, compatibility and adapter QA
+  for CVE-2026-109618 and CVE-2026-109619. The WordPress 6.9 jobs retain PHP
+  8.0 and 8.1 coverage using backported packages. The adapter assessment uses
+  the current WordPress QA baseline for its PHP 8.2 lane.
+
 - Make `scripts/test-release-runtime.sh` read the pinned Plugin Check version from
   `.github/compatibility-versions.json` instead of hardcoding it, so baseline
   bumps no longer break the release-safeguards CI job.

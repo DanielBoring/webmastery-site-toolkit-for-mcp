@@ -309,7 +309,8 @@ final class CompatibilityBaselinesTest extends TestCase {
 		self::assertCount( 8, $lanes );
 		self::assertCount( 8, array_unique( array_column( $lanes, 'label' ) ) );
 		self::assertSame( 'wp69-php81-compatibility', $lanes[0]['label'] );
-		self::assertSame( 'wordpress:6.9-php8.1-apache', $lanes[0]['wordpress-image'] );
+		self::assertSame( '8.1', $lanes[0]['build-php'] );
+		self::assertArrayNotHasKey( 'wordpress-image', $lanes[0] );
 		self::assertSame( 'wp69-seo', $lanes[0]['dependency-policy'] );
 		foreach ( $lanes as $lane ) {
 			$expected = str_contains( $lane['mcp-adapter-zip'], '/v99.2.3/' ) ? $latest['mcp_adapter_sha256'] : $this->baseline['mcp_adapter_sha256'];
