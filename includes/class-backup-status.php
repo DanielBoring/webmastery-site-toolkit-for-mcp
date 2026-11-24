@@ -38,6 +38,11 @@ class Webmastery_MCP_Backup_Status {
 		'montly'              => 'monthly',
 	];
 
+	/**
+	 * Register the backup-status ability.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/backup-status', [
 			'label'               => 'Backup Status',
@@ -52,10 +57,21 @@ class Webmastery_MCP_Backup_Status {
 		] );
 	}
 
+	/**
+	 * Permission callback requiring manage_options.
+	 *
+	 * @return bool|WP_Error
+	 */
 	public static function permission() {
 		return Webmastery_MCP_Permissions::check( 'manage_options' );
 	}
 
+	/**
+	 * Report active known backup plugins with last-backup and schedule details.
+	 *
+	 * @param array<string, mixed> $input Ability input (unused).
+	 * @return array{success: true, data: array<string, mixed>}
+	 */
 	public static function execute( $input = [] ) {
 		$active_plugins = self::get_active_plugin_basenames();
 		$plugins        = self::get_active_known_backup_plugins( $active_plugins );
@@ -106,6 +122,12 @@ class Webmastery_MCP_Backup_Status {
 		];
 	}
 
+	/**
+	 * Active known backup plugins, dedicated plugins first.
+	 *
+	 * @param list<string> $active_plugins Active plugin basenames.
+	 * @return list<array{name: string, basename: string, last_backup: string|null, schedule: string|null, backup_verified: bool}>
+	 */
 	private static function get_active_known_backup_plugins( $active_plugins ) {
 		$plugins = [];
 		$groups  = [
@@ -133,6 +155,12 @@ class Webmastery_MCP_Backup_Status {
 		return $plugins;
 	}
 
+	/**
+	 * Last backup time for a plugin whose data is readable.
+	 *
+	 * @param string $basename Plugin basename.
+	 * @return string|null ISO 8601 time, or null when unknown.
+	 */
 	private static function get_last_backup_for_plugin( $basename ) {
 		if ( 'updraftplus/updraftplus.php' === $basename ) {
 			return self::get_updraftplus_last_backup();
@@ -151,7 +179,9 @@ class Webmastery_MCP_Backup_Status {
 
 	/**
 	 * Solid Backups (BackupBuddy) keeps its settings in the `pb_backupbuddy` option and sets
-	 * `last_backup_finish` (microtime float, 0 = never) only after a backup completes without failing.
+	 * `last_backup_finish` (microtime float, 0 = never) only after a backup completes without failing.  *
+	 *
+	 * @return string|null ISO 8601 time of the last completed backup, or null when unknown.
 	 */
 	private static function get_solid_backups_last_backup() {
 		$options = get_option( 'pb_backupbuddy', null );
@@ -174,6 +204,11 @@ class Webmastery_MCP_Backup_Status {
 		return null === $timestamp ? null : gmdate( 'Y-m-d\TH:i:s\Z', $timestamp );
 	}
 
+	/**
+	 * Latest BackWPup job run time.
+	 *
+	 * @return string|null ISO 8601 time, or null when unknown.
+	 */
 	private static function get_backwpup_last_backup() {
 		$jobs = get_option( 'backwpup_jobs', [] );
 		if ( ! is_array( $jobs ) ) {
@@ -200,6 +235,11 @@ class Webmastery_MCP_Backup_Status {
 		return null === $latest ? null : gmdate( 'Y-m-d\TH:i:s\Z', $latest );
 	}
 
+	/**
+	 * UpdraftPlus last backup time.
+	 *
+	 * @return string|null ISO 8601 time, or null when unknown.
+	 */
 	private static function get_updraftplus_last_backup() {
 		$last_backup = get_option( 'updraft_last_backup', null );
 
@@ -212,6 +252,12 @@ class Webmastery_MCP_Backup_Status {
 		return self::format_latest_timestamp( $last_backup );
 	}
 
+	/**
+	 * Backup schedule for a plugin whose settings are readable.
+	 *
+	 * @param string $basename Plugin basename.
+	 * @return string|null Schedule description, or null when unknown.
+	 */
 	private static function get_schedule_for_plugin( $basename ) {
 		if ( 'updraftplus/updraftplus.php' === $basename ) {
 			return self::get_updraftplus_schedule();
@@ -226,7 +272,9 @@ class Webmastery_MCP_Backup_Status {
 
 	/**
 	 * WPvivid saves its schedule form as `wpvivid_schedule_setting`: `enable` ('1' when on) and
-	 * `type` (a recurrence name). A disabled schedule means backups run only manually.
+	 * `type` (a recurrence name). A disabled schedule means backups run only manually.  *
+	 *
+	 * @return string|null Schedule name, 'manual' when disabled, or null when unknown.
 	 */
 	private static function get_wpvivid_schedule() {
 		$setting = get_option( 'wpvivid_schedule_setting', null );
@@ -246,6 +294,11 @@ class Webmastery_MCP_Backup_Status {
 		return self::WPVIVID_SCHEDULES[ $setting['type'] ] ?? null;
 	}
 
+	/**
+	 * UpdraftPlus file and database schedule summary.
+	 *
+	 * @return string|null Schedule description, or null when none is configured.
+	 */
 	private static function get_updraftplus_schedule() {
 		$file_schedule     = self::normalize_schedule_value( get_option( 'updraft_interval', null ) );
 		$database_schedule = self::normalize_schedule_value( get_option( 'updraft_interval_database', null ) );
@@ -265,6 +318,12 @@ class Webmastery_MCP_Backup_Status {
 		);
 	}
 
+	/**
+	 * Trimmed schedule name from a stored option value.
+	 *
+	 * @param mixed $value Stored option value.
+	 * @return string|null
+	 */
 	private static function normalize_schedule_value( $value ) {
 		if ( is_string( $value ) ) {
 			$value = trim( $value );
@@ -278,6 +337,12 @@ class Webmastery_MCP_Backup_Status {
 		return null;
 	}
 
+	/**
+	 * Latest timestamp found in a stored value, formatted as ISO 8601 UTC.
+	 *
+	 * @param mixed $value Stored option value, possibly nested.
+	 * @return string|null
+	 */
 	private static function format_latest_timestamp( $value ) {
 		$timestamps = self::extract_timestamps( $value );
 
@@ -288,6 +353,12 @@ class Webmastery_MCP_Backup_Status {
 		return gmdate( 'Y-m-d\TH:i:s\Z', max( $timestamps ) );
 	}
 
+	/**
+	 * Collect every plausible Unix timestamp from a possibly nested value.
+	 *
+	 * @param mixed $value Stored option value.
+	 * @return list<int>
+	 */
 	private static function extract_timestamps( $value ) {
 		$timestamps = [];
 
@@ -310,6 +381,12 @@ class Webmastery_MCP_Backup_Status {
 		return $timestamps;
 	}
 
+	/**
+	 * Unix timestamp from a stored value, or null when it is not a plausible time.
+	 *
+	 * @param mixed $value Stored option value.
+	 * @return int|null
+	 */
 	private static function normalize_timestamp( $value ) {
 		if ( is_numeric( $value ) ) {
 			$timestamp = (int) $value;
@@ -320,6 +397,11 @@ class Webmastery_MCP_Backup_Status {
 		return false === $timestamp ? null : $timestamp;
 	}
 
+	/**
+	 * Basenames of the active plugins.
+	 *
+	 * @return list<string>
+	 */
 	private static function get_active_plugin_basenames() {
 		return Webmastery_MCP_Plugins::active_basenames();
 	}

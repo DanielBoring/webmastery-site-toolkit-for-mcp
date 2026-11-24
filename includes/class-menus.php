@@ -36,6 +36,11 @@ class Webmastery_MCP_Menus {
 	/** Item record fields that hold stored, user-controlled text. */
 	private const ITEM_TEXT = [ 'title', 'url', 'attr_title', 'description', 'classes', 'xfn' ];
 
+	/**
+	 * Register the menu abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-menus', [
 			'label'               => 'List Navigation Menus',
@@ -102,6 +107,11 @@ class Webmastery_MCP_Menus {
 		] );
 	}
 
+	/**
+	 * List navigation menus and the registered theme locations.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function list_menus() {
 		$assigned   = self::assigned_locations();
 		$registered = get_registered_nav_menus();
@@ -133,6 +143,12 @@ class Webmastery_MCP_Menus {
 		] );
 	}
 
+	/**
+	 * Get one navigation menu with a page of its items.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array<string, mixed>
+	 */
 	public static function get_menu( $input = [] ) {
 		$input    = is_array( $input ) ? $input : [];
 		$per_page = Webmastery_MCP_Input::per_page( $input, 100, 200 );
@@ -159,6 +175,12 @@ class Webmastery_MCP_Menus {
 		] );
 	}
 
+	/**
+	 * Update fields of one navigation menu item.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array<string, mixed>
+	 */
 	public static function update_menu_item( $input = [] ) {
 		$input   = is_array( $input ) ? $input : [];
 		$item_id = (int) ( $input['menu_item_id'] ?? 0 );
@@ -321,6 +343,7 @@ class Webmastery_MCP_Menus {
 	 *
 	 * @param WP_Term            $menu     Menu term.
 	 * @param array<string, int> $assigned Location to menu ID map.
+	 * @return array<string, mixed>
 	 */
 	private static function menu_record( WP_Term $menu, array $assigned ): array {
 		$locations = array_keys( array_filter( $assigned, static fn( $menu_id ) => (int) $menu->term_id === $menu_id ) );
@@ -338,6 +361,7 @@ class Webmastery_MCP_Menus {
 	 * Public item record. Items linking to a post the caller cannot read never expose its title or URL.
 	 *
 	 * @param object $item Item decorated by wp_setup_nav_menu_item().
+	 * @return array<string, mixed>
 	 */
 	private static function item_record( $item ): array {
 		$id         = (int) ( $item->db_id ?? $item->ID ?? 0 );
@@ -530,6 +554,12 @@ class Webmastery_MCP_Menus {
 		return 'parent_item_id is nested too deeply (or its ancestors already form a cycle).';
 	}
 
+	/**
+	 * Build an invalid_input error envelope.
+	 *
+	 * @param string $message Error message.
+	 * @return array<string, mixed>
+	 */
 	private static function invalid( string $message ): array {
 		return Webmastery_MCP_Response::legacy_error( 'invalid_input', $message );
 	}

@@ -4,12 +4,23 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Content_Hygiene {
 
+	/**
+	 * Register the content hygiene abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_list_orphaned_media();
 		self::register_list_posts_no_featured_image();
 		self::register_list_stuck_scheduled();
 	}
 
+	/**
+	 * Shared pagination properties for the hygiene list schemas.
+	 *
+	 * @param int $default_per_page Default page size.
+	 * @return array<string, array<string, mixed>>
+	 */
 	private static function pagination_schema( $default_per_page = 20 ) {
 		return [
 			'per_page' => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => $default_per_page ],
@@ -17,18 +28,43 @@ class Webmastery_MCP_Content_Hygiene {
 		];
 	}
 
+	/**
+	 * Requested page size.
+	 *
+	 * @param array<string, mixed> $input            Ability input.
+	 * @param int                  $default_per_page Default page size.
+	 * @return int
+	 */
 	private static function per_page( $input, $default_per_page = 20 ) {
 		return Webmastery_MCP_Input::per_page( $input, $default_per_page );
 	}
 
+	/**
+	 * Requested page number.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return int
+	 */
 	private static function page( $input ) {
 		return Webmastery_MCP_Input::page( $input );
 	}
 
+	/**
+	 * Permission callback requiring a capability.
+	 *
+	 * @param string $cap WordPress capability.
+	 * @return Closure
+	 */
 	private static function permission( $cap ) {
 		return Webmastery_MCP_Permissions::cap( $cap );
 	}
 
+	/**
+	 * Permission callback for the posts-without-featured-image listing.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return true|WP_Error
+	 */
 	public static function posts_no_featured_image_permission( $input = [] ) {
 		$post_type = sanitize_key( $input['post_type'] ?? 'post' );
 		if ( 'page' === $post_type && ! current_user_can( 'edit_pages' ) ) {
@@ -41,6 +77,11 @@ class Webmastery_MCP_Content_Hygiene {
 		return true;
 	}
 
+	/**
+	 * Register the list-orphaned-media ability.
+	 *
+	 * @return void
+	 */
 	private static function register_list_orphaned_media() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-orphaned-media', [
 			'label'               => 'List Orphaned Media',
@@ -60,6 +101,12 @@ class Webmastery_MCP_Content_Hygiene {
 		] );
 	}
 
+	/**
+	 * List unattached media that nothing is known to reference.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array{success: true, data: array<string, mixed>}|WP_Error
+	 */
 	public static function execute_list_orphaned_media( $input = [] ) {
 		$args = [
 			'post_type'      => 'attachment',
@@ -102,6 +149,12 @@ class Webmastery_MCP_Content_Hygiene {
 		];
 	}
 
+	/**
+	 * Public record for an orphaned attachment.
+	 *
+	 * @param WP_Post|int $attachment Attachment post or ID.
+	 * @return array<string, mixed>
+	 */
 	private static function normalize_orphaned_media( $attachment ) {
 		$attachment = get_post( $attachment );
 		$file       = get_attached_file( $attachment->ID );
@@ -115,6 +168,12 @@ class Webmastery_MCP_Content_Hygiene {
 		], [ 'title', 'url' ] );
 	}
 
+	/**
+	 * Whether an attachment is a featured image or is referenced by post content.
+	 *
+	 * @param WP_Post|int $attachment Attachment post or ID.
+	 * @return bool|WP_Error
+	 */
 	public static function is_attachment_referenced( $attachment ) {
 		$attachment = get_post( $attachment );
 		if ( ! $attachment ) {
@@ -124,6 +183,12 @@ class Webmastery_MCP_Content_Hygiene {
 		return is_wp_error( $result ) ? $result : $result[ $attachment->ID ];
 	}
 
+	/**
+	 * Check a bounded set of attachments for featured-image and content references.
+	 *
+	 * @param list<WP_Post|int> $attachments Attachment posts or IDs (at most 100).
+	 * @return array<int, bool>|WP_Error Referenced flag keyed by attachment ID.
+	 */
 	public static function attachments_referenced( array $attachments ) {
 		global $wpdb;
 
@@ -193,6 +258,12 @@ class Webmastery_MCP_Content_Hygiene {
 		return $hits;
 	}
 
+	/**
+	 * Build the error for a failed content hygiene query.
+	 *
+	 * @param string $context Description of what was being read.
+	 * @return WP_Error
+	 */
 	private static function database_error( $context ) {
 		return Webmastery_MCP_Response::local_error(
 			'content_hygiene_query_failed',
@@ -203,6 +274,11 @@ class Webmastery_MCP_Content_Hygiene {
 		);
 	}
 
+	/**
+	 * Register the list-posts-no-featured-image ability.
+	 *
+	 * @return void
+	 */
 	private static function register_list_posts_no_featured_image() {
 		$properties              = self::pagination_schema();
 		$properties['post_type'] = [ 'type' => 'string', 'enum' => [ 'post', 'page' ], 'default' => 'post' ];
@@ -225,6 +301,12 @@ class Webmastery_MCP_Content_Hygiene {
 		] );
 	}
 
+	/**
+	 * List published posts or pages without a featured image.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array<string, mixed>|WP_Error
+	 */
 	public static function execute_list_posts_no_featured_image( $input = [] ) {
 		$post_type = sanitize_key( $input['post_type'] ?? 'post' );
 		if ( ! in_array( $post_type, [ 'post', 'page' ], true ) ) {
@@ -274,6 +356,12 @@ class Webmastery_MCP_Content_Hygiene {
 		];
 	}
 
+	/**
+	 * Public summary for a post without a featured image.
+	 *
+	 * @param WP_Post|int $post Post or ID.
+	 * @return array<string, mixed>
+	 */
 	private static function normalize_post_summary( $post ) {
 		$post = get_post( $post );
 
@@ -286,6 +374,11 @@ class Webmastery_MCP_Content_Hygiene {
 		], [ 'title', 'url' ] );
 	}
 
+	/**
+	 * Register the list-stuck-scheduled ability.
+	 *
+	 * @return void
+	 */
 	private static function register_list_stuck_scheduled() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-stuck-scheduled', [
 			'label'               => 'List Stuck Scheduled Posts',
@@ -305,6 +398,12 @@ class Webmastery_MCP_Content_Hygiene {
 		] );
 	}
 
+	/**
+	 * List scheduled posts whose publish time has passed.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array{success: true, data: array{items: list<array<string, mixed>>, total: int, total_pages: int}}
+	 */
 	public static function execute_list_stuck_scheduled( $input = [] ) {
 		$args = [
 			'post_type'      => 'post',
@@ -336,6 +435,12 @@ class Webmastery_MCP_Content_Hygiene {
 		];
 	}
 
+	/**
+	 * Public record for a stuck scheduled post.
+	 *
+	 * @param WP_Post|int $post Post or ID.
+	 * @return array<string, mixed>
+	 */
 	private static function normalize_stuck_scheduled_post( $post ) {
 		$post = get_post( $post );
 

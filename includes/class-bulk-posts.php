@@ -4,11 +4,22 @@ defined( 'ABSPATH' ) || exit;
 
 final class Webmastery_MCP_Bulk_Posts {
 
+	/**
+	 * Register the bulk post abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_bulk_trash_posts();
 		self::register_bulk_publish_posts();
 	}
 
+	/**
+	 * Build the shared input schema for the bulk post abilities.
+	 *
+	 * @param string $description Description of the ids property.
+	 * @return array<string, mixed>
+	 */
 	private static function bulk_post_ids_schema( $description ) {
 		return [
 			'type'       => 'object',
@@ -27,6 +38,12 @@ final class Webmastery_MCP_Bulk_Posts {
 		];
 	}
 
+	/**
+	 * Validate the raw bulk input before any write.
+	 *
+	 * @param array<string, mixed> $input Raw ability input.
+	 * @return array<string, mixed>|null Error envelope, or null when the input is valid.
+	 */
 	public static function bulk_input_error( $input ) {
 		if ( true !== ( $input['confirm'] ?? null ) ) {
 			return Webmastery_MCP_Response::legacy_error( 'missing_confirmation', 'Set confirm to true to acknowledge this operation, including a dry run.' );
@@ -49,6 +66,15 @@ final class Webmastery_MCP_Bulk_Posts {
 		return null;
 	}
 
+	/**
+	 * Build the success envelope for a bulk post operation.
+	 *
+	 * @param list<int>                            $ids       Normalized post IDs.
+	 * @param list<array{id: int, status: string}> $successes Posts changed (or that would be changed).
+	 * @param list<array<string, mixed>>           $failures  Per-item error records.
+	 * @param bool                                 $dry_run   Whether this was a dry run.
+	 * @return array{success: true, data: array<string, mixed>}
+	 */
 	private static function bulk_post_summary( $ids, $successes, $failures, $dry_run ) {
 		$result = [
 			'success' => true,
@@ -66,6 +92,11 @@ final class Webmastery_MCP_Bulk_Posts {
 		return $result;
 	}
 
+	/**
+	 * Register the bulk-trash-posts ability.
+	 *
+	 * @return void
+	 */
 	private static function register_bulk_trash_posts() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/bulk-trash-posts', [
 			'label'               => 'Bulk Trash Posts',
@@ -121,6 +152,11 @@ final class Webmastery_MCP_Bulk_Posts {
 		] );
 	}
 
+	/**
+	 * Register the bulk-publish-posts ability.
+	 *
+	 * @return void
+	 */
 	private static function register_bulk_publish_posts() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/bulk-publish-posts', [
 			'label'               => 'Bulk Publish Posts',

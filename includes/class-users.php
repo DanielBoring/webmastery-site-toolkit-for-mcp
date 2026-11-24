@@ -4,12 +4,23 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Users {
 
+	/**
+	 * Register the user abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_list();
 		self::register_get();
 		self::register_user_access_audit();
 	}
 
+	/**
+	 * Public user record; login and email only for callers who may edit the user.
+	 *
+	 * @param WP_User|int $user User object or ID.
+	 * @return array<string, mixed>|null Null when the user does not exist.
+	 */
 	private static function normalize( $user ) {
 		$user = $user instanceof WP_User ? $user : get_userdata( $user );
 		if ( ! $user ) {
@@ -33,14 +44,30 @@ class Webmastery_MCP_Users {
 		return Webmastery_MCP_Untrusted::mark( $data, [ 'display_name', 'nicename', 'url', 'login', 'email' ] );
 	}
 
+	/**
+	 * Permission callback for the user listing abilities.
+	 *
+	 * @return bool|WP_Error
+	 */
 	public static function permission() {
 		return Webmastery_MCP_Permissions::check( 'list_users' );
 	}
 
+	/**
+	 * Permission callback for the user access audit.
+	 *
+	 * @return bool|WP_Error
+	 */
 	public static function audit_permission() {
 		return Webmastery_MCP_Permissions::check( 'edit_users' );
 	}
 
+	/**
+	 * Administrator account record for the access audit.
+	 *
+	 * @param WP_User|int $user User object or ID.
+	 * @return array<string, mixed>|null Null when the user does not exist.
+	 */
 	private static function normalize_admin_account( $user ) {
 		$user = $user instanceof WP_User ? $user : get_userdata( $user );
 		if ( ! $user ) {
@@ -56,6 +83,12 @@ class Webmastery_MCP_Users {
 		], [ 'login', 'email', 'last_login' ] );
 	}
 
+	/**
+	 * Last login time recorded by a known login-tracking meta key.
+	 *
+	 * @param int $user_id User ID.
+	 * @return string|null ISO 8601 time, the raw stored value, or null when none is recorded.
+	 */
 	private static function get_last_login( $user_id ) {
 		$meta_keys = [
 			'last_login',
@@ -75,6 +108,13 @@ class Webmastery_MCP_Users {
 		return null;
 	}
 
+	/**
+	 * Application password record without any secret material.
+	 *
+	 * @param WP_User              $user     Owner of the password.
+	 * @param array<string, mixed> $password Stored application password entry.
+	 * @return array<string, mixed>
+	 */
 	private static function normalize_application_password( $user, $password ) {
 		$last_used = $password['last_used'] ?? null;
 		if ( is_numeric( $last_used ) ) {
@@ -89,6 +129,11 @@ class Webmastery_MCP_Users {
 		], [ 'user_login', 'app_name' ] );
 	}
 
+	/**
+	 * Register the list-users ability.
+	 *
+	 * @return void
+	 */
 	private static function register_list() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-users', [
 			'label'               => 'List Users',
@@ -149,6 +194,11 @@ class Webmastery_MCP_Users {
 		] );
 	}
 
+	/**
+	 * Register the get-user ability.
+	 *
+	 * @return void
+	 */
 	private static function register_get() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-user', [
 			'label'               => 'Get User',
@@ -178,6 +228,11 @@ class Webmastery_MCP_Users {
 		] );
 	}
 
+	/**
+	 * Register the user-access-audit ability.
+	 *
+	 * @return void
+	 */
 	private static function register_user_access_audit() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/user-access-audit', [
 			'label'               => 'User Access Audit',
@@ -197,6 +252,12 @@ class Webmastery_MCP_Users {
 	 */
 	private const ADMIN_WARNING_THRESHOLD = 3;
 
+	/**
+	 * Audit administrator accounts and their application passwords.
+	 *
+	 * @param array<string, mixed> $input Ability input (unused).
+	 * @return array<string, mixed>
+	 */
 	public static function execute_user_access_audit( $input = [] ) {
 		$query        = new WP_User_Query(
 			[

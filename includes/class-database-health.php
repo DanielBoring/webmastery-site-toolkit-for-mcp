@@ -6,6 +6,11 @@ class Webmastery_MCP_Database_Health {
 
 	private const AUTOLOAD_THRESHOLD_BYTES = 921600;
 
+	/**
+	 * Register the database-health ability.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/database-health', [
 			'label'               => 'Database Health',
@@ -31,10 +36,21 @@ class Webmastery_MCP_Database_Health {
 		] );
 	}
 
+	/**
+	 * Permission callback requiring manage_options.
+	 *
+	 * @return bool|WP_Error
+	 */
 	public static function permission() {
 		return Webmastery_MCP_Permissions::check( 'manage_options' );
 	}
 
+	/**
+	 * Audit database bloat indicators.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array{success: true, data: array<string, mixed>}|WP_Error
+	 */
 	public static function execute( $input = [] ) {
 		$permission = self::permission();
 		if ( is_wp_error( $permission ) ) {
@@ -82,6 +98,11 @@ class Webmastery_MCP_Database_Health {
 		];
 	}
 
+	/**
+	 * Count post revisions and estimate their size.
+	 *
+	 * @return array{count: int, estimated_bytes: int, wp_post_revisions_defined: bool, wp_post_revisions_value: bool|int|string|null, revision_limit_configured: bool, limit_not_configured: bool}|WP_Error
+	 */
 	private static function get_revision_report() {
 		global $wpdb;
 
@@ -123,6 +144,11 @@ class Webmastery_MCP_Database_Health {
 		];
 	}
 
+	/**
+	 * Count post meta rows whose post no longer exists.
+	 *
+	 * @return array{count: int}|WP_Error
+	 */
 	private static function get_orphaned_post_meta_report() {
 		global $wpdb;
 
@@ -142,6 +168,11 @@ class Webmastery_MCP_Database_Health {
 		];
 	}
 
+	/**
+	 * Count expired transient timeout rows.
+	 *
+	 * @return array{count: int}|WP_Error
+	 */
 	private static function get_expired_transients_report() {
 		global $wpdb;
 
@@ -165,6 +196,11 @@ class Webmastery_MCP_Database_Health {
 		];
 	}
 
+	/**
+	 * Measure the size of autoloaded options against the threshold.
+	 *
+	 * @return array{total_bytes: int, threshold_bytes: int, over_threshold: bool}|WP_Error
+	 */
 	private static function get_autoloaded_options_report() {
 		global $wpdb;
 
@@ -195,6 +231,12 @@ class Webmastery_MCP_Database_Health {
 		];
 	}
 
+	/**
+	 * Report table sizes, with private labels unless raw names were requested.
+	 *
+	 * @param bool $include_table_names Whether to return raw table identifiers.
+	 * @return list<array{table: string, is_core_table: bool, rows: int, data_bytes: int, index_bytes: int, total_bytes: int}>|WP_Error
+	 */
 	private static function get_table_sizes( bool $include_table_names ) {
 		global $wpdb;
 
@@ -261,6 +303,11 @@ class Webmastery_MCP_Database_Health {
 		);
 	}
 
+	/**
+	 * Value of the WP_POST_REVISIONS constant, or null when it is not defined.
+	 *
+	 * @return bool|int|string|null
+	 */
 	private static function get_revision_limit_value() {
 		if ( ! defined( 'WP_POST_REVISIONS' ) ) {
 			return null;
@@ -277,10 +324,21 @@ class Webmastery_MCP_Database_Health {
 		return (string) WP_POST_REVISIONS;
 	}
 
+	/**
+	 * Whether the revision limit is explicitly disabled or set to a non-negative integer.
+	 *
+	 * @param bool|int|string|null $limit_value Value from get_revision_limit_value().
+	 * @return bool
+	 */
 	private static function is_revision_limit_configured( $limit_value ) {
 		return false === $limit_value || ( is_int( $limit_value ) && $limit_value >= 0 );
 	}
 
+	/**
+	 * Option autoload values that count as autoloaded.
+	 *
+	 * @return list<string>
+	 */
 	private static function get_autoload_values() {
 		if ( function_exists( 'wp_autoload_values_to_autoload' ) ) {
 			return array_values( array_map( 'strval', wp_autoload_values_to_autoload() ) );
@@ -289,6 +347,12 @@ class Webmastery_MCP_Database_Health {
 		return [ 'yes', 'on', 'auto-on', 'auto' ];
 	}
 
+	/**
+	 * Build the error for a failed database health query.
+	 *
+	 * @param string $context Description of what was being read.
+	 * @return WP_Error
+	 */
 	private static function database_error( $context ) {
 		return Webmastery_MCP_Response::local_error(
 			'database_health_query_failed',

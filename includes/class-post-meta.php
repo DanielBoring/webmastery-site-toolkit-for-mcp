@@ -70,18 +70,38 @@ final class Webmastery_MCP_Post_Meta {
 		'twitter_image'         => 'rank_math_twitter_image',
 	];
 
+	/**
+	 * Rank Math post meta keys by field name (inspect-only).
+	 *
+	 * @return array<string, string>
+	 */
 	public static function rankmath_keys(): array {
 		return self::RANKMATH;
 	}
 
+	/**
+	 * Yoast SEO post meta keys by field name.
+	 *
+	 * @return array<string, string>
+	 */
 	public static function yoast_keys(): array {
 		return array_map( static fn( $definition ) => $definition[0], self::YOAST );
 	}
 
+	/**
+	 * SEOPress post meta keys by field name.
+	 *
+	 * @return array<string, string>
+	 */
 	public static function seopress_keys(): array {
 		return array_map( static fn( $definition ) => $definition[0], self::SEOPRESS );
 	}
 
+	/**
+	 * Protected SEO meta keys that may be written, mapped to their value type.
+	 *
+	 * @return array<string, string>
+	 */
 	public static function writable_keys(): array {
 		$keys = [];
 		foreach ( array_merge( array_values( self::YOAST ), array_values( self::SEOPRESS ) ) as [ $key, $type ] ) {
@@ -96,20 +116,41 @@ final class Webmastery_MCP_Post_Meta {
 	private const POST_META_VALUE_MAX_BYTES = 100000;
 	private const POST_META_VALUE_MAX_DEPTH = 10;
 
+	/**
+	 * Register the post meta abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_get_post_meta();
 		self::register_update_post_meta();
 		self::register_delete_post_meta();
 	}
 
+	/**
+	 * Protected meta keys the plugin may write, mapped to their value type.
+	 *
+	 * @return array<string, string>
+	 */
 	private static function writable_protected_meta_keys() {
 		return self::writable_keys();
 	}
 
+	/**
+	 * Allowlist of protected post meta keys, keyed by meta key.
+	 *
+	 * @return array<string, true>
+	 */
 	private static function allowed_protected_post_meta_keys() {
 		return array_fill_keys( array_keys( self::writable_protected_meta_keys() ), true );
 	}
 
+	/**
+	 * Validate a requested post meta key.
+	 *
+	 * @param mixed $key Requested meta key.
+	 * @return string|WP_Error The key, or an invalid_meta_key error.
+	 */
 	private static function validate_post_meta_key( $key ) {
 		$key = (string) $key;
 
@@ -126,10 +167,22 @@ final class Webmastery_MCP_Post_Meta {
 		return $key;
 	}
 
+	/**
+	 * Whether a post meta key is unprotected or explicitly allowlisted.
+	 *
+	 * @param string $key Meta key.
+	 * @return bool
+	 */
 	private static function can_access_post_meta_key( $key ) {
 		return ! is_protected_meta( $key, 'post' ) || isset( self::allowed_protected_post_meta_keys()[ $key ] );
 	}
 
+	/**
+	 * Reject post writes that mix metadata with other fields.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array<string, mixed>|null Error envelope, or null when no metadata fields are present.
+	 */
 	public static function reject_combined_metadata( array $input ): ?array {
 		$fields = [];
 		foreach ( array_keys( $input ) as $field ) {
@@ -153,6 +206,14 @@ final class Webmastery_MCP_Post_Meta {
 		return self::can_edit_post_meta_key( $post_id, $key, 'edit_post_meta', in_array( $key, self::RANKMATH, true ) );
 	}
 
+	/**
+	 * Whether an unregistered SEO key relies on the plugin's compatibility authorization.
+	 *
+	 * @param string       $key          Meta key.
+	 * @param string|false $type         Post type.
+	 * @param bool         $inspect_only Whether the key is inspect-only.
+	 * @return bool
+	 */
 	private static function uses_post_meta_compatibility_auth( $key, $type, $inspect_only = false ) {
 		return ( $inspect_only || isset( self::allowed_protected_post_meta_keys()[ $key ] ) )
 			&& ! isset( get_registered_meta_keys( 'post' )[ $key ] )
@@ -162,6 +223,15 @@ final class Webmastery_MCP_Post_Meta {
 			&& ! has_filter( "auth_post_{$type}_meta_{$key}" );
 	}
 
+	/**
+	 * Whether the current user may use a capability on a post meta key.
+	 *
+	 * @param int    $post_id      Post ID.
+	 * @param string $key          Meta key.
+	 * @param string $cap          Meta capability to check.
+	 * @param bool   $inspect_only Whether the key is inspect-only.
+	 * @return bool
+	 */
 	private static function can_edit_post_meta_key( $post_id, $key, $cap = 'edit_post_meta', $inspect_only = false ) {
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return false;
@@ -186,6 +256,13 @@ final class Webmastery_MCP_Post_Meta {
 		}
 	}
 
+	/**
+	 * Sanitize a post meta value, recursing into arrays and objects.
+	 *
+	 * @param array<mixed>|bool|float|int|object|string|null $value Raw meta value.
+	 * @param int                                            $depth Current nesting depth.
+	 * @return array<int|string, mixed>|bool|float|int|string|WP_Error
+	 */
 	private static function normalize_post_meta_value( $value, $depth = 0 ) {
 		if ( $depth > self::POST_META_VALUE_MAX_DEPTH ) {
 			return Webmastery_MCP_Response::local_error( 'invalid_meta_value', 'meta_value nesting is too deep.' );
@@ -225,6 +302,12 @@ final class Webmastery_MCP_Post_Meta {
 		return Webmastery_MCP_Response::local_error( 'invalid_meta_value', 'meta_value must be a scalar, object, or array.' );
 	}
 
+	/**
+	 * Normalize a post meta value and enforce the encoded size limit.
+	 *
+	 * @param array<mixed>|bool|float|int|object|string|null $value Raw meta value.
+	 * @return array<int|string, mixed>|bool|float|int|string|WP_Error
+	 */
 	private static function validate_post_meta_value( $value ) {
 		$normalized = self::normalize_post_meta_value( $value );
 		if ( is_wp_error( $normalized ) ) {
@@ -242,6 +325,13 @@ final class Webmastery_MCP_Post_Meta {
 		return $normalized;
 	}
 
+	/**
+	 * Prepare the value to store for a meta key.
+	 *
+	 * @param string                                         $key   Validated meta key.
+	 * @param array<mixed>|bool|float|int|object|string|null $value Raw meta value.
+	 * @return array<int|string, mixed>|bool|float|int|string|WP_Error
+	 */
 	private static function prepare_post_meta_update_value( $key, $value ) {
 		$protected_keys = self::writable_protected_meta_keys();
 
@@ -257,6 +347,12 @@ final class Webmastery_MCP_Post_Meta {
 		return self::validate_post_meta_value( $value );
 	}
 
+	/**
+	 * Normalize a stored meta value for the response, recursing into arrays.
+	 *
+	 * @param mixed $value Stored meta value.
+	 * @return mixed
+	 */
 	private static function normalize_post_meta_response_value( $value ) {
 		if ( is_array( $value ) ) {
 			foreach ( $value as $key => $item ) {
@@ -267,6 +363,13 @@ final class Webmastery_MCP_Post_Meta {
 		return $value;
 	}
 
+	/**
+	 * Normalize a value for a protected SEO meta key of a given type.
+	 *
+	 * @param array<mixed>|bool|float|int|object|string|null $value Raw meta value.
+	 * @param string                                         $type  Value type: string, url, integer_string, boolean_string or seopress_boolean_string.
+	 * @return string|null Null when the value is not valid for the type.
+	 */
 	private static function normalize_meta_value( $value, $type = 'string' ) {
 		if ( null === $value ) {
 			return '';
@@ -298,6 +401,11 @@ final class Webmastery_MCP_Post_Meta {
 		return sanitize_text_field( (string) $value );
 	}
 
+	/**
+	 * Register the get-post-meta ability.
+	 *
+	 * @return void
+	 */
 	private static function register_get_post_meta() {
 		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key,WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Ability schema and response field names, not query arguments.
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-post-meta', [
@@ -366,6 +474,11 @@ final class Webmastery_MCP_Post_Meta {
 		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_key,WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 	}
 
+	/**
+	 * Register the update-post-meta ability.
+	 *
+	 * @return void
+	 */
 	private static function register_update_post_meta() {
 		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key,WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Ability schema and response field names, not query arguments.
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/update-post-meta', [
@@ -435,6 +548,11 @@ final class Webmastery_MCP_Post_Meta {
 		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_key,WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 	}
 
+	/**
+	 * Register the delete-post-meta ability.
+	 *
+	 * @return void
+	 */
 	private static function register_delete_post_meta() {
 		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Ability schema and response field names, not query arguments.
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/delete-post-meta', [

@@ -6,6 +6,11 @@ class Webmastery_MCP_Updates {
 
 	private const ITEM_LIMIT = 100;
 
+	/**
+	 * Register the updates overview ability.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-updates-overview', [
 			'label'               => 'Get Updates Overview',
@@ -20,6 +25,11 @@ class Webmastery_MCP_Updates {
 		] );
 	}
 
+	/**
+	 * Permission callback requiring any update capability.
+	 *
+	 * @return true|WP_Error
+	 */
 	public static function permission() {
 		if ( current_user_can( 'update_core' ) || current_user_can( 'update_plugins' ) || current_user_can( 'update_themes' ) ) {
 			return true;
@@ -28,6 +38,12 @@ class Webmastery_MCP_Updates {
 		return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires update_core, update_plugins or update_themes capability.' );
 	}
 
+	/**
+	 * Report cached core, plugin and theme update data.
+	 *
+	 * @param array<string, mixed> $input Ability input (unused).
+	 * @return array<string, mixed>
+	 */
 	public static function execute( $input = [] ) {
 		$data    = [];
 		$omitted = [];
@@ -60,6 +76,11 @@ class Webmastery_MCP_Updates {
 		return Webmastery_MCP_Response::ok( $data );
 	}
 
+	/**
+	 * Core update section from the cached update_core transient.
+	 *
+	 * @return array{current_version: string, update_available: bool|null, latest_version: string|null, data_cached: bool, last_checked: string|null}
+	 */
 	private static function core_section(): array {
 		$transient = get_site_transient( 'update_core' );
 		$entries   = self::field( $transient, 'updates' );
@@ -89,6 +110,11 @@ class Webmastery_MCP_Updates {
 		];
 	}
 
+	/**
+	 * Plugin update section from the cached update_plugins transient.
+	 *
+	 * @return array{data_cached: bool, last_checked: string|null, count: int, truncated: bool, items: list<array<string, mixed>>}
+	 */
 	private static function plugins_section(): array {
 		if ( ! function_exists( 'get_plugins' ) && defined( 'ABSPATH' ) && is_readable( ABSPATH . 'wp-admin/includes/plugin.php' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
@@ -116,6 +142,11 @@ class Webmastery_MCP_Updates {
 		return self::section( $transient, $cached, $records );
 	}
 
+	/**
+	 * Theme update section from the cached update_themes transient.
+	 *
+	 * @return array{data_cached: bool, last_checked: string|null, count: int, truncated: bool, items: list<array<string, mixed>>}
+	 */
 	private static function themes_section(): array {
 		$transient = get_site_transient( 'update_themes' );
 		$response  = self::field( $transient, 'response' );
@@ -148,6 +179,7 @@ class Webmastery_MCP_Updates {
 	 * @param mixed                               $transient Raw site transient value.
 	 * @param bool                                $cached    Whether the transient had a usable response list.
 	 * @param array<string, array<string, mixed>> $records Validated items keyed by basename/stylesheet.
+	 * @return array{data_cached: bool, last_checked: string|null, count: int, truncated: bool, items: list<array<string, mixed>>}
 	 */
 	private static function section( $transient, bool $cached, array $records ): array {
 		ksort( $records, SORT_STRING );
@@ -193,6 +225,13 @@ class Webmastery_MCP_Updates {
 		return gmdate( 'Y-m-d\TH:i:s\Z', (int) $value );
 	}
 
+	/**
+	 * Trimmed, tag-stripped text capped at 200 characters, or the fallback.
+	 *
+	 * @param mixed  $value    Raw value.
+	 * @param string $fallback Text returned when the value is not usable.
+	 * @return string
+	 */
 	private static function plain_text( $value, string $fallback ): string {
 		$text = is_string( $value ) ? trim( wp_strip_all_tags( $value ) ) : '';
 
