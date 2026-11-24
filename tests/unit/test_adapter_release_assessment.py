@@ -214,12 +214,13 @@ class AdapterReleaseAssessmentTest(unittest.TestCase):
             self.assertIsNotNone(expression)
             probe = re.sub(r"\$plugin_data\['version'\]|\$summary\['adapter'\]\['version'\] \?\? null",
                            "$version", expression.group())
-            # The scheduled 0.7.1 lanes used to stop at this guard before
-            # exercising any transport assertions. Admission stays explicit:
-            # neither a future release nor a malformed version is assessed.
+            # The scheduled 0.7.1 and 0.7.2 lanes used to stop at this guard
+            # before exercising any transport assertions. Admission stays
+            # explicit: neither a future release nor a malformed version is
+            # assessed.
             for version, allowed in (("0.6.1", True), ("0.7.0", True), ("0.7.1", True),
-                                     ("0.7.2", False), ("0.8.0", False),
-                                     ("0.7.1-rc1", False), ("trunk", False), (None, False)):
+                                     ("0.7.2", True), ("0.7.3", False), ("0.8.0", False),
+                                     ("0.7.1-rc1", False), ("0.7.2-rc1", False), ("trunk", False), (None, False)):
                 value = "null" if version is None else "'" + version + "'"
                 actual = subprocess.check_output(
                     ["php", "-r", "$version=" + value + ";echo " + probe + ' ? "yes" : "no";'], text=True
