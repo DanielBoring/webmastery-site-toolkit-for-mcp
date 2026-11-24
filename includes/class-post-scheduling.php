@@ -3,6 +3,14 @@
 defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Post_Scheduling {
+	/**
+	 * Validate a requested schedule and build the post date arguments for it.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @param WP_Post|null         $post  Existing post when updating, or null when creating.
+	 * @param int|null             $now   Current Unix timestamp, defaulting to time().
+	 * @return array{}|array{post_date: string, post_date_gmt: string, edit_date?: true}|WP_Error
+	 */
 	public static function prepare( $input, $post = null, $now = null ) {
 		$now    = $now ?? time();
 		$status = isset( $input['status'] ) && in_array( $input['status'], [ 'draft', 'publish', 'pending', 'private', 'future' ], true )
@@ -64,6 +72,12 @@ class Webmastery_MCP_Post_Scheduling {
 		return $args;
 	}
 
+	/**
+	 * Check that a date is a real Y-m-d H:i:s calendar date and time.
+	 *
+	 * @param string|false $date Formatted or stored date.
+	 * @return bool
+	 */
 	private static function valid_stored_date( $date ) {
 		if ( ! is_string( $date ) || ! preg_match( '/^([0-9]{4})-([0-9]{2})-([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})$/D', $date, $parts ) ) {
 			return false;
@@ -76,10 +90,20 @@ class Webmastery_MCP_Post_Scheduling {
 			&& (int) $parts[6] < 60;
 	}
 
+	/**
+	 * Error for an unparseable or impossible scheduled date.
+	 *
+	 * @return WP_Error
+	 */
 	private static function invalid_date() {
 		return Webmastery_MCP_Response::local_error( 'invalid_scheduled_date', 'Provide a valid scheduled date without invalid calendar or time values.' );
 	}
 
+	/**
+	 * Error for a future status without a usable scheduled date.
+	 *
+	 * @return WP_Error
+	 */
 	private static function missing_date() {
 		return Webmastery_MCP_Response::local_error( 'missing_scheduled_date', 'Provide a nonempty scheduled date when newly scheduling content; omit it only to retain an existing valid future schedule.' );
 	}

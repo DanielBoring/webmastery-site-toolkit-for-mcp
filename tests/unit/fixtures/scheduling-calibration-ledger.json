@@ -30,9 +30,9 @@
             "git_blob": "c025ffdca479c87d89d84b69f36f8e39995bf469"
         },
         "includes/class-post-scheduling.php": {
-            "baseline_sha256": "43b37d5742d4100eab15c71075d411c9cc2bc6ad7cbc5b366332a71b7ca85a7a",
-            "current_sha256": "43b37d5742d4100eab15c71075d411c9cc2bc6ad7cbc5b366332a71b7ca85a7a",
-            "git_blob": "5e7085fa23d0182ac0e8549456f480031672ee6b"
+            "baseline_sha256": "25802c7d0ba78d3ae7a80912e2ed604159e4ce5d1ad7e77cc735e21529936e7f",
+            "current_sha256": "25802c7d0ba78d3ae7a80912e2ed604159e4ce5d1ad7e77cc735e21529936e7f",
+            "git_blob": "bdf60ca8347066bf35a422535ea2a70e1bc590b1"
         },
         "includes/class-input.php": {
             "baseline_sha256": "7e84ddf668840c01826a2865fc8929f3f55ad2ac49d8b038b5210a751925fc30",

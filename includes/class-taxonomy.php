@@ -4,6 +4,11 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Taxonomy {
 
+	/**
+	 * Register the category and tag abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_list( 'category', 'Categories' );
 		self::register_list( 'post_tag', 'Tags' );
@@ -17,6 +22,12 @@ class Webmastery_MCP_Taxonomy {
 		self::register_delete( 'post_tag' );
 	}
 
+	/**
+	 * Normalize a term for responses.
+	 *
+	 * @param WP_Term $term Term.
+	 * @return array{id: int, name: string, slug: string, description: string, count: int, parent: int}
+	 */
 	private static function normalize_term( $term ) {
 		return [
 			'id'          => $term->term_id,
@@ -28,6 +39,14 @@ class Webmastery_MCP_Taxonomy {
 		];
 	}
 
+	/**
+	 * Check the taxonomy capability for a write, and the term capability when a term ID is given.
+	 *
+	 * @param string   $taxonomy Taxonomy name.
+	 * @param string   $action   Write action: edit or delete.
+	 * @param int|null $term_id  Term ID, or null when creating.
+	 * @return true|WP_Error
+	 */
 	private static function check_write_permission( $taxonomy, $action, $term_id = null ) {
 		$tax = get_taxonomy( $taxonomy );
 		if ( ! $tax ) {
@@ -50,6 +69,13 @@ class Webmastery_MCP_Taxonomy {
 		return true;
 	}
 
+	/**
+	 * Register the list ability for a taxonomy.
+	 *
+	 * @param string $taxonomy Taxonomy name: category or post_tag.
+	 * @param string $label    Plural label.
+	 * @return void
+	 */
 	private static function register_list( $taxonomy, $label ) {
 		$ability = 'category' === $taxonomy ? 'categories' : 'tags';
 
@@ -105,6 +131,12 @@ class Webmastery_MCP_Taxonomy {
 		] );
 	}
 
+	/**
+	 * Register the get ability for a taxonomy.
+	 *
+	 * @param string $taxonomy Taxonomy name: category or post_tag.
+	 * @return void
+	 */
 	private static function register_get( $taxonomy ) {
 		$is_category = 'category' === $taxonomy;
 		$label       = $is_category ? 'Category' : 'Tag';
@@ -139,6 +171,12 @@ class Webmastery_MCP_Taxonomy {
 		] );
 	}
 
+	/**
+	 * Register the create ability for a taxonomy.
+	 *
+	 * @param string $taxonomy Taxonomy name: category or post_tag.
+	 * @return void
+	 */
 	private static function register_create( $taxonomy ) {
 		$is_category = 'category' === $taxonomy;
 		$label       = $is_category ? 'Category' : 'Tag';
@@ -201,6 +239,12 @@ class Webmastery_MCP_Taxonomy {
 		] );
 	}
 
+	/**
+	 * Register the update ability for a taxonomy.
+	 *
+	 * @param string $taxonomy Taxonomy name: category or post_tag.
+	 * @return void
+	 */
 	private static function register_update( $taxonomy ) {
 		$is_category = 'category' === $taxonomy;
 		$label       = $is_category ? 'Category' : 'Tag';
@@ -278,6 +322,12 @@ class Webmastery_MCP_Taxonomy {
 		] );
 	}
 
+	/**
+	 * Require confirm:true before a permanent term deletion.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array{success: false, error: array{code: string, reason: string, message: string, details: stdClass}}|null
+	 */
 	public static function delete_input_error( array $input ): ?array {
 		if ( true !== ( $input['confirm'] ?? null ) ) {
 			return Webmastery_MCP_Response::legacy_error( 'missing_confirmation', 'Set confirm to true to acknowledge permanent deletion.' );
@@ -285,6 +335,12 @@ class Webmastery_MCP_Taxonomy {
 		return null;
 	}
 
+	/**
+	 * Register the delete ability for a taxonomy.
+	 *
+	 * @param string $taxonomy Taxonomy name: category or post_tag.
+	 * @return void
+	 */
 	private static function register_delete( $taxonomy ) {
 		$is_category = 'category' === $taxonomy;
 		$label       = $is_category ? 'Category' : 'Tag';

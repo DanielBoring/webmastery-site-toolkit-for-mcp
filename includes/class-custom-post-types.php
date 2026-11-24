@@ -6,11 +6,21 @@ class Webmastery_MCP_Custom_Post_Types {
 
 	private const NAMESPACE = 'webmastery-site-toolkit-for-mcp';
 
+	/**
+	 * Register the custom post type abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_list_post_types();
 		self::register_dynamic_post_type_abilities();
 	}
 
+	/**
+	 * Register the item abilities for every eligible custom post type.
+	 *
+	 * @return void
+	 */
 	public static function register_dynamic_post_type_abilities() {
 		foreach ( self::ability_base_map() as $post_type => $ability_base ) {
 			$post_type_object = get_post_type_object( $post_type );
@@ -23,6 +33,11 @@ class Webmastery_MCP_Custom_Post_Types {
 		}
 	}
 
+	/**
+	 * Public, non-built-in post types shown in the admin UI, sorted by name.
+	 *
+	 * @return array<string, WP_Post_Type>
+	 */
 	private static function eligible_post_types() {
 		$post_types = get_post_types(
 			[
@@ -47,6 +62,11 @@ class Webmastery_MCP_Custom_Post_Types {
 		return $eligible;
 	}
 
+	/**
+	 * Map each eligible post type to a unique ability name base.
+	 *
+	 * @return array<string, string>
+	 */
 	private static function ability_base_map() {
 		$base_counts = [];
 		$bases       = [];
@@ -71,18 +91,44 @@ class Webmastery_MCP_Custom_Post_Types {
 		return $bases;
 	}
 
+	/**
+	 * Check whether an ability is already registered.
+	 *
+	 * @param string $ability_name Ability name.
+	 * @return bool
+	 */
 	private static function ability_registered( $ability_name ) {
 		return function_exists( 'wp_get_abilities' ) && array_key_exists( $ability_name, wp_get_abilities() );
 	}
 
+	/**
+	 * Build a custom post type ability name.
+	 *
+	 * @param string $action       Ability action: list, get, create, update or delete.
+	 * @param string $ability_base Ability name base.
+	 * @return string
+	 */
 	private static function ability_name( $action, $ability_base ) {
 		return self::NAMESPACE . "/{$action}-cpt-{$ability_base}";
 	}
 
+	/**
+	 * Map a generic capability to the post type's own capability.
+	 *
+	 * @param WP_Post_Type $post_type_object Post type.
+	 * @param string       $capability       Generic capability name.
+	 * @return string
+	 */
 	private static function cap( $post_type_object, $capability ) {
 		return $post_type_object->cap->{$capability} ?? $capability;
 	}
 
+	/**
+	 * Normalize a taxonomy for the post type listing.
+	 *
+	 * @param WP_Taxonomy $taxonomy Taxonomy.
+	 * @return array{name: string, label: string, hierarchical: bool, rest_base: string|bool, capabilities: array<string, string>}
+	 */
 	private static function normalize_taxonomy( $taxonomy ) {
 		return [
 			'name'        => $taxonomy->name,
@@ -93,6 +139,13 @@ class Webmastery_MCP_Custom_Post_Types {
 		];
 	}
 
+	/**
+	 * Normalize a post type and its generated ability names for responses.
+	 *
+	 * @param WP_Post_Type $post_type_object Post type.
+	 * @param string       $ability_base     Ability name base.
+	 * @return array{name: string, label: string, singular_label: string, description: string, ability_base: string, abilities: array{list: string, get: string, create: string, update: string, delete: string}, public: bool, show_ui: bool, show_in_rest: bool, rest_base: string|bool, hierarchical: bool, supports: list<string>, taxonomies: list<array{name: string, label: string, hierarchical: bool, rest_base: string|bool, capabilities: array<string, string>}>, capability_type: string, capabilities: array<string, string>}
+	 */
 	private static function normalize_post_type( $post_type_object, $ability_base ) {
 		$taxonomies = get_object_taxonomies( $post_type_object->name, 'objects' );
 
@@ -121,6 +174,13 @@ class Webmastery_MCP_Custom_Post_Types {
 		];
 	}
 
+	/**
+	 * Normalize a custom post type item for responses, adding its term IDs by taxonomy.
+	 *
+	 * @param int|WP_Post|null $post   Post ID or object.
+	 * @param string           $fields Field projection: summary or full.
+	 * @return array<string, mixed>|null
+	 */
 	private static function normalize_post( $post, $fields = 'full' ) {
 		$post = get_post( $post );
 
@@ -149,19 +209,50 @@ class Webmastery_MCP_Custom_Post_Types {
 		return $data;
 	}
 
+	/**
+	 * Check whether the current user may read an item in full.
+	 *
+	 * @param WP_Post_Type $post_type_object Post type.
+	 * @param int|WP_Post  $post             Post ID or object.
+	 * @return bool
+	 */
 	private static function can_read_full_post( $post_type_object, $post ) {
 		return Webmastery_MCP_Post_Access::can_read( $post, self::cap( $post_type_object, 'read_post' ), self::cap( $post_type_object, 'edit_post' ), self::cap( $post_type_object, 'delete_post' ) );
 	}
 
+	/**
+	 * Read one window of items and keep the readable ones.
+	 *
+	 * @param WP_Post_Type         $post_type_object Post type.
+	 * @param array<string, mixed> $args             WP_Query arguments.
+	 * @param int                  $page             Requested page.
+	 * @param int                  $per_page         Requested page size.
+	 * @param string               $fields           Field projection: summary or full.
+	 * @return array{items: list<array<string, mixed>>, page: int, per_page: int, next_page: int|null}|WP_Error
+	 */
 	private static function query_readable_posts( $post_type_object, $args, $page, $per_page, $fields = 'summary' ) {
 		return Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => self::can_read_full_post( $post_type_object, $id ), static fn( $post ) => self::normalize_post( $post, $fields ) );
 	}
 
 
+	/**
+	 * Permission callback requiring the post type's mapped capability.
+	 *
+	 * @param WP_Post_Type $post_type_object Post type.
+	 * @param string       $capability       Generic capability name.
+	 * @return Closure
+	 */
 	private static function permission( $post_type_object, $capability ) {
 		return Webmastery_MCP_Permissions::cap( self::cap( $post_type_object, $capability ) );
 	}
 
+	/**
+	 * Permission callback requiring the mapped capability for the item in the id input.
+	 *
+	 * @param WP_Post_Type $post_type_object Post type.
+	 * @param string       $capability       Generic capability name.
+	 * @return Closure
+	 */
 	private static function object_permission( $post_type_object, $capability ) {
 		$type = $post_type_object->name;
 		$cap  = self::cap( $post_type_object, $capability );
@@ -169,6 +260,12 @@ class Webmastery_MCP_Custom_Post_Types {
 		return Webmastery_MCP_Permissions::object( $type, 'id', $cap, 'Custom post type item not found.', "Requires {$cap} capability for this custom post type item." );
 	}
 
+	/**
+	 * Permission callback for creating an item with the requested status and parent.
+	 *
+	 * @param WP_Post_Type $post_type_object Post type.
+	 * @return Closure(mixed=): (true|WP_Error)
+	 */
 	private static function create_permission( $post_type_object ) {
 		$create_cap  = self::cap( $post_type_object, 'create_posts' );
 		$publish_cap = self::cap( $post_type_object, 'publish_posts' );
@@ -192,6 +289,11 @@ class Webmastery_MCP_Custom_Post_Types {
 		};
 	}
 
+	/**
+	 * Input schema for taxonomy term assignments.
+	 *
+	 * @return array{type: string, description: string, additionalProperties: array{type: string, items: array{type: string}}}
+	 */
 	private static function taxonomy_terms_schema() {
 		return [
 			'type'                 => 'object',
@@ -205,6 +307,13 @@ class Webmastery_MCP_Custom_Post_Types {
 		];
 	}
 
+	/**
+	 * Check that each taxonomy is registered for the post type and assignable by the current user.
+	 *
+	 * @param string $post_type      Post type name.
+	 * @param mixed  $taxonomy_terms Term IDs keyed by taxonomy name.
+	 * @return true|WP_Error
+	 */
 	private static function validate_taxonomy_terms( $post_type, $taxonomy_terms ) {
 		if ( empty( $taxonomy_terms ) ) {
 			return true;
@@ -231,6 +340,14 @@ class Webmastery_MCP_Custom_Post_Types {
 		return true;
 	}
 
+	/**
+	 * Validate and replace an item's terms for each given taxonomy.
+	 *
+	 * @param int    $post_id        Item ID.
+	 * @param string $post_type      Post type name.
+	 * @param mixed  $taxonomy_terms Term IDs keyed by taxonomy name.
+	 * @return array<string, array<int, int>>|WP_Error
+	 */
 	private static function assign_taxonomy_terms( $post_id, $post_type, $taxonomy_terms ) {
 		$validated = self::validate_taxonomy_terms( $post_type, $taxonomy_terms );
 
@@ -258,6 +375,12 @@ class Webmastery_MCP_Custom_Post_Types {
 		return $assigned;
 	}
 
+	/**
+	 * Input schema properties shared by the create and update abilities.
+	 *
+	 * @param WP_Post_Type $post_type_object Post type.
+	 * @return array<string, array<string, mixed>>
+	 */
 	private static function post_input_properties( $post_type_object ) {
 		$properties = [
 			'title'          => [ 'type' => 'string', 'description' => 'Custom post type item title.' ],
@@ -276,6 +399,13 @@ class Webmastery_MCP_Custom_Post_Types {
 		return $properties;
 	}
 
+	/**
+	 * Build sanitized post arguments from the supplied input fields.
+	 *
+	 * @param array<string, mixed> $input            Ability input.
+	 * @param list<string>         $allowed_statuses Statuses that may be applied.
+	 * @return array{post_title?: string, post_content?: string, post_excerpt?: string, post_name?: string, post_status?: string, post_parent?: int}
+	 */
 	private static function sanitized_post_args( $input, $allowed_statuses ) {
 		$args = [];
 
@@ -301,6 +431,11 @@ class Webmastery_MCP_Custom_Post_Types {
 		return $args;
 	}
 
+	/**
+	 * Register the list-post-types ability.
+	 *
+	 * @return void
+	 */
 	private static function register_list_post_types() {
 		wp_register_ability(
 			self::NAMESPACE . '/list-post-types',
@@ -341,6 +476,13 @@ class Webmastery_MCP_Custom_Post_Types {
 		);
 	}
 
+	/**
+	 * Register the list, get, create, update and delete abilities for one post type.
+	 *
+	 * @param WP_Post_Type $post_type_object Post type.
+	 * @param string       $ability_base     Ability name base.
+	 * @return void
+	 */
 	private static function register_custom_post_type( $post_type_object, $ability_base ) {
 		$label          = $post_type_object->labels->singular_name ?? $post_type_object->label;
 		$post_type_name = $post_type_object->name;
