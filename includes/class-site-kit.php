@@ -2,6 +2,18 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Google Site Kit status, modules, permissions and PageSpeed abilities.
+ *
+ * @phpstan-type AbilityMeta array{annotations: array{readonly: bool, destructive: bool, idempotent: bool}, mcp: array{public: bool, type: string}}
+ * @phpstan-type PluginStatus array{installed: bool, active: bool, version: string|null}
+ * @phpstan-type SiteKitRoute array{endpoint: array<string, mixed>, url_params: array<string, string>}
+ * @phpstan-type ModuleRecord array{slug: string, name: string, available: true, active: bool, connected: bool, shareable: bool, dependencies: list<string>, dependants: list<string>}
+ * @phpstan-type PermissionsRecord array{permissions: array<string, bool>, modules: array<string, array{read_shared_data: bool, manage_sharing_options: bool, delegate_sharing_management: bool}>}
+ * @phpstan-type PagespeedInput array{url: string, strategy: 'mobile'|'desktop'}
+ * @phpstan-type FieldData array{overall_category: string|null, metrics: array<string, array{percentile: float|null, category: string}>}
+ * @phpstan-type PagespeedRecord array{requested_url: string, strategy: string, id: string, analysis_timestamp: string, field_data: FieldData, categories: array<string, array{score: float|null}>, audits: array<string, array{score: float|null, numeric_value: float|null, numeric_unit: string, display_value: string}>}
+ */
 class Webmastery_MCP_Site_Kit {
 
 	private const REST_ROOT = '/google-site-kit/v1';
@@ -13,6 +25,11 @@ class Webmastery_MCP_Site_Kit {
 	// Fixed guidance: a denial alone does not establish this user's authentication or sharing state.
 	private const FORBIDDEN_GUIDANCE = 'Google Site Kit denied this request. Possible causes include missing Dashboard sharing access or a Google account sign-in/reauthentication requirement. An authorized administrator can review access for this user\'s role to the relevant service using the sharing icon in the Site Kit dashboard header. Eligible users can sign in to Google in Site Kit as this WordPress user. For diagnosis, use get-site-kit-status (requires manage_options) and get-site-kit-permissions where permitted.';
 
+	/**
+	 * Register the Google Site Kit abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_status();
 		self::register_modules();
@@ -20,6 +37,11 @@ class Webmastery_MCP_Site_Kit {
 		self::register_pagespeed();
 	}
 
+	/**
+	 * Register the get-site-kit-status ability.
+	 *
+	 * @return void
+	 */
 	private static function register_status() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-site-kit-status', [
 			'label'               => 'Google Site Kit: Status',
@@ -31,6 +53,11 @@ class Webmastery_MCP_Site_Kit {
 		] );
 	}
 
+	/**
+	 * Register the list-site-kit-modules ability.
+	 *
+	 * @return void
+	 */
 	private static function register_modules() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-site-kit-modules', [
 			'label'               => 'Google Site Kit: Modules',
@@ -42,6 +69,11 @@ class Webmastery_MCP_Site_Kit {
 		] );
 	}
 
+	/**
+	 * Register the get-site-kit-permissions ability.
+	 *
+	 * @return void
+	 */
 	private static function register_permissions() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-site-kit-permissions', [
 			'label'               => 'Google Site Kit: Permissions',
@@ -53,6 +85,11 @@ class Webmastery_MCP_Site_Kit {
 		] );
 	}
 
+	/**
+	 * Register the get-site-kit-pagespeed ability.
+	 *
+	 * @return void
+	 */
 	private static function register_pagespeed() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-site-kit-pagespeed', [
 			'label'               => 'Google Site Kit: PageSpeed',
@@ -84,6 +121,11 @@ class Webmastery_MCP_Site_Kit {
 		] );
 	}
 
+	/**
+	 * Ability meta shared by the read-only, idempotent Site Kit abilities.
+	 *
+	 * @return AbilityMeta
+	 */
 	private static function readonly_meta() {
 		return [
 			'annotations' => [ 'readonly' => true, 'destructive' => false, 'idempotent' => true ],
@@ -91,6 +133,11 @@ class Webmastery_MCP_Site_Kit {
 		];
 	}
 
+	/**
+	 * Permission callback for get-site-kit-status.
+	 *
+	 * @return true|\WP_Error True when allowed, or an error describing why not.
+	 */
 	public static function permission_status() {
 		$permission = Webmastery_MCP_Permissions::check( 'manage_options' );
 		if ( is_wp_error( $permission ) ) {
@@ -105,6 +152,11 @@ class Webmastery_MCP_Site_Kit {
 		return self::check_route_permission( self::REST_ROOT . '/core/site/data/connection' );
 	}
 
+	/**
+	 * Permission callback for list-site-kit-modules.
+	 *
+	 * @return true|\WP_Error True when allowed, or an error describing why not.
+	 */
 	public static function permission_modules() {
 		$permission = Webmastery_MCP_Permissions::check( 'read' );
 		if ( is_wp_error( $permission ) ) {
@@ -114,6 +166,11 @@ class Webmastery_MCP_Site_Kit {
 		return self::check_route_permission( self::REST_ROOT . '/core/modules/data/list' );
 	}
 
+	/**
+	 * Permission callback for get-site-kit-permissions.
+	 *
+	 * @return true|\WP_Error True when allowed, or an error describing why not.
+	 */
 	public static function permission_permissions() {
 		$permission = Webmastery_MCP_Permissions::check( 'read' );
 		if ( is_wp_error( $permission ) ) {
@@ -127,6 +184,12 @@ class Webmastery_MCP_Site_Kit {
 		);
 	}
 
+	/**
+	 * Permission callback for get-site-kit-pagespeed.
+	 *
+	 * @param array<string, mixed> $input Ability input: optional url and strategy.
+	 * @return true|\WP_Error True when allowed, or an error describing why not.
+	 */
 	public static function permission_pagespeed( $input = [] ) {
 		$permission = Webmastery_MCP_Permissions::check( 'read' );
 		if ( is_wp_error( $permission ) ) {
@@ -144,6 +207,11 @@ class Webmastery_MCP_Site_Kit {
 		);
 	}
 
+	/**
+	 * Report Site Kit availability, connection and authentication status.
+	 *
+	 * @return array{success: true, data: array{plugin: PluginStatus, connection: array{connected: bool, setup_completed: bool}|null, authentication: array{authenticated: bool, needs_reauthentication: bool}|null, compatibility: array{status: string, note: string}}}|\WP_Error
+	 */
 	public static function execute_status() {
 		$plugin = self::plugin_status();
 		if ( ! $plugin['active'] ) {
@@ -191,6 +259,11 @@ class Webmastery_MCP_Site_Kit {
 		];
 	}
 
+	/**
+	 * List Site Kit modules with their safe states.
+	 *
+	 * @return array{success: true, data: array{items: list<ModuleRecord>, total: int}}|\WP_Error
+	 */
 	public static function execute_modules() {
 		$permission = Webmastery_MCP_Permissions::check( 'read' );
 		if ( is_wp_error( $permission ) ) {
@@ -213,6 +286,11 @@ class Webmastery_MCP_Site_Kit {
 		];
 	}
 
+	/**
+	 * Return the current user's Site Kit permission matrix.
+	 *
+	 * @return array{success: true, data: PermissionsRecord}|\WP_Error
+	 */
 	public static function execute_permissions() {
 		$permission = Webmastery_MCP_Permissions::check( 'read' );
 		if ( is_wp_error( $permission ) ) {
@@ -235,6 +313,12 @@ class Webmastery_MCP_Site_Kit {
 		];
 	}
 
+	/**
+	 * Fetch a PageSpeed Insights summary through Site Kit.
+	 *
+	 * @param array<string, mixed> $input Ability input: optional url and strategy.
+	 * @return array{success: true, data: PagespeedRecord}|\WP_Error
+	 */
 	public static function execute_pagespeed( $input = [] ) {
 		$permission = Webmastery_MCP_Permissions::check( 'read' );
 		if ( is_wp_error( $permission ) ) {
@@ -285,6 +369,11 @@ class Webmastery_MCP_Site_Kit {
 		];
 	}
 
+	/**
+	 * Installation, activation and version state of Google Site Kit.
+	 *
+	 * @return PluginStatus
+	 */
 	private static function plugin_status() {
 		$plugins = [];
 		if ( ! function_exists( 'get_plugins' ) ) {
@@ -309,6 +398,12 @@ class Webmastery_MCP_Site_Kit {
 		];
 	}
 
+	/**
+	 * Apply defaults to the PageSpeed input and validate the strategy.
+	 *
+	 * @param array<string, mixed> $input Ability input: optional url and strategy.
+	 * @return PagespeedInput|\WP_Error
+	 */
 	private static function normalize_pagespeed_input( $input ) {
 		$strategy = array_key_exists( 'strategy', $input ) ? $input['strategy'] : 'mobile';
 		if ( ! in_array( $strategy, [ 'mobile', 'desktop' ], true ) ) {
@@ -321,6 +416,12 @@ class Webmastery_MCP_Site_Kit {
 		];
 	}
 
+	/**
+	 * Normalize the PageSpeed input and require a same-site URL.
+	 *
+	 * @param array<string, mixed> $input Ability input: optional url and strategy.
+	 * @return PagespeedInput|\WP_Error
+	 */
 	private static function validate_pagespeed_input( $input ) {
 		$validated = self::normalize_pagespeed_input( $input );
 		if ( is_wp_error( $validated ) ) {
@@ -333,6 +434,12 @@ class Webmastery_MCP_Site_Kit {
 		return $validated;
 	}
 
+	/**
+	 * Whether a URL is an HTTP(S) URL on the current site without credentials or a fragment.
+	 *
+	 * @param string $url URL to check.
+	 * @return bool
+	 */
 	private static function is_same_site_url( $url ) {
 		$url_parts  = wp_parse_url( $url );
 		$home_parts = wp_parse_url( home_url( '/' ) );
@@ -353,6 +460,12 @@ class Webmastery_MCP_Site_Kit {
 		return self::effective_port( $url_parts ) === self::effective_port( $home_parts );
 	}
 
+	/**
+	 * Port of a parsed URL, defaulting from its scheme.
+	 *
+	 * @param array<string, string|int> $parts Parsed URL, as returned by wp_parse_url().
+	 * @return int
+	 */
 	private static function effective_port( $parts ) {
 		if ( isset( $parts['port'] ) ) {
 			return (int) $parts['port'];
@@ -361,6 +474,14 @@ class Webmastery_MCP_Site_Kit {
 		return 'https' === strtolower( $parts['scheme'] ?? '' ) ? 443 : 80;
 	}
 
+	/**
+	 * Run the permission callback of a Site Kit REST route for the current user.
+	 *
+	 * @param string               $path            REST route path.
+	 * @param array<string, mixed> $params          Query parameters for the request.
+	 * @param string               $minimum_version Site Kit version the route needs; empty for any.
+	 * @return true|\WP_Error True when allowed, or an error describing why not.
+	 */
 	private static function check_route_permission( $path, $params = [], $minimum_version = '' ) {
 		$route = self::find_route( $path, 'GET', $minimum_version );
 		if ( is_wp_error( $route ) ) {
@@ -381,6 +502,15 @@ class Webmastery_MCP_Site_Kit {
 		return true;
 	}
 
+	/**
+	 * Dispatch a GET request to a Site Kit REST route and return its decoded data.
+	 *
+	 * @param string               $path                        REST route path.
+	 * @param array<string, mixed> $params                      Query parameters for the request.
+	 * @param string               $minimum_version             Site Kit version the route needs; empty for any.
+	 * @param bool                 $require_permission_callback Whether the route must define a permission callback.
+	 * @return array<mixed>|\WP_Error Decoded response data, or an error.
+	 */
 	private static function dispatch_route( $path, $params = [], $minimum_version = '', $require_permission_callback = false ) {
 		$route = self::find_route( $path, 'GET', $minimum_version );
 		if ( is_wp_error( $route ) ) {
@@ -422,6 +552,14 @@ class Webmastery_MCP_Site_Kit {
 		return $data;
 	}
 
+	/**
+	 * Build a GET REST request for a matched route.
+	 *
+	 * @param string                $path       REST route path.
+	 * @param array<string, mixed>  $params     Query parameters for the request.
+	 * @param array<string, string> $url_params URL parameters captured from the route pattern.
+	 * @return \WP_REST_Request
+	 */
 	private static function build_request( $path, $params, $url_params ) {
 		$request = new WP_REST_Request( 'GET', $path );
 		$request->set_query_params( $params );
@@ -429,6 +567,14 @@ class Webmastery_MCP_Site_Kit {
 		return $request;
 	}
 
+	/**
+	 * Find the registered REST route and endpoint matching a path and method.
+	 *
+	 * @param string $path            REST route path.
+	 * @param string $method          HTTP method.
+	 * @param string $minimum_version Site Kit version the route needs; empty for any.
+	 * @return SiteKitRoute|\WP_Error The matched route, or an error when Site Kit is inactive or lacks the route.
+	 */
 	private static function find_route( $path, $method, $minimum_version = '' ) {
 		$plugin = self::plugin_status();
 		if ( ! $plugin['active'] ) {
@@ -477,6 +623,13 @@ class Webmastery_MCP_Site_Kit {
 		);
 	}
 
+	/**
+	 * Whether a REST endpoint definition allows an HTTP method.
+	 *
+	 * @param array<string, mixed> $endpoint REST endpoint definition.
+	 * @param string               $method   HTTP method.
+	 * @return bool
+	 */
 	private static function endpoint_allows_method( $endpoint, $method ) {
 		$methods = $endpoint['methods'] ?? [];
 		if ( is_string( $methods ) ) {
@@ -489,6 +642,12 @@ class Webmastery_MCP_Site_Kit {
 		return ! empty( $methods[ $method ] ) || in_array( $method, $methods, true );
 	}
 
+	/**
+	 * Reduce the Site Kit module list to safe module records.
+	 *
+	 * @param array<mixed> $modules Decoded module list from Site Kit.
+	 * @return list<ModuleRecord>
+	 */
 	private static function normalize_modules( $modules ) {
 		$items = [];
 		foreach ( $modules as $module ) {
@@ -516,6 +675,12 @@ class Webmastery_MCP_Site_Kit {
 		return $items;
 	}
 
+	/**
+	 * Sanitize a list of module slugs, dropping empty and duplicate entries.
+	 *
+	 * @param mixed $values Raw slug list; anything but an array yields an empty list.
+	 * @return list<string>
+	 */
 	private static function normalize_slugs( $values ) {
 		if ( ! is_array( $values ) ) {
 			return [];
@@ -525,6 +690,12 @@ class Webmastery_MCP_Site_Kit {
 		return array_values( array_unique( $slugs ) );
 	}
 
+	/**
+	 * Group Site Kit capability results into base and per-module permissions.
+	 *
+	 * @param array<mixed> $permissions Capability results keyed by capability name.
+	 * @return PermissionsRecord
+	 */
 	private static function normalize_permissions( $permissions ) {
 		$base_map = [
 			'googlesitekit_authenticate'                 => 'authenticate',
@@ -583,6 +754,13 @@ class Webmastery_MCP_Site_Kit {
 		];
 	}
 
+	/**
+	 * Reduce a PageSpeed Insights result to a safe summary.
+	 *
+	 * @param array<mixed>   $result Decoded PageSpeed response from Site Kit.
+	 * @param PagespeedInput $input  Validated PageSpeed input.
+	 * @return PagespeedRecord
+	 */
 	private static function normalize_pagespeed( $result, $input ) {
 		$lighthouse = is_array( $result['lighthouseResult'] ?? null ) ? $result['lighthouseResult'] : [];
 		$categories = [];
@@ -621,6 +799,12 @@ class Webmastery_MCP_Site_Kit {
 		];
 	}
 
+	/**
+	 * Reduce PageSpeed field data to a safe summary.
+	 *
+	 * @param mixed $experience Raw loadingExperience data; anything but an array yields an empty summary.
+	 * @return FieldData
+	 */
 	private static function normalize_field_data( $experience ) {
 		if ( ! is_array( $experience ) ) {
 			return [

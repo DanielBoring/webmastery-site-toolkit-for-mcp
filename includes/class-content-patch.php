@@ -4,26 +4,55 @@ defined( 'ABSPATH' ) || exit;
 
 final class Webmastery_MCP_Content_Patch {
 
+	/**
+	 * Register the block-level content patching abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_list_content_blocks();
 		self::register_patch_content_block();
 		self::register_patch_post_content();
 	}
 
+	/**
+	 * Hash post content for optimistic-concurrency checks.
+	 *
+	 * @param string $content Raw post content.
+	 * @return string SHA-256 hex digest.
+	 */
 	private static function content_hash( $content ) {
 		return hash( 'sha256', (string) $content );
 	}
 
+	/**
+	 * Hash the serialized form of one parsed block.
+	 *
+	 * @param array<string, mixed> $block Parsed block, as returned by parse_blocks().
+	 * @return string SHA-256 hex digest.
+	 */
 	private static function block_hash( $block ) {
 		return self::content_hash( serialize_block( $block ) );
 	}
 
+	/**
+	 * Whether a parsed block is an empty freeform (whitespace-only, no inner blocks) block.
+	 *
+	 * @param array<string, mixed> $block Parsed block, as returned by parse_blocks().
+	 * @return bool
+	 */
 	private static function is_empty_freeform_block( $block ) {
 		return null === ( $block['blockName'] ?? null )
 			&& '' === trim( $block['innerHTML'] ?? '' )
 			&& empty( $block['innerBlocks'] );
 	}
 
+	/**
+	 * Drop empty freeform blocks, recursing into inner blocks.
+	 *
+	 * @param array<int, array<string, mixed>> $blocks Parsed blocks.
+	 * @return list<array<string, mixed>> Blocks without empty freeform blocks.
+	 */
 	private static function filter_empty_freeform_blocks( $blocks ) {
 		$filtered = [];
 
@@ -42,10 +71,22 @@ final class Webmastery_MCP_Content_Patch {
 		return $filtered;
 	}
 
+	/**
+	 * Parse post content into blocks, omitting empty freeform blocks.
+	 *
+	 * @param string $content Raw post content.
+	 * @return list<array<string, mixed>>
+	 */
 	private static function parse_editable_blocks( $content ) {
 		return self::filter_empty_freeform_blocks( parse_blocks( $content ) );
 	}
 
+	/**
+	 * Plain text of a parsed block, with tags stripped and entities decoded.
+	 *
+	 * @param array<string, mixed> $block Parsed block, as returned by parse_blocks().
+	 * @return string
+	 */
 	private static function block_text( $block ) {
 		$html = $block['innerHTML'] ?? '';
 		if ( '' === $html && ! empty( $block['innerContent'] ) && is_array( $block['innerContent'] ) ) {
@@ -55,6 +96,12 @@ final class Webmastery_MCP_Content_Patch {
 		return trim( html_entity_decode( wp_strip_all_tags( $html ), ENT_QUOTES | ENT_HTML5, get_bloginfo( 'charset' ) ) );
 	}
 
+	/**
+	 * Plain text of a heading block, or an empty string for any other block.
+	 *
+	 * @param array<string, mixed> $block Parsed block, as returned by parse_blocks().
+	 * @return string
+	 */
 	private static function heading_text( $block ) {
 		if ( 'core/heading' !== ( $block['blockName'] ?? null ) ) {
 			return '';
@@ -63,6 +110,12 @@ final class Webmastery_MCP_Content_Patch {
 		return self::block_text( $block );
 	}
 
+	/**
+	 * Heading level (1-6) of a parsed block, defaulting to 2.
+	 *
+	 * @param array<string, mixed> $block Parsed block, as returned by parse_blocks().
+	 * @return int
+	 */
 	private static function heading_level( $block ) {
 		if ( isset( $block['attrs']['level'] ) ) {
 			return max( 1, min( 6, absint( $block['attrs']['level'] ) ) );
@@ -75,6 +128,13 @@ final class Webmastery_MCP_Content_Patch {
 		return 2;
 	}
 
+	/**
+	 * Build the response record for one parsed block.
+	 *
+	 * @param array<string, mixed> $block Parsed block, as returned by parse_blocks().
+	 * @param string               $path  Dotted block path, such as 0 or 2.1.
+	 * @return array<string, mixed> Record with untrusted fields marked.
+	 */
 	private static function normalize_block( $block, $path ) {
 		return Webmastery_MCP_Untrusted::mark( [
 			'path'              => $path,
@@ -87,6 +147,13 @@ final class Webmastery_MCP_Content_Patch {
 		], [ 'block_name', 'text', 'html', 'attrs' ] );
 	}
 
+	/**
+	 * Flatten a block tree into response records, depth first.
+	 *
+	 * @param array<int, array<string, mixed>> $blocks Parsed blocks.
+	 * @param string                           $prefix Dotted path of the parent block; empty at the top level.
+	 * @return list<array<string, mixed>>
+	 */
 	private static function flatten_blocks( $blocks, $prefix = '' ) {
 		$flat = [];
 
@@ -102,6 +169,12 @@ final class Webmastery_MCP_Content_Patch {
 		return $flat;
 	}
 
+	/**
+	 * Parse a dotted numeric block path into index segments.
+	 *
+	 * @param string $path Dotted block path, such as 0 or 2.1.
+	 * @return list<int>|\WP_Error Path segments, or an error for a malformed path.
+	 */
 	private static function parse_block_path( $path ) {
 		$path = trim( (string) $path );
 
@@ -112,6 +185,13 @@ final class Webmastery_MCP_Content_Patch {
 		return array_map( 'absint', explode( '.', $path ) );
 	}
 
+	/**
+	 * Find a block by its path segments.
+	 *
+	 * @param array<int, array<string, mixed>> $blocks   Parsed blocks.
+	 * @param list<int>                        $segments Path segments, from parse_block_path().
+	 * @return array<string, mixed>|\WP_Error|null The block, an error when the path is missing, or null when there are no segments.
+	 */
 	private static function get_block_by_segments( $blocks, $segments ) {
 		$current_blocks = $blocks;
 		$current_block  = null;
@@ -128,6 +208,14 @@ final class Webmastery_MCP_Content_Patch {
 		return $current_block;
 	}
 
+	/**
+	 * Replace a block, found by its path segments, in place.
+	 *
+	 * @param array<int, array<string, mixed>> &$blocks           Parsed blocks, modified in place.
+	 * @param list<int>                        $segments          Path segments, from parse_block_path().
+	 * @param array<string, mixed>             $replacement_block Parsed block to put at the target path.
+	 * @return true|\WP_Error True once replaced, or an error when the path is missing.
+	 */
 	private static function replace_block_by_segments( &$blocks, $segments, $replacement_block ) {
 		$segment = array_shift( $segments );
 
@@ -147,6 +235,14 @@ final class Webmastery_MCP_Content_Patch {
 		return self::replace_block_by_segments( $blocks[ $segment ]['innerBlocks'], $segments, $replacement_block );
 	}
 
+	/**
+	 * Find the paths of all blocks whose hash matches.
+	 *
+	 * @param array<int, array<string, mixed>> $blocks Parsed blocks.
+	 * @param string                           $hash   Block hash to look for.
+	 * @param string                           $prefix Dotted path of the parent block; empty at the top level.
+	 * @return list<string> Dotted paths of matching blocks.
+	 */
 	private static function find_block_paths_by_hash( $blocks, $hash, $prefix = '' ) {
 		$matches = [];
 
@@ -165,6 +261,11 @@ final class Webmastery_MCP_Content_Patch {
 		return $matches;
 	}
 
+	/**
+	 * Register the list-content-blocks ability.
+	 *
+	 * @return void
+	 */
 	private static function register_list_content_blocks() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-content-blocks', [
 			'label'               => 'List Content Blocks',
@@ -218,6 +319,11 @@ final class Webmastery_MCP_Content_Patch {
 		] );
 	}
 
+	/**
+	 * Register the patch-content-block ability.
+	 *
+	 * @return void
+	 */
 	private static function register_patch_content_block() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/patch-content-block', [
 			'label'               => 'Patch Content Block',
@@ -364,6 +470,14 @@ final class Webmastery_MCP_Content_Patch {
 		] );
 	}
 
+	/**
+	 * Replace the section under a heading with new content.
+	 *
+	 * @param string $content             Raw post content.
+	 * @param string $heading_text        Exact text of the heading to target.
+	 * @param string $replacement_content Replacement block markup for the section body.
+	 * @return array{content: string, replaced_blocks: int, target: array{type: string, heading_text: string, heading_level: int}}|\WP_Error Patched content and target details, or an error when the heading is missing or ambiguous.
+	 */
 	private static function patch_content_by_heading( $content, $heading_text, $replacement_content ) {
 		$blocks  = self::parse_editable_blocks( $content );
 		$matches = [];
@@ -411,6 +525,14 @@ final class Webmastery_MCP_Content_Patch {
 		];
 	}
 
+	/**
+	 * Replace one exact occurrence of a string in the content.
+	 *
+	 * @param string $content             Raw post content.
+	 * @param string $old_content         Exact content to replace.
+	 * @param string $replacement_content Replacement content.
+	 * @return array{content: string, replaced_blocks: null, target: array{type: string}}|\WP_Error Patched content and target details, or an error when the match is missing or ambiguous.
+	 */
 	private static function patch_content_by_exact_match( $content, $old_content, $replacement_content ) {
 		$count = substr_count( $content, $old_content );
 
@@ -430,6 +552,11 @@ final class Webmastery_MCP_Content_Patch {
 		];
 	}
 
+	/**
+	 * Register the patch-post-content ability.
+	 *
+	 * @return void
+	 */
 	private static function register_patch_post_content() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/patch-post-content', [
 			'label'               => 'Patch Post Content',

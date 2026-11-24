@@ -2,8 +2,21 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Plugin listing, audit, activation and deactivation abilities.
+ *
+ * @phpstan-type PluginRecord array{plugin: string, name: string, version: string, active: bool, network_active: bool, update_available: bool}
+ * @phpstan-type PluginAuditRecord array{plugin: string, name: string, slug: string, version: string, active: bool, update_available: bool, new_version: string|null, tested_up_to: string|null, requires_wp: string|null, abandoned: bool, days_since_update: int|null, critical_update: bool}
+ * @phpstan-type PluginCriticalUpdate array{plugin: string, name: string, slug: string, version: string, new_version: string|null}
+ * @phpstan-type PluginDeprecation array{field: string, replacement: string, removal: string, reason: string}
+ */
 class Webmastery_MCP_Plugins {
 
+	/**
+	 * Basenames of the active plugins, including network-activated ones on multisite.
+	 *
+	 * @return list<string>
+	 */
 	public static function active_basenames() {
 		$active_plugins = get_option( 'active_plugins', [] );
 		if ( ! is_array( $active_plugins ) ) {
@@ -20,6 +33,11 @@ class Webmastery_MCP_Plugins {
 		return array_values( array_unique( array_map( 'strval', $active_plugins ) ) );
 	}
 
+	/**
+	 * Register the plugin management abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::load_plugin_api();
 		self::register_list();
@@ -28,6 +46,12 @@ class Webmastery_MCP_Plugins {
 		self::register_deactivate();
 	}
 
+	/**
+	 * Permission callback shared by the plugin abilities.
+	 *
+	 * @param array<string, mixed> $input Ability input; network_wide is checked when set.
+	 * @return true|\WP_Error True when allowed, or an error describing the missing capability or context.
+	 */
 	public static function permission( $input = [] ) {
 		if ( ! current_user_can( 'activate_plugins' ) ) {
 			return Webmastery_MCP_Response::legacy_wp_error(
@@ -61,6 +85,12 @@ class Webmastery_MCP_Plugins {
 		return true;
 	}
 
+	/**
+	 * List installed plugins and their activation state.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array{success: true, data: array{items: list<PluginRecord>}}|\WP_Error
+	 */
 	public static function list_plugins( $input = [] ) {
 		$permission = self::permission( $input );
 		if ( is_wp_error( $permission ) ) {
@@ -82,6 +112,12 @@ class Webmastery_MCP_Plugins {
 		];
 	}
 
+	/**
+	 * Audit installed plugins for inactive, outdated and potentially abandoned entries.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array{success: true, data: array{inactive_count: int, updates_available_count: int, potentially_abandoned_count: int, critical_updates: list<PluginCriticalUpdate>, deprecations: list<PluginDeprecation>, items: list<PluginAuditRecord>}}|\WP_Error
+	 */
 	public static function plugin_audit( $input = [] ) {
 		$permission = self::permission( $input );
 		if ( is_wp_error( $permission ) ) {
@@ -145,7 +181,7 @@ class Webmastery_MCP_Plugins {
 	/**
 	 * Fields of the plugin audit response that are deprecated, for the response's `deprecations` list.
 	 *
-	 * @return array[]
+	 * @return list<PluginDeprecation>
 	 */
 	private static function plugin_audit_deprecations() {
 		$reason = 'WordPress.org update data does not identify security releases, so this is false or empty unless a third-party update source sets a security flag. Do not read it as "no security updates pending".';
@@ -166,6 +202,12 @@ class Webmastery_MCP_Plugins {
 		];
 	}
 
+	/**
+	 * Activate a plugin resolved from the input.
+	 *
+	 * @param array<string, mixed> $input Ability input: plugin or slug, and optionally network_wide.
+	 * @return array{success: true, data: PluginRecord}|\WP_Error
+	 */
 	public static function activate_plugin( $input = [] ) {
 		$permission = self::permission( $input );
 		if ( is_wp_error( $permission ) ) {
@@ -207,6 +249,12 @@ class Webmastery_MCP_Plugins {
 		];
 	}
 
+	/**
+	 * Deactivate a plugin resolved from the input.
+	 *
+	 * @param array<string, mixed> $input Ability input: plugin or slug, and optionally force and network_wide.
+	 * @return array{success: true, data: PluginRecord}|\WP_Error
+	 */
 	public static function deactivate_plugin( $input = [] ) {
 		$permission = self::permission( $input );
 		if ( is_wp_error( $permission ) ) {
@@ -271,6 +319,11 @@ class Webmastery_MCP_Plugins {
 		];
 	}
 
+	/**
+	 * Register the list-plugins ability.
+	 *
+	 * @return void
+	 */
 	private static function register_list() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-plugins', [
 			'label'               => 'List Plugins',
@@ -285,6 +338,11 @@ class Webmastery_MCP_Plugins {
 		] );
 	}
 
+	/**
+	 * Register the plugin-audit ability.
+	 *
+	 * @return void
+	 */
 	private static function register_audit() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/plugin-audit', [
 			'label'               => 'Plugin Audit',
@@ -299,6 +357,11 @@ class Webmastery_MCP_Plugins {
 		] );
 	}
 
+	/**
+	 * Register the activate-plugin ability.
+	 *
+	 * @return void
+	 */
 	private static function register_activate() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/activate-plugin', [
 			'label'               => 'Activate Plugin',
@@ -321,6 +384,11 @@ class Webmastery_MCP_Plugins {
 		] );
 	}
 
+	/**
+	 * Register the deactivate-plugin ability.
+	 *
+	 * @return void
+	 */
 	private static function register_deactivate() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/deactivate-plugin', [
 			'label'               => 'Deactivate Plugin',
@@ -344,10 +412,20 @@ class Webmastery_MCP_Plugins {
 		] );
 	}
 
+	/**
+	 * Load the WordPress plugin API functions.
+	 *
+	 * @return void
+	 */
 	private static function load_plugin_api() {
 		require_once ABSPATH . 'wp-admin/includes/plugin.php';
 	}
 
+	/**
+	 * Installed plugins sorted by basename.
+	 *
+	 * @return array<string, array<string, mixed>> Plugin header data keyed by plugin basename.
+	 */
 	private static function get_plugins() {
 		$plugins = get_plugins();
 		ksort( $plugins );
@@ -355,6 +433,12 @@ class Webmastery_MCP_Plugins {
 		return $plugins;
 	}
 
+	/**
+	 * Resolve the plugin basename from the plugin or slug input.
+	 *
+	 * @param array<string, mixed> $input Ability input: plugin or slug.
+	 * @return string|\WP_Error Plugin basename, or an error when none or several match.
+	 */
 	private static function resolve_plugin_basename( $input ) {
 		$plugins = self::get_plugins();
 
@@ -420,6 +504,13 @@ class Webmastery_MCP_Plugins {
 		);
 	}
 
+	/**
+	 * Whether a plugin basename matches a slug by directory or file name.
+	 *
+	 * @param string $plugin Plugin basename.
+	 * @param string $slug   Sanitized plugin slug.
+	 * @return bool
+	 */
 	private static function plugin_matches_slug( $plugin, $slug ) {
 		$parts    = explode( '/', $plugin );
 		$filename = basename( $plugin, '.php' );
@@ -427,6 +518,13 @@ class Webmastery_MCP_Plugins {
 		return $slug === $filename || ( count( $parts ) > 1 && $slug === $parts[0] );
 	}
 
+	/**
+	 * Build the list record for one installed plugin.
+	 *
+	 * @param string               $plugin      Plugin basename.
+	 * @param array<string, mixed> $plugin_data Plugin header data.
+	 * @return PluginRecord
+	 */
 	private static function normalize_plugin( $plugin, $plugin_data ) {
 		$updates        = self::get_update_plugins_transient();
 		$network_active = is_multisite() && is_plugin_active_for_network( $plugin );
@@ -441,6 +539,14 @@ class Webmastery_MCP_Plugins {
 		];
 	}
 
+	/**
+	 * Build the audit record for one installed plugin.
+	 *
+	 * @param string               $plugin      Plugin basename.
+	 * @param array<string, mixed> $plugin_data Plugin header data.
+	 * @param object               $updates     Update data from get_update_plugins_transient().
+	 * @return PluginAuditRecord
+	 */
 	private static function normalize_plugin_audit( $plugin, $plugin_data, $updates ) {
 		$update          = $updates->response[ $plugin ] ?? null;
 		$no_update       = self::get_no_update_record( $updates, $plugin );
@@ -464,6 +570,11 @@ class Webmastery_MCP_Plugins {
 		];
 	}
 
+	/**
+	 * Cached plugin update data, with an empty response list when none is stored.
+	 *
+	 * @return object Update data whose response property is an array.
+	 */
 	private static function get_update_plugins_transient() {
 		$updates = get_site_transient( 'update_plugins' );
 		if ( ! is_object( $updates ) ) {
@@ -477,6 +588,13 @@ class Webmastery_MCP_Plugins {
 		return $updates;
 	}
 
+	/**
+	 * Cached no-update record for a plugin.
+	 *
+	 * @param object $updates Update data from get_update_plugins_transient().
+	 * @param string $plugin  Plugin basename.
+	 * @return object|null
+	 */
 	private static function get_no_update_record( $updates, $plugin ) {
 		if ( ! isset( $updates->no_update ) || ! is_array( $updates->no_update ) || ! isset( $updates->no_update[ $plugin ] ) ) {
 			return null;
@@ -490,6 +608,14 @@ class Webmastery_MCP_Plugins {
 		return is_object( $record ) ? $record : null;
 	}
 
+	/**
+	 * Slug of a plugin, from its update records or its basename.
+	 *
+	 * @param string      $plugin    Plugin basename.
+	 * @param object|null $update    Cached update record.
+	 * @param object|null $no_update Cached no-update record.
+	 * @return string
+	 */
 	private static function get_plugin_slug( $plugin, $update = null, $no_update = null ) {
 		foreach ( [ $update, $no_update ] as $record ) {
 			if ( is_object( $record ) && ! empty( $record->slug ) && is_scalar( $record->slug ) ) {
@@ -505,6 +631,14 @@ class Webmastery_MCP_Plugins {
 		return sanitize_key( basename( $plugin, '.php' ) );
 	}
 
+	/**
+	 * Highest WordPress version a plugin declares compatibility with.
+	 *
+	 * @param string      $plugin    Plugin basename.
+	 * @param object|null $update    Cached update record.
+	 * @param object|null $no_update Cached no-update record.
+	 * @return string|null Version string, or null when none is declared.
+	 */
 	private static function get_plugin_tested_up_to( $plugin, $update = null, $no_update = null ) {
 		foreach ( [ $update, $no_update ] as $record ) {
 			if ( ! is_object( $record ) ) {
@@ -528,6 +662,12 @@ class Webmastery_MCP_Plugins {
 		return self::sanitize_version_string( $headers['TestedUpTo'] );
 	}
 
+	/**
+	 * Accept only short dotted numeric version strings.
+	 *
+	 * @param mixed $value Raw version value.
+	 * @return string|null
+	 */
 	private static function sanitize_version_string( $value ) {
 		if ( ! is_string( $value ) && ! is_int( $value ) && ! is_float( $value ) ) {
 			return null;
@@ -541,6 +681,12 @@ class Webmastery_MCP_Plugins {
 		return $value;
 	}
 
+	/**
+	 * Tested up to version from a plugin readme file.
+	 *
+	 * @param string $plugin Plugin basename.
+	 * @return string|null
+	 */
 	private static function get_readme_tested_up_to( $plugin ) {
 		$directory = dirname( (string) $plugin );
 		if ( '.' === $directory || '' === $directory || '/' === $directory || '\\' === $directory ) {
@@ -571,11 +717,26 @@ class Webmastery_MCP_Plugins {
 		return null;
 	}
 
+	/**
+	 * Whether a path lies inside a root directory.
+	 *
+	 * @param string $path Path to check.
+	 * @param string $root Root directory.
+	 * @return bool
+	 */
 	private static function is_path_inside( $path, $root ) {
 		$root = rtrim( $root, '/\\' ) . DIRECTORY_SEPARATOR;
 		return 0 === strpos( $path, $root );
 	}
 
+	/**
+	 * Minimum WordPress version a plugin requires.
+	 *
+	 * @param array<string, mixed> $plugin_data Plugin header data.
+	 * @param object|null          $update      Cached update record.
+	 * @param object|null          $no_update   Cached no-update record.
+	 * @return string|null
+	 */
 	private static function get_plugin_requires_wp( $plugin_data, $update = null, $no_update = null ) {
 		foreach ( [ $update, $no_update ] as $record ) {
 			if ( is_object( $record ) && ! empty( $record->requires ) && is_scalar( $record->requires ) ) {
@@ -590,6 +751,12 @@ class Webmastery_MCP_Plugins {
 		return null;
 	}
 
+	/**
+	 * Read extra headers from a plugin file.
+	 *
+	 * @param string $plugin Plugin basename.
+	 * @return array{TestedUpTo: string|null}
+	 */
 	private static function get_extra_plugin_headers( $plugin ) {
 		$path = self::plugin_file_path( $plugin );
 		if ( ! file_exists( $path ) ) {
@@ -611,10 +778,22 @@ class Webmastery_MCP_Plugins {
 		];
 	}
 
+	/**
+	 * Absolute path of a plugin file.
+	 *
+	 * @param string $plugin Plugin basename.
+	 * @return string
+	 */
 	private static function plugin_file_path( $plugin ) {
 		return WP_PLUGIN_DIR . '/' . $plugin;
 	}
 
+	/**
+	 * Whether the tested-up-to version is two or more WordPress releases behind.
+	 *
+	 * @param string|null $tested_up_to Tested up to version.
+	 * @return bool
+	 */
 	private static function is_potentially_abandoned( $tested_up_to ) {
 		if ( empty( $tested_up_to ) ) {
 			return false;
@@ -630,6 +809,12 @@ class Webmastery_MCP_Plugins {
 		return ( $current - $tested ) >= 2;
 	}
 
+	/**
+	 * Numeric index of a version string, as major times ten plus minor.
+	 *
+	 * @param string $version Version string.
+	 * @return int|null
+	 */
 	private static function major_minor_version_index( $version ) {
 		if ( ! preg_match( '/^(\d+)(?:\.(\d+))?/', (string) $version, $matches ) ) {
 			return null;
@@ -641,6 +826,12 @@ class Webmastery_MCP_Plugins {
 		return ( $major * 10 ) + $minor;
 	}
 
+	/**
+	 * Days since a plugin file was last modified.
+	 *
+	 * @param string $plugin Plugin basename.
+	 * @return int|null
+	 */
 	private static function get_days_since_update( $plugin ) {
 		$path = self::plugin_file_path( $plugin );
 		if ( ! file_exists( $path ) ) {
@@ -678,10 +869,21 @@ class Webmastery_MCP_Plugins {
 		return false;
 	}
 
+	/**
+	 * Whether a plugin is protected from deactivation without force.
+	 *
+	 * @param string $plugin Plugin basename.
+	 * @return bool
+	 */
 	private static function is_protected_plugin( $plugin ) {
 		return in_array( $plugin, self::protected_plugins(), true );
 	}
 
+	/**
+	 * Basenames of the protected plugins.
+	 *
+	 * @return list<string>
+	 */
 	private static function protected_plugins() {
 		return [
 			plugin_basename( dirname( __DIR__ ) . '/webmastery-site-toolkit-for-mcp.php' ),
