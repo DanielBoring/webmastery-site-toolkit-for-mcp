@@ -2,8 +2,19 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * SEO analysis and SEO plugin metadata abilities.
+ *
+ * @phpstan-type ErrorDetail array{code: string, reason: string, message: string, details: object}
+ * @phpstan-type MetadataRead array{values: array<string, mixed>, unavailable_fields: array<string, ErrorDetail>}
+ */
 class Webmastery_MCP_SEO {
 
+	/**
+	 * Register the SEO abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_analyze_post();
 		self::register_site_overview();
@@ -15,6 +26,12 @@ class Webmastery_MCP_SEO {
 		self::register_score_ability( 'get-readability-scores', 'Readability Scores', '_yoast_wpseo_content_score', 'Yoast readability analysis scores.' );
 	}
 
+	/**
+	 * Permission callback for seo-analyze-post.
+	 *
+	 * @param array<string, mixed> $input Ability input: post_id.
+	 * @return true|\WP_Error True when allowed, or an error describing why not.
+	 */
 	public static function permission_analyze_post( $input = [] ) {
 		$id   = absint( $input['post_id'] ?? 0 );
 		$post = get_post( $id );
@@ -28,6 +45,11 @@ class Webmastery_MCP_SEO {
 		return true;
 	}
 
+	/**
+	 * Register the seo-analyze-post ability.
+	 *
+	 * @return void
+	 */
 	private static function register_analyze_post() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/seo-analyze-post', [
 			'label'               => 'SEO: Analyze Post',
@@ -49,6 +71,12 @@ class Webmastery_MCP_SEO {
 		] );
 	}
 
+	/**
+	 * Run on-page SEO checks for a post or page.
+	 *
+	 * @param array<string, mixed> $input Ability input: post_id.
+	 * @return array<string, mixed> Success or error envelope.
+	 */
 	public static function execute_analyze_post( $input = [] ) {
 		$permission = self::permission_analyze_post( $input );
 		if ( is_wp_error( $permission ) ) {
@@ -193,6 +221,13 @@ class Webmastery_MCP_SEO {
 		return [ 'success' => true, 'data' => $analysis ];
 	}
 
+	/**
+	 * Read post meta fields the current user may read, listing the rest as unavailable.
+	 *
+	 * @param int                   $post_id Post ID.
+	 * @param array<string, string> $keys    Meta keys by response field name.
+	 * @return MetadataRead
+	 */
 	private static function read_metadata_fields( int $post_id, array $keys ): array {
 		$result = [ 'values' => [], 'unavailable_fields' => [] ];
 		foreach ( $keys as $field => $key ) {
@@ -210,6 +245,12 @@ class Webmastery_MCP_SEO {
 		return $result;
 	}
 
+	/**
+	 * Count images in the content that lack non-empty alt text.
+	 *
+	 * @param string $content Post content.
+	 * @return int
+	 */
 	private static function count_images_without_alt( $content ) {
 		preg_match_all( '/<img\s[^>]*>/i', $content, $matches );
 		$count = 0;
@@ -221,6 +262,14 @@ class Webmastery_MCP_SEO {
 		return $count;
 	}
 
+	/**
+	 * Count internal or external links in the content.
+	 *
+	 * @param string $content  Post content.
+	 * @param string $home     Site home URL.
+	 * @param bool   $external Count external links instead of internal ones.
+	 * @return int
+	 */
 	private static function count_links( $content, $home, $external = false ) {
 		$home_host = Webmastery_MCP_Links::normalize_host( (string) wp_parse_url( $home, PHP_URL_HOST ) );
 		$count     = 0;
@@ -234,6 +283,11 @@ class Webmastery_MCP_SEO {
 		return $count;
 	}
 
+	/**
+	 * Register the seo-site-overview ability.
+	 *
+	 * @return void
+	 */
 	private static function register_site_overview() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/seo-site-overview', [
 			'label'               => 'SEO: Site Overview',
@@ -250,6 +304,11 @@ class Webmastery_MCP_SEO {
 		] );
 	}
 
+	/**
+	 * Register the get-yoast-metadata ability.
+	 *
+	 * @return void
+	 */
 	private static function register_yoast_metadata() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-yoast-metadata', [
 			'label'               => 'SEO: Yoast Metadata',
@@ -271,6 +330,11 @@ class Webmastery_MCP_SEO {
 		] );
 	}
 
+	/**
+	 * Register the get-seopress-metadata ability.
+	 *
+	 * @return void
+	 */
 	private static function register_seopress_metadata() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-seopress-metadata', [
 			'label'               => 'SEO: SEOPress Metadata',
@@ -292,6 +356,11 @@ class Webmastery_MCP_SEO {
 		] );
 	}
 
+	/**
+	 * Register the get-rankmath-metadata ability.
+	 *
+	 * @return void
+	 */
 	private static function register_rankmath_metadata() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-rankmath-metadata', [
 			'label'               => 'SEO: Rank Math Metadata',
@@ -313,6 +382,11 @@ class Webmastery_MCP_SEO {
 		] );
 	}
 
+	/**
+	 * Register the get-aioseo-metadata ability.
+	 *
+	 * @return void
+	 */
 	private static function register_aioseo_metadata() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-aioseo-metadata', [
 			'label'               => 'SEO: All in One SEO Metadata',
@@ -334,6 +408,12 @@ class Webmastery_MCP_SEO {
 		] );
 	}
 
+	/**
+	 * Permission callback for get-yoast-metadata.
+	 *
+	 * @param array<string, mixed> $input Ability input: post_id or url.
+	 * @return true|\WP_Error True when allowed, or an error describing why not.
+	 */
 	public static function permission_yoast_metadata( $input = [] ) {
 		$id = absint( $input['post_id'] ?? 0 );
 		if ( $id ) {
@@ -359,14 +439,31 @@ class Webmastery_MCP_SEO {
 		return Webmastery_MCP_Response::local_error( 'missing_target', 'Provide post_id or url.' );
 	}
 
+	/**
+	 * Yoast post meta keys by response field name.
+	 *
+	 * @return array<string, string>
+	 */
 	private static function yoast_post_meta_keys() {
 		return Webmastery_MCP_Post_Meta::yoast_keys();
 	}
 
+	/**
+	 * SEOPress post meta keys by response field name.
+	 *
+	 * @return array<string, string>
+	 */
 	private static function seopress_post_meta_keys() {
 		return Webmastery_MCP_Post_Meta::seopress_keys();
 	}
 
+	/**
+	 * Cast a raw Yoast meta value to its response type.
+	 *
+	 * @param string $field Response field name.
+	 * @param mixed  $value Raw post meta value.
+	 * @return mixed Null for an empty value, an int or bool for typed fields, otherwise the raw value.
+	 */
 	private static function normalize_yoast_meta_value( $field, $value ) {
 		if ( '' === $value ) {
 			return null;
@@ -382,6 +479,13 @@ class Webmastery_MCP_SEO {
 		return $value;
 	}
 
+	/**
+	 * Cast a raw SEOPress meta value to its response type.
+	 *
+	 * @param string $field Response field name.
+	 * @param mixed  $value Raw post meta value.
+	 * @return mixed Null for an empty value, an int or bool for typed fields, otherwise the raw value.
+	 */
 	private static function normalize_seopress_meta_value( $field, $value ) {
 		if ( '' === $value ) {
 			return null;
@@ -397,6 +501,12 @@ class Webmastery_MCP_SEO {
 		return $value;
 	}
 
+	/**
+	 * Inspect Yoast SEO metadata for a post or page.
+	 *
+	 * @param array<string, mixed> $input Ability input: post_id or url.
+	 * @return array<string, mixed> Success or error envelope.
+	 */
 	public static function execute_yoast_metadata( $input = [] ) {
 		$permission = self::permission_yoast_metadata( $input );
 		if ( is_wp_error( $permission ) ) {
@@ -469,6 +579,12 @@ class Webmastery_MCP_SEO {
 		];
 	}
 
+	/**
+	 * Permission callback for get-seopress-metadata.
+	 *
+	 * @param array<string, mixed> $input Ability input: post_id.
+	 * @return true|\WP_Error True when allowed, or an error describing why not.
+	 */
 	public static function permission_seopress_metadata( $input = [] ) {
 		$id   = absint( $input['post_id'] ?? 0 );
 		$post = get_post( $id );
@@ -483,6 +599,12 @@ class Webmastery_MCP_SEO {
 		return true;
 	}
 
+	/**
+	 * Inspect SEOPress metadata for a post or page.
+	 *
+	 * @param array<string, mixed> $input Ability input: post_id.
+	 * @return array<string, mixed> Success or error envelope.
+	 */
 	public static function execute_seopress_metadata( $input = [] ) {
 		$permission = self::permission_seopress_metadata( $input );
 		if ( is_wp_error( $permission ) ) {
@@ -538,14 +660,32 @@ class Webmastery_MCP_SEO {
 		];
 	}
 
+	/**
+	 * Permission callback for get-rankmath-metadata.
+	 *
+	 * @param array<string, mixed> $input Ability input: post_id.
+	 * @return true|\WP_Error True when allowed, or an error describing why not.
+	 */
 	public static function permission_rankmath_metadata( $input = [] ) {
 		return self::permission_seopress_metadata( $input );
 	}
 
+	/**
+	 * Permission callback for get-aioseo-metadata.
+	 *
+	 * @param array<string, mixed> $input Ability input: post_id.
+	 * @return true|\WP_Error True when allowed, or an error describing why not.
+	 */
 	public static function permission_aioseo_metadata( $input = [] ) {
 		return self::permission_seopress_metadata( $input );
 	}
 
+	/**
+	 * Inspect Rank Math metadata for a post or page.
+	 *
+	 * @param array<string, mixed> $input Ability input: post_id.
+	 * @return array<string, mixed> Success or error envelope.
+	 */
 	public static function execute_rankmath_metadata( $input = [] ) {
 		$permission = self::permission_rankmath_metadata( $input );
 		if ( is_wp_error( $permission ) ) {
@@ -600,6 +740,13 @@ class Webmastery_MCP_SEO {
 		];
 	}
 
+	/**
+	 * Cast a raw Rank Math meta value to its response type.
+	 *
+	 * @param string $field Response field name.
+	 * @param mixed  $value Raw post meta value.
+	 * @return list<string>|int|bool|string|null Robots directives for the robots field, otherwise a scalar, or null when empty or invalid.
+	 */
 	private static function normalize_rankmath_meta_value( $field, $value ) {
 		if ( 'robots' === $field ) {
 			if ( ! is_array( $value ) || [] === $value ) {
@@ -622,6 +769,12 @@ class Webmastery_MCP_SEO {
 		return self::bounded_text( $value );
 	}
 
+	/**
+	 * Inspect All in One SEO metadata for a post or page.
+	 *
+	 * @param array<string, mixed> $input Ability input: post_id.
+	 * @return array<string, mixed> Success or error envelope.
+	 */
 	public static function execute_aioseo_metadata( $input = [] ) {
 		$permission = self::permission_aioseo_metadata( $input );
 		if ( is_wp_error( $permission ) ) {
@@ -711,7 +864,7 @@ class Webmastery_MCP_SEO {
 	 * read in one query; every non-allowlisted column is dropped before anything else sees it.
 	 *
 	 * @param int $post_id Post or page ID.
-	 * @return array|null Allowlisted columns present in the row (empty when no record exists), or null when the read failed.
+	 * @return array<string, mixed>|null Allowlisted columns present in the row (empty when no record exists), or null when the read failed.
 	 */
 	private static function read_aioseo_row( int $post_id ) {
 		global $wpdb;
@@ -742,6 +895,12 @@ class Webmastery_MCP_SEO {
 		return array_intersect_key( $row, $allowed );
 	}
 
+	/**
+	 * Map an allowlisted AIOSEO row to response fields.
+	 *
+	 * @param array<string, mixed> $row Allowlisted columns, as returned by read_aioseo_row().
+	 * @return array<string, string|int|bool|null> Response fields by name.
+	 */
 	private static function normalize_aioseo_row( array $row ): array {
 		$meta = [];
 		foreach ( [
@@ -773,6 +932,13 @@ class Webmastery_MCP_SEO {
 		return $meta;
 	}
 
+	/**
+	 * Focus keyphrase from the AIOSEO column or, failing that, the legacy keyphrases JSON.
+	 *
+	 * @param mixed $column     Raw focus_keyword column.
+	 * @param mixed $keyphrases Raw keyphrases column.
+	 * @return string|null
+	 */
 	private static function aioseo_focus_keyword( $column, $keyphrases ) {
 		if ( is_scalar( $column ) && '' !== trim( (string) $column ) ) {
 			return self::bounded_text( $column );
@@ -784,10 +950,20 @@ class Webmastery_MCP_SEO {
 		return is_scalar( $value ) && '' !== trim( (string) $value ) ? self::bounded_text( $value ) : null;
 	}
 
+	/**
+	 * Cast a scalar to text, limited to 1000 characters.
+	 *
+	 * @param scalar $value Value to cast.
+	 */
 	private static function bounded_text( $value ): string {
 		return mb_substr( (string) $value, 0, 1000 );
 	}
 
+	/**
+	 * Whether Rank Math is active.
+	 *
+	 * @return bool
+	 */
 	private static function is_rankmath_active() {
 		$active_plugins = (array) get_option( 'active_plugins', [] );
 
@@ -797,6 +973,11 @@ class Webmastery_MCP_SEO {
 			|| in_array( 'seo-by-rank-math/rank-math.php', $active_plugins, true );
 	}
 
+	/**
+	 * Whether All in One SEO is active.
+	 *
+	 * @return bool
+	 */
 	private static function is_aioseo_active() {
 		$active_plugins = (array) get_option( 'active_plugins', [] );
 
@@ -806,6 +987,11 @@ class Webmastery_MCP_SEO {
 			|| in_array( 'all-in-one-seo-pack-pro/all_in_one_seo_pack.php', $active_plugins, true );
 	}
 
+	/**
+	 * Whether Yoast SEO is active.
+	 *
+	 * @return bool
+	 */
 	private static function is_yoast_active() {
 		return defined( 'WPSEO_VERSION' )
 			|| defined( 'WPSEO_FILE' )
@@ -813,6 +999,11 @@ class Webmastery_MCP_SEO {
 			|| function_exists( 'wpseo_init' );
 	}
 
+	/**
+	 * Whether SEOPress is active.
+	 *
+	 * @return bool
+	 */
 	private static function is_seopress_active() {
 		$active_plugins = (array) get_option( 'active_plugins', [] );
 
@@ -823,6 +1014,11 @@ class Webmastery_MCP_SEO {
 			|| in_array( 'wp-seopress/seopress.php', $active_plugins, true );
 	}
 
+	/**
+	 * Input schema shared by the score listing abilities.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function score_input_schema() {
 		return [
 			'type'       => 'object',
@@ -837,6 +1033,15 @@ class Webmastery_MCP_SEO {
 		];
 	}
 
+	/**
+	 * Register a paged Yoast score listing ability.
+	 *
+	 * @param string $slug        Ability slug.
+	 * @param string $label       Ability label suffix.
+	 * @param string $meta_key    Post meta key holding the score.
+	 * @param string $description Ability description.
+	 * @return void
+	 */
 	private static function register_score_ability( $slug, $label, $meta_key, $description ) {
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/{$slug}", [
 			'label'               => "SEO: {$label}",
@@ -854,6 +1059,12 @@ class Webmastery_MCP_SEO {
 		] );
 	}
 
+	/**
+	 * Permission callback for the score listing abilities.
+	 *
+	 * @param array<string, mixed> $input Ability input: optional post_type.
+	 * @return true|\WP_Error True when allowed, or an error describing why not.
+	 */
 	public static function permission_score_list( $input = [] ) {
 		if ( 'page' === ( $input['post_type'] ?? null ) && ! current_user_can( 'edit_pages' ) ) {
 			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires edit_pages capability.' );
@@ -864,6 +1075,13 @@ class Webmastery_MCP_SEO {
 		return true;
 	}
 
+	/**
+	 * List post scores stored under a Yoast meta key, one page at a time.
+	 *
+	 * @param array<string, mixed> $input    Ability input: paging, post_type, status and modified_after.
+	 * @param string               $meta_key Post meta key holding the score.
+	 * @return array<string, mixed> Success or error envelope.
+	 */
 	public static function execute_score_list( $input, $meta_key ) {
 		$permission = self::permission_score_list( $input );
 		if ( is_wp_error( $permission ) ) {
@@ -955,10 +1173,21 @@ class Webmastery_MCP_SEO {
 		];
 	}
 
+	/**
+	 * Permission callback for seo-site-overview.
+	 *
+	 * @return true|\WP_Error True when allowed, or an error describing why not.
+	 */
 	public static function permission_site_overview() {
 		return Webmastery_MCP_Permissions::check( 'manage_options' );
 	}
 
+	/**
+	 * Inspect the sitemap, robots.txt and a sample of post metadata.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array<string, mixed> Success or error envelope.
+	 */
 	public static function execute_site_overview( $input = [] ) {
 		$permission = self::permission_site_overview();
 		if ( is_wp_error( $permission ) ) {
