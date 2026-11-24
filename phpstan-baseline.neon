@@ -1,6 +1,18 @@
 parameters:
 	ignoreErrors:
 		-
+			message: '#^Method Webmastery_MCP_Comments\:\:normalize\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: includes/class-comments.php
+
+		-
+			message: '#^Method Webmastery_MCP_Comments\:\:normalize\(\) has parameter \$comment with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: includes/class-comments.php
+
+		-
 			message: '#^Strict comparison using \!\=\= between '''' and '''' will always evaluate to false\.$#'
 			identifier: notIdentical.alwaysFalse
 			count: 1
@@ -41,3 +53,9 @@ parameters:
 			identifier: identical.alwaysFalse
 			count: 3
 			path: includes/class-media.php
+
+		-
+			message: '#^Unable to resolve the template type T in call to function rest_sanitize_boolean$#'
+			identifier: argument.templateType
+			count: 2
+			path: includes/class-seo.php

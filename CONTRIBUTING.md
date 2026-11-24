@@ -101,7 +101,7 @@ change. The minimum-runtime lane runs nightly and on dispatch rather than on
 every PR. Neither is a required merge check; both must be green on the commit
 you tag for release.
 
-PHPStan runs at level 5 with a reviewed, file/message/identifier/count-scoped baseline and a PHP 8.0 analysis target. New diagnostics must be fixed rather than added to the baseline. When fixing existing debt, lower the matching count or remove the resolved entry in the same PR; unmatched entries fail full-project analysis. Run `composer phpstan` without individual-file arguments and `composer test:phpstan-baseline` to verify the ratchet. See the [baseline review and regeneration policy](docs/01-static-qa.md#phpstan-level-5-and-baseline-ratchet).
+PHPStan runs at level 6 with a reviewed, file/message/identifier/count-scoped baseline and a PHP 8.0 analysis target. New diagnostics must be fixed rather than added to the baseline. When fixing existing debt, lower the matching count or remove the resolved entry in the same PR; unmatched entries fail full-project analysis. Run `composer phpstan` without individual-file arguments and `composer test:phpstan-baseline` to verify the ratchet. See the [baseline review and regeneration policy](docs/01-static-qa.md#phpstan-level-6-and-baseline-ratchet).
 
 Workflow and shell changes also need the dedicated workflow lint checks. These
 tools are separate from the normal `composer qa` path. Genuine PHP 8.0/8.4
@@ -345,7 +345,7 @@ Environment-specific notes for GitHub Actions, Windows PowerShell, and Windows G
 | Command | What it runs |
 | --- | --- |
 | `composer qa` | Fast local default: Static QA plus Unit Tests |
-| `composer qa:static` | PHP/Python AST lint, mock-only HOST prerequisite controls, PHPCS, PHPStan level 5 plus baseline regression guards, Composer audit, manifest structure validation, security QA validation, and `git diff --check` |
+| `composer qa:static` | PHP/Python AST lint, mock-only HOST prerequisite controls, PHPCS, PHPStan level 6 plus baseline regression guards, Composer audit, manifest structure validation, security QA validation, and `git diff --check` |
 | `composer test:host-prerequisites` | Three fixed mock-only prerequisite/provisioning/driver suites; never native hardening or HOST acquisition |
 | `composer qa:unit` | PHPUnit `product` suite: unit tests of plugin code (seconds) |
 | `composer qa:tooling` | PHPUnit `qa-tooling` suite: tests of QA, release and evidence tooling (several minutes); run when you change `scripts/` or `tests/` tooling |

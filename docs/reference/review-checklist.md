@@ -35,7 +35,7 @@ shortened. The short checklist is in
 - [ ] Local QA checked with `composer qa` and relevant Docker/release wrappers, including original-ZIP checks for release-bound changes, or missing tools/runtime blockers are documented above
 - [ ] Development runtime QA ran where the session executes; engine, genuine PHP lane, package results and any blocked checks are recorded separately from WordPress.org publishing findings
 - [ ] `composer phpcs`, E2E manifest validation, relevant E2E QA, and `git diff --check` ran, or missing tools/runtime blockers are documented
-- [ ] PHPStan level 5 passes without new baseline debt; resolved entries/counts are removed or lowered, and baseline changes follow the [ratchet policy](../01-static-qa.md#phpstan-level-5-and-baseline-ratchet)
+- [ ] PHPStan level 6 passes without new baseline debt; resolved entries/counts are removed or lowered, and baseline changes follow the [ratchet policy](../01-static-qa.md#phpstan-level-6-and-baseline-ratchet)
 - [ ] Genuine PHP 8.0/8.4 interpreter evidence is distinguished from PHPStan's PHP 8.0 analysis target and the separate WordPress 6.9/PHP 8.1 runtime compatibility lane
 - [ ] Compatibility QA was considered for release candidates, dependency-sensitive changes, or WordPress/PHP support changes
 - [ ] Workflow/shell changes pass dedicated workflow linters and applicable safeguard regressions; the unit aggregate requires all applicable unit/safeguard jobs and fails on failure, cancellation, or unexpected skip

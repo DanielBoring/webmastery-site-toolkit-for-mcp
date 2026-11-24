@@ -79,7 +79,7 @@ require_once $repository . '/vendor/autoload.php';
 // Use the public container API: dump-parameters formats regex escapes through the console formatter.
 $factory = new PHPStan\DependencyInjection\ContainerFactory($repository);
 $parameters = $factory->create($work . '/container', array($configuration), array())->getParameters();
-phpstan_test_require(5 === $parameters['level'], 'The repository must analyse at level 5.');
+phpstan_test_require(6 === $parameters['level'], 'The repository must analyse at level 6.');
 phpstan_test_require(80000 === $parameters['phpVersion'], 'Analysis must target PHP 8.0.');
 phpstan_test_require(true === $parameters['reportUnmatchedIgnoredErrors'], 'Unmatched ignores must fail.');
 phpstan_test_require(false === $parameters['treatPhpDocTypesAsCertain'], 'Preserve the existing PHPDoc certainty policy.');
@@ -141,7 +141,7 @@ phpstan_test_require(
 	array('argument.type', 'constant.notFound', 'return.type') === phpstan_test_identifiers($regression) && array() === $regression['errors'],
 	'New argument/return errors and the same baselined error in a different path must fail.'
 );
-echo "PASS new level-5 argument, return, and different-path errors fail\n";
+echo "PASS new argument, return, and different-path errors fail\n";
 phpstan_test_write($fresh, "<?php\n");
 
 phpstan_test_write($fixture, "<?php\n" . str_repeat($existing_error, 2) . "echo WSTM_PHPSTAN_DIFFERENT_FIXTURE;\n");
