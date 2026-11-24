@@ -4,6 +4,11 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Media {
 
+	/**
+	 * Register the media abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_list();
 		self::register_get();
@@ -12,6 +17,12 @@ class Webmastery_MCP_Media {
 		self::register_delete();
 	}
 
+	/**
+	 * Public record for a media attachment.
+	 *
+	 * @param WP_Post|int|null $attachment Attachment post or ID.
+	 * @return array<string, mixed>|null Null when the post is not an attachment.
+	 */
 	private static function normalize( $attachment ) {
 		$attachment = get_post( $attachment );
 		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
@@ -46,28 +57,66 @@ class Webmastery_MCP_Media {
 		return Webmastery_MCP_Untrusted::mark( $data, [ 'title', 'caption', 'alt_text', 'url', 'filename' ] );
 	}
 
+	/**
+	 * Permission callback requiring a capability.
+	 *
+	 * @param string $cap WordPress capability.
+	 * @return Closure
+	 */
 	private static function permission( $cap ) {
 		return Webmastery_MCP_Permissions::cap( $cap );
 	}
 
+	/**
+	 * Whether the current user may read an attachment.
+	 *
+	 * @param WP_Post|int|null $attachment Attachment post or ID.
+	 * @return bool
+	 */
 	private static function can_read_attachment( $attachment ) {
 		$attachment = get_post( $attachment );
 		return $attachment && 'attachment' === $attachment->post_type && current_user_can( 'edit_post', $attachment->ID );
 	}
 
+	/**
+	 * List the readable attachments in a bounded candidate window.
+	 *
+	 * @param array<string, mixed> $args     WP_Query arguments.
+	 * @param int                  $page     Page number.
+	 * @param int                  $per_page Page size.
+	 * @return array{items: list<array<string, mixed>>, page: int, per_page: int, next_page: int|null}|WP_Error
+	 */
 	private static function query_readable_attachments( $args, $page, $per_page ) {
 		return Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => self::can_read_attachment( $id ), static fn( $post ) => self::normalize( $post ) );
 	}
 
 
+	/**
+	 * Whether an address is private, reserved or not an IP.
+	 *
+	 * @param string $ip Address.
+	 * @return bool
+	 */
 	protected static function is_private_ip( $ip ) {
 		return Webmastery_MCP_Safe_Http::is_private_ip( $ip );
 	}
 
+	/**
+	 * Resolve a hostname to IPv4 addresses.
+	 *
+	 * @param string $host Hostname.
+	 * @return array<int, string>|false
+	 */
 	protected static function resolve_image_ipv4( $host ) {
 		return gethostbynamel( $host );
 	}
 
+	/**
+	 * Resolve AAAA and CNAME records; false on resolver failure.
+	 *
+	 * @param string $host Hostname.
+	 * @return array<int, array<string, mixed>>|false
+	 */
 	protected static function resolve_image_dns( $host ) {
 		if ( ! function_exists( 'dns_get_record' ) ) {
 			return false;
@@ -85,6 +134,7 @@ class Webmastery_MCP_Media {
 	 *
 	 * @param string             $url           Untrusted image URL.
 	 * @param array<int, string> $validated_ips Set on success: the IPv4 addresses that passed validation, empty for an IP literal.
+	 * @return string|WP_Error The sanitized URL, or an invalid_url error.
 	 */
 	protected static function validate_public_image_url( $url, &$validated_ips = null ) {
 		return Webmastery_MCP_Safe_Http::validate_public_url(
@@ -107,10 +157,24 @@ class Webmastery_MCP_Media {
 		return Webmastery_MCP_Safe_Http::pin_entries( $url, $ips );
 	}
 
+	/**
+	 * Lowercased host:port an image URL connects to.
+	 *
+	 * @param string $url Image URL.
+	 * @return string
+	 */
 	private static function image_target( $url ) {
 		return Webmastery_MCP_Safe_Http::target( $url );
 	}
 
+	/**
+	 * Download an image into a temporary file, aborting once it exceeds the size limit.
+	 *
+	 * @param string                  $url           Validated image URL.
+	 * @param int                     $max_size      Maximum size in bytes.
+	 * @param array<int, string>|null $validated_ips Addresses accepted by validate_public_image_url().
+	 * @return string|WP_Error Temporary file path, or an error.
+	 */
 	private static function download_bounded_image( $url, $max_size, $validated_ips = null ) {
 		$filename         = null;
 		$pins             = null === $validated_ips ? [] : [ self::image_target( $url ) => self::image_pin_entries( $url, $validated_ips ) ];
@@ -299,6 +363,12 @@ class Webmastery_MCP_Media {
 		}
 	}
 
+	/**
+	 * Permission callback for uploading an image, optionally attached to a post or page.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return true|WP_Error
+	 */
 	public static function upload_image_permission( $input = [] ) {
 		if ( ! current_user_can( 'upload_files' ) ) {
 			return Webmastery_MCP_Response::local_error( 'forbidden', 'Requires upload_files capability.' );
@@ -321,10 +391,22 @@ class Webmastery_MCP_Media {
 		return true;
 	}
 
+	/**
+	 * Permission callback requiring a capability on the attachment named by the input.
+	 *
+	 * @param string $input_key Input key holding the attachment ID.
+	 * @param string $cap       Meta capability checked against the attachment.
+	 * @return Closure
+	 */
 	private static function attachment_permission( $input_key, $cap ) {
 		return Webmastery_MCP_Permissions::object( 'attachment', $input_key, $cap, 'Media item not found.', "Requires {$cap} capability for this media item." );
 	}
 
+	/**
+	 * Register the list-media ability.
+	 *
+	 * @return void
+	 */
 	private static function register_list() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-media', [
 			'label'               => 'List Media',
@@ -377,6 +459,11 @@ class Webmastery_MCP_Media {
 		] );
 	}
 
+	/**
+	 * Register the get-media ability.
+	 *
+	 * @return void
+	 */
 	private static function register_get() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/get-media', [
 			'label'               => 'Get Media',
@@ -410,6 +497,11 @@ class Webmastery_MCP_Media {
 		] );
 	}
 
+	/**
+	 * Register the upload-image ability.
+	 *
+	 * @return void
+	 */
 	private static function register_upload_image() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/upload-image', [
 			'label'               => 'Upload Image from URL',
@@ -552,6 +644,11 @@ class Webmastery_MCP_Media {
 		] );
 	}
 
+	/**
+	 * Register the update-media ability.
+	 *
+	 * @return void
+	 */
 	private static function register_update() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/update-media', [
 			'label'               => 'Update Media',
@@ -609,6 +706,12 @@ class Webmastery_MCP_Media {
 		] );
 	}
 
+	/**
+	 * Validate the confirmation and force flags of a delete request.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array<string, mixed>|null Error envelope, or null when the input is valid.
+	 */
 	public static function delete_input_error( array $input ): ?array {
 		if ( true !== ( $input['confirm'] ?? null ) ) {
 			return Webmastery_MCP_Response::legacy_error( 'missing_confirmation', 'Set confirm to true to acknowledge permanent deletion.' );
@@ -619,6 +722,11 @@ class Webmastery_MCP_Media {
 		return null;
 	}
 
+	/**
+	 * Register the delete-media ability.
+	 *
+	 * @return void
+	 */
 	private static function register_delete() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/delete-media', [
 			'label'               => 'Delete Media',

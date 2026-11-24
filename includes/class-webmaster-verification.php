@@ -4,6 +4,11 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Webmaster_Verification {
 
+	/**
+	 * Register the webmaster-verification-status ability.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		wp_register_ability(
 			'webmastery-site-toolkit-for-mcp/webmaster-verification-status',
@@ -21,10 +26,21 @@ class Webmastery_MCP_Webmaster_Verification {
 		);
 	}
 
+	/**
+	 * Permission callback requiring the read capability.
+	 *
+	 * @return bool|WP_Error
+	 */
 	public static function permission() {
 		return Webmastery_MCP_Permissions::check( 'read' );
 	}
 
+	/**
+	 * Report public webmaster verification signals.
+	 *
+	 * @param array<string, mixed> $input Ability input (unused).
+	 * @return array{success: true, data: array<string, mixed>}|WP_Error
+	 */
 	public static function execute( $input = [] ) {
 		$permission = self::permission();
 		if ( is_wp_error( $permission ) ) {
@@ -70,6 +86,12 @@ class Webmastery_MCP_Webmaster_Verification {
 		];
 	}
 
+	/**
+	 * Run the public checks, cached briefly per site and home URL.
+	 *
+	 * @param string $home_url Home URL.
+	 * @return array{home_reached: bool, checks: array<string, array<string, mixed>>}
+	 */
 	private static function public_checks( $home_url ) {
 		// The schema version and site/home scope keep shared public results separate.
 		$cache_key = 'webmastery_mcp_verification_v1_' . hash( 'sha256', get_current_blog_id() . ':' . $home_url );
@@ -109,6 +131,11 @@ class Webmastery_MCP_Webmaster_Verification {
 		return $public;
 	}
 
+	/**
+	 * Check whether Google Site Kit is installed and active.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function check_google_site_kit() {
 		if ( ! function_exists( 'get_plugins' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
@@ -141,6 +168,14 @@ class Webmastery_MCP_Webmaster_Verification {
 		);
 	}
 
+	/**
+	 * Check the homepage HTML for a verification meta tag.
+	 *
+	 * @param array{error: WP_Error|null, status_code: int|null, body: string} $home_response Homepage response from request_url().
+	 * @param string                                                           $meta_name Meta tag name.
+	 * @param string                                                           $label     Human-readable check label.
+	 * @return array<string, mixed>
+	 */
 	private static function check_meta_tag( $home_response, $meta_name, $label ) {
 		if ( is_wp_error( $home_response['error'] ) ) {
 			return self::result(
@@ -180,6 +215,11 @@ class Webmastery_MCP_Webmaster_Verification {
 		);
 	}
 
+	/**
+	 * Check whether BingSiteAuth.xml is publicly reachable.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function check_bing_site_auth_xml() {
 		$url      = home_url( '/BingSiteAuth.xml' );
 		$response = self::request_url( $url, 'HEAD' );
@@ -210,6 +250,11 @@ class Webmastery_MCP_Webmaster_Verification {
 		);
 	}
 
+	/**
+	 * Look for Google and Bing verification records among the host's DNS TXT records.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function check_dns_txt_records() {
 		$host = wp_parse_url( home_url(), PHP_URL_HOST );
 		if ( ! is_string( $host ) || '' === $host ) {
@@ -277,6 +322,11 @@ class Webmastery_MCP_Webmaster_Verification {
 		);
 	}
 
+	/**
+	 * Check robots.txt reachability and the sitemap URLs it declares.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function check_robots_txt() {
 		$url      = home_url( '/robots.txt' );
 		$response = self::request_url( $url );
@@ -315,6 +365,12 @@ class Webmastery_MCP_Webmaster_Verification {
 		);
 	}
 
+	/**
+	 * Check the reachability of the sitemap URLs declared in robots.txt.
+	 *
+	 * @param list<string> $sitemap_urls Sitemap URLs.
+	 * @return array{sitemap_reachability: array<string, mixed>}
+	 */
 	private static function check_sitemaps( $sitemap_urls ) {
 		if ( empty( $sitemap_urls ) ) {
 			return [
@@ -373,6 +429,12 @@ class Webmastery_MCP_Webmaster_Verification {
 		];
 	}
 
+	/**
+	 * Check whether one declared sitemap URL is reachable.
+	 *
+	 * @param string $url Sitemap URL.
+	 * @return array<string, mixed>
+	 */
 	private static function check_sitemap_url( $url ) {
 		$home_host    = wp_parse_url( home_url(), PHP_URL_HOST );
 		$sitemap_host = wp_parse_url( $url, PHP_URL_HOST );
@@ -403,6 +465,13 @@ class Webmastery_MCP_Webmaster_Verification {
 		];
 	}
 
+	/**
+	 * Request a URL and reduce the response to its status and body.
+	 *
+	 * @param string $url    URL to request.
+	 * @param string $method HTTP method.
+	 * @return array{error: WP_Error|null, status_code: int|null, body: string}
+	 */
 	private static function request_url( $url, $method = 'GET' ) {
 		$args = [
 			'method'      => $method,
@@ -426,12 +495,25 @@ class Webmastery_MCP_Webmaster_Verification {
 		];
 	}
 
+	/**
+	 * Whether a response has a 2xx status code.
+	 *
+	 * @param array{error: WP_Error|null, status_code: int|null, body: string} $response Response from request_url().
+	 * @return bool
+	 */
 	private static function is_success_response( $response ) {
 		return isset( $response['status_code'] )
 			&& $response['status_code'] >= 200
 			&& $response['status_code'] < 300;
 	}
 
+	/**
+	 * Content attribute of the first meta tag with a given name.
+	 *
+	 * @param string $html Page HTML.
+	 * @param string $name Meta tag name.
+	 * @return string|null
+	 */
 	private static function find_meta_content( $html, $name ) {
 		if ( '' === $html ) {
 			return null;
@@ -445,6 +527,12 @@ class Webmastery_MCP_Webmaster_Verification {
 		return null;
 	}
 
+	/**
+	 * Sitemap URLs declared in a robots.txt body.
+	 *
+	 * @param string $robots_body robots.txt contents.
+	 * @return list<string>
+	 */
 	private static function parse_sitemap_urls( $robots_body ) {
 		$urls = [];
 		foreach ( preg_split( '/\r\n|\r|\n/', $robots_body ) as $line ) {
@@ -456,6 +544,15 @@ class Webmastery_MCP_Webmaster_Verification {
 		return array_values( array_unique( array_filter( $urls ) ) );
 	}
 
+	/**
+	 * Build a check result.
+	 *
+	 * @param string               $status  Check status: pass, warn or unknown.
+	 * @param string               $message Summary message.
+	 * @param string|null          $detail  Optional detail text.
+	 * @param array<string, mixed> $extra   Additional fields merged into the result.
+	 * @return array<string, mixed>
+	 */
 	private static function result( $status, $message, $detail = null, $extra = [] ) {
 		$result = array_merge(
 			[
@@ -472,6 +569,12 @@ class Webmastery_MCP_Webmaster_Verification {
 		return $result;
 	}
 
+	/**
+	 * Count check results by status.
+	 *
+	 * @param array<string, array<string, mixed>> $checks Check results.
+	 * @return array{pass: int, warn: int, unknown: int}
+	 */
 	private static function summarize( $checks ) {
 		$summary = [
 			'pass'    => 0,
