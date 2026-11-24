@@ -55,7 +55,7 @@ assessment; unknown future versions remain rejected. Admission is not a passing
 compatibility result: the complete assertions and verified cleanup must pass.
 The historical 2.6.0 comparison remains fixed to 0.6.1 and 0.7.0. See
 [compatibility failure triage](../../docs/07-compatibility-qa.md#reading-failures)
-for the 0.7.1 override and the distinction between a guard failure and a runtime
+for the 0.7.1 and 0.7.2 admissions and the distinction between a guard failure and a runtime
 regression. The 2025-11-25
 HTTP clients must send the matching `MCP-Protocol-Version` header on session
 requests, including notifications and cleanup; Adapter 0.7.0 rejects its absence.

@@ -6,6 +6,13 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Admit MCP Adapter 0.7.2 in the error-contract and untrusted-content E2E
+  runner guards, which still reject unreviewed versions. The November 23
+  Compatibility QA run (issue #209) stopped at these guards in every 0.7.2
+  lane. The guard regression test now covers 0.7.2 and rejects 0.7.3. The
+  triage note in `docs/07-compatibility-qa.md` records the upstream changes.
+  No dependency baseline is promoted by this change.
+
 - Patch the PHP runtimes used by minimum-runtime, compatibility and adapter QA
   for CVE-2026-109618 and CVE-2026-109619. The WordPress 6.9 jobs retain PHP
   8.0 and 8.1 coverage using backported packages. The adapter assessment uses

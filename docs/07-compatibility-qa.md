@@ -147,6 +147,25 @@ export MCP_ADAPTER_SHA256=c8bc28f83d3c39beffa2add4f6becc0b1ae54097df433697d1dbe6
 bash scripts/qa-run.sh all
 ```
 
+The [November 23, 2026 run](https://github.com/DanielBoring/webmastery-site-toolkit-for-mcp/actions/runs/45270501483)
+reopened issue #209 the same way: Adapter 0.7.2 installed in the
+`latest-mcp-adapter`, `latest-seo` and `combined-latest` lanes, and product QA
+stopped right after setup, while every lane still on 0.7.1 passed (including
+WordPress 7.1.5). Both guards now admit 0.7.2 explicitly and keep rejecting
+unreviewed versions. The
+[upstream changes](https://github.com/WordPress/mcp-adapter/compare/5bdb40b49c307e517413f77f9157272d46d52e07...6f10591a6415cc2d29a13f488348ce12b635a685)
+from 0.7.1 to 0.7.2 (`6f10591a6415cc2d29a13f488348ce12b635a685`) prepare and
+validate ability input before the Adapter's permission pre-check, accept a
+session request without the `MCP-Protocol-Version` header, and update Jetpack
+Autoloader. The Toolkit already validates input before its permission
+callbacks and does not use `mcp_adapter_pre_tool_call`, and the E2E clients
+always send the header; admission still does not certify those changes. The
+complete assertions and verified cleanup must pass on 0.7.2 before a baseline
+is promoted. To reproduce, use the same commands with
+`MCP_ADAPTER_ZIP=https://github.com/WordPress/mcp-adapter/releases/download/v0.7.2/mcp-adapter.zip`
+and
+`MCP_ADAPTER_SHA256=baab734f26bd347a87947d141bb0728a8594ab7f17af03d2ae2e95e31d828b5b`.
+
 Use a separate checkout/project with `bash scripts/qa-run.sh package` for original
 ZIP evidence. A failed run retains its owned stack and private captures when
 cleanup is unresolved; inspect those captures locally without uploading them.
