@@ -4,6 +4,14 @@ defined( 'ABSPATH' ) || exit;
 
 final class Webmastery_MCP_List_Query {
 
+	/**
+	 * Read one bounded window of post IDs, with a one-item lookahead for next_page.
+	 *
+	 * @param array<string, mixed> $args     WP_Query arguments.
+	 * @param int                  $page     Requested page, clamped to at least 1.
+	 * @param int                  $per_page Requested page size, clamped to 1-100.
+	 * @return array{ids: list<int>, page: int, per_page: int, next_page: int|null}|WP_Error
+	 */
 	public static function window( array $args, int $page, int $per_page ): array|WP_Error {
 		global $wpdb;
 
@@ -47,6 +55,12 @@ final class Webmastery_MCP_List_Query {
 		];
 	}
 
+	/**
+	 * Run a database read and turn a failed query into an error.
+	 *
+	 * @param callable(): mixed $read Read to observe.
+	 * @return mixed The read's result, or WP_Error when a query failed.
+	 */
 	private static function database_read( callable $read ) {
 		global $wpdb;
 
@@ -75,6 +89,13 @@ final class Webmastery_MCP_List_Query {
 		return $result;
 	}
 
+	/**
+	 * Build a list response page from a window and its readable items.
+	 *
+	 * @param array{ids: list<int>, page: int, per_page: int, next_page: int|null} $window Window from window().
+	 * @param array<int, array<string, mixed>>                                     $items Normalized items.
+	 * @return array{items: list<array<string, mixed>>, page: int, per_page: int, next_page: int|null}
+	 */
 	public static function result( array $window, array $items ): array {
 		return [
 			'items'     => array_values( $items ),
@@ -84,6 +105,11 @@ final class Webmastery_MCP_List_Query {
 		];
 	}
 
+	/**
+	 * Schema for the summary/full field projection input.
+	 *
+	 * @return array{type: string, enum: list<string>, default: string, description: string}
+	 */
 	public static function fields_schema(): array {
 		return [
 			'type'        => 'string',
@@ -93,6 +119,13 @@ final class Webmastery_MCP_List_Query {
 		];
 	}
 
+	/**
+	 * Apply the field projection and untrusted-field markers to one item.
+	 *
+	 * @param array<string, mixed> $item   Normalized item.
+	 * @param string               $fields Field projection: summary or full.
+	 * @return array<string, mixed>
+	 */
 	public static function project( array $item, string $fields ): array {
 		if ( 'summary' === $fields ) {
 			unset( $item['content'] );

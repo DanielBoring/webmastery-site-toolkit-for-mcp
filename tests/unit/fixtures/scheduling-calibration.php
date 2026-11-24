@@ -18,7 +18,7 @@ require_once __DIR__ . '/legacy-artifact-calibration.php';
 
 const BASELINE = '735d31df97ed91af34eec9439a3dbea22ea8f5d8';
 const ORIGINAL_SHA256 = 'e9ced6e22fd1a4347565024a3a903a27d3184a86f2f674bb0d7723bcd2328ff3';
-const LEDGER_SHA256 = '30cad4e6931b82edb1ccf63c2fc429b02a1e9ccb79306d38b37a09d497a0a8a5';
+const LEDGER_SHA256 = '0c348756b3084b6ebbec6343fbe4c87916c84bc47009e99bc746e2f5649f9a77';
 
 function json( $value ): string {
 	return json_encode( $value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR ) . "\n";
@@ -49,9 +49,9 @@ function load_ledger( ?string $source = null ): stdClass {
 
 function bounded_source_bindings(): array {
 	return array(
-		'includes/class-posts.php' => array( 'ab08b239d861608011c0b7fc550ea4e24da12666d431fcaf95dfca4d790af2bb', 'b39b64a89494cf96589f880c0675a85ae52ab567' ),
-		'includes/class-custom-post-types.php' => array( '88a90d2a981e6dacdb444e69fde5adadb8f8f5664307b1d9064cf6812aff46d3', 'f06b57ccbcb1f81b49468eae2abc056f7a7528f7' ),
-		'includes/class-list-query.php' => array( 'd6f267226522ddf267ec0497b997dcea1160ee15d0a353013fa51b46eefe9090', '723b2e143f3f06163780bf6bb79e42d46ad62095' ),
+		'includes/class-posts.php' => array( '8ace5009d0541fedc0d27037d18e97d69d3c0e573b37cc73c0fe463ec32fdea6', '1eee76689912a159bfaa6e9716983155b3e823f3' ),
+		'includes/class-custom-post-types.php' => array( '1d65b3b924cc48a5e9dad31eb03b78af56bb9a38ad310d161909163e32f88be5', '01248d57a56ff9bbbdbb07ae83eb88808522496b' ),
+		'includes/class-list-query.php' => array( '0674a64ab353bef92af09afde6c6a93744775671d663729bcf280e5ec3ed1d90', '1b29ca7f54e0d1287dec2550bce3f72959528023' ),
 		'includes/class-untrusted.php' => array( '5a0ba6dffdf9c30b0ec7a01c6d7cbaa7c9f15c3707adc04e06255deb41104e20', 'dd504fd3eae59bc945768b2249f122026af8bdef' ),
 		'includes/class-input.php' => \wstm_test_product_binding( 'includes/class-input.php' ),
 		'includes/class-response.php' => \wstm_test_product_binding( 'includes/class-response.php' ),

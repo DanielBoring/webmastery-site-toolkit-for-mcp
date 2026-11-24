@@ -4,6 +4,11 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Comments {
 
+	/**
+	 * Register the comment abilities.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_list();
 		self::register_reply();
@@ -28,6 +33,12 @@ class Webmastery_MCP_Comments {
 	}
 
 
+	/**
+	 * Load a comment by ID.
+	 *
+	 * @param int|float|string $comment_id Comment ID, passed through absint().
+	 * @return WP_Comment|WP_Error
+	 */
 	private static function get_comment_or_error( $comment_id ) {
 		$comment = get_comment( absint( $comment_id ) );
 
@@ -38,6 +49,12 @@ class Webmastery_MCP_Comments {
 		return $comment;
 	}
 
+	/**
+	 * Load the post a comment belongs to.
+	 *
+	 * @param WP_Comment $comment Comment.
+	 * @return WP_Post|WP_Error
+	 */
 	private static function get_comment_post_or_error( $comment ) {
 		$post = get_post( (int) $comment->comment_post_ID );
 
@@ -48,6 +65,11 @@ class Webmastery_MCP_Comments {
 		return $post;
 	}
 
+	/**
+	 * Moderation statuses accepted by update-comment, keyed by input value.
+	 *
+	 * @return array{approve: 'approve', hold: 'hold', spam: 'spam', trash: 'trash'}
+	 */
 	private static function allowed_update_statuses() {
 		return [
 			'approve' => 'approve',
@@ -57,10 +79,20 @@ class Webmastery_MCP_Comments {
 		];
 	}
 
+	/**
+	 * Permission callback for reply-comment.
+	 *
+	 * @return Closure
+	 */
 	private static function reply_permission() {
 		return Webmastery_MCP_Permissions::cap( 'edit_posts' );
 	}
 
+	/**
+	 * Permission callback for moderation abilities that leaves input and not-found errors to execution.
+	 *
+	 * @return Closure(mixed=): (true|WP_Error)
+	 */
 	private static function moderate_permission() {
 		return function ( $input = [] ) {
 			$comment = self::moderate_comment_or_error( $input, true );
@@ -72,6 +104,13 @@ class Webmastery_MCP_Comments {
 		};
 	}
 
+	/**
+	 * Load a comment the current user may moderate.
+	 *
+	 * @param mixed $input            Ability input.
+	 * @param bool  $permission_check Whether this is the permission check, which requires moderate_comments first.
+	 * @return WP_Comment|WP_Error
+	 */
 	private static function moderate_comment_or_error( $input = [], $permission_check = false ) {
 		$can_moderate = current_user_can( 'moderate_comments' );
 		if ( $permission_check && ! $can_moderate ) {
@@ -107,6 +146,11 @@ class Webmastery_MCP_Comments {
 		return $comment;
 	}
 
+	/**
+	 * Register the list-comments ability.
+	 *
+	 * @return void
+	 */
 	private static function register_list() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/list-comments', [
 			'label'               => 'List Comments',
@@ -158,6 +202,11 @@ class Webmastery_MCP_Comments {
 		] );
 	}
 
+	/**
+	 * Register the reply-comment ability.
+	 *
+	 * @return void
+	 */
 	private static function register_reply() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/reply-comment', [
 			'label'               => 'Reply Comment',
@@ -237,6 +286,11 @@ class Webmastery_MCP_Comments {
 		] );
 	}
 
+	/**
+	 * Register the update-comment ability.
+	 *
+	 * @return void
+	 */
 	private static function register_update() {
 		wp_register_ability( 'webmastery-site-toolkit-for-mcp/update-comment', [
 			'label'               => 'Update Comment',
@@ -331,6 +385,14 @@ class Webmastery_MCP_Comments {
 		] );
 	}
 
+	/**
+	 * Register an ability that sets one comment status.
+	 *
+	 * @param string $action    Ability action: approve, trash or spam.
+	 * @param string $label     Ability label.
+	 * @param string $wp_status Status passed to wp_set_comment_status().
+	 * @return void
+	 */
 	private static function register_set_status( $action, $label, $wp_status ) {
 		wp_register_ability( "webmastery-site-toolkit-for-mcp/{$action}-comment", [
 			'label'               => $label,

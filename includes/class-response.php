@@ -19,6 +19,16 @@ final class Webmastery_MCP_Response {
 		'upstream_failed'     => [ 'upstream_failed', 'external_error', 'content_hygiene_query_failed', 'database_health_query_failed', 'create_failed', 'delete_failed', 'download_failed', 'featured_image_failed', 'meta_write_failed', 'metadata_update_failed', 'restore_revision_failed', 'restore_failed', 'site_kit_invalid_response', 'site_kit_request_failed', 'status_update_failed', 'trash_failed', 'update_failed', 'upload_failed', 'ability_invalid_output', 'ability_callback_exception', 'ability_invalid_execute_callback', 'ability_invalid_permission_callback', 'ability_missing_input_schema' ],
 	];
 
+	/**
+	 * Build a failure envelope for a public error code.
+	 *
+	 * @param string               $code    Public error code.
+	 * @param string               $message Public message.
+	 * @param array<string, mixed> $details Safe public details.
+	 * @param string|null          $reason  Specific reason, defaulting to the code.
+	 * @return array{success: false, error: array{code: string, reason: string, message: string, details: stdClass}}
+	 * @throws InvalidArgumentException When the code is not a public error code.
+	 */
 	public static function error( string $code, string $message, array $details = [], ?string $reason = null ): array {
 		if ( ! isset( self::REASONS[ $code ] ) ) {
 			throw new InvalidArgumentException( 'Unknown Webmastery error code.' );
@@ -34,10 +44,24 @@ final class Webmastery_MCP_Response {
 		];
 	}
 
+	/**
+	 * Build a success envelope.
+	 *
+	 * @param array<mixed> $data Response data.
+	 * @return array{success: true, data: array<mixed>}
+	 */
 	public static function ok( array $data ): array {
 		return [ 'success' => true, 'data' => $data ];
 	}
 
+	/**
+	 * Build a failure envelope from a specific reason, mapped to its public code.
+	 *
+	 * @param string               $reason  Specific reason.
+	 * @param string               $message Public message.
+	 * @param array<string, mixed> $details Safe public details.
+	 * @return array{success: false, error: array{code: string, reason: string, message: string, details: stdClass}}
+	 */
 	public static function legacy_error( string $reason, string $message, array $details = [] ): array {
 		foreach ( self::REASONS as $code => $reasons ) {
 			if ( in_array( $reason, $reasons, true ) ) {
@@ -47,6 +71,12 @@ final class Webmastery_MCP_Response {
 		return self::error( 'upstream_failed', 'An external operation failed.', [], 'external_error' );
 	}
 
+	/**
+	 * Convert a WordPress error into a failure envelope without publishing provider data.
+	 *
+	 * @param WP_Error $error Error to convert.
+	 * @return array{success: false, error: array{code: string, reason: string, message: string, details: object}}
+	 */
 	public static function from_wp_error( WP_Error $error ): array {
 		$data = $error->get_error_data();
 		if ( $error instanceof Webmastery_MCP_Error && is_array( $data ) && isset( $data['webmastery_error'] ) && self::is_error( $data['webmastery_error'] ) ) {
@@ -84,14 +114,37 @@ final class Webmastery_MCP_Response {
 		return self::legacy_error( $reason, $message, $details );
 	}
 
+	/**
+	 * Create a plugin-owned error whose message may be published.
+	 *
+	 * @param string               $reason  Specific reason.
+	 * @param string               $message Public message.
+	 * @param array<string, mixed> $data    Error data.
+	 * @return WP_Error
+	 */
 	public static function local_error( string $reason, string $message, array $data = [] ): WP_Error {
 		return new Webmastery_MCP_Local_Error( $reason, $message, $data );
 	}
 
+	/**
+	 * Build an inline failure entry for one item of a batch.
+	 *
+	 * @param int                  $id      Item ID.
+	 * @param string               $reason  Specific reason.
+	 * @param string               $message Public message.
+	 * @param array<string, mixed> $details Safe public details.
+	 * @return array{id: int, code: string, reason: string, message: string, details: stdClass}
+	 */
 	public static function item_error( int $id, string $reason, string $message, array $details = [] ): array {
 		return [ 'id' => $id ] + self::legacy_error( $reason, $message, $details )['error'];
 	}
 
+	/**
+	 * Check whether a value is a well-formed failure envelope.
+	 *
+	 * @param mixed $result Value to check.
+	 * @return bool
+	 */
 	public static function is_error( $result ): bool {
 		return is_array( $result ) && false === ( $result['success'] ?? null )
 			&& is_array( $result['error'] ?? null )
@@ -109,6 +162,15 @@ final class Webmastery_MCP_Response {
 		return self::carrier( $envelope, $status );
 	}
 
+	/**
+	 * Carry a failure envelope for a specific reason in a WordPress error.
+	 *
+	 * @param string               $reason  Specific reason.
+	 * @param string               $message Public message.
+	 * @param array<string, mixed> $details Safe public details.
+	 * @param int                  $status  HTTP status.
+	 * @return WP_Error
+	 */
 	public static function legacy_wp_error( string $reason, string $message, array $details = [], int $status = 400 ): WP_Error {
 		return self::carrier( self::legacy_error( $reason, $message, $details ), $status );
 	}
@@ -118,6 +180,14 @@ final class Webmastery_MCP_Response {
 		return $statuses[ $code ];
 	}
 
+	/**
+	 * Carry a failure envelope in a WordPress error, encoded as its message.
+	 *
+	 * @param array{success: false, error: array{code: string, reason: string, message: string, details: object}} $envelope Failure envelope.
+	 * @param int                                                                                                 $status HTTP status.
+	 * @return WP_Error
+	 * @throws RuntimeException When the envelope cannot be encoded.
+	 */
 	private static function carrier( array $envelope, int $status ): WP_Error {
 		// Adapter 0.6.1 discards WP_Error data, including before its result filter.
 		$message = wp_json_encode( $envelope, JSON_INVALID_UTF8_SUBSTITUTE );
@@ -131,6 +201,13 @@ final class Webmastery_MCP_Response {
 		return 0 === strpos( $name, 'webmastery-site-toolkit-for-mcp/' );
 	}
 
+	/**
+	 * Back owned abilities with the plugin's ability class.
+	 *
+	 * @param array<string, mixed> $args Ability registration arguments (wp_register_ability_args filter).
+	 * @param string               $name Ability name.
+	 * @return array<string, mixed>
+	 */
 	public static function register_args( array $args, string $name ): array {
 		if ( self::owns( $name ) ) {
 			$args['ability_class'] = Webmastery_MCP_Ability::class;
@@ -138,6 +215,15 @@ final class Webmastery_MCP_Response {
 		return $args;
 	}
 
+	/**
+	 * Carry owned failure envelopes through the MCP Adapter tool call result filter.
+	 *
+	 * @param mixed  $result    Tool call result.
+	 * @param mixed  $args      Tool call arguments.
+	 * @param string $tool_name Tool name.
+	 * @param object $tool      Adapter tool, exposing get_observability_context().
+	 * @return mixed
+	 */
 	public static function mcp_result( $result, $args, $tool_name, $tool ) {
 		$context = $tool->get_observability_context();
 		$name    = $context['ability_name'] ?? '';

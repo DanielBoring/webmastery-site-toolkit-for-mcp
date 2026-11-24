@@ -13,15 +13,39 @@ final class Webmastery_MCP_Input {
 	 */
 	private static ?WeakMap $diagnostics = null;
 
+	/**
+	 * Read the requested page size, clamped to the given bounds.
+	 *
+	 * @param array<string, mixed> $input            Ability input.
+	 * @param int                  $default_per_page Page size when per_page is absent.
+	 * @param int                  $maximum          Largest page size.
+	 * @param int|null             $minimum          Smallest page size, or null for no lower clamp.
+	 * @return int
+	 */
 	public static function per_page( array $input, int $default_per_page = 20, int $maximum = 100, ?int $minimum = 1 ): int {
 		$value = (int) ( $input['per_page'] ?? $default_per_page );
 		return min( null === $minimum ? $value : max( $minimum, $value ), $maximum );
 	}
 
+	/**
+	 * Read the requested page number, at least 1.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return int
+	 */
 	public static function page( array $input ): int {
 		return max( 1, (int) ( $input['page'] ?? 1 ) );
 	}
 
+	/**
+	 * Read the requested page size and page number together.
+	 *
+	 * @param array<string, mixed> $input            Ability input.
+	 * @param int                  $default_per_page Page size when per_page is absent.
+	 * @param int                  $maximum          Largest page size.
+	 * @param int|null             $minimum          Smallest page size, or null for no lower clamp.
+	 * @return array{per_page: int, page: int}
+	 */
 	public static function pagination( array $input, int $default_per_page = 20, int $maximum = 100, ?int $minimum = 1 ): array {
 		return [
 			'per_page' => self::per_page( $input, $default_per_page, $maximum, $minimum ),
@@ -29,6 +53,13 @@ final class Webmastery_MCP_Input {
 		];
 	}
 
+	/**
+	 * Close an owned ability's input schema and wrap its callbacks with strict validation.
+	 *
+	 * @param array<string, mixed> $args Ability registration arguments (wp_register_ability_args filter).
+	 * @param string               $name Ability name.
+	 * @return array<string, mixed>
+	 */
 	public static function register_args( array $args, string $name ): array {
 		if ( ! Webmastery_MCP_Response::owns( $name ) ) {
 			return $args;
@@ -81,6 +112,13 @@ final class Webmastery_MCP_Input {
 		return $args;
 	}
 
+	/**
+	 * Return an ability's own input error envelope in place of a schema rejection.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @param string               $name  Ability name.
+	 * @return array{success: false, error: array{code: string, reason: string, message: string, details: stdClass}}|null
+	 */
 	private static function interlock_error( array $input, string $name ): ?array {
 		// Preserve the existing direct-callback diagnostics, not a validation bypass.
 		switch ( $name ) {
@@ -96,6 +134,12 @@ final class Webmastery_MCP_Input {
 		return null;
 	}
 
+	/**
+	 * Close every declared property set in a JSON schema, recursively.
+	 *
+	 * @param array<string, mixed> $schema JSON schema.
+	 * @return array<string, mixed>
+	 */
 	public static function close_schema( array $schema ): array {
 		// A declared property set is closed; unstructured values and explicit maps are not.
 		if ( 'object' === ( $schema['type'] ?? null ) && array_key_exists( 'properties', $schema )
@@ -113,6 +157,13 @@ final class Webmastery_MCP_Input {
 		return $schema;
 	}
 
+	/**
+	 * Validate a raw value against a schema and remember the first failure's diagnostic.
+	 *
+	 * @param mixed                $value  Raw input.
+	 * @param array<string, mixed> $schema Public input schema.
+	 * @return WP_Error|null
+	 */
 	public static function validate( $value, array $schema ): ?WP_Error {
 		$diagnostic = self::diagnose( $value, $schema );
 		if ( null !== $diagnostic ) {
@@ -123,6 +174,14 @@ final class Webmastery_MCP_Input {
 		return null;
 	}
 
+	/**
+	 * Attach a schema diagnostic to a core input-validation error.
+	 *
+	 * @param WP_Error             $error  Error returned by input validation.
+	 * @param mixed                $value  Raw input.
+	 * @param array<string, mixed> $schema Public input schema.
+	 * @return void
+	 */
 	public static function annotate_error( WP_Error $error, $value, array $schema ): void {
 		// Keep the parent object, message and data intact. Never parse its diagnostics.
 		if ( 'ability_invalid_input' === $error->get_error_code() ) {
@@ -130,6 +189,12 @@ final class Webmastery_MCP_Input {
 		}
 	}
 
+	/**
+	 * Return the remembered diagnostic for an input-validation error.
+	 *
+	 * @param WP_Error $error Error identity.
+	 * @return array{}|array{field: string, reason: string}
+	 */
 	public static function error_details( WP_Error $error ): array {
 		return 'ability_invalid_input' === $error->get_error_code() ? ( self::$diagnostics[ $error ] ?? [] ) : [];
 	}
@@ -156,6 +221,13 @@ final class Webmastery_MCP_Input {
 		return strlen( $path . $suffix ) > 240 ? $path . '...' : $path . $suffix;
 	}
 
+	/**
+	 * Extend a schema path with a property name, or a wildcard for other keys.
+	 *
+	 * @param string     $path Bounded schema path.
+	 * @param int|string $key  Property key.
+	 * @return string
+	 */
 	private static function property_path( string $path, $key ): string {
 		// Only declared schema names reach this method; other keys use a wildcard.
 		$suffix = is_string( $key ) && preg_match( '/^[A-Za-z_][A-Za-z0-9_-]{0,63}$/D', $key ) ? '.' . $key : '.*';
@@ -165,9 +237,9 @@ final class Webmastery_MCP_Input {
 	/**
 	 * Find the first strict failure without reading provider diagnostics.
 	 *
-	 * @param mixed  $value Raw input.
-	 * @param array  $schema Public schema.
-	 * @param string $path Bounded schema path.
+	 * @param mixed                $value Raw input.
+	 * @param array<string, mixed> $schema Public schema.
+	 * @param string               $path Bounded schema path.
 	 * @return array{field: string, reason: string}|null
 	 */
 	private static function diagnose( $value, array $schema, string $path = '$' ): ?array {
@@ -231,6 +303,13 @@ final class Webmastery_MCP_Input {
 		return null;
 	}
 
+	/**
+	 * Check a raw value against one JSON schema type without coercion.
+	 *
+	 * @param mixed  $value Raw input.
+	 * @param string $type  JSON schema type name.
+	 * @return bool
+	 */
 	private static function is_type( $value, string $type ): bool {
 		switch ( $type ) {
 			case 'null':
@@ -258,6 +337,13 @@ final class Webmastery_MCP_Input {
 		}
 	}
 
+	/**
+	 * Convert schema objects in validated input to associative arrays, recursively.
+	 *
+	 * @param mixed                $value  Validated input.
+	 * @param array<string, mixed> $schema Public input schema.
+	 * @return mixed
+	 */
 	private static function normalize_objects( $value, array $schema ) {
 		if ( 'object' === ( $schema['type'] ?? null ) ) {
 			$value = (array) $value;

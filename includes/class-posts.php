@@ -4,6 +4,11 @@ defined( 'ABSPATH' ) || exit;
 
 class Webmastery_MCP_Posts {
 
+	/**
+	 * Register the post and page abilities and their companion areas.
+	 *
+	 * @return void
+	 */
 	public static function register() {
 		self::register_post_type( 'post' );
 		self::register_post_type( 'page' );
@@ -14,6 +19,12 @@ class Webmastery_MCP_Posts {
 		Webmastery_MCP_Bulk_Posts::register();
 	}
 
+	/**
+	 * Reject metadata fields in a create or update input.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array{success: false, error: array{code: string, reason: string, message: string, details: stdClass}}|null
+	 */
 	public static function reject_combined_metadata( array $input ): ?array {
 		return Webmastery_MCP_Post_Meta::reject_combined_metadata( $input );
 	}
@@ -22,10 +33,23 @@ class Webmastery_MCP_Posts {
 		return Webmastery_MCP_Post_Meta::can_read_post_meta_key( $post_id, $key );
 	}
 
+	/**
+	 * Check a bulk post operation's input before any read or write.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array{success: false, error: array{code: string, reason: string, message: string, details: stdClass}}|null
+	 */
 	public static function bulk_input_error( $input ) {
 		return Webmastery_MCP_Bulk_Posts::bulk_input_error( $input );
 	}
 
+	/**
+	 * Normalize a post or page for responses, adding category and tag IDs to posts.
+	 *
+	 * @param int|WP_Post|null $post   Post ID or object.
+	 * @param string           $fields Field projection: summary or full.
+	 * @return array<string, mixed>|null
+	 */
 	public static function normalize( $post, $fields = 'full' ) {
 		$post = get_post( $post );
 		if ( ! $post ) {
@@ -42,14 +66,35 @@ class Webmastery_MCP_Posts {
 		return $data;
 	}
 
+	/**
+	 * Check whether the current user may read a post in full.
+	 *
+	 * @param int|WP_Post $post Post ID or object.
+	 * @return bool
+	 */
 	private static function can_read_full_post( $post ) {
 		return Webmastery_MCP_Post_Access::can_read( $post );
 	}
 
+	/**
+	 * Read one window of posts and keep the readable ones.
+	 *
+	 * @param array<string, mixed> $args     WP_Query arguments.
+	 * @param int                  $page     Requested page.
+	 * @param int                  $per_page Requested page size.
+	 * @param string               $fields   Field projection: summary or full.
+	 * @return array{items: list<array<string, mixed>>, page: int, per_page: int, next_page: int|null}|WP_Error
+	 */
 	private static function query_readable_posts( $args, $page, $per_page, $fields = 'summary' ) {
 		return Webmastery_MCP_Post_Access::query_readable( $args, $page, $per_page, static fn( $id ) => self::can_read_full_post( $id ), static fn( $post ) => self::normalize( $post, $fields ) );
 	}
 
+	/**
+	 * Register the abilities for one built-in post type.
+	 *
+	 * @param string $type Post type: post or page.
+	 * @return void
+	 */
 	private static function register_post_type( $type ) {
 		$slug  = 'post' === $type ? 'posts' : 'pages';
 		$label = 'post' === $type ? 'Post' : 'Page';
