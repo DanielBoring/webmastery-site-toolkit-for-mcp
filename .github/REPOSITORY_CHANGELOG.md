@@ -6,6 +6,8 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Verify that Adapter 0.7.2 rejects invalid input during preparation on both the gateway and individual-tool routes before any registered callback runs.
+
 - Raise PHPStan from level 5 to level 6 (issue #236). PHPDoc types now cover
   every `includes/` class (#251, #261, #262, #263), with no native types and
   byte-identical comment-stripped source. Four reviewed baseline entries cover

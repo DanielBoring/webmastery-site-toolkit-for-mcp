@@ -81,6 +81,34 @@ try {
 	$ability = wp_get_ability( $name );
 	webmastery_mcp_e2e_assert( $ability instanceof Webmastery_MCP_Ability, 'Owned ability class was not installed.' );
 	webmastery_mcp_e2e_assert( ! wp_get_ability( 'wstm118-foreign/probe' ) instanceof Webmastery_MCP_Ability, 'Foreign ability class was intercepted.' );
+	// A native caller can reach the same Adapter checker through the gateway.
+	if ( defined( 'WP\MCP\Core\McpAdapter::VERSION' ) && '0.7.2' === \WP\MCP\Core\McpAdapter::VERSION && ! method_exists( 'WP_Ability', 'prepare_input' ) ) {
+		$invalid = array( 'diagnostic' => array( 'strategy' => 'invalid' ) );
+		$gateway = wp_get_ability( 'mcp-adapter/execute-ability' );
+		foreach ( array(
+			'prepare' => static fn() => $ability->prepare_input( $invalid ),
+			'gateway' => static fn() => $gateway->check_permissions( array( 'ability_name' => $name, 'parameters' => $invalid ) ),
+		) as $path => $invoke_native ) {
+			$original = null;
+			$observe = static function ( WP_Error $error ) use ( &$original, &$message, &$data ) {
+				if ( null === $original && 'ability_invalid_input' === $error->get_error_code() ) {
+					$error->add_data( array( 'native_probe' => true ) );
+					$original = $error;
+					$message = $error->get_error_messages();
+					$data = $error->get_all_error_data();
+				}
+			};
+			add_action( 'is_wp_error_instance', $observe );
+			try {
+				$actual = $invoke_native();
+				webmastery_mcp_e2e_assert( $original instanceof WP_Error && $actual === $original
+					&& 'ability_invalid_input' === $actual->get_error_code() && $message === $actual->get_error_messages()
+					&& $data === $actual->get_all_error_data(), "Native {$path} changed the WordPress error." );
+			} finally {
+				remove_action( 'is_wp_error_instance', $observe );
+			}
+		}
+	}
 	// Additive #203 cases belong to this error stage, not the frozen 152-case schema stage.
 	$diagnostic_cases = array(
 		'required' => array( array(), '$.diagnostic.strategy', 'required' ),

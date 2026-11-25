@@ -469,7 +469,7 @@ final class PermissionDefaultTest extends TestCase {
 		$tail = str_replace( $before, $after, substr( $source, $start ), $count );
 		self::assertSame( 1, $count, 'Mutation must affect exactly the actual permission method.' );
 		$source = substr( $source, 0, $start ) . $tail;
-		$source = str_replace( 'final class Webmastery_MCP_Ability', 'final class Wstm_Permission_Default_Mutant', $source, $count );
+		$source = str_replace( 'class Webmastery_MCP_Ability extends WP_Ability', 'final class Wstm_Permission_Default_Mutant extends WP_Ability', $source, $count );
 		self::assertSame( 1, $count );
 		eval( substr( $source, 5 ) );
 		$this->expectException( AssertionFailedError::class );

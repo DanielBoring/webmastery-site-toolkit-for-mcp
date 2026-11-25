@@ -176,6 +176,8 @@ final class CommentsCalibrationTest extends TestCase {
 		$binding = wstm_test_product_binding( 'includes/class-ability.php' );
 		self::assertSame( $binding[0], hash( 'sha256', $source ), 'Current Ability source drift.' );
 		self::assertSame( $binding[1], hash( 'sha1', 'blob ' . strlen( $source ) . "\0" . $source ), 'Current Ability Git blob drift.' );
+		$source = str_replace( "\nclass Webmastery_MCP_Ability extends WP_Ability", "\nfinal class Webmastery_MCP_Ability extends WP_Ability", $source, $subclass );
+		self::assertSame( 1, $subclass, 'Reverse only the declaration change that permits the legacy Adapter subclass.' );
 		$source = str_replace( "\t\t\tWebmastery_MCP_Input::annotate_error( \$result, \$input, \$this->get_input_schema() );\n", '', $source, $diagnostics );
 		self::assertSame( 1, $diagnostics, 'Reverse exactly the approved diagnostic association, retaining the parent error return.' );
 		$restored = str_replace( self::ABILITY_PERMISSION_ANCHOR . self::ABILITY_DEFAULT_GUARD, self::ABILITY_PERMISSION_ANCHOR, $source, $replacements );

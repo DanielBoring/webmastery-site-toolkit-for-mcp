@@ -66,7 +66,7 @@ if ( ! defined( 'WSTM126_DISPOSABLE_RUNTIME' ) || true !== WSTM126_DISPOSABLE_RU
 }
 wstm126_require( false === get_option( 'wstm126_http', false ), 'An input proof already owns the HTTP observation option.' );
 $summary = array(
-	'schema_version' => 1, 'owner' => $stage_token, 'project' => $project,
+	'schema_version' => 2, 'owner' => $stage_token, 'project' => $project,
 	'expected_cases' => 152, 'completed' => false, 'cleanup_complete' => false,
 	'boundary' => $boundary, 'wordpress' => get_bloginfo( 'version' ), 'php' => PHP_VERSION,
 	'source_sha' => $source_sha,
@@ -80,6 +80,9 @@ foreach ( array( Webmastery_MCP_Ability::class => 'class-ability.php', Webmaster
 }
 wstm126_require( realpath( dirname( __DIR__, 2 ) ) === realpath( $plugin_root ), 'Runner is not in the loaded production mount.' );
 $summary['source_hashes'] = wstm126_source_hashes( $plugin_root );
+$summary['adapter_version'] = get_file_data( WP_PLUGIN_DIR . '/mcp-adapter/mcp-adapter.php', array( 'version' => 'Version' ) )['version'];
+$summary['core_prepares'] = method_exists( 'WP_Ability', 'prepare_input' );
+$adapter_prepares = '0.7.2' === $summary['adapter_version'] && ! $summary['core_prepares'];
 $progress( 'preflight', 'end', 0, array_intersect_key( $summary['source_hashes']['harness'], array(
 	'tests/e2e/input-schema-runner.php' => true, 'tests/e2e/input-schema-cleanup.php' => true,
 ) ) );
@@ -279,13 +282,12 @@ try {
 		}
 	}
 	foreach ( $cases as $label => [ $slug, $input, $reason ] ) {
-		$record( $label, static function ( &$entry ) use ( $invoke, $slug, $input, $reason, $boundary ) {
+		$record( $label, static function ( &$entry ) use ( $invoke, $slug, $input, $reason, $boundary, $adapter_prepares ) {
 			$result = $invoke( $slug, $input, 'administrator', $entry );
 			wstm118_error_envelope( $result );
 			wstm126_require( $reason === $result['error']['reason'], 'Wrong rejection layer/reason.' );
 			wstm126_assert_no_work( $entry['before'], $entry['after'], $entry['evidence'] );
-			$expected = 'ability' === $boundary ? 0 : 1;
-			wstm126_require( $expected === count( $entry['evidence']['callbacks'] ), 'Missing or replayed callback observation.' );
+			wstm126_verify_rejection_stage( $boundary, $adapter_prepares, $entry['evidence'] );
 		} );
 	}
 	$record( 'valid subscriber denial', static function ( &$entry ) use ( $invoke, $posts, $boundary ) {
