@@ -69,7 +69,6 @@ $summary = array(
 	'schema_version' => 2, 'owner' => $stage_token, 'project' => $project,
 	'expected_cases' => 152, 'completed' => false, 'cleanup_complete' => false,
 	'boundary' => $boundary, 'wordpress' => get_bloginfo( 'version' ), 'php' => PHP_VERSION,
-	'adapter_version' => \WP\MCP\Core\McpAdapter::VERSION, 'core_prepares' => method_exists( 'WP_Ability', 'prepare_input' ),
 	'source_sha' => $source_sha,
 	'passed' => 0, 'failed' => 0, 'cases' => array(), 'cleanup' => array(),
 );
@@ -81,6 +80,9 @@ foreach ( array( Webmastery_MCP_Ability::class => 'class-ability.php', Webmaster
 }
 wstm126_require( realpath( dirname( __DIR__, 2 ) ) === realpath( $plugin_root ), 'Runner is not in the loaded production mount.' );
 $summary['source_hashes'] = wstm126_source_hashes( $plugin_root );
+$summary['adapter_version'] = get_file_data( WP_PLUGIN_DIR . '/mcp-adapter/mcp-adapter.php', array( 'version' => 'Version' ) )['version'];
+$summary['core_prepares'] = method_exists( 'WP_Ability', 'prepare_input' );
+$adapter_prepares = '0.7.2' === $summary['adapter_version'] && ! $summary['core_prepares'];
 $progress( 'preflight', 'end', 0, array_intersect_key( $summary['source_hashes']['harness'], array(
 	'tests/e2e/input-schema-runner.php' => true, 'tests/e2e/input-schema-cleanup.php' => true,
 ) ) );
@@ -279,7 +281,6 @@ try {
 			}
 		}
 	}
-	$adapter_prepares = '0.7.2' === $summary['adapter_version'] && ! $summary['core_prepares'];
 	foreach ( $cases as $label => [ $slug, $input, $reason ] ) {
 		$record( $label, static function ( &$entry ) use ( $invoke, $slug, $input, $reason, $boundary, $adapter_prepares ) {
 			$result = $invoke( $slug, $input, 'administrator', $entry );

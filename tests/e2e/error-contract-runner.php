@@ -82,7 +82,7 @@ try {
 	webmastery_mcp_e2e_assert( $ability instanceof Webmastery_MCP_Ability, 'Owned ability class was not installed.' );
 	webmastery_mcp_e2e_assert( ! wp_get_ability( 'wstm118-foreign/probe' ) instanceof Webmastery_MCP_Ability, 'Foreign ability class was intercepted.' );
 	// A native caller can reach the same Adapter checker through the gateway.
-	if ( '0.7.2' === \WP\MCP\Core\McpAdapter::VERSION && ! method_exists( 'WP_Ability', 'prepare_input' ) ) {
+	if ( defined( 'WP\MCP\Core\McpAdapter::VERSION' ) && '0.7.2' === \WP\MCP\Core\McpAdapter::VERSION && ! method_exists( 'WP_Ability', 'prepare_input' ) ) {
 		$invalid = array( 'diagnostic' => array( 'strategy' => 'invalid' ) );
 		$gateway = wp_get_ability( 'mcp-adapter/execute-ability' );
 		foreach ( array(
