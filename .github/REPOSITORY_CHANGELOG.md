@@ -6,6 +6,13 @@ Plugin-facing release notes belong in `CHANGELOG.md`.
 
 ## Unreleased
 
+- Raise PHPStan from level 5 to level 6 (issue #236). PHPDoc types now cover
+  every `includes/` class (#251, #261, #262, #263), with no native types and
+  byte-identical comment-stripped source. Four reviewed baseline entries cover
+  what PHPDoc cannot resolve without a cast: `Webmastery_MCP_Comments::normalize()`
+  and two `rest_sanitize_boolean()` calls on raw post meta. The baseline guard
+  now requires level 6, and `docs/01-static-qa.md` records the entries.
+
 - Admit MCP Adapter 0.7.2 in the error-contract and untrusted-content E2E
   runner guards, which still reject unreviewed versions. The November 23
   Compatibility QA run (issue #209) stopped at these guards in every 0.7.2
