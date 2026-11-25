@@ -30,6 +30,22 @@ final class InputSchemaProofTest extends TestCase {
 		}
 	}
 
+	public static function invalid_preparation_evidence(): array {
+		return array(
+			'missing rejection' => array( 0, 0 ),
+			'replayed rejection' => array( 2, 0 ),
+			'permission callback after rejection' => array( 1, 1 ),
+		);
+	}
+
+	/** @dataProvider invalid_preparation_evidence */
+	public function test_adapter_precheck_requires_one_rejection_and_no_callback( int $rejections, int $callbacks ): void {
+		$this->expectExceptionMessage( 'Missing or replayed schema rejection' );
+		wstm126_verify_rejection_stage( 'http', true, array(
+			'preparation_rejections' => $rejections, 'callbacks' => array_fill( 0, $callbacks, array() ),
+		) );
+	}
+
 	public static function mutations(): array {
 		return array_map( static fn( $name ) => array( $name ), array(
 			'owner', 'source', 'project', 'boundary', 'version', 'completed', 'cleanup-complete', 'cleanup-empty', 'cleanup-string',

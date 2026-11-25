@@ -568,6 +568,16 @@ exclusive runtime lease. The accepted safety lifecycle and error-contract runner
 are untouched; schema orchestration is a separate serial call after metadata
 QA and before the final debug-log check. Final integration must preserve the newer error
 floor, metadata authorization, destructive guards, and performance projections.
+To verify the Adapter 0.7.2 workaround locally, run `scripts/qa-run.sh all`
+with `MCP_ADAPTER_ZIP` and `MCP_ADAPTER_SHA256` set to the 0.7.2 release
+asset and its verified digest. In both the gateway (`http`) and individual
+schema reports, each of the 149 invalid inputs must have one
+`preparation_rejections` event, zero callbacks or mutations, and identical
+before/after snapshots. The three valid-input controls must have zero
+preparation rejections. On the pinned 0.7.1 Adapter, each invalid MCP call
+reaches one registered callback. Run the same command without overrides to
+exercise that path.
+
 The synthetic missing-schema error fixture clears its schema after registration
 and restores only that probe's original permission callback: clearing the
 property alone leaves the raw wrapper's captured empty schema active.

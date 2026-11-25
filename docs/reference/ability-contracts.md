@@ -94,6 +94,10 @@ core `WP_Error` object and its original data; normalize it with
 `Webmastery_MCP_Response::from_wp_error()` to obtain the safe details. If only
 a core keyword such as `format` or a combinator fails, details remain `{}`.
 Diagnostics do not alter schema acceptance, authorization, or defaults.
+On WordPress versions without native input preparation, Webmastery supplies
+the public error envelope for the standard MCP Adapter 0.7.2 tool routes.
+A native caller that validates the same input receives the original WordPress
+error object and its attached data.
 
 Use exact enum values (`"DESC"`, not `"desc"` or `"DESC!"`), JSON integers for
 IDs, and JSON booleans for flags. Optional fields retain existing defaults when

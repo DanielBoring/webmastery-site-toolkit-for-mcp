@@ -6,6 +6,8 @@ Repository, CI, contributor, and GitHub platform changes are tracked separately 
 
 ## Unreleased
 
+- Restore structured, redacted MCP input errors for users on WordPress MCP Adapter 0.7.2. Native WordPress callers retain the original validation error.
+
 ## 3.2.0
 
 ### Added

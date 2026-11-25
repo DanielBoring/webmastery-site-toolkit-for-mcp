@@ -47,8 +47,26 @@ add_filter( 'wp_register_ability_args', static function ( $args, $name ) {
 	return $args;
 }, PHP_INT_MAX, 2 );
 
+// Observe the Adapter consuming the actual preparation error before it can call check_permissions().
+add_action( 'is_wp_error_instance', static function ( $error ) {
+	if ( ! isset( $GLOBALS['wstm126_evidence'] ) || ! $error instanceof Webmastery_MCP_Error
+		|| 'ability_invalid_input' !== ( $error->get_error_data()['webmastery_error']['error']['reason'] ?? null ) ) {
+		return;
+	}
+	$stack = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 8 );
+	foreach ( $stack as $index => $frame ) {
+		if ( 'is_wp_error' === $frame['function'] ) {
+			$caller = $stack[ $index + 1 ] ?? array();
+			if ( ( $caller['class'] ?? '' ) === 'WP\MCP\Domain\Utils\AbilityPermissionChecker' && 'check' === $caller['function'] ) {
+				++$GLOBALS['wstm126_evidence']['preparation_rejections'];
+			}
+			return;
+		}
+	}
+} );
+
 function wstm126_begin(): Closure {
-	$GLOBALS['wstm126_evidence'] = array( 'callbacks' => array(), 'mutations' => array() );
+	$GLOBALS['wstm126_evidence'] = array( 'callbacks' => array(), 'mutations' => array(), 'preparation_rejections' => 0 );
 	return wstm110_batch_observe( static function ( $hook ) { $GLOBALS['wstm126_evidence']['mutations'][] = $hook; } );
 }
 

@@ -8,7 +8,7 @@ require_once dirname( __DIR__, 2 ) . '/e2e/input-schema-proof.php';
 function wstm126_fake_report( string $owner, string $source, string $project, string $boundary ): array {
 	$report = array(
 		'schema_version' => 1, 'owner' => $owner, 'source_sha' => $source, 'project' => $project, 'boundary' => $boundary,
-		'expected_cases' => 152, 'completed' => true, 'cleanup_complete' => true, 'passed' => 152, 'failed' => 0,
+		'adapter_version' => '0.7.1', 'core_prepares' => false, 'expected_cases' => 152, 'completed' => true, 'cleanup_complete' => true, 'passed' => 152, 'failed' => 0,
 		'cases' => array(), 'cleanup' => array( 'independent absence' => true ),
 		'cleanup_proof' => array_fill_keys( array( 'identity_validated', 'sessions_closed', 'posts_absent', 'actors_absent', 'credentials_absent', 'observation_absent', 'baseline_restored', 'journal_retired' ), true ),
 		'hashes' => array_fill_keys( array( 'input-schema-runner.php', 'input-schema-fixture.php', 'class-input.php', 'class-ability.php' ), str_repeat( 'a', 64 ) ),
@@ -29,7 +29,7 @@ function wstm126_fake_report( string $owner, string $source, string $project, st
 		$case = array(
 			'label' => $label, 'passed' => true, 'input' => array( 'fixture' => 'Synthetic verifier input' ),
 			'before' => $snapshot, 'after' => $snapshot,
-			'evidence' => array( 'callbacks' => 'ability' === $boundary && $index < 149 ? array() : array( $callback ), 'mutations' => array() ),
+			'evidence' => array( 'preparation_rejections' => 0, 'callbacks' => 'ability' === $boundary && $index < 149 ? array() : array( $callback ), 'mutations' => array() ),
 			'result' => array( 'success' => false, 'error' => array( 'code' => 'missing_confirmation' === $reason ? 'precondition_failed' : 'invalid_input', 'reason' => $reason ) ),
 		);
 		if ( 149 === $index ) {

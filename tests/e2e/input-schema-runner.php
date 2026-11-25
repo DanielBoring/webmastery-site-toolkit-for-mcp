@@ -69,6 +69,7 @@ $summary = array(
 	'schema_version' => 1, 'owner' => $stage_token, 'project' => $project,
 	'expected_cases' => 152, 'completed' => false, 'cleanup_complete' => false,
 	'boundary' => $boundary, 'wordpress' => get_bloginfo( 'version' ), 'php' => PHP_VERSION,
+	'adapter_version' => \WP\MCP\Core\McpAdapter::VERSION, 'core_prepares' => method_exists( 'WP_Ability', 'prepare_input' ),
 	'source_sha' => $source_sha,
 	'passed' => 0, 'failed' => 0, 'cases' => array(), 'cleanup' => array(),
 );
@@ -278,14 +279,14 @@ try {
 			}
 		}
 	}
+	$adapter_prepares = '0.7.2' === $summary['adapter_version'] && ! $summary['core_prepares'];
 	foreach ( $cases as $label => [ $slug, $input, $reason ] ) {
-		$record( $label, static function ( &$entry ) use ( $invoke, $slug, $input, $reason, $boundary ) {
+		$record( $label, static function ( &$entry ) use ( $invoke, $slug, $input, $reason, $boundary, $adapter_prepares ) {
 			$result = $invoke( $slug, $input, 'administrator', $entry );
 			wstm118_error_envelope( $result );
 			wstm126_require( $reason === $result['error']['reason'], 'Wrong rejection layer/reason.' );
 			wstm126_assert_no_work( $entry['before'], $entry['after'], $entry['evidence'] );
-			$expected = 'ability' === $boundary ? 0 : 1;
-			wstm126_require( $expected === count( $entry['evidence']['callbacks'] ), 'Missing or replayed callback observation.' );
+			wstm126_verify_rejection_stage( $boundary, $adapter_prepares, $entry['evidence'] );
 		} );
 	}
 	$record( 'valid subscriber denial', static function ( &$entry ) use ( $invoke, $posts, $boundary ) {

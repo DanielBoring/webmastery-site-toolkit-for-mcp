@@ -28,10 +28,20 @@ function wstm126_expected_labels(): array {
 	return array_merge( $labels, array( 'valid subscriber denial', 'allowed hierarchical detach/omission 0', 'allowed hierarchical detach/omission 1' ) );
 }
 
+/** Require positive evidence from the expected rejection point on this runtime. */
+function wstm126_verify_rejection_stage( string $boundary, bool $adapter_prepares, array $evidence ): void {
+	$early = $adapter_prepares && in_array( $boundary, array( 'http', 'individual' ), true );
+	$expected_callbacks = ( $early || 'ability' === $boundary ) ? 0 : 1;
+	if ( ( $early ? 1 : 0 ) !== ( $evidence['preparation_rejections'] ?? null )
+		|| $expected_callbacks !== count( $evidence['callbacks'] ) ) {
+		throw new RuntimeException( 'Missing or replayed schema rejection at the expected stage.' );
+	}
+}
+
 function wstm126_source_hashes( string $plugin_root, ?string $harness_root = null ): array {
 	$harness_root = $harness_root ?? $plugin_root;
 	$files = array(
-		'production' => array( 'webmastery-site-toolkit-for-mcp.php', 'includes/class-ability.php', 'includes/class-input.php', 'includes/class-response.php' ),
+		'production' => array( 'webmastery-site-toolkit-for-mcp.php', 'includes/class-ability.php', 'includes/class-adapter-ability.php', 'includes/class-input.php', 'includes/class-response.php' ),
 		'harness' => array(
 			'tests/e2e/input-schema-runner.php', 'tests/e2e/input-schema-fixture.php', 'tests/e2e/input-schema-proof.php',
 			'tests/e2e/input-schema-cleanup.php', 'tests/e2e/input-schema-lifecycle.php', 'tests/e2e/input-schema-stage.php',
@@ -74,6 +84,8 @@ function wstm126_validate_invocation( array $report, string $owner, string $sour
 	}
 	$require( ! array_key_exists( 'fatal', $report ), 'Fatal schema invocation is incomplete.' );
 	$require( isset( $report['cases'] ) && is_array( $report['cases'] ) && array_keys( $report['cases'] ) === range( 0, 151 ), 'Incomplete schema case list.' );
+	$require( is_string( $report['adapter_version'] ?? null ) && is_bool( $report['core_prepares'] ?? null ), 'Missing Adapter/core preparation identity.' );
+	$adapter_prepares = '0.7.2' === $report['adapter_version'] && ! $report['core_prepares'];
 	$labels = wstm126_expected_labels();
 	$passed = 0;
 	foreach ( $report['cases'] as $index => $case ) {
@@ -108,14 +120,17 @@ function wstm126_validate_invocation( array $report, string $owner, string $sour
 				&& is_int( $callback['queries'] ?? null ) && $callback['queries'] >= 0
 				&& is_int( $callback['capabilities'] ?? null ) && $callback['capabilities'] >= 0, 'Malformed callback observation.' );
 		}
+		if ( $index >= 149 ) {
+			$require( 0 === ( $evidence['preparation_rejections'] ?? null ), 'Unexpected preparation rejection on a valid input.' );
+		}
 		if ( $index < 149 ) {
 			$reason = 'ability_invalid_input';
 			if ( 'direct' === $boundary && false !== strpos( $case['label'], ':confirm:' ) ) { $reason = 'missing_confirmation'; }
 			if ( 'direct' === $boundary && ( false !== strpos( $case['label'], ':force:' ) || false !== strpos( $case['label'], ':dry_run:' ) ) ) { $reason = 'invalid_input'; }
 			$require( false === ( $case['result']['success'] ?? null ) && $reason === ( $case['result']['error']['reason'] ?? null )
 				&& ( 'missing_confirmation' === $reason ? 'precondition_failed' : 'invalid_input' ) === ( $case['result']['error']['code'] ?? null ), 'Changed strict input error oracle.' );
-			$require( $case['before'] === $case['after'] && array() === $evidence['mutations']
-				&& count( $evidence['callbacks'] ) === ( 'ability' === $boundary ? 0 : 1 ), 'Changed state or callback-count oracle.' );
+			$require( $case['before'] === $case['after'] && array() === $evidence['mutations'], 'Rejected input changed state.' );
+			wstm126_verify_rejection_stage( $boundary, $adapter_prepares, $evidence );
 			foreach ( $evidence['callbacks'] as $callback ) {
 				$require( 0 === $callback['queries'] && 0 === $callback['capabilities'], 'Rejected input reached operation work.' );
 			}

@@ -211,6 +211,11 @@ final class Webmastery_MCP_Response {
 	public static function register_args( array $args, string $name ): array {
 		if ( self::owns( $name ) ) {
 			$args['ability_class'] = Webmastery_MCP_Ability::class;
+			if ( ! method_exists( 'WP_Ability', 'prepare_input' )
+				&& defined( 'WP\\MCP\\Core\\McpAdapter::VERSION' ) && '0.7.2' === constant( 'WP\\MCP\\Core\\McpAdapter::VERSION' ) ) {
+				require_once __DIR__ . '/class-adapter-ability.php';
+				$args['ability_class'] = Webmastery_MCP_Adapter_Ability::class;
+			}
 		}
 		return $args;
 	}

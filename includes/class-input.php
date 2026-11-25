@@ -86,14 +86,11 @@ final class Webmastery_MCP_Input {
 				if ( $no_input && null === $input ) {
 					$input = [];
 				}
-				if ( self::is_type( $input, 'object' )
-					&& preg_match( '~^webmastery-site-toolkit-for-mcp/(?:create|update)-(?:post|page|cpt-.+)$~', $name ) ) {
-					$metadata_error = Webmastery_MCP_Posts::reject_combined_metadata( (array) $input );
-					if ( null !== $metadata_error ) {
-						return $is_permission
-							? Webmastery_MCP_Response::legacy_wp_error( $metadata_error['error']['reason'], $metadata_error['error']['message'], (array) $metadata_error['error']['details'] )
-							: $metadata_error;
-					}
+				$metadata_error = self::combined_metadata_error( $name, $input );
+				if ( null !== $metadata_error ) {
+					return $is_permission
+						? Webmastery_MCP_Response::legacy_wp_error( $metadata_error['error']['reason'], $metadata_error['error']['message'], (array) $metadata_error['error']['details'] )
+						: $metadata_error;
 				}
 				$error = self::validate( $input, $schema );
 				if ( null !== $error ) {
@@ -110,6 +107,18 @@ final class Webmastery_MCP_Input {
 			};
 		}
 		return $args;
+	}
+
+	/**
+	 * @param mixed $input Ability input.
+	 * @return array{success: false, error: array{code: string, reason: string, message: string, details: stdClass}}|null
+	 */
+	public static function combined_metadata_error( string $name, $input ): ?array {
+		if ( self::is_type( $input, 'object' )
+			&& preg_match( '~^webmastery-site-toolkit-for-mcp/(?:create|update)-(?:post|page|cpt-.+)$~', $name ) ) {
+			return Webmastery_MCP_Posts::reject_combined_metadata( (array) $input );
+		}
+		return null;
 	}
 
 	/**

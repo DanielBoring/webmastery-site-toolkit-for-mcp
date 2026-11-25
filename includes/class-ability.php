@@ -5,7 +5,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Preserve the core lifecycle while normalizing only this plugin's boundaries.
  */
-final class Webmastery_MCP_Ability extends WP_Ability {
+class Webmastery_MCP_Ability extends WP_Ability {
 	public function validate_input( $input = null ) {
 		$result = parent::validate_input( $input );
 		if ( is_wp_error( $result ) ) {

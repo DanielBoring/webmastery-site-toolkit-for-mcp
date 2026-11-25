@@ -289,6 +289,10 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 == Changelog ==
 
+= Unreleased =
+
+* Restore structured MCP input errors and redact unknown field names on standard MCP Adapter 0.7.2 tool calls.
+
 = 3.2.0 =
 
 * Add read-only abilities to list installed themes, report available core, plugin and theme updates from cached data, and inspect WP-Cron configuration and scheduled events (never event arguments).
