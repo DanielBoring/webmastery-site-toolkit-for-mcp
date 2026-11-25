@@ -95,7 +95,7 @@ for mode in contract e2e all; do
 done
 mkdir -p "$WORK/package/includes"
 cp "$ROOT/webmastery-site-toolkit-for-mcp.php" "$WORK/package/"
-for file in class-ability.php class-input.php class-response.php; do
+for file in class-ability.php class-adapter-ability.php class-input.php class-response.php; do
 	cp "$ROOT/includes/$file" "$WORK/package/includes/$file"
 done
 printf '\n/* Isolated package identity negative control. */\n' >> "$WORK/package/includes/class-ability.php"
