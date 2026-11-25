@@ -4,7 +4,7 @@ Tags: mcp, ai, automation, content-management, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 3.2.0
+Stable tag: 3.2.1
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Donate link: https://paypal.me/VirtuallyBoring
@@ -289,7 +289,7 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 
 == Changelog ==
 
-= Unreleased =
+= 3.2.1 =
 
 * Restore structured MCP input errors and redact unknown field names on standard MCP Adapter 0.7.2 tool calls.
 
@@ -407,6 +407,9 @@ Security fixes target the latest stable release. Reports receive a best-effort r
 * Add block inspection, single-block replacement, and safer partial post body edits.
 
 == Upgrade Notice ==
+
+= 3.2.1 =
+Restores structured, redacted input errors for sites using MCP Adapter 0.7.2. You can keep the Adapter installed while updating Webmastery.
 
 = 3.2.0 =
 Adds abilities for themes, updates, cron, menus, broken links, Rank Math and All in One SEO. External link checks run only when an administrator asks. Jetpack/ManageWP alone no longer counts as a backup. Plugin-audit critical_update fields are deprecated.
