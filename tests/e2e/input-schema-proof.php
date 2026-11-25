@@ -78,7 +78,7 @@ function wstm126_validate_invocation( array $report, string $owner, string $sour
 	$require( 1 === preg_match( '/^[a-f0-9]{32}$/D', $owner ) && 1 === preg_match( '/^[a-f0-9]{40}$/D', $source )
 		&& 1 === preg_match( '/^[a-z0-9][a-z0-9_-]*$/D', $project )
 		&& in_array( $boundary, array( 'direct', 'permission', 'ability', 'http', 'individual' ), true ), 'Invalid expected schema identity.' );
-	foreach ( array( 'schema_version' => 1, 'owner' => $owner, 'source_sha' => $source, 'project' => $project,
+	foreach ( array( 'schema_version' => 2, 'owner' => $owner, 'source_sha' => $source, 'project' => $project,
 		'boundary' => $boundary, 'expected_cases' => 152, 'completed' => true, 'cleanup_complete' => true ) as $key => $value ) {
 		$require( array_key_exists( $key, $report ) && $value === $report[ $key ], 'Missing or foreign schema proof: ' . $key );
 	}

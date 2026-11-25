@@ -110,7 +110,10 @@ final class Webmastery_MCP_Input {
 	}
 
 	/**
-	 * @param mixed $input Ability input.
+	 * Identify metadata fields that require separate tool calls.
+	 *
+	 * @param string $name  Registered ability name.
+	 * @param mixed  $input Ability input.
 	 * @return array{success: false, error: array{code: string, reason: string, message: string, details: stdClass}}|null
 	 */
 	public static function combined_metadata_error( string $name, $input ): ?array {

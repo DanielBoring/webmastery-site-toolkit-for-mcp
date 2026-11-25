@@ -7,6 +7,8 @@ defined( 'ABSPATH' ) || exit;
  */
 final class Webmastery_MCP_Adapter_Ability extends Webmastery_MCP_Ability {
 	/**
+	 * Prepare input and preserve the error contract for the calling boundary.
+	 *
 	 * @param mixed $input Ability input.
 	 * @return mixed Normalized input or the rejection for this caller.
 	 */

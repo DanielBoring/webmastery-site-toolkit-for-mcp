@@ -7,7 +7,7 @@ require_once dirname( __DIR__, 2 ) . '/e2e/input-schema-proof.php';
 /** Synthetic evidence for verifier mutations; not runtime or cleanup proof. */
 function wstm126_fake_report( string $owner, string $source, string $project, string $boundary ): array {
 	$report = array(
-		'schema_version' => 1, 'owner' => $owner, 'source_sha' => $source, 'project' => $project, 'boundary' => $boundary,
+		'schema_version' => 2, 'owner' => $owner, 'source_sha' => $source, 'project' => $project, 'boundary' => $boundary,
 		'adapter_version' => '0.7.1', 'core_prepares' => false, 'expected_cases' => 152, 'completed' => true, 'cleanup_complete' => true, 'passed' => 152, 'failed' => 0,
 		'cases' => array(), 'cleanup' => array( 'independent absence' => true ),
 		'cleanup_proof' => array_fill_keys( array( 'identity_validated', 'sessions_closed', 'posts_absent', 'actors_absent', 'credentials_absent', 'observation_absent', 'baseline_restored', 'journal_retired' ), true ),

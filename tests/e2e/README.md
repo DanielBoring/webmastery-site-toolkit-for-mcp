@@ -560,14 +560,11 @@ is now exactly `ability_invalid_input`, while direct/gateway/individual
 presence rejection stays exactly `metadata_requires_separate_call`.
 The manifest validator and its mutation test enforce that distinction.
 
-`input-schema-runner.php` and `input-schema-fixture.php` have an isolated,
-opt-in stage, but **actual integrated runtime execution remains pending**;
-stage mocks are not completed WordPress or wire acceptance.
-Do not start Docker or local WordPress without the coordinator's explicit
-exclusive runtime lease. The accepted safety lifecycle and error-contract runner
-are untouched; schema orchestration is a separate serial call after metadata
-QA and before the final debug-log check. Final integration must preserve the newer error
-floor, metadata authorization, destructive guards, and performance projections.
+The opt-in schema stage runs after metadata QA and before the final debug-log
+check in the owned Docker test environment. Its version 2 report records the
+Adapter version, the core preparation capability, and observations from each
+request. Use the matching checkout to verify a report from an earlier run.
+
 To verify the Adapter 0.7.2 workaround locally, run `scripts/qa-run.sh all`
 with `MCP_ADAPTER_ZIP` and `MCP_ADAPTER_SHA256` set to the 0.7.2 release
 asset and its verified digest. In both the gateway (`http`) and individual

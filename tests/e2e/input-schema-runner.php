@@ -66,7 +66,7 @@ if ( ! defined( 'WSTM126_DISPOSABLE_RUNTIME' ) || true !== WSTM126_DISPOSABLE_RU
 }
 wstm126_require( false === get_option( 'wstm126_http', false ), 'An input proof already owns the HTTP observation option.' );
 $summary = array(
-	'schema_version' => 1, 'owner' => $stage_token, 'project' => $project,
+	'schema_version' => 2, 'owner' => $stage_token, 'project' => $project,
 	'expected_cases' => 152, 'completed' => false, 'cleanup_complete' => false,
 	'boundary' => $boundary, 'wordpress' => get_bloginfo( 'version' ), 'php' => PHP_VERSION,
 	'adapter_version' => \WP\MCP\Core\McpAdapter::VERSION, 'core_prepares' => method_exists( 'WP_Ability', 'prepare_input' ),
